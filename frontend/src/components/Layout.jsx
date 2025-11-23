@@ -92,11 +92,7 @@ export default function Layout() {
       label: t('nav.clients'),
       icon: Users,
       path: '/customers',
-      subItems: [
-        { label: t('nav.sub.allClients'), icon: UserCheck, path: '/customers' },
-        { label: t('nav.sub.newClients'), icon: UserPlus, path: '/customers/new' },
-        { label: t('nav.sub.clientHistory'), icon: History, path: '/customers/history' },
-      ],
+      subItems: [],
     },
     {
       id: 'employees',
@@ -181,49 +177,67 @@ export default function Layout() {
             {menuItems.map((item) => (
               <li key={item.id}>
                 <div>
-                  <button
-                    onClick={() => {
-                      toggleMenu(item.id);
-                      if (!expandedMenus[item.id]) {
-                        navigate(item.path);
-                      }
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                      isActive(item.path)
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
+                  {item.subItems.length === 0 ? (
+                    // Direct link for items without sub-items
+                    <Link
+                      to={item.path}
+                      className={`w-full flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        isActive(item.path)
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
                       <item.icon className="h-5 w-5" />
                       <span>{item.label}</span>
-                    </div>
-                    {expandedMenus[item.id] ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </button>
+                    </Link>
+                  ) : (
+                    // Expandable menu for items with sub-items
+                    <>
+                      <button
+                        onClick={() => {
+                          toggleMenu(item.id);
+                          if (!expandedMenus[item.id]) {
+                            navigate(item.path);
+                          }
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                          isActive(item.path)
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <item.icon className="h-5 w-5" />
+                          <span>{item.label}</span>
+                        </div>
+                        {expandedMenus[item.id] ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </button>
 
-                  {/* Sub-menu */}
-                  {expandedMenus[item.id] && (
-                    <ul className="mt-1 ml-4 space-y-1">
-                      {item.subItems.map((subItem, idx) => (
-                        <li key={idx}>
-                          <Link
-                            to={subItem.path}
-                            className={`flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors ${
-                              isActive(subItem.path)
-                                ? 'bg-blue-50 text-blue-700'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                          >
-                            <subItem.icon className="h-4 w-4" />
-                            <span>{subItem.label}</span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                      {/* Sub-menu */}
+                      {expandedMenus[item.id] && (
+                        <ul className="mt-1 ml-4 space-y-1">
+                          {item.subItems.map((subItem, idx) => (
+                            <li key={idx}>
+                              <Link
+                                to={subItem.path}
+                                className={`flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors ${
+                                  isActive(subItem.path)
+                                    ? 'bg-blue-50 text-blue-700'
+                                    : 'text-gray-600 hover:bg-gray-100'
+                                }`}
+                              >
+                                <subItem.icon className="h-4 w-4" />
+                                <span>{subItem.label}</span>
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
                   )}
                 </div>
               </li>
