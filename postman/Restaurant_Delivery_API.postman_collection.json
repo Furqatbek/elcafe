@@ -1,0 +1,820 @@
+{
+	"info": {
+		"_postman_id": "restaurant-delivery-api",
+		"name": "Restaurant Delivery Control Service API",
+		"description": "Complete API collection for Restaurant Delivery Management System",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "restaurant-delivery-service"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.data.accessToken);",
+									"    pm.environment.set(\"refresh_token\", jsonData.data.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"newuser@elcafe.com\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+1234567890\",\n  \"role\": \"OPERATOR\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						},
+						"description": "Register a new user account"
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.data.accessToken);",
+									"    pm.environment.set(\"refresh_token\", jsonData.data.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@elcafe.com\",\n  \"password\": \"Admin123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "login"]
+						},
+						"description": "Authenticate user and get access tokens"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"access_token\", jsonData.data.accessToken);",
+									"    pm.environment.set(\"refresh_token\", jsonData.data.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "refresh"]
+						},
+						"description": "Get new access token using refresh token"
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@elcafe.com\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/forgot-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "forgot-password"]
+						},
+						"description": "Request password reset token"
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "reset-password"]
+						},
+						"description": "Reset password using token"
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication and authorization endpoints"
+		},
+		{
+			"name": "Restaurants",
+			"item": [
+				{
+					"name": "Create Restaurant",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"New Restaurant\",\n  \"description\": \"Best food in town\",\n  \"logoUrl\": \"https://example.com/logo.png\",\n  \"bannerUrl\": \"https://example.com/banner.png\",\n  \"address\": \"456 Oak Street\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zipCode\": \"10002\",\n  \"country\": \"USA\",\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060,\n  \"phone\": \"+1234567891\",\n  \"email\": \"contact@newrestaurant.com\",\n  \"website\": \"https://newrestaurant.com\",\n  \"active\": true,\n  \"acceptingOrders\": true,\n  \"minimumOrderAmount\": 15.00,\n  \"deliveryFee\": 6.00,\n  \"estimatedDeliveryTimeMinutes\": 45,\n  \"businessHours\": [\n    {\n      \"dayOfWeek\": \"MONDAY\",\n      \"openTime\": \"09:00\",\n      \"closeTime\": \"22:00\",\n      \"closed\": false\n    }\n  ],\n  \"deliveryZones\": [\n    {\n      \"name\": \"Downtown\",\n      \"zipCode\": \"10002\",\n      \"city\": \"New York\",\n      \"deliveryFee\": 5.00,\n      \"estimatedDeliveryTimeMinutes\": 30,\n      \"active\": true\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants"]
+						},
+						"description": "Create a new restaurant (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Restaurants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants?page=0&size=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all restaurants with pagination"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Restaurant by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "1"]
+						},
+						"description": "Get restaurant details by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Restaurants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/active",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "active"]
+						},
+						"description": "Get all active restaurants"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Accepting Orders Restaurants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/accepting-orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "accepting-orders"]
+						},
+						"description": "Get restaurants currently accepting orders"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Restaurant",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Restaurant Name\",\n  \"description\": \"Updated description\",\n  \"address\": \"456 Oak Street\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zipCode\": \"10002\",\n  \"country\": \"USA\",\n  \"active\": true,\n  \"acceptingOrders\": false,\n  \"deliveryFee\": 7.00,\n  \"estimatedDeliveryTimeMinutes\": 40\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "1"]
+						},
+						"description": "Update restaurant details (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Restaurant",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "1"]
+						},
+						"description": "Delete restaurant (Admin only)"
+					},
+					"response": []
+				}
+			],
+			"description": "Restaurant management endpoints"
+		},
+		{
+			"name": "Menu",
+			"item": [
+				{
+					"name": "Get Public Menu",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/menu/public/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "menu", "public", "1"]
+						},
+						"description": "Get public menu for a restaurant (cached, no auth required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Categories by Restaurant",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/menu/restaurants/1/categories",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "menu", "restaurants", "1", "categories"]
+						},
+						"description": "Get all categories for a restaurant"
+					},
+					"response": []
+				}
+			],
+			"description": "Menu and product endpoints"
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Create Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"order_id\", jsonData.data.id);",
+									"    pm.environment.set(\"order_number\", jsonData.data.orderNumber);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"restaurant\": {\n    \"id\": 1\n  },\n  \"customer\": {\n    \"id\": 1\n  },\n  \"subtotal\": 25.00,\n  \"deliveryFee\": 5.00,\n  \"tax\": 2.50,\n  \"discount\": 0.00,\n  \"total\": 32.50,\n  \"customerNotes\": \"Please ring doorbell\",\n  \"items\": [],\n  \"deliveryInfo\": {\n    \"address\": \"123 Main St\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zipCode\": \"10001\",\n    \"contactPhone\": \"+1234567890\",\n    \"contactName\": \"John Doe\"\n  },\n  \"payment\": {\n    \"method\": \"CARD\",\n    \"amount\": 32.50\n  }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders"]
+						},
+						"description": "Create a new order"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}"]
+						},
+						"description": "Get order details by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by Number",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/number/{{order_number}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "number", "{{order_number}}"]
+						},
+						"description": "Get order by order number"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders?page=0&size=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all orders with pagination"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Restaurant Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/restaurant/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "restaurant", "1"]
+						},
+						"description": "Get orders for a specific restaurant"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pending Orders",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/pending",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "pending"]
+						},
+						"description": "Get all pending orders"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status - Accept",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}/status?status=ACCEPTED&notes=Order accepted&changedBy=operator@elcafe.com",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}", "status"],
+							"query": [
+								{
+									"key": "status",
+									"value": "ACCEPTED"
+								},
+								{
+									"key": "notes",
+									"value": "Order accepted"
+								},
+								{
+									"key": "changedBy",
+									"value": "operator@elcafe.com"
+								}
+							]
+						},
+						"description": "Update order status to ACCEPTED"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status - Preparing",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}/status?status=PREPARING&notes=Kitchen preparing order",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}", "status"],
+							"query": [
+								{
+									"key": "status",
+									"value": "PREPARING"
+								},
+								{
+									"key": "notes",
+									"value": "Kitchen preparing order"
+								}
+							]
+						},
+						"description": "Update order status to PREPARING"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status - Ready",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}/status?status=READY&notes=Order ready for pickup",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}", "status"],
+							"query": [
+								{
+									"key": "status",
+									"value": "READY"
+								},
+								{
+									"key": "notes",
+									"value": "Order ready for pickup"
+								}
+							]
+						},
+						"description": "Update order status to READY"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status - Delivered",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}/status?status=DELIVERED&notes=Order delivered successfully",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "orders", "{{order_id}}", "status"],
+							"query": [
+								{
+									"key": "status",
+									"value": "DELIVERED"
+								},
+								{
+									"key": "notes",
+									"value": "Order delivered successfully"
+								}
+							]
+						},
+						"description": "Update order status to DELIVERED"
+					},
+					"response": []
+				}
+			],
+			"description": "Order management endpoints"
+		},
+		{
+			"name": "Customers (CRM)",
+			"item": [
+				{
+					"name": "Create Customer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"customer_id\", jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"phone\": \"+1234567892\",\n  \"defaultAddress\": \"789 Pine Avenue\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zipCode\": \"10003\",\n  \"notes\": \"Prefers contactless delivery\",\n  \"tags\": \"vip,regular\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "customers"]
+						},
+						"description": "Create a new customer"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Customers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers?page=0&size=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "customers"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all customers with pagination"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{customer_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "customers", "{{customer_id}}"]
+						},
+						"description": "Get customer details by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Order History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{customer_id}}/orders",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "customers", "{{customer_id}}", "orders"]
+						},
+						"description": "Get order history for a customer"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Customer",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"phone\": \"+1234567892\",\n  \"defaultAddress\": \"789 Pine Avenue, Apt 5B\",\n  \"city\": \"New York\",\n  \"state\": \"NY\",\n  \"zipCode\": \"10003\",\n  \"notes\": \"Prefers contactless delivery, allergic to peanuts\",\n  \"tags\": \"vip,regular,premium\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{customer_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "customers", "{{customer_id}}"]
+						},
+						"description": "Update customer information"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Customer",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/customers/{{customer_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "customers", "{{customer_id}}"]
+						},
+						"description": "Delete customer"
+					},
+					"response": []
+				}
+			],
+			"description": "Customer management (CRM) endpoints"
+		},
+		{
+			"name": "Courier Integration",
+			"item": [
+				{
+					"name": "Delivery Status Webhook",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"trackingId\": \"TRACK-ABC123\",\n  \"status\": \"PICKED_UP\",\n  \"timestamp\": \"2025-01-23T10:30:00Z\",\n  \"location\": {\n    \"latitude\": 40.7128,\n    \"longitude\": -74.0060\n  },\n  \"courierName\": \"John Driver\",\n  \"estimatedArrival\": \"2025-01-23T11:00:00Z\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/courier/webhook/delivery-status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "courier", "webhook", "delivery-status"]
+						},
+						"description": "Receive delivery status updates from courier provider (webhook, no auth)"
+					},
+					"response": []
+				}
+			],
+			"description": "Courier integration webhook endpoints"
+		},
+		{
+			"name": "Health & Monitoring",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/health",
+							"host": ["{{base_url}}"],
+							"path": ["actuator", "health"]
+						},
+						"description": "Check application health status"
+					},
+					"response": []
+				},
+				{
+					"name": "Application Info",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/info",
+							"host": ["{{base_url}}"],
+							"path": ["actuator", "info"]
+						},
+						"description": "Get application information"
+					},
+					"response": []
+				},
+				{
+					"name": "Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/actuator/metrics",
+							"host": ["{{base_url}}"],
+							"path": ["actuator", "metrics"]
+						},
+						"description": "Get application metrics"
+					},
+					"response": []
+				}
+			],
+			"description": "Health check and monitoring endpoints"
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}
