@@ -69,23 +69,25 @@ public class RestaurantService {
         // Update business hours
         if (request.getBusinessHours() != null) {
             restaurant.getBusinessHours().clear();
+            final Restaurant finalRestaurant = restaurant;
             request.getBusinessHours().forEach(hoursReq -> {
-                restaurant.addBusinessHours(restaurantMapper.toBusinessHoursEntity(hoursReq));
+                finalRestaurant.addBusinessHours(restaurantMapper.toBusinessHoursEntity(hoursReq));
             });
         }
 
         // Update delivery zones
         if (request.getDeliveryZones() != null) {
             restaurant.getDeliveryZones().clear();
+            final Restaurant finalRestaurant2 = restaurant;
             request.getDeliveryZones().forEach(zoneReq -> {
-                restaurant.addDeliveryZone(restaurantMapper.toDeliveryZoneEntity(zoneReq));
+                finalRestaurant2.addDeliveryZone(restaurantMapper.toDeliveryZoneEntity(zoneReq));
             });
         }
 
-        restaurant = restaurantRepository.save(restaurant);
+        Restaurant savedRestaurant = restaurantRepository.save(restaurant);
         log.info("Restaurant updated successfully: {}", id);
 
-        return restaurantMapper.toResponse(restaurant);
+        return restaurantMapper.toResponse(savedRestaurant);
     }
 
     @Transactional(readOnly = true)
