@@ -57,6 +57,8 @@ export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (data) => api.post('/auth/register', data),
   refresh: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
+  forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
+  resetPassword: (token, newPassword) => api.post('/auth/reset-password', { token, newPassword }),
 };
 
 export const restaurantAPI = {
@@ -66,6 +68,7 @@ export const restaurantAPI = {
   update: (id, data) => api.put(`/restaurants/${id}`, data),
   delete: (id) => api.delete(`/restaurants/${id}`),
   getActive: () => api.get('/restaurants/active'),
+  getAcceptingOrders: () => api.get('/restaurants/accepting-orders'),
 };
 
 export const menuAPI = {
@@ -76,11 +79,12 @@ export const menuAPI = {
 export const orderAPI = {
   create: (data) => api.post('/orders', data),
   getById: (id) => api.get(`/orders/${id}`),
+  getByNumber: (orderNumber) => api.get(`/orders/number/${orderNumber}`),
   getAll: (params) => api.get('/orders', { params }),
   getPending: () => api.get('/orders/pending'),
   getByRestaurant: (restaurantId) => api.get(`/orders/restaurant/${restaurantId}`),
-  updateStatus: (id, status, notes) =>
-    api.patch(`/orders/${id}/status`, null, { params: { status, notes } }),
+  updateStatus: (id, status, notes, changedBy = 'OPERATOR') =>
+    api.patch(`/orders/${id}/status`, null, { params: { status, notes, changedBy } }),
 };
 
 export const customerAPI = {

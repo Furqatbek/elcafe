@@ -1,9 +1,12 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { Button } from './ui/button';
+import { LanguageSwitcher } from './LanguageSwitcher';
 import { Home, Package, Store, Users, Menu, LogOut } from 'lucide-react';
 
 export default function Layout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { logout, user } = useAuthStore();
 
@@ -13,11 +16,11 @@ export default function Layout() {
   };
 
   const navItems = [
-    { to: '/dashboard', icon: Home, label: 'Dashboard' },
-    { to: '/orders', icon: Package, label: 'Orders' },
-    { to: '/restaurants', icon: Store, label: 'Restaurants' },
-    { to: '/menu', icon: Menu, label: 'Menu' },
-    { to: '/customers', icon: Users, label: 'Customers' },
+    { to: '/dashboard', icon: Home, label: t('nav.dashboard') },
+    { to: '/orders', icon: Package, label: t('nav.orders') },
+    { to: '/restaurants', icon: Store, label: t('nav.restaurants') },
+    { to: '/menu', icon: Menu, label: t('nav.menu') },
+    { to: '/customers', icon: Users, label: t('nav.customers') },
   ];
 
   return (
@@ -27,7 +30,7 @@ export default function Layout() {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <span className="text-xl font-bold">ElCafe Control</span>
+                <span className="text-xl font-bold">{t('app.name')}</span>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-4">
                 {navItems.map((item) => (
@@ -42,13 +45,14 @@ export default function Layout() {
                 ))}
               </div>
             </div>
-            <div className="flex items-center">
-              <span className="text-sm text-gray-700 mr-4">
+            <div className="flex items-center gap-3">
+              <LanguageSwitcher />
+              <span className="text-sm text-gray-700">
                 {user?.email || 'User'}
               </span>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
-                Logout
+                {t('auth.logout')}
               </Button>
             </div>
           </div>

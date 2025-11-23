@@ -21,6 +21,8 @@ Modern, minimalist frontend application built with React, Vite, and Shadcn UI fo
 | **Zustand** | State Management |
 | **Axios** | API Client |
 | **Lucide React** | Icons |
+| **i18next** | Internationalization |
+| **react-i18next** | React i18n Integration |
 
 ## 🚀 Quick Start
 
@@ -59,7 +61,8 @@ frontend/
 ├── src/
 │   ├── components/      # Reusable components
 │   │   ├── ui/         # Shadcn UI components
-│   │   └── Layout.jsx  # Main layout wrapper
+│   │   ├── Layout.jsx  # Main layout wrapper
+│   │   └── LanguageSwitcher.jsx  # Language switcher
 │   ├── pages/          # Page components
 │   │   ├── Login.jsx
 │   │   ├── Dashboard.jsx
@@ -70,6 +73,12 @@ frontend/
 │   │   └── api.js      # Axios configuration
 │   ├── store/          # State management
 │   │   └── authStore.js
+│   ├── i18n/           # Internationalization
+│   │   ├── config.js   # i18n configuration
+│   │   └── locales/    # Translation files
+│   │       ├── en.json # English
+│   │       ├── ru.json # Russian
+│   │       └── uz.json # Uzbek
 │   ├── lib/            # Utilities
 │   │   └── utils.js
 │   ├── App.jsx         # Main app component
@@ -108,6 +117,13 @@ frontend/
 - **Customer List**: All customer information
 - **Order History**: Per-customer orders
 - **Contact Info**: Email, phone, address
+
+### Internationalization (i18n)
+- **Multi-Language Support**: English, Russian, Uzbek
+- **Language Switcher**: Easy language selection
+- **Persistent Language**: Saved in localStorage
+- **Complete Translation**: All UI text translated
+- **Dynamic Switching**: No page reload required
 
 ## 🔐 Authentication Flow
 
@@ -163,6 +179,91 @@ import { Badge } from '@/components/ui/badge';
 </div>
 ```
 
+## 🌍 Internationalization (i18n)
+
+### Supported Languages
+
+The application supports three languages:
+- **English (en)**: Default language
+- **Russian (ru)**: Русский
+- **Uzbek (uz)**: O'zbek
+
+### Using Translations
+
+```jsx
+import { useTranslation } from 'react-i18next';
+
+export default function MyComponent() {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h1>{t('dashboard.title')}</h1>
+      <p>{t('dashboard.overview')}</p>
+    </div>
+  );
+}
+```
+
+### Language Switcher
+
+The `LanguageSwitcher` component is available in the navigation bar:
+
+```jsx
+import { LanguageSwitcher } from './components/LanguageSwitcher';
+
+<LanguageSwitcher />
+```
+
+### Adding New Translations
+
+1. Add keys to translation files:
+   - `src/i18n/locales/en.json`
+   - `src/i18n/locales/ru.json`
+   - `src/i18n/locales/uz.json`
+
+2. Use in components:
+```jsx
+const { t } = useTranslation();
+<span>{t('your.new.key')}</span>
+```
+
+### Translation Structure
+
+```json
+{
+  "app": {
+    "name": "El Cafe - Restaurant Delivery",
+    "tagline": "Manage your restaurant delivery operations"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "restaurants": "Restaurants"
+  }
+}
+```
+
+### Changing Language Programmatically
+
+```javascript
+import { useTranslation } from 'react-i18next';
+
+const { i18n } = useTranslation();
+
+// Change language
+i18n.changeLanguage('ru'); // 'en', 'ru', 'uz'
+
+// Get current language
+const currentLang = i18n.language;
+```
+
 ## 🔌 API Integration
 
 ### API Service
@@ -174,14 +275,36 @@ import { authAPI, orderAPI, restaurantAPI } from './services/api';
 // Authentication
 await authAPI.login(credentials);
 await authAPI.register(data);
+await authAPI.forgotPassword(email);
+await authAPI.resetPassword(token, newPassword);
 
 // Orders
 await orderAPI.getAll({ page: 0, size: 20 });
-await orderAPI.updateStatus(id, status, notes);
+await orderAPI.getById(id);
+await orderAPI.getByNumber(orderNumber);
+await orderAPI.getPending();
+await orderAPI.updateStatus(id, status, notes, changedBy);
 
 // Restaurants
-await restaurantAPI.getAll();
+await restaurantAPI.getAll({ page: 0, size: 20 });
 await restaurantAPI.getById(id);
+await restaurantAPI.getActive();
+await restaurantAPI.getAcceptingOrders();
+await restaurantAPI.create(data);
+await restaurantAPI.update(id, data);
+await restaurantAPI.delete(id);
+
+// Customers
+await customerAPI.getAll({ page: 0, size: 50 });
+await customerAPI.getById(id);
+await customerAPI.create(data);
+await customerAPI.update(id, data);
+await customerAPI.delete(id);
+await customerAPI.getOrders(id);
+
+// Menu
+await menuAPI.getPublicMenu(restaurantId);
+await menuAPI.getCategories(restaurantId);
 ```
 
 ### Auto-Retry & Token Refresh

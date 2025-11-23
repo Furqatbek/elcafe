@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { orderAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -10,12 +11,14 @@ const statusColors = {
   ACCEPTED: 'bg-green-100 text-green-800',
   PREPARING: 'bg-yellow-100 text-yellow-800',
   READY: 'bg-purple-100 text-purple-800',
+  COURIER_ASSIGNED: 'bg-indigo-100 text-indigo-800',
   ON_DELIVERY: 'bg-indigo-100 text-indigo-800',
   DELIVERED: 'bg-green-100 text-green-800',
   CANCELLED: 'bg-red-100 text-red-800',
 };
 
 export default function Orders() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,7 +28,7 @@ export default function Orders() {
 
   const loadOrders = async () => {
     try {
-      const response = await orderAPI.getAll({ page: 0, size: 50 });
+      const response = await orderAPI.getAll({ page: 0, size: 50, sort: 'createdAt,desc' });
       setOrders(response.data.data.content || []);
     } catch (error) {
       console.error('Failed to load orders:', error);
@@ -40,7 +43,7 @@ export default function Orders() {
       loadOrders();
     } catch (error) {
       console.error('Failed to update order status:', error);
-      alert('Failed to update order status');
+      alert(t('messages.error'));
     }
   };
 
@@ -48,21 +51,22 @@ export default function Orders() {
     NEW: 'ACCEPTED',
     ACCEPTED: 'PREPARING',
     PREPARING: 'READY',
-    READY: 'ON_DELIVERY',
+    READY: 'COURIER_ASSIGNED',
+    COURIER_ASSIGNED: 'ON_DELIVERY',
     ON_DELIVERY: 'DELIVERED',
   };
 
   if (loading) {
-    return <div>Loading orders...</div>;
+    return <div>{t('common.loading')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Orders</h1>
+          <h1 className="text-3xl font-bold">{t('orders.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            Manage and track all orders
+            {t('orders.allOrders')}
           </p>
         </div>
       </div>
@@ -72,7 +76,7 @@ export default function Orders() {
           <Card>
             <CardContent className="pt-6">
               <p className="text-center text-muted-foreground">
-                No orders found
+                {t('common.noData')}
               </p>
             </CardContent>
           </Card>
@@ -83,46 +87,100 @@ export default function Orders() {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-lg">
-                      Order #{order.orderNumber}
+                      {t('orders.orderNumber')}: #{order.orderNumber}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
+                      {order.restaurant?.name || 'Restaurant'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
                       {order.createdAt && format(new Date(order.createdAt), 'PPpp')}
                     </p>
                   </div>
                   <Badge className={statusColors[order.status] || 'bg-gray-100'}>
-                    {order.status}
+                    {t(`orders.statuses.${order.status}`)}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
                   <div>
-                    <p className="text-sm font-medium">Total Amount</p>
+                    <p className="text-sm font-medium">{t('orders.subtotal')}</p>
+                    <p className="text-lg font-bold">${order.subtotal?.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{t('orders.deliveryFee')}</p>
+                    <p className="text-lg font-bold">${order.deliveryFee?.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{t('orders.total')}</p>
                     <p className="text-2xl font-bold">${order.total?.toFixed(2)}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">Customer Notes</p>
+                </div>
+
+                {order.items && order.items.length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium mb-2">{t('orders.items')}:</p>
+                    <div className="space-y-1">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="text-sm text-muted-foreground flex justify-between">
+                          <span>{item.quantity}x {item.productName} {item.variantName ? `(${item.variantName})` : ''}</span>
+                          <span>${item.totalPrice?.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {order.deliveryInfo && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium">{t('orders.deliveryInfo.address')}:</p>
                     <p className="text-sm text-muted-foreground">
-                      {order.customerNotes || 'No notes'}
+                      {order.deliveryInfo.address}, {order.deliveryInfo.city}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {t('orders.deliveryInfo.contactName')}: {order.deliveryInfo.contactName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {t('orders.deliveryInfo.contactPhone')}: {order.deliveryInfo.contactPhone}
                     </p>
                   </div>
-                </div>
-                {nextStatusMap[order.status] && (
+                )}
+
+                {order.customerNotes && (
                   <div className="mt-4">
+                    <p className="text-sm font-medium">{t('orders.notes')}:</p>
+                    <p className="text-sm text-muted-foreground">
+                      {order.customerNotes}
+                    </p>
+                  </div>
+                )}
+
+                {order.payment && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium">{t('orders.payment')}:</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t(`orders.paymentMethods.${order.payment.method}`)} - {t(`orders.paymentStatus.${order.payment.status}`)}
+                    </p>
+                  </div>
+                )}
+
+                {nextStatusMap[order.status] && (
+                  <div className="mt-4 flex gap-2">
                     <Button
                       size="sm"
                       onClick={() => updateOrderStatus(order.id, nextStatusMap[order.status])}
                     >
-                      Mark as {nextStatusMap[order.status]}
+                      {t('orders.updateStatus')}: {t(`orders.statuses.${nextStatusMap[order.status]}`)}
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="ml-2"
-                      onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                    >
-                      Cancel Order
-                    </Button>
+                    {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
+                      >
+                        {t('orders.cancelOrder')}
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>

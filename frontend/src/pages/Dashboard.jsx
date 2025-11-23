@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { orderAPI, restaurantAPI } from '../services/api';
+import { useTranslation } from 'react-i18next';
+import { orderAPI, restaurantAPI, customerAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Package, Users, ShoppingCart, Store } from 'lucide-react';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState({
     pendingOrders: 0,
     restaurants: 0,
+    totalCustomers: 0,
     loading: true,
   });
 
@@ -16,14 +19,16 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
-      const [ordersRes, restaurantsRes] = await Promise.all([
+      const [ordersRes, restaurantsRes, customersRes] = await Promise.all([
         orderAPI.getPending(),
         restaurantAPI.getActive(),
+        customerAPI.getAll({ page: 0, size: 1 }),
       ]);
 
       setStats({
         pendingOrders: ordersRes.data.data.length,
         restaurants: restaurantsRes.data.data.length,
+        totalCustomers: customersRes.data.data.totalElements || 0,
         loading: false,
       });
     } catch (error) {
@@ -34,30 +39,30 @@ export default function Dashboard() {
 
   const statCards = [
     {
-      title: 'Pending Orders',
+      title: t('dashboard.stats.pendingOrders'),
       value: stats.pendingOrders,
-      description: 'Orders awaiting processing',
+      description: t('orders.statuses.NEW'),
       icon: Package,
       color: 'text-blue-600',
     },
     {
-      title: 'Active Restaurants',
+      title: t('dashboard.stats.activeRestaurants'),
       value: stats.restaurants,
-      description: 'Currently accepting orders',
+      description: t('restaurants.acceptingOrders'),
       icon: Store,
       color: 'text-green-600',
     },
     {
-      title: 'Total Orders',
-      value: '0',
-      description: 'Today',
+      title: t('dashboard.stats.totalOrders'),
+      value: stats.pendingOrders,
+      description: t('dashboard.stats.todayRevenue'),
       icon: ShoppingCart,
       color: 'text-purple-600',
     },
     {
-      title: 'Total Customers',
-      value: '0',
-      description: 'Registered users',
+      title: t('dashboard.stats.totalCustomers'),
+      value: stats.totalCustomers,
+      description: t('customers.title'),
       icon: Users,
       color: 'text-orange-600',
     },
@@ -66,9 +71,9 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
         <p className="text-muted-foreground mt-1">
-          Overview of your restaurant delivery system
+          {t('app.tagline')}
         </p>
       </div>
 
@@ -94,24 +99,24 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest orders and updates</CardDescription>
+            <CardTitle>{t('dashboard.recentActivity')}</CardTitle>
+            <CardDescription>{t('dashboard.recentOrders')}</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              No recent activity to display
+              {t('common.noData')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and operations</CardDescription>
+            <CardTitle>{t('common.actions')}</CardTitle>
+            <CardDescription>{t('dashboard.overview')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Navigate to Orders or Restaurants to get started
+              {t('common.loading')}
             </p>
           </CardContent>
         </Card>
