@@ -1,6 +1,6 @@
 # Restaurant Delivery Control Service
 
-A complete production-ready backend system for restaurant management and delivery control built with Java 23 + Spring Boot 3.x.
+A complete production-ready backend system for restaurant management and delivery control built with Java 21 (LTS) + Spring Boot 3.x.
 
 ## 🚀 Features
 
@@ -27,7 +27,7 @@ A complete production-ready backend system for restaurant management and deliver
 
 ## 📋 Prerequisites
 
-- Java 23+
+- Java 21+ (LTS recommended)
 - Maven 3.9+
 - Docker & Docker Compose
 - PostgreSQL 16 (if running locally)
@@ -37,7 +37,7 @@ A complete production-ready backend system for restaurant management and deliver
 
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| Java | 23 | Programming Language |
+| Java | 21 (LTS) | Programming Language |
 | Spring Boot | 3.3.0 | Framework |
 | PostgreSQL | 16 | Database |
 | Redis | 7 | Caching |
@@ -367,4 +367,4 @@ Built with Spring Boot, PostgreSQL, Redis, and modern Java best practices.
 
 **Version**: 1.0.0
 **Last Updated**: 2025-01-23
-**Built with**: ☕ Java 23 + 🍃 Spring Boot 3.x
+**Built with**: ☕ Java 21 LTS + 🍃 Spring Boot 3.x
