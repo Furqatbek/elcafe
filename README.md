@@ -1,6 +1,9 @@
 # Restaurant Delivery Control Service
 
-A complete production-ready backend system for restaurant management and delivery control built with Java 21 (LTS) + Spring Boot 3.x.
+A complete full-stack production-ready system for restaurant management and delivery control.
+
+**Backend**: Java 21 (LTS) + Spring Boot 3.x
+**Frontend**: React 18 + Vite + Shadcn UI
 
 ## 🚀 Features
 
@@ -35,6 +38,7 @@ A complete production-ready backend system for restaurant management and deliver
 
 ## 🛠️ Tech Stack
 
+### Backend
 | Technology | Version | Purpose |
 |-----------|---------|---------|
 | Java | 21 (LTS) | Programming Language |
@@ -44,7 +48,22 @@ A complete production-ready backend system for restaurant management and deliver
 | Flyway | Latest | Database Migrations |
 | JWT | 0.12.5 | Authentication |
 | Springdoc | 2.5.0 | API Documentation |
+
+### Frontend
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| React | 18.3 | UI Library |
+| Vite | 5.1 | Build Tool |
+| Shadcn UI | Latest | Component Library |
+| Tailwind CSS | 3.4 | Styling |
+| Zustand | 4.5 | State Management |
+| React Router | 6.22 | Navigation |
+
+### DevOps
+| Technology | Version | Purpose |
+|-----------|---------|---------|
 | Docker | Latest | Containerization |
+| Nginx | Alpine | Web Server |
 
 ## 🚀 Quick Start
 
@@ -64,9 +83,10 @@ docker-compose up --build
 3. Wait for all services to start (approximately 2-3 minutes)
 
 4. Access the application:
-- API: http://localhost:8080
-- Swagger UI: http://localhost:8080/swagger-ui.html
-- API Docs: http://localhost:8080/api-docs
+- **Frontend UI**: http://localhost:3000
+- **Backend API**: http://localhost:8080
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **API Docs**: http://localhost:8080/api-docs
 
 ### Option 2: Run Locally
 
