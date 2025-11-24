@@ -335,12 +335,12 @@ public class FinancialAnalyticsService {
             return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
-                    .filter(order -> order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
                     .collect(Collectors.toList());
         } else {
             return orderRepository.findAll().stream()
                     .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
-                    .filter(order -> order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
                     .collect(Collectors.toList());
         }
     }

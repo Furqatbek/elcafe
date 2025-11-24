@@ -3,6 +3,7 @@ package com.elcafe.modules.menu.service;
 import com.elcafe.modules.menu.dto.*;
 import com.elcafe.modules.menu.entity.*;
 import com.elcafe.modules.menu.repository.*;
+import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

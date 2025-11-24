@@ -235,19 +235,19 @@ public class CustomerAnalyticsService {
             return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
-                    .filter(order -> order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
                     .collect(Collectors.toList());
         } else {
             return orderRepository.findAll().stream()
                     .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
-                    .filter(order -> order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
                     .collect(Collectors.toList());
         }
     }
 
     private CustomerMetrics calculateCustomerMetrics(Customer customer, Long restaurantId) {
         List<Order> customerOrders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId()).stream()
-                .filter(order -> order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.DELIVERED)
+                .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
                 .filter(order -> restaurantId == null || order.getRestaurant().getId().equals(restaurantId))
                 .collect(Collectors.toList());
 

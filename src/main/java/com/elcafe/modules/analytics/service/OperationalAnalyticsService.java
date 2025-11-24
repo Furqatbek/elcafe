@@ -258,12 +258,12 @@ public class OperationalAnalyticsService {
             return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
-                    .filter(order -> order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
                     .collect(Collectors.toList());
         } else {
             return orderRepository.findAll().stream()
                     .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
-                    .filter(order -> order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
                     .collect(Collectors.toList());
         }
     }
@@ -287,10 +287,10 @@ public class OperationalAnalyticsService {
 
     private double calculateWaitTime(Order order) {
         Optional<LocalDateTime> readyTime = findStatusTime(order, OrderStatus.READY);
-        Optional<LocalDateTime> completedTime = findStatusTime(order, OrderStatus.COMPLETED);
+        Optional<LocalDateTime> deliveredTime = findStatusTime(order, OrderStatus.DELIVERED);
 
-        if (readyTime.isPresent() && completedTime.isPresent()) {
-            return Duration.between(readyTime.get(), completedTime.get()).toMinutes();
+        if (readyTime.isPresent() && deliveredTime.isPresent()) {
+            return Duration.between(readyTime.get(), deliveredTime.get()).toMinutes();
         }
 
         return 0.0;
