@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.entity;
 
 import com.elcafe.modules.customer.entity.Customer;
+import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
@@ -45,6 +46,11 @@ public class Order {
     @Column(nullable = false)
     @Builder.Default
     private OrderStatus status = OrderStatus.NEW;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    @Builder.Default
+    private OrderSource orderSource = OrderSource.ADMIN_PANEL;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal;

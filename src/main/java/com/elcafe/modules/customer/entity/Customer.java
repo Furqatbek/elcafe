@@ -1,5 +1,6 @@
 package com.elcafe.modules.customer.entity;
 
+import com.elcafe.modules.customer.enums.RegistrationSource;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -57,6 +58,11 @@ public class Customer {
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    @Builder.Default
+    private RegistrationSource registrationSource = RegistrationSource.ADMIN_PANEL;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

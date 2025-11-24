@@ -94,6 +94,9 @@ export const customerAPI = {
   update: (id, data) => api.put(`/customers/${id}`, data),
   delete: (id) => api.delete(`/customers/${id}`),
   getOrders: (id) => api.get(`/customers/${id}/orders`),
+  getAllActivity: () => api.get('/customers/activity'),
+  getFilteredActivity: (params) => api.get('/customers/activity/filter', { params }),
+  filterActivity: (filterData) => api.post('/customers/activity/filter', filterData),
 };
 
 export default api;
