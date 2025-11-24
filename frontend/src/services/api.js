@@ -107,4 +107,13 @@ export const operatorAPI = {
   delete: (id) => api.delete(`/operators/${id}`),
 };
 
+export const courierAPI = {
+  getAll: (params) => api.get('/couriers', { params }),
+  getById: (id) => api.get(`/couriers/${id}`),
+  getWallet: (id) => api.get(`/couriers/${id}/wallet`),
+  create: (data) => api.post('/couriers', data),
+  update: (id, data) => api.put(`/couriers/${id}`, data),
+  delete: (id) => api.delete(`/couriers/${id}`),
+};
+
 export default api;

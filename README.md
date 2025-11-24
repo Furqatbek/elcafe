@@ -232,7 +232,22 @@ CANCELLED
 - `GET /api/v1/customers/activity/filter` - Filter customers with query parameters
 - `POST /api/v1/customers/activity/filter` - Advanced filtering with request body
 
-### Courier
+### Operators (Admin only)
+- `GET /api/v1/operators` - Get paginated list of operators
+- `GET /api/v1/operators/{id}` - Get operator details
+- `POST /api/v1/operators` - Create new operator
+- `PUT /api/v1/operators/{id}` - Update operator
+- `DELETE /api/v1/operators/{id}` - Delete operator
+
+### Couriers (Admin only for write operations)
+- `GET /api/v1/couriers` - Get paginated list of couriers
+- `GET /api/v1/couriers/{id}` - Get courier details
+- `GET /api/v1/couriers/{id}/wallet` - Get courier wallet balance
+- `POST /api/v1/couriers` - Create new courier with wallet
+- `PUT /api/v1/couriers/{id}` - Update courier
+- `DELETE /api/v1/couriers/{id}` - Delete courier
+
+### Courier Webhooks
 - `POST /api/v1/courier/webhook/delivery-status` - Receive delivery status updates
 
 ## 🗄️ Database Schema

@@ -41,6 +41,7 @@ import {
   Wrench,
   Shield,
   CreditCard,
+  Truck,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -104,6 +105,7 @@ export default function Layout() {
       path: '/operators',
       subItems: [
         { label: t('nav.sub.operators'), icon: UserCog, path: '/operators' },
+        { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
         { label: t('nav.sub.schedule'), icon: Calendar, path: '/employees/schedule' },
         { label: t('nav.sub.performance'), icon: Award, path: '/employees/performance' },
       ],

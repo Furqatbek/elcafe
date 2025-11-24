@@ -8,6 +8,7 @@ import Restaurants from './pages/Restaurants';
 import Customers from './pages/Customers';
 import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
+import Couriers from './pages/Couriers';
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -35,6 +36,7 @@ function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="operators" element={<Operators />} />
+          <Route path="couriers" element={<Couriers />} />
         </Route>
       </Routes>
     </BrowserRouter>

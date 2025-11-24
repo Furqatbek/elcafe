@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-24
 
+#### Courier Management System
+
+**Backend**:
+- Added `COURIER` role to UserRole enum
+- Created comprehensive courier domain model:
+  - `CourierProfile` entity with user relationship, vehicle info, license, availability
+  - `CourierWallet` entity for balance and transaction tracking
+  - `WalletTransaction` entity for transaction history
+  - `CourierTariff` entity for bonus/fine tariff rules
+  - `CourierBonusFine` entity for applied bonuses/fines
+  - `CourierAttendance` entity for daily attendance tracking
+- Created enums: `CourierType`, `CourierVehicle`, `TariffType`, `TransactionType`
+- Created DTOs: `CourierDTO`, `CreateCourierRequest`, `UpdateCourierRequest`, `CourierWalletDTO`, `TariffDTO`
+- Implemented `CourierService` with full CRUD operations and wallet management
+- Created `CourierController` with paginated REST endpoints:
+  - `GET /api/v1/couriers` - List all couriers with pagination
+  - `GET /api/v1/couriers/{id}` - Get courier details
+  - `GET /api/v1/couriers/{id}/wallet` - Get courier wallet balance
+  - `POST /api/v1/couriers` - Create new courier
+  - `PUT /api/v1/couriers/{id}` - Update courier
+  - `DELETE /api/v1/couriers/{id}` - Delete courier
+- Created Flyway migration V4 with comprehensive database schema
+- Automatic wallet creation on courier registration
+
+**Frontend**:
+- Created Couriers page with Excel-style table and 10 columns
+- Implemented full pagination (5/10/20/50 per page)
+- Added multi-dimensional filtering:
+  - Search by name, email, phone, city
+  - Filter by status (Active/Inactive)
+  - Filter by courier type (Full Time, Part Time, Freelance, Contractor)
+  - Filter by vehicle (Bicycle, Motorcycle, Scooter, Car, On Foot)
+- Created comprehensive CRUD modals:
+  - Create/edit form with validation
+  - Password visibility toggle
+  - Vehicle and courier type selectors
+  - Address and emergency contact fields
+- Added wallet modal displaying:
+  - Current balance
+  - Total earned
+  - Total bonuses
+  - Total fines
+  - Total withdrawn
+- Implemented CSV export with all courier data
+- Added to Employees sub-menu in navigation
+- Added complete i18n support (EN, RU, UZ)
+
+**Features**:
+- Courier profiles linked to User entity with COURIER role
+- Wallet system with automatic balance tracking
+- Support for bonuses and fines (foundation for future tariff system)
+- Multiple courier types and vehicle options
+- Availability and verification status tracking
+- Emergency contact management
+- Admin-only access to courier management
+
+#### Operator Management System
+
+**Backend**:
+- Created operator-specific DTOs and service layer
+- Implemented `OperatorController` with pagination
+- Added `GET /api/v1/operators` endpoint with sorting and pagination
+
+**Frontend**:
+- Created Operators page with Excel-style table
+- Added operator CRUD operations with modals
+- Implemented pagination and filtering
+- Added to Employees sub-menu
+- Full i18n support (EN, RU, UZ)
+
 #### RFM Customer Activity Tracking System
 
 **Backend**:
