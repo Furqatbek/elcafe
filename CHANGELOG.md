@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2025-11-24
 
+#### Analytics System (Phase 2)
+
+**Backend**:
+- Created comprehensive analytics module with 19 metrics across 4 categories:
+
+**Financial Analytics (6 metrics)**:
+  - Daily revenue with payment method breakdown (cash, card, online)
+  - Average Order Value (AOV) calculation
+  - Sales per category with revenue percentages
+  - Cost of Goods Sold (COGS) tracking
+  - Food cost percentage calculation
+  - Gross profit margin analysis
+
+**Profitability Analytics**:
+  - Labor cost tracking and percentage
+  - COGS + Labor cost (crucial profitability metric)
+  - Net profit margin calculation
+  - Contribution margin per menu item
+  - Top/bottom performing products by contribution
+
+**Operational Analytics (9 metrics)**:
+  - Sales per hour with hourly breakdown
+  - Peak hours detection and analysis
+  - Table turnover rate calculation
+  - Order preparation time tracking (min/max/avg/median)
+  - Dine-in wait time analysis
+  - Delivery time tracking and optimization
+  - Percentage of orders meeting targets (15min prep, 30min delivery)
+  - Total orders analyzed
+
+**Customer Analytics (3 metrics)**:
+  - Customer retention rate and churn rate
+  - Customer Lifetime Value (CLV) calculation
+  - One-time vs repeat customer analysis
+  - Customer satisfaction score aggregation (Google, Yandex, Telegram, internal)
+
+**Inventory Analytics (1 metric)**:
+  - Inventory turnover ratio
+  - Days to sell inventory calculation
+  - Ingredient-level turnover tracking
+  - Cost value analysis per ingredient
+
+**Implementation Details**:
+- Created 13 comprehensive DTOs for analytics responses
+- Implemented 4 specialized analytics services:
+  - `FinancialAnalyticsService` - Revenue, COGS, margins, profitability
+  - `OperationalAnalyticsService` - Timing, peak hours, turnover
+  - `CustomerAnalyticsService` - Retention, LTV, satisfaction
+  - `InventoryAnalyticsService` - Turnover calculations
+- Created `AnalyticsSummaryService` for dashboard overview
+- Implemented `AnalyticsController` with 15 REST endpoints:
+  - `GET /api/v1/analytics/summary` - Dashboard with all key metrics
+  - `GET /api/v1/analytics/financial/daily-revenue`
+  - `GET /api/v1/analytics/financial/sales-by-category`
+  - `GET /api/v1/analytics/financial/cogs`
+  - `GET /api/v1/analytics/financial/profitability`
+  - `GET /api/v1/analytics/financial/contribution-margins`
+  - `GET /api/v1/analytics/operational/sales-per-hour`
+  - `GET /api/v1/analytics/operational/peak-hours`
+  - `GET /api/v1/analytics/operational/table-turnover`
+  - `GET /api/v1/analytics/operational/order-timing`
+  - `GET /api/v1/analytics/customer/retention`
+  - `GET /api/v1/analytics/customer/ltv`
+  - `GET /api/v1/analytics/customer/satisfaction`
+  - `GET /api/v1/analytics/inventory/turnover`
+- All endpoints secured with role-based access (ADMIN, OPERATOR)
+- Date range filtering on all analytics
+- Optional restaurant-specific filtering
+- Automatic calculation from existing order data
+
 #### Courier Management System
 
 **Backend**:
