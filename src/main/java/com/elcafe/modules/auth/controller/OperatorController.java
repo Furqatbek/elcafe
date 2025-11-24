@@ -44,7 +44,7 @@ public class OperatorController {
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<OperatorDTO> operators = operatorService.getAllOperators(pageable);
 
-        return ResponseEntity.ok(ApiResponse.success(operators, "Operators retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Operators retrieved successfully", operators));
     }
 
     @GetMapping("/{id}")
@@ -52,7 +52,7 @@ public class OperatorController {
     @Operation(summary = "Get operator by ID", description = "Get operator details by ID")
     public ResponseEntity<ApiResponse<OperatorDTO>> getOperatorById(@PathVariable Long id) {
         OperatorDTO operator = operatorService.getOperatorById(id);
-        return ResponseEntity.ok(ApiResponse.success(operator, "Operator retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Operator retrieved successfully", operator));
     }
 
     @PostMapping
@@ -63,7 +63,7 @@ public class OperatorController {
         OperatorDTO operator = operatorService.createOperator(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(operator, "Operator created successfully"));
+                .body(ApiResponse.success("Operator created successfully", operator));
     }
 
     @PutMapping("/{id}")
@@ -73,7 +73,7 @@ public class OperatorController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateOperatorRequest request) {
         OperatorDTO operator = operatorService.updateOperator(id, request);
-        return ResponseEntity.ok(ApiResponse.success(operator, "Operator updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Operator updated successfully", operator));
     }
 
     @DeleteMapping("/{id}")
@@ -81,6 +81,6 @@ public class OperatorController {
     @Operation(summary = "Delete operator", description = "Delete operator by ID")
     public ResponseEntity<ApiResponse<Void>> deleteOperator(@PathVariable Long id) {
         operatorService.deleteOperator(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Operator deleted successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Operator deleted successfully", null));
     }
 }

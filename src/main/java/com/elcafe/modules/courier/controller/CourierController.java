@@ -45,7 +45,7 @@ public class CourierController {
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<CourierDTO> couriers = courierService.getAllCouriers(pageable);
 
-        return ResponseEntity.ok(ApiResponse.success(couriers, "Couriers retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Couriers retrieved successfully", couriers));
     }
 
     @GetMapping("/{id}")
@@ -53,7 +53,7 @@ public class CourierController {
     @Operation(summary = "Get courier by ID", description = "Get courier details by ID")
     public ResponseEntity<ApiResponse<CourierDTO>> getCourierById(@PathVariable Long id) {
         CourierDTO courier = courierService.getCourierById(id);
-        return ResponseEntity.ok(ApiResponse.success(courier, "Courier retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Courier retrieved successfully", courier));
     }
 
     @GetMapping("/{id}/wallet")
@@ -61,7 +61,7 @@ public class CourierController {
     @Operation(summary = "Get courier wallet", description = "Get courier wallet balance and statistics")
     public ResponseEntity<ApiResponse<CourierWalletDTO>> getCourierWallet(@PathVariable Long id) {
         CourierWalletDTO wallet = courierService.getCourierWallet(id);
-        return ResponseEntity.ok(ApiResponse.success(wallet, "Wallet retrieved successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Wallet retrieved successfully", wallet));
     }
 
     @PostMapping
@@ -72,7 +72,7 @@ public class CourierController {
         CourierDTO courier = courierService.createCourier(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(ApiResponse.success(courier, "Courier created successfully"));
+                .body(ApiResponse.success("Courier created successfully", courier));
     }
 
     @PutMapping("/{id}")
@@ -82,7 +82,7 @@ public class CourierController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateCourierRequest request) {
         CourierDTO courier = courierService.updateCourier(id, request);
-        return ResponseEntity.ok(ApiResponse.success(courier, "Courier updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Courier updated successfully", courier));
     }
 
     @DeleteMapping("/{id}")
@@ -90,6 +90,6 @@ public class CourierController {
     @Operation(summary = "Delete courier", description = "Delete courier by ID")
     public ResponseEntity<ApiResponse<Void>> deleteCourier(@PathVariable Long id) {
         courierService.deleteCourier(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Courier deleted successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Courier deleted successfully", null));
     }
 }
