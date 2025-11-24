@@ -15,7 +15,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/customers/activity")
+@RequestMapping("/api/v1/customers/activity")
 @RequiredArgsConstructor
 public class CustomerActivityController {
 
