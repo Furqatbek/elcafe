@@ -2,7 +2,6 @@ package com.elcafe.modules.sms.service;
 
 import com.elcafe.modules.sms.config.SmsProperties;
 import com.elcafe.modules.sms.dto.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
@@ -20,7 +19,6 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SmsService {
 
     private final SmsProperties smsProperties;
