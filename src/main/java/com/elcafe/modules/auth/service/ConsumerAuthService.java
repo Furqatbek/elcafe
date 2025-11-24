@@ -157,16 +157,18 @@ public class ConsumerAuthService {
         otpCodeRepository.save(otp);
 
         // Find or create customer
-        Customer customer = customerRepository.findByPhoneNumber(phoneNumber)
+        Customer customer = customerRepository.findByPhone(phoneNumber)
                 .orElse(null);
 
         boolean isNewUser = customer == null;
 
         if (isNewUser) {
-            // Create new customer
+            // Create new customer with placeholder name (can be updated later)
             customer = Customer.builder()
-                    .phoneNumber(phoneNumber)
-                    .registrationSource("MOBILE_APP")
+                    .phone(phoneNumber)
+                    .firstName("Customer")
+                    .lastName(phoneNumber.substring(Math.max(0, phoneNumber.length() - 4))) // Last 4 digits
+                    .registrationSource(com.elcafe.modules.customer.enums.RegistrationSource.MOBILE_APP)
                     .build();
             customer = customerRepository.save(customer);
             log.info("Created new customer for phone number: {}", phoneNumber);
