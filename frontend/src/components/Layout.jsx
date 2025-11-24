@@ -92,7 +92,10 @@ export default function Layout() {
       label: t('nav.clients'),
       icon: Users,
       path: '/customers',
-      subItems: [],
+      subItems: [
+        { label: t('nav.sub.customers'), icon: UserCheck, path: '/customers' },
+        { label: t('nav.sub.customerSegments'), icon: Target, path: '/customer-segments' },
+      ],
     },
     {
       id: 'employees',

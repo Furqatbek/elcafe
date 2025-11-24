@@ -48,6 +48,8 @@
       "allOrders": "Barcha buyurtmalar",
       "pending": "Kutilmoqda",
       "completed": "Bajarilgan",
+      "customers": "Mijozlar",
+      "customerSegments": "Mijoz segmentlari",
       "allClients": "Barcha mijozlar",
       "newClients": "Yangi mijozlar",
       "clientHistory": "Mijozlar tarixi",
@@ -261,6 +263,11 @@
       "walkin": "Shaxsiy tashrif",
       "other": "Boshqa"
     }
+  },
+  "customerSegments": {
+    "title": "Mijoz segmentlari",
+    "totalSegments": "Jami segmentlar",
+    "description": "RFM tahlili va mijozlarni so'nggi faollik, chastota va xarid summasi bo'yicha segmentatsiya"
   },
   "couriers": {
     "title": "Kuryerlar",

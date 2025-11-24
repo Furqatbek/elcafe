@@ -48,6 +48,8 @@
       "allOrders": "Все заказы",
       "pending": "Ожидающие",
       "completed": "Выполненные",
+      "customers": "Клиенты",
+      "customerSegments": "Сегменты клиентов",
       "allClients": "Все клиенты",
       "newClients": "Новые клиенты",
       "clientHistory": "История клиентов",
@@ -261,6 +263,11 @@
       "walkin": "Личное посещение",
       "other": "Другое"
     }
+  },
+  "customerSegments": {
+    "title": "Сегменты клиентов",
+    "totalSegments": "Всего сегментов",
+    "description": "RFM анализ и сегментация клиентов по давности, частоте и сумме покупок"
   },
   "couriers": {
     "title": "Курьеры",

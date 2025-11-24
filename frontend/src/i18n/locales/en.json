@@ -48,6 +48,8 @@
       "allOrders": "All Orders",
       "pending": "Pending",
       "completed": "Completed",
+      "customers": "Customers",
+      "customerSegments": "Customer Segments",
       "allClients": "All Clients",
       "newClients": "New Clients",
       "clientHistory": "Client History",
@@ -261,6 +263,11 @@
       "walkin": "Walk-in",
       "other": "Other"
     }
+  },
+  "customerSegments": {
+    "title": "Customer Segments",
+    "totalSegments": "Total Segments",
+    "description": "RFM analysis and customer segmentation based on Recency, Frequency, and Monetary value"
   },
   "couriers": {
     "title": "Couriers",
