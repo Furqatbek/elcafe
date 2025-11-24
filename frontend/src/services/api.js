@@ -116,4 +116,30 @@ export const courierAPI = {
   delete: (id) => api.delete(`/couriers/${id}`),
 };
 
+export const analyticsAPI = {
+  // Summary
+  getSummary: (params) => api.get('/analytics/summary', { params }),
+
+  // Financial Analytics
+  getDailyRevenue: (params) => api.get('/analytics/financial/daily-revenue', { params }),
+  getSalesByCategory: (params) => api.get('/analytics/financial/sales-by-category', { params }),
+  getCOGS: (params) => api.get('/analytics/financial/cogs', { params }),
+  getProfitability: (params) => api.get('/analytics/financial/profitability', { params }),
+  getContributionMargins: (params) => api.get('/analytics/financial/contribution-margins', { params }),
+
+  // Operational Analytics
+  getSalesPerHour: (params) => api.get('/analytics/operational/sales-per-hour', { params }),
+  getPeakHours: (params) => api.get('/analytics/operational/peak-hours', { params }),
+  getTableTurnover: (params) => api.get('/analytics/operational/table-turnover', { params }),
+  getOrderTiming: (params) => api.get('/analytics/operational/order-timing', { params }),
+
+  // Customer Analytics
+  getCustomerRetention: (params) => api.get('/analytics/customer/retention', { params }),
+  getCustomerLTV: (params) => api.get('/analytics/customer/ltv', { params }),
+  getCustomerSatisfaction: (params) => api.get('/analytics/customer/satisfaction', { params }),
+
+  // Inventory Analytics
+  getInventoryTurnover: (params) => api.get('/analytics/inventory/turnover', { params }),
+};
+
 export default api;

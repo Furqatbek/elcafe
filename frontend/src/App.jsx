@@ -9,6 +9,10 @@ import Customers from './pages/Customers';
 import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
 import Couriers from './pages/Couriers';
+import FinancialAnalytics from './pages/FinancialAnalytics';
+import OperationalAnalytics from './pages/OperationalAnalytics';
+import CustomerAnalytics from './pages/CustomerAnalytics';
+import InventoryAnalytics from './pages/InventoryAnalytics';
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -30,6 +34,10 @@ function App() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="dashboard/financial-analytics" element={<FinancialAnalytics />} />
+          <Route path="dashboard/operational-analytics" element={<OperationalAnalytics />} />
+          <Route path="dashboard/customer-analytics" element={<CustomerAnalytics />} />
+          <Route path="dashboard/inventory-analytics" element={<InventoryAnalytics />} />
           <Route path="orders" element={<Orders />} />
           <Route path="restaurants" element={<Restaurants />} />
           <Route path="menu" element={<Dashboard />} />

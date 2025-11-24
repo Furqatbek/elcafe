@@ -72,9 +72,10 @@ export default function Layout() {
       icon: LayoutDashboard,
       path: '/dashboard',
       subItems: [
-        { label: t('nav.sub.analytics'), icon: BarChart3, path: '/dashboard/analytics' },
-        { label: t('nav.sub.performance'), icon: TrendingUp, path: '/dashboard/performance' },
-        { label: t('nav.sub.reports'), icon: PieChart, path: '/dashboard/reports' },
+        { label: t('nav.sub.financialAnalytics'), icon: TrendingUp, path: '/dashboard/financial-analytics' },
+        { label: t('nav.sub.operationalAnalytics'), icon: BarChart3, path: '/dashboard/operational-analytics' },
+        { label: t('nav.sub.customerAnalytics'), icon: Users, path: '/dashboard/customer-analytics' },
+        { label: t('nav.sub.inventoryAnalytics'), icon: Package, path: '/dashboard/inventory-analytics' },
       ],
     },
     {
