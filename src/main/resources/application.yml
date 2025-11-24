@@ -130,6 +130,12 @@ app:
       access-token-expiration: 3600000 # 1 hour (in milliseconds)
       refresh-token-expiration: 2592000000 # 30 days (in milliseconds)
 
+  file:
+    upload-dir: ${FILE_UPLOAD_DIR:uploads}
+    base-url: ${FILE_BASE_URL:http://localhost:8080/uploads}
+    max-file-size: 10MB
+    max-request-size: 10MB
+
 # Eskiz.uz SMS Broker Configuration
 eskiz:
   sms:
