@@ -118,3 +118,15 @@ app:
 
   courier:
     webhook-secret: ${COURIER_WEBHOOK_SECRET:change-me-in-production}
+
+# Eskiz.uz SMS Broker Configuration
+eskiz:
+  sms:
+    base-url: ${ESKIZ_SMS_BASE_URL:https://notify.eskiz.uz/api}
+    email: ${ESKIZ_SMS_EMAIL:}
+    password: ${ESKIZ_SMS_PASSWORD:}
+    enabled: ${ESKIZ_SMS_ENABLED:true}
+    connection-timeout: 30000
+    read-timeout: 30000
+    token-expiration-ms: 2505600000 # 29 days
+    callback-url: ${ESKIZ_SMS_CALLBACK_URL:}

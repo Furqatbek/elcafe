@@ -250,6 +250,20 @@ CANCELLED
 ### Courier Webhooks
 - `POST /api/v1/courier/webhook/delivery-status` - Receive delivery status updates
 
+### SMS (Admin/Operator only)
+- `POST /api/v1/sms/auth/login` - Authenticate with SMS broker
+- `PATCH /api/v1/sms/auth/refresh` - Refresh SMS broker token
+- `GET /api/v1/sms/auth/user` - Get SMS broker user info
+- `GET /api/v1/sms/user/limit` - Get user SMS limit
+- `GET /api/v1/sms/templates` - Get SMS templates
+- `POST /api/v1/sms/send` - Send single SMS
+- `POST /api/v1/sms/send-batch` - Send batch SMS
+- `POST /api/v1/sms/send-global` - Send global SMS to multiple recipients
+- `GET /api/v1/sms/message/{id}/status` - Get message status
+- `GET /api/v1/sms/messages` - Get user messages (paginated)
+- `GET /api/v1/sms/dispatch/{dispatchId}/messages` - Get messages by dispatch
+- `GET /api/v1/sms/dispatch/{dispatchId}/status` - Get dispatch status
+
 ## 🗄️ Database Schema
 
 The application uses PostgreSQL with the following main tables:
@@ -309,6 +323,26 @@ app:
     menu-ttl: 1800  # 30 minutes
     restaurant-ttl: 3600  # 1 hour
 ```
+
+### SMS Integration (Eskiz.uz)
+```yaml
+eskiz:
+  sms:
+    base-url: https://notify.eskiz.uz/api
+    email: your-email@example.com
+    password: your-password
+    enabled: true  # Set to false to disable SMS sending (mock mode)
+    connection-timeout: 30000
+    read-timeout: 30000
+    token-expiration-ms: 2505600000  # 29 days
+    callback-url: https://your-domain.com/api/v1/sms/callback
+```
+
+Environment variables:
+- `ESKIZ_SMS_EMAIL` - Eskiz.uz account email
+- `ESKIZ_SMS_PASSWORD` - Eskiz.uz account password
+- `ESKIZ_SMS_ENABLED` - Enable/disable SMS sending (default: true)
+- `ESKIZ_SMS_CALLBACK_URL` - Callback URL for delivery reports
 
 ## 🧪 Testing
 

@@ -79,6 +79,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added to Employees sub-menu
 - Full i18n support (EN, RU, UZ)
 
+#### SMS Integration (Eskiz.uz)
+
+**Backend**:
+- Integrated with Eskiz.uz SMS broker API
+- Created comprehensive SMS module with configuration, DTOs, service, and controller
+- Implemented `SmsProperties` configuration class with environment variable support
+- Created enums: `MessageStatus`, `DispatchStatus`
+- Created DTOs for all API operations:
+  - Authentication: `AuthRequest`, `AuthResponse`
+  - Sending: `SendSmsRequest`, `SendBatchSmsRequest`, `SendGlobalSmsRequest`, `SendSmsResponse`
+  - Status: `MessageStatusResponse`, `DispatchStatusResponse`
+  - User info: `UserInfoResponse`, `UserLimitResponse`
+  - Templates: `TemplateResponse`
+  - Messages: `UserMessagesResponse`
+- Implemented `SmsService` with automatic token management and all available methods:
+  - `authenticate()` - Login to SMS broker
+  - `refreshToken()` - Refresh authentication token
+  - `getUserInfo()` - Get user account information
+  - `getUserLimit()` - Get SMS limit and count
+  - `sendSms()` - Send single SMS
+  - `sendBatchSms()` - Send batch SMS
+  - `sendGlobalSms()` - Send global SMS to multiple recipients
+  - `getMessageStatus()` - Get message delivery status
+  - `getUserMessages()` - Get user messages with pagination
+  - `getUserMessagesByDispatch()` - Get messages by dispatch ID
+  - `getDispatchStatus()` - Get dispatch status and statistics
+  - `getTemplates()` - Get SMS templates
+- Created `SmsController` with 12 REST endpoints:
+  - `POST /api/v1/sms/auth/login` - Authenticate with SMS broker
+  - `PATCH /api/v1/sms/auth/refresh` - Refresh token
+  - `GET /api/v1/sms/auth/user` - Get user info
+  - `GET /api/v1/sms/user/limit` - Get user limit
+  - `GET /api/v1/sms/templates` - Get templates
+  - `POST /api/v1/sms/send` - Send single SMS
+  - `POST /api/v1/sms/send-batch` - Send batch SMS
+  - `POST /api/v1/sms/send-global` - Send global SMS
+  - `GET /api/v1/sms/message/{id}/status` - Get message status
+  - `GET /api/v1/sms/messages` - Get user messages (paginated)
+  - `GET /api/v1/sms/dispatch/{dispatchId}/messages` - Get dispatch messages
+  - `GET /api/v1/sms/dispatch/{dispatchId}/status` - Get dispatch status
+- Added configuration to `application.yml` with environment variables
+- Implemented automatic token refresh (29-day expiration)
+- Mock mode support for testing without sending real SMS
+
+**Features**:
+- Complete integration with Eskiz.uz SMS API
+- Automatic authentication and token management
+- Support for single, batch, and global SMS sending
+- Message status tracking and delivery reports
+- Dispatch management for bulk campaigns
+- SMS templates support
+- User limit monitoring
+- Mock mode for development/testing
+- Admin and Operator role access control
+- Comprehensive error handling and logging
+- Configurable timeouts and retry logic
+
+**Configuration**:
+Environment variables:
+- `ESKIZ_SMS_EMAIL` - SMS broker account email
+- `ESKIZ_SMS_PASSWORD` - SMS broker account password
+- `ESKIZ_SMS_ENABLED` - Enable/disable SMS sending (default: true)
+- `ESKIZ_SMS_BASE_URL` - API base URL (default: https://notify.eskiz.uz/api)
+- `ESKIZ_SMS_CALLBACK_URL` - Callback URL for delivery reports
+
 #### RFM Customer Activity Tracking System
 
 **Backend**:
