@@ -202,6 +202,12 @@ CANCELLED
 - `POST /api/v1/auth/forgot-password` - Request password reset
 - `POST /api/v1/auth/reset-password` - Reset password
 
+### Consumer Authentication (OTP-based for Mobile/Web)
+- `POST /api/v1/consumer/auth/login` - Request OTP code via SMS
+- `POST /api/v1/consumer/auth/verify` - Verify OTP and get tokens
+- `POST /api/v1/consumer/auth/refresh` - Refresh consumer access token
+- `POST /api/v1/consumer/auth/logout` - Logout and invalidate session
+
 ### Restaurants (Admin only for write operations)
 - `GET /api/v1/restaurants` - List all restaurants
 - `GET /api/v1/restaurants/{id}` - Get restaurant details
@@ -343,6 +349,33 @@ Environment variables:
 - `ESKIZ_SMS_PASSWORD` - Eskiz.uz account password
 - `ESKIZ_SMS_ENABLED` - Enable/disable SMS sending (default: true)
 - `ESKIZ_SMS_CALLBACK_URL` - Callback URL for delivery reports
+
+### Consumer Authentication (OTP)
+```yaml
+app:
+  consumer:
+    otp:
+      expiration-minutes: 5  # OTP validity duration
+      max-attempts: 3  # Maximum verification attempts
+      rate-limit-minutes: 1  # Rate limit time window
+      rate-limit-count: 3  # Maximum OTP requests within window
+      include-in-response: false  # Include OTP in response (dev/test only)
+    session:
+      access-token-expiration: 3600000  # 1 hour
+      refresh-token-expiration: 2592000000  # 30 days
+```
+
+Environment variables:
+- `CONSUMER_OTP_INCLUDE_IN_RESPONSE` - Include OTP in API response for testing (default: false)
+
+Features:
+- Phone-based authentication with SMS OTP
+- 6-digit OTP codes with 5-minute expiration
+- Rate limiting to prevent abuse (3 requests per minute)
+- Automatic customer creation on first login
+- JWT-based session management with refresh tokens
+- Automatic cleanup of expired OTPs and sessions
+- IP address and user agent tracking
 
 ## 🧪 Testing
 

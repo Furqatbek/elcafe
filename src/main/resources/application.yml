@@ -119,6 +119,17 @@ app:
   courier:
     webhook-secret: ${COURIER_WEBHOOK_SECRET:change-me-in-production}
 
+  consumer:
+    otp:
+      expiration-minutes: 5 # OTP validity duration
+      max-attempts: 3 # Maximum verification attempts
+      rate-limit-minutes: 1 # Rate limit time window
+      rate-limit-count: 3 # Maximum OTP requests within time window
+      include-in-response: ${CONSUMER_OTP_INCLUDE_IN_RESPONSE:false} # Include OTP in response (dev/test only)
+    session:
+      access-token-expiration: 3600000 # 1 hour (in milliseconds)
+      refresh-token-expiration: 2592000000 # 30 days (in milliseconds)
+
 # Eskiz.uz SMS Broker Configuration
 eskiz:
   sms:

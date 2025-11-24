@@ -144,6 +144,75 @@ Environment variables:
 - `ESKIZ_SMS_BASE_URL` - API base URL (default: https://notify.eskiz.uz/api)
 - `ESKIZ_SMS_CALLBACK_URL` - Callback URL for delivery reports
 
+#### Consumer OTP Authentication System
+
+**Backend**:
+- Implemented phone-based OTP authentication for consumers (mobile app/website users)
+- Created database migration V5 for OTP and session management
+- Created entities:
+  - `OtpCode` - Stores 6-digit OTP codes with expiration and verification tracking
+  - `ConsumerSession` - Manages JWT-based consumer sessions with refresh tokens
+- Created repositories with custom queries:
+  - `OtpCodeRepository` - OTP management with rate limiting and cleanup
+  - `ConsumerSessionRepository` - Session management and invalidation
+- Created DTOs:
+  - `ConsumerLoginRequest` - Phone number input for OTP request
+  - `ConsumerLoginResponse` - OTP sent confirmation with expiration
+  - `VerifyOtpRequest` - OTP verification input
+  - `ConsumerAuthResponse` - Authentication tokens and session info
+  - `RefreshTokenRequest` - Token refresh input (reused from existing)
+- Implemented `ConsumerAuthService` with comprehensive features:
+  - `requestOtp()` - Generate and send 6-digit OTP via SMS
+  - `verifyOtp()` - Verify OTP and create session
+  - `refreshAccessToken()` - Refresh expired access tokens
+  - `logout()` - Invalidate consumer session
+  - `cleanupExpiredData()` - Scheduled cleanup task (hourly)
+- Created `ConsumerAuthController` with 4 REST endpoints:
+  - `POST /api/v1/consumer/auth/login` - Request OTP
+  - `POST /api/v1/consumer/auth/verify` - Verify OTP and get tokens
+  - `POST /api/v1/consumer/auth/refresh` - Refresh access token
+  - `POST /api/v1/consumer/auth/logout` - Logout and invalidate session
+- Updated `SecurityConfig` to allow public access to consumer auth endpoints
+- Added `@EnableScheduling` to main application for cleanup tasks
+- Integrated with SMS service for OTP delivery
+
+**Features**:
+- Phone-only authentication (no password required)
+- 6-digit OTP codes with 5-minute expiration
+- Rate limiting: 3 OTP requests per minute per phone number
+- Maximum 3 verification attempts per OTP
+- JWT access tokens (1 hour expiration)
+- Refresh tokens (30 days expiration)
+- Automatic customer creation on first login
+- Session tracking with IP address and user agent
+- Automatic invalidation of old sessions on new login
+- Scheduled cleanup of expired OTPs and sessions (runs hourly)
+- Development mode: Include OTP in response (configurable)
+- Comprehensive error handling and validation
+- Phone number normalization
+- Security features:
+  - OTP attempt limiting
+  - Rate limiting per phone number
+  - Session invalidation support
+  - Token-based authentication
+
+**Database Schema**:
+- `otp_codes` table with indexes on phone_number, expires_at, is_verified
+- `consumer_sessions` table with indexes on tokens and expiration
+- Foreign key to customers table for linked accounts
+
+**Configuration**:
+Environment variables:
+- `CONSUMER_OTP_INCLUDE_IN_RESPONSE` - Include OTP in response for testing (default: false)
+
+Configuration properties:
+- `app.consumer.otp.expiration-minutes` - OTP validity (default: 5)
+- `app.consumer.otp.max-attempts` - Max verification attempts (default: 3)
+- `app.consumer.otp.rate-limit-minutes` - Rate limit window (default: 1)
+- `app.consumer.otp.rate-limit-count` - Max requests in window (default: 3)
+- `app.consumer.session.access-token-expiration` - Access token TTL (default: 1 hour)
+- `app.consumer.session.refresh-token-expiration` - Refresh token TTL (default: 30 days)
+
 #### RFM Customer Activity Tracking System
 
 **Backend**:
