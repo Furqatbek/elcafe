@@ -14,7 +14,8 @@ A complete full-stack production-ready system for restaurant management and deli
 - **Menu Management**: Categories, products, variants, and add-ons with Redis caching
 - **Order Management**: Full order lifecycle from creation to delivery with status tracking
 - **Courier Integration**: Pluggable courier provider system with webhook support
-- **CRM**: Customer management with order history and analytics
+- **CRM**: Customer management with order history and RFM analytics
+- **RFM Analysis**: Customer segmentation based on Recency, Frequency, and Monetary value with 11 customer segments
 
 ### Technical Features
 
@@ -226,6 +227,11 @@ CANCELLED
 - `PUT /api/v1/customers/{id}` - Update customer
 - `GET /api/v1/customers/{id}/orders` - Get customer order history
 
+### Customer Activity & RFM Analysis
+- `GET /api/v1/customers/activity` - Get all customers with RFM metrics
+- `GET /api/v1/customers/activity/filter` - Filter customers with query parameters
+- `POST /api/v1/customers/activity/filter` - Advanced filtering with request body
+
 ### Courier
 - `POST /api/v1/courier/webhook/delivery-status` - Receive delivery status updates
 
@@ -242,8 +248,8 @@ The application uses PostgreSQL with the following main tables:
 - **product_variants** - Product variations (size, type, etc.)
 - **addon_groups** - Add-on categories
 - **addons** - Individual add-ons
-- **customers** - Customer information
-- **orders** - Order records
+- **customers** - Customer information with registration source tracking
+- **orders** - Order records with order source tracking
 - **order_items** - Order line items
 - **delivery_info** - Delivery details
 - **payments** - Payment records
@@ -363,6 +369,10 @@ docker run -p 8080:8080 \
 - **Lazy loading** for JPA relationships
 - **Async processing** for non-blocking operations
 
+## 📋 Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for a detailed list of changes, new features, and fixes.
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -385,6 +395,6 @@ Built with Spring Boot, PostgreSQL, Redis, and modern Java best practices.
 
 ---
 
-**Version**: 1.0.0
-**Last Updated**: 2025-01-23
+**Version**: 1.1.0
+**Last Updated**: 2025-11-24
 **Built with**: ☕ Java 21 LTS + 🍃 Spring Boot 3.x
