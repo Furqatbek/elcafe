@@ -101,9 +101,9 @@ export default function Layout() {
       id: 'employees',
       label: t('nav.employees'),
       icon: UserCog,
-      path: '/employees',
+      path: '/operators',
       subItems: [
-        { label: t('nav.sub.allEmployees'), icon: Briefcase, path: '/employees' },
+        { label: t('nav.sub.operators'), icon: UserCog, path: '/operators' },
         { label: t('nav.sub.schedule'), icon: Calendar, path: '/employees/schedule' },
         { label: t('nav.sub.performance'), icon: Award, path: '/employees/performance' },
       ],
