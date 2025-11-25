@@ -9,6 +9,7 @@ import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.entity.*;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
@@ -108,8 +109,8 @@ public class ConsumerOrderService {
                 .city(request.getDeliveryInfo().getCity())
                 .state(request.getDeliveryInfo().getState())
                 .zipCode(request.getDeliveryInfo().getZipCode())
-                .latitude(request.getDeliveryInfo().getLatitude())
-                .longitude(request.getDeliveryInfo().getLongitude())
+                .latitude(request.getDeliveryInfo().getLatitude() != null ? request.getDeliveryInfo().getLatitude().doubleValue() : null)
+                .longitude(request.getDeliveryInfo().getLongitude() != null ? request.getDeliveryInfo().getLongitude().doubleValue() : null)
                 .deliveryInstructions(request.getDeliveryInfo().getDeliveryInstructions())
                 .build();
         order.setDeliveryInfo(deliveryInfo);
@@ -117,7 +118,7 @@ public class ConsumerOrderService {
         // 7. Add payment info
         Payment payment = Payment.builder()
                 .order(order)
-                .method(request.getPaymentMethod())
+                .method(PaymentMethod.valueOf(request.getPaymentMethod()))
                 .status(PaymentStatus.PENDING)
                 .amount(total)
                 .build();
@@ -231,8 +232,8 @@ public class ConsumerOrderService {
                     .city(order.getDeliveryInfo().getCity())
                     .state(order.getDeliveryInfo().getState())
                     .zipCode(order.getDeliveryInfo().getZipCode())
-                    .latitude(order.getDeliveryInfo().getLatitude())
-                    .longitude(order.getDeliveryInfo().getLongitude())
+                    .latitude(order.getDeliveryInfo().getLatitude() != null ? BigDecimal.valueOf(order.getDeliveryInfo().getLatitude()) : null)
+                    .longitude(order.getDeliveryInfo().getLongitude() != null ? BigDecimal.valueOf(order.getDeliveryInfo().getLongitude()) : null)
                     .deliveryInstructions(order.getDeliveryInfo().getDeliveryInstructions())
                     .courierName(order.getDeliveryInfo().getCourierName())
                     .courierPhone(order.getDeliveryInfo().getCourierPhone())
@@ -242,8 +243,8 @@ public class ConsumerOrderService {
         OrderResponse.PaymentInfo paymentInfo = null;
         if (order.getPayment() != null) {
             paymentInfo = OrderResponse.PaymentInfo.builder()
-                    .paymentMethod(order.getPayment().getMethod())
-                    .paymentStatus(order.getPayment().getStatus())
+                    .paymentMethod(order.getPayment().getMethod().name())
+                    .paymentStatus(order.getPayment().getStatus().name())
                     .amount(order.getPayment().getAmount())
                     .build();
         }
