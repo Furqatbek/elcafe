@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, Plus, Download, Edit, Trash2, X, Eye, EyeOff } from 'lucide-react';
+import { Search, Plus, Download, Edit, Trash2, X, Eye, EyeOff, Shuffle } from 'lucide-react';
 import { operatorAPI } from '../services/api';
 import { format } from 'date-fns';
+import { generatePassword, copyToClipboard } from '../utils/passwordGenerator';
 
 export default function Operators() {
   const { t } = useTranslation();
@@ -519,25 +520,46 @@ export default function Operators() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t('operators.password')} {!editingOperator && '*'}
                 </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    placeholder={editingOperator ? t('operators.passwordPlaceholder') : ''}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10 ${
-                      errors.password ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder={editingOperator ? t('operators.passwordPlaceholder') : ''}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10 ${
+                        errors.password ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={async () => {
+                      const newPassword = generatePassword(12);
+                      setFormData({ ...formData, password: newPassword });
+                      setShowPassword(true);
+                      await copyToClipboard(newPassword);
+                    }}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2 whitespace-nowrap"
+                    title="Generate secure password"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    <Shuffle className="w-4 h-4" />
+                    <span className="hidden sm:inline">Generate</span>
                   </button>
                 </div>
                 {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
+                {formData.password && showPassword && (
+                  <p className="text-xs text-green-600 mt-1">
+                    ✓ Password copied to clipboard
+                  </p>
+                )}
               </div>
 
               <div>
