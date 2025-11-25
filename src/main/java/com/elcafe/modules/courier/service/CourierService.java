@@ -303,7 +303,7 @@ public class CourierService {
 
         // Get latest location if available
         CourierLocation latestLocation = courierLocationRepository
-                .findTopByCourierIdOrderByTimestampDesc(courierId)
+                .findFirstByCourierIdOrderByTimestampDesc(courierId)
                 .orElse(null);
 
         return CourierStatusResponse.builder()
@@ -328,7 +328,7 @@ public class CourierService {
 
         // Get latest location
         CourierLocation latestLocation = courierLocationRepository
-                .findTopByCourierIdOrderByTimestampDesc(courierId)
+                .findFirstByCourierIdOrderByTimestampDesc(courierId)
                 .orElse(null);
 
         return CourierStatusResponse.builder()
