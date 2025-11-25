@@ -25,7 +25,7 @@ import java.util.List;
 @Entity
 @Table(name = "products")
 @EntityListeners(AuditingEntityListener.class)
-@JsonIgnoreProperties({"variants", "ingredients", "linkedItems", "addOnGroups", "hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"category", "variants", "ingredients", "linkedItems", "addOnGroups", "hibernateLazyInitializer", "handler"})
 public class Product {
 
     @Id
