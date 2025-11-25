@@ -1,18 +1,41 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Navigation, Clock, User, RefreshCw, Circle } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
+import { MapPin, Navigation, Clock, User, RefreshCw, Circle as CircleIcon } from 'lucide-react';
 import { courierAPI } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default marker icons in React-Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom marker icons for different statuses
+const createCustomIcon = (color) => {
+  return L.divIcon({
+    className: 'custom-div-icon',
+    html: `<div style="background-color: ${color}; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+};
+
+const statusIcons = {
+  ONLINE: createCustomIcon('#22c55e'),
+  ON_DELIVERY: createCustomIcon('#3b82f6'),
+  BUSY: createCustomIcon('#eab308'),
+  OFFLINE: createCustomIcon('#9ca3af'),
+};
 
 /**
- * Courier Map - Real-time courier tracking dashboard
- * Shows all couriers with their online/offline status and current deliveries
- *
- * TODO: Install react-leaflet for full map integration:
- * npm install react-leaflet leaflet
- * Then import: import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+ * Courier Map - Real-time courier tracking dashboard with interactive map
  */
 export default function CourierMap() {
   const { t } = useTranslation();
@@ -25,6 +48,10 @@ export default function CourierMap() {
     onDelivery: 0,
     busy: 0
   });
+
+  // Default map center (Tashkent, Uzbekistan)
+  const defaultCenter = [41.2995, 69.2401];
+  const [mapCenter, setMapCenter] = useState(defaultCenter);
 
   // Fetch all couriers with their status
   const fetchCouriers = async () => {
@@ -54,6 +81,19 @@ export default function CourierMap() {
           }
         })
       );
+
+      // Filter couriers with location data for map
+      const couriersWithLocation = couriersWithStatus.filter(
+        c => c.status?.latitude && c.status?.longitude
+      );
+
+      // Update map center to first online courier with location
+      if (couriersWithLocation.length > 0) {
+        const firstOnline = couriersWithLocation.find(c => c.status?.isOnline);
+        if (firstOnline) {
+          setMapCenter([firstOnline.status.latitude, firstOnline.status.longitude]);
+        }
+      }
 
       setCouriers(couriersWithStatus);
 
@@ -141,6 +181,11 @@ export default function CourierMap() {
     return new Date(lastSeenAt).toLocaleDateString();
   };
 
+  // Filter couriers with valid location data
+  const couriersOnMap = couriers.filter(
+    c => c.status?.latitude && c.status?.longitude
+  );
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -169,7 +214,7 @@ export default function CourierMap() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <Circle className="h-3 w-3 fill-green-500 text-green-500" />
+              <CircleIcon className="h-3 w-3 fill-green-500 text-green-500" />
               <span className="text-2xl font-bold">{stats.online}</span>
             </div>
           </CardContent>
@@ -183,7 +228,7 @@ export default function CourierMap() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <Circle className="h-3 w-3 fill-blue-500 text-blue-500" />
+              <CircleIcon className="h-3 w-3 fill-blue-500 text-blue-500" />
               <span className="text-2xl font-bold">{stats.onDelivery}</span>
             </div>
           </CardContent>
@@ -197,7 +242,7 @@ export default function CourierMap() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <Circle className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+              <CircleIcon className="h-3 w-3 fill-yellow-500 text-yellow-500" />
               <span className="text-2xl font-bold">{stats.busy}</span>
             </div>
           </CardContent>
@@ -211,7 +256,7 @@ export default function CourierMap() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-2">
-              <Circle className="h-3 w-3 fill-gray-400 text-gray-400" />
+              <CircleIcon className="h-3 w-3 fill-gray-400 text-gray-400" />
               <span className="text-2xl font-bold">{stats.offline}</span>
             </div>
           </CardContent>
@@ -224,20 +269,72 @@ export default function CourierMap() {
         {t('courier.map.lastUpdate', 'Last updated')}: {lastUpdate.toLocaleTimeString()}
       </div>
 
-      {/* Map Placeholder */}
-      <Card className="bg-gray-50 border-dashed">
-        <CardContent className="p-12 text-center">
-          <MapPin className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-semibold mb-2">
-            {t('courier.map.mapPlaceholder.title', 'Interactive Map View')}
-          </h3>
-          <p className="text-gray-500 mb-4">
-            {t('courier.map.mapPlaceholder.description',
-              'Install react-leaflet to see couriers on an interactive map')}
-          </p>
-          <code className="text-sm bg-gray-200 px-3 py-1 rounded">
-            npm install react-leaflet leaflet
-          </code>
+      {/* Interactive Map */}
+      <Card>
+        <CardContent className="p-0">
+          <div style={{ height: '500px', width: '100%' }}>
+            <MapContainer
+              center={mapCenter}
+              zoom={12}
+              style={{ height: '100%', width: '100%', borderRadius: '0.5rem' }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+
+              {couriersOnMap.map((courier) => (
+                <Marker
+                  key={courier.id}
+                  position={[courier.status.latitude, courier.status.longitude]}
+                  icon={statusIcons[courier.status.currentStatus] || statusIcons.OFFLINE}
+                >
+                  <Popup>
+                    <div className="p-2">
+                      <div className="font-semibold text-lg mb-2">
+                        {courier.firstName} {courier.lastName}
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getStatusBadgeVariant(courier.status.currentStatus)}>
+                            {getStatusLabel(courier.status.currentStatus)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Navigation className="h-3 w-3" />
+                          <span>{courier.vehicle}</span>
+                        </div>
+                        {courier.phone && (
+                          <div className="flex items-center gap-2">
+                            <span>📞</span>
+                            <span>{courier.phone}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatLastSeen(courier.status.lastSeenAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Popup>
+
+                  {/* Accuracy circle if available */}
+                  {courier.status.accuracy && (
+                    <Circle
+                      center={[courier.status.latitude, courier.status.longitude]}
+                      radius={courier.status.accuracy}
+                      pathOptions={{
+                        fillColor: '#3b82f6',
+                        fillOpacity: 0.1,
+                        color: '#3b82f6',
+                        weight: 1
+                      }}
+                    />
+                  )}
+                </Marker>
+              ))}
+            </MapContainer>
+          </div>
         </CardContent>
       </Card>
 
@@ -260,7 +357,16 @@ export default function CourierMap() {
             </div>
           ) : (
             couriers.map((courier) => (
-              <Card key={courier.id} className="hover:shadow-lg transition-shadow">
+              <Card
+                key={courier.id}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => {
+                  if (courier.status?.latitude && courier.status?.longitude) {
+                    setMapCenter([courier.status.latitude, courier.status.longitude]);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }
+                }}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center space-x-3">
