@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,6 +22,7 @@ import java.util.List;
 @Entity
 @Table(name = "restaurants")
 @EntityListeners(AuditingEntityListener.class)
+@JsonIgnoreProperties({"businessHours", "deliveryZones"})
 public class Restaurant {
 
     @Id

@@ -1,6 +1,7 @@
 package com.elcafe.modules.menu.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,6 +22,7 @@ import java.util.List;
 @Entity
 @Table(name = "categories")
 @EntityListeners(AuditingEntityListener.class)
+@JsonIgnoreProperties({"products", "hibernateLazyInitializer", "handler"})
 public class Category {
 
     @Id
