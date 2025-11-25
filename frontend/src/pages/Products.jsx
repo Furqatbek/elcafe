@@ -190,14 +190,7 @@ export default function Products() {
   const handleCreateProduct = async (e) => {
     e.preventDefault();
 
-    // Note: This assumes the backend has a POST /api/v1/products endpoint
-    // If not, you'll need to create it on the backend
     try {
-      // For now, we'll show an alert that the backend endpoint needs to be implemented
-      alert('Backend API endpoint for creating products needs to be implemented: POST /api/v1/products');
-
-      // Uncomment this when the backend endpoint is ready:
-      /*
       await menuAPI.createProduct({
         ...formData,
         price: parseFloat(formData.price),
@@ -206,10 +199,9 @@ export default function Products() {
       setCreateModalOpen(false);
       resetForm();
       loadProducts();
-      */
     } catch (error) {
       console.error('Failed to create product:', error);
-      alert('Failed to create product');
+      alert('Failed to create product: ' + (error.response?.data?.message || error.message));
     }
   };
 

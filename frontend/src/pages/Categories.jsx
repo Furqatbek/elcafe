@@ -109,12 +109,7 @@ export default function Categories() {
   const handleCreateCategory = async (e) => {
     e.preventDefault();
 
-    // Note: Backend endpoint needs to be implemented
     try {
-      alert('Backend API endpoint for creating categories needs to be implemented: POST /api/v1/categories');
-
-      // Uncomment when endpoint is ready:
-      /*
       await menuAPI.createCategory({
         ...formData,
         restaurantId: selectedRestaurant
@@ -122,10 +117,9 @@ export default function Categories() {
       setCreateModalOpen(false);
       resetForm();
       loadCategories();
-      */
     } catch (error) {
       console.error('Failed to create category:', error);
-      alert('Failed to create category');
+      alert('Failed to create category: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -133,19 +127,14 @@ export default function Categories() {
     e.preventDefault();
 
     try {
-      alert('Backend API endpoint for updating categories needs to be implemented: PUT /api/v1/categories/{id}');
-
-      // Uncomment when endpoint is ready:
-      /*
       await menuAPI.updateCategory(selectedCategory.id, formData);
       setEditModalOpen(false);
       resetForm();
       setSelectedCategory(null);
       loadCategories();
-      */
     } catch (error) {
       console.error('Failed to update category:', error);
-      alert('Failed to update category');
+      alert('Failed to update category: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -153,16 +142,11 @@ export default function Categories() {
     if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
-      alert('Backend API endpoint for deleting categories needs to be implemented: DELETE /api/v1/categories/{id}');
-
-      // Uncomment when endpoint is ready:
-      /*
       await menuAPI.deleteCategory(categoryId);
       loadCategories();
-      */
     } catch (error) {
       console.error('Failed to delete category:', error);
-      alert('Failed to delete category');
+      alert('Failed to delete category: ' + (error.response?.data?.message || error.message));
     }
   };
 
