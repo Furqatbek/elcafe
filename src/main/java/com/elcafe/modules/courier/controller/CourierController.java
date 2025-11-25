@@ -1,6 +1,8 @@
 package com.elcafe.modules.courier.controller;
 
 import com.elcafe.modules.courier.dto.CourierDTO;
+import com.elcafe.modules.courier.dto.CourierStatusResponse;
+import com.elcafe.modules.courier.dto.CourierStatusUpdateRequest;
 import com.elcafe.modules.courier.dto.CourierWalletDTO;
 import com.elcafe.modules.courier.dto.CreateCourierRequest;
 import com.elcafe.modules.courier.dto.UpdateCourierRequest;
@@ -91,5 +93,25 @@ public class CourierController {
     public ResponseEntity<ApiResponse<Void>> deleteCourier(@PathVariable Long id) {
         courierService.deleteCourier(id);
         return ResponseEntity.ok(ApiResponse.success("Courier deleted successfully", null));
+    }
+
+    // ========== Status Management ==========
+
+    @PostMapping("/{id}/status")
+    @PreAuthorize("hasRole('COURIER')")
+    @Operation(summary = "Update courier status", description = "Courier app updates online/offline status")
+    public ResponseEntity<ApiResponse<CourierStatusResponse>> updateStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody CourierStatusUpdateRequest request) {
+        CourierStatusResponse response = courierService.updateCourierStatus(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Status updated successfully", response));
+    }
+
+    @GetMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'COURIER')")
+    @Operation(summary = "Get courier status", description = "Get current courier online/offline status and location")
+    public ResponseEntity<ApiResponse<CourierStatusResponse>> getStatus(@PathVariable Long id) {
+        CourierStatusResponse response = courierService.getCourierStatus(id);
+        return ResponseEntity.ok(ApiResponse.success("Status retrieved successfully", response));
     }
 }

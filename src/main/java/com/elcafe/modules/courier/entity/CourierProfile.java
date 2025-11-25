@@ -1,6 +1,7 @@
 package com.elcafe.modules.courier.entity;
 
 import com.elcafe.modules.auth.entity.User;
+import com.elcafe.modules.courier.enums.CourierStatus;
 import com.elcafe.modules.courier.enums.CourierType;
 import com.elcafe.modules.courier.enums.CourierVehicle;
 import jakarta.persistence.*;
@@ -61,6 +62,22 @@ public class CourierProfile {
 
     @Column(length = 20)
     private String emergencyContact;
+
+    // Status tracking fields
+    @Column(name = "is_online", nullable = false)
+    @Builder.Default
+    private Boolean isOnline = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "current_status", nullable = false, length = 50)
+    @Builder.Default
+    private CourierStatus currentStatus = CourierStatus.OFFLINE;
+
+    @Column(name = "last_seen_at")
+    private LocalDateTime lastSeenAt;
+
+    @Column(name = "last_location_update_at")
+    private LocalDateTime lastLocationUpdateAt;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

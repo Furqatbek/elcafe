@@ -5,11 +5,16 @@ import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.courier.dto.CourierDTO;
+import com.elcafe.modules.courier.dto.CourierStatusResponse;
+import com.elcafe.modules.courier.dto.CourierStatusUpdateRequest;
 import com.elcafe.modules.courier.dto.CourierWalletDTO;
 import com.elcafe.modules.courier.dto.CreateCourierRequest;
 import com.elcafe.modules.courier.dto.UpdateCourierRequest;
+import com.elcafe.modules.courier.entity.CourierLocation;
 import com.elcafe.modules.courier.entity.CourierProfile;
 import com.elcafe.modules.courier.entity.CourierWallet;
+import com.elcafe.modules.courier.enums.CourierStatus;
+import com.elcafe.modules.courier.repository.CourierLocationRepository;
 import com.elcafe.modules.courier.repository.CourierProfileRepository;
 import com.elcafe.modules.courier.repository.CourierWalletRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +33,7 @@ public class CourierService {
 
     private final CourierProfileRepository courierProfileRepository;
     private final CourierWalletRepository courierWalletRepository;
+    private final CourierLocationRepository courierLocationRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -260,6 +267,79 @@ public class CourierService {
                 .totalFines(wallet.getTotalFines())
                 .createdAt(wallet.getCreatedAt())
                 .updatedAt(wallet.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * Update courier status (online/offline/on_delivery/busy)
+     */
+    @Transactional
+    public CourierStatusResponse updateCourierStatus(Long courierId, CourierStatusUpdateRequest request) {
+        CourierProfile profile = courierProfileRepository.findById(courierId)
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found with id: " + courierId));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Update status fields
+        profile.setCurrentStatus(request.getStatus());
+        profile.setIsOnline(request.getStatus() != CourierStatus.OFFLINE);
+        profile.setLastSeenAt(now);
+
+        // If location is provided, update location update timestamp and save location
+        if (request.getLatitude() != null && request.getLongitude() != null) {
+            profile.setLastLocationUpdateAt(now);
+
+            // Save location to courier_locations table
+            CourierLocation location = CourierLocation.builder()
+                    .courier(profile)
+                    .latitude(request.getLatitude())
+                    .longitude(request.getLongitude())
+                    .isActive(true)
+                    .build();
+            courierLocationRepository.save(location);
+        }
+
+        CourierProfile updatedProfile = courierProfileRepository.save(profile);
+
+        // Get latest location if available
+        CourierLocation latestLocation = courierLocationRepository
+                .findTopByCourierIdOrderByTimestampDesc(courierId)
+                .orElse(null);
+
+        return CourierStatusResponse.builder()
+                .courierId(updatedProfile.getId())
+                .courierName(updatedProfile.getUser().getFirstName() + " " + updatedProfile.getUser().getLastName())
+                .isOnline(updatedProfile.getIsOnline())
+                .currentStatus(updatedProfile.getCurrentStatus())
+                .lastSeenAt(updatedProfile.getLastSeenAt())
+                .lastLocationUpdateAt(updatedProfile.getLastLocationUpdateAt())
+                .latitude(latestLocation != null ? latestLocation.getLatitude() : null)
+                .longitude(latestLocation != null ? latestLocation.getLongitude() : null)
+                .build();
+    }
+
+    /**
+     * Get courier current status
+     */
+    @Transactional(readOnly = true)
+    public CourierStatusResponse getCourierStatus(Long courierId) {
+        CourierProfile profile = courierProfileRepository.findById(courierId)
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found with id: " + courierId));
+
+        // Get latest location
+        CourierLocation latestLocation = courierLocationRepository
+                .findTopByCourierIdOrderByTimestampDesc(courierId)
+                .orElse(null);
+
+        return CourierStatusResponse.builder()
+                .courierId(profile.getId())
+                .courierName(profile.getUser().getFirstName() + " " + profile.getUser().getLastName())
+                .isOnline(profile.getIsOnline())
+                .currentStatus(profile.getCurrentStatus())
+                .lastSeenAt(profile.getLastSeenAt())
+                .lastLocationUpdateAt(profile.getLastLocationUpdateAt())
+                .latitude(latestLocation != null ? latestLocation.getLatitude() : null)
+                .longitude(latestLocation != null ? latestLocation.getLongitude() : null)
                 .build();
     }
 }
