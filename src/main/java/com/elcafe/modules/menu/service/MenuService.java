@@ -53,7 +53,7 @@ public class MenuService {
     private PublicMenuCategoryDTO convertToCategoryDTO(Category category) {
         // Get products for this category
         List<Product> products = productRepository.findByCategoryIdAndStatusOrderBySortOrder(
-                category.getId(), ProductStatus.ACTIVE);
+                category.getId(), ProductStatus.LIVE);
 
         List<PublicMenuProductDTO> productDTOs = products.stream()
                 .filter(Product::getInStock)
