@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { menuAPI, restaurantAPI } from '../services/api';
+import { menuAPI, restaurantAPI, uploadAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -60,6 +60,8 @@ export default function Products() {
     inStock: true,
     featured: false
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
 
   useEffect(() => {
     loadRestaurants();
@@ -68,6 +70,7 @@ export default function Products() {
   useEffect(() => {
     if (selectedRestaurant) {
       loadProducts();
+      loadCategories();
     }
   }, [selectedRestaurant]);
 
@@ -88,6 +91,18 @@ export default function Products() {
     }
   };
 
+  const loadCategories = async () => {
+    if (!selectedRestaurant) return;
+
+    try {
+      const response = await menuAPI.getCategories(selectedRestaurant);
+      const cats = response.data.data || [];
+      setCategories(cats);
+    } catch (error) {
+      console.error('Failed to load categories:', error);
+    }
+  };
+
   const loadProducts = async () => {
     if (!selectedRestaurant) return;
 
@@ -96,9 +111,8 @@ export default function Products() {
       const response = await menuAPI.getPublicMenu(selectedRestaurant);
       const menuData = response.data.data;
 
-      // Extract categories
-      const cats = menuData.categories || [];
-      setCategories(cats);
+      // Extract categories and products
+      const cats = menuData || [];
 
       // Extract all products from all categories
       const allProducts = cats.flatMap(cat =>
@@ -187,12 +201,34 @@ export default function Products() {
     document.body.removeChild(link);
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateProduct = async (e) => {
     e.preventDefault();
 
     try {
+      let imageUrl = formData.imageUrl;
+
+      // Upload image file if provided
+      if (imageFile) {
+        const uploadResponse = await uploadAPI.uploadImage(imageFile);
+        imageUrl = uploadResponse.data.data;
+      }
+
       await menuAPI.createProduct({
         ...formData,
+        imageUrl,
         price: parseFloat(formData.price),
         categoryId: parseInt(formData.categoryId)
       });
@@ -216,6 +252,8 @@ export default function Products() {
       inStock: true,
       featured: false
     });
+    setImageFile(null);
+    setImagePreview('');
   };
 
   const handleViewLinkedItems = (productId) => {
@@ -523,10 +561,29 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
+                <Label htmlFor="imageFile">Product Image</Label>
+                <Input
+                  id="imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-md border"
+                    />
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Or enter image URL instead:
+                </p>
                 <Input
                   id="imageUrl"
                   type="url"
+                  placeholder="https://example.com/image.jpg"
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                   maxLength={500}

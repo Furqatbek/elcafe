@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { menuAPI, restaurantAPI } from '../services/api';
+import { menuAPI, restaurantAPI, uploadAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -50,6 +50,8 @@ export default function Categories() {
     sortOrder: 0,
     active: true
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
 
   useEffect(() => {
     loadRestaurants();
@@ -110,8 +112,17 @@ export default function Categories() {
     e.preventDefault();
 
     try {
+      let imageUrl = formData.imageUrl;
+
+      // Upload image file if provided
+      if (imageFile) {
+        const uploadResponse = await uploadAPI.uploadImage(imageFile);
+        imageUrl = uploadResponse.data.data;
+      }
+
       await menuAPI.createCategory({
         ...formData,
+        imageUrl,
         restaurantId: selectedRestaurant
       });
       setCreateModalOpen(false);
@@ -127,7 +138,18 @@ export default function Categories() {
     e.preventDefault();
 
     try {
-      await menuAPI.updateCategory(selectedCategory.id, formData);
+      let imageUrl = formData.imageUrl;
+
+      // Upload image file if provided
+      if (imageFile) {
+        const uploadResponse = await uploadAPI.uploadImage(imageFile);
+        imageUrl = uploadResponse.data.data;
+      }
+
+      await menuAPI.updateCategory(selectedCategory.id, {
+        ...formData,
+        imageUrl
+      });
       setEditModalOpen(false);
       resetForm();
       setSelectedCategory(null);
@@ -150,6 +172,19 @@ export default function Categories() {
     }
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const openEditModal = (category) => {
     setSelectedCategory(category);
     setFormData({
@@ -159,6 +194,7 @@ export default function Categories() {
       sortOrder: category.sortOrder || 0,
       active: category.active !== undefined ? category.active : true
     });
+    setImagePreview(category.imageUrl || '');
     setEditModalOpen(true);
   };
 
@@ -170,6 +206,8 @@ export default function Categories() {
       sortOrder: 0,
       active: true
     });
+    setImageFile(null);
+    setImagePreview('');
   };
 
   if (loading && categories.length === 0) {
@@ -366,7 +404,25 @@ export default function Categories() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
+                <Label htmlFor="imageFile">Category Image</Label>
+                <Input
+                  id="imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-md border"
+                    />
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Or enter image URL instead:
+                </p>
                 <div className="flex gap-2">
                   <ImageIcon className="h-5 w-5 text-muted-foreground mt-2" />
                   <Input
@@ -448,7 +504,25 @@ export default function Categories() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-imageUrl">Image URL</Label>
+                <Label htmlFor="edit-imageFile">Category Image</Label>
+                <Input
+                  id="edit-imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-md border"
+                    />
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Or enter image URL instead:
+                </p>
                 <div className="flex gap-2">
                   <ImageIcon className="h-5 w-5 text-muted-foreground mt-2" />
                   <Input
