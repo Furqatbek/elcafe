@@ -9,6 +9,7 @@ import Customers from './pages/Customers';
 import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
 import Couriers from './pages/Couriers';
+import CourierMap from './pages/CourierMap';
 import MenuCollections from './pages/MenuCollections';
 import KitchenDashboard from './pages/KitchenDashboard';
 import FinancialAnalytics from './pages/FinancialAnalytics';
@@ -48,6 +49,7 @@ function App() {
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="operators" element={<Operators />} />
           <Route path="couriers" element={<Couriers />} />
+          <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
         </Route>
       </Routes>

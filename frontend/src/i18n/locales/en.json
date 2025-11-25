@@ -59,6 +59,7 @@
       "clientHistory": "Client History",
       "operators": "Operators",
       "couriers": "Couriers",
+      "courierMap": "Courier Map",
       "schedule": "Schedule",
       "products": "Products",
       "categories": "Categories",
@@ -523,6 +524,36 @@
     "assignedOrders": "Assigned Orders",
     "deliveryHistory": "Delivery History"
   },
+  "courier": {
+    "status": {
+      "online": "Online",
+      "offline": "Offline",
+      "onDelivery": "On Delivery",
+      "busy": "Busy"
+    },
+    "map": {
+      "title": "Courier Map",
+      "subtitle": "Real-time courier tracking and status monitoring",
+      "lastUpdate": "Last updated",
+      "lastSeen": "Last seen",
+      "couriersList": "All Couriers",
+      "noCouriers": "No couriers found",
+      "neverSeen": "Never",
+      "justNow": "Just now",
+      "minutesAgo": "{{minutes}}m ago",
+      "hoursAgo": "{{hours}}h ago",
+      "stats": {
+        "online": "Online",
+        "offline": "Offline",
+        "onDelivery": "On Delivery",
+        "busy": "Busy"
+      },
+      "mapPlaceholder": {
+        "title": "Interactive Map View",
+        "description": "Install react-leaflet to see couriers on an interactive map"
+      }
+    }
+  },
   "common": {
     "search": "Search",
     "filter": "Filter",
@@ -541,6 +572,7 @@
     "previous": "Previous",
     "view": "View",
     "create": "Create",
+    "refresh": "Refresh",
     "active": "Active",
     "inactive": "Inactive",
     "page": "Page",

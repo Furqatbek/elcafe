@@ -117,12 +117,15 @@ export const operatorAPI = {
 };
 
 export const courierAPI = {
-  getAll: (params) => api.get('/couriers', { params }),
+  getAll: (page = 0, size = 10) => api.get('/couriers', { params: { page, size } }),
   getById: (id) => api.get(`/couriers/${id}`),
   getWallet: (id) => api.get(`/couriers/${id}/wallet`),
   create: (data) => api.post('/couriers', data),
   update: (id, data) => api.put(`/couriers/${id}`, data),
   delete: (id) => api.delete(`/couriers/${id}`),
+  // Status management
+  updateStatus: (id, data) => api.post(`/couriers/${id}/status`, data),
+  getStatus: (id) => api.get(`/couriers/${id}/status`),
 };
 
 export const analyticsAPI = {

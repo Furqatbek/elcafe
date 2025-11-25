@@ -42,6 +42,7 @@ import {
   Shield,
   CreditCard,
   Truck,
+  MapPin,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -107,6 +108,7 @@ export default function Layout() {
       subItems: [
         { label: t('nav.sub.operators'), icon: UserCog, path: '/operators' },
         { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
+        { label: t('nav.sub.courierMap'), icon: MapPin, path: '/courier-map' },
         { label: t('nav.sub.schedule'), icon: Calendar, path: '/employees/schedule' },
         { label: t('nav.sub.performance'), icon: Award, path: '/employees/performance' },
       ],
