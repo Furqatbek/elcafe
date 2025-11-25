@@ -724,6 +724,197 @@
 			"description": "Customer management (CRM) endpoints"
 		},
 		{
+			"name": "Couriers",
+			"item": [
+				{
+					"name": "Get All Couriers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/couriers?page=0&size=10",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "couriers"],
+							"query": [
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get paginated list of all couriers"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Courier by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/couriers/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "couriers", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Get courier details by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Courier Wallet",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/couriers/:id/wallet",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "couriers", ":id", "wallet"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Get courier wallet balance and statistics"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Courier Status",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"ONLINE\",\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/couriers/:id/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "couriers", ":id", "status"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Update courier online/offline status from courier app. Statuses: ONLINE, OFFLINE, ON_DELIVERY, BUSY. Optionally includes location coordinates."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Courier Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/couriers/:id/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "couriers", ":id", "status"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Get current courier status and last known location"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Courier",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"courier@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Driver\",\n  \"phone\": \"+1234567890\",\n  \"courierType\": \"FULL_TIME\",\n  \"vehicle\": \"MOTORCYCLE\",\n  \"vehiclePlate\": \"ABC-123\",\n  \"licenseNumber\": \"DL123456\",\n  \"address\": \"123 Main St\",\n  \"city\": \"New York\",\n  \"emergencyContact\": \"+1234567899\",\n  \"available\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/couriers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "couriers"]
+						},
+						"description": "Create a new courier with user account and wallet (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Courier",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Driver Updated\",\n  \"phone\": \"+1234567890\",\n  \"vehicle\": \"CAR\",\n  \"vehiclePlate\": \"XYZ-789\",\n  \"city\": \"Los Angeles\",\n  \"available\": true,\n  \"verified\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/couriers/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "couriers", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Update courier information (Admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Courier",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/couriers/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "couriers", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						},
+						"description": "Delete courier (Admin only)"
+					},
+					"response": []
+				}
+			],
+			"description": "Courier management and status tracking endpoints"
+		},
+		{
 			"name": "Courier Integration",
 			"item": [
 				{
