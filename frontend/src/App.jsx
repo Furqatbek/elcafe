@@ -9,6 +9,7 @@ import Customers from './pages/Customers';
 import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
 import Couriers from './pages/Couriers';
+import MenuCollections from './pages/MenuCollections';
 import FinancialAnalytics from './pages/FinancialAnalytics';
 import OperationalAnalytics from './pages/OperationalAnalytics';
 import CustomerAnalytics from './pages/CustomerAnalytics';
@@ -41,6 +42,7 @@ function App() {
           <Route path="orders" element={<Orders />} />
           <Route path="restaurants" element={<Restaurants />} />
           <Route path="menu" element={<Dashboard />} />
+          <Route path="menu-collections" element={<MenuCollections />} />
           <Route path="customers" element={<Customers />} />
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="operators" element={<Operators />} />

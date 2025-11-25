@@ -76,6 +76,15 @@ export const menuAPI = {
   getCategories: (restaurantId) => api.get(`/menu/restaurants/${restaurantId}/categories`),
 };
 
+export const menuCollectionAPI = {
+  getAll: (restaurantId, params) => api.get('/menu-collections', { params: { restaurantId, ...params } }),
+  getById: (id) => api.get(`/menu-collections/${id}`),
+  getActive: (restaurantId) => api.get('/menu-collections/active', { params: { restaurantId } }),
+  create: (data) => api.post('/menu-collections', data),
+  addProducts: (id, productIds) => api.post(`/menu-collections/${id}/products`, productIds),
+  delete: (id) => api.delete(`/menu-collections/${id}`),
+};
+
 export const orderAPI = {
   create: (data) => api.post('/orders', data),
   getById: (id) => api.get(`/orders/${id}`),

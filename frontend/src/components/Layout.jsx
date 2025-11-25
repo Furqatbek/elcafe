@@ -119,6 +119,7 @@ export default function Layout() {
       subItems: [
         { label: t('nav.sub.products'), icon: Grid, path: '/restaurants' },
         { label: t('nav.sub.categories'), icon: List, path: '/catalog/categories' },
+        { label: t('nav.sub.menuCollections'), icon: Package, path: '/menu-collections' },
         { label: t('nav.sub.pricing'), icon: Tag, path: '/catalog/pricing' },
       ],
     },
