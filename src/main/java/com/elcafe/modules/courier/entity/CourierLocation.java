@@ -18,9 +18,9 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "courier_locations", indexes = {
-        @Index(name = "idx_courier_id", columnList = "courier_id"),
-        @Index(name = "idx_order_id", columnList = "order_id"),
-        @Index(name = "idx_timestamp", columnList = "timestamp")
+        @Index(name = "idx_courier_locations_courier_id", columnList = "courier_id"),
+        @Index(name = "idx_courier_locations_order_id", columnList = "order_id"),
+        @Index(name = "idx_courier_locations_timestamp", columnList = "timestamp")
 })
 public class CourierLocation {
 

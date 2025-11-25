@@ -20,11 +20,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Entity
 @Table(name = "courier_wallet_transactions", indexes = {
-        @Index(name = "idx_wallet_id", columnList = "wallet_id"),
-        @Index(name = "idx_courier_id", columnList = "courier_id"),
-        @Index(name = "idx_order_id", columnList = "order_id"),
-        @Index(name = "idx_transaction_type", columnList = "transaction_type"),
-        @Index(name = "idx_created_at", columnList = "created_at")
+        @Index(name = "idx_courier_wallet_transactions_wallet_id", columnList = "wallet_id"),
+        @Index(name = "idx_courier_wallet_transactions_courier_id", columnList = "courier_id"),
+        @Index(name = "idx_courier_wallet_transactions_order_id", columnList = "order_id"),
+        @Index(name = "idx_courier_wallet_transactions_transaction_type", columnList = "transaction_type"),
+        @Index(name = "idx_courier_wallet_transactions_created_at", columnList = "created_at")
 })
 public class CourierWalletTransaction {
 
