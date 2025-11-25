@@ -31,6 +31,13 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     List<Order> findByStatusOrderByCreatedAtAsc(OrderStatus status);
 
+    List<Order> findByStatus(OrderStatus status);
+
+    List<Order> findByRestaurantIdAndStatus(Long restaurantId, OrderStatus status);
+
+    @Query("SELECT o FROM Order o WHERE o.deliveryInfo.courierId = :courierId ORDER BY o.createdAt DESC")
+    List<Order> findByCourierId(@Param("courierId") Long courierId);
+
     // Customer Activity Queries
     @Query("SELECT COUNT(o) FROM Order o WHERE o.customer.id = :customerId")
     Long countByCustomerId(@Param("customerId") Long customerId);

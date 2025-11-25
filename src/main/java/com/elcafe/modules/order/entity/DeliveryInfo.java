@@ -49,11 +49,23 @@ public class DeliveryInfo {
     @Column(length = 500)
     private String deliveryInstructions;
 
+    private Long courierId;
+
+    @Column(length = 200)
+    private String courierName;
+
+    @Column(length = 20)
+    private String courierPhone;
+
     private String courierProviderId;
 
     private String courierTrackingId;
 
+    private LocalDateTime pickupTime;
+
     private LocalDateTime estimatedDeliveryTime;
+
+    private LocalDateTime deliveryTime;
 
     private LocalDateTime actualDeliveryTime;
 }
