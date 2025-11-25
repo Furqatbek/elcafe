@@ -1,6 +1,5 @@
 package com.elcafe.modules.courier.entity;
 
-import com.elcafe.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,7 +30,7 @@ public class CourierLocation {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "courier_id", nullable = false)
-    private Courier courier;
+    private CourierProfile courier;
 
     @Column(name = "order_id")
     private Long orderId; // Optional - tracks which order this location update is for

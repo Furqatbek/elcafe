@@ -2,10 +2,10 @@ package com.elcafe.modules.courier.service;
 
 import com.elcafe.modules.courier.dto.CourierLocationResponse;
 import com.elcafe.modules.courier.dto.CourierLocationUpdateRequest;
-import com.elcafe.modules.courier.entity.Courier;
+import com.elcafe.modules.courier.entity.CourierProfile;
 import com.elcafe.modules.courier.entity.CourierLocation;
 import com.elcafe.modules.courier.repository.CourierLocationRepository;
-import com.elcafe.modules.courier.repository.CourierRepository;
+import com.elcafe.modules.courier.repository.CourierProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,14 +24,14 @@ import java.util.stream.Collectors;
 public class CourierLocationService {
 
     private final CourierLocationRepository courierLocationRepository;
-    private final CourierRepository courierRepository;
+    private final CourierProfileRepository courierProfileRepository;
 
     /**
      * Update courier location
      */
     @Transactional
     public CourierLocationResponse updateLocation(Long courierId, CourierLocationUpdateRequest request) {
-        Courier courier = courierRepository.findById(courierId)
+        CourierProfile courier = courierProfileRepository.findById(courierId)
                 .orElseThrow(() -> new RuntimeException("Courier not found with ID: " + courierId));
 
         CourierLocation location = CourierLocation.builder()
