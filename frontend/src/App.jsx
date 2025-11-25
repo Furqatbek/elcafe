@@ -9,6 +9,7 @@ import Restaurants from './pages/Restaurants';
 import Products from './pages/Products';
 import LinkedItems from './pages/LinkedItems';
 import Menu from './pages/Menu';
+import Categories from './pages/Categories';
 import Customers from './pages/Customers';
 import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
@@ -51,6 +52,7 @@ function App() {
           <Route path="products" element={<Products />} />
           <Route path="products/:productId/linked-items" element={<LinkedItems />} />
           <Route path="menu" element={<Menu />} />
+          <Route path="catalog/categories" element={<Categories />} />
           <Route path="menu-collections" element={<MenuCollections />} />
           <Route path="customers" element={<Customers />} />
           <Route path="customer-segments" element={<CustomerSegments />} />
