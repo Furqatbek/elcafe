@@ -9,6 +9,7 @@ import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.entity.*;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -70,7 +71,7 @@ public class ConsumerOrderService {
             Product product = productRepository.findById(itemRequest.getProductId())
                     .orElseThrow(() -> new RuntimeException("Product not found: " + itemRequest.getProductId()));
 
-            if (!product.getAvailable()) {
+            if (!product.getInStock()) {
                 throw new RuntimeException("Product not available: " + product.getName());
             }
 
@@ -79,13 +80,13 @@ public class ConsumerOrderService {
                     .productId(product.getId())
                     .productName(product.getName())
                     .quantity(itemRequest.getQuantity())
-                    .price(product.getPrice())
-                    .total(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())))
+                    .unitPrice(product.getPrice())
+                    .totalPrice(product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())))
                     .specialInstructions(itemRequest.getSpecialInstructions())
                     .build();
 
             order.addItem(orderItem);
-            subtotal = subtotal.add(orderItem.getTotal());
+            subtotal = subtotal.add(orderItem.getTotalPrice());
         }
 
         // 5. Calculate costs
@@ -103,10 +104,10 @@ public class ConsumerOrderService {
         // 6. Add delivery info
         DeliveryInfo deliveryInfo = DeliveryInfo.builder()
                 .order(order)
-                .deliveryAddress(request.getDeliveryInfo().getAddress())
-                .deliveryCity(request.getDeliveryInfo().getCity())
-                .deliveryState(request.getDeliveryInfo().getState())
-                .deliveryZipCode(request.getDeliveryInfo().getZipCode())
+                .address(request.getDeliveryInfo().getAddress())
+                .city(request.getDeliveryInfo().getCity())
+                .state(request.getDeliveryInfo().getState())
+                .zipCode(request.getDeliveryInfo().getZipCode())
                 .latitude(request.getDeliveryInfo().getLatitude())
                 .longitude(request.getDeliveryInfo().getLongitude())
                 .deliveryInstructions(request.getDeliveryInfo().getDeliveryInstructions())
@@ -116,8 +117,8 @@ public class ConsumerOrderService {
         // 7. Add payment info
         Payment payment = Payment.builder()
                 .order(order)
-                .paymentMethod(request.getPaymentMethod())
-                .paymentStatus("PENDING")
+                .method(request.getPaymentMethod())
+                .status(PaymentStatus.PENDING)
                 .amount(total)
                 .build();
         order.setPayment(payment);
@@ -217,8 +218,8 @@ public class ConsumerOrderService {
                         .id(item.getId())
                         .productName(item.getProductName())
                         .quantity(item.getQuantity())
-                        .price(item.getPrice())
-                        .total(item.getTotal())
+                        .price(item.getUnitPrice())
+                        .total(item.getTotalPrice())
                         .specialInstructions(item.getSpecialInstructions())
                         .build())
                 .toList();
@@ -226,10 +227,10 @@ public class ConsumerOrderService {
         OrderResponse.DeliveryInfo deliveryInfo = null;
         if (order.getDeliveryInfo() != null) {
             deliveryInfo = OrderResponse.DeliveryInfo.builder()
-                    .address(order.getDeliveryInfo().getDeliveryAddress())
-                    .city(order.getDeliveryInfo().getDeliveryCity())
-                    .state(order.getDeliveryInfo().getDeliveryState())
-                    .zipCode(order.getDeliveryInfo().getDeliveryZipCode())
+                    .address(order.getDeliveryInfo().getAddress())
+                    .city(order.getDeliveryInfo().getCity())
+                    .state(order.getDeliveryInfo().getState())
+                    .zipCode(order.getDeliveryInfo().getZipCode())
                     .latitude(order.getDeliveryInfo().getLatitude())
                     .longitude(order.getDeliveryInfo().getLongitude())
                     .deliveryInstructions(order.getDeliveryInfo().getDeliveryInstructions())
@@ -241,8 +242,8 @@ public class ConsumerOrderService {
         OrderResponse.PaymentInfo paymentInfo = null;
         if (order.getPayment() != null) {
             paymentInfo = OrderResponse.PaymentInfo.builder()
-                    .paymentMethod(order.getPayment().getPaymentMethod())
-                    .paymentStatus(order.getPayment().getPaymentStatus())
+                    .paymentMethod(order.getPayment().getMethod())
+                    .paymentStatus(order.getPayment().getStatus())
                     .amount(order.getPayment().getAmount())
                     .build();
         }
