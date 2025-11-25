@@ -1,6 +1,20 @@
--- Migration: Add courier location tracking and wallet transactions
--- Version: V7
--- Description: Creates tables for courier GPS location tracking and wallet transaction history
+-- Migration: Fix courier location and wallet transactions (cleanup and recreate)
+-- Version: V8
+-- Description: Fixes the V7 migration by dropping partial objects and recreating with correct index names
+
+-- Drop tables if they exist (from failed V7 migration)
+DROP TABLE IF EXISTS courier_wallet_transactions CASCADE;
+DROP TABLE IF EXISTS courier_locations CASCADE;
+
+-- Drop any indexes that might have been created
+DROP INDEX IF EXISTS idx_courier_id;
+DROP INDEX IF EXISTS idx_order_id;
+DROP INDEX IF EXISTS idx_timestamp;
+DROP INDEX IF EXISTS idx_wallet_id;
+DROP INDEX IF EXISTS idx_transaction_type;
+DROP INDEX IF EXISTS idx_created_at;
+
+-- Now create everything with correct names
 
 -- Create courier_locations table
 CREATE TABLE courier_locations (
@@ -21,7 +35,7 @@ CREATE TABLE courier_locations (
     CONSTRAINT fk_courier_location_courier FOREIGN KEY (courier_id) REFERENCES courier_profiles(id) ON DELETE CASCADE
 );
 
--- Create indexes for courier_locations
+-- Create indexes for courier_locations with unique names
 CREATE INDEX idx_courier_locations_courier_id ON courier_locations(courier_id);
 CREATE INDEX idx_courier_locations_order_id ON courier_locations(order_id);
 CREATE INDEX idx_courier_locations_timestamp ON courier_locations(timestamp);
@@ -43,7 +57,7 @@ CREATE TABLE courier_wallet_transactions (
     CONSTRAINT fk_wallet_transaction_wallet FOREIGN KEY (wallet_id) REFERENCES courier_wallets(id) ON DELETE CASCADE
 );
 
--- Create indexes for courier_wallet_transactions
+-- Create indexes for courier_wallet_transactions with unique names
 CREATE INDEX idx_courier_wallet_transactions_wallet_id ON courier_wallet_transactions(wallet_id);
 CREATE INDEX idx_courier_wallet_transactions_courier_id ON courier_wallet_transactions(courier_id);
 CREATE INDEX idx_courier_wallet_transactions_order_id ON courier_wallet_transactions(order_id);
