@@ -25,6 +25,7 @@ public class CourierOrderService {
     private final CourierProfileRepository courierProfileRepository;
     private final NotificationService notificationService;
     private final KitchenOrderService kitchenOrderService;
+    private final CourierWalletService courierWalletService;
 
     /**
      * Get orders that are ready for courier assignment
@@ -206,6 +207,14 @@ public class CourierOrderService {
         order.addStatusHistory(statusHistory);
 
         Order savedOrder = orderRepository.save(order);
+
+        // Credit courier wallet for delivery
+        try {
+            courierWalletService.creditDeliveryFee(courierId, savedOrder);
+        } catch (Exception e) {
+            log.error("Failed to credit courier wallet for order {}: {}", savedOrder.getOrderNumber(), e.getMessage());
+            // Continue with delivery completion even if wallet credit fails
+        }
 
         // Notify
         notificationService.notifyOrderDelivered(savedOrder);

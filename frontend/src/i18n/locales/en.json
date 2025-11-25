@@ -68,6 +68,7 @@
       "emails": "Email Marketing",
       "notifications": "Notifications",
       "activeOrders": "Active Orders",
+      "kitchenDashboard": "Kitchen Dashboard",
       "recipes": "Recipes",
       "inventory": "Inventory",
       "general": "General Settings",
@@ -708,6 +709,74 @@
       "passwordMin": "Password must be at least 8 characters",
       "firstNameRequired": "First name is required",
       "lastNameRequired": "Last name is required"
+    }
+  },
+  "kitchen": {
+    "title": "Kitchen Dashboard",
+    "subtitle": "Manage food preparation and order fulfillment",
+    "stats": {
+      "pending": "Pending",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "total": "Total Orders"
+    },
+    "sections": {
+      "pending": "Pending Orders",
+      "preparing": "Orders in Preparation",
+      "ready": "Ready for Pickup"
+    },
+    "fields": {
+      "orderNumber": "Order #",
+      "items": "Items",
+      "priority": "Priority",
+      "createdAt": "Created",
+      "chefName": "Chef Name",
+      "startedAt": "Started",
+      "elapsed": "Elapsed Time",
+      "estimatedTime": "Est. Time",
+      "preparedBy": "Prepared By",
+      "prepTime": "Prep Time"
+    },
+    "actions": {
+      "start": "Start Preparation",
+      "markReady": "Mark as Ready",
+      "markPickedUp": "Mark as Picked Up",
+      "changePriority": "Change Priority",
+      "startPreparation": "Start Preparation"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "PREPARING": "Preparing",
+      "READY": "Ready",
+      "PICKED_UP": "Picked Up"
+    },
+    "priority": {
+      "URGENT": "Urgent",
+      "HIGH": "High",
+      "NORMAL": "Normal",
+      "LOW": "Low"
+    },
+    "modals": {
+      "startPreparation": {
+        "title": "Start Preparation",
+        "description": "Enter the chef's name who will prepare this order",
+        "chefNameLabel": "Chef Name",
+        "chefNamePlaceholder": "e.g., John Smith"
+      },
+      "changePriority": {
+        "title": "Change Priority",
+        "description": "Select the new priority level for this order"
+      }
+    },
+    "errors": {
+      "loadFailed": "Failed to load kitchen orders",
+      "startFailed": "Failed to start preparation",
+      "markReadyFailed": "Failed to mark order as ready",
+      "markPickedUpFailed": "Failed to mark order as picked up",
+      "changePriorityFailed": "Failed to change priority"
+    },
+    "empty": {
+      "noOrders": "No orders in this section"
     }
   },
   "messages": {

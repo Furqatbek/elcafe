@@ -151,4 +151,13 @@ export const analyticsAPI = {
   getInventoryTurnover: (params) => api.get('/analytics/inventory/turnover', { params }),
 };
 
+export const kitchenAPI = {
+  getActiveOrders: (restaurantId) => api.get('/kitchen/orders/active', { params: { restaurantId } }),
+  getReadyOrders: (restaurantId) => api.get('/kitchen/orders/ready', { params: { restaurantId } }),
+  startPreparation: (id, chefName) => api.post(`/kitchen/orders/${id}/start`, null, { params: { chefName } }),
+  markReady: (id) => api.post(`/kitchen/orders/${id}/ready`),
+  markPickedUp: (id) => api.post(`/kitchen/orders/${id}/picked-up`),
+  updatePriority: (id, priority) => api.patch(`/kitchen/orders/${id}/priority`, null, { params: { priority } }),
+};
+
 export default api;

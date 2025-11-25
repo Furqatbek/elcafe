@@ -10,6 +10,7 @@ import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
 import Couriers from './pages/Couriers';
 import MenuCollections from './pages/MenuCollections';
+import KitchenDashboard from './pages/KitchenDashboard';
 import FinancialAnalytics from './pages/FinancialAnalytics';
 import OperationalAnalytics from './pages/OperationalAnalytics';
 import CustomerAnalytics from './pages/CustomerAnalytics';
@@ -47,6 +48,7 @@ function App() {
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="operators" element={<Operators />} />
           <Route path="couriers" element={<Couriers />} />
+          <Route path="kitchen" element={<KitchenDashboard />} />
         </Route>
       </Routes>
     </BrowserRouter>

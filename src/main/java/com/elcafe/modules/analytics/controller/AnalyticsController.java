@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controller for business analytics endpoints
@@ -166,6 +167,18 @@ public class AnalyticsController {
     ) {
         OrderTimingAnalyticsDTO timing = operationalAnalyticsService.getOrderTimingAnalytics(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Order timing analytics retrieved successfully", timing));
+    }
+
+    @GetMapping("/operational/kitchen")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'KITCHEN_STAFF')")
+    @Operation(summary = "Get kitchen analytics", description = "Kitchen performance, preparation times, and chef metrics")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getKitchenAnalytics(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Long restaurantId
+    ) {
+        Map<String, Object> analytics = operationalAnalyticsService.getKitchenAnalytics(startDate, endDate, restaurantId);
+        return ResponseEntity.ok(ApiResponse.success("Kitchen analytics retrieved successfully", analytics));
     }
 
     // ========== Customer Analytics ==========

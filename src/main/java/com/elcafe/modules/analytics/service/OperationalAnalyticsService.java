@@ -1,6 +1,9 @@
 package com.elcafe.modules.analytics.service;
 
 import com.elcafe.modules.analytics.dto.*;
+import com.elcafe.modules.kitchen.entity.KitchenOrder;
+import com.elcafe.modules.kitchen.enums.KitchenOrderStatus;
+import com.elcafe.modules.kitchen.repository.KitchenOrderRepository;
 import com.elcafe.modules.order.entity.DeliveryInfo;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
@@ -28,6 +31,7 @@ import java.util.stream.Collectors;
 public class OperationalAnalyticsService {
 
     private final OrderRepository orderRepository;
+    private final KitchenOrderRepository kitchenOrderRepository;
 
     /**
      * Calculate sales per hour
@@ -269,7 +273,13 @@ public class OperationalAnalyticsService {
     }
 
     private double calculatePreparationTime(Order order) {
-        // Find timestamps from status history
+        // Try to get accurate preparation time from KitchenOrder first
+        Optional<KitchenOrder> kitchenOrder = kitchenOrderRepository.findByOrderId(order.getId());
+        if (kitchenOrder.isPresent() && kitchenOrder.get().getActualPreparationTimeMinutes() != null) {
+            return kitchenOrder.get().getActualPreparationTimeMinutes().doubleValue();
+        }
+
+        // Fallback to status history calculation
         Optional<LocalDateTime> newTime = findStatusTime(order, OrderStatus.NEW);
         Optional<LocalDateTime> readyTime = findStatusTime(order, OrderStatus.READY);
 
@@ -353,5 +363,116 @@ public class OperationalAnalyticsService {
         } else {
             return sorted.get(size / 2);
         }
+    }
+
+    /**
+     * Get kitchen performance analytics
+     * Provides metrics on kitchen efficiency, preparation times, and chef performance
+     */
+    public Map<String, Object> getKitchenAnalytics(LocalDate startDate, LocalDate endDate, Long restaurantId) {
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
+        List<KitchenOrder> kitchenOrders;
+        if (restaurantId != null) {
+            kitchenOrders = kitchenOrderRepository.findByRestaurantAndCreatedAtBetween(
+                    restaurantId, startDateTime, endDateTime);
+        } else {
+            kitchenOrders = kitchenOrderRepository.findByCreatedAtBetween(startDateTime, endDateTime);
+        }
+
+        // Calculate status distribution
+        Map<KitchenOrderStatus, Long> statusDistribution = kitchenOrders.stream()
+                .collect(Collectors.groupingBy(KitchenOrder::getStatus, Collectors.counting()));
+
+        // Calculate average preparation time from completed orders
+        List<Double> preparationTimes = kitchenOrders.stream()
+                .filter(ko -> ko.getActualPreparationTimeMinutes() != null)
+                .map(ko -> ko.getActualPreparationTimeMinutes().doubleValue())
+                .collect(Collectors.toList());
+
+        double avgPreparationTime = calculateAverage(preparationTimes);
+        double medianPreparationTime = calculateMedian(preparationTimes);
+        double minPreparationTime = preparationTimes.isEmpty() ? 0.0 : Collections.min(preparationTimes);
+        double maxPreparationTime = preparationTimes.isEmpty() ? 0.0 : Collections.max(preparationTimes);
+
+        // Calculate chef performance
+        Map<String, Map<String, Object>> chefPerformance = kitchenOrders.stream()
+                .filter(ko -> ko.getAssignedChef() != null)
+                .collect(Collectors.groupingBy(KitchenOrder::getAssignedChef))
+                .entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> {
+                            List<KitchenOrder> chefOrders = entry.getValue();
+                            List<Double> chefPrepTimes = chefOrders.stream()
+                                    .filter(ko -> ko.getActualPreparationTimeMinutes() != null)
+                                    .map(ko -> ko.getActualPreparationTimeMinutes().doubleValue())
+                                    .collect(Collectors.toList());
+
+                            Map<String, Object> performance = new HashMap<>();
+                            performance.put("totalOrders", chefOrders.size());
+                            performance.put("avgPreparationTime", calculateAverage(chefPrepTimes));
+                            performance.put("completedOrders", chefOrders.stream()
+                                    .filter(ko -> ko.getStatus() == KitchenOrderStatus.READY ||
+                                            ko.getStatus() == KitchenOrderStatus.PICKED_UP)
+                                    .count());
+                            return performance;
+                        }
+                ));
+
+        // Calculate efficiency metrics
+        long totalOrders = kitchenOrders.size();
+        long completedOrders = kitchenOrders.stream()
+                .filter(ko -> ko.getStatus() == KitchenOrderStatus.READY ||
+                        ko.getStatus() == KitchenOrderStatus.PICKED_UP)
+                .count();
+        long cancelledOrders = kitchenOrders.stream()
+                .filter(ko -> ko.getStatus() == KitchenOrderStatus.CANCELLED)
+                .count();
+
+        double completionRate = totalOrders > 0 ? (double) completedOrders / totalOrders * 100 : 0.0;
+        double cancellationRate = totalOrders > 0 ? (double) cancelledOrders / totalOrders * 100 : 0.0;
+
+        // Estimate vs actual preparation time comparison
+        List<Map<String, Object>> estimateAccuracy = kitchenOrders.stream()
+                .filter(ko -> ko.getEstimatedPreparationTimeMinutes() != null &&
+                        ko.getActualPreparationTimeMinutes() != null)
+                .map(ko -> {
+                    Map<String, Object> comparison = new HashMap<>();
+                    comparison.put("orderId", ko.getId());
+                    comparison.put("estimated", ko.getEstimatedPreparationTimeMinutes());
+                    comparison.put("actual", ko.getActualPreparationTimeMinutes());
+                    comparison.put("variance", ko.getActualPreparationTimeMinutes() - ko.getEstimatedPreparationTimeMinutes());
+                    return comparison;
+                })
+                .collect(Collectors.toList());
+
+        double avgVariance = estimateAccuracy.stream()
+                .mapToDouble(m -> ((Integer) m.get("variance")).doubleValue())
+                .average()
+                .orElse(0.0);
+
+        // Build response
+        Map<String, Object> analytics = new HashMap<>();
+        analytics.put("startDate", startDate);
+        analytics.put("endDate", endDate);
+        analytics.put("totalOrders", totalOrders);
+        analytics.put("completedOrders", completedOrders);
+        analytics.put("cancelledOrders", cancelledOrders);
+        analytics.put("completionRate", completionRate);
+        analytics.put("cancellationRate", cancellationRate);
+        analytics.put("statusDistribution", statusDistribution);
+        analytics.put("avgPreparationTime", avgPreparationTime);
+        analytics.put("medianPreparationTime", medianPreparationTime);
+        analytics.put("minPreparationTime", minPreparationTime);
+        analytics.put("maxPreparationTime", maxPreparationTime);
+        analytics.put("avgEstimateVariance", avgVariance);
+        analytics.put("chefPerformance", chefPerformance);
+
+        log.info("Kitchen analytics calculated for period {} to {}: {} orders processed, {}% completion rate",
+                startDate, endDate, totalOrders, String.format("%.1f", completionRate));
+
+        return analytics;
     }
 }
