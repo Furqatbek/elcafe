@@ -233,16 +233,17 @@ export const kitchenAPI = {
 };
 
 export const uploadAPI = {
-  uploadImage: (file) => {
+  uploadImage: (file, folder = 'images') => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/upload/image', formData, {
+    formData.append('folder', folder);
+    return api.post('/files/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
   },
-  deleteImage: (url) => api.delete('/upload/image', { params: { url } }),
+  deleteImage: (url) => api.delete('/files', { params: { fileUrl: url } }),
 };
 
 export default api;
