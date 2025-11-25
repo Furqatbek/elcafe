@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import Layout from './components/Layout';
+import SessionManager from './components/SessionManager';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
@@ -28,6 +29,7 @@ function PrivateRoute({ children }) {
 function App() {
   return (
     <BrowserRouter>
+      <SessionManager />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route

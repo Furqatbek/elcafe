@@ -32,18 +32,70 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refresh_token');
+
+        // Check if refresh token is expired
+        const refreshTokenExpiry = localStorage.getItem('refresh_token_expiry');
+        if (refreshTokenExpiry && Date.now() >= parseInt(refreshTokenExpiry)) {
+          throw new Error('Refresh token expired');
+        }
+
         const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
           refreshToken,
         });
 
-        const { accessToken } = response.data.data;
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+
+        // Update tokens with expiration tracking
+        const now = Date.now();
+
+        // Try to decode JWT to get actual expiration
+        const decodeJWT = (token) => {
+          try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+              atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+            );
+            return JSON.parse(jsonPayload);
+          } catch {
+            return null;
+          }
+        };
+
+        const decodedAccess = decodeJWT(accessToken);
+        const accessTokenExpiry = decodedAccess?.exp
+          ? decodedAccess.exp * 1000
+          : now + (15 * 60 * 1000); // 15 minutes default
+
         localStorage.setItem('access_token', accessToken);
+        localStorage.setItem('access_token_expiry', accessTokenExpiry.toString());
+
+        if (newRefreshToken) {
+          const decodedRefresh = decodeJWT(newRefreshToken);
+          const refreshTokenExpiry = decodedRefresh?.exp
+            ? decodedRefresh.exp * 1000
+            : now + (7 * 24 * 60 * 60 * 1000); // 7 days default
+
+          localStorage.setItem('refresh_token', newRefreshToken);
+          localStorage.setItem('refresh_token_expiry', refreshTokenExpiry.toString());
+        }
+
+        localStorage.setItem('token_set_time', now.toString());
 
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
+        // Clear all auth data
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+        localStorage.removeItem('access_token_expiry');
+        localStorage.removeItem('refresh_token_expiry');
+        localStorage.removeItem('token_set_time');
+
+        // Redirect to login
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
