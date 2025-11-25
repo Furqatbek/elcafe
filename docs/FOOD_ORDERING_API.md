@@ -24,9 +24,12 @@ The El Cafe Food Ordering System provides a complete end-to-end solution for foo
 - **Public Order Placement API** - Website and mobile app integration
 - **Kitchen Management System** - Real-time food preparation tracking
 - **Courier Delivery System** - Delivery assignment and tracking
+- **Courier Status Management** - Real-time courier online/offline status and GPS tracking
+- **Courier Map Dashboard** - Live visualization of courier fleet with status monitoring
 - **Real-time Notifications** - Multi-channel notification system
 - **Order Status Tracking** - Live order tracking for customers
 - **Role-based Access Control** - Secure endpoints for different user roles
+- **Courier Wallet System** - Automatic payment calculation and tracking
 
 ### System Components
 
@@ -655,6 +658,108 @@ POST /courier/orders/1234/complete?courierId=456&notes=Delivered to reception de
 - Customer receives notification
 - Restaurant receives notification
 - Admin dashboard updated
+- Courier wallet credited with delivery fee
+
+---
+
+## 4️⃣ Courier Status Management
+
+**Base Path:** `/couriers`
+
+**Authentication:** Required (COURIER role for status updates)
+
+---
+
+### 4.1 Update Courier Status
+
+**Endpoint:** `POST /couriers/{id}/status`
+
+**Description:** Update courier online/offline status and location from courier mobile app.
+
+**Authentication:** Required (COURIER role)
+
+**Path Parameters:**
+- `id` (required) - Courier ID
+
+**Request Body:**
+
+```json
+{
+  "status": "ONLINE",
+  "latitude": 41.2995,
+  "longitude": 69.2401
+}
+```
+
+**Status Values:**
+- `ONLINE` - Courier is online and available for orders
+- `OFFLINE` - Courier is offline
+- `ON_DELIVERY` - Courier is currently delivering an order
+- `BUSY` - Courier is busy (on break, handling issue)
+
+**Response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Status updated successfully",
+  "data": {
+    "courierId": 456,
+    "courierName": "Ali Karimov",
+    "isOnline": true,
+    "currentStatus": "ONLINE",
+    "lastSeenAt": "2025-11-25T11:45:00",
+    "lastLocationUpdateAt": "2025-11-25T11:45:00",
+    "latitude": 41.2995,
+    "longitude": 69.2401
+  }
+}
+```
+
+**Side Effects:**
+- Courier status updated in database
+- Last seen timestamp updated
+- If location provided, GPS coordinates saved to courier_locations table
+- Last location update timestamp recorded
+- Available for order assignment if status is ONLINE
+
+---
+
+### 4.2 Get Courier Status
+
+**Endpoint:** `GET /couriers/{id}/status`
+
+**Description:** Get current courier status and last known location.
+
+**Authentication:** Required (ADMIN, OPERATOR, or COURIER roles)
+
+**Path Parameters:**
+- `id` (required) - Courier ID
+
+**Response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "message": "Status retrieved successfully",
+  "data": {
+    "courierId": 456,
+    "courierName": "Ali Karimov",
+    "isOnline": true,
+    "currentStatus": "ONLINE",
+    "lastSeenAt": "2025-11-25T11:45:00",
+    "lastLocationUpdateAt": "2025-11-25T11:45:00",
+    "latitude": 41.2995,
+    "longitude": 69.2401
+  }
+}
+```
+
+**Use Cases:**
+- Admin dashboard courier map
+- Real-time courier tracking
+- Availability monitoring
+- Order assignment decisions
 
 ---
 
