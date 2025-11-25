@@ -85,6 +85,13 @@ export const menuCollectionAPI = {
   delete: (id) => api.delete(`/menu-collections/${id}`),
 };
 
+export const linkedItemAPI = {
+  getLinkedItems: (productId) => api.get(`/products/${productId}/linked-items`),
+  getLinkedItemsByType: (productId, linkType) => api.get(`/products/${productId}/linked-items/by-type`, { params: { linkType } }),
+  addLinkedItem: (productId, data) => api.post(`/products/${productId}/linked-items`, data),
+  deleteLinkedItem: (productId, id) => api.delete(`/products/${productId}/linked-items/${id}`),
+};
+
 export const orderAPI = {
   create: (data) => api.post('/orders', data),
   getById: (id) => api.get(`/orders/${id}`),
