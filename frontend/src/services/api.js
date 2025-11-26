@@ -134,6 +134,7 @@ export const menuAPI = {
   // Product management
   createProduct: (data) => api.post('/products', data),
   getProductById: (id) => api.get(`/products/${id}`),
+  getProductsByRestaurant: (restaurantId) => api.get(`/products/restaurant/${restaurantId}`),
   getProductsByCategory: (categoryId) => api.get(`/products/category/${categoryId}`),
   deleteProduct: (id) => api.delete(`/products/${id}`),
 };

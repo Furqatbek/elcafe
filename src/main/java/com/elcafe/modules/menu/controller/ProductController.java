@@ -2,6 +2,7 @@ package com.elcafe.modules.menu.controller;
 
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.CreateProductRequest;
+import com.elcafe.modules.menu.dto.ProductListDTO;
 import com.elcafe.modules.menu.entity.Category;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.CategoryRepository;
@@ -71,6 +72,17 @@ public class ProductController {
         Product product = menuService.getProductById(id);
 
         return ResponseEntity.ok(ApiResponse.success("Product retrieved successfully", product));
+    }
+
+    @GetMapping("/restaurant/{restaurantId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @Operation(summary = "Get products by restaurant", description = "Get all products for a specific restaurant")
+    public ResponseEntity<ApiResponse<List<ProductListDTO>>> getProductsByRestaurant(@PathVariable Long restaurantId) {
+        log.info("Fetching products for restaurant: {}", restaurantId);
+
+        List<ProductListDTO> products = menuService.getProductsByRestaurant(restaurantId);
+
+        return ResponseEntity.ok(ApiResponse.success("Products retrieved successfully", products));
     }
 
     @GetMapping("/category/{categoryId}")

@@ -1,6 +1,7 @@
 package com.elcafe.modules.menu.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.menu.dto.ProductListDTO;
 import com.elcafe.modules.menu.dto.PublicMenuCategoryDTO;
 import com.elcafe.modules.menu.dto.PublicMenuProductDTO;
 import com.elcafe.modules.menu.entity.*;
@@ -196,6 +197,37 @@ public class MenuService {
     @Transactional(readOnly = true)
     public List<Product> getProductsByCategory(Long categoryId) {
         return productRepository.findByCategoryIdOrderBySortOrder(categoryId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductListDTO> getProductsByRestaurant(Long restaurantId) {
+        List<Product> products = productRepository.findByRestaurantIdAndStatus(restaurantId, ProductStatus.LIVE);
+        return products.stream()
+                .map(this::convertToProductListDTO)
+                .collect(Collectors.toList());
+    }
+
+    private ProductListDTO convertToProductListDTO(Product product) {
+        return ProductListDTO.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .description(product.getDescription())
+                .imageUrl(product.getImageUrl())
+                .price(product.getPrice())
+                .priceWithMargin(product.getPriceWithMargin())
+                .itemType(product.getItemType())
+                .sortOrder(product.getSortOrder())
+                .status(product.getStatus())
+                .inStock(product.getInStock())
+                .featured(product.getFeatured())
+                .hasVariants(product.getHasVariants())
+                .categoryId(product.getCategory().getId())
+                .categoryName(product.getCategory().getName())
+                .available(product.getInStock()) // For frontend compatibility
+                .isFeatured(product.getFeatured()) // For frontend compatibility
+                .createdAt(product.getCreatedAt())
+                .updatedAt(product.getUpdatedAt())
+                .build();
     }
 
     @Transactional

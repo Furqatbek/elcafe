@@ -108,22 +108,10 @@ export default function Products() {
 
     setLoading(true);
     try {
-      const response = await menuAPI.getPublicMenu(selectedRestaurant);
-      const menuData = response.data.data;
+      const response = await menuAPI.getProductsByRestaurant(selectedRestaurant);
+      const productsData = response.data.data || [];
 
-      // Extract categories and products
-      const cats = menuData || [];
-
-      // Extract all products from all categories
-      const allProducts = cats.flatMap(cat =>
-        (cat.products || []).map(product => ({
-          ...product,
-          categoryName: cat.name,
-          categoryId: cat.id
-        }))
-      );
-
-      setProducts(allProducts);
+      setProducts(productsData);
     } catch (error) {
       console.error('Failed to load products:', error);
     } finally {
