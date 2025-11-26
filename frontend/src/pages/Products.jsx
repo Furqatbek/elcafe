@@ -27,7 +27,9 @@ import {
   Search,
   DollarSign,
   Plus,
-  Star
+  Star,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 export default function Products() {
@@ -41,6 +43,9 @@ export default function Products() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -184,6 +189,69 @@ export default function Products() {
     setImagePreview('');
   };
 
+  const handleEditClick = (product) => {
+    setSelectedProduct(product);
+    setFormData({
+      name: product.name,
+      description: product.description || '',
+      imageUrl: product.imageUrl || '',
+      price: product.price?.toString() || '',
+      categoryId: product.categoryId?.toString() || '',
+      sortOrder: product.sortOrder || 0,
+      inStock: product.available ?? true,
+      featured: product.isFeatured ?? false
+    });
+    setImagePreview(product.imageUrl || '');
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateProduct = async (e) => {
+    e.preventDefault();
+
+    try {
+      let imageUrl = formData.imageUrl;
+
+      // Upload new image file if provided
+      if (imageFile) {
+        const uploadResponse = await uploadAPI.uploadImage(imageFile);
+        imageUrl = uploadResponse.data.data;
+      }
+
+      await menuAPI.updateProduct(selectedProduct.id, {
+        ...formData,
+        imageUrl,
+        price: parseFloat(formData.price),
+        categoryId: parseInt(formData.categoryId)
+      });
+      setEditModalOpen(false);
+      resetForm();
+      setSelectedProduct(null);
+      loadProducts();
+    } catch (error) {
+      console.error('Failed to update product:', error);
+      alert('Failed to update product: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteClick = (product) => {
+    setSelectedProduct(product);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedProduct) return;
+
+    try {
+      await menuAPI.deleteProduct(selectedProduct.id);
+      setDeleteDialogOpen(false);
+      setSelectedProduct(null);
+      loadProducts();
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+      alert('Failed to delete product: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
   if (loading && products.length === 0) {
     return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
   }
@@ -307,6 +375,26 @@ export default function Products() {
                     <DollarSign className="h-5 w-5" />
                     <span>{product.price?.toFixed(2)}</span>
                   </div>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => handleEditClick(product)}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => handleDeleteClick(product)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -456,6 +544,171 @@ export default function Products() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>
+              Update the product details
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateProduct}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">{t('menu.productName')} *</Label>
+                <Input
+                  id="edit-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  maxLength={200}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">Category *</Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">{t('menu.description')}</Label>
+                <Textarea
+                  id="edit-description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  maxLength={1000}
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-imageFile">Product Image</Label>
+                <Input
+                  id="edit-imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-md border"
+                    />
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Or enter image URL instead:
+                </p>
+                <Input
+                  id="edit-imageUrl"
+                  type="url"
+                  placeholder="https://example.com/image.jpg"
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  maxLength={500}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-price">{t('menu.price')} *</Label>
+                  <Input
+                    id="edit-price"
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    required
+                    min="0"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-sortOrder">{t('menu.sortOrder')}</Label>
+                  <Input
+                    id="edit-sortOrder"
+                    type="number"
+                    value={formData.sortOrder}
+                    onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                    min={0}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-inStock"
+                    checked={formData.inStock}
+                    onChange={(e) => setFormData({ ...formData, inStock: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="edit-inStock">{t('menu.inStock')}</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-featured"
+                    checked={formData.featured}
+                    onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="edit-featured">{t('menu.featured')}</Label>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setEditModalOpen(false); resetForm(); setSelectedProduct(null); }}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit">
+                Update
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Product</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{selectedProduct?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setSelectedProduct(null); }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

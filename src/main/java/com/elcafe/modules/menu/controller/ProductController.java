@@ -96,6 +96,39 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success("Products retrieved successfully", products));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update product", description = "Update an existing product")
+    public ResponseEntity<ApiResponse<Product>> updateProduct(
+            @PathVariable Long id,
+            @Valid @RequestBody CreateProductRequest request
+    ) {
+        log.info("Updating product: {} with data: {}", id, request.getName());
+
+        // Validate category exists
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category", "id", request.getCategoryId()));
+
+        // Build product entity with updated data
+        Product productData = Product.builder()
+                .category(category)
+                .name(request.getName())
+                .description(request.getDescription())
+                .imageUrl(request.getImageUrl())
+                .price(request.getPrice())
+                .itemType(request.getItemType())
+                .sortOrder(request.getSortOrder())
+                .status(request.getStatus())
+                .inStock(request.getInStock())
+                .featured(request.getFeatured())
+                .hasVariants(request.getHasVariants())
+                .build();
+
+        Product updatedProduct = menuService.updateProduct(id, productData);
+
+        return ResponseEntity.ok(ApiResponse.success("Product updated successfully", updatedProduct));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Delete product", description = "Delete a product")

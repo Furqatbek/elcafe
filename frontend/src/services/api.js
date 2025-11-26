@@ -133,6 +133,7 @@ export const menuAPI = {
   getCategoryById: (id) => api.get(`/categories/${id}`),
   // Product management
   createProduct: (data) => api.post('/products', data),
+  updateProduct: (id, data) => api.put(`/products/${id}`, data),
   getProductById: (id) => api.get(`/products/${id}`),
   getProductsByRestaurant: (restaurantId) => api.get(`/products/restaurant/${restaurantId}`),
   getProductsByCategory: (categoryId) => api.get(`/products/category/${categoryId}`),
