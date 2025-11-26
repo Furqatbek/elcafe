@@ -258,28 +258,32 @@ export default function Products() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.map((product) => (
             <Card key={product.id} className="hover:shadow-lg transition-shadow overflow-hidden">
-              {product.imageUrl && (
-                <div className="h-48 overflow-hidden relative">
+              <div className="h-48 overflow-hidden relative">
+                {product.imageUrl ? (
                   <img
                     src={product.imageUrl}
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-2 right-2 flex gap-2">
-                    {product.status && (
-                      <Badge variant={product.status === 'LIVE' ? 'default' : 'secondary'}>
-                        {product.status}
-                      </Badge>
-                    )}
-                    {product.isFeatured && (
-                      <Badge className="bg-yellow-500">
-                        <Star className="h-3 w-3 mr-1" />
-                        Featured
-                      </Badge>
-                    )}
+                ) : (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <Package className="h-16 w-16 text-gray-400" />
                   </div>
+                )}
+                <div className="absolute top-2 right-2 flex gap-2">
+                  {product.status && (
+                    <Badge variant={product.status === 'LIVE' ? 'default' : 'secondary'}>
+                      {product.status}
+                    </Badge>
+                  )}
+                  {product.isFeatured && (
+                    <Badge className="bg-yellow-500">
+                      <Star className="h-3 w-3 mr-1" />
+                      Featured
+                    </Badge>
+                  )}
                 </div>
-              )}
+              </div>
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
