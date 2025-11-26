@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import { menuAPI, restaurantAPI, uploadAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -27,17 +26,12 @@ import {
   Package,
   Search,
   DollarSign,
-  Eye,
-  Link as LinkIcon,
-  Filter,
   Plus,
-  Download,
   Star
 } from 'lucide-react';
 
 export default function Products() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
@@ -45,9 +39,6 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [availabilityFilter, setAvailabilityFilter] = useState('all');
-  const [featuredFilter, setFeaturedFilter] = useState('all');
-  const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [categories, setCategories] = useState([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -76,7 +67,7 @@ export default function Products() {
 
   useEffect(() => {
     filterProducts();
-  }, [searchTerm, selectedCategory, availabilityFilter, featuredFilter, priceRange, products]);
+  }, [searchTerm, selectedCategory, products]);
 
   const loadRestaurants = async () => {
     try {
@@ -135,58 +126,7 @@ export default function Products() {
       filtered = filtered.filter(product => product.categoryId === parseInt(selectedCategory));
     }
 
-    // Filter by availability
-    if (availabilityFilter !== 'all') {
-      const isAvailable = availabilityFilter === 'available';
-      filtered = filtered.filter(product => product.available === isAvailable);
-    }
-
-    // Filter by featured
-    if (featuredFilter !== 'all') {
-      const isFeatured = featuredFilter === 'featured';
-      filtered = filtered.filter(product => product.isFeatured === isFeatured);
-    }
-
-    // Filter by price range
-    if (priceRange.min) {
-      filtered = filtered.filter(product => product.price >= parseFloat(priceRange.min));
-    }
-    if (priceRange.max) {
-      filtered = filtered.filter(product => product.price <= parseFloat(priceRange.max));
-    }
-
     setFilteredProducts(filtered);
-  };
-
-  const handleExportCSV = () => {
-    // Prepare CSV data
-    const headers = ['ID', 'Name', 'Description', 'Category', 'Price', 'Available', 'Featured'];
-    const rows = filteredProducts.map(product => [
-      product.id,
-      `"${product.name}"`,
-      `"${product.description || ''}"`,
-      `"${product.categoryName}"`,
-      product.price?.toFixed(2) || '0.00',
-      product.available ? 'Yes' : 'No',
-      product.isFeatured ? 'Yes' : 'No'
-    ]);
-
-    // Create CSV content
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-
-    // Create blob and download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `products_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const handleImageChange = (e) => {
@@ -244,46 +184,29 @@ export default function Products() {
     setImagePreview('');
   };
 
-  const handleViewLinkedItems = (productId) => {
-    navigate(`/products/${productId}/linked-items`);
-  };
-
-  const resetFilters = () => {
-    setSearchTerm('');
-    setSelectedCategory('all');
-    setAvailabilityFilter('all');
-    setFeaturedFilter('all');
-    setPriceRange({ min: '', max: '' });
-  };
-
   if (loading && products.length === 0) {
     return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">{t('nav.sub.products')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t('menu.products')}
-          </p>
+          <h1 className="text-3xl font-bold">Products</h1>
+          <p className="text-muted-foreground mt-1">Browse all food items</p>
         </div>
         <div className="flex gap-3">
-          <Button onClick={handleExportCSV} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
           <Button onClick={() => setCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            {t('menu.newProduct')}
+            New Product
           </Button>
           <Select
             value={selectedRestaurant?.toString()}
             onValueChange={(value) => setSelectedRestaurant(parseInt(value))}
           >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder={t('common.selectRestaurant')} />
+              <SelectValue placeholder="Select Restaurant" />
             </SelectTrigger>
             <SelectContent>
               {restaurants.map((restaurant) => (
@@ -296,131 +219,30 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Search and Filter Bar */}
-      <div className="space-y-4">
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t('common.search')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select
-            value={selectedCategory}
-            onValueChange={setSelectedCategory}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue>
-                <div className="flex items-center">
-                  <Filter className="h-4 w-4 mr-2" />
-                  {selectedCategory === 'all' ? t('common.all') : categories.find(c => c.id === parseInt(selectedCategory))?.name}
-                </div>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('common.all')} {t('menu.categories')}</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category.id} value={category.id.toString()}>
-                  {category.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Additional Filters */}
-        <div className="flex gap-4">
-          <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="available">Available</SelectItem>
-              <SelectItem value="unavailable">Unavailable</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={featuredFilter} onValueChange={setFeaturedFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Featured</SelectItem>
-              <SelectItem value="featured">Featured Only</SelectItem>
-              <SelectItem value="regular">Regular Only</SelectItem>
-            </SelectContent>
-          </Select>
-
+      {/* Search Bar */}
+      <div className="flex gap-4">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            type="number"
-            placeholder="Min Price"
-            value={priceRange.min}
-            onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-            className="w-[120px]"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
           />
-
-          <Input
-            type="number"
-            placeholder="Max Price"
-            value={priceRange.max}
-            onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-            className="w-[120px]"
-          />
-
-          <Button variant="outline" onClick={resetFilters}>
-            {t('common.reset')}
-          </Button>
         </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              {t('common.total')} {t('menu.products')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{products.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              {t('menu.categories')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{categories.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              Filtered Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredProducts.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">
-              Available
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {filteredProducts.filter(p => p.available).length}
-            </div>
-          </CardContent>
-        </Card>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id.toString()}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Products Grid */}
@@ -428,16 +250,16 @@ export default function Products() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
-              {t('common.noData')}
+              No products found
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.map((product) => (
-            <Card key={product.id} className="hover:shadow-lg transition-shadow">
+            <Card key={product.id} className="hover:shadow-lg transition-shadow overflow-hidden">
               {product.imageUrl && (
-                <div className="h-48 overflow-hidden rounded-t-lg relative">
+                <div className="h-48 overflow-hidden relative">
                   <img
                     src={product.imageUrl}
                     alt={product.name}
@@ -457,7 +279,7 @@ export default function Products() {
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
                   <Badge variant={product.available ? 'default' : 'secondary'}>
-                    {product.available ? t('common.active') : t('common.unavailable')}
+                    {product.available ? 'In Stock' : 'Out of Stock'}
                   </Badge>
                 </div>
                 {product.description && (
@@ -466,28 +288,16 @@ export default function Products() {
                   </CardDescription>
                 )}
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center text-muted-foreground">
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center text-muted-foreground text-sm">
                     <Package className="h-4 w-4 mr-2" />
                     <span>{product.categoryName}</span>
                   </div>
-                  <div className="flex items-center font-semibold text-lg">
-                    <DollarSign className="h-5 w-5 mr-1" />
+                  <div className="flex items-center font-semibold text-lg text-green-600">
+                    <DollarSign className="h-5 w-5" />
                     <span>{product.price?.toFixed(2)}</span>
                   </div>
-                </div>
-
-                <div className="pt-2 flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => handleViewLinkedItems(product.id)}
-                  >
-                    <LinkIcon className="h-4 w-4 mr-1" />
-                    {t('common.view')}
-                  </Button>
                 </div>
               </CardContent>
             </Card>
