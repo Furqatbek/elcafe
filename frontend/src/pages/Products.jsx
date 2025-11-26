@@ -265,14 +265,19 @@ export default function Products() {
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
-                  {product.isFeatured && (
-                    <div className="absolute top-2 right-2">
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    {product.status && (
+                      <Badge variant={product.status === 'LIVE' ? 'default' : 'secondary'}>
+                        {product.status}
+                      </Badge>
+                    )}
+                    {product.isFeatured && (
                       <Badge className="bg-yellow-500">
                         <Star className="h-3 w-3 mr-1" />
                         Featured
                       </Badge>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
               <CardHeader>

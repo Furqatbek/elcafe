@@ -201,7 +201,8 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<ProductListDTO> getProductsByRestaurant(Long restaurantId) {
-        List<Product> products = productRepository.findByRestaurantIdAndStatus(restaurantId, ProductStatus.LIVE);
+        // Fetch all products (DRAFT and LIVE) for admin view
+        List<Product> products = productRepository.findByRestaurantId(restaurantId);
         return products.stream()
                 .map(this::convertToProductListDTO)
                 .collect(Collectors.toList());
