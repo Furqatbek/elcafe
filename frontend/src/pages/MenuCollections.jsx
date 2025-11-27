@@ -100,9 +100,9 @@ export default function MenuCollections() {
 
   const loadProducts = async (restaurantId) => {
     try {
-      const response = await menuAPI.getPublicMenu(restaurantId);
-      // Extract all products from all categories
-      const allProducts = response.data.data?.categories?.flatMap(cat => cat.products || []) || [];
+      const response = await menuAPI.getProductsByRestaurant(restaurantId);
+      // Use the products data directly (includes all products - DRAFT and LIVE)
+      const allProducts = response.data.data || [];
       setProducts(allProducts);
     } catch (error) {
       console.error('Failed to load products:', error);
