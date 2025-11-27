@@ -60,11 +60,14 @@ export default function Orders() {
   // Create order form
   const [formData, setFormData] = useState({
     restaurantId: '',
-    customerName: '',
+    customerFirstName: '',
+    customerLastName: '',
     customerPhone: '',
     customerEmail: '',
     deliveryAddress: '',
     deliveryCity: '',
+    deliveryState: '',
+    deliveryZipCode: '',
     customerNotes: '',
     paymentMethod: 'CARD',
     items: []
@@ -177,22 +180,28 @@ export default function Orders() {
     try {
       const orderData = {
         restaurantId: parseInt(formData.restaurantId),
-        customer: {
-          name: formData.customerName,
+        orderSource: 'ADMIN_PANEL',
+        customerInfo: {
+          firstName: formData.customerFirstName,
+          lastName: formData.customerLastName,
           phone: formData.customerPhone,
           email: formData.customerEmail
         },
+        items: formData.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          specialInstructions: item.specialInstructions || null
+        })),
         deliveryInfo: {
           address: formData.deliveryAddress,
           city: formData.deliveryCity,
-          contactName: formData.customerName,
-          contactPhone: formData.customerPhone
+          state: formData.deliveryState || null,
+          zipCode: formData.deliveryZipCode || null,
+          deliveryInstructions: null
         },
-        items: formData.items,
         customerNotes: formData.customerNotes,
-        payment: {
-          method: formData.paymentMethod
-        }
+        paymentMethod: formData.paymentMethod,
+        scheduledFor: null
       };
 
       await orderAPI.create(orderData);
@@ -238,11 +247,14 @@ export default function Orders() {
   const resetForm = () => {
     setFormData({
       restaurantId: '',
-      customerName: '',
+      customerFirstName: '',
+      customerLastName: '',
       customerPhone: '',
       customerEmail: '',
       deliveryAddress: '',
       deliveryCity: '',
+      deliveryState: '',
+      deliveryZipCode: '',
       customerNotes: '',
       paymentMethod: 'CARD',
       items: []
@@ -513,15 +525,27 @@ export default function Orders() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="customerName">Customer Name *</Label>
+                  <Label htmlFor="customerFirstName">First Name *</Label>
                   <Input
-                    id="customerName"
-                    value={formData.customerName}
-                    onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+                    id="customerFirstName"
+                    value={formData.customerFirstName}
+                    onChange={(e) => setFormData({ ...formData, customerFirstName: e.target.value })}
                     required
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="customerLastName">Last Name *</Label>
+                  <Input
+                    id="customerLastName"
+                    value={formData.customerLastName}
+                    onChange={(e) => setFormData({ ...formData, customerLastName: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="customerPhone">Customer Phone *</Label>
                   <Input
@@ -532,29 +556,29 @@ export default function Orders() {
                     required
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="customerEmail">Customer Email</Label>
+                  <Input
+                    id="customerEmail"
+                    type="email"
+                    value={formData.customerEmail}
+                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="customerEmail">Customer Email</Label>
+                <Label htmlFor="deliveryAddress">Delivery Address *</Label>
                 <Input
-                  id="customerEmail"
-                  type="email"
-                  value={formData.customerEmail}
-                  onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                  id="deliveryAddress"
+                  value={formData.deliveryAddress}
+                  onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+                  required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryAddress">Delivery Address *</Label>
-                  <Input
-                    id="deliveryAddress"
-                    value={formData.deliveryAddress}
-                    onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-                    required
-                  />
-                </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="deliveryCity">City *</Label>
                   <Input
@@ -564,6 +588,24 @@ export default function Orders() {
                     required
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryState">State</Label>
+                  <Input
+                    id="deliveryState"
+                    value={formData.deliveryState}
+                    onChange={(e) => setFormData({ ...formData, deliveryState: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="deliveryZipCode">ZIP Code</Label>
+                <Input
+                  id="deliveryZipCode"
+                  value={formData.deliveryZipCode}
+                  onChange={(e) => setFormData({ ...formData, deliveryZipCode: e.target.value })}
+                />
               </div>
 
               <div className="space-y-2">
