@@ -4,6 +4,7 @@ import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,6 +26,18 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@NamedEntityGraph(
+    name = "Order.full",
+    attributeNodes = {
+        @NamedAttributeNode("restaurant"),
+        @NamedAttributeNode("customer"),
+        @NamedAttributeNode("items"),
+        @NamedAttributeNode("deliveryInfo"),
+        @NamedAttributeNode("payment"),
+        @NamedAttributeNode("statusHistory")
+    }
+)
 public class Order {
 
     @Id
