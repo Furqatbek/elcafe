@@ -145,6 +145,7 @@ export const menuCollectionAPI = {
   getById: (id) => api.get(`/menu-collections/${id}`),
   getActive: (restaurantId) => api.get('/menu-collections/active', { params: { restaurantId } }),
   create: (data) => api.post('/menu-collections', data),
+  update: (id, data) => api.put(`/menu-collections/${id}`, data),
   addProducts: (id, productIds) => api.post(`/menu-collections/${id}/products`, productIds),
   delete: (id) => api.delete(`/menu-collections/${id}`),
 };

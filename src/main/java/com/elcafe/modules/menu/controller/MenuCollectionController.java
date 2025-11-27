@@ -68,6 +68,17 @@ public class MenuCollectionController {
                 .body(ApiResponse.success("Menu collection created successfully", collection));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update menu collection")
+    public ResponseEntity<ApiResponse<MenuCollectionDTO>> updateMenuCollection(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateMenuCollectionRequest request
+    ) {
+        MenuCollectionDTO collection = menuCollectionService.updateMenuCollection(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Menu collection updated successfully", collection));
+    }
+
     @PostMapping("/{id}/products")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Add products to menu collection")

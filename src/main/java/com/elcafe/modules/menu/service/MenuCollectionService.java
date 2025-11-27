@@ -73,6 +73,30 @@ public class MenuCollectionService {
     }
 
     @Transactional
+    public MenuCollectionDTO updateMenuCollection(Long id, UpdateMenuCollectionRequest request) {
+        MenuCollection collection = menuCollectionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Menu collection not found with id: " + id));
+
+        collection.setName(request.getName());
+        collection.setDescription(request.getDescription());
+        collection.setImageUrl(request.getImageUrl());
+        collection.setStartDate(request.getStartDate());
+        collection.setEndDate(request.getEndDate());
+
+        if (request.getSortOrder() != null) {
+            collection.setSortOrder(request.getSortOrder());
+        }
+
+        if (request.getIsActive() != null) {
+            collection.setIsActive(request.getIsActive());
+        }
+
+        MenuCollection updated = menuCollectionRepository.save(collection);
+        log.info("Updated menu collection: {}", updated.getName());
+        return toDTO(updated);
+    }
+
+    @Transactional
     public void addProductsToCollection(Long collectionId, List<Long> productIds) {
         MenuCollection collection = menuCollectionRepository.findById(collectionId)
                 .orElseThrow(() -> new RuntimeException("Menu collection not found"));
