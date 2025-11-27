@@ -160,8 +160,9 @@ public class OrderService {
         log.info("Order created with number: {}", order.getOrderNumber());
 
         // Fetch the order again with EntityGraph to ensure all associations are loaded
-        return orderRepository.findById(order.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", order.getId()));
+        final Long orderId = order.getId();
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
     }
 
     private Customer findOrCreateCustomer(CreateOrderRequest.CustomerInfo customerInfo) {
