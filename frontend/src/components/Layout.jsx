@@ -84,11 +84,7 @@ export default function Layout() {
       label: t('nav.orders'),
       icon: ShoppingCart,
       path: '/orders',
-      subItems: [
-        { label: t('nav.sub.allOrders'), icon: Package, path: '/orders' },
-        { label: t('nav.sub.pending'), icon: Clock, path: '/orders/pending' },
-        { label: t('nav.sub.completed'), icon: CheckCircle, path: '/orders/completed' },
-      ],
+      subItems: [],
     },
     {
       id: 'clients',
