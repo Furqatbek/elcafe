@@ -116,8 +116,8 @@ public class OrderService {
 
         // 6. Create payment
         Payment payment = Payment.builder()
-                .paymentMethod(PaymentMethod.valueOf(request.getPaymentMethod()))
-                .paymentStatus(PaymentStatus.PENDING)
+                .method(PaymentMethod.valueOf(request.getPaymentMethod()))
+                .status(PaymentStatus.PENDING)
                 .amount(total)
                 .build();
 
