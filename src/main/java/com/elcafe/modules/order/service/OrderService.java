@@ -159,7 +159,9 @@ public class OrderService {
         order = orderRepository.save(order);
         log.info("Order created with number: {}", order.getOrderNumber());
 
-        return order;
+        // Fetch the order again with EntityGraph to ensure all associations are loaded
+        return orderRepository.findById(order.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", order.getId()));
     }
 
     private Customer findOrCreateCustomer(CreateOrderRequest.CustomerInfo customerInfo) {
