@@ -26,7 +26,7 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "statusHistory"})
 @NamedEntityGraph(
     name = "Order.full",
     attributeNodes = {
@@ -34,8 +34,7 @@ import java.util.List;
         @NamedAttributeNode("customer"),
         @NamedAttributeNode("items"),
         @NamedAttributeNode("deliveryInfo"),
-        @NamedAttributeNode("payment"),
-        @NamedAttributeNode("statusHistory")
+        @NamedAttributeNode("payment")
     }
 )
 public class Order {
