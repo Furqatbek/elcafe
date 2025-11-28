@@ -12,6 +12,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
@@ -39,6 +41,7 @@ public class Customer {
     @Column(nullable = false, length = 20)
     private String phone;
 
+    // Legacy address fields (kept for backward compatibility)
     @Column(length = 500)
     private String defaultAddress;
 
@@ -65,6 +68,11 @@ public class Customer {
     @Column(length = 50)
     @Builder.Default
     private RegistrationSource registrationSource = RegistrationSource.ADMIN_PANEL;
+
+    // Address relationship
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Address> addresses = new ArrayList<>();
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
