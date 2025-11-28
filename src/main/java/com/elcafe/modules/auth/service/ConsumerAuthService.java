@@ -65,6 +65,9 @@ public class ConsumerAuthService {
     @Value("${app.consumer.otp.include-in-response:false}")
     private Boolean includeOtpInResponse;
 
+    @Value("${app.consumer.otp.development-mode:false}")
+    private Boolean developmentMode;
+
     private static final Random RANDOM = new Random();
 
     /**
@@ -80,6 +83,11 @@ public class ConsumerAuthService {
         // Generate 6-digit OTP
         String otpCode = generateOtpCode();
 
+        // Always log OTP to console for development
+        log.info("=================================================");
+        log.info("OTP CODE GENERATED for {}: {}", phoneNumber, otpCode);
+        log.info("=================================================");
+
         // Calculate expiration
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(otpExpirationMinutes);
 
@@ -94,19 +102,23 @@ public class ConsumerAuthService {
 
         otpCodeRepository.save(otp);
 
-        // Send OTP via SMS
-        try {
-            SendSmsRequest smsRequest = SendSmsRequest.builder()
-                    .mobilePhone(phoneNumber)
-                    .message(String.format("Your verification code is: %s. Valid for %d minutes.",
-                            otpCode, otpExpirationMinutes))
-                    .build();
+        // Send OTP via SMS (skip in development mode)
+        if (!developmentMode) {
+            try {
+                SendSmsRequest smsRequest = SendSmsRequest.builder()
+                        .mobilePhone(phoneNumber)
+                        .message(String.format("Your verification code is: %s. Valid for %d minutes.",
+                                otpCode, otpExpirationMinutes))
+                        .build();
 
-            smsService.sendSms(smsRequest);
-            log.info("OTP sent successfully to {}", phoneNumber);
-        } catch (Exception e) {
-            log.error("Failed to send OTP SMS to {}: {}", phoneNumber, e.getMessage());
-            // Don't fail the request - OTP is still saved in DB
+                smsService.sendSms(smsRequest);
+                log.info("OTP sent successfully to {}", phoneNumber);
+            } catch (Exception e) {
+                log.error("Failed to send OTP SMS to {}: {}", phoneNumber, e.getMessage());
+                // Don't fail the request - OTP is still saved in DB
+            }
+        } else {
+            log.info("Development mode: SMS sending skipped for {}", phoneNumber);
         }
 
         long expiresInSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), expiresAt);
@@ -135,20 +147,41 @@ public class ConsumerAuthService {
         String phoneNumber = normalizePhoneNumber(request.getPhoneNumber());
         String otpCode = request.getOtpCode();
 
-        // Find OTP
-        OtpCode otp = otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse(phoneNumber, otpCode)
-                .orElseThrow(() -> new RuntimeException("Invalid OTP code"));
+        OtpCode otp;
 
-        // Check if expired
-        if (otp.isExpired()) {
-            throw new RuntimeException("OTP code has expired");
-        }
+        // In development mode, accept any OTP code
+        if (developmentMode) {
+            log.info("Development mode: Accepting any OTP code for {}", phoneNumber);
+            // Find any recent OTP for this phone number (to mark as verified)
+            otp = otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse(phoneNumber, otpCode)
+                    .orElseGet(() -> {
+                        // If no matching OTP found in dev mode, create a temporary one
+                        log.info("Development mode: Creating temporary OTP record for {}", phoneNumber);
+                        OtpCode tempOtp = OtpCode.builder()
+                                .phoneNumber(phoneNumber)
+                                .otpCode(otpCode)
+                                .expiresAt(LocalDateTime.now().plusMinutes(otpExpirationMinutes))
+                                .ipAddress(ipAddress)
+                                .userAgent(userAgent)
+                                .build();
+                        return otpCodeRepository.save(tempOtp);
+                    });
+        } else {
+            // Production mode: strict OTP validation
+            otp = otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse(phoneNumber, otpCode)
+                    .orElseThrow(() -> new RuntimeException("Invalid OTP code"));
 
-        // Check attempts
-        otp.incrementAttempts();
-        if (otp.getAttempts() > maxOtpAttempts) {
-            otpCodeRepository.save(otp);
-            throw new RuntimeException("Maximum verification attempts exceeded");
+            // Check if expired
+            if (otp.isExpired()) {
+                throw new RuntimeException("OTP code has expired");
+            }
+
+            // Check attempts
+            otp.incrementAttempts();
+            if (otp.getAttempts() > maxOtpAttempts) {
+                otpCodeRepository.save(otp);
+                throw new RuntimeException("Maximum verification attempts exceeded");
+            }
         }
 
         // Mark as verified

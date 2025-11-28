@@ -129,6 +129,7 @@ app:
       rate-limit-minutes: 1 # Rate limit time window
       rate-limit-count: 3 # Maximum OTP requests within time window
       include-in-response: ${CONSUMER_OTP_INCLUDE_IN_RESPONSE:false} # Include OTP in response (dev/test only)
+      development-mode: ${CONSUMER_OTP_DEVELOPMENT_MODE:true} # Accept any OTP in dev mode (no SMS sending)
     session:
       access-token-expiration: 3600000 # 1 hour (in milliseconds)
       refresh-token-expiration: 2592000000 # 30 days (in milliseconds)
