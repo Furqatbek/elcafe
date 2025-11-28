@@ -11,6 +11,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,11 @@ public class Customer {
 
     @Column(nullable = false, length = 20)
     private String phone;
+
+    private LocalDate birthDate;
+
+    @Column(length = 10)
+    private String language; // e.g., "uz", "ru", "en"
 
     // Legacy address fields (kept for backward compatibility)
     @Column(length = 500)

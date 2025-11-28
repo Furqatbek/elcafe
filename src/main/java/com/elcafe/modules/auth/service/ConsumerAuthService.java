@@ -196,15 +196,28 @@ public class ConsumerAuthService {
         boolean isNewUser = customer == null;
 
         if (isNewUser) {
-            // Create new customer with placeholder name (can be updated later)
+            // Create new customer with data from registration request
+            String firstName = request.getFirstName();
+            String lastName = request.getLastName();
+
+            // Use defaults if name not provided
+            if (firstName == null || firstName.trim().isEmpty()) {
+                firstName = "Customer";
+            }
+            if (lastName == null || lastName.trim().isEmpty()) {
+                lastName = phoneNumber.substring(Math.max(0, phoneNumber.length() - 4)); // Last 4 digits
+            }
+
             customer = Customer.builder()
                     .phone(phoneNumber)
-                    .firstName("Customer")
-                    .lastName(phoneNumber.substring(Math.max(0, phoneNumber.length() - 4))) // Last 4 digits
-                    .registrationSource(com.elcafe.modules.customer.enums.RegistrationSource.MOBILE_APP)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .birthDate(request.getBirthDate())
+                    .language(request.getLanguage())
+                    .registrationSource(request.getRegistrationSource())
                     .build();
             customer = customerRepository.save(customer);
-            log.info("Created new customer for phone number: {}", phoneNumber);
+            log.info("Created new customer for phone number: {}, source: {}", phoneNumber, request.getRegistrationSource());
         }
 
         // Invalidate existing sessions
