@@ -58,7 +58,6 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/consumer/auth/**",
-                                "/api/v1/menu/public/**",
                                 "/api/v1/courier/webhook/**",
                                 "/uploads/**",
                                 "/api-docs/**",
@@ -67,6 +66,8 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/info"
                         ).permitAll()
+                        // Public GET requests for menu
+                        .requestMatchers(HttpMethod.GET, "/api/v1/menu/**").permitAll()
                         // Admin only endpoints
                         .requestMatchers(HttpMethod.POST, "/api/v1/restaurants/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/restaurants/**").hasRole("ADMIN")
