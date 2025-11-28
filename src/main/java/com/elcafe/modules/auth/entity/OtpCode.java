@@ -1,5 +1,6 @@
 package com.elcafe.modules.auth.entity;
 
+import com.elcafe.modules.customer.enums.RegistrationSource;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -57,6 +59,23 @@ public class OtpCode {
     @Column(name = "attempts", nullable = false)
     @Builder.Default
     private Integer attempts = 0;
+
+    // Registration data (stored when requesting OTP)
+    @Column(name = "first_name", length = 100)
+    private String firstName;
+
+    @Column(name = "last_name", length = 100)
+    private String lastName;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "registration_source", length = 50)
+    private RegistrationSource registrationSource;
+
+    @Column(name = "language", length = 10)
+    private String language;
 
     /**
      * Check if OTP code is expired

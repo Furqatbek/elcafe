@@ -91,13 +91,19 @@ public class ConsumerAuthService {
         // Calculate expiration
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(otpExpirationMinutes);
 
-        // Save OTP to database
+        // Save OTP to database with registration data
         OtpCode otp = OtpCode.builder()
                 .phoneNumber(phoneNumber)
                 .otpCode(otpCode)
                 .expiresAt(expiresAt)
                 .ipAddress(ipAddress)
                 .userAgent(userAgent)
+                // Store registration data for later use
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .birthDate(request.getBirthDate())
+                .registrationSource(request.getRegistrationSource())
+                .language(request.getLanguage())
                 .build();
 
         otpCodeRepository.save(otp);
@@ -196,9 +202,9 @@ public class ConsumerAuthService {
         boolean isNewUser = customer == null;
 
         if (isNewUser) {
-            // Create new customer with data from registration request
-            String firstName = request.getFirstName();
-            String lastName = request.getLastName();
+            // Create new customer with data from OTP request
+            String firstName = otp.getFirstName();
+            String lastName = otp.getLastName();
 
             // Use defaults if name not provided
             if (firstName == null || firstName.trim().isEmpty()) {
@@ -212,12 +218,12 @@ public class ConsumerAuthService {
                     .phone(phoneNumber)
                     .firstName(firstName)
                     .lastName(lastName)
-                    .birthDate(request.getBirthDate())
-                    .language(request.getLanguage())
-                    .registrationSource(request.getRegistrationSource())
+                    .birthDate(otp.getBirthDate())
+                    .language(otp.getLanguage())
+                    .registrationSource(otp.getRegistrationSource())
                     .build();
             customer = customerRepository.save(customer);
-            log.info("Created new customer for phone number: {}, source: {}", phoneNumber, request.getRegistrationSource());
+            log.info("Created new customer for phone number: {}, source: {}", phoneNumber, otp.getRegistrationSource());
         }
 
         // Invalidate existing sessions
