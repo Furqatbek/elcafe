@@ -9,8 +9,8 @@ CREATE TABLE customer_addresses (
     place_id BIGINT,
     osm_type VARCHAR(20),
     osm_id BIGINT,
-    latitude DECIMAL(10, 7),
-    longitude DECIMAL(10, 7),
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
     address_class VARCHAR(100),
     type VARCHAR(100),
     display_name TEXT,
@@ -26,10 +26,10 @@ CREATE TABLE customer_addresses (
     country_code VARCHAR(10),
 
     -- Bounding box
-    bounding_box_min_lat DECIMAL(10, 7),
-    bounding_box_max_lat DECIMAL(10, 7),
-    bounding_box_min_lon DECIMAL(10, 7),
-    bounding_box_max_lon DECIMAL(10, 7),
+    bounding_box_min_lat DOUBLE PRECISION,
+    bounding_box_max_lat DOUBLE PRECISION,
+    bounding_box_min_lon DOUBLE PRECISION,
+    bounding_box_max_lon DOUBLE PRECISION,
 
     -- Additional info
     delivery_instructions TEXT,

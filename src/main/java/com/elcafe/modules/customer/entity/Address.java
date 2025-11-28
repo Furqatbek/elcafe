@@ -47,10 +47,8 @@ public class Address {
     @Column(name = "osm_id")
     private Long osmId;
 
-    @Column(precision = 10, scale = 7)
     private Double latitude;
 
-    @Column(precision = 10, scale = 7)
     private Double longitude;
 
     @Column(length = 100)
@@ -88,16 +86,12 @@ public class Address {
     private String countryCode;
 
     // Bounding box (stored as JSON or separate fields)
-    @Column(precision = 10, scale = 7)
     private Double boundingBoxMinLat;
 
-    @Column(precision = 10, scale = 7)
     private Double boundingBoxMaxLat;
 
-    @Column(precision = 10, scale = 7)
     private Double boundingBoxMinLon;
 
-    @Column(precision = 10, scale = 7)
     private Double boundingBoxMaxLon;
 
     // Additional info
