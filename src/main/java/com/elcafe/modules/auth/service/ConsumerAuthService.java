@@ -77,6 +77,15 @@ public class ConsumerAuthService {
     public ConsumerLoginResponse requestOtp(ConsumerLoginRequest request, String ipAddress, String userAgent) {
         String phoneNumber = normalizePhoneNumber(request.getPhoneNumber());
 
+        // Debug logging to see what data is received
+        log.info("Login request received - phone: {}, firstName: {}, lastName: {}, birthDate: {}, source: {}, language: {}",
+                phoneNumber,
+                request.getFirstName(),
+                request.getLastName(),
+                request.getBirthDate(),
+                request.getRegistrationSource(),
+                request.getLanguage());
+
         // Rate limiting check
         checkRateLimit(phoneNumber);
 
@@ -108,7 +117,8 @@ public class ConsumerAuthService {
                     .registrationSource(request.getRegistrationSource())
                     .build();
             customer = customerRepository.save(customer);
-            log.info("Created new customer during login request: phone={}, source={}", phoneNumber, request.getRegistrationSource());
+            log.info("Created new customer - phone: {}, firstName: {}, lastName: {}, birthDate: {}, source: {}, language: {}",
+                    phoneNumber, firstName, lastName, request.getBirthDate(), request.getRegistrationSource(), request.getLanguage());
         } else {
             // Update existing customer with new data if provided
             boolean updated = false;
