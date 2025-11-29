@@ -80,6 +80,66 @@ public class ConsumerAuthService {
         // Rate limiting check
         checkRateLimit(phoneNumber);
 
+        // Find or create customer with provided registration data
+        Customer customer = customerRepository.findByPhone(phoneNumber)
+                .orElse(null);
+
+        boolean isNewCustomer = customer == null;
+
+        if (isNewCustomer) {
+            // Create new customer with registration data
+            String firstName = request.getFirstName();
+            String lastName = request.getLastName();
+
+            // Use defaults if name not provided
+            if (firstName == null || firstName.trim().isEmpty()) {
+                firstName = "Customer";
+            }
+            if (lastName == null || lastName.trim().isEmpty()) {
+                lastName = phoneNumber.substring(Math.max(0, phoneNumber.length() - 4)); // Last 4 digits
+            }
+
+            customer = Customer.builder()
+                    .phone(phoneNumber)
+                    .firstName(firstName)
+                    .lastName(lastName)
+                    .birthDate(request.getBirthDate())
+                    .language(request.getLanguage())
+                    .registrationSource(request.getRegistrationSource())
+                    .build();
+            customer = customerRepository.save(customer);
+            log.info("Created new customer during login request: phone={}, source={}", phoneNumber, request.getRegistrationSource());
+        } else {
+            // Update existing customer with new data if provided
+            boolean updated = false;
+
+            if (request.getFirstName() != null && !request.getFirstName().trim().isEmpty()) {
+                customer.setFirstName(request.getFirstName());
+                updated = true;
+            }
+            if (request.getLastName() != null && !request.getLastName().trim().isEmpty()) {
+                customer.setLastName(request.getLastName());
+                updated = true;
+            }
+            if (request.getBirthDate() != null) {
+                customer.setBirthDate(request.getBirthDate());
+                updated = true;
+            }
+            if (request.getLanguage() != null) {
+                customer.setLanguage(request.getLanguage());
+                updated = true;
+            }
+            if (request.getRegistrationSource() != null) {
+                customer.setRegistrationSource(request.getRegistrationSource());
+                updated = true;
+            }
+
+            if (updated) {
+                customer = customerRepository.save(customer);
+                log.info("Updated customer during login request: phone={}", phoneNumber);
+            }
+        }
+
         // Generate 6-digit OTP
         String otpCode = generateOtpCode();
 
@@ -195,36 +255,11 @@ public class ConsumerAuthService {
         otp.setVerifiedAt(LocalDateTime.now());
         otpCodeRepository.save(otp);
 
-        // Find or create customer
+        // Find customer (should have been created during login request)
         Customer customer = customerRepository.findByPhone(phoneNumber)
-                .orElse(null);
+                .orElseThrow(() -> new RuntimeException("Customer not found. Please request OTP first."));
 
-        boolean isNewUser = customer == null;
-
-        if (isNewUser) {
-            // Create new customer with data from OTP request
-            String firstName = otp.getFirstName();
-            String lastName = otp.getLastName();
-
-            // Use defaults if name not provided
-            if (firstName == null || firstName.trim().isEmpty()) {
-                firstName = "Customer";
-            }
-            if (lastName == null || lastName.trim().isEmpty()) {
-                lastName = phoneNumber.substring(Math.max(0, phoneNumber.length() - 4)); // Last 4 digits
-            }
-
-            customer = Customer.builder()
-                    .phone(phoneNumber)
-                    .firstName(firstName)
-                    .lastName(lastName)
-                    .birthDate(otp.getBirthDate())
-                    .language(otp.getLanguage())
-                    .registrationSource(otp.getRegistrationSource())
-                    .build();
-            customer = customerRepository.save(customer);
-            log.info("Created new customer for phone number: {}, source: {}", phoneNumber, otp.getRegistrationSource());
-        }
+        log.info("Customer authenticated: phone={}, customerId={}", phoneNumber, customer.getId());
 
         // Invalidate existing sessions
         sessionRepository.invalidateAllSessionsByPhoneNumber(phoneNumber);
@@ -253,8 +288,8 @@ public class ConsumerAuthService {
 
         long expiresInSeconds = accessTokenExpiration / 1000;
 
-        log.info("Consumer authenticated successfully: phone={}, customerId={}, isNew={}",
-                phoneNumber, customer.getId(), isNewUser);
+        log.info("Consumer authenticated successfully: phone={}, customerId={}",
+                phoneNumber, customer.getId());
 
         return ConsumerAuthResponse.builder()
                 .accessToken(accessToken)
@@ -263,7 +298,7 @@ public class ConsumerAuthService {
                 .expiresInSeconds(expiresInSeconds)
                 .phoneNumber(phoneNumber)
                 .customerId(customer.getId())
-                .isNewUser(isNewUser)
+                .isNewUser(false) // Customer was created during login request
                 .build();
     }
 
