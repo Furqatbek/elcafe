@@ -947,6 +947,550 @@
 			"description": "Courier integration webhook endpoints"
 		},
 		{
+			"name": "Waiter Module",
+			"item": [
+				{
+					"name": "Waiter Authentication",
+					"item": [
+						{
+							"name": "Waiter Login (PIN)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    var jsonData = pm.response.json();",
+											"    pm.environment.set(\"waiter_token\", jsonData.data.token);",
+											"    pm.environment.set(\"waiter_id\", jsonData.data.waiterId);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"pinCode\": \"1234\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/auth",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "auth"]
+								},
+								"description": "Authenticate waiter using PIN code"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Waiter Management",
+					"item": [
+						{
+							"name": "Create Waiter",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"John Doe\",\n  \"pinCode\": \"1234\",\n  \"email\": \"john@restaurant.com\",\n  \"phoneNumber\": \"+998901234567\",\n  \"role\": \"WAITER\",\n  \"permissions\": [\"take_orders\", \"view_menu\", \"request_bill\"]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/waiters",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "waiters"]
+								},
+								"description": "Create a new waiter"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Waiters",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/waiters?active=true",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "waiters"],
+									"query": [
+										{
+											"key": "active",
+											"value": "true"
+										}
+									]
+								},
+								"description": "Get all waiters for a restaurant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Waiter by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/{{waiter_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "{{waiter_id}}"]
+								},
+								"description": "Get waiter details by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Waiter",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"John Smith\",\n  \"email\": \"johnsmith@restaurant.com\",\n  \"role\": \"HEAD_WAITER\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/{{waiter_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "{{waiter_id}}"]
+								},
+								"description": "Update waiter information"
+							},
+							"response": []
+						},
+						{
+							"name": "Deactivate Waiter",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/{{waiter_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "{{waiter_id}}"]
+								},
+								"description": "Deactivate a waiter"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Table Management",
+					"item": [
+						{
+							"name": "Create Table",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"number\": \"A1\",\n  \"capacity\": 4,\n  \"floor\": 1,\n  \"section\": \"Main Hall\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/tables",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "tables"]
+								},
+								"description": "Create a new table"
+							},
+							"response": []
+						},
+						{
+							"name": "Get All Tables",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/tables",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "tables"]
+								},
+								"description": "Get all tables for a restaurant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Available Tables",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/tables/available",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "tables", "available"]
+								},
+								"description": "Get available tables"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Table by ID",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}"]
+								},
+								"description": "Get table details"
+							},
+							"response": []
+						},
+						{
+							"name": "Open Table",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"waiterId\": {{waiter_id}}\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/open",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "open"]
+								},
+								"description": "Open a table and assign to waiter"
+							},
+							"response": []
+						},
+						{
+							"name": "Close Table",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/close",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "close"]
+								},
+								"description": "Close a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Merge Tables",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"mergeWithTableId\": 2\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/merge",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "merge"]
+								},
+								"description": "Merge two tables"
+							},
+							"response": []
+						},
+						{
+							"name": "Unmerge Table",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/unmerge",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "unmerge"]
+								},
+								"description": "Unmerge a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Assign Waiter to Table",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"waiterId\": {{waiter_id}}\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/assign-waiter",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "assign-waiter"]
+								},
+								"description": "Assign a waiter to a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Table Orders",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/orders",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "orders"]
+								},
+								"description": "Get all orders for a table"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Order Management",
+					"item": [
+						{
+							"name": "Create Order for Table",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    var jsonData = pm.response.json();",
+											"    pm.environment.set(\"order_id\", jsonData.data.orderId);",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"waiterId\": {{waiter_id}},\n  \"customerId\": 1,\n  \"items\": [\n    {\n      \"productId\": 5,\n      \"quantity\": 2,\n      \"notes\": \"No onions\"\n    },\n    {\n      \"productId\": 10,\n      \"quantity\": 1\n    }\n  ],\n  \"customerNotes\": \"Please serve quickly\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/tables/{{table_id}}/orders",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "tables", "{{table_id}}", "orders"]
+								},
+								"description": "Create a new order for a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Add Item to Order",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"productId\": 15,\n  \"quantity\": 1,\n  \"notes\": \"Extra spicy\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/items",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "items"]
+								},
+								"description": "Add an item to existing order"
+							},
+							"response": []
+						},
+						{
+							"name": "Update Order Item",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"quantity\": 3,\n  \"notes\": \"Medium spice\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/items/{{item_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "items", "{{item_id}}"]
+								},
+								"description": "Update an order item"
+							},
+							"response": []
+						},
+						{
+							"name": "Remove Order Item",
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/items/{{item_id}}?reason=Customer%20changed%20mind",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "items", "{{item_id}}"],
+									"query": [
+										{
+											"key": "reason",
+											"value": "Customer%20changed%20mind"
+										}
+									]
+								},
+								"description": "Remove an item from order"
+							},
+							"response": []
+						},
+						{
+							"name": "Submit Order to Kitchen",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/submit",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "submit"]
+								},
+								"description": "Submit order to kitchen for preparation"
+							},
+							"response": []
+						},
+						{
+							"name": "Request Bill",
+							"request": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/bill",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "bill"]
+								},
+								"description": "Request bill for an order"
+							},
+							"response": []
+						},
+						{
+							"name": "Mark Order as Paid",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"paymentMethod\": \"CARD\",\n  \"amount\": 45.50,\n  \"transactionId\": \"TXN-12345\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/paid",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "paid"]
+								},
+								"description": "Mark order as paid"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Order Details",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}"]
+								},
+								"description": "Get order details"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Waiter Orders",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/waiters/{{waiter_id}}/orders?status=ACTIVE",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "waiters", "{{waiter_id}}", "orders"],
+									"query": [
+										{
+											"key": "status",
+											"value": "ACTIVE"
+										}
+									]
+								},
+								"description": "Get orders for a specific waiter"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "Order Events",
+					"item": [
+						{
+							"name": "Get Order Events",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/orders/{{order_id}}/events",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "orders", "{{order_id}}", "events"]
+								},
+								"description": "Get event history for an order"
+							},
+							"response": []
+						}
+					]
+				}
+			],
+			"description": "Complete waiter module for table management and dine-in orders"
+		},
+		{
 			"name": "Health & Monitoring",
 			"item": [
 				{
