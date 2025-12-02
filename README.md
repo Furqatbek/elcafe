@@ -470,6 +470,7 @@ See [CHANGELOG.md](./CHANGELOG.md) for a detailed list of changes, new features,
 
 ### Module Documentation
 - **[Waiter Module](./docs/WAITER_MODULE.md)** - Complete guide for table management, dine-in orders, and WebSocket communication
+- **[Waiter Quick Start](./docs/WAITER_QUICKSTART.md)** - Get started with the Waiter Module in 5 minutes
 - **[Food Ordering API](./docs/FOOD_ORDERING_API.md)** - Complete API documentation for food ordering system
 
 ### Guides
