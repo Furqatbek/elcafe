@@ -41,7 +41,7 @@ public class WebSocketEventHandler {
                     .tableId(event.getTableId())
                     .waiterId(event.getWaiterId())
                     .message(String.format("New order created with %d items", event.getItemCount()))
-                    .timestamp(event.getTimestamp())
+                    .timestamp(event.getEventTimestamp())
                     .build();
 
             // Broadcast to all waiters
@@ -76,7 +76,7 @@ public class WebSocketEventHandler {
                     .tableId(event.getTableId())
                     .waiterId(event.getWaiterId())
                     .message(String.format("Order submitted to kitchen - Total: $%.2f", event.getTotalAmount()))
-                    .timestamp(event.getTimestamp())
+                    .timestamp(event.getEventTimestamp())
                     .build();
 
             // Broadcast to kitchen
@@ -112,7 +112,7 @@ public class WebSocketEventHandler {
                     .orderNumber(event.getOrderNumber())
                     .tableId(event.getTableId())
                     .waiterId(event.getWaiterId())
-                    .timestamp(event.getTimestamp())
+                    .timestamp(event.getEventTimestamp())
                     .build();
 
             // Send to specific waiter with high priority
@@ -152,7 +152,7 @@ public class WebSocketEventHandler {
                     .tableId(event.getTableId())
                     .waiterId(event.getWaiterId())
                     .message(String.format("Bill requested - Total: $%.2f", event.getTotalAmount()))
-                    .timestamp(event.getTimestamp())
+                    .timestamp(event.getEventTimestamp())
                     .build();
 
             // Notify waiter
@@ -188,7 +188,7 @@ public class WebSocketEventHandler {
                     .waiterId(event.getWaiterId())
                     .message(String.format("Payment completed - $%.2f via %s",
                             event.getAmount(), event.getPaymentMethod()))
-                    .timestamp(event.getTimestamp())
+                    .timestamp(event.getEventTimestamp())
                     .build();
 
             // Notify waiter
@@ -269,7 +269,7 @@ public class WebSocketEventHandler {
                     .tableNumber(event.getTableNumber())
                     .status(event.getNewStatus().name())
                     .waiterId(event.getWaiterId())
-                    .timestamp(event.getTimestamp())
+                    .timestamp(event.getEventTimestamp())
                     .build();
 
             // Broadcast to all waiters

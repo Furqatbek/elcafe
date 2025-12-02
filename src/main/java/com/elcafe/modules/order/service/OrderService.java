@@ -256,10 +256,11 @@ public class OrderService {
             case NEW -> next == OrderStatus.ACCEPTED || next == OrderStatus.CANCELLED;
             case ACCEPTED -> next == OrderStatus.PREPARING || next == OrderStatus.CANCELLED;
             case PREPARING -> next == OrderStatus.READY || next == OrderStatus.CANCELLED;
-            case READY -> next == OrderStatus.COURIER_ASSIGNED || next == OrderStatus.CANCELLED;
+            case READY -> next == OrderStatus.COURIER_ASSIGNED || next == OrderStatus.COMPLETED || next == OrderStatus.CANCELLED;
             case COURIER_ASSIGNED -> next == OrderStatus.ON_DELIVERY || next == OrderStatus.CANCELLED;
             case ON_DELIVERY -> next == OrderStatus.DELIVERED;
-            case DELIVERED, CANCELLED -> false;
+            case DELIVERED -> next == OrderStatus.COMPLETED;
+            case COMPLETED, CANCELLED -> false;
         };
     }
 }

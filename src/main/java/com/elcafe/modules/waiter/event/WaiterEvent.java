@@ -19,7 +19,7 @@ public abstract class WaiterEvent extends ApplicationEvent {
     private final Long orderId;
     private final Long tableId;
     private final Long waiterId;
-    private final LocalDateTime timestamp;
+    private final LocalDateTime eventTimestamp;
     private final Map<String, Object> metadata;
     private final String triggeredBy;
 
@@ -35,7 +35,7 @@ public abstract class WaiterEvent extends ApplicationEvent {
         this.orderId = orderId;
         this.tableId = tableId;
         this.waiterId = waiterId;
-        this.timestamp = LocalDateTime.now();
+        this.eventTimestamp = LocalDateTime.now();
         this.metadata = new HashMap<>();
         this.triggeredBy = triggeredBy;
     }

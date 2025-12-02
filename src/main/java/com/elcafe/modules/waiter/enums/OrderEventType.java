@@ -7,7 +7,10 @@ public enum OrderEventType {
     // Waiter → Kitchen
     ORDER_CREATED,
     ORDER_UPDATED,
+    ORDER_SUBMITTED,
     ORDER_SUBMITTED_TO_KITCHEN,
+    ITEM_ADDED,
+    ITEM_REMOVED,
     ITEM_DELIVERED,
 
     // Kitchen → Waiter
@@ -25,6 +28,7 @@ public enum OrderEventType {
     TABLE_OPENED,
     TABLE_CLOSED,
     TABLE_MERGED,
+    TABLE_STATUS_CHANGED,
     WAITER_ASSIGNED,
     WAITER_UNASSIGNED
 }
