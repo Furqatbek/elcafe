@@ -13,6 +13,7 @@ A complete full-stack production-ready system for restaurant management and deli
 - **Restaurant Management**: Complete CRUD for restaurants, business hours, and delivery zones
 - **Menu Management**: Categories, products, variants, and add-ons with Redis caching
 - **Order Management**: Full order lifecycle from creation to delivery with status tracking
+- **Waiter Module**: Complete table management, dine-in orders, and real-time kitchen communication via WebSocket
 - **Courier Integration**: Pluggable courier provider system with webhook support
 - **CRM**: Customer management with order history and RFM analytics
 - **RFM Analysis**: Customer segmentation based on Recency, Frequency, and Monetary value with 11 customer segments
@@ -23,6 +24,8 @@ A complete full-stack production-ready system for restaurant management and deli
 - PostgreSQL database with Flyway migrations
 - Redis caching for menu data
 - JWT authentication with refresh tokens
+- WebSocket real-time communication (STOMP/SockJS)
+- Event-driven architecture with async processing
 - OpenAPI/Swagger documentation
 - Docker containerization
 - Comprehensive exception handling
@@ -48,6 +51,7 @@ A complete full-stack production-ready system for restaurant management and deli
 | Redis | 7 | Caching |
 | Flyway | Latest | Database Migrations |
 | JWT | 0.12.5 | Authentication |
+| WebSocket | STOMP/SockJS | Real-time Communication |
 | Springdoc | 2.5.0 | API Documentation |
 
 ### Frontend
@@ -173,6 +177,7 @@ src/main/java/com/elcafe/
     ├── restaurant/       # Restaurant management
     ├── menu/            # Menu management
     ├── order/           # Order management
+    ├── waiter/          # Waiter & table management
     ├── courier/         # Courier integration
     └── customer/        # CRM
 
@@ -188,10 +193,12 @@ src/main/resources/
 Orders follow this status lifecycle:
 
 ```
-NEW → ACCEPTED → PREPARING → READY → COURIER_ASSIGNED → ON_DELIVERY → DELIVERED
-  ↓
-CANCELLED
+NEW → ACCEPTED → PREPARING → READY → COURIER_ASSIGNED → ON_DELIVERY → DELIVERED → COMPLETED
+  ↓                                     ↓
+CANCELLED                           COMPLETED (dine-in)
 ```
+
+**Dine-in orders** (via Waiter Module): `NEW → ACCEPTED → PREPARING → READY → COMPLETED`
 
 ## 🎯 Key Endpoints
 
@@ -289,6 +296,10 @@ The application uses PostgreSQL with the following main tables:
 - **delivery_info** - Delivery details
 - **payments** - Payment records
 - **order_status_history** - Order status audit trail
+- **waiters** - Waiter accounts with PIN authentication
+- **tables** - Restaurant tables with status tracking
+- **waiter_tables** - Waiter-table assignment history
+- **order_events** - Comprehensive audit trail for all order operations
 
 ## ⚙️ Configuration
 
@@ -454,6 +465,22 @@ docker run -p 8080:8080 \
 ## 📋 Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md) for a detailed list of changes, new features, and fixes.
+
+## 📚 Documentation
+
+### Module Documentation
+- **[Waiter Module](./docs/WAITER_MODULE.md)** - Complete guide for table management, dine-in orders, and WebSocket communication
+- **[Food Ordering API](./docs/FOOD_ORDERING_API.md)** - Complete API documentation for food ordering system
+
+### Guides
+- **[API Integration Guide](./README_API_INTEGRATION.md)** - Integration guide for third-party services
+- **[Setup Template Smith Forge](./SETUP_TEMPLATE_SMITH_FORGE.md)** - Frontend template setup
+
+### WebSocket Documentation
+For real-time communication between waiters and kitchen:
+- Endpoint: `ws://localhost:8080/ws-waiter`
+- Topics: `/topic/waiter/orders`, `/topic/kitchen`, `/topic/table`
+- See [Waiter Module Documentation](./docs/WAITER_MODULE.md#websocket-communication) for details
 
 ## 🤝 Contributing
 
