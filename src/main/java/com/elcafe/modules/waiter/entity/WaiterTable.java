@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "waiter_tables", indexes = {
+@jakarta.persistence.Table(name = "waiter_tables", indexes = {
     @Index(name = "idx_waiter_active", columnList = "waiter_id,active"),
     @Index(name = "idx_table_active", columnList = "table_id,active")
 })

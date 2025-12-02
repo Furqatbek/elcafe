@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "order_events", indexes = {
+@jakarta.persistence.Table(name = "order_events", indexes = {
     @Index(name = "idx_order_id", columnList = "order_id"),
     @Index(name = "idx_event_type", columnList = "event_type"),
     @Index(name = "idx_created_at", columnList = "created_at")

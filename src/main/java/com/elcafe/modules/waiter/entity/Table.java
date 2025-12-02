@@ -25,7 +25,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "tables", uniqueConstraints = {
+@jakarta.persistence.Table(name = "tables", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"restaurant_id", "number"})
 })
 @EntityListeners(AuditingEntityListener.class)
