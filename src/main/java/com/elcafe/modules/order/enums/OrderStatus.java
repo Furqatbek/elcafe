@@ -8,5 +8,6 @@ public enum OrderStatus {
     COURIER_ASSIGNED,
     ON_DELIVERY,
     DELIVERED,
+    COMPLETED,
     CANCELLED
 }
