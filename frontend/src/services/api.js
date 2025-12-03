@@ -33,6 +33,11 @@ api.interceptors.response.use(
       try {
         const refreshToken = localStorage.getItem('refresh_token');
 
+        // If no refresh token exists, redirect to login immediately
+        if (!refreshToken || refreshToken === '' || refreshToken === 'null' || refreshToken === 'undefined') {
+          throw new Error('No refresh token available');
+        }
+
         // Check if refresh token is expired
         const refreshTokenExpiry = localStorage.getItem('refresh_token_expiry');
         if (refreshTokenExpiry && Date.now() >= parseInt(refreshTokenExpiry)) {
