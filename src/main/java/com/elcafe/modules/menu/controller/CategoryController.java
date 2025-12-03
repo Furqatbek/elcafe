@@ -18,6 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/categories")
@@ -27,6 +29,26 @@ public class CategoryController {
 
     private final MenuService menuService;
     private final RestaurantRepository restaurantRepository;
+
+    @GetMapping
+    @Operation(summary = "Get active categories", description = "Get all active categories for a restaurant (public endpoint)")
+    public ResponseEntity<ApiResponse<List<Category>>> getActiveCategories(
+            @RequestParam Long restaurantId
+    ) {
+        log.info("Fetching active categories for restaurant: {}", restaurantId);
+
+        // Validate restaurant exists and is active
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
+
+        if (!restaurant.getActive()) {
+            throw new ResourceNotFoundException("Restaurant is not active");
+        }
+
+        List<Category> categories = menuService.getActiveCategoriesByRestaurant(restaurantId);
+
+        return ResponseEntity.ok(ApiResponse.success("Categories retrieved successfully", categories));
+    }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
