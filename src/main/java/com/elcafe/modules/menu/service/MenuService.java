@@ -94,14 +94,14 @@ public class MenuService {
     }
 
     @Transactional
-    @CacheEvict(value = "menu", allEntries = true)
+    @CacheEvict(value = {"menu", "categories"}, allEntries = true)
     public Category createCategory(Category category) {
         log.info("Creating category: {}", category.getName());
         return categoryRepository.save(category);
     }
 
     @Transactional
-    @CacheEvict(value = "menu", allEntries = true)
+    @CacheEvict(value = {"menu", "categories"}, allEntries = true)
     public Category updateCategory(Long id, Category categoryData) {
         log.info("Updating category: {}", id);
 
@@ -128,8 +128,15 @@ public class MenuService {
         return categoryRepository.findByRestaurantIdOrderBySortOrder(restaurantId);
     }
 
+    @Transactional(readOnly = true)
+    @Cacheable(value = "categories", key = "#restaurantId")
+    public List<Category> getActiveCategoriesByRestaurant(Long restaurantId) {
+        log.info("Fetching active categories for restaurant: {}", restaurantId);
+        return categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
+    }
+
     @Transactional
-    @CacheEvict(value = "menu", allEntries = true)
+    @CacheEvict(value = {"menu", "categories"}, allEntries = true)
     public void deleteCategory(Long id) {
         log.info("Deleting category: {}", id);
         Category category = categoryRepository.findById(id)
