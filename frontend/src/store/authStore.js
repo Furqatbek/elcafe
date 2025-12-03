@@ -67,10 +67,45 @@ export const shouldRefreshToken = () => {
   return timeUntilExpiry < 2 * 60 * 1000 && timeUntilExpiry > 0;
 };
 
+// Helper to validate and clean up tokens on initialization
+const validateStoredTokens = () => {
+  const accessToken = localStorage.getItem('access_token');
+  const refreshToken = localStorage.getItem('refresh_token');
+
+  // Clean up invalid access tokens
+  if (!accessToken || accessToken === '' || accessToken === 'null' || accessToken === 'undefined') {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('access_token_expiry');
+  }
+
+  // Clean up invalid refresh tokens
+  if (!refreshToken || refreshToken === '' || refreshToken === 'null' || refreshToken === 'undefined') {
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('refresh_token_expiry');
+    // If refresh token is invalid, clear access token too
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('access_token_expiry');
+    localStorage.removeItem('token_set_time');
+    return false;
+  }
+
+  // Check if tokens are expired
+  if (isAccessTokenExpired() && isRefreshTokenExpired()) {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('access_token_expiry');
+    localStorage.removeItem('refresh_token_expiry');
+    localStorage.removeItem('token_set_time');
+    return false;
+  }
+
+  return !!accessToken && !isAccessTokenExpired();
+};
+
 export const useAuthStore = create((set) => ({
   user: null,
   token: localStorage.getItem('access_token'),
-  isAuthenticated: !!localStorage.getItem('access_token') && !isAccessTokenExpired(),
+  isAuthenticated: validateStoredTokens(),
 
   login: async (credentials) => {
     try {
@@ -109,7 +144,13 @@ export const useAuthStore = create((set) => ({
   refreshToken: async () => {
     try {
       const refreshToken = localStorage.getItem('refresh_token');
-      if (!refreshToken || isRefreshTokenExpired()) {
+
+      // Check if refresh token exists and is valid
+      if (!refreshToken || refreshToken === '' || refreshToken === 'null' || refreshToken === 'undefined') {
+        throw new Error('No refresh token available');
+      }
+
+      if (isRefreshTokenExpired()) {
         throw new Error('Refresh token expired');
       }
 
