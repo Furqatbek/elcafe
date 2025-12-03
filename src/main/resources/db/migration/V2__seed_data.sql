@@ -1,10 +1,10 @@
 -- Insert default admin user (password: Admin123!)
 INSERT INTO users (email, password, first_name, last_name, role, active, email_verified)
-VALUES ('admin@elcafe.com', '$2a$10$9K7JZjFf1F8xYxB5yKxVXOqKzH6j7Ej7Pq9Wx7Zj0Zj7Pq9Wx7Zj0', 'Admin', 'User', 'ADMIN', TRUE, TRUE);
+VALUES ('admin@elcafe.com', '$2b$10$kN8gjk1ZkNyX2n/gF2hT9.qiS.vtYg0BtIJrZJFposjefJIeWf9U6', 'Admin', 'User', 'ADMIN', TRUE, TRUE);
 
 -- Insert default operator user (password: Operator123!)
 INSERT INTO users (email, password, first_name, last_name, role, active, email_verified)
-VALUES ('operator@elcafe.com', '$2a$10$9K7JZjFf1F8xYxB5yKxVXOqKzH6j7Ej7Pq9Wx7Zj0Zj7Pq9Wx7Zj0', 'Operator', 'User', 'OPERATOR', TRUE, TRUE);
+VALUES ('operator@elcafe.com', '$2b$10$6ugmemqTbgGrlOyNUcdoFOm2TgScm0fCtpNq/shIHDLgkgZrcpZWu', 'Operator', 'User', 'OPERATOR', TRUE, TRUE);
 
 -- Insert sample restaurant
 INSERT INTO restaurants (name, description, address, city, state, zip_code, country, phone, email, active, accepting_orders, delivery_fee, estimated_delivery_time_minutes)
