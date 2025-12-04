@@ -3,6 +3,7 @@ package com.elcafe.modules.order.entity;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.waiter.entity.Table;
 import com.elcafe.modules.waiter.entity.Waiter;
@@ -96,6 +97,39 @@ public class Order {
     private String internalNotes;
 
     private LocalDateTime scheduledFor;
+
+    // Payment fields
+    @Column(length = 50)
+    private String paymentMethod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private PaymentStatus paymentStatus;
+
+    @Column(length = 255)
+    private String paymentIntentId;
+
+    // Cancellation fields
+    @Column(length = 1000)
+    private String cancellationReason;
+
+    @Column(length = 20)
+    private String cancelledBy; // CONSUMER, ADMIN, SYSTEM
+
+    // Order type
+    @Column(length = 20)
+    @Builder.Default
+    private String orderType = "DELIVERY"; // DELIVERY or PICKUP
+
+    // Status timestamps
+    private LocalDateTime placedAt;
+    private LocalDateTime acceptedAt;
+    private LocalDateTime preparingAt;
+    private LocalDateTime readyAt;
+    private LocalDateTime pickedUpAt;
+    private LocalDateTime completedAt;
+    private LocalDateTime cancelledAt;
+    private LocalDateTime rejectedAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
