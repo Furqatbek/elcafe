@@ -14,6 +14,7 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.order.validator.OrderStatusTransitionValidator;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class OrderService {
     private final CustomerRepository customerRepository;
     private final RestaurantRepository restaurantRepository;
     private final ProductRepository productRepository;
+    private final OrderStatusTransitionValidator statusTransitionValidator;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -190,14 +192,18 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
 
         OrderStatus currentStatus = order.getStatus();
-        if (!isValidStatusTransition(currentStatus, newStatus)) {
-            throw new BadRequestException(
-                    String.format("Invalid status transition from %s to %s", currentStatus, newStatus)
-            );
-        }
 
+        // Validate status transition using state machine
+        statusTransitionValidator.validateTransition(currentStatus, newStatus);
+
+        // Update status
         order.setStatus(newStatus);
 
+        // Update timestamp based on new status
+        LocalDateTime now = LocalDateTime.now();
+        updateStatusTimestamp(order, newStatus, now);
+
+        // Add status history
         OrderStatusHistory history = OrderStatusHistory.builder()
                 .status(newStatus)
                 .changedBy(changedBy)
@@ -207,6 +213,106 @@ public class OrderService {
 
         order = orderRepository.save(order);
         log.info("Order status updated: {} -> {}", currentStatus, newStatus);
+
+        return order;
+    }
+
+    /**
+     * Updates the appropriate timestamp field based on the new status.
+     */
+    private void updateStatusTimestamp(Order order, OrderStatus newStatus, LocalDateTime timestamp) {
+        switch (newStatus) {
+            case PLACED -> order.setPlacedAt(timestamp);
+            case ACCEPTED -> order.setAcceptedAt(timestamp);
+            case PREPARING -> order.setPreparingAt(timestamp);
+            case READY -> order.setReadyAt(timestamp);
+            case PICKED_UP -> order.setPickedUpAt(timestamp);
+            case COMPLETED -> order.setCompletedAt(timestamp);
+            case CANCELLED -> order.setCancelledAt(timestamp);
+            case REJECTED -> order.setRejectedAt(timestamp);
+            default -> {} // No timestamp for other statuses
+        }
+    }
+
+    /**
+     * Accept an order - transition from PLACED to ACCEPTED.
+     */
+    @Transactional
+    public Order acceptOrder(Long orderId, String acceptedBy, String notes) {
+        log.info("Accepting order {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Validate restaurant is accepting orders
+        if (!order.getRestaurant().getAcceptingOrders()) {
+            throw new BadRequestException("Restaurant is not currently accepting orders");
+        }
+
+        return updateOrderStatus(orderId, OrderStatus.ACCEPTED, notes, acceptedBy);
+    }
+
+    /**
+     * Reject an order - transition from PLACED to REJECTED and initiate refund.
+     */
+    @Transactional
+    public Order rejectOrder(Long orderId, String reason, String rejectedBy) {
+        log.info("Rejecting order {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Update order status
+        order = updateOrderStatus(orderId, OrderStatus.REJECTED, "Order rejected: " + reason, rejectedBy);
+
+        // TODO: Initiate refund via payment service
+        if (order.getPayment() != null && order.getPayment().getStatus() == PaymentStatus.COMPLETED) {
+            order.getPayment().setStatus(PaymentStatus.REFUNDED);
+            log.info("Refund initiated for order {}", orderId);
+        }
+
+        return order;
+    }
+
+    /**
+     * Cancel an order - can be done by consumer or admin with validation.
+     */
+    @Transactional
+    public Order cancelOrder(Long orderId, String reason, String cancelledBy) {
+        log.info("Cancelling order {} by {}", orderId, cancelledBy);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Validate if order can be cancelled from current status
+        if (!statusTransitionValidator.canBeCancelled(order.getStatus())) {
+            throw new BadRequestException(
+                "Order cannot be cancelled at this stage. Current status: " + order.getStatus()
+            );
+        }
+
+        // For consumer cancellations, check if within time window (5 minutes after placement)
+        if ("CONSUMER".equals(cancelledBy) && order.getPlacedAt() != null) {
+            LocalDateTime fiveMinutesAfterPlacement = order.getPlacedAt().plusMinutes(5);
+            if (LocalDateTime.now().isAfter(fiveMinutesAfterPlacement)) {
+                throw new BadRequestException(
+                    "Order can only be cancelled within 5 minutes of placement"
+                );
+            }
+        }
+
+        // Store cancellation details
+        order.setCancellationReason(reason);
+        order.setCancelledBy(cancelledBy);
+
+        // Update order status
+        order = updateOrderStatus(orderId, OrderStatus.CANCELLED, "Order cancelled: " + reason, cancelledBy);
+
+        // TODO: Initiate refund via payment service
+        if (order.getPayment() != null && order.getPayment().getStatus() == PaymentStatus.COMPLETED) {
+            order.getPayment().setStatus(PaymentStatus.REFUNDED);
+            log.info("Refund initiated for cancelled order {}", orderId);
+        }
 
         return order;
     }
@@ -248,19 +354,8 @@ public class OrderService {
     }
 
     private String generateOrderNumber() {
+        // Format: ORD-YYYYMMDD-XXXX
+        // For now using simple format, can be enhanced for sequential numbering per day
         return "ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-    }
-
-    private boolean isValidStatusTransition(OrderStatus current, OrderStatus next) {
-        return switch (current) {
-            case NEW -> next == OrderStatus.ACCEPTED || next == OrderStatus.CANCELLED;
-            case ACCEPTED -> next == OrderStatus.PREPARING || next == OrderStatus.CANCELLED;
-            case PREPARING -> next == OrderStatus.READY || next == OrderStatus.CANCELLED;
-            case READY -> next == OrderStatus.COURIER_ASSIGNED || next == OrderStatus.COMPLETED || next == OrderStatus.CANCELLED;
-            case COURIER_ASSIGNED -> next == OrderStatus.ON_DELIVERY || next == OrderStatus.CANCELLED;
-            case ON_DELIVERY -> next == OrderStatus.DELIVERED;
-            case DELIVERED -> next == OrderStatus.COMPLETED;
-            case COMPLETED, CANCELLED -> false;
-        };
     }
 }
