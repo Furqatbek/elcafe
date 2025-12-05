@@ -2,10 +2,14 @@ package com.elcafe.modules.order.repository;
 
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderSource;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,4 +39,18 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime createdAt);
 
     List<Order> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+
+    // Additional methods for courier and customer activity
+    List<Order> findByRestaurantIdAndStatus(Long restaurantId, OrderStatus status);
+
+    List<Order> findByStatus(OrderStatus status);
+
+    @Query("SELECT o FROM Order o WHERE o.deliveryInfo.courierId = :courierId ORDER BY o.createdAt DESC")
+    List<Order> findByCourierId(@Param("courierId") Long courierId);
+
+    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.customer.id = :customerId")
+    BigDecimal sumTotalByCustomerId(@Param("customerId") Long customerId);
+
+    @Query("SELECT DISTINCT o.orderSource FROM Order o WHERE o.customer.id = :customerId")
+    List<OrderSource> findDistinctOrderSourcesByCustomerId(@Param("customerId") Long customerId);
 }

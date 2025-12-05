@@ -69,6 +69,27 @@ public class NotificationService {
     }
 
     /**
+     * Notify when order is rejected by restaurant
+     */
+    public void notifyOrderRejected(Order order) {
+        log.info("❌ Order Rejected: {}", order.getOrderNumber());
+
+        notifyCustomer(order, "ORDER_REJECTED");
+        broadcastToAdmins(order, "ORDER_REJECTED");
+    }
+
+    /**
+     * Notify when order is completed
+     */
+    public void notifyOrderCompleted(Order order) {
+        log.info("✅ Order Completed: {}", order.getOrderNumber());
+
+        notifyCustomer(order, "ORDER_COMPLETED");
+        notifyRestaurantOperators(order, "ORDER_COMPLETED");
+        broadcastToAdmins(order, "ORDER_COMPLETED");
+    }
+
+    /**
      * Notify when courier is assigned
      */
     public void notifyCourierAssigned(Order order, Long courierId, String courierName) {
