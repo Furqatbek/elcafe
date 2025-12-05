@@ -45,11 +45,21 @@ public class ConsumerOrderService {
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
         if (!restaurant.getActive()) {
-            throw new RuntimeException("Restaurant is not active");
+            throw new RuntimeException("Restaurant is not currently active");
         }
 
         if (!restaurant.getAcceptingOrders()) {
-            throw new RuntimeException("Restaurant is not accepting orders");
+            throw new RuntimeException("Restaurant is not accepting orders at this time");
+        }
+
+        // Validate business hours (if configured)
+        LocalDateTime now = LocalDateTime.now();
+        // TODO: Implement business hours validation using restaurant.getBusinessHours()
+
+        // Validate delivery zones (if applicable)
+        if ("DELIVERY".equals(request.getOrderType()) && request.getDeliveryInfo() != null) {
+            // TODO: Check if delivery address is within restaurant's delivery zones
+            log.info("Delivery order - address validation needed");
         }
 
         // 2. Find or create customer
@@ -100,6 +110,24 @@ public class ConsumerOrderService {
         BigDecimal tax = subtotal.multiply(BigDecimal.valueOf(0.10)); // 10% tax
         BigDecimal discount = BigDecimal.ZERO;
         BigDecimal total = subtotal.add(deliveryFee).add(tax).subtract(discount);
+
+        // Validate minimum order amount ($10)
+        BigDecimal minimumOrderAmount = BigDecimal.valueOf(10.00);
+        if (subtotal.compareTo(minimumOrderAmount) < 0) {
+            throw new RuntimeException(
+                String.format("Minimum order amount is $%.2f. Current subtotal: $%.2f",
+                        minimumOrderAmount, subtotal)
+            );
+        }
+
+        // Validate maximum order amount ($500) - fraud prevention
+        BigDecimal maximumOrderAmount = BigDecimal.valueOf(500.00);
+        if (total.compareTo(maximumOrderAmount) > 0) {
+            throw new RuntimeException(
+                String.format("Maximum order amount is $%.2f. Current total: $%.2f",
+                        maximumOrderAmount, total)
+            );
+        }
 
         order.setSubtotal(subtotal);
         order.setDeliveryFee(deliveryFee);

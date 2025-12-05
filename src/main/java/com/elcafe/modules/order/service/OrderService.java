@@ -2,21 +2,10 @@ package com.elcafe.modules.order.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
-import com.elcafe.modules.customer.entity.Customer;
-import com.elcafe.modules.customer.enums.RegistrationSource;
-import com.elcafe.modules.customer.repository.CustomerRepository;
-import com.elcafe.modules.menu.entity.Product;
-import com.elcafe.modules.menu.repository.ProductRepository;
-import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
-import com.elcafe.modules.order.entity.*;
-import com.elcafe.modules.order.enums.OrderSource;
+import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
-import com.elcafe.modules.order.enums.PaymentMethod;
-import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
-import com.elcafe.modules.order.validator.OrderStatusTransitionValidator;
-import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,9 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,10 +23,9 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final CustomerRepository customerRepository;
-    private final RestaurantRepository restaurantRepository;
-    private final ProductRepository productRepository;
     private final OrderStatusTransitionValidator statusTransitionValidator;
+    private final OrderEventBroadcaster orderEventBroadcaster;
+    private final com.elcafe.modules.notification.service.NotificationService notificationService;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -62,129 +48,6 @@ public class OrderService {
     }
 
     @Transactional
-    public Order createOrder(CreateOrderRequest request) {
-        log.info("Creating new order from request");
-
-        // 1. Lookup or create customer
-        Customer customer = findOrCreateCustomer(request.getCustomerInfo());
-
-        // 2. Get restaurant
-        Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", request.getRestaurantId()));
-
-        // 3. Create order items and calculate totals
-        List<OrderItem> orderItems = new ArrayList<>();
-        BigDecimal subtotal = BigDecimal.ZERO;
-
-        for (CreateOrderRequest.OrderItemRequest itemRequest : request.getItems()) {
-            Product product = productRepository.findById(itemRequest.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product", "id", itemRequest.getProductId()));
-
-            BigDecimal itemTotal = product.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
-            subtotal = subtotal.add(itemTotal);
-
-            OrderItem orderItem = OrderItem.builder()
-                    .productId(product.getId())
-                    .productName(product.getName())
-                    .quantity(itemRequest.getQuantity())
-                    .unitPrice(product.getPrice())
-                    .totalPrice(itemTotal)
-                    .specialInstructions(itemRequest.getSpecialInstructions())
-                    .build();
-
-            orderItems.add(orderItem);
-        }
-
-        // 4. Calculate fees and total
-        BigDecimal deliveryFee = BigDecimal.valueOf(5.00); // Default delivery fee
-        BigDecimal tax = subtotal.multiply(BigDecimal.valueOf(0.08)); // 8% tax
-        BigDecimal discount = BigDecimal.ZERO;
-        BigDecimal total = subtotal.add(deliveryFee).add(tax).subtract(discount);
-
-        // 5. Create delivery info
-        DeliveryInfo deliveryInfo = DeliveryInfo.builder()
-                .address(request.getDeliveryInfo().getAddress())
-                .city(request.getDeliveryInfo().getCity())
-                .state(request.getDeliveryInfo().getState())
-                .zipCode(request.getDeliveryInfo().getZipCode())
-                .latitude(request.getDeliveryInfo().getLatitude() != null ?
-                         request.getDeliveryInfo().getLatitude().doubleValue() : null)
-                .longitude(request.getDeliveryInfo().getLongitude() != null ?
-                          request.getDeliveryInfo().getLongitude().doubleValue() : null)
-                .deliveryInstructions(request.getDeliveryInfo().getDeliveryInstructions())
-                .contactPhone(request.getCustomerInfo().getPhone())
-                .contactName(request.getCustomerInfo().getFirstName() + " " + request.getCustomerInfo().getLastName())
-                .build();
-
-        // 6. Create payment
-        Payment payment = Payment.builder()
-                .method(PaymentMethod.valueOf(request.getPaymentMethod()))
-                .status(PaymentStatus.PENDING)
-                .amount(total)
-                .build();
-
-        // 7. Create order
-        Order order = Order.builder()
-                .restaurant(restaurant)
-                .customer(customer)
-                .orderSource(request.getOrderSource() != null ? request.getOrderSource() : OrderSource.ADMIN_PANEL)
-                .subtotal(subtotal)
-                .deliveryFee(deliveryFee)
-                .tax(tax)
-                .discount(discount)
-                .total(total)
-                .customerNotes(request.getCustomerNotes())
-                .scheduledFor(request.getScheduledFor())
-                .items(new ArrayList<>())
-                .build();
-
-        // Set order number and status
-        order.setOrderNumber(generateOrderNumber());
-        order.setStatus(OrderStatus.NEW);
-
-        // Add status history
-        OrderStatusHistory history = OrderStatusHistory.builder()
-                .status(OrderStatus.NEW)
-                .changedBy("SYSTEM")
-                .notes("Order created")
-                .build();
-        order.addStatusHistory(history);
-
-        // Set relationships properly using helper methods
-        for (OrderItem item : orderItems) {
-            order.addItem(item);
-        }
-        order.setDeliveryInfo(deliveryInfo);
-        order.setPayment(payment);
-
-        // Save order (cascade will save items, delivery info, payment, and history)
-        order = orderRepository.save(order);
-        log.info("Order created with number: {}", order.getOrderNumber());
-
-        // Fetch the order again with EntityGraph to ensure all associations are loaded
-        final Long orderId = order.getId();
-        return orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-    }
-
-    private Customer findOrCreateCustomer(CreateOrderRequest.CustomerInfo customerInfo) {
-        // Try to find existing customer by phone
-        return customerRepository.findByPhone(customerInfo.getPhone())
-                .orElseGet(() -> {
-                    log.info("Creating new customer with phone: {}", customerInfo.getPhone());
-                    Customer newCustomer = Customer.builder()
-                            .firstName(customerInfo.getFirstName())
-                            .lastName(customerInfo.getLastName())
-                            .phone(customerInfo.getPhone())
-                            .email(customerInfo.getEmail())
-                            .active(true)
-                            .registrationSource(RegistrationSource.ADMIN_PANEL)
-                            .build();
-                    return customerRepository.save(newCustomer);
-                });
-    }
-
-    @Transactional
     public Order updateOrderStatus(Long orderId, OrderStatus newStatus, String notes, String changedBy) {
         log.info("Updating order {} to status: {}", orderId, newStatus);
 
@@ -192,18 +55,14 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
 
         OrderStatus currentStatus = order.getStatus();
+        if (!isValidStatusTransition(currentStatus, newStatus)) {
+            throw new BadRequestException(
+                    String.format("Invalid status transition from %s to %s", currentStatus, newStatus)
+            );
+        }
 
-        // Validate status transition using state machine
-        statusTransitionValidator.validateTransition(currentStatus, newStatus);
-
-        // Update status
         order.setStatus(newStatus);
 
-        // Update timestamp based on new status
-        LocalDateTime now = LocalDateTime.now();
-        updateStatusTimestamp(order, newStatus, now);
-
-        // Add status history
         OrderStatusHistory history = OrderStatusHistory.builder()
                 .status(newStatus)
                 .changedBy(changedBy)
@@ -213,106 +72,6 @@ public class OrderService {
 
         order = orderRepository.save(order);
         log.info("Order status updated: {} -> {}", currentStatus, newStatus);
-
-        return order;
-    }
-
-    /**
-     * Updates the appropriate timestamp field based on the new status.
-     */
-    private void updateStatusTimestamp(Order order, OrderStatus newStatus, LocalDateTime timestamp) {
-        switch (newStatus) {
-            case PLACED -> order.setPlacedAt(timestamp);
-            case ACCEPTED -> order.setAcceptedAt(timestamp);
-            case PREPARING -> order.setPreparingAt(timestamp);
-            case READY -> order.setReadyAt(timestamp);
-            case PICKED_UP -> order.setPickedUpAt(timestamp);
-            case COMPLETED -> order.setCompletedAt(timestamp);
-            case CANCELLED -> order.setCancelledAt(timestamp);
-            case REJECTED -> order.setRejectedAt(timestamp);
-            default -> {} // No timestamp for other statuses
-        }
-    }
-
-    /**
-     * Accept an order - transition from PLACED to ACCEPTED.
-     */
-    @Transactional
-    public Order acceptOrder(Long orderId, String acceptedBy, String notes) {
-        log.info("Accepting order {}", orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Validate restaurant is accepting orders
-        if (!order.getRestaurant().getAcceptingOrders()) {
-            throw new BadRequestException("Restaurant is not currently accepting orders");
-        }
-
-        return updateOrderStatus(orderId, OrderStatus.ACCEPTED, notes, acceptedBy);
-    }
-
-    /**
-     * Reject an order - transition from PLACED to REJECTED and initiate refund.
-     */
-    @Transactional
-    public Order rejectOrder(Long orderId, String reason, String rejectedBy) {
-        log.info("Rejecting order {}", orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Update order status
-        order = updateOrderStatus(orderId, OrderStatus.REJECTED, "Order rejected: " + reason, rejectedBy);
-
-        // TODO: Initiate refund via payment service
-        if (order.getPayment() != null && order.getPayment().getStatus() == PaymentStatus.COMPLETED) {
-            order.getPayment().setStatus(PaymentStatus.REFUNDED);
-            log.info("Refund initiated for order {}", orderId);
-        }
-
-        return order;
-    }
-
-    /**
-     * Cancel an order - can be done by consumer or admin with validation.
-     */
-    @Transactional
-    public Order cancelOrder(Long orderId, String reason, String cancelledBy) {
-        log.info("Cancelling order {} by {}", orderId, cancelledBy);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Validate if order can be cancelled from current status
-        if (!statusTransitionValidator.canBeCancelled(order.getStatus())) {
-            throw new BadRequestException(
-                "Order cannot be cancelled at this stage. Current status: " + order.getStatus()
-            );
-        }
-
-        // For consumer cancellations, check if within time window (5 minutes after placement)
-        if ("CONSUMER".equals(cancelledBy) && order.getPlacedAt() != null) {
-            LocalDateTime fiveMinutesAfterPlacement = order.getPlacedAt().plusMinutes(5);
-            if (LocalDateTime.now().isAfter(fiveMinutesAfterPlacement)) {
-                throw new BadRequestException(
-                    "Order can only be cancelled within 5 minutes of placement"
-                );
-            }
-        }
-
-        // Store cancellation details
-        order.setCancellationReason(reason);
-        order.setCancelledBy(cancelledBy);
-
-        // Update order status
-        order = updateOrderStatus(orderId, OrderStatus.CANCELLED, "Order cancelled: " + reason, cancelledBy);
-
-        // TODO: Initiate refund via payment service
-        if (order.getPayment() != null && order.getPayment().getStatus() == PaymentStatus.COMPLETED) {
-            order.getPayment().setStatus(PaymentStatus.REFUNDED);
-            log.info("Refund initiated for cancelled order {}", orderId);
-        }
 
         return order;
     }
@@ -354,8 +113,358 @@ public class OrderService {
     }
 
     private String generateOrderNumber() {
-        // Format: ORD-YYYYMMDD-XXXX
-        // For now using simple format, can be enhanced for sequential numbering per day
         return "ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    private boolean isValidStatusTransition(OrderStatus current, OrderStatus next) {
+        return switch (current) {
+            case NEW -> next == OrderStatus.ACCEPTED || next == OrderStatus.CANCELLED;
+            case ACCEPTED -> next == OrderStatus.PREPARING || next == OrderStatus.CANCELLED;
+            case PREPARING -> next == OrderStatus.READY || next == OrderStatus.CANCELLED;
+            case READY -> next == OrderStatus.COURIER_ASSIGNED || next == OrderStatus.CANCELLED;
+            case COURIER_ASSIGNED -> next == OrderStatus.ON_DELIVERY || next == OrderStatus.CANCELLED;
+            case ON_DELIVERY -> next == OrderStatus.DELIVERED;
+            case DELIVERED, CANCELLED -> false;
+        };
+    }
+
+    /**
+     * Accept order - Admin action
+     * Status: PLACED → ACCEPTED
+     */
+    @Transactional
+    public Order acceptOrder(Long orderId, String acceptedBy, String notes) {
+        log.info("Accepting order: {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Validate transition
+        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.ACCEPTED);
+
+        // Update status and timestamp
+        order.setStatus(OrderStatus.ACCEPTED);
+        order.setAcceptedAt(LocalDateTime.now());
+
+        // Add status history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .status(OrderStatus.ACCEPTED)
+                .changedBy(acceptedBy)
+                .notes(notes != null ? notes : "Order accepted by restaurant")
+                .build();
+        order.addStatusHistory(history);
+
+        order = orderRepository.save(order);
+
+        // Broadcast WebSocket event
+        try {
+            orderEventBroadcaster.broadcastOrderAccepted(order);
+        } catch (Exception e) {
+            log.error("Failed to broadcast order accepted event: {}", e.getMessage());
+        }
+
+        // Send SMS notification
+        try {
+            notificationService.notifyOrderAccepted(order);
+        } catch (Exception e) {
+            log.error("Failed to send order accepted SMS: {}", e.getMessage());
+        }
+
+        log.info("Order {} accepted successfully", order.getOrderNumber());
+        return order;
+    }
+
+    /**
+     * Reject order - Admin action
+     * Status: PLACED → REJECTED
+     * Automatically initiates refund
+     */
+    @Transactional
+    public Order rejectOrder(Long orderId, String reason, String rejectedBy) {
+        log.info("Rejecting order: {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Validate transition
+        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.REJECTED);
+
+        // Update status and timestamp
+        order.setStatus(OrderStatus.REJECTED);
+        order.setRejectedAt(LocalDateTime.now());
+
+        // Add status history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .status(OrderStatus.REJECTED)
+                .changedBy(rejectedBy)
+                .notes("Order rejected: " + reason)
+                .build();
+        order.addStatusHistory(history);
+
+        // Initiate refund if payment was completed
+        if (order.getPayment() != null &&
+            order.getPayment().getStatus() == com.elcafe.modules.order.enums.PaymentStatus.COMPLETED) {
+            order.getPayment().setStatus(com.elcafe.modules.order.enums.PaymentStatus.REFUNDED);
+            order.setPaymentStatus(com.elcafe.modules.order.enums.PaymentStatus.REFUNDED);
+        }
+
+        order = orderRepository.save(order);
+
+        // Broadcast WebSocket event
+        try {
+            orderEventBroadcaster.broadcastOrderRejected(order, reason);
+        } catch (Exception e) {
+            log.error("Failed to broadcast order rejected event: {}", e.getMessage());
+        }
+
+        // Send SMS notification
+        try {
+            notificationService.notifyOrderRejected(order);
+        } catch (Exception e) {
+            log.error("Failed to send order rejected SMS: {}", e.getMessage());
+        }
+
+        log.info("Order {} rejected successfully", order.getOrderNumber());
+        return order;
+    }
+
+    /**
+     * Cancel order - Can be called by Consumer or Admin
+     * Validates cancellation rules (5-minute window for consumers)
+     */
+    @Transactional
+    public Order cancelOrder(Long orderId, String reason, String cancelledBy) {
+        log.info("Cancelling order: {} by {}", orderId, cancelledBy);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Validate if order can be cancelled
+        if (!statusTransitionValidator.canBeCancelled(order.getStatus())) {
+            throw new BadRequestException(
+                "Order cannot be cancelled at this stage. Current status: " + order.getStatus()
+            );
+        }
+
+        // For consumer cancellations, check 5-minute time window
+        if ("CONSUMER".equals(cancelledBy) && order.getPlacedAt() != null) {
+            LocalDateTime fiveMinutesAfterPlacement = order.getPlacedAt().plusMinutes(5);
+            if (LocalDateTime.now().isAfter(fiveMinutesAfterPlacement)) {
+                throw new BadRequestException(
+                    "Order can only be cancelled within 5 minutes of placement"
+                );
+            }
+        }
+
+        // Store cancellation details
+        order.setCancellationReason(reason);
+        order.setCancelledBy(cancelledBy);
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCancelledAt(LocalDateTime.now());
+
+        // Add status history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .status(OrderStatus.CANCELLED)
+                .changedBy(cancelledBy)
+                .notes("Order cancelled: " + reason)
+                .build();
+        order.addStatusHistory(history);
+
+        // Initiate refund if payment was completed
+        if (order.getPayment() != null &&
+            order.getPayment().getStatus() == com.elcafe.modules.order.enums.PaymentStatus.COMPLETED) {
+            order.getPayment().setStatus(com.elcafe.modules.order.enums.PaymentStatus.REFUNDED);
+            order.setPaymentStatus(com.elcafe.modules.order.enums.PaymentStatus.REFUNDED);
+        }
+
+        order = orderRepository.save(order);
+
+        // Broadcast WebSocket event
+        try {
+            orderEventBroadcaster.broadcastOrderCancelled(order);
+        } catch (Exception e) {
+            log.error("Failed to broadcast order cancelled event: {}", e.getMessage());
+        }
+
+        // Send SMS notification
+        try {
+            notificationService.notifyOrderCancelled(order);
+        } catch (Exception e) {
+            log.error("Failed to send order cancelled SMS: {}", e.getMessage());
+        }
+
+        log.info("Order {} cancelled successfully", order.getOrderNumber());
+        return order;
+    }
+
+    /**
+     * Mark order as preparing - Kitchen starts work
+     * Status: ACCEPTED → PREPARING
+     */
+    @Transactional
+    public Order markOrderPreparing(Long orderId, String notes) {
+        log.info("Marking order as preparing: {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Validate transition
+        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.PREPARING);
+
+        // Update status and timestamp
+        order.setStatus(OrderStatus.PREPARING);
+        order.setPreparingAt(LocalDateTime.now());
+
+        // Add status history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .status(OrderStatus.PREPARING)
+                .changedBy("KITCHEN")
+                .notes(notes != null ? notes : "Kitchen started preparing order")
+                .build();
+        order.addStatusHistory(history);
+
+        order = orderRepository.save(order);
+
+        // Broadcast WebSocket event
+        try {
+            orderEventBroadcaster.broadcastOrderPreparing(order);
+        } catch (Exception e) {
+            log.error("Failed to broadcast order preparing event: {}", e.getMessage());
+        }
+
+        log.info("Order {} marked as preparing", order.getOrderNumber());
+        return order;
+    }
+
+    /**
+     * Mark order as ready - Food is ready for pickup/delivery
+     * Status: PREPARING → READY
+     */
+    @Transactional
+    public Order markOrderReady(Long orderId, String notes) {
+        log.info("Marking order as ready: {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Validate transition
+        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.READY);
+
+        // Update status and timestamp
+        order.setStatus(OrderStatus.READY);
+        order.setReadyAt(LocalDateTime.now());
+
+        // Add status history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .status(OrderStatus.READY)
+                .changedBy("KITCHEN")
+                .notes(notes != null ? notes : "Order is ready for " +
+                       (order.getOrderType().equals("PICKUP") ? "pickup" : "delivery"))
+                .build();
+        order.addStatusHistory(history);
+
+        order = orderRepository.save(order);
+
+        // Broadcast WebSocket event
+        try {
+            orderEventBroadcaster.broadcastOrderReady(order);
+        } catch (Exception e) {
+            log.error("Failed to broadcast order ready event: {}", e.getMessage());
+        }
+
+        // Send SMS notification
+        try {
+            notificationService.notifyOrderReady(order);
+        } catch (Exception e) {
+            log.error("Failed to send order ready SMS: {}", e.getMessage());
+        }
+
+        log.info("Order {} marked as ready", order.getOrderNumber());
+        return order;
+    }
+
+    /**
+     * Mark order as picked up - Courier picked up the order
+     * Status: READY → PICKED_UP
+     */
+    @Transactional
+    public Order markOrderPickedUp(Long orderId, String notes) {
+        log.info("Marking order as picked up: {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Validate transition
+        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.PICKED_UP);
+
+        // Update status and timestamp
+        order.setStatus(OrderStatus.PICKED_UP);
+        order.setPickedUpAt(LocalDateTime.now());
+
+        // Add status history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .status(OrderStatus.PICKED_UP)
+                .changedBy("COURIER")
+                .notes(notes != null ? notes : "Order picked up by courier")
+                .build();
+        order.addStatusHistory(history);
+
+        order = orderRepository.save(order);
+
+        // Broadcast WebSocket event
+        try {
+            orderEventBroadcaster.broadcastOrderPickedUp(order);
+        } catch (Exception e) {
+            log.error("Failed to broadcast order picked up event: {}", e.getMessage());
+        }
+
+        log.info("Order {} marked as picked up", order.getOrderNumber());
+        return order;
+    }
+
+    /**
+     * Mark order as completed - Final status
+     * Status: PICKED_UP → COMPLETED
+     */
+    @Transactional
+    public Order markOrderCompleted(Long orderId, String notes) {
+        log.info("Marking order as completed: {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        // Validate transition
+        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.COMPLETED);
+
+        // Update status and timestamp
+        order.setStatus(OrderStatus.COMPLETED);
+        order.setCompletedAt(LocalDateTime.now());
+
+        // Add status history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .status(OrderStatus.COMPLETED)
+                .changedBy("COURIER")
+                .notes(notes != null ? notes : "Order delivered successfully")
+                .build();
+        order.addStatusHistory(history);
+
+        order = orderRepository.save(order);
+
+        // Broadcast WebSocket event
+        try {
+            orderEventBroadcaster.broadcastOrderCompleted(order);
+        } catch (Exception e) {
+            log.error("Failed to broadcast order completed event: {}", e.getMessage());
+        }
+
+        // Send SMS notification
+        try {
+            notificationService.notifyOrderCompleted(order);
+        } catch (Exception e) {
+            log.error("Failed to send order completed SMS: {}", e.getMessage());
+        }
+
+        log.info("Order {} marked as completed", order.getOrderNumber());
+        return order;
     }
 }
