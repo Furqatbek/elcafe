@@ -26,4 +26,11 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Order> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
 
     List<Order> findByStatusOrderByCreatedAtAsc(OrderStatus status);
+
+    // For background jobs
+    List<Order> findByStatusAndPlacedAtBefore(OrderStatus status, LocalDateTime placedAt);
+
+    List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime createdAt);
+
+    List<Order> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }
