@@ -15,6 +15,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     Optional<Order> findByOrderNumber(String orderNumber);
 
+    Optional<Order> findByPaymentIntentId(String paymentIntentId);
+
     List<Order> findByRestaurantIdAndStatusOrderByCreatedAtDesc(Long restaurantId, OrderStatus status);
 
     List<Order> findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
