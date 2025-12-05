@@ -7,6 +7,115 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-12-05 🚀 **Order & Payment Enhancements**
+
+### Added - 2025-12-05
+
+#### Enhanced Order Status Flow
+- **NEW Order Status Values**: Expanded from 8 to 13 statuses
+  - `PENDING` - Order created, awaiting payment
+  - `PLACED` - Payment confirmed
+  - `NEW` - Alternative entry (waiter/dine-in)
+  - `REJECTED` - Restaurant rejection with refund
+  - `PICKED_UP` - Courier picked up order
+  - `COURIER_ASSIGNED` - Courier assigned
+  - `ON_DELIVERY` - In transit
+  - `DELIVERED` - Delivered, awaiting confirmation
+  - `COMPLETED` - Final successful state
+
+#### Order Entity Enhancements
+- **Order Fulfillment Tracking**:
+  - `orderType` (String) - DELIVERY, PICKUP, DINE_IN
+  - `orderSource` (OrderSource enum) - WEB, MOBILE, PHONE, WAITER, KIOSK, POS
+
+- **Dine-In Support**:
+  - `table` (ManyToOne) - Links to restaurant table
+  - `waiter` (ManyToOne) - Assigned waiter tracking
+
+- **Payment Integration**:
+  - `paymentIntentId` (String, 200 chars) - Payment gateway transaction ID
+  - Enhanced `paymentMethod` and `paymentStatus` fields
+
+- **Lifecycle Timestamps**:
+  - `acceptedAt`, `rejectedAt`, `preparingAt`, `readyAt`
+  - `pickedUpAt`, `completedAt`, `cancelledAt`
+  - `placedAt` - Order placement tracking
+
+#### Payment Entity Enhancements
+- **Payment Lifecycle Tracking**:
+  - `completedAt` (LocalDateTime) - Payment completion timestamp
+  - `refundedAt` (LocalDateTime) - Refund processing timestamp
+- Performance indexes on new timestamp fields
+
+#### Database Migration V17
+- Added `order_source`, `table_id`, `waiter_id` to orders table
+- Added `completed_at`, `refunded_at` to payments table
+- Foreign key constraints for table and waiter relationships
+- Check constraints for enum validation
+- Strategic indexes for query optimization
+
+#### CreateOrderRequest DTO Updates
+- Added `orderType` field (optional, validated)
+- Supports specifying DELIVERY/PICKUP/DINE_IN at creation
+
+### Changed - 2025-12-05
+
+- **State Machine**: Enhanced with 25+ transition rules
+  - Multiple order workflows (online, dine-in, pickup)
+  - Terminal states (COMPLETED, CANCELLED, REJECTED)
+  - Courier workflow (READY → COURIER_ASSIGNED → ON_DELIVERY → DELIVERED → COMPLETED)
+
+- **Order Validation**: Updated to handle multiple order types and sources
+
+- **Documentation**:
+  - Updated `CLIENT_RESTAURANT_FLOW.md` with complete state diagram
+  - Enhanced database schema documentation
+  - Added comprehensive transition rules table
+  - Created detailed CHANGELOG entry
+
+### Fixed - 2025-12-05
+
+- **Compilation Errors**: Resolved 47 compilation errors across entities and services
+- **Schema Validation**: Fixed missing column errors for `completed_at` in payments table
+- **Type Mismatches**: Added missing getters/setters for all new fields
+- **Switch Expressions**: Updated OrderService to handle all status values
+
+### Database Impact - 2025-12-05
+
+**Migration Required**: Yes (Flyway V17)
+**Backward Compatible**: Yes ✅
+
+**New Indexes**:
+- `idx_orders_table_id` on orders(table_id)
+- `idx_orders_waiter_id` on orders(waiter_id)
+- `idx_orders_order_source` on orders(order_source)
+- `idx_payments_completed_at` on payments(completed_at)
+- `idx_payments_refunded_at` on payments(refunded_at)
+
+**New Constraints**:
+- `fk_orders_table` - Foreign key to tables
+- `fk_orders_waiter` - Foreign key to waiters
+- `chk_order_source` - Enum validation for order sources
+- Extended `chk_status` - Now includes all 13 statuses
+
+### Analytics Impact - 2025-12-05
+
+**New Capabilities**:
+- Track orders by source channel (WEB vs MOBILE vs WAITER)
+- Waiter performance metrics (orders served, completion times)
+- Table utilization for dine-in orders
+- Payment vs refund rates
+- Detailed order lifecycle timing analysis
+
+### Security - 2025-12-05
+
+- All new fields are nullable (backward compatible)
+- Foreign key relationships maintain referential integrity
+- Enum constraints prevent invalid data
+- Index optimization for performance
+
+---
+
 ## [1.0.0] - 2025-12-05 ✅ **100% Complete**
 
 ### Added - 2025-12-05
