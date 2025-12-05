@@ -7,6 +7,7 @@ import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +28,7 @@ public class OrderController {
 
     @PostMapping
     @Operation(summary = "Create order", description = "Create a new order")
-    public ResponseEntity<ApiResponse<Order>> createOrder(@RequestBody Order order) {
+    public ResponseEntity<ApiResponse<Order>> createOrder(@Valid @RequestBody Order order) {
         Order createdOrder = orderService.createOrder(order);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
