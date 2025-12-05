@@ -43,6 +43,10 @@ public class Order {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "table_id")
+    private com.elcafe.modules.waiter.entity.Table table;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -59,6 +63,9 @@ public class Order {
 
     @Enumerated(EnumType.STRING)
     private PaymentStatus paymentStatus;
+
+    @Column(length = 200)
+    private String paymentIntentId;
 
     private LocalDateTime placedAt;
 
