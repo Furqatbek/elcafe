@@ -25,6 +25,7 @@ public class OrderBackgroundJobs {
 
     private final OrderRepository orderRepository;
     private final OrderService orderService;
+    private final com.elcafe.modules.notification.service.NotificationService notificationService;
 
     /**
      * Auto-reject orders that haven't been accepted within 10 minutes.
@@ -59,7 +60,13 @@ public class OrderBackgroundJobs {
 
                         log.info("Successfully auto-rejected order: {}", order.getOrderNumber());
 
-                        // TODO: Send SMS notification to customer
+                        // Send SMS notification to customer
+                        try {
+                            notificationService.notifyOrderRejected(order);
+                        } catch (Exception notifEx) {
+                            log.error("Failed to send rejection notification for order {}: {}",
+                                    order.getOrderNumber(), notifEx.getMessage());
+                        }
                     } catch (Exception e) {
                         log.error("Failed to auto-reject order {}: {}",
                                 order.getOrderNumber(), e.getMessage(), e);
@@ -109,7 +116,13 @@ public class OrderBackgroundJobs {
 
                         log.info("Cancelled order with failed payment: {}", order.getOrderNumber());
 
-                        // TODO: Send SMS notification to customer
+                        // Send SMS notification to customer
+                        try {
+                            notificationService.notifyOrderCancelled(order);
+                        } catch (Exception notifEx) {
+                            log.error("Failed to send cancellation notification for order {}: {}",
+                                    order.getOrderNumber(), notifEx.getMessage());
+                        }
                     } catch (Exception e) {
                         log.error("Failed to cancel order {}: {}",
                                 order.getOrderNumber(), e.getMessage(), e);
