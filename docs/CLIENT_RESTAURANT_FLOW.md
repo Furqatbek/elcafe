@@ -638,11 +638,14 @@ CREATE TABLE orders (
     id BIGSERIAL PRIMARY KEY,
     restaurant_id BIGINT NOT NULL REFERENCES restaurants(id),
     consumer_id BIGINT NOT NULL REFERENCES consumers(id),
+    table_id BIGINT REFERENCES tables(id),  -- For dine-in orders
+    waiter_id BIGINT REFERENCES waiters(id), -- Assigned waiter
     order_number VARCHAR(20) UNIQUE NOT NULL,
 
     -- Status tracking
     status VARCHAR(20) NOT NULL,
-    order_type VARCHAR(20) NOT NULL DEFAULT 'DELIVERY',
+    order_type VARCHAR(50),  -- DELIVERY, PICKUP, DINE_IN
+    order_source VARCHAR(50), -- WEB, MOBILE, PHONE, WAITER, KIOSK, POS
 
     -- Financial
     subtotal DECIMAL(10,2) NOT NULL,
@@ -653,19 +656,21 @@ CREATE TABLE orders (
     -- Payment
     payment_method VARCHAR(50),
     payment_status VARCHAR(20),
-    payment_intent_id VARCHAR(255),
+    payment_intent_id VARCHAR(200),
 
     -- Delivery
     delivery_address_id BIGINT REFERENCES consumer_addresses(id),
     notes TEXT,
+    internal_notes TEXT,
 
     -- Cancellation
     cancellation_reason TEXT,
-    cancelled_by VARCHAR(20), -- CONSUMER, ADMIN, SYSTEM
+    cancelled_by VARCHAR(100), -- CONSUMER, ADMIN, SYSTEM
 
     -- Timestamps
     placed_at TIMESTAMP,
     accepted_at TIMESTAMP,
+    rejected_at TIMESTAMP,
     preparing_at TIMESTAMP,
     ready_at TIMESTAMP,
     picked_up_at TIMESTAMP,
@@ -675,11 +680,18 @@ CREATE TABLE orders (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_status CHECK (status IN (
-        'PENDING', 'PLACED', 'ACCEPTED', 'PREPARING',
-        'READY', 'PICKED_UP', 'COMPLETED', 'CANCELLED', 'REJECTED'
+        'PENDING', 'PLACED', 'NEW', 'ACCEPTED', 'REJECTED', 'PREPARING',
+        'READY', 'PICKED_UP', 'COURIER_ASSIGNED', 'ON_DELIVERY',
+        'DELIVERED', 'COMPLETED', 'CANCELLED'
     )),
     CONSTRAINT chk_payment_status CHECK (payment_status IN (
         'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'REFUNDED'
+    )),
+    CONSTRAINT chk_order_source CHECK (order_source IS NULL OR order_source IN (
+        'WEB', 'MOBILE', 'PHONE', 'WAITER', 'KIOSK', 'POS'
+    )),
+    CONSTRAINT chk_order_type CHECK (order_type IS NULL OR order_type IN (
+        'DELIVERY', 'PICKUP', 'DINE_IN'
     ))
 );
 
@@ -688,6 +700,9 @@ CREATE INDEX idx_orders_restaurant ON orders(restaurant_id);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_placed_at ON orders(placed_at);
 CREATE INDEX idx_orders_order_number ON orders(order_number);
+CREATE INDEX idx_orders_table_id ON orders(table_id);
+CREATE INDEX idx_orders_waiter_id ON orders(waiter_id);
+CREATE INDEX idx_orders_order_source ON orders(order_source);
 ```
 
 #### Order Events Table
@@ -1302,72 +1317,122 @@ Response:
 ### 6.1 State Diagram
 
 ```
-                    ┌──────────────┐
-                    │   PENDING    │ (Payment pending)
-                    └──────┬───────┘
-                           │
-                  Payment completed
-                           │
-                    ┌──────▼───────┐
-           ┌────────│    PLACED    │────────┐
-           │        └──────┬───────┘        │
-           │               │                │
-    Admin rejects    Admin accepts    Consumer cancels
-           │               │           (within 5 min)
-           │        ┌──────▼───────┐        │
-           │        │   ACCEPTED   │        │
-           │        └──────┬───────┘        │
-           │               │                │
-           │      Kitchen starts            │
-           │               │                │
-           │        ┌──────▼───────┐        │
-           │        │  PREPARING   │        │
-           │        └──────┬───────┘        │
-           │               │                │
-           │      Food ready                │
-           │               │                │
-           │        ┌──────▼───────┐        │
-           │        │    READY     │        │
-           │        └──────┬───────┘        │
-           │               │                │
-           │    Driver picks up             │
-           │               │                │
-           │        ┌──────▼───────┐        │
-           │        │  PICKED_UP   │        │
-           │        └──────┬───────┘        │
-           │               │                │
-           │    Delivery completed          │
-           │               │                │
-           │        ┌──────▼───────┐        │
-           │        │  COMPLETED   │        │
-           │        └──────────────┘        │
-           │                                │
-           │        ┌──────────────┐        │
-           └───────>│   REJECTED   │<───────┘
-                    └──────────────┘
-                           ▲
-                           │
-                    ┌──────┴───────┐
-                    │  CANCELLED   │
-                    └──────────────┘
+                         ┌──────────────┐
+                         │   PENDING    │ (Payment pending)
+                         └──────┬───────┘
+                                │
+                       Payment completed
+                                │
+                         ┌──────▼───────┐
+                    ┌────│    PLACED    │────┐
+                    │    └──────┬───────┘    │
+                    │           │            │
+                    │    Admin accepts  Consumer
+                    │      (or NEW)     cancels
+                    │           │            │
+             ┌──────▼───────┐   │            │
+             │   REJECTED   │   │            │
+             │ (terminal)   │   │            │
+             └──────────────┘   │            │
+                                │            │
+                         ┌──────▼───────┐    │
+                    ┌────│   ACCEPTED   │────┤
+                    │    └──────┬───────┘    │
+                    │           │            │
+           Emergency│   Kitchen starts       │
+            cancel  │           │            │
+                    │    ┌──────▼───────┐    │
+                    │    │  PREPARING   │    │
+                    │    └──────┬───────┘    │
+                    │           │            │
+                    │     Food ready         │
+                    │           │            │
+                    │    ┌──────▼───────┐    │
+                    │    │    READY     │    │
+                    │    └──┬────┬────┬─┘    │
+                    │       │    │    │      │
+                    │  Pickup  Courier  │    │
+                    │       │    │ Assigned  │
+                    │       │    │    │      │
+              ┌─────▼───┐   │    │    │      │
+              │COMPLETED│   │    │    │      │
+              └─────────┘   │    │    │      │
+                            │    │    │      │
+                     ┌──────▼┐   │    │      │
+                     │PICKED_UP│ │    │      │
+                     └──┬────┬┘  │    │      │
+                        │    │   │    │      │
+                   Direct  On │   │    │      │
+                  Complete    │   │    │      │
+                        │     │   │    │      │
+                     ┌──▼─────▼┐  │    │      │
+                     │COMPLETED│  │    │      │
+                     └─────────┘  │    │      │
+                                  │    │      │
+                          ┌───────▼────▼──┐   │
+                          │COURIER_ASSIGNED│   │
+                          └───────┬────────┘   │
+                                  │            │
+                           On delivery         │
+                                  │            │
+                          ┌───────▼────────┐   │
+                          │  ON_DELIVERY   │   │
+                          └───────┬────────┘   │
+                                  │            │
+                           Delivered           │
+                                  │            │
+                          ┌───────▼────────┐   │
+                          │   DELIVERED    │   │
+                          └───────┬────────┘   │
+                                  │            │
+                              Complete         │
+                                  │            │
+                          ┌───────▼────────┐   │
+                          │   COMPLETED    │   │
+                          └────────────────┘   │
+                                               │
+                          ┌────────────────┐   │
+                          │   CANCELLED    │◄──┘
+                          │   (terminal)   │
+                          └────────────────┘
+
+Legend:
+- PENDING → PLACED: Payment successful
+- PLACED → ACCEPTED/REJECTED: Admin decision
+- ACCEPTED → PREPARING: Kitchen workflow
+- READY → Multiple paths: Based on order type
+- Terminal states: COMPLETED, CANCELLED, REJECTED
 ```
 
 ### 6.2 State Transitions Table
 
-| From Status | To Status   | Trigger             | Actor          | Conditions                                    |
-|-------------|-------------|---------------------|----------------|-----------------------------------------------|
-| PENDING     | PLACED      | Payment succeeded   | System         | Payment completed successfully                |
-| PENDING     | CANCELLED   | Payment timeout     | System         | Payment not completed within 15 minutes       |
-| PLACED      | ACCEPTED    | Admin accepts       | Admin/Operator | Restaurant is accepting orders                |
-| PLACED      | REJECTED    | Admin rejects       | Admin/Operator | Items unavailable, other issues               |
-| PLACED      | CANCELLED   | Consumer cancels    | Consumer       | Within 5 minutes of placement                 |
-| ACCEPTED    | PREPARING   | Kitchen starts      | Admin/Operator | Order handed to kitchen                       |
-| ACCEPTED    | CANCELLED   | Admin cancels       | Admin/Operator | Emergency situations only                     |
-| PREPARING   | READY       | Food prepared       | Admin/Operator | All items completed                           |
-| READY       | PICKED_UP   | Driver collects     | Admin/Operator | For delivery orders                           |
-| READY       | COMPLETED   | Customer collects   | Admin/Operator | For pickup orders                             |
-| PICKED_UP   | COMPLETED   | Delivery done       | Admin/Operator | Customer received order                       |
-| ANY         | REJECTED    | Critical issue      | Admin          | Payment failed, force majeure                 |
+| From Status     | To Status     | Trigger             | Actor          | Conditions                                    |
+|-----------------|---------------|---------------------|----------------|-----------------------------------------------|
+| PENDING         | PLACED        | Payment succeeded   | System         | Payment completed successfully                |
+| PENDING         | CANCELLED     | Payment timeout     | System         | Payment not completed within 15 minutes       |
+| PLACED          | NEW           | System transition   | System         | Alternative flow for waiter/dine-in orders    |
+| PLACED          | ACCEPTED      | Admin accepts       | Admin/Operator | Restaurant is accepting orders                |
+| PLACED          | REJECTED      | Admin rejects       | Admin/Operator | Items unavailable, other issues               |
+| PLACED          | CANCELLED     | Consumer cancels    | Consumer       | Within 5 minutes of placement                 |
+| NEW             | ACCEPTED      | Admin accepts       | Admin/Operator | For waiter-created orders                     |
+| NEW             | REJECTED      | Admin rejects       | Admin/Operator | Items unavailable, other issues               |
+| NEW             | CANCELLED     | Consumer/Admin      | Consumer/Admin | Order cancellation                            |
+| ACCEPTED        | PREPARING     | Kitchen starts      | Admin/Operator | Order handed to kitchen                       |
+| ACCEPTED        | CANCELLED     | Admin cancels       | Admin/Operator | Emergency situations only                     |
+| REJECTED        | (terminal)    | -                   | -              | Refund processed, no further transitions      |
+| PREPARING       | READY         | Food prepared       | Admin/Operator | All items completed                           |
+| READY           | PICKED_UP     | Courier collects    | Courier        | For delivery orders                           |
+| READY           | COURIER_ASSIGNED | Courier assigned | Admin/Operator | Courier assigned to delivery                  |
+| READY           | COMPLETED     | Customer collects   | Admin/Operator | For pickup/dine-in orders                     |
+| PICKED_UP       | ON_DELIVERY   | En route            | Courier        | Courier in transit                            |
+| PICKED_UP       | COMPLETED     | Direct completion   | Courier        | Delivery completed                            |
+| COURIER_ASSIGNED| ON_DELIVERY   | Courier departs     | Courier        | Courier started delivery                      |
+| COURIER_ASSIGNED| CANCELLED     | Cancellation        | Admin          | Emergency cancellation                        |
+| ON_DELIVERY     | DELIVERED     | Arrival confirmed   | Courier        | Customer location reached                     |
+| ON_DELIVERY     | COMPLETED     | Direct completion   | Courier        | Delivery completed                            |
+| DELIVERED       | COMPLETED     | Final confirmation  | Courier/Admin  | Payment confirmed, order closed               |
+| COMPLETED       | (terminal)    | -                   | -              | No further transitions                        |
+| CANCELLED       | (terminal)    | -                   | -              | Refund processed, no further transitions      |
 
 ### 6.3 Business Rules
 
