@@ -1,6 +1,5 @@
 package com.elcafe.modules.order.controller;
 
-import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.service.OrderService;
@@ -29,8 +28,8 @@ public class OrderController {
 
     @PostMapping
     @Operation(summary = "Create order", description = "Create a new order")
-    public ResponseEntity<ApiResponse<Order>> createOrder(@Valid @RequestBody CreateOrderRequest request) {
-        Order createdOrder = orderService.createOrder(request);
+    public ResponseEntity<ApiResponse<Order>> createOrder(@Valid @RequestBody Order order) {
+        Order createdOrder = orderService.createOrder(order);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Order created successfully", createdOrder));
