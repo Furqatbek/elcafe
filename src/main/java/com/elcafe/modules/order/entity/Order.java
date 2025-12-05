@@ -47,6 +47,10 @@ public class Order {
     @JoinColumn(name = "table_id")
     private com.elcafe.modules.waiter.entity.Table table;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "waiter_id")
+    private com.elcafe.modules.waiter.entity.Waiter waiter;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
