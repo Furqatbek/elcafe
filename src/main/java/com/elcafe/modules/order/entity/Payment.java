@@ -54,6 +54,10 @@ public class Payment {
 
     private LocalDateTime paidAt;
 
+    private LocalDateTime completedAt;
+
+    private LocalDateTime refundedAt;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
