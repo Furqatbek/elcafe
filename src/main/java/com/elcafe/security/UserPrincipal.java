@@ -33,7 +33,7 @@ public class UserPrincipal implements UserDetails {
                 user.getEmail(),
                 user.getPassword(),
                 user.getRole(),
-                user.isActive()
+                user.getActive()
         );
     }
 

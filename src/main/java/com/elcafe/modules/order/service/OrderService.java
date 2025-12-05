@@ -119,13 +119,18 @@ public class OrderService {
 
     private boolean isValidStatusTransition(OrderStatus current, OrderStatus next) {
         return switch (current) {
-            case NEW -> next == OrderStatus.ACCEPTED || next == OrderStatus.CANCELLED;
+            case PENDING -> next == OrderStatus.PLACED || next == OrderStatus.CANCELLED;
+            case PLACED -> next == OrderStatus.NEW || next == OrderStatus.ACCEPTED || next == OrderStatus.REJECTED || next == OrderStatus.CANCELLED;
+            case NEW -> next == OrderStatus.ACCEPTED || next == OrderStatus.REJECTED || next == OrderStatus.CANCELLED;
             case ACCEPTED -> next == OrderStatus.PREPARING || next == OrderStatus.CANCELLED;
+            case REJECTED -> false;
             case PREPARING -> next == OrderStatus.READY || next == OrderStatus.CANCELLED;
-            case READY -> next == OrderStatus.COURIER_ASSIGNED || next == OrderStatus.CANCELLED;
+            case READY -> next == OrderStatus.PICKED_UP || next == OrderStatus.COURIER_ASSIGNED || next == OrderStatus.CANCELLED;
+            case PICKED_UP -> next == OrderStatus.COMPLETED || next == OrderStatus.ON_DELIVERY;
             case COURIER_ASSIGNED -> next == OrderStatus.ON_DELIVERY || next == OrderStatus.CANCELLED;
-            case ON_DELIVERY -> next == OrderStatus.DELIVERED;
-            case DELIVERED, CANCELLED -> false;
+            case ON_DELIVERY -> next == OrderStatus.DELIVERED || next == OrderStatus.COMPLETED;
+            case DELIVERED -> next == OrderStatus.COMPLETED;
+            case COMPLETED, CANCELLED -> false;
         };
     }
 

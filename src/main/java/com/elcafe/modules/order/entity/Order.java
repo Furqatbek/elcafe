@@ -5,9 +5,6 @@ import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.elcafe.modules.waiter.entity.Table;
-import com.elcafe.modules.waiter.entity.Waiter;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,19 +24,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@jakarta.persistence.Table(name = "orders")
+@Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "statusHistory"})
-@NamedEntityGraph(
-    name = "Order.full",
-    attributeNodes = {
-        @NamedAttributeNode("restaurant"),
-        @NamedAttributeNode("customer"),
-        @NamedAttributeNode("items"),
-        @NamedAttributeNode("deliveryInfo"),
-        @NamedAttributeNode("payment")
-    }
-)
 public class Order {
 
     @Id
@@ -57,23 +43,24 @@ public class Order {
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "table_id")
-    private Table table;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "waiter_id")
-    private Waiter waiter;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private OrderStatus status = OrderStatus.NEW;
 
-    @Enumerated(EnumType.STRING)
     @Column(length = 50)
-    @Builder.Default
-    private OrderSource orderSource = OrderSource.ADMIN_PANEL;
+    private String orderType; // DELIVERY, PICKUP, DINE_IN
+
+    @Enumerated(EnumType.STRING)
+    private OrderSource orderSource; // WEB, MOBILE, PHONE, etc.
+
+    @Column(length = 50)
+    private String paymentMethod; // CASH, CARD, ONLINE
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
+
+    private LocalDateTime placedAt;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal;
@@ -98,38 +85,25 @@ public class Order {
 
     private LocalDateTime scheduledFor;
 
-    // Payment fields
-    @Column(length = 50)
-    private String paymentMethod;
+    private LocalDateTime acceptedAt;
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 20)
-    private PaymentStatus paymentStatus;
+    private LocalDateTime rejectedAt;
 
-    @Column(length = 255)
-    private String paymentIntentId;
+    private LocalDateTime preparingAt;
 
-    // Cancellation fields
+    private LocalDateTime readyAt;
+
+    private LocalDateTime pickedUpAt;
+
+    private LocalDateTime completedAt;
+
+    private LocalDateTime cancelledAt;
+
     @Column(length = 1000)
     private String cancellationReason;
 
-    @Column(length = 20)
-    private String cancelledBy; // CONSUMER, ADMIN, SYSTEM
-
-    // Order type
-    @Column(length = 20)
-    @Builder.Default
-    private String orderType = "DELIVERY"; // DELIVERY or PICKUP
-
-    // Status timestamps
-    private LocalDateTime placedAt;
-    private LocalDateTime acceptedAt;
-    private LocalDateTime preparingAt;
-    private LocalDateTime readyAt;
-    private LocalDateTime pickedUpAt;
-    private LocalDateTime completedAt;
-    private LocalDateTime cancelledAt;
-    private LocalDateTime rejectedAt;
+    @Column(length = 100)
+    private String cancelledBy;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

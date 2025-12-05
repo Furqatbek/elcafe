@@ -24,6 +24,9 @@ public class CreateOrderRequest {
     @NotNull(message = "Order source is required")
     private OrderSource orderSource;
 
+    @Size(max = 50, message = "Order type must not exceed 50 characters")
+    private String orderType; // DELIVERY, PICKUP, DINE_IN
+
     @Valid
     @NotNull(message = "Customer information is required")
     private CustomerInfo customerInfo;
