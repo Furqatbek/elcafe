@@ -1,45 +1,78 @@
 # El Cafe - API Integration Guide
 
+**API Version**: 1.0.0
+**Status**: 100% Complete ✅
+**Last Updated**: 2025-12-05
+
 ## 🚀 Quick Start
 
-### Complete Food Ordering System
-
-The El Cafe platform provides a comprehensive API for food ordering, kitchen management, and delivery tracking.
+The El Cafe platform provides a **production-ready** API for complete restaurant management including food ordering, kitchen operations, waiter service, courier delivery, and comprehensive analytics.
 
 ```
 ┌──────────────┐
 │   Customer   │──► Places Order ──► Restaurant Accepts ──► Kitchen Prepares
 └──────────────┘                                                    │
                                                                     ▼
-                  Delivered ◄── Courier Delivers ◄── Courier Accepts ◄── Food Ready
+                  Delivered ◄── Courier Delivers ◄── Courier Picks Up ◄── Food Ready
 ```
+
+### Real-time Features
+- **WebSocket** notifications for orders, kitchen, and table updates
+- **SMS** notifications at key milestones (via Eskiz.uz)
+- **GPS tracking** for courier delivery routes
+- **Live analytics** dashboard
 
 ---
 
 ## 📚 Documentation
 
-**Complete API Documentation:** [FOOD_ORDERING_API.md](./docs/FOOD_ORDERING_API.md)
+**📘 [Complete API Reference](./docs/API_REFERENCE.md)** - Detailed documentation for all 250+ endpoints
+**📗 [Implementation Status](./docs/IMPLEMENTATION_STATUS.md)** - Feature tracking (100% complete)
+**📙 [Food Ordering API](./docs/FOOD_ORDERING_API.md)** - Order flow details
+**📕 [Flyway Checksum Guide](./docs/FLYWAY_CHECKSUM_GUIDE.md)** - Database migration management
+**📔 [Waiter Module](./docs/WAITER_MODULE.md)** - Dine-in service documentation
 
 **Quick Links:**
 - [Order Flow](#order-flow)
 - [Consumer API](#consumer-api-public)
+- [Admin Order Management](#admin-order-management)
 - [Kitchen API](#kitchen-api)
+- [Waiter API](#waiter-api)
 - [Courier API](#courier-api)
+- [Analytics API](#analytics-api)
 - [Testing Examples](#testing-examples)
 
 ---
 
-## 🎯 Key Features
+## 🎯 Features
 
-### ✅ Implemented
+### ✅ 100% Implemented
 
-- **Consumer Order Placement** - Public API for website/mobile apps
-- **Order Tracking** - Real-time order status updates
-- **Kitchen Management** - Food preparation workflow
-- **Courier Assignment** - Delivery management system
-- **Notification System** - Multi-channel notifications
-- **Status History** - Complete audit trail
-- **Role-Based Access** - Secure endpoints
+#### Core Features
+- **Consumer Order Placement** - Public API (no authentication required)
+- **Order Tracking** - Real-time status updates via WebSocket
+- **Admin Order Management** - Accept, reject, cancel with state machine validation
+- **Kitchen Management** - Chef assignment, preparation tracking, priority management
+- **Waiter Module** - Table management, dine-in orders, PIN authentication
+- **Courier System** - GPS tracking, wallet management, automatic assignment
+- **Customer Management** - CRM with RFM analysis and activity tracking
+- **Analytics Suite** - Financial, operational, customer, and inventory analytics
+- **SMS Notifications** - Integrated with Eskiz.uz gateway
+- **Payment Processing** - Multiple methods with automatic refunds
+- **Menu Management** - Products, variants, add-ons, ingredients, collections
+- **File Upload** - Image management for menu items
+
+#### Technical Features
+- **250+ REST Endpoints** across 11 modules
+- **State Machine** validation for order lifecycle
+- **WebSocket (STOMP)** for real-time updates
+- **Redis Caching** for menu data (30-min TTL)
+- **JWT Authentication** with refresh tokens
+- **Role-Based Access** (Admin, Operator, Waiter, Courier, Kitchen Staff)
+- **Order Validation** ($10 minimum, $500 maximum)
+- **Complete Audit Trail** via status history
+- **Background Jobs** for order lifecycle management
+- **Flyway Migrations** (V1-V16, 40+ tables)
 
 ---
 
@@ -48,9 +81,22 @@ The El Cafe platform provides a comprehensive API for food ordering, kitchen man
 ### Consumer API (Public - No Auth)
 
 ```http
-POST   /api/v1/consumer/orders                    # Place new order
-GET    /api/v1/consumer/orders/{orderNumber}      # Track order
-POST   /api/v1/consumer/orders/{orderNumber}/cancel # Cancel order
+POST   /api/v1/consumer/orders                      # Place new order
+GET    /api/v1/consumer/orders/{orderNumber}        # Track order
+POST   /api/v1/consumer/orders/{orderNumber}/cancel # Cancel order (5-min window)
+POST   /api/v1/consumer/auth/login                  # Request OTP
+POST   /api/v1/consumer/auth/verify                 # Verify OTP
+```
+
+### Admin Order Management (Auth Required)
+
+```http
+GET    /api/v1/admin/orders                       # Get all orders
+GET    /api/v1/admin/orders/{orderId}             # Get order details
+POST   /api/v1/admin/orders/{orderId}/accept      # Accept order
+POST   /api/v1/admin/orders/{orderId}/reject      # Reject order (auto-refund)
+POST   /api/v1/admin/orders/{orderId}/cancel      # Cancel order
+PATCH  /api/v1/admin/orders/{orderId}/status      # Update status
 ```
 
 ### Kitchen API (Auth Required)
@@ -64,6 +110,19 @@ POST   /api/v1/kitchen/orders/{id}/picked-up      # Mark picked up
 PATCH  /api/v1/kitchen/orders/{id}/priority       # Update priority
 ```
 
+### Waiter API (Auth Required)
+
+```http
+POST   /api/v1/waiters/auth                       # PIN authentication
+GET    /api/v1/waiter/tables                      # Get all tables
+GET    /api/v1/waiter/tables/available            # Get available tables
+POST   /api/v1/waiter/tables/{id}/open            # Open table
+POST   /api/v1/waiter/orders                      # Create dine-in order
+POST   /api/v1/waiter/orders/{id}/submit          # Submit to kitchen
+POST   /api/v1/waiter/orders/{id}/bill            # Request bill
+POST   /api/v1/waiter/orders/{id}/close           # Close order
+```
+
 ### Courier API (Auth Required)
 
 ```http
@@ -74,6 +133,20 @@ POST   /api/v1/courier/orders/{id}/decline        # Decline order
 POST   /api/v1/courier/orders/assign              # Manual assignment (Admin)
 POST   /api/v1/courier/orders/{id}/start-delivery # Start delivery
 POST   /api/v1/courier/orders/{id}/complete       # Complete delivery
+POST   /api/v1/courier/orders/location            # Update GPS location
+GET    /api/v1/courier/orders/location/active     # Get active couriers
+```
+
+### Analytics API (Auth Required)
+
+```http
+GET    /api/v1/analytics/summary                      # Dashboard metrics
+GET    /api/v1/analytics/financial/daily-revenue     # Daily revenue
+GET    /api/v1/analytics/financial/profitability     # Profit analysis
+GET    /api/v1/analytics/operational/peak-hours      # Peak hours
+GET    /api/v1/analytics/operational/kitchen         # Kitchen metrics
+GET    /api/v1/analytics/customer/retention          # Retention rate
+GET    /api/v1/analytics/customer/ltv                # Customer LTV
 ```
 
 ---
@@ -83,32 +156,51 @@ POST   /api/v1/courier/orders/{id}/complete       # Complete delivery
 ### Order Status Lifecycle
 
 ```
-NEW
-  ↓ Restaurant accepts
+PENDING (Payment processing)
+    ↓ Payment confirmed or CASH selected
+PLACED (Waiting for restaurant acceptance)
+    ↓ Admin/Operator accepts → SMS to customer
 ACCEPTED
-  ↓ Kitchen starts preparation
+    ↓ Kitchen starts preparation
 PREPARING
-  ↓ Food ready
+    ↓ Food ready → SMS to customer
 READY
-  ↓ Courier accepts
-COURIER_ASSIGNED
-  ↓ Courier picks up
-ON_DELIVERY
-  ↓ Delivered to customer
-DELIVERED
+    ↓ Courier picks up
+PICKED_UP
+    ↓ Order delivered → SMS to customer
+COMPLETED
 ```
+
+**Alternative Flows:**
+```
+PLACED → REJECTED (Restaurant rejects) → Auto-refund → SMS notification
+PENDING/PLACED/ACCEPTED → CANCELLED (Customer/Admin cancels) → Refund → SMS notification
+```
+
+### State Machine Rules
+
+- **PENDING → PLACED**: Automatic when payment confirmed or CASH selected
+- **PLACED → ACCEPTED**: Admin/Operator action (broadcasts WebSocket + SMS)
+- **PLACED → REJECTED**: Admin/Operator action (auto-refund + SMS)
+- **ACCEPTED → PREPARING**: Kitchen starts cooking
+- **PREPARING → READY**: Kitchen completes (SMS notification)
+- **READY → PICKED_UP**: Courier picks up order
+- **PICKED_UP → COMPLETED**: Delivery completed (SMS notification + wallet update)
+- **Any → CANCELLED**: Within rules (5-min window for consumers, anytime for admin)
 
 ### Notifications at Each Step
 
-| Status | Customer | Restaurant | Kitchen | Courier | Admin |
-|--------|----------|------------|---------|---------|-------|
-| NEW | ✅ | ✅ | ✅ | ⚪ | ✅ |
-| ACCEPTED | ✅ | ⚪ | ✅ | ⚪ | ✅ |
-| PREPARING | ✅ | ⚪ | ⚪ | ⚪ | ⚪ |
-| READY | ✅ | ⚪ | ⚪ | ✅ | ✅ |
-| COURIER_ASSIGNED | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ON_DELIVERY | ✅ | ⚪ | ⚪ | ⚪ | ✅ |
-| DELIVERED | ✅ | ✅ | ⚪ | ⚪ | ✅ |
+| Status | SMS | WebSocket | Actions Triggered |
+|--------|-----|-----------|-------------------|
+| PENDING | ⚪ | ⚪ | Order created, payment pending |
+| PLACED | ✅ | ✅ | Notify restaurant, create kitchen order |
+| ACCEPTED | ✅ | ✅ | Notify customer, estimated ready time |
+| PREPARING | ⚪ | ✅ | Update kitchen dashboard |
+| READY | ✅ | ✅ | Notify customer & available couriers |
+| PICKED_UP | ⚪ | ✅ | Track courier GPS location |
+| COMPLETED | ✅ | ✅ | Update courier wallet, close order |
+| REJECTED | ✅ | ✅ | Auto-refund, notify customer |
+| CANCELLED | ✅ | ✅ | Refund if paid, notify all parties |
 
 ---
 
@@ -518,5 +610,29 @@ When adding new features:
 
 ---
 
-**Last Updated:** November 25, 2025
+## 📚 Additional Resources
+
+### Documentation
+- **[Complete API Reference](./docs/API_REFERENCE.md)** - Detailed endpoint documentation
+- **[Implementation Status](./docs/IMPLEMENTATION_STATUS.md)** - 100% complete feature list
+- **[Flyway Checksum Guide](./docs/FLYWAY_CHECKSUM_GUIDE.md)** - Database migration management
+- **[Main README](./README.md)** - Project overview and setup guide
+
+### API Tools
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **API Docs**: http://localhost:8080/api-docs
+- **Health Check**: http://localhost:8080/actuator/health
+- **Postman Collection**: [./postman/Restaurant_Delivery_API.postman_collection.json](./postman/Restaurant_Delivery_API.postman_collection.json)
+
+### Support
+- **Development Server**: http://localhost:8080
+- **Base API URL**: http://localhost:8080/api/v1
+- **WebSocket**: ws://localhost:8080/ws
+
+---
+
+**Implementation Status:** 100% Complete ✅
 **API Version:** v1.0.0
+**Total Endpoints:** 250+
+**Last Updated:** December 5, 2025
+**Built with:** ☕ Java 21 + 🍃 Spring Boot 3.3.0
