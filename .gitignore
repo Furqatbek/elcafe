@@ -32,3 +32,6 @@ Thumbs.db
 # Application
 application-local.yml
 .env
+
+# External repositories (manually cloned)
+template-smith-forge/
