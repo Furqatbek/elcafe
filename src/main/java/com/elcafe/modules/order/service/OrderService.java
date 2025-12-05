@@ -7,7 +7,6 @@ import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.validator.OrderStatusTransitionValidator;
-import com.elcafe.modules.order.websocket.OrderEventBroadcaster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
