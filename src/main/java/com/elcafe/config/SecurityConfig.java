@@ -54,23 +54,18 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        // Allow all OPTIONS requests (CORS preflight)
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Public endpoints
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/consumer/auth/**",
+                                "/api/v1/menu/public/**",
                                 "/api/v1/courier/webhook/**",
-                                "/uploads/**",
                                 "/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/actuator/health",
                                 "/actuator/info"
                         ).permitAll()
-                        // Public GET requests for menu and categories
-                        .requestMatchers(HttpMethod.GET, "/api/v1/menu/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/categories").permitAll()
                         // Admin only endpoints
                         .requestMatchers(HttpMethod.POST, "/api/v1/restaurants/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/restaurants/**").hasRole("ADMIN")
@@ -93,7 +88,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*")); // Allow all origins
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
         configuration.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
         configuration.setAllowCredentials(allowCredentials);
