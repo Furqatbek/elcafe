@@ -1,6 +1,7 @@
 package com.elcafe.modules.menu.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.menu.dto.ProductListDTO;
 import com.elcafe.modules.menu.entity.*;
 import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.AddOnGroupRepository;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -146,6 +148,37 @@ public class MenuService {
     @Transactional(readOnly = true)
     public List<Product> getProductsByCategory(Long categoryId) {
         return productRepository.findByCategoryIdOrderBySortOrder(categoryId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductListDTO> getProductsByRestaurant(Long restaurantId) {
+        log.info("Fetching products for restaurant: {}", restaurantId);
+
+        List<Category> categories = categoryRepository.findByRestaurantIdOrderBySortOrder(restaurantId);
+
+        return categories.stream()
+                .flatMap(category -> category.getProducts().stream()
+                        .map(product -> ProductListDTO.builder()
+                                .id(product.getId())
+                                .name(product.getName())
+                                .description(product.getDescription())
+                                .imageUrl(product.getImageUrl())
+                                .price(product.getPrice())
+                                .priceWithMargin(product.getPriceWithMargin())
+                                .itemType(product.getItemType())
+                                .sortOrder(product.getSortOrder())
+                                .status(product.getStatus())
+                                .inStock(product.getInStock())
+                                .featured(product.getFeatured())
+                                .hasVariants(product.getHasVariants())
+                                .categoryId(category.getId())
+                                .categoryName(category.getName())
+                                .available(product.getInStock())
+                                .isFeatured(product.getFeatured())
+                                .createdAt(product.getCreatedAt())
+                                .updatedAt(product.getUpdatedAt())
+                                .build()))
+                .collect(Collectors.toList());
     }
 
     @Transactional
