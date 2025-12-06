@@ -2,8 +2,6 @@ package com.elcafe.modules.menu.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.ProductListDTO;
-import com.elcafe.modules.menu.dto.PublicMenuCategoryDTO;
-import com.elcafe.modules.menu.dto.PublicMenuProductDTO;
 import com.elcafe.modules.menu.entity.*;
 import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.AddOnGroupRepository;
@@ -33,7 +31,7 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "menu", key = "#restaurantId")
-    public List<PublicMenuCategoryDTO> getPublicMenu(Long restaurantId) {
+    public List<Category> getPublicMenu(Long restaurantId) {
         log.info("Fetching public menu for restaurant: {}", restaurantId);
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
@@ -43,65 +41,18 @@ public class MenuService {
             throw new ResourceNotFoundException("Restaurant is not active");
         }
 
-        List<Category> categories = categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
-
-        // Convert to DTOs with products
-        return categories.stream()
-                .map(this::convertToCategoryDTO)
-                .collect(Collectors.toList());
-    }
-
-    private PublicMenuCategoryDTO convertToCategoryDTO(Category category) {
-        // Get products for this category
-        List<Product> products = productRepository.findByCategoryIdAndStatusOrderBySortOrder(
-                category.getId(), ProductStatus.LIVE);
-
-        List<PublicMenuProductDTO> productDTOs = products.stream()
-                .filter(Product::getInStock)
-                .map(this::convertToProductDTO)
-                .collect(Collectors.toList());
-
-        return PublicMenuCategoryDTO.builder()
-                .id(category.getId())
-                .name(category.getName())
-                .description(category.getDescription())
-                .imageUrl(category.getImageUrl())
-                .sortOrder(category.getSortOrder())
-                .active(category.getActive())
-                .createdAt(category.getCreatedAt())
-                .updatedAt(category.getUpdatedAt())
-                .products(productDTOs)
-                .build();
-    }
-
-    private PublicMenuProductDTO convertToProductDTO(Product product) {
-        return PublicMenuProductDTO.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .description(product.getDescription())
-                .imageUrl(product.getImageUrl())
-                .price(product.getPrice())
-                .priceWithMargin(product.getPriceWithMargin())
-                .itemType(product.getItemType())
-                .sortOrder(product.getSortOrder())
-                .status(product.getStatus())
-                .inStock(product.getInStock())
-                .featured(product.getFeatured())
-                .hasVariants(product.getHasVariants())
-                .createdAt(product.getCreatedAt())
-                .updatedAt(product.getUpdatedAt())
-                .build();
+        return categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
     }
 
     @Transactional
-    @CacheEvict(value = {"menu", "categories"}, allEntries = true)
+    @CacheEvict(value = "menu", allEntries = true)
     public Category createCategory(Category category) {
         log.info("Creating category: {}", category.getName());
         return categoryRepository.save(category);
     }
 
     @Transactional
-    @CacheEvict(value = {"menu", "categories"}, allEntries = true)
+    @CacheEvict(value = "menu", allEntries = true)
     public Category updateCategory(Long id, Category categoryData) {
         log.info("Updating category: {}", id);
 
@@ -129,14 +80,13 @@ public class MenuService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "categories", key = "#restaurantId")
     public List<Category> getActiveCategoriesByRestaurant(Long restaurantId) {
         log.info("Fetching active categories for restaurant: {}", restaurantId);
         return categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
     }
 
     @Transactional
-    @CacheEvict(value = {"menu", "categories"}, allEntries = true)
+    @CacheEvict(value = "menu", allEntries = true)
     public void deleteCategory(Long id) {
         log.info("Deleting category: {}", id);
         Category category = categoryRepository.findById(id)
@@ -208,34 +158,33 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<ProductListDTO> getProductsByRestaurant(Long restaurantId) {
-        // Fetch all products (DRAFT and LIVE) for admin view
-        List<Product> products = productRepository.findByRestaurantId(restaurantId);
-        return products.stream()
-                .map(this::convertToProductListDTO)
-                .collect(Collectors.toList());
-    }
+        log.info("Fetching products for restaurant: {}", restaurantId);
 
-    private ProductListDTO convertToProductListDTO(Product product) {
-        return ProductListDTO.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .description(product.getDescription())
-                .imageUrl(product.getImageUrl())
-                .price(product.getPrice())
-                .priceWithMargin(product.getPriceWithMargin())
-                .itemType(product.getItemType())
-                .sortOrder(product.getSortOrder())
-                .status(product.getStatus())
-                .inStock(product.getInStock())
-                .featured(product.getFeatured())
-                .hasVariants(product.getHasVariants())
-                .categoryId(product.getCategory().getId())
-                .categoryName(product.getCategory().getName())
-                .available(product.getInStock()) // For frontend compatibility
-                .isFeatured(product.getFeatured()) // For frontend compatibility
-                .createdAt(product.getCreatedAt())
-                .updatedAt(product.getUpdatedAt())
-                .build();
+        List<Category> categories = categoryRepository.findByRestaurantIdOrderBySortOrder(restaurantId);
+
+        return categories.stream()
+                .flatMap(category -> category.getProducts().stream()
+                        .map(product -> ProductListDTO.builder()
+                                .id(product.getId())
+                                .name(product.getName())
+                                .description(product.getDescription())
+                                .imageUrl(product.getImageUrl())
+                                .price(product.getPrice())
+                                .priceWithMargin(product.getPriceWithMargin())
+                                .itemType(product.getItemType())
+                                .sortOrder(product.getSortOrder())
+                                .status(product.getStatus())
+                                .inStock(product.getInStock())
+                                .featured(product.getFeatured())
+                                .hasVariants(product.getHasVariants())
+                                .categoryId(category.getId())
+                                .categoryName(category.getName())
+                                .available(product.getInStock())
+                                .isFeatured(product.getFeatured())
+                                .createdAt(product.getCreatedAt())
+                                .updatedAt(product.getUpdatedAt())
+                                .build()))
+                .collect(Collectors.toList());
     }
 
     @Transactional
