@@ -1,5 +1,7 @@
 package com.elcafe.security;
 
+import com.elcafe.modules.customer.entity.Customer;
+import com.elcafe.modules.customer.repository.CustomerRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +24,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final CustomerRepository customerRepository;
 
     @Override
     protected void doFilterInternal(
@@ -41,19 +44,50 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         jwt = authHeader.substring(7);
         try {
+            String tokenType = jwtUtil.extractTokenType(jwt);
             username = jwtUtil.extractUsername(jwt);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                UserDetails userDetails;
 
-                if (jwtUtil.validateToken(jwt, userDetails)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                // Handle consumer (customer) tokens
+                if ("consumer".equals(tokenType)) {
+                    Long customerId = jwtUtil.extractCustomerId(jwt);
+
+                    // Try to load full customer details if available
+                    Customer customer = customerRepository.findByPhone(username)
+                            .orElse(null);
+
+                    if (customer != null) {
+                        userDetails = CustomerPrincipal.create(customer);
+                    } else {
+                        // Create minimal principal from token claims
+                        userDetails = CustomerPrincipal.create(username, customerId);
+                    }
+
+                    // Validate token expiration
+                    if (!jwtUtil.isTokenExpired(jwt)) {
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
+                } else {
+                    // Handle regular user tokens
+                    userDetails = userDetailsService.loadUserByUsername(username);
+
+                    if (jwtUtil.validateToken(jwt, userDetails)) {
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                    }
                 }
             }
         } catch (Exception e) {
