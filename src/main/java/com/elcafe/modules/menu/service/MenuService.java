@@ -79,6 +79,12 @@ public class MenuService {
         return categoryRepository.findByRestaurantIdOrderBySortOrder(restaurantId);
     }
 
+    @Transactional(readOnly = true)
+    public List<Category> getActiveCategoriesByRestaurant(Long restaurantId) {
+        log.info("Fetching active categories for restaurant: {}", restaurantId);
+        return categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
+    }
+
     @Transactional
     @CacheEvict(value = "menu", allEntries = true)
     public void deleteCategory(Long id) {
