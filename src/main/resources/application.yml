@@ -107,7 +107,7 @@ app:
       access-token-expiration: 3600000 # 1 hour
       refresh-token-expiration: 86400000 # 24 hours
     cors:
-      allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:8080}
+      allowed-origins: ${CORS_ORIGINS:*}
       allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
       allowed-headers: '*'
       allow-credentials: true
