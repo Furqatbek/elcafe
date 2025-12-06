@@ -1,5 +1,6 @@
 package com.elcafe.modules.customer.entity;
 
+import com.elcafe.modules.customer.enums.RegistrationSource;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -53,6 +55,15 @@ public class Customer {
 
     @Column(columnDefinition = "TEXT")
     private String tags;
+
+    private LocalDate birthDate;
+
+    @Column(length = 10)
+    private String language; // e.g., "uz", "ru", "en"
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private RegistrationSource registrationSource;
 
     @Column(nullable = false)
     @Builder.Default
