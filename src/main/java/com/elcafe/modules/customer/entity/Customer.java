@@ -1,7 +1,6 @@
 package com.elcafe.modules.customer.entity;
 
 import com.elcafe.modules.customer.enums.RegistrationSource;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,8 +12,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Data
 @Builder
@@ -23,7 +20,6 @@ import java.util.List;
 @Entity
 @Table(name = "customers")
 @EntityListeners(AuditingEntityListener.class)
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Customer {
 
     @Id
@@ -42,12 +38,6 @@ public class Customer {
     @Column(nullable = false, length = 20)
     private String phone;
 
-    private LocalDate birthDate;
-
-    @Column(length = 10)
-    private String language; // e.g., "uz", "ru", "en"
-
-    // Legacy address fields (kept for backward compatibility)
     @Column(length = 500)
     private String defaultAddress;
 
@@ -66,19 +56,18 @@ public class Customer {
     @Column(columnDefinition = "TEXT")
     private String tags;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean active = true;
+    private LocalDate birthDate;
+
+    @Column(length = 10)
+    private String language; // e.g., "uz", "ru", "en"
 
     @Enumerated(EnumType.STRING)
     @Column(length = 50)
-    @Builder.Default
-    private RegistrationSource registrationSource = RegistrationSource.ADMIN_PANEL;
+    private RegistrationSource registrationSource;
 
-    // Address relationship
-    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Column(nullable = false)
     @Builder.Default
-    private List<Address> addresses = new ArrayList<>();
+    private Boolean active = true;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
