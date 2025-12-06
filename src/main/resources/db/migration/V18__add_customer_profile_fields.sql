@@ -19,7 +19,7 @@ UPDATE customers SET language = NULL WHERE language NOT IN ('uz', 'ru', 'en', 't
 UPDATE customers SET registration_source = UPPER(registration_source) WHERE registration_source IS NOT NULL;
 UPDATE customers SET registration_source = 'OTHER'
 WHERE registration_source IS NOT NULL
-  AND registration_source NOT IN ('WEB', 'MOBILE', 'TELEGRAM', 'FACEBOOK', 'INSTAGRAM', 'PHONE', 'REFERRAL', 'OTHER');
+  AND registration_source NOT IN ('TELEGRAM_BOT', 'WEBSITE', 'ADMIN_PANEL', 'MOBILE_APP', 'PHONE_CALL', 'WALK_IN', 'OTHER');
 
 -- Add check constraint for language codes
 ALTER TABLE customers DROP CONSTRAINT IF EXISTS chk_customer_language;
@@ -32,7 +32,7 @@ ALTER TABLE customers ADD CONSTRAINT chk_customer_language CHECK (
 ALTER TABLE customers DROP CONSTRAINT IF EXISTS chk_registration_source;
 ALTER TABLE customers ADD CONSTRAINT chk_registration_source CHECK (
     registration_source IS NULL OR
-    registration_source IN ('WEB', 'MOBILE', 'TELEGRAM', 'FACEBOOK', 'INSTAGRAM', 'PHONE', 'REFERRAL', 'OTHER')
+    registration_source IN ('TELEGRAM_BOT', 'WEBSITE', 'ADMIN_PANEL', 'MOBILE_APP', 'PHONE_CALL', 'WALK_IN', 'OTHER')
 );
 
 -- Create indexes for filtering and analytics
@@ -43,4 +43,4 @@ CREATE INDEX IF NOT EXISTS idx_customers_birth_date ON customers(birth_date);
 -- Add comments
 COMMENT ON COLUMN customers.birth_date IS 'Customer date of birth for demographics and birthday promotions';
 COMMENT ON COLUMN customers.language IS 'Preferred language for customer communication: uz, ru, en, tr, ar';
-COMMENT ON COLUMN customers.registration_source IS 'Channel through which customer registered: WEB, MOBILE, TELEGRAM, etc.';
+COMMENT ON COLUMN customers.registration_source IS 'Channel through which customer registered: TELEGRAM_BOT, WEBSITE, ADMIN_PANEL, MOBILE_APP, PHONE_CALL, WALK_IN, OTHER';
