@@ -98,7 +98,7 @@ public class CustomerService {
         }
 
         if (request.getLanguage() != null && !request.getLanguage().trim().isEmpty()) {
-            customer.setLanguage(request.getLanguage().trim());
+            customer.setLanguage(request.getLanguage().trim().toLowerCase());
         }
 
         if (request.getDefaultAddress() != null) {
