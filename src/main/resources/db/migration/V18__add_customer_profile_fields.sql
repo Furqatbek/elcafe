@@ -10,6 +10,17 @@ ALTER TABLE customers ADD COLUMN IF NOT EXISTS language VARCHAR(10);
 -- Add registration source to track how customers found the platform
 ALTER TABLE customers ADD COLUMN IF NOT EXISTS registration_source VARCHAR(50);
 
+-- Normalize existing language values to conform to constraint
+-- Convert any invalid values to NULL or normalize them
+UPDATE customers SET language = LOWER(language) WHERE language IS NOT NULL;
+UPDATE customers SET language = NULL WHERE language NOT IN ('uz', 'ru', 'en', 'tr', 'ar');
+
+-- Normalize existing registration_source values
+UPDATE customers SET registration_source = UPPER(registration_source) WHERE registration_source IS NOT NULL;
+UPDATE customers SET registration_source = 'OTHER'
+WHERE registration_source IS NOT NULL
+  AND registration_source NOT IN ('WEB', 'MOBILE', 'TELEGRAM', 'FACEBOOK', 'INSTAGRAM', 'PHONE', 'REFERRAL', 'OTHER');
+
 -- Add check constraint for language codes
 ALTER TABLE customers DROP CONSTRAINT IF EXISTS chk_customer_language;
 ALTER TABLE customers ADD CONSTRAINT chk_customer_language CHECK (
