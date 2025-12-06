@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.modules.menu.dto.PublicMenuCategoryDTO;
 import com.elcafe.modules.menu.entity.Category;
 import com.elcafe.modules.menu.service.MenuService;
 import com.elcafe.utils.ApiResponse;
@@ -21,8 +22,8 @@ public class MenuController {
 
     @GetMapping("/public/{restaurantId}")
     @Operation(summary = "Get public menu", description = "Get public menu for a restaurant (cached)")
-    public ResponseEntity<ApiResponse<List<Category>>> getPublicMenu(@PathVariable Long restaurantId) {
-        List<Category> menu = menuService.getPublicMenu(restaurantId);
+    public ResponseEntity<ApiResponse<List<PublicMenuCategoryDTO>>> getPublicMenu(@PathVariable Long restaurantId) {
+        List<PublicMenuCategoryDTO> menu = menuService.getPublicMenu(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(menu));
     }
 
