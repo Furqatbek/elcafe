@@ -2,6 +2,8 @@ package com.elcafe.modules.menu.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.ProductListDTO;
+import com.elcafe.modules.menu.dto.PublicMenuCategoryDTO;
+import com.elcafe.modules.menu.dto.PublicMenuProductDTO;
 import com.elcafe.modules.menu.entity.*;
 import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.AddOnGroupRepository;
@@ -31,7 +33,7 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "menu", key = "#restaurantId")
-    public List<Category> getPublicMenu(Long restaurantId) {
+    public List<PublicMenuCategoryDTO> getPublicMenu(Long restaurantId) {
         log.info("Fetching public menu for restaurant: {}", restaurantId);
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
@@ -41,7 +43,43 @@ public class MenuService {
             throw new ResourceNotFoundException("Restaurant is not active");
         }
 
-        return categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
+        List<Category> categories = categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
+
+        return categories.stream()
+                .map(category -> {
+                    List<PublicMenuProductDTO> products = category.getProducts().stream()
+                            .filter(product -> product.getInStock() != null && product.getInStock())
+                            .map(product -> PublicMenuProductDTO.builder()
+                                    .id(product.getId())
+                                    .name(product.getName())
+                                    .description(product.getDescription())
+                                    .imageUrl(product.getImageUrl())
+                                    .price(product.getPrice())
+                                    .priceWithMargin(product.getPriceWithMargin())
+                                    .itemType(product.getItemType())
+                                    .sortOrder(product.getSortOrder())
+                                    .status(product.getStatus())
+                                    .inStock(product.getInStock())
+                                    .featured(product.getFeatured())
+                                    .hasVariants(product.getHasVariants())
+                                    .createdAt(product.getCreatedAt())
+                                    .updatedAt(product.getUpdatedAt())
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    return PublicMenuCategoryDTO.builder()
+                            .id(category.getId())
+                            .name(category.getName())
+                            .description(category.getDescription())
+                            .imageUrl(category.getImageUrl())
+                            .sortOrder(category.getSortOrder())
+                            .active(category.getActive())
+                            .createdAt(category.getCreatedAt())
+                            .updatedAt(category.getUpdatedAt())
+                            .products(products)
+                            .build();
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional
