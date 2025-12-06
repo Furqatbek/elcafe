@@ -113,7 +113,7 @@ public class ConsumerAuthService {
                     .firstName(firstName)
                     .lastName(lastName)
                     .birthDate(request.getBirthDate())
-                    .language(request.getLanguage())
+                    .language(request.getLanguage() != null ? request.getLanguage().toLowerCase() : null)
                     .registrationSource(request.getRegistrationSource())
                     .build();
             customer = customerRepository.save(customer);
@@ -136,7 +136,7 @@ public class ConsumerAuthService {
                 updated = true;
             }
             if (request.getLanguage() != null) {
-                customer.setLanguage(request.getLanguage());
+                customer.setLanguage(request.getLanguage().toLowerCase());
                 updated = true;
             }
             if (request.getRegistrationSource() != null) {
