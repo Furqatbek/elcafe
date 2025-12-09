@@ -5,6 +5,7 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -19,11 +20,14 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
-    @Query("SELECT DISTINCT o FROM Order o " +
-           "LEFT JOIN FETCH o.restaurant " +
-           "LEFT JOIN FETCH o.customer " +
-           "LEFT JOIN FETCH o.items " +
-           "LEFT JOIN FETCH o.deliveryInfo")
+    @EntityGraph(attributePaths = {
+        "restaurant",
+        "customer",
+        "items",
+        "deliveryInfo",
+        "statusHistory"
+    })
+    @Query("SELECT o FROM Order o")
     Page<Order> findAllWithRelations(Pageable pageable);
 
     Optional<Order> findByOrderNumber(String orderNumber);
