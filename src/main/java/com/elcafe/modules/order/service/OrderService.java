@@ -91,7 +91,15 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Page<Order> getAllOrders(Pageable pageable) {
-        return orderRepository.findAllWithRelations(pageable);
+        Page<Order> orders = orderRepository.findAllWithRelations(pageable);
+
+        // Force initialization of lazy collections within transaction
+        orders.forEach(order -> {
+            order.getItems().size();           // Trigger lazy load
+            order.getStatusHistory().size();    // Trigger lazy load
+        });
+
+        return orders;
     }
 
     @Transactional(readOnly = true)
