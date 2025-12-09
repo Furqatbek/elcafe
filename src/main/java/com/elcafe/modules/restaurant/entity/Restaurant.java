@@ -22,7 +22,7 @@ import java.util.List;
 @Entity
 @Table(name = "restaurants")
 @EntityListeners(AuditingEntityListener.class)
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "businessHours", "deliveryZones"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Restaurant {
 
     @Id
