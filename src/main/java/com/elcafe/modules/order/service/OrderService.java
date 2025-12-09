@@ -217,6 +217,13 @@ public class OrderService {
         }
 
         log.info("Order {} accepted successfully", order.getOrderNumber());
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
         return order;
     }
 
@@ -271,6 +278,13 @@ public class OrderService {
         }
 
         log.info("Order {} rejected successfully", order.getOrderNumber());
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
         return order;
     }
 
