@@ -23,7 +23,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
            "LEFT JOIN FETCH o.restaurant " +
            "LEFT JOIN FETCH o.customer " +
            "LEFT JOIN FETCH o.items " +
-           "LEFT JOIN FETCH o.deliveryInfo")
+           "LEFT JOIN FETCH o.deliveryInfo " +
+           "LEFT JOIN FETCH o.statusHistory")
     Page<Order> findAllWithRelations(Pageable pageable);
 
     Optional<Order> findByOrderNumber(String orderNumber);
