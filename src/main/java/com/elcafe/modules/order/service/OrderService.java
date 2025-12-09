@@ -45,6 +45,12 @@ public class OrderService {
         order = orderRepository.save(order);
         log.info("Order created with number: {}", order.getOrderNumber());
 
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
         return order;
     }
 
@@ -73,6 +79,12 @@ public class OrderService {
 
         order = orderRepository.save(order);
         log.info("Order status updated: {} -> {}", currentStatus, newStatus);
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
 
         return order;
     }
@@ -354,6 +366,13 @@ public class OrderService {
         }
 
         log.info("Order {} cancelled successfully", order.getOrderNumber());
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
         return order;
     }
 
@@ -393,6 +412,13 @@ public class OrderService {
         }
 
         log.info("Order {} marked as preparing", order.getOrderNumber());
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
         return order;
     }
 
@@ -440,6 +466,13 @@ public class OrderService {
         }
 
         log.info("Order {} marked as ready", order.getOrderNumber());
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
         return order;
     }
 
@@ -479,6 +512,13 @@ public class OrderService {
         }
 
         log.info("Order {} marked as picked up", order.getOrderNumber());
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
         return order;
     }
 
@@ -525,6 +565,13 @@ public class OrderService {
         }
 
         log.info("Order {} marked as completed", order.getOrderNumber());
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
         return order;
     }
 }
