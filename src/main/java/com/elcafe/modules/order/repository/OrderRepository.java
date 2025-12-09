@@ -23,9 +23,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @EntityGraph(attributePaths = {
         "restaurant",
         "customer",
-        "items",
-        "deliveryInfo",
-        "statusHistory"
+        "deliveryInfo"
     })
     @Query("SELECT o FROM Order o")
     Page<Order> findAllWithRelations(Pageable pageable);
