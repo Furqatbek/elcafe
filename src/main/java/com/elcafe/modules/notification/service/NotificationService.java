@@ -39,7 +39,7 @@ public class NotificationService {
             NotificationType.NEW_ORDER,
             "New Order Received",
             String.format("New order #%s received. Total: $%.2f",
-                order.getOrderNumber(), order.getTotalAmount()),
+                order.getOrderNumber(), order.getTotal()),
             order.getId(),
             order.getOrderNumber(),
             1 // High priority
@@ -65,7 +65,7 @@ public class NotificationService {
             NotificationType.ORDER_CONFIRMED,
             "Order Confirmed",
             String.format("Your order #%s has been placed successfully. Total: $%.2f",
-                order.getOrderNumber(), order.getTotalAmount()),
+                order.getOrderNumber(), order.getTotal()),
             order.getId(),
             order.getOrderNumber(),
             2
@@ -78,7 +78,7 @@ public class NotificationService {
             NotificationType.NEW_ORDER_RECEIVED,
             "New Order Received",
             String.format("New order #%s from %s. Total: $%.2f",
-                order.getOrderNumber(), order.getRestaurant().getName(), order.getTotalAmount()),
+                order.getOrderNumber(), order.getRestaurant().getName(), order.getTotal()),
             order.getId(),
             order.getOrderNumber(),
             2
