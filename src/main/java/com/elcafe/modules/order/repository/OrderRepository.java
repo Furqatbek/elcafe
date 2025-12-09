@@ -19,9 +19,11 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
-    @Query("SELECT o FROM Order o " +
+    @Query("SELECT DISTINCT o FROM Order o " +
            "LEFT JOIN FETCH o.restaurant " +
-           "LEFT JOIN FETCH o.customer")
+           "LEFT JOIN FETCH o.customer " +
+           "LEFT JOIN FETCH o.items " +
+           "LEFT JOIN FETCH o.deliveryInfo")
     Page<Order> findAllWithRelations(Pageable pageable);
 
     Optional<Order> findByOrderNumber(String orderNumber);
