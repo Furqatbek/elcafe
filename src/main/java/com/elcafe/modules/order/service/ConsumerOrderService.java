@@ -120,15 +120,6 @@ public class ConsumerOrderService {
             );
         }
 
-        // Validate maximum order amount ($500) - fraud prevention
-        BigDecimal maximumOrderAmount = BigDecimal.valueOf(500.00);
-        if (total.compareTo(maximumOrderAmount) > 0) {
-            throw new RuntimeException(
-                String.format("Maximum order amount is $%.2f. Current total: $%.2f",
-                        maximumOrderAmount, total)
-            );
-        }
-
         order.setSubtotal(subtotal);
         order.setDeliveryFee(deliveryFee);
         order.setTax(tax);
