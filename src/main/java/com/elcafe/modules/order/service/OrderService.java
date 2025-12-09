@@ -104,21 +104,45 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<Order> getOrdersByRestaurant(Long restaurantId) {
-        return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        List<Order> orders = orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId,
                 LocalDateTime.now().minusDays(7),
                 LocalDateTime.now()
         );
+
+        // Force initialization of lazy collections
+        orders.forEach(order -> {
+            order.getItems().size();
+            order.getStatusHistory().size();
+        });
+
+        return orders;
     }
 
     @Transactional(readOnly = true)
     public List<Order> getOrdersByCustomer(Long customerId) {
-        return orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+
+        // Force initialization of lazy collections
+        orders.forEach(order -> {
+            order.getItems().size();
+            order.getStatusHistory().size();
+        });
+
+        return orders;
     }
 
     @Transactional(readOnly = true)
     public List<Order> getPendingOrders() {
-        return orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.NEW);
+        List<Order> orders = orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.NEW);
+
+        // Force initialization of lazy collections
+        orders.forEach(order -> {
+            order.getItems().size();
+            order.getStatusHistory().size();
+        });
+
+        return orders;
     }
 
     private String generateOrderNumber() {
