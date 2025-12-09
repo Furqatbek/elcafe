@@ -411,6 +411,13 @@ public class OrderService {
             log.error("Failed to broadcast order preparing event: {}", e.getMessage());
         }
 
+        // Send notifications
+        try {
+            notificationService.notifyOrderPreparing(order);
+        } catch (Exception e) {
+            log.error("Failed to send order preparing notification: {}", e.getMessage());
+        }
+
         log.info("Order {} marked as preparing", order.getOrderNumber());
 
         // Force initialization of ALL lazy relationships within transaction
@@ -509,6 +516,13 @@ public class OrderService {
             orderEventBroadcaster.broadcastOrderPickedUp(order);
         } catch (Exception e) {
             log.error("Failed to broadcast order picked up event: {}", e.getMessage());
+        }
+
+        // Send notifications
+        try {
+            notificationService.notifyOrderPickedUp(order);
+        } catch (Exception e) {
+            log.error("Failed to send order picked up notification: {}", e.getMessage());
         }
 
         log.info("Order {} marked as picked up", order.getOrderNumber());
