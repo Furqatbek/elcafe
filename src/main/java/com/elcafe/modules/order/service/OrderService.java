@@ -91,7 +91,7 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Page<Order> getAllOrders(Pageable pageable) {
-        return orderRepository.findAll(pageable);
+        return orderRepository.findAllWithRelations(pageable);
     }
 
     @Transactional(readOnly = true)

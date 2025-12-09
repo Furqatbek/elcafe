@@ -5,6 +5,7 @@ import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,7 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Order {
 
     @Id
