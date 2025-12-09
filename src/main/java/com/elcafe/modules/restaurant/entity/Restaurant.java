@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -89,10 +90,12 @@ public class Restaurant {
 
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore  // Prevent lazy loading issues when serializing orders
     private List<BusinessHours> businessHours = new ArrayList<>();
 
     @OneToMany(mappedBy = "restaurant", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore  // Prevent lazy loading issues when serializing orders
     private List<DeliveryZone> deliveryZones = new ArrayList<>();
 
     @CreatedDate
