@@ -93,10 +93,12 @@ public class OrderService {
     public Page<Order> getAllOrders(Pageable pageable) {
         Page<Order> orders = orderRepository.findAllWithRelations(pageable);
 
-        // Force initialization of lazy collections within transaction
+        // Force initialization of ALL lazy relationships within transaction
         orders.forEach(order -> {
-            order.getItems().size();           // Trigger lazy load
-            order.getStatusHistory().size();    // Trigger lazy load
+            order.getRestaurant().getName();    // Trigger restaurant load
+            order.getCustomer().getPhone();     // Trigger customer load
+            order.getItems().size();            // Trigger items load
+            order.getStatusHistory().size();     // Trigger statusHistory load
         });
 
         return orders;
@@ -110,8 +112,10 @@ public class OrderService {
                 LocalDateTime.now()
         );
 
-        // Force initialization of lazy collections
+        // Force initialization of ALL lazy relationships
         orders.forEach(order -> {
+            order.getRestaurant().getName();
+            order.getCustomer().getPhone();
             order.getItems().size();
             order.getStatusHistory().size();
         });
@@ -123,8 +127,10 @@ public class OrderService {
     public List<Order> getOrdersByCustomer(Long customerId) {
         List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
 
-        // Force initialization of lazy collections
+        // Force initialization of ALL lazy relationships
         orders.forEach(order -> {
+            order.getRestaurant().getName();
+            order.getCustomer().getPhone();
             order.getItems().size();
             order.getStatusHistory().size();
         });
@@ -136,8 +142,10 @@ public class OrderService {
     public List<Order> getPendingOrders() {
         List<Order> orders = orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.NEW);
 
-        // Force initialization of lazy collections
+        // Force initialization of ALL lazy relationships
         orders.forEach(order -> {
+            order.getRestaurant().getName();
+            order.getCustomer().getPhone();
             order.getItems().size();
             order.getStatusHistory().size();
         });
