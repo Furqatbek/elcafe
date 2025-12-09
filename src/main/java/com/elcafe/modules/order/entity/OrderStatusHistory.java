@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.entity;
 
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,6 +27,7 @@ public class OrderStatusHistory {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
+    @JsonIgnore  // Prevent circular reference during JSON serialization
     private Order order;
 
     @Enumerated(EnumType.STRING)
