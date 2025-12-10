@@ -4,7 +4,7 @@ import { ChevronLeft, CreditCard, Banknote, Smartphone, CheckCircle } from 'luci
 import TouchButton from '../components/TouchButton';
 import NumericKeypad from '../components/NumericKeypad';
 import usePOSStore from '../store/posStore';
-import axios from 'axios';
+import { posAPI } from '../../services/api';
 
 /**
  * PaymentScreen - Payment processing and tender collection
@@ -77,40 +77,57 @@ const PaymentScreen = () => {
     setPaymentStatus('PROCESSING');
 
     try {
-      // Prepare order data
+      // Prepare order data for POS API
       const orderData = {
-        type: currentOrder.type,
-        customerId: customer.id || null,
-        customerName: customer.name,
-        customerPhone: customer.phone,
-        customerEmail: customer.email || null,
+        restaurantId: 1, // TODO: Make this configurable
+        orderType: currentOrder.type, // DELIVERY, TAKEAWAY, DINE_IN
+        orderSource: 'WALK_IN',
+        customerInfo: {
+          name: customer.name,
+          phone: customer.phone,
+          email: customer.email || null,
+        },
         items: currentOrder.items.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
           price: item.basePrice,
-          modifiers: item.modifiers,
-          notes: item.notes,
+          modifiers: item.modifiers?.map(mod => ({
+            name: mod.name,
+            price: mod.price,
+          })) || [],
+          notes: item.notes || null,
         })),
+        orderNotes: currentOrder.notes || null,
+        paymentMethod: method,
         subtotal: currentOrder.subtotal,
         tax: currentOrder.tax,
         deliveryFee: currentOrder.deliveryFee,
         total: currentOrder.total,
-        notes: currentOrder.notes,
-        paymentMethod: method,
-        paymentStatus: 'PAID',
-        // Type-specific data
-        ...(currentOrder.type === 'DELIVERY' && {
-          deliveryAddress: customer.address,
-          deliveryInstructions: customer.deliveryInstructions,
-        }),
-        ...(currentOrder.type === 'DINE_IN' && {
-          tableNumber: customer.tableNumber,
-          guestCount: customer.guestCount,
-        }),
+        amountTendered: method === 'CASH' ? cashTendered : currentOrder.total,
+        changeDue: method === 'CASH' ? cashTendered - currentOrder.total : 0,
       };
 
+      // Add type-specific data
+      if (currentOrder.type === 'DELIVERY') {
+        if (!customer.address) {
+          throw new Error('Delivery address is required for delivery orders');
+        }
+        orderData.deliveryInfo = {
+          street: customer.address.street,
+          city: customer.address.city,
+          state: customer.address.state || '',
+          zipCode: customer.address.zipCode,
+          deliveryInstructions: customer.deliveryInstructions || null,
+        };
+      } else if (currentOrder.type === 'DINE_IN') {
+        orderData.dineInInfo = {
+          tableNumber: customer.tableNumber,
+          guestCount: customer.guestCount,
+        };
+      }
+
       // Submit order to backend
-      const response = await axios.post('/api/v1/consumer/orders', orderData);
+      const response = await posAPI.createOrder(orderData);
 
       setPaymentStatus('COMPLETED');
 
@@ -123,7 +140,8 @@ const PaymentScreen = () => {
     } catch (error) {
       console.error('Payment failed:', error);
       setPaymentStatus('FAILED');
-      alert('Payment failed. Please try again.');
+      const errorMessage = error.response?.data?.message || error.message || 'Payment failed. Please try again.';
+      alert(errorMessage);
     } finally {
       setProcessingPayment(false);
     }
