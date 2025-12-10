@@ -2,6 +2,8 @@ package com.elcafe.modules.order.service;
 
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.POSOrderResponse;
@@ -9,8 +11,6 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
-import com.elcafe.modules.product.entity.Product;
-import com.elcafe.modules.product.repository.ProductRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
