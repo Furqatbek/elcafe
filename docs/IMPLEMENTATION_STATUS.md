@@ -127,48 +127,38 @@ This document tracks the implementation status of the single-restaurant ordering
 
 ## 🚧 In Progress
 
-### Recently Completed (Final Updates - 100%)
-- [x] **Consumer order creation** - ConsumerOrderService with new lifecycle integration
-- [x] **Payment gateway structure** - PaymentGatewayService ready for Stripe/PayPal
-- [x] **SMS notifications** - Complete integration for all order statuses (placed, accepted, ready, completed, rejected, cancelled)
-- [x] **Analytics REST endpoints** - 20+ endpoints fully implemented
-- [x] **Order lifecycle methods** - acceptOrder, rejectOrder, cancelOrder, markOrderPreparing, markOrderReady, markOrderPickedUp, markOrderCompleted
-- [x] **Order validation** - Minimum/maximum amount, restaurant status, delivery zones structure
-- [x] **Complete WebSocket integration** - All 8 event types with SMS notifications
+### Order Management APIs
+- [ ] **Update existing order endpoints** to use new status lifecycle
+- [ ] **Admin order update endpoint** with state machine validation
+- [ ] **Consumer order cancellation** endpoint
 
 ---
 
 ## 📋 Pending Implementation
 
-### 1. Order Lifecycle - ✅ Mostly Complete
+### 1. Order Lifecycle - High Priority
 
-#### 1.1 Order Status Updates - ✅ COMPLETED
-- [x] **Update OrderService** to use OrderStatusTransitionValidator
-- [x] **Implement status update method** with timestamp tracking
-- [x] **Admin order endpoints** (`AdminOrderController`)
-  - [x] GET `/api/v1/admin/orders` - List orders with filters
-  - [x] GET `/api/v1/admin/orders/{id}` - Get order details
-  - [x] PATCH `/api/v1/admin/orders/{id}/status` - Update status
-  - [x] POST `/api/v1/admin/orders/{id}/accept` - Accept order
-  - [x] POST `/api/v1/admin/orders/{id}/reject` - Reject order with refund
-  - [x] POST `/api/v1/admin/orders/{id}/cancel` - Cancel order
-- [x] **Automatic timestamp setting** when status changes
+#### 1.1 Order Status Updates
+- [ ] **Update OrderService** to use OrderStatusTransitionValidator
+- [ ] **Implement status update method** with timestamp tracking
+- [ ] **Admin order accept endpoint** (`PATCH /api/v1/admin/orders/{id}/status`)
+- [ ] **Admin order reject endpoint** (`POST /api/v1/admin/orders/{id}/reject`)
+- [ ] **Automatic timestamp setting** when status changes
 
-#### 1.2 Order Cancellation & Refunds - ✅ Partially Complete
-- [x] **Consumer cancellation logic** in OrderService
-  - [x] Validate cancellation rules (5-minute time window, status check)
-  - [x] Check if order can be cancelled
-  - [x] Initiate refund process (payment status update)
+#### 1.2 Order Cancellation & Refunds
+- [ ] **Consumer cancellation endpoint** (`POST /api/v1/orders/{id}/cancel`)
+  - [ ] Validate cancellation rules (time window, status)
+  - [ ] Check if order can be cancelled
+  - [ ] Initiate refund process
 
-- [x] **Admin cancellation endpoint**
-  - [x] Reason required
-  - [x] Automatic refund initiation
+- [ ] **Admin cancellation endpoint**
+  - [ ] Reason required
+  - [ ] Automatic refund initiation
 
-- [ ] **Refund Service Enhancement**
-  - [ ] Create RefundTransaction entity for tracking
-  - [ ] Payment gateway integration for actual refunds
-  - [ ] Refund webhook handling
-  - [ ] Refund status synchronization
+- [ ] **Refund Service**
+  - [ ] Create RefundTransaction entity
+  - [ ] Payment gateway integration for refunds
+  - [ ] Refund status tracking
 
 - [ ] **Refund repository** and CRUD operations
 
@@ -191,101 +181,101 @@ This document tracks the implementation status of the single-restaurant ordering
 - [ ] **Refund status tracking**
 - [ ] **Estimated refund arrival calculation**
 
-### 3. Real-time Updates - ✅ COMPLETED
+### 3. Real-time Updates - High Priority
 
-#### 3.1 WebSocket Events for Orders - ✅ COMPLETED
-- [x] **Order placed event** to admin (`OrderEventBroadcaster.broadcastOrderPlaced()`)
-- [x] **Order accepted event** to consumer (`OrderEventBroadcaster.broadcastOrderAccepted()`)
-- [x] **Order preparing event** to consumer (`OrderEventBroadcaster.broadcastOrderPreparing()`)
-- [x] **Order ready event** to consumer (`OrderEventBroadcaster.broadcastOrderReady()`)
-- [x] **Order picked up event** to consumer (`OrderEventBroadcaster.broadcastOrderPickedUp()`)
-- [x] **Order completed event** to consumer (`OrderEventBroadcaster.broadcastOrderCompleted()`)
-- [x] **Order cancelled event** to consumer & admin (`OrderEventBroadcaster.broadcastOrderCancelled()`)
-- [x] **Order rejected event** to consumer (`OrderEventBroadcaster.broadcastOrderRejected()`)
+#### 3.1 WebSocket Events for Orders
+- [ ] **Order placed event** to admin
+- [ ] **Order accepted event** to consumer
+- [ ] **Order preparing event** to consumer
+- [ ] **Order ready event** to consumer
+- [ ] **Order picked up event** to consumer
+- [ ] **Order completed event** to consumer
+- [ ] **Order cancelled event** to consumer & admin
+- [ ] **Order rejected event** to consumer
 
-#### 3.2 WebSocket Infrastructure - ✅ COMPLETED
-- [x] **WebSocket config** for consumer orders (`WebSocketConfig.java`)
-- [x] **Consumer order subscription** (`/user/{consumerId}/topic/orders`)
-- [x] **Restaurant order subscription** (`/topic/restaurant/{id}/orders`)
-- [x] **Event broadcasting service** (`OrderEventBroadcaster`)
-- [x] **Integration** with OrderService for automatic broadcasting
-- [ ] **Connection authentication** with JWT (optional enhancement)
+#### 3.2 WebSocket Infrastructure
+- [ ] **Update existing WebSocket config** for consumer orders
+- [ ] **Consumer order subscription** (`/user/topic/orders`)
+- [ ] **Restaurant order subscription** (`/topic/restaurant/{id}/orders`)
+- [ ] **Event broadcasting service**
+- [ ] **Connection authentication** with JWT
 
-### 4. Background Jobs - ✅ Mostly Complete
+### 4. Background Jobs - Medium Priority
 
-#### 4.1 Auto-Rejection Job - ✅ COMPLETED
-- [x] **Scheduled task** (every 1 minute) - `@Scheduled(cron = "0 * * * * *")`
-- [x] **Find orders** with status=PLACED older than 10 minutes
-- [x] **Update status** to REJECTED via `orderService.rejectOrder()`
-- [x] **Initiate refund** (payment status update)
-- [ ] **Send SMS notifications** (TODO in code)
+#### 4.1 Auto-Rejection Job
+- [ ] **Scheduled task** (every 1 minute)
+- [ ] **Find orders** with status=PLACED older than 10 minutes
+- [ ] **Update status** to REJECTED
+- [ ] **Initiate refund**
+- [ ] **Send notifications**
 
-#### 4.2 Payment Verification Job - ✅ Partially Complete
-- [x] **Scheduled task** (every 5 minutes) - `@Scheduled(cron = "0 */5 * * * *")`
-- [x] **Find orders** with status=PENDING
-- [x] **Cancel orders** with pending payments after 15 minutes
-- [ ] **Check payment** status with gateway API (TODO in code)
-- [ ] **Update order** status based on gateway response
+#### 4.2 Payment Verification Job
+- [ ] **Scheduled task** (every 5 minutes)
+- [ ] **Find orders** with status=PENDING
+- [ ] **Check payment** status with gateway
+- [ ] **Update order** status accordingly
+- [ ] **Cancel orders** with failed payments after 15 minutes
 
-#### 4.3 Notification Retry Job - 📋 Pending
+#### 4.3 Notification Retry Job
 - [ ] **Scheduled task** (every 2 minutes)
 - [ ] **Find failed** SMS notifications
 - [ ] **Retry** up to 3 times with exponential backoff
 - [ ] **Mark as** permanently failed after 3 attempts
 
-#### 4.4 Analytics Calculation Job - ✅ Partially Complete
-- [x] **Scheduled task** (hourly) - `@Scheduled(cron = "0 0 * * * *")`
-- [x] **Calculate** daily metrics (orders, completed, cancelled)
-- [ ] **Update** analytics cache in Redis (TODO in code)
-- [ ] **Generate** detailed summary reports
+#### 4.4 Analytics Calculation Job
+- [ ] **Scheduled task** (hourly)
+- [ ] **Calculate** daily metrics
+- [ ] **Update** analytics cache
+- [ ] **Generate** summary reports
 
-#### 4.5 Cache Cleanup Job - ✅ Structure Ready
-- [x] **Scheduled task** (every 6 hours) - `@Scheduled(cron = "0 0 */6 * * *")`
-- [ ] **Remove** expired Redis keys (TODO in code)
-- [ ] **Clean up** old session data (TODO in code)
-- [ ] **Archive** old order events >90 days (TODO in code)
+#### 4.5 Cache Cleanup Job
+- [ ] **Scheduled task** (every 6 hours)
+- [ ] **Remove** expired Redis keys
+- [ ] **Clean up** old session data
+- [ ] **Archive** old order events (>90 days)
 
-### 5. Analytics & Reporting - ✅ COMPLETED
+### 5. Analytics & Reporting - Medium Priority
 
-#### 5.1 Analytics Summary - ✅ COMPLETED
-- [x] **Comprehensive dashboard** (`GET /api/v1/analytics/summary`)
-  - [x] Financial metrics (revenue, COGS, profitability)
-  - [x] Operational metrics (order timing, table turnover)
-  - [x] Customer metrics (retention, LTV, satisfaction)
-  - [x] Inventory metrics (turnover)
+#### 5.1 Daily Analytics
+- [ ] **Daily summary endpoint** (`GET /api/v1/admin/analytics/daily`)
+  - [ ] Total orders
+  - [ ] Completed orders
+  - [ ] Cancelled/Rejected orders
+  - [ ] Total revenue
+  - [ ] Average order value
+  - [ ] Average preparation time
+  - [ ] Top products
 
-#### 5.2 Financial Analytics - ✅ COMPLETED (5 endpoints)
-- [x] GET `/api/v1/analytics/financial/daily-revenue` - Daily revenue breakdown
-- [x] GET `/api/v1/analytics/financial/sales-by-category` - Category-wise sales
-- [x] GET `/api/v1/analytics/financial/cogs` - Cost of Goods Sold analytics
-- [x] GET `/api/v1/analytics/financial/profitability` - Profitability with labor costs
-- [x] GET `/api/v1/analytics/financial/contribution-margins` - Per-item margins
+#### 5.2 Revenue Reports
+- [ ] **Revenue report endpoint** (`GET /api/v1/admin/analytics/revenue`)
+  - [ ] Date range filtering
+  - [ ] Daily breakdown
+  - [ ] Total revenue
+  - [ ] Total orders
+  - [ ] Average order value
 
-#### 5.3 Operational Analytics - ✅ COMPLETED (5 endpoints)
-- [x] GET `/api/v1/analytics/operational/sales-per-hour` - Hourly sales
-- [x] GET `/api/v1/analytics/operational/peak-hours` - Peak business hours
-- [x] GET `/api/v1/analytics/operational/table-turnover` - Table occupancy
-- [x] GET `/api/v1/analytics/operational/order-timing` - Prep & delivery times
-- [x] GET `/api/v1/analytics/operational/kitchen` - Kitchen performance
+#### 5.3 Product Analytics
+- [ ] **Product performance endpoint**
+- [ ] **Top-selling products**
+- [ ] **Low-performing products**
+- [ ] **Stock alerts**
 
-#### 5.4 Customer Analytics - ✅ COMPLETED (3 endpoints)
-- [x] GET `/api/v1/analytics/customer/retention` - Retention & churn rate
-- [x] GET `/api/v1/analytics/customer/ltv` - Customer lifetime value
-- [x] GET `/api/v1/analytics/customer/satisfaction` - Satisfaction scores
-
-#### 5.5 Inventory Analytics - ✅ COMPLETED (1 endpoint)
-- [x] GET `/api/v1/analytics/inventory/turnover` - Inventory turnover ratio
+#### 5.4 Customer Insights
+- [ ] **Customer analytics endpoint**
+- [ ] **Retention metrics**
+- [ ] **Lifetime value**
+- [ ] **Order frequency**
 
 ### 6. Notification System - Medium Priority
 
-#### 6.1 SMS Notifications - ✅ Mostly Complete
+#### 6.1 SMS Notifications
 - [x] SMS service integration (Eskiz.uz)
-- [x] **Order placed** notification (via NotificationService)
-- [x] **Order rejected** notification (in auto-rejection job)
-- [x] **Order cancelled** notification (in payment verification job)
-- [ ] **Order accepted** notification (with ETA) - TODO
-- [ ] **Order ready** notification - TODO
-- [ ] **Order completed** notification - TODO
+- [ ] **Order placed** notification
+- [ ] **Order accepted** notification (with ETA)
+- [ ] **Order ready** notification
+- [ ] **Order completed** notification
+- [ ] **Order cancelled** notification
+- [ ] **Order rejected** notification
 
 #### 6.2 Push Notifications
 - [ ] **FCM integration** (Firebase Cloud Messaging)
@@ -373,28 +363,22 @@ This document tracks the implementation status of the single-restaurant ordering
 
 ## 📊 Implementation Progress
 
-### Overall Progress: **100% 🎉**
+### Overall Progress: **~45%**
 
 | Category | Progress | Status |
 |----------|---------|--------|
 | Infrastructure & Setup | 100% | ✅ Complete |
 | Authentication | 100% | ✅ Complete |
 | Menu Management | 100% | ✅ Complete |
-| Database Schema | 100% | ✅ Complete (V1-V16) |
-| Order Entity & State Machine | 100% | ✅ Complete |
-| Order APIs (Admin) | 100% | ✅ Complete |
-| Order APIs (Consumer) | 100% | ✅ Complete |
-| Payment Integration | 100% | ✅ Complete |
-| WebSocket Real-time | 100% | ✅ Complete |
-| Background Jobs | 100% | ✅ Complete |
-| Analytics (Services) | 100% | ✅ Complete |
-| Analytics (APIs) | 100% | ✅ Complete |
-| Notifications (Infrastructure) | 100% | ✅ Complete |
-| Notifications (Integration) | 100% | ✅ Complete |
-| Waiter Module | 100% | ✅ Complete |
-| Courier Module | 100% | ✅ Complete |
-| Kitchen Module | 100% | ✅ Complete |
-| Testing | 20% | 📋 Optional |
+| Database Schema | 95% | ✅ Near Complete |
+| Order Entity & State Machine | 90% | ✅ Near Complete |
+| Order APIs | 40% | 🚧 In Progress |
+| Payment Integration | 10% | 📋 Pending |
+| WebSocket Real-time | 50% | 🚧 In Progress |
+| Background Jobs | 0% | 📋 Pending |
+| Analytics | 30% | 📋 Pending |
+| Notifications | 40% | 🚧 In Progress |
+| Testing | 20% | 📋 Pending |
 
 ---
 
@@ -430,31 +414,22 @@ This document tracks the implementation status of the single-restaurant ordering
 ## 📝 Notes
 
 ### What Works Now
-- ✅ Consumer can register/login via OTP with SMS verification
-- ✅ Admin can login with email/password
-- ✅ Public menu browsing with Redis caching
-- ✅ Complete order lifecycle with state machine validation
-- ✅ Admin order management (accept, reject, cancel, status updates)
-- ✅ WebSocket real-time events for all order status changes
-- ✅ Background jobs (auto-rejection, payment verification, metrics)
-- ✅ Database schema is complete (V1-V16 migrations)
-- ✅ Waiter module is fully functional
-- ✅ Courier module with GPS tracking and wallet
-- ✅ Kitchen module with order queue management
-- ✅ Analytics services with RFM analysis
+- Consumer can register/login via OTP
+- Admin can login with email/password
+- Public menu browsing works
+- Order entity has all required fields
+- State machine validation is ready
+- Database schema is complete
+- Waiter module is fully functional
 
-### Production Configuration Needed
-- ⚙️ Payment gateway API keys (Stripe/PayPal credentials)
-- ⚙️ SMS provider credentials (Eskiz.uz configuration)
-- ⚙️ Redis server for caching (optional but recommended)
-- ⚙️ SSL certificates for production domain
-
-### Optional Enhancements
-- 📝 Comprehensive unit and integration tests
-- 📝 RefundTransaction entity for detailed refund tracking
-- 📝 Notification retry job with exponential backoff
-- 📝 Redis cache storage in analytics job
-- 📝 Advanced fraud detection rules
+### What's Missing
+- Order status update endpoints need state machine integration
+- Payment gateway integration
+- WebSocket broadcasting for consumer orders
+- Background job schedulers
+- Analytics endpoints
+- Refund processing
+- Some notification triggers
 
 ### Breaking Changes
 - OrderStatus enum updated with new values

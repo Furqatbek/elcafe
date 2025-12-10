@@ -35,8 +35,6 @@ public class ConsumerOrderService {
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
     private final NotificationService notificationService;
-    private final OrderEventBroadcaster orderEventBroadcaster;
-    private final OrderService orderService;
 
     @Transactional
     public OrderResponse placeOrder(CreateOrderRequest request) {
@@ -45,35 +43,22 @@ public class ConsumerOrderService {
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
         if (!restaurant.getActive()) {
-            throw new RuntimeException("Restaurant is not currently active");
+            throw new RuntimeException("Restaurant is not active");
         }
 
         if (!restaurant.getAcceptingOrders()) {
-            throw new RuntimeException("Restaurant is not accepting orders at this time");
-        }
-
-        // Validate business hours (if configured)
-        LocalDateTime now = LocalDateTime.now();
-        // TODO: Implement business hours validation using restaurant.getBusinessHours()
-
-        // Validate delivery zones (if applicable)
-        if ("DELIVERY".equals(request.getOrderType()) && request.getDeliveryInfo() != null) {
-            // TODO: Check if delivery address is within restaurant's delivery zones
-            log.info("Delivery order - address validation needed");
+            throw new RuntimeException("Restaurant is not accepting orders");
         }
 
         // 2. Find or create customer
         Customer customer = findOrCreateCustomer(request.getCustomerInfo());
 
         // 3. Build order
-        // New order lifecycle: Start with PENDING (waiting for payment)
-        // After payment confirmed, will move to PLACED (waiting for restaurant acceptance)
         Order order = Order.builder()
                 .orderNumber(generateOrderNumber())
                 .restaurant(restaurant)
                 .customer(customer)
-                .status(OrderStatus.PENDING)
-                .orderType(request.getOrderType() != null ? request.getOrderType() : "DELIVERY")
+                .status(OrderStatus.NEW)
                 .orderSource(request.getOrderSource())
                 .customerNotes(request.getCustomerNotes())
                 .scheduledFor(request.getScheduledFor())
@@ -111,15 +96,6 @@ public class ConsumerOrderService {
         BigDecimal discount = BigDecimal.ZERO;
         BigDecimal total = subtotal.add(deliveryFee).add(tax).subtract(discount);
 
-        // Validate minimum order amount ($10)
-        BigDecimal minimumOrderAmount = BigDecimal.valueOf(10.00);
-        if (subtotal.compareTo(minimumOrderAmount) < 0) {
-            throw new RuntimeException(
-                String.format("Minimum order amount is $%.2f. Current subtotal: $%.2f",
-                        minimumOrderAmount, subtotal)
-            );
-        }
-
         order.setSubtotal(subtotal);
         order.setDeliveryFee(deliveryFee);
         order.setTax(tax);
@@ -140,69 +116,36 @@ public class ConsumerOrderService {
         order.setDeliveryInfo(deliveryInfo);
 
         // 7. Add payment info
-        PaymentMethod paymentMethod = PaymentMethod.valueOf(request.getPaymentMethod());
         Payment payment = Payment.builder()
                 .order(order)
-                .method(paymentMethod)
+                .method(PaymentMethod.valueOf(request.getPaymentMethod()))
                 .status(PaymentStatus.PENDING)
                 .amount(total)
                 .build();
         order.setPayment(payment);
 
-        // Set payment fields in order entity
-        order.setPaymentMethod(paymentMethod.name());
-        order.setPaymentStatus(com.elcafe.modules.order.enums.PaymentStatus.PENDING);
-
         // 8. Add initial status history
         OrderStatusHistory statusHistory = OrderStatusHistory.builder()
                 .order(order)
-                .status(OrderStatus.PENDING)
+                .status(OrderStatus.NEW)
                 .changedBy("CUSTOMER")
-                .notes("Order created - waiting for payment confirmation")
+                .notes("Order placed")
                 .build();
         order.addStatusHistory(statusHistory);
 
         // 9. Save order
         Order savedOrder = orderRepository.save(order);
 
-        // 10. If payment method is CASH (pay on delivery), mark as PLACED immediately
-        if (paymentMethod == PaymentMethod.CASH) {
-            savedOrder.setStatus(OrderStatus.PLACED);
-            savedOrder.setPaymentStatus(com.elcafe.modules.order.enums.PaymentStatus.PENDING);
-            savedOrder.setPlacedAt(LocalDateTime.now());
-
-            OrderStatusHistory placedHistory = OrderStatusHistory.builder()
-                    .order(savedOrder)
-                    .status(OrderStatus.PLACED)
-                    .changedBy("SYSTEM")
-                    .notes("Order placed - cash on delivery")
-                    .build();
-            savedOrder.addStatusHistory(placedHistory);
-
-            savedOrder = orderRepository.save(savedOrder);
-
-            // Broadcast to admin panel for new order
-            orderEventBroadcaster.broadcastOrderPlaced(savedOrder);
-
-            // Send SMS notification to restaurant
-            notificationService.notifyNewOrder(savedOrder);
-        }
+        // 10. Send notifications
+        notificationService.notifyNewOrder(savedOrder);
 
         // 11. Return response
         return mapToResponse(savedOrder);
     }
 
-    @Transactional(readOnly = true)
     public OrderResponse getOrderByNumber(String orderNumber) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
         return mapToResponse(order);
     }
 
@@ -211,12 +154,30 @@ public class ConsumerOrderService {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
 
-        // Use OrderService.cancelOrder which has proper state machine validation
-        // and WebSocket broadcasting
-        String cancellationReason = reason != null ? reason : "No reason provided";
-        Order cancelledOrder = orderService.cancelOrder(order.getId(), cancellationReason, "CONSUMER");
+        // Only allow cancellation if order is not being prepared yet
+        if (order.getStatus() == OrderStatus.PREPARING ||
+                order.getStatus() == OrderStatus.READY ||
+                order.getStatus() == OrderStatus.ON_DELIVERY ||
+                order.getStatus() == OrderStatus.DELIVERED) {
+            throw new RuntimeException("Cannot cancel order in current status: " + order.getStatus());
+        }
 
-        return mapToResponse(cancelledOrder);
+        order.setStatus(OrderStatus.CANCELLED);
+
+        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
+                .order(order)
+                .status(OrderStatus.CANCELLED)
+                .changedBy("CUSTOMER")
+                .notes("Cancelled by customer: " + (reason != null ? reason : "No reason provided"))
+                .build();
+        order.addStatusHistory(statusHistory);
+
+        Order savedOrder = orderRepository.save(order);
+
+        // Notify about cancellation
+        notificationService.notifyOrderCancelled(savedOrder);
+
+        return mapToResponse(savedOrder);
     }
 
     private Customer findOrCreateCustomer(CreateOrderRequest.CustomerInfo customerInfo) {

@@ -31,9 +31,7 @@ import {
 import { format } from 'date-fns';
 
 const statusColors = {
-  PENDING: 'bg-orange-100 text-orange-800 border-2 border-orange-400', // Caution color for pending
-  PLACED: 'bg-orange-100 text-orange-800 border-2 border-orange-400', // Caution color for placed
-  NEW: 'bg-orange-100 text-orange-800 border-2 border-orange-400', // Caution color for new
+  NEW: 'bg-blue-100 text-blue-800',
   ACCEPTED: 'bg-green-100 text-green-800',
   PREPARING: 'bg-yellow-100 text-yellow-800',
   READY: 'bg-purple-100 text-purple-800',
@@ -41,7 +39,6 @@ const statusColors = {
   ON_DELIVERY: 'bg-indigo-100 text-indigo-800',
   DELIVERED: 'bg-green-100 text-green-800',
   CANCELLED: 'bg-red-100 text-red-800',
-  REJECTED: 'bg-red-100 text-red-800',
 };
 
 export default function Orders() {
@@ -169,31 +166,6 @@ export default function Orders() {
     } catch (error) {
       console.error('Failed to update order status:', error);
       alert(t('messages.error'));
-    }
-  };
-
-  const handleAcceptOrder = async (orderId) => {
-    try {
-      await orderAPI.acceptOrder(orderId, 'Order accepted by admin');
-      loadOrders();
-      alert('Order accepted successfully!');
-    } catch (error) {
-      console.error('Failed to accept order:', error);
-      alert('Failed to accept order: ' + (error.response?.data?.message || error.message));
-    }
-  };
-
-  const handleRejectOrder = async (orderId) => {
-    const reason = prompt('Please provide a reason for rejection:');
-    if (!reason) return;
-
-    try {
-      await orderAPI.rejectOrder(orderId, reason);
-      loadOrders();
-      alert('Order rejected successfully!');
-    } catch (error) {
-      console.error('Failed to reject order:', error);
-      alert('Failed to reject order: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -492,29 +464,7 @@ export default function Orders() {
                   </div>
                 )}
 
-                {/* Accept/Reject buttons for pending orders */}
-                {(order.status === 'PENDING' || order.status === 'PLACED' || order.status === 'NEW') && (
-                  <div className="mt-4 flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="default"
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={() => handleAcceptOrder(order.id)}
-                    >
-                      ✓ Accept Order
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleRejectOrder(order.id)}
-                    >
-                      ✗ Reject Order
-                    </Button>
-                  </div>
-                )}
-
-                {/* Regular status progression buttons */}
-                {nextStatusMap[order.status] && order.status !== 'PENDING' && order.status !== 'PLACED' && order.status !== 'NEW' && (
+                {nextStatusMap[order.status] && (
                   <div className="mt-4 flex gap-2">
                     <Button
                       size="sm"

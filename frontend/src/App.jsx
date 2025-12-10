@@ -21,6 +21,8 @@ import FinancialAnalytics from './pages/FinancialAnalytics';
 import OperationalAnalytics from './pages/OperationalAnalytics';
 import CustomerAnalytics from './pages/CustomerAnalytics';
 import InventoryAnalytics from './pages/InventoryAnalytics';
+import POSApp from './pos/POSApp';
+import KitchenTicketPage from './pos/KitchenTicketPage';
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -33,6 +35,11 @@ function App() {
       <SessionManager />
       <Routes>
         <Route path="/login" element={<Login />} />
+
+        {/* POS System Routes - No authentication required */}
+        <Route path="/pos" element={<POSApp />} />
+        <Route path="/pos/kitchen-ticket" element={<KitchenTicketPage />} />
+
         <Route
           path="/"
           element={
