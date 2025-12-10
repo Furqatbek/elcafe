@@ -91,14 +91,30 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Order getOrderById(Long id) {
-        return orderRepository.findById(id)
+        Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", id));
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
+        return order;
     }
 
     @Transactional(readOnly = true)
     public Order getOrderByNumber(String orderNumber) {
-        return orderRepository.findByOrderNumber(orderNumber)
+        Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
+        return order;
     }
 
     @Transactional(readOnly = true)
