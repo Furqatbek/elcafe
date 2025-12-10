@@ -1,0 +1,3 @@
+[submodule "template-smith-forge"]
+	path = template-smith-forge
+	url = https://github.com/Furqatbek/template-smith-forge.git
