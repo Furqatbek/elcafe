@@ -4,7 +4,7 @@ import { Search, ShoppingCart, X, Grid3x3, List } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
-import axios from 'axios';
+import { posAPI } from '../../services/api';
 
 /**
  * MenuSelectionScreen - Main menu browsing and product selection
@@ -31,8 +31,8 @@ const MenuSelectionScreen = () => {
       try {
         setLoading(true);
         const [categoriesRes, productsRes] = await Promise.all([
-          axios.get('/api/v1/categories'),
-          axios.get('/api/v1/products'),
+          posAPI.getCategories(),
+          posAPI.getProducts(),
         ]);
 
         setMenuData(

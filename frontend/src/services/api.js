@@ -254,4 +254,10 @@ export const uploadAPI = {
   deleteImage: (url) => api.delete('/files', { params: { fileUrl: url } }),
 };
 
+export const posAPI = {
+  createOrder: (data) => api.post('/pos/orders', data),
+  getCategories: () => api.get('/categories'),
+  getProducts: () => api.get('/products'),
+};
+
 export default api;
