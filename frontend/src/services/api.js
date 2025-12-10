@@ -256,8 +256,8 @@ export const uploadAPI = {
 
 export const posAPI = {
   createOrder: (data) => api.post('/pos/orders', data),
-  getCategories: () => api.get('/categories'),
-  getProducts: () => api.get('/products'),
+  getCategories: (restaurantId = 1) => api.get('/categories', { params: { restaurantId } }),
+  getProducts: (restaurantId = 1) => api.get(`/products/restaurant/${restaurantId}`),
 };
 
 export default api;
