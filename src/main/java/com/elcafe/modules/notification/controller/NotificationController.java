@@ -130,9 +130,9 @@ public class NotificationController {
 
     /**
      * Mark all notifications as read for a user
-     * POST /api/v1/notifications/read-all?role=CUSTOMER&userId=123
+     * PATCH /api/v1/notifications/mark-all-read?role=CUSTOMER&userId=123
      */
-    @PostMapping("/read-all")
+    @PatchMapping("/mark-all-read")
     public ResponseEntity<ApiResponse<Map<String, Integer>>> markAllAsRead(
         @RequestParam UserRole role,
         @RequestParam Long userId

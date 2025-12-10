@@ -192,9 +192,17 @@ public class ConsumerOrderService {
         return mapToResponse(savedOrder);
     }
 
+    @Transactional(readOnly = true)
     public OrderResponse getOrderByNumber(String orderNumber) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
+
+        // Force initialization of ALL lazy relationships within transaction
+        order.getRestaurant().getName();    // Trigger restaurant load
+        order.getCustomer().getPhone();     // Trigger customer load
+        order.getItems().size();            // Trigger items load
+        order.getStatusHistory().size();    // Trigger statusHistory load
+
         return mapToResponse(order);
     }
 
