@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { financialAPI, restaurantsAPI } from '../services/api';
+import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Check, DollarSign, Calendar } from 'lucide-react';
 
@@ -70,7 +70,7 @@ const Expenses = () => {
 
   const loadRestaurants = async () => {
     try {
-      const response = await restaurantsAPI.getAll();
+      const response = await restaurantAPI.getAll();
       setRestaurants(response.data.data || []);
     } catch (error) {
       console.error('Failed to load restaurants:', error);
