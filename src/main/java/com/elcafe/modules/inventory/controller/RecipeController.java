@@ -1,6 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
-import com.elcafe.common.ApiResponse;
+import com.elcafe.utils.ApiResponse;
 import com.elcafe.modules.inventory.dto.RecipeRequest;
 import com.elcafe.modules.inventory.dto.RecipeResponse;
 import com.elcafe.modules.inventory.entity.Ingredient;

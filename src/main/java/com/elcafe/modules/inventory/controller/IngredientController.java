@@ -1,6 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
-import com.elcafe.common.ApiResponse;
+import com.elcafe.utils.ApiResponse;
 import com.elcafe.modules.inventory.dto.AddStockRequest;
 import com.elcafe.modules.inventory.dto.AdjustStockRequest;
 import com.elcafe.modules.inventory.dto.IngredientRequest;
