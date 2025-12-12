@@ -260,4 +260,35 @@ export const posAPI = {
   getProducts: (restaurantId = 1) => api.get(`/products/restaurant/${restaurantId}`),
 };
 
+export const inventoryAPI = {
+  // Ingredients
+  getIngredients: (restaurantId) => api.get('/inventory/ingredients', { params: { restaurantId } }),
+  getIngredientById: (id) => api.get(`/inventory/ingredients/${id}`),
+  createIngredient: (data) => api.post('/inventory/ingredients', data),
+  updateIngredient: (id, data) => api.put(`/inventory/ingredients/${id}`, data),
+  deleteIngredient: (id) => api.delete(`/inventory/ingredients/${id}`),
+  getLowStockIngredients: (restaurantId) => api.get('/inventory/ingredients/low-stock', { params: { restaurantId } }),
+  getReorderIngredients: (restaurantId) => api.get('/inventory/ingredients/reorder', { params: { restaurantId } }),
+
+  // Stock management
+  addStock: (ingredientId, data) => api.post(`/inventory/ingredients/${ingredientId}/add-stock`, data),
+  adjustStock: (ingredientId, data) => api.post(`/inventory/ingredients/${ingredientId}/adjust-stock`, data),
+
+  // Transactions
+  getTransactions: (ingredientId) => api.get(`/inventory/ingredients/${ingredientId}/transactions`),
+  getAllTransactions: (restaurantId, params) => api.get('/inventory/transactions', { params: { restaurantId, ...params } }),
+};
+
+export const recipesAPI = {
+  // Product ingredients (recipes)
+  getProductRecipe: (productId) => api.get(`/inventory/recipes/product/${productId}`),
+  getIngredientUsage: (ingredientId) => api.get(`/inventory/recipes/ingredient/${ingredientId}`),
+  createRecipe: (data) => api.post('/inventory/recipes', data),
+  updateRecipe: (id, data) => api.put(`/inventory/recipes/${id}`, data),
+  deleteRecipe: (id) => api.delete(`/inventory/recipes/${id}`),
+
+  // Availability checks
+  checkProductAvailability: (productId, quantity) => api.get(`/inventory/recipes/product/${productId}/check-availability`, { params: { quantity } }),
+};
+
 export default api;
