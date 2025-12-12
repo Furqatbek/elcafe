@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { financialAPI } from '../services/api';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../store/authStore';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3, Calendar } from 'lucide-react';
 
 const FinancialReports = () => {
