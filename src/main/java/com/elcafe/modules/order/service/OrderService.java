@@ -2,11 +2,11 @@ package com.elcafe.modules.order.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
-import com.elcafe.modules.order.validator.OrderStatusTransitionValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,9 +25,7 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final OrderStatusTransitionValidator statusTransitionValidator;
-    private final OrderEventBroadcaster orderEventBroadcaster;
-    private final com.elcafe.modules.notification.service.NotificationService notificationService;
+    private final InventoryService inventoryService;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -45,12 +44,6 @@ public class OrderService {
         order = orderRepository.save(order);
         log.info("Order created with number: {}", order.getOrderNumber());
 
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
         return order;
     }
 
@@ -68,6 +61,33 @@ public class OrderService {
             );
         }
 
+        // Check inventory availability and deduct stock when order is accepted
+        if (newStatus == OrderStatus.ACCEPTED) {
+            log.info("Checking ingredient availability for order {}", order.getOrderNumber());
+
+            if (!inventoryService.checkIngredientAvailability(order)) {
+                List<String> missingIngredients = new ArrayList<>();
+                for (var item : order.getItems()) {
+                    missingIngredients.addAll(
+                        inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity())
+                    );
+                }
+
+                String errorMsg = "Insufficient ingredients for order: " + String.join(", ", missingIngredients);
+                log.error(errorMsg);
+                throw new BadRequestException(errorMsg);
+            }
+
+            // Deduct ingredients from stock
+            try {
+                inventoryService.deductIngredientsForOrder(order);
+                log.info("Successfully deducted ingredients for order {}", order.getOrderNumber());
+            } catch (Exception e) {
+                log.error("Failed to deduct ingredients for order {}: {}", order.getOrderNumber(), e.getMessage());
+                throw new BadRequestException("Failed to process inventory: " + e.getMessage());
+            }
+        }
+
         order.setStatus(newStatus);
 
         OrderStatusHistory history = OrderStatusHistory.builder()
@@ -80,105 +100,43 @@ public class OrderService {
         order = orderRepository.save(order);
         log.info("Order status updated: {} -> {}", currentStatus, newStatus);
 
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
         return order;
     }
 
     @Transactional(readOnly = true)
     public Order getOrderById(Long id) {
-        Order order = orderRepository.findById(id)
+        return orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "id", id));
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
-        return order;
     }
 
     @Transactional(readOnly = true)
     public Order getOrderByNumber(String orderNumber) {
-        Order order = orderRepository.findByOrderNumber(orderNumber)
+        return orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
-        return order;
     }
 
     @Transactional(readOnly = true)
     public Page<Order> getAllOrders(Pageable pageable) {
-        Page<Order> orders = orderRepository.findAllWithRelations(pageable);
-
-        // Force initialization of ALL lazy relationships within transaction
-        orders.forEach(order -> {
-            order.getRestaurant().getName();    // Trigger restaurant load
-            order.getCustomer().getPhone();     // Trigger customer load
-            order.getItems().size();            // Trigger items load
-            order.getStatusHistory().size();     // Trigger statusHistory load
-        });
-
-        return orders;
+        return orderRepository.findAll(pageable);
     }
 
     @Transactional(readOnly = true)
     public List<Order> getOrdersByRestaurant(Long restaurantId) {
-        List<Order> orders = orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId,
                 LocalDateTime.now().minusDays(7),
                 LocalDateTime.now()
         );
-
-        // Force initialization of ALL lazy relationships
-        orders.forEach(order -> {
-            order.getRestaurant().getName();
-            order.getCustomer().getPhone();
-            order.getItems().size();
-            order.getStatusHistory().size();
-        });
-
-        return orders;
     }
 
     @Transactional(readOnly = true)
     public List<Order> getOrdersByCustomer(Long customerId) {
-        List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
-
-        // Force initialization of ALL lazy relationships
-        orders.forEach(order -> {
-            order.getRestaurant().getName();
-            order.getCustomer().getPhone();
-            order.getItems().size();
-            order.getStatusHistory().size();
-        });
-
-        return orders;
+        return orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
     }
 
     @Transactional(readOnly = true)
     public List<Order> getPendingOrders() {
-        List<Order> orders = orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.NEW);
-
-        // Force initialization of ALL lazy relationships
-        orders.forEach(order -> {
-            order.getRestaurant().getName();
-            order.getCustomer().getPhone();
-            order.getItems().size();
-            order.getStatusHistory().size();
-        });
-
-        return orders;
+        return orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.NEW);
     }
 
     private String generateOrderNumber() {
@@ -187,421 +145,13 @@ public class OrderService {
 
     private boolean isValidStatusTransition(OrderStatus current, OrderStatus next) {
         return switch (current) {
-            case PENDING -> next == OrderStatus.PLACED || next == OrderStatus.CANCELLED;
-            case PLACED -> next == OrderStatus.NEW || next == OrderStatus.ACCEPTED || next == OrderStatus.REJECTED || next == OrderStatus.CANCELLED;
-            case NEW -> next == OrderStatus.ACCEPTED || next == OrderStatus.REJECTED || next == OrderStatus.CANCELLED;
+            case NEW -> next == OrderStatus.ACCEPTED || next == OrderStatus.CANCELLED;
             case ACCEPTED -> next == OrderStatus.PREPARING || next == OrderStatus.CANCELLED;
-            case REJECTED -> false;
             case PREPARING -> next == OrderStatus.READY || next == OrderStatus.CANCELLED;
-            case READY -> next == OrderStatus.PICKED_UP || next == OrderStatus.COURIER_ASSIGNED || next == OrderStatus.CANCELLED;
-            case PICKED_UP -> next == OrderStatus.COMPLETED || next == OrderStatus.ON_DELIVERY;
+            case READY -> next == OrderStatus.COURIER_ASSIGNED || next == OrderStatus.CANCELLED;
             case COURIER_ASSIGNED -> next == OrderStatus.ON_DELIVERY || next == OrderStatus.CANCELLED;
-            case ON_DELIVERY -> next == OrderStatus.DELIVERED || next == OrderStatus.COMPLETED;
-            case DELIVERED -> next == OrderStatus.COMPLETED;
-            case COMPLETED, CANCELLED -> false;
+            case ON_DELIVERY -> next == OrderStatus.DELIVERED;
+            case DELIVERED, CANCELLED -> false;
         };
-    }
-
-    /**
-     * Accept order - Admin action
-     * Status: PLACED → ACCEPTED
-     */
-    @Transactional
-    public Order acceptOrder(Long orderId, String acceptedBy, String notes) {
-        log.info("Accepting order: {}", orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Validate transition
-        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.ACCEPTED);
-
-        // Update status and timestamp
-        order.setStatus(OrderStatus.ACCEPTED);
-        order.setAcceptedAt(LocalDateTime.now());
-
-        // Add status history
-        OrderStatusHistory history = OrderStatusHistory.builder()
-                .status(OrderStatus.ACCEPTED)
-                .changedBy(acceptedBy)
-                .notes(notes != null ? notes : "Order accepted by restaurant")
-                .build();
-        order.addStatusHistory(history);
-
-        order = orderRepository.save(order);
-
-        // Broadcast WebSocket event
-        try {
-            orderEventBroadcaster.broadcastOrderAccepted(order);
-        } catch (Exception e) {
-            log.error("Failed to broadcast order accepted event: {}", e.getMessage());
-        }
-
-        // Send SMS notification
-        try {
-            notificationService.notifyOrderAccepted(order);
-        } catch (Exception e) {
-            log.error("Failed to send order accepted SMS: {}", e.getMessage());
-        }
-
-        log.info("Order {} accepted successfully", order.getOrderNumber());
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
-        return order;
-    }
-
-    /**
-     * Reject order - Admin action
-     * Status: PLACED → REJECTED
-     * Automatically initiates refund
-     */
-    @Transactional
-    public Order rejectOrder(Long orderId, String reason, String rejectedBy) {
-        log.info("Rejecting order: {}", orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Validate transition
-        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.REJECTED);
-
-        // Update status and timestamp
-        order.setStatus(OrderStatus.REJECTED);
-        order.setRejectedAt(LocalDateTime.now());
-
-        // Add status history
-        OrderStatusHistory history = OrderStatusHistory.builder()
-                .status(OrderStatus.REJECTED)
-                .changedBy(rejectedBy)
-                .notes("Order rejected: " + reason)
-                .build();
-        order.addStatusHistory(history);
-
-        // Initiate refund if payment was completed
-        if (order.getPayment() != null &&
-            order.getPayment().getStatus() == com.elcafe.modules.order.enums.PaymentStatus.COMPLETED) {
-            order.getPayment().setStatus(com.elcafe.modules.order.enums.PaymentStatus.REFUNDED);
-            order.setPaymentStatus(com.elcafe.modules.order.enums.PaymentStatus.REFUNDED);
-        }
-
-        order = orderRepository.save(order);
-
-        // Broadcast WebSocket event
-        try {
-            orderEventBroadcaster.broadcastOrderRejected(order, reason);
-        } catch (Exception e) {
-            log.error("Failed to broadcast order rejected event: {}", e.getMessage());
-        }
-
-        // Send SMS notification
-        try {
-            notificationService.notifyOrderRejected(order);
-        } catch (Exception e) {
-            log.error("Failed to send order rejected SMS: {}", e.getMessage());
-        }
-
-        log.info("Order {} rejected successfully", order.getOrderNumber());
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
-        return order;
-    }
-
-    /**
-     * Cancel order - Can be called by Consumer or Admin
-     * Validates cancellation rules (5-minute window for consumers)
-     */
-    @Transactional
-    public Order cancelOrder(Long orderId, String reason, String cancelledBy) {
-        log.info("Cancelling order: {} by {}", orderId, cancelledBy);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Validate if order can be cancelled
-        if (!statusTransitionValidator.canBeCancelled(order.getStatus())) {
-            throw new BadRequestException(
-                "Order cannot be cancelled at this stage. Current status: " + order.getStatus()
-            );
-        }
-
-        // For consumer cancellations, check 5-minute time window
-        if ("CONSUMER".equals(cancelledBy) && order.getPlacedAt() != null) {
-            LocalDateTime fiveMinutesAfterPlacement = order.getPlacedAt().plusMinutes(5);
-            if (LocalDateTime.now().isAfter(fiveMinutesAfterPlacement)) {
-                throw new BadRequestException(
-                    "Order can only be cancelled within 5 minutes of placement"
-                );
-            }
-        }
-
-        // Store cancellation details
-        order.setCancellationReason(reason);
-        order.setCancelledBy(cancelledBy);
-        order.setStatus(OrderStatus.CANCELLED);
-        order.setCancelledAt(LocalDateTime.now());
-
-        // Add status history
-        OrderStatusHistory history = OrderStatusHistory.builder()
-                .status(OrderStatus.CANCELLED)
-                .changedBy(cancelledBy)
-                .notes("Order cancelled: " + reason)
-                .build();
-        order.addStatusHistory(history);
-
-        // Initiate refund if payment was completed
-        if (order.getPayment() != null &&
-            order.getPayment().getStatus() == com.elcafe.modules.order.enums.PaymentStatus.COMPLETED) {
-            order.getPayment().setStatus(com.elcafe.modules.order.enums.PaymentStatus.REFUNDED);
-            order.setPaymentStatus(com.elcafe.modules.order.enums.PaymentStatus.REFUNDED);
-        }
-
-        order = orderRepository.save(order);
-
-        // Broadcast WebSocket event
-        try {
-            orderEventBroadcaster.broadcastOrderCancelled(order);
-        } catch (Exception e) {
-            log.error("Failed to broadcast order cancelled event: {}", e.getMessage());
-        }
-
-        // Send SMS notification
-        try {
-            notificationService.notifyOrderCancelled(order);
-        } catch (Exception e) {
-            log.error("Failed to send order cancelled SMS: {}", e.getMessage());
-        }
-
-        log.info("Order {} cancelled successfully", order.getOrderNumber());
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
-        return order;
-    }
-
-    /**
-     * Mark order as preparing - Kitchen starts work
-     * Status: ACCEPTED → PREPARING
-     */
-    @Transactional
-    public Order markOrderPreparing(Long orderId, String notes) {
-        log.info("Marking order as preparing: {}", orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Validate transition
-        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.PREPARING);
-
-        // Update status and timestamp
-        order.setStatus(OrderStatus.PREPARING);
-        order.setPreparingAt(LocalDateTime.now());
-
-        // Add status history
-        OrderStatusHistory history = OrderStatusHistory.builder()
-                .status(OrderStatus.PREPARING)
-                .changedBy("KITCHEN")
-                .notes(notes != null ? notes : "Kitchen started preparing order")
-                .build();
-        order.addStatusHistory(history);
-
-        order = orderRepository.save(order);
-
-        // Broadcast WebSocket event
-        try {
-            orderEventBroadcaster.broadcastOrderPreparing(order);
-        } catch (Exception e) {
-            log.error("Failed to broadcast order preparing event: {}", e.getMessage());
-        }
-
-        // Send notifications
-        try {
-            notificationService.notifyOrderPreparing(order);
-        } catch (Exception e) {
-            log.error("Failed to send order preparing notification: {}", e.getMessage());
-        }
-
-        log.info("Order {} marked as preparing", order.getOrderNumber());
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
-        return order;
-    }
-
-    /**
-     * Mark order as ready - Food is ready for pickup/delivery
-     * Status: PREPARING → READY
-     */
-    @Transactional
-    public Order markOrderReady(Long orderId, String notes) {
-        log.info("Marking order as ready: {}", orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Validate transition
-        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.READY);
-
-        // Update status and timestamp
-        order.setStatus(OrderStatus.READY);
-        order.setReadyAt(LocalDateTime.now());
-
-        // Add status history
-        OrderStatusHistory history = OrderStatusHistory.builder()
-                .status(OrderStatus.READY)
-                .changedBy("KITCHEN")
-                .notes(notes != null ? notes : "Order is ready for " +
-                       (order.getOrderType().equals("PICKUP") ? "pickup" : "delivery"))
-                .build();
-        order.addStatusHistory(history);
-
-        order = orderRepository.save(order);
-
-        // Broadcast WebSocket event
-        try {
-            orderEventBroadcaster.broadcastOrderReady(order);
-        } catch (Exception e) {
-            log.error("Failed to broadcast order ready event: {}", e.getMessage());
-        }
-
-        // Send SMS notification
-        try {
-            notificationService.notifyOrderReady(order);
-        } catch (Exception e) {
-            log.error("Failed to send order ready SMS: {}", e.getMessage());
-        }
-
-        log.info("Order {} marked as ready", order.getOrderNumber());
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
-        return order;
-    }
-
-    /**
-     * Mark order as picked up - Courier picked up the order
-     * Status: READY → PICKED_UP
-     */
-    @Transactional
-    public Order markOrderPickedUp(Long orderId, String notes) {
-        log.info("Marking order as picked up: {}", orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Validate transition
-        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.PICKED_UP);
-
-        // Update status and timestamp
-        order.setStatus(OrderStatus.PICKED_UP);
-        order.setPickedUpAt(LocalDateTime.now());
-
-        // Add status history
-        OrderStatusHistory history = OrderStatusHistory.builder()
-                .status(OrderStatus.PICKED_UP)
-                .changedBy("COURIER")
-                .notes(notes != null ? notes : "Order picked up by courier")
-                .build();
-        order.addStatusHistory(history);
-
-        order = orderRepository.save(order);
-
-        // Broadcast WebSocket event
-        try {
-            orderEventBroadcaster.broadcastOrderPickedUp(order);
-        } catch (Exception e) {
-            log.error("Failed to broadcast order picked up event: {}", e.getMessage());
-        }
-
-        // Send notifications
-        try {
-            notificationService.notifyOrderPickedUp(order);
-        } catch (Exception e) {
-            log.error("Failed to send order picked up notification: {}", e.getMessage());
-        }
-
-        log.info("Order {} marked as picked up", order.getOrderNumber());
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
-        return order;
-    }
-
-    /**
-     * Mark order as completed - Final status
-     * Status: PICKED_UP → COMPLETED
-     */
-    @Transactional
-    public Order markOrderCompleted(Long orderId, String notes) {
-        log.info("Marking order as completed: {}", orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
-
-        // Validate transition
-        statusTransitionValidator.validateTransition(order.getStatus(), OrderStatus.COMPLETED);
-
-        // Update status and timestamp
-        order.setStatus(OrderStatus.COMPLETED);
-        order.setCompletedAt(LocalDateTime.now());
-
-        // Add status history
-        OrderStatusHistory history = OrderStatusHistory.builder()
-                .status(OrderStatus.COMPLETED)
-                .changedBy("COURIER")
-                .notes(notes != null ? notes : "Order delivered successfully")
-                .build();
-        order.addStatusHistory(history);
-
-        order = orderRepository.save(order);
-
-        // Broadcast WebSocket event
-        try {
-            orderEventBroadcaster.broadcastOrderCompleted(order);
-        } catch (Exception e) {
-            log.error("Failed to broadcast order completed event: {}", e.getMessage());
-        }
-
-        // Send SMS notification
-        try {
-            notificationService.notifyOrderCompleted(order);
-        } catch (Exception e) {
-            log.error("Failed to send order completed SMS: {}", e.getMessage());
-        }
-
-        log.info("Order {} marked as completed", order.getOrderNumber());
-
-        // Force initialization of ALL lazy relationships within transaction
-        order.getRestaurant().getName();    // Trigger restaurant load
-        order.getCustomer().getPhone();     // Trigger customer load
-        order.getItems().size();            // Trigger items load
-        order.getStatusHistory().size();    // Trigger statusHistory load
-
-        return order;
     }
 }
