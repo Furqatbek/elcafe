@@ -1,7 +1,7 @@
 package com.elcafe.modules.financial.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.elcafe.modules.user.entity.User;
+import com.elcafe.modules.auth.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

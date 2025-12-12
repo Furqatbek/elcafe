@@ -5,7 +5,7 @@ import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
-import com.elcafe.modules.menu.entity.OrderItem;
+import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.entity.Order;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
