@@ -7,7 +7,7 @@ import com.elcafe.modules.inventory.dto.IngredientRequest;
 import com.elcafe.modules.inventory.dto.IngredientResponse;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
-import com.elcafe.modules.inventory.repository.IngredientRepository;
+import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InventoryIngredientController {
 
-    private final IngredientRepository ingredientRepository;
+    private final InventoryIngredientRepository ingredientRepository;
     private final RestaurantRepository restaurantRepository;
     private final InventoryService inventoryService;
 

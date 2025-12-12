@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface IngredientRepository extends JpaRepository<Ingredient, Long> {
+public interface InventoryIngredientRepository extends JpaRepository<Ingredient, Long> {
 
     List<Ingredient> findByRestaurantId(Long restaurantId);
 
