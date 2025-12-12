@@ -2,6 +2,7 @@ package com.elcafe.modules.order.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,6 +25,7 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final InventoryService inventoryService;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -56,6 +59,33 @@ public class OrderService {
             throw new BadRequestException(
                     String.format("Invalid status transition from %s to %s", currentStatus, newStatus)
             );
+        }
+
+        // Check inventory availability and deduct stock when order is accepted
+        if (newStatus == OrderStatus.ACCEPTED) {
+            log.info("Checking ingredient availability for order {}", order.getOrderNumber());
+
+            if (!inventoryService.checkIngredientAvailability(order)) {
+                List<String> missingIngredients = new ArrayList<>();
+                for (var item : order.getItems()) {
+                    missingIngredients.addAll(
+                        inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity())
+                    );
+                }
+
+                String errorMsg = "Insufficient ingredients for order: " + String.join(", ", missingIngredients);
+                log.error(errorMsg);
+                throw new BadRequestException(errorMsg);
+            }
+
+            // Deduct ingredients from stock
+            try {
+                inventoryService.deductIngredientsForOrder(order);
+                log.info("Successfully deducted ingredients for order {}", order.getOrderNumber());
+            } catch (Exception e) {
+                log.error("Failed to deduct ingredients for order {}: {}", order.getOrderNumber(), e.getMessage());
+                throw new BadRequestException("Failed to process inventory: " + e.getMessage());
+            }
         }
 
         order.setStatus(newStatus);
