@@ -250,6 +250,9 @@ public class PurchaseOrderService {
         return String.format("PO-%s-%04d", datePrefix, count + 1);
     }
 
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
     public static class ReceivedItem {
         public Long itemId;
         public BigDecimal receivedQuantity;
