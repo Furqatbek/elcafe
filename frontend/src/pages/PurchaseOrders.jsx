@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { financialAPI, inventoryAPI } from '../services/api';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Check, X, DollarSign, Package } from 'lucide-react';
 
 const PurchaseOrders = () => {

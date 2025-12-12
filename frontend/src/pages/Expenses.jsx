@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { financialAPI } from '../services/api';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Check, DollarSign, Calendar } from 'lucide-react';
 
 const Expenses = () => {
