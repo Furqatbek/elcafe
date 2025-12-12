@@ -139,12 +139,28 @@ public class OrderService {
         return orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.NEW);
     }
 
+    @Transactional
+    public Order acceptOrder(Long orderId, String changedBy, String notes) {
+        return updateOrderStatus(orderId, OrderStatus.ACCEPTED, notes, changedBy);
+    }
+
+    @Transactional
+    public Order rejectOrder(Long orderId, String reason, String changedBy) {
+        return updateOrderStatus(orderId, OrderStatus.CANCELLED, reason, changedBy);
+    }
+
+    @Transactional
+    public Order cancelOrder(Long orderId, String reason, String changedBy) {
+        return updateOrderStatus(orderId, OrderStatus.CANCELLED, reason, changedBy);
+    }
+
     private String generateOrderNumber() {
         return "ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
     private boolean isValidStatusTransition(OrderStatus current, OrderStatus next) {
         return switch (current) {
+            case PENDING -> next == OrderStatus.NEW || next == OrderStatus.ACCEPTED || next == OrderStatus.CANCELLED;
             case NEW -> next == OrderStatus.ACCEPTED || next == OrderStatus.CANCELLED;
             case ACCEPTED -> next == OrderStatus.PREPARING || next == OrderStatus.CANCELLED;
             case PREPARING -> next == OrderStatus.READY || next == OrderStatus.CANCELLED;
