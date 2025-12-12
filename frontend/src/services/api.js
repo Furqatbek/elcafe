@@ -291,4 +291,29 @@ export const recipesAPI = {
   checkProductAvailability: (productId, quantity) => api.get(`/inventory/recipes/product/${productId}/check-availability`, { params: { quantity } }),
 };
 
+export const financialAPI = {
+  // Purchase Orders
+  getPurchaseOrders: (restaurantId) => api.get('/financial/purchase-orders', { params: { restaurantId } }),
+  getPurchaseOrderById: (id) => api.get(`/financial/purchase-orders/${id}`),
+  createPurchaseOrder: (data) => api.post('/financial/purchase-orders', data),
+  approvePurchaseOrder: (id, approvedBy) => api.post(`/financial/purchase-orders/${id}/approve`, null, { params: { approvedBy } }),
+  receivePurchaseOrder: (id, data) => api.post(`/financial/purchase-orders/${id}/receive`, data),
+  recordPOPayment: (id, data) => api.post(`/financial/purchase-orders/${id}/payment`, data),
+
+  // Expenses
+  getExpenses: (restaurantId, startDate, endDate) => api.get('/financial/expenses', { params: { restaurantId, startDate, endDate } }),
+  getExpenseById: (id) => api.get(`/financial/expenses/${id}`),
+  getUnpaidExpenses: (restaurantId) => api.get('/financial/expenses/unpaid', { params: { restaurantId } }),
+  createExpense: (data) => api.post('/financial/expenses', data),
+  approveExpense: (id, approvedBy) => api.post(`/financial/expenses/${id}/approve`, null, { params: { approvedBy } }),
+  recordExpensePayment: (id, paymentDate, recordedBy) => api.post(`/financial/expenses/${id}/pay`, null, { params: { paymentDate, recordedBy } }),
+  deleteExpense: (id) => api.delete(`/financial/expenses/${id}`),
+
+  // Reports
+  getProfitLossReport: (restaurantId, startDate, endDate) => api.get('/financial/reports/profit-loss', { params: { restaurantId, startDate, endDate } }),
+  getBalanceSheet: (restaurantId, asOfDate) => api.get('/financial/reports/balance-sheet', { params: { restaurantId, asOfDate } }),
+  getCashFlowReport: (restaurantId, startDate, endDate) => api.get('/financial/reports/cash-flow', { params: { restaurantId, startDate, endDate } }),
+  getCogsReport: (restaurantId, startDate, endDate) => api.get('/financial/reports/cogs', { params: { restaurantId, startDate, endDate } }),
+};
+
 export default api;

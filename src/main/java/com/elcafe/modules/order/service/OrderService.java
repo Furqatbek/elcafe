@@ -2,6 +2,7 @@ package com.elcafe.modules.order.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.financial.service.RevenueService;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
@@ -9,6 +10,8 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,10 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final InventoryService inventoryService;
+
+    @Autowired
+    @Lazy
+    private RevenueService revenueService;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -99,6 +106,19 @@ public class OrderService {
 
         order = orderRepository.save(order);
         log.info("Order status updated: {} -> {}", currentStatus, newStatus);
+
+        // Record revenue when order is completed or delivered
+        if (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED) {
+            if (revenueService != null) {
+                try {
+                    revenueService.recordOrderRevenue(order);
+                    log.info("Revenue recorded for completed order: {}", order.getOrderNumber());
+                } catch (Exception e) {
+                    log.error("Failed to record revenue for order {}: {}", order.getOrderNumber(), e.getMessage());
+                    // Don't fail the order status update if revenue recording fails
+                }
+            }
+        }
 
         return order;
     }

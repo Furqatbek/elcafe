@@ -23,6 +23,9 @@ import FinancialAnalytics from './pages/FinancialAnalytics';
 import OperationalAnalytics from './pages/OperationalAnalytics';
 import CustomerAnalytics from './pages/CustomerAnalytics';
 import InventoryAnalytics from './pages/InventoryAnalytics';
+import PurchaseOrders from './pages/PurchaseOrders';
+import Expenses from './pages/Expenses';
+import FinancialReports from './pages/FinancialReports';
 import POSApp from './pos/POSApp';
 import KitchenTicketPage from './pos/KitchenTicketPage';
 
@@ -71,6 +74,9 @@ function App() {
           <Route path="kitchen" element={<KitchenDashboard />} />
           <Route path="kitchen/inventory" element={<Inventory />} />
           <Route path="kitchen/recipes" element={<Recipes />} />
+          <Route path="finance/purchase-orders" element={<PurchaseOrders />} />
+          <Route path="finance/expenses" element={<Expenses />} />
+          <Route path="finance/reports" element={<FinancialReports />} />
         </Route>
       </Routes>
     </BrowserRouter>
