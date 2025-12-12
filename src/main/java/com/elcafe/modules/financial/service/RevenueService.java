@@ -54,7 +54,7 @@ public class RevenueService {
                         order.getId(),
                         cashAccount.getId(),
                         salesAccount.getId(),
-                        order.getTotalAmount(),
+                        order.getTotal(),
                         "SYSTEM"
                 );
             }
@@ -170,7 +170,7 @@ public class RevenueService {
         try {
             // Get ingredients for this product
             List<ProductIngredient> productIngredients = productIngredientRepository
-                    .findByProductIdWithIngredients(orderItem.getProduct().getId());
+                    .findByProductIdWithIngredients(orderItem.getProductId());
 
             for (ProductIngredient pi : productIngredients) {
                 if (pi.getOptional()) {
