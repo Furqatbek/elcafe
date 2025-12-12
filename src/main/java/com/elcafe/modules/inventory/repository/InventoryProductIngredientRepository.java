@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ProductIngredientRepository extends JpaRepository<ProductIngredient, Long> {
+public interface InventoryProductIngredientRepository extends JpaRepository<ProductIngredient, Long> {
 
     List<ProductIngredient> findByProductId(Long productId);
 

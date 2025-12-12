@@ -6,7 +6,7 @@ import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.enums.TransactionType;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
-import com.elcafe.modules.inventory.repository.ProductIngredientRepository;
+import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ import java.util.Map;
 public class InventoryService {
 
     private final InventoryIngredientRepository ingredientRepository;
-    private final ProductIngredientRepository productIngredientRepository;
+    private final InventoryProductIngredientRepository productIngredientRepository;
     private final InventoryTransactionRepository transactionRepository;
 
     /**
