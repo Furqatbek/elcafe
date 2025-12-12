@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { financialAPI } from '../services/api';
+import { financialAPI, restaurantsAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Check, DollarSign, Calendar } from 'lucide-react';
 
 const Expenses = () => {
   const { user } = useAuthStore();
   const [expenses, setExpenses] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -51,12 +52,30 @@ const Expenses = () => {
   ];
 
   useEffect(() => {
-    if (user?.restaurantId) {
+    loadRestaurants();
+  }, []);
+
+  useEffect(() => {
+    if (user?.restaurantId && !selectedRestaurant) {
       setSelectedRestaurant(user.restaurantId);
       setFormData(prev => ({ ...prev, restaurantId: user.restaurantId }));
-      loadExpenses(user.restaurantId);
     }
-  }, [user, dateRange]);
+  }, [user]);
+
+  useEffect(() => {
+    if (selectedRestaurant) {
+      loadExpenses(selectedRestaurant);
+    }
+  }, [selectedRestaurant, dateRange]);
+
+  const loadRestaurants = async () => {
+    try {
+      const response = await restaurantsAPI.getAll();
+      setRestaurants(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load restaurants:', error);
+    }
+  };
 
   const loadExpenses = async (restaurantId) => {
     try {
@@ -234,7 +253,23 @@ const Expenses = () => {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 grid grid-cols-5 gap-4">
+      <div className="mb-4 grid grid-cols-6 gap-4">
+        <select
+          value={selectedRestaurant || ''}
+          onChange={(e) => {
+            const restaurantId = e.target.value ? parseInt(e.target.value) : null;
+            setSelectedRestaurant(restaurantId);
+            setFormData(prev => ({ ...prev, restaurantId }));
+          }}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">Select Restaurant</option>
+          {restaurants.map(restaurant => (
+            <option key={restaurant.id} value={restaurant.id}>
+              {restaurant.name}
+            </option>
+          ))}
+        </select>
         <input
           type="text"
           placeholder="Search expenses..."
