@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/inventory/ingredients")
 @RequiredArgsConstructor
-public class IngredientController {
+public class InventoryIngredientController {
 
     private final IngredientRepository ingredientRepository;
     private final RestaurantRepository restaurantRepository;
