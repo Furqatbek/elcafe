@@ -52,10 +52,10 @@ public interface PayrollEntryRepository extends JpaRepository<PayrollEntry, Long
            "AND pe.status = 'PAID'")
     BigDecimal getTotalPayrollByDateRange(Long restaurantId, LocalDate startDate, LocalDate endDate);
 
-    @Query("SELECT pe.employee.id, pe.employee.username, SUM(pe.netPay) FROM FinancialPayrollEntry pe " +
+    @Query("SELECT pe.employee.id, pe.employee.email, SUM(pe.netPay) FROM FinancialPayrollEntry pe " +
            "WHERE pe.restaurant.id = :restaurantId " +
            "AND pe.payPeriodStart BETWEEN :startDate AND :endDate " +
            "AND pe.status = 'PAID' " +
-           "GROUP BY pe.employee.id, pe.employee.username")
+           "GROUP BY pe.employee.id, pe.employee.email")
     List<Object[]> getPayrollByEmployee(Long restaurantId, LocalDate startDate, LocalDate endDate);
 }
