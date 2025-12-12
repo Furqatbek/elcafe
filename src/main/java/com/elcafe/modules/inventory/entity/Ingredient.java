@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Entity
+@Entity(name = "InventoryIngredient")
 @Table(name = "inventory_ingredients")
 @EntityListeners(AuditingEntityListener.class)
 public class Ingredient {

@@ -17,12 +17,12 @@ public interface InventoryIngredientRepository extends JpaRepository<Ingredient,
 
     Optional<Ingredient> findByRestaurantIdAndName(Long restaurantId, String name);
 
-    @Query("SELECT i FROM Ingredient i WHERE i.restaurant.id = :restaurantId AND i.currentStock <= i.minimumStock AND i.active = true")
+    @Query("SELECT i FROM InventoryIngredient i WHERE i.restaurant.id = :restaurantId AND i.currentStock <= i.minimumStock AND i.active = true")
     List<Ingredient> findLowStockIngredients(Long restaurantId);
 
-    @Query("SELECT i FROM Ingredient i WHERE i.restaurant.id = :restaurantId AND i.currentStock <= i.reorderLevel AND i.active = true")
+    @Query("SELECT i FROM InventoryIngredient i WHERE i.restaurant.id = :restaurantId AND i.currentStock <= i.reorderLevel AND i.active = true")
     List<Ingredient> findIngredientsNeedingReorder(Long restaurantId);
 
-    @Query("SELECT i FROM Ingredient i WHERE i.restaurant.id = :restaurantId AND i.trackInventory = true AND i.active = true")
+    @Query("SELECT i FROM InventoryIngredient i WHERE i.restaurant.id = :restaurantId AND i.trackInventory = true AND i.active = true")
     List<Ingredient> findTrackedIngredients(Long restaurantId);
 }
