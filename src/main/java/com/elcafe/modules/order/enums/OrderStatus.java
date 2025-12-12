@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.enums;
 
 public enum OrderStatus {
+    PENDING,
     NEW,
     ACCEPTED,
     PREPARING,

@@ -154,14 +154,15 @@ public class IngredientController {
             @Valid @RequestBody AddStockRequest request) {
         log.info("Adding stock to ingredient: {}", id);
 
-        Ingredient ingredient = inventoryService.addStock(
+        inventoryService.addStock(
                 id,
                 request.getQuantity(),
-                request.getCostPerUnit(),
-                request.getSupplier(),
                 request.getNotes(),
                 request.getPerformedBy()
         );
+
+        Ingredient ingredient = ingredientRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
 
         return ResponseEntity.ok(ApiResponse.success("Stock added successfully", mapToResponse(ingredient)));
     }
@@ -172,12 +173,15 @@ public class IngredientController {
             @Valid @RequestBody AdjustStockRequest request) {
         log.info("Adjusting stock for ingredient: {}", id);
 
-        Ingredient ingredient = inventoryService.adjustStock(
+        inventoryService.adjustStock(
                 id,
                 request.getNewQuantity(),
                 request.getNotes(),
                 request.getPerformedBy()
         );
+
+        Ingredient ingredient = ingredientRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
 
         return ResponseEntity.ok(ApiResponse.success("Stock adjusted successfully", mapToResponse(ingredient)));
     }
