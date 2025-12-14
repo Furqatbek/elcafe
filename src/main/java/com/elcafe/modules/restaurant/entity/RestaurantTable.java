@@ -52,7 +52,7 @@ public class RestaurantTable {
     @Column(name = "qr_code")
     private String qrCode;
 
-    @OneToMany(mappedBy = "table", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "diningTable", cascade = CascadeType.ALL)
     private List<Order> orders;
 
     @CreationTimestamp
