@@ -162,7 +162,7 @@ public class NotificationService {
             NotificationType.ORDER_READY,
             "Order Ready",
             String.format("Your order #%s is ready for %s",
-                order.getOrderNumber(), order.getOrderType().toLowerCase()),
+                order.getOrderNumber(), order.getOrderType().name().toLowerCase()),
             order.getId(),
             order.getOrderNumber(),
             1
