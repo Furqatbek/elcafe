@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,12 +24,15 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1")
-@RequiredArgsConstructor
 @Tag(name = "Restaurant Tables", description = "Table management endpoints for restaurants")
 @SecurityRequirement(name = "Bearer Authentication")
 public class TableController {
 
     private final TableService tableService;
+
+    public TableController(@Qualifier("restaurantTableService") TableService tableService) {
+        this.tableService = tableService;
+    }
 
     @PostMapping("/tables")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
