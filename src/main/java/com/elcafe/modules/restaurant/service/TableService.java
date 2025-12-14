@@ -8,7 +8,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.mapper.TableMapper;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
-import com.elcafe.modules.restaurant.repository.TableRepository;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TableService {
 
-    private final TableRepository tableRepository;
+    private final RestaurantTableRepository tableRepository;
     private final RestaurantRepository restaurantRepository;
     private final TableMapper tableMapper;
 
