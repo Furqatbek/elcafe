@@ -50,7 +50,11 @@ const Tables = () => {
   const loadRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll();
-      setRestaurants(response.data.data || []);
+      console.log('Restaurants response:', response);
+      console.log('Restaurants data:', response.data);
+      console.log('Restaurants array:', response.data.data);
+      const restaurantsData = response?.data?.data;
+      setRestaurants(Array.isArray(restaurantsData) ? restaurantsData : []);
     } catch (error) {
       console.error('Failed to load restaurants:', error);
       setRestaurants([]);
@@ -61,7 +65,11 @@ const Tables = () => {
     try {
       setLoading(true);
       const response = await tablesAPI.getAll(selectedRestaurant);
-      setTables(response.data.data || []);
+      console.log('Tables response:', response);
+      console.log('Tables data:', response.data);
+      console.log('Tables array:', response.data.data);
+      const tablesData = response?.data?.data;
+      setTables(Array.isArray(tablesData) ? tablesData : []);
     } catch (error) {
       console.error('Failed to load tables:', error);
       setTables([]);
