@@ -234,7 +234,7 @@ const Tables = () => {
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">{t('common.selectRestaurant')}</option>
-          {restaurants.map(restaurant => (
+          {Array.isArray(restaurants) && restaurants.map(restaurant => (
             <option key={restaurant.id} value={restaurant.id}>
               {restaurant.name}
             </option>
@@ -261,7 +261,14 @@ const Tables = () => {
 
       {/* Tables Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {loading ? (
+        {!selectedRestaurant ? (
+          <div className="col-span-full text-center py-12">
+            <div className="text-gray-400 mb-2">
+              <Grid size={48} className="mx-auto mb-2" />
+            </div>
+            <p className="text-gray-600">{t('tables.selectRestaurantFirst') || 'Please select a restaurant to view tables'}</p>
+          </div>
+        ) : loading ? (
           <div className="col-span-full text-center py-8 text-gray-500">{t('common.loading')}</div>
         ) : filteredTables.length === 0 ? (
           <div className="col-span-full text-center py-8 text-gray-500">{t('tables.noTables')}</div>
