@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { financialAPI, inventoryAPI } from '../services/api';
+import { financialAPI, inventoryAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Check, X, DollarSign, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,7 @@ const PurchaseOrders = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
   const [ingredients, setIngredients] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -58,13 +59,31 @@ const PurchaseOrders = () => {
   });
 
   useEffect(() => {
-    if (user?.restaurantId) {
+    loadRestaurants();
+  }, []);
+
+  useEffect(() => {
+    if (user?.restaurantId && !selectedRestaurant) {
       setSelectedRestaurant(user.restaurantId);
       setFormData(prev => ({ ...prev, restaurantId: user.restaurantId }));
-      loadPurchaseOrders(user.restaurantId);
-      loadIngredients(user.restaurantId);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (selectedRestaurant) {
+      loadPurchaseOrders(selectedRestaurant);
+      loadIngredients(selectedRestaurant);
+    }
+  }, [selectedRestaurant]);
+
+  const loadRestaurants = async () => {
+    try {
+      const response = await restaurantAPI.getAll();
+      setRestaurants(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load restaurants:', error);
+    }
+  };
 
   const loadPurchaseOrders = async (restaurantId) => {
     try {
@@ -306,6 +325,22 @@ const PurchaseOrders = () => {
 
       {/* Filters */}
       <div className="mb-4 flex gap-4">
+        <select
+          value={selectedRestaurant || ''}
+          onChange={(e) => {
+            const restaurantId = e.target.value ? parseInt(e.target.value) : null;
+            setSelectedRestaurant(restaurantId);
+            setFormData(prev => ({ ...prev, restaurantId }));
+          }}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">{t('finance.common.selectRestaurant')}</option>
+          {restaurants.map(restaurant => (
+            <option key={restaurant.id} value={restaurant.id}>
+              {restaurant.name}
+            </option>
+          ))}
+        </select>
         <input
           type="text"
           placeholder={t('finance.purchaseOrders.searchPlaceholder')}
