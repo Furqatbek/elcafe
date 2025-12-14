@@ -1,6 +1,6 @@
 package com.elcafe.modules.restaurant.service;
 
-import com.elcafe.exceptions.ResourceNotFoundException;
+import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.restaurant.dto.CreateTableRequest;
 import com.elcafe.modules.restaurant.dto.TableResponse;
 import com.elcafe.modules.restaurant.dto.UpdateTableRequest;
