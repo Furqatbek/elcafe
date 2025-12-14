@@ -466,6 +466,181 @@
       "lastNameRequired": "Familiya majburiy"
     }
   },
+  "kitchen": {
+    "title": "Oshxona paneli",
+    "subtitle": "Ovqat tayyorlash va buyurtmalarni bajarishni boshqarish",
+    "stats": {
+      "pending": "Kutilmoqda",
+      "preparing": "Tayyorlanmoqda",
+      "ready": "Tayyor",
+      "total": "Jami buyurtmalar"
+    },
+    "sections": {
+      "pending": "Kutilayotgan buyurtmalar",
+      "preparing": "Tayyorlanayotgan buyurtmalar",
+      "ready": "Olib ketishga tayyor"
+    },
+    "fields": {
+      "orderNumber": "Buyurtma #",
+      "items": "Mahsulotlar",
+      "priority": "Ustuvorlik",
+      "createdAt": "Yaratilgan",
+      "chefName": "Oshpaz ismi",
+      "startedAt": "Boshlangan",
+      "elapsed": "O'tgan vaqt",
+      "estimatedTime": "Taxminiy vaqt",
+      "preparedBy": "Tayyorlagan",
+      "prepTime": "Tayyorlash vaqti"
+    },
+    "actions": {
+      "start": "Tayyorlashni boshlash",
+      "markReady": "Tayyor deb belgilash",
+      "markPickedUp": "Olib ketildi deb belgilash",
+      "changePriority": "Ustuvorlikni o'zgartirish",
+      "startPreparation": "Tayyorlashni boshlash"
+    },
+    "status": {
+      "PENDING": "Kutilmoqda",
+      "PREPARING": "Tayyorlanmoqda",
+      "READY": "Tayyor",
+      "PICKED_UP": "Olib ketilgan"
+    },
+    "priority": {
+      "URGENT": "Shoshilinch",
+      "HIGH": "Yuqori",
+      "NORMAL": "Oddiy",
+      "LOW": "Past"
+    },
+    "modals": {
+      "startPreparation": {
+        "title": "Tayyorlashni boshlash",
+        "description": "Buyurtmani tayyorlaydigan oshpaz nomini kiriting",
+        "chefNameLabel": "Oshpaz ismi",
+        "chefNamePlaceholder": "masalan, Alisher Mahmudov"
+      },
+      "changePriority": {
+        "title": "Ustuvorlikni o'zgartirish",
+        "description": "Ushbu buyurtma uchun yangi ustuvorlik darajasini tanlang"
+      }
+    },
+    "errors": {
+      "loadFailed": "Oshxona buyurtmalarini yuklab bo'lmadi",
+      "startFailed": "Tayyorlashni boshlab bo'lmadi",
+      "markReadyFailed": "Buyurtmani tayyor deb belgilab bo'lmadi",
+      "markPickedUpFailed": "Buyurtmani olib ketildi deb belgilab bo'lmadi",
+      "changePriorityFailed": "Ustuvorlikni o'zgartirib bo'lmadi",
+      "chefNameRequired": "Oshpaz nomini kiriting"
+    },
+    "empty": {
+      "noOrders": "Ushbu bo'limda buyurtmalar yo'q"
+    }
+  },
+  "inventory": {
+    "title": "Inventar boshqaruvi",
+    "subtitle": "Restoran ingredientlari va zaxira darajalarini kuzatish va boshqarish",
+    "addIngredient": "Ingredient qo'shish",
+    "editIngredient": "Ingredientni tahrirlash",
+    "editDescription": "Ingredient ma'lumotlarini yangilash",
+    "addDescription": "Inventaringizga yangi ingredient qo'shish",
+    "ingredientsList": "Ingredientlar ro'yxati",
+    "ingredientsDescription": "Restoran ingredientlarini boshqarish",
+    "noIngredients": "Ingredientlar topilmadi",
+    "confirmDelete": "Ushbu ingredientni o'chirishni xohlaysizmi?",
+    "searchPlaceholder": "Ingredientlarni qidirish...",
+    "stats": {
+      "total": "Jami ingredientlar",
+      "active": "faol",
+      "lowStock": "Kam qolgan mahsulotlar",
+      "needsAttention": "e'tibor talab qiladi",
+      "reorder": "Qayta buyurtma kerak",
+      "reorderSoon": "tez orada buyurtma bering",
+      "tracked": "Inventar kuzatilmoqda",
+      "monitoring": "zaxira kuzatilmoqda"
+    },
+    "filters": {
+      "all": "Barcha ingredientlar",
+      "active": "Faqat faol",
+      "inactive": "Faqat faol emas",
+      "lowStock": "Kam qolgan",
+      "reorder": "Qayta buyurtma darajasi"
+    },
+    "fields": {
+      "name": "Ingredient nomi",
+      "sku": "SKU",
+      "description": "Tavsif",
+      "unit": "O'lchov birligi",
+      "currentStock": "Joriy zaxira",
+      "minimumStock": "Minimal zaxira",
+      "reorderLevel": "Qayta buyurtma darajasi",
+      "costPerUnit": "Birlik narxi",
+      "supplier": "Yetkazib beruvchi",
+      "status": "Holat",
+      "active": "Faol",
+      "trackInventory": "Inventarni kuzatish"
+    },
+    "placeholders": {
+      "name": "masalan, Pomidor, Un, Tovuq",
+      "sku": "masalan, ING-001",
+      "description": "Ingredient haqida qisqacha tavsif",
+      "supplier": "masalan, ABC Yetkazib beruvchilar",
+      "unit": "Birlikni tanlang"
+    },
+    "units": {
+      "kg": "Kilogrammlar (kg)",
+      "g": "Grammlar (g)",
+      "L": "Litrlar (L)",
+      "ml": "Millilitrlar (ml)",
+      "pieces": "Donalar",
+      "dozens": "O'nlab"
+    },
+    "errors": {
+      "saveFailed": "Ingredientni saqlab bo'lmadi. Qayta urinib ko'ring.",
+      "deleteFailed": "Ingredientni o'chirib bo'lmadi. Qayta urinib ko'ring."
+    }
+  },
+  "recipes": {
+    "title": "Retseptlar boshqaruvi",
+    "subtitle": "Mahsulot retseptlari va ingredient talablarini aniqlash",
+    "products": "Mahsulotlar",
+    "selectProduct": "Retseptni boshqarish uchun mahsulotni tanlang",
+    "searchProducts": "Mahsulotlarni qidirish...",
+    "noProducts": "Mahsulotlar topilmadi",
+    "noProductSelected": "Mahsulotni tanlang",
+    "recipeDescription": "Ushbu mahsulot uchun ingredient talablari",
+    "addIngredient": "Ingredient qo'shish",
+    "editIngredient": "Ingredientni tahrirlash",
+    "editDescription": "Ingredient talabini yangilash",
+    "addDescription": "Retseptga ingredient qo'shish",
+    "noIngredients": "Ushbu retseptga hali ingredientlar qo'shilmagan",
+    "noIngredientsDesc": "Yuqoridagi tugma yordamida ingredientlar qo'shishni boshlang",
+    "confirmDelete": "Ushbu ingredientni retseptdan olib tashlashni xohlaysizmi?",
+    "selectProductPrompt": "Ro'yxatdan mahsulotni tanlang",
+    "selectProductDesc": "Retsept ingredientlarini ko'rish va boshqarish uchun mahsulotni tanlang",
+    "optional": "Ixtiyoriy",
+    "required": "Majburiy",
+    "stats": {
+      "total": "Jami ingredientlar",
+      "required": "Majburiy",
+      "optional": "Ixtiyoriy"
+    },
+    "fields": {
+      "ingredient": "Ingredient",
+      "quantity": "Kerakli miqdor",
+      "unit": "Birlik",
+      "type": "Turi",
+      "notes": "Izohlar",
+      "optional": "Ixtiyoriy ingredient"
+    },
+    "placeholders": {
+      "selectIngredient": "Ingredientni tanlang",
+      "unit": "masalan, kg, dona",
+      "notes": "Maxsus izohlar yoki ko'rsatmalar"
+    },
+    "errors": {
+      "saveFailed": "Retsept ingredientini saqlab bo'lmadi. Qayta urinib ko'ring.",
+      "deleteFailed": "Ingredientni retseptdan olib tashlab bo'lmadi. Qayta urinib ko'ring."
+    }
+  },
   "finance": {
     "title": "Moliya",
     "subtitle": "Moliyaviy operatsiyalarni boshqarish",
