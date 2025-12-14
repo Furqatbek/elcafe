@@ -17,7 +17,7 @@ import org.springframework.transaction.event.TransactionPhase;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class OrderEventListener {
+public class LoyaltyOrderEventListener {
 
     private final LoyaltyService loyaltyService;
 
