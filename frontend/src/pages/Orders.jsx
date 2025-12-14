@@ -210,7 +210,7 @@ export default function Orders() {
       loadOrders();
     } catch (error) {
       console.error('Failed to create order:', error);
-      alert('Failed to create order: ' + (error.response?.data?.message || error.message));
+      alert(t('orders.messages.createOrderError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 

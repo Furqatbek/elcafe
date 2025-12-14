@@ -148,7 +148,8 @@
       "actualTime": "Фактическое время доставки"
     },
     "messages": {
-      "addAtLeastOneItem": "Пожалуйста, добавьте хотя бы одну позицию в заказ"
+      "addAtLeastOneItem": "Пожалуйста, добавьте хотя бы одну позицию в заказ",
+      "createOrderError": "Не удалось создать заказ"
     }
   },
   "restaurants": {
@@ -213,9 +214,26 @@
     "addAddOn": "Добавить дополнение",
     "variantName": "Название варианта",
     "addOnName": "Название дополнения",
+    "filteredResults": "Отфильтрованные результаты",
+    "categoryImage": "Изображение категории",
+    "productImage": "Изображение продукта",
+    "orEnterImageUrl": "Или введите URL изображения:",
+    "createCategoryDescription": "Заполните данные для создания новой категории",
+    "updateCategoryDescription": "Обновите данные категории",
+    "createProductDescription": "Заполните данные для создания нового продукта",
+    "updateProductDescription": "Обновите данные продукта",
     "status": {
       "DRAFT": "Черновик",
       "LIVE": "Опубликован"
+    },
+    "messages": {
+      "createCategoryError": "Не удалось создать категорию",
+      "updateCategoryError": "Не удалось обновить категорию",
+      "confirmDeleteCategory": "Вы уверены, что хотите удалить эту категорию?",
+      "deleteCategoryError": "Не удалось удалить категорию",
+      "createProductError": "Не удалось создать продукт",
+      "updateProductError": "Не удалось обновить продукт",
+      "deleteProductError": "Не удалось удалить продукт"
     }
   },
   "customers": {

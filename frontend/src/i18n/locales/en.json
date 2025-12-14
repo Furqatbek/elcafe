@@ -360,7 +360,8 @@
       "actualTime": "Actual Delivery Time"
     },
     "messages": {
-      "addAtLeastOneItem": "Please add at least one item to the order"
+      "addAtLeastOneItem": "Please add at least one item to the order",
+      "createOrderError": "Failed to create order"
     }
   },
   "restaurants": {
@@ -425,9 +426,26 @@
     "addAddOn": "Add Add-on",
     "variantName": "Variant Name",
     "addOnName": "Add-on Name",
+    "filteredResults": "Filtered Results",
+    "categoryImage": "Category Image",
+    "productImage": "Product Image",
+    "orEnterImageUrl": "Or enter image URL instead:",
+    "createCategoryDescription": "Fill in the details to create a new category",
+    "updateCategoryDescription": "Update the category details",
+    "createProductDescription": "Fill in the details to create a new product",
+    "updateProductDescription": "Update the product details",
     "status": {
       "DRAFT": "Draft",
       "LIVE": "Live"
+    },
+    "messages": {
+      "createCategoryError": "Failed to create category",
+      "updateCategoryError": "Failed to update category",
+      "confirmDeleteCategory": "Are you sure you want to delete this category?",
+      "deleteCategoryError": "Failed to delete category",
+      "createProductError": "Failed to create product",
+      "updateProductError": "Failed to update product",
+      "deleteProductError": "Failed to delete product"
     }
   },
   "menuCollections": {

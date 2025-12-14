@@ -148,7 +148,8 @@
       "actualTime": "Haqiqiy yetkazib berish vaqti"
     },
     "messages": {
-      "addAtLeastOneItem": "Buyurtmaga kamida bitta mahsulot qo'shing"
+      "addAtLeastOneItem": "Buyurtmaga kamida bitta mahsulot qo'shing",
+      "createOrderError": "Buyurtma yaratib bo'lmadi"
     }
   },
   "restaurants": {
@@ -213,9 +214,26 @@
     "addAddOn": "Qo'shimcha qo'shish",
     "variantName": "Variant nomi",
     "addOnName": "Qo'shimcha nomi",
+    "filteredResults": "Filtrlangan natijalar",
+    "categoryImage": "Kategoriya rasmi",
+    "productImage": "Mahsulot rasmi",
+    "orEnterImageUrl": "Yoki rasm URL manzilini kiriting:",
+    "createCategoryDescription": "Yangi kategoriya yaratish uchun ma'lumotlarni to'ldiring",
+    "updateCategoryDescription": "Kategoriya ma'lumotlarini yangilash",
+    "createProductDescription": "Yangi mahsulot yaratish uchun ma'lumotlarni to'ldiring",
+    "updateProductDescription": "Mahsulot ma'lumotlarini yangilash",
     "status": {
       "DRAFT": "Qoralama",
       "LIVE": "Nashr etilgan"
+    },
+    "messages": {
+      "createCategoryError": "Kategoriya yaratib bo'lmadi",
+      "updateCategoryError": "Kategoriyani yangilab bo'lmadi",
+      "confirmDeleteCategory": "Ushbu kategoriyani o'chirmoqchimisiz?",
+      "deleteCategoryError": "Kategoriyani o'chirib bo'lmadi",
+      "createProductError": "Mahsulot yaratib bo'lmadi",
+      "updateProductError": "Mahsulotni yangilab bo'lmadi",
+      "deleteProductError": "Mahsulotni o'chirib bo'lmadi"
     }
   },
   "customers": {
