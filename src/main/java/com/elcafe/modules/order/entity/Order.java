@@ -88,6 +88,10 @@ public class Order {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal discount;
 
+    @Column(name = "bonus_used", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal bonusUsed = BigDecimal.ZERO;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 

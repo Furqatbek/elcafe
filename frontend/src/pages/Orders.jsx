@@ -113,11 +113,21 @@ export default function Orders() {
 
   const loadTables = async (restaurantId) => {
     try {
+      console.log('Loading tables for restaurant ID:', restaurantId);
       const response = await tablesAPI.getAvailable(restaurantId);
+      console.log('Tables API response:', response);
+      console.log('Tables data:', response?.data);
+      console.log('Tables data.data:', response?.data?.data);
+
       const tablesData = response?.data?.data?.content || response?.data?.data || [];
+      console.log('Extracted tables data:', tablesData);
+      console.log('Is array?', Array.isArray(tablesData));
+
       setTables(Array.isArray(tablesData) ? tablesData : []);
     } catch (error) {
       console.error('Failed to load tables:', error);
+      console.error('Error response:', error.response);
+      console.error('Error message:', error.message);
       setTables([]);
     }
   };
