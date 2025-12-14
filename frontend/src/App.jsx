@@ -26,6 +26,7 @@ import InventoryAnalytics from './pages/InventoryAnalytics';
 import PurchaseOrders from './pages/PurchaseOrders';
 import Expenses from './pages/Expenses';
 import FinancialReports from './pages/FinancialReports';
+import EmployeeSchedule from './pages/EmployeeSchedule';
 import POSApp from './pos/POSApp';
 import KitchenTicketPage from './pos/KitchenTicketPage';
 
@@ -69,6 +70,7 @@ function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="operators" element={<Operators />} />
+          <Route path="employees/schedule" element={<EmployeeSchedule />} />
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
