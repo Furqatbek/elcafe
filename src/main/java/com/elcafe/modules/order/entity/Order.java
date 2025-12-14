@@ -3,6 +3,7 @@ package com.elcafe.modules.order.entity;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,6 +41,10 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "table_id")
+    private RestaurantTable table;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
