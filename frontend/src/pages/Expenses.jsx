@@ -98,19 +98,19 @@ const Expenses = () => {
   const handleSave = async () => {
     try {
       if (!formData.description || !formData.amount) {
-        alert('Please fill in all required fields');
+        alert(t('finance.common.fillRequiredFields'));
         return;
       }
 
       setLoading(true);
       await financialAPI.createExpense(formData);
-      alert('Expense created successfully!');
+      alert(t('finance.expenses.messages.createSuccess'));
       setShowModal(false);
       resetForm();
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to create expense:', error);
-      alert('Failed to create expense: ' + (error.response?.data?.message || error.message));
+      alert(t('finance.expenses.messages.createError') + ': ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -119,11 +119,11 @@ const Expenses = () => {
   const handleApprove = async (id) => {
     try {
       await financialAPI.approveExpense(id, user?.username);
-      alert('Expense approved successfully!');
+      alert(t('finance.expenses.messages.approveSuccess'));
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to approve expense:', error);
-      alert('Failed to approve expense');
+      alert(t('finance.expenses.messages.approveError'));
     }
   };
 
@@ -135,30 +135,30 @@ const Expenses = () => {
         new Date().toISOString().split('T')[0],
         user?.username
       );
-      alert('Payment recorded successfully!');
+      alert(t('finance.expenses.messages.paymentSuccess'));
       setShowPaymentModal(false);
       setSelectedExpense(null);
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to record payment:', error);
-      alert('Failed to record payment');
+      alert(t('finance.expenses.messages.paymentError'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this expense?')) {
+    if (!window.confirm(t('finance.expenses.messages.confirmDelete'))) {
       return;
     }
 
     try {
       await financialAPI.deleteExpense(id);
-      alert('Expense deleted successfully!');
+      alert(t('finance.expenses.messages.deleteSuccess'));
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to delete expense:', error);
-      alert('Failed to delete expense: ' + (error.response?.data?.message || 'Cannot delete paid expense'));
+      alert(t('finance.expenses.messages.deleteError') + ': ' + (error.response?.data?.message || t('finance.expenses.messages.cannotDeletePaid')));
     }
   };
 

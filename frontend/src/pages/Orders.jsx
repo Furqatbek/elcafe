@@ -173,7 +173,7 @@ export default function Orders() {
     e.preventDefault();
 
     if (formData.items.length === 0) {
-      alert('Please add at least one item to the order');
+      alert(t('orders.messages.addAtLeastOneItem'));
       return;
     }
 

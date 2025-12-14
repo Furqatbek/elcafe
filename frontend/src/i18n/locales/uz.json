@@ -146,6 +146,9 @@
       "instructions": "Yetkazib berish bo'yicha ko'rsatmalar",
       "estimatedTime": "Taxminiy yetkazib berish vaqti",
       "actualTime": "Haqiqiy yetkazib berish vaqti"
+    },
+    "messages": {
+      "addAtLeastOneItem": "Buyurtmaga kamida bitta mahsulot qo'shing"
     }
   },
   "restaurants": {
@@ -800,7 +803,19 @@
       "unpaidExpenses": "To'lanmagan xarajatlar",
       "totalItems": "Jami elementlar",
       "amountToPay": "To'lov summasi",
-      "paymentConfirmation": "Bu xarajat to'langan deb belgilanadi. To'lov bugungi sana bilan qayd qilinadi."
+      "paymentConfirmation": "Bu xarajat to'langan deb belgilanadi. To'lov bugungi sana bilan qayd qilinadi.",
+      "messages": {
+        "createSuccess": "Xarajat muvaffaqiyatli yaratildi!",
+        "createError": "Xarajatni yaratib bo'lmadi",
+        "approveSuccess": "Xarajat muvaffaqiyatli tasdiqlandi!",
+        "approveError": "Xarajatni tasdiqlab bo'lmadi",
+        "paymentSuccess": "To'lov muvaffaqiyatli qayd qilindi!",
+        "paymentError": "To'lovni qayd qilib bo'lmadi",
+        "confirmDelete": "Ushbu xarajatni o'chirmoqchimisiz?",
+        "deleteSuccess": "Xarajat muvaffaqiyatli o'chirildi!",
+        "deleteError": "Xarajatni o'chirib bo'lmadi",
+        "cannotDeletePaid": "To'langan xarajatni o'chirib bo'lmaydi"
+      }
     },
     "reports": {
       "title": "Moliyaviy hisobotlar",
