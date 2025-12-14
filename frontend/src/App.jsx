@@ -27,6 +27,7 @@ import PurchaseOrders from './pages/PurchaseOrders';
 import Expenses from './pages/Expenses';
 import FinancialReports from './pages/FinancialReports';
 import EmployeeSchedule from './pages/EmployeeSchedule';
+import Tables from './pages/Tables';
 import POSApp from './pos/POSApp';
 import KitchenTicketPage from './pos/KitchenTicketPage';
 
@@ -62,6 +63,7 @@ function App() {
           <Route path="dashboard/inventory-analytics" element={<InventoryAnalytics />} />
           <Route path="orders" element={<Orders />} />
           <Route path="restaurants" element={<Restaurants />} />
+          <Route path="restaurants/tables" element={<Tables />} />
           <Route path="products" element={<Products />} />
           <Route path="products/:productId/linked-items" element={<LinkedItems />} />
           <Route path="menu" element={<Menu />} />

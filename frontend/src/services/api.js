@@ -332,4 +332,20 @@ export const workingHoursAPI = {
   deleteByUser: (userId) => api.delete(`/users/${userId}/working-hours`),
 };
 
+export const tablesAPI = {
+  // Get tables
+  getAll: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables`),
+  getById: (id) => api.get(`/tables/${id}`),
+  getAvailable: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/available`),
+  getBySection: (restaurantId, section) => api.get(`/restaurants/${restaurantId}/tables/section/${section}`),
+  getSections: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/sections`),
+  getStats: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/stats`),
+
+  // Create, update, delete
+  create: (data) => api.post('/tables', data),
+  update: (id, data) => api.put(`/tables/${id}`, data),
+  updateStatus: (id, status) => api.patch(`/tables/${id}/status`, { status }),
+  delete: (id) => api.delete(`/tables/${id}`),
+};
+
 export default api;
