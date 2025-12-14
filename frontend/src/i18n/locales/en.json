@@ -1268,6 +1268,51 @@
       "to": "to"
     }
   },
+  "schedule": {
+    "title": "Employee Schedule",
+    "subtitle": "Manage employee working hours and shifts",
+    "newSchedule": "New Schedule",
+    "createSchedule": "Create Schedule",
+    "editSchedule": "Edit Schedule",
+    "deleteSchedule": "Delete Schedule",
+    "scheduleList": "Schedule List",
+    "scheduleDescription": "View and manage employee working hours",
+    "employee": "Employee",
+    "day": "Day",
+    "shift": "Shift",
+    "startTime": "Start Time",
+    "endTime": "End Time",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional notes about this shift",
+    "active": "Active",
+    "allEmployees": "All Employees",
+    "allDays": "All Days",
+    "selectEmployee": "Select an employee",
+    "searchPlaceholder": "Search by employee name or notes...",
+    "createDescription": "Create a new working hours schedule for an employee",
+    "updateDescription": "Update the working hours schedule",
+    "confirmDelete": "Are you sure you want to delete this schedule?",
+    "noSchedules": "No schedules found",
+    "days": {
+      "MONDAY": "Monday",
+      "TUESDAY": "Tuesday",
+      "WEDNESDAY": "Wednesday",
+      "THURSDAY": "Thursday",
+      "FRIDAY": "Friday",
+      "SATURDAY": "Saturday",
+      "SUNDAY": "Sunday"
+    },
+    "stats": {
+      "totalSchedules": "Total Schedules",
+      "activeEmployees": "Active Employees",
+      "filteredResults": "Filtered Results"
+    },
+    "messages": {
+      "createError": "Failed to create schedule",
+      "updateError": "Failed to update schedule",
+      "deleteError": "Failed to delete schedule"
+    }
+  },
   "messages": {
     "loginSuccess": "Login successful",
     "loginError": "Login failed. Please check your credentials",

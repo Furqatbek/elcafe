@@ -316,4 +316,20 @@ export const financialAPI = {
   getCogsReport: (restaurantId, startDate, endDate) => api.get('/financial/reports/cogs', { params: { restaurantId, startDate, endDate } }),
 };
 
+export const workingHoursAPI = {
+  // Get working hours
+  getByRestaurant: (restaurantId) => api.get(`/restaurants/${restaurantId}/working-hours`),
+  getByUser: (userId) => api.get(`/users/${userId}/working-hours`),
+  getByRestaurantAndUser: (restaurantId, userId) => api.get(`/restaurants/${restaurantId}/users/${userId}/working-hours`),
+  getByDay: (restaurantId, dayOfWeek) => api.get(`/restaurants/${restaurantId}/working-hours/day/${dayOfWeek}`),
+  getById: (id) => api.get(`/working-hours/${id}`),
+
+  // Create, update, delete
+  create: (data) => api.post('/working-hours', data),
+  update: (id, data) => api.put(`/working-hours/${id}`, data),
+  delete: (id) => api.delete(`/working-hours/${id}`),
+  deleteByRestaurant: (restaurantId) => api.delete(`/restaurants/${restaurantId}/working-hours`),
+  deleteByUser: (userId) => api.delete(`/users/${userId}/working-hours`),
+};
+
 export default api;

@@ -986,6 +986,51 @@
       "to": "ga"
     }
   },
+  "schedule": {
+    "title": "Xodimlar jadvali",
+    "subtitle": "Xodimlarning ish vaqti va smenalarini boshqarish",
+    "newSchedule": "Yangi jadval",
+    "createSchedule": "Jadval yaratish",
+    "editSchedule": "Jadvalni tahrirlash",
+    "deleteSchedule": "Jadvalni o'chirish",
+    "scheduleList": "Jadvallar ro'yxati",
+    "scheduleDescription": "Xodimlarning ish vaqtini ko'rish va boshqarish",
+    "employee": "Xodim",
+    "day": "Kun",
+    "shift": "Smena",
+    "startTime": "Boshlanish vaqti",
+    "endTime": "Tugash vaqti",
+    "notes": "Izohlar",
+    "notesPlaceholder": "Ushbu smena haqida qo'shimcha izohlar",
+    "active": "Faol",
+    "allEmployees": "Barcha xodimlar",
+    "allDays": "Barcha kunlar",
+    "selectEmployee": "Xodimni tanlang",
+    "searchPlaceholder": "Xodim nomi yoki izohlar bo'yicha qidirish...",
+    "createDescription": "Xodim uchun yangi ish vaqti jadvali yaratish",
+    "updateDescription": "Ish vaqti jadvalini yangilash",
+    "confirmDelete": "Ushbu jadvalni o'chirishni xohlaysizmi?",
+    "noSchedules": "Jadvallar topilmadi",
+    "days": {
+      "MONDAY": "Dushanba",
+      "TUESDAY": "Seshanba",
+      "WEDNESDAY": "Chorshanba",
+      "THURSDAY": "Payshanba",
+      "FRIDAY": "Juma",
+      "SATURDAY": "Shanba",
+      "SUNDAY": "Yakshanba"
+    },
+    "stats": {
+      "totalSchedules": "Jami jadvallar",
+      "activeEmployees": "Faol xodimlar",
+      "filteredResults": "Filtrlangan natijalar"
+    },
+    "messages": {
+      "createError": "Jadvalni yaratib bo'lmadi",
+      "updateError": "Jadvalni yangilab bo'lmadi",
+      "deleteError": "Jadvalni o'chirib bo'lmadi"
+    }
+  },
   "messages": {
     "loginSuccess": "Kirish muvaffaqiyatli",
     "loginError": "Kirish xatoligi. Ma'lumotlaringizni tekshiring",
