@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { orderAPI, restaurantAPI, menuAPI } from '../services/api';
+import { orderAPI, restaurantAPI, menuAPI, tablesAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -26,7 +26,10 @@ import {
   Plus,
   Search,
   Filter,
-  X
+  X,
+  Truck,
+  ShoppingBag,
+  Utensils
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -47,6 +50,7 @@ export default function Orders() {
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [products, setProducts] = useState([]);
+  const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
@@ -60,6 +64,8 @@ export default function Orders() {
   // Create order form
   const [formData, setFormData] = useState({
     restaurantId: '',
+    orderType: 'DELIVERY', // DELIVERY, TAKEAWAY, DINE_IN
+    diningTableId: '',
     customerFirstName: '',
     customerLastName: '',
     customerPhone: '',
@@ -102,6 +108,17 @@ export default function Orders() {
       setProducts(productsData);
     } catch (error) {
       console.error('Failed to load products:', error);
+    }
+  };
+
+  const loadTables = async (restaurantId) => {
+    try {
+      const response = await tablesAPI.getAvailable(restaurantId);
+      const tablesData = response?.data?.data?.content || response?.data?.data || [];
+      setTables(Array.isArray(tablesData) ? tablesData : []);
+    } catch (error) {
+      console.error('Failed to load tables:', error);
+      setTables([]);
     }
   };
 
@@ -181,6 +198,10 @@ export default function Orders() {
       const orderData = {
         restaurantId: parseInt(formData.restaurantId),
         orderSource: 'ADMIN_PANEL',
+        orderType: formData.orderType,
+        diningTableId: formData.orderType === 'DINE_IN' && formData.diningTableId
+          ? parseInt(formData.diningTableId)
+          : null,
         customerInfo: {
           firstName: formData.customerFirstName,
           lastName: formData.customerLastName,
@@ -192,13 +213,13 @@ export default function Orders() {
           quantity: item.quantity,
           specialInstructions: item.specialInstructions || null
         })),
-        deliveryInfo: {
+        deliveryInfo: formData.orderType === 'DELIVERY' ? {
           address: formData.deliveryAddress,
           city: formData.deliveryCity,
           state: formData.deliveryState || null,
           zipCode: formData.deliveryZipCode || null,
           deliveryInstructions: null
-        },
+        } : null,
         customerNotes: formData.customerNotes,
         paymentMethod: formData.paymentMethod,
         scheduledFor: null
@@ -247,6 +268,8 @@ export default function Orders() {
   const resetForm = () => {
     setFormData({
       restaurantId: '',
+      orderType: 'DELIVERY',
+      diningTableId: '',
       customerFirstName: '',
       customerLastName: '',
       customerPhone: '',
@@ -261,6 +284,7 @@ export default function Orders() {
     });
     setSelectedProduct('');
     setSelectedQuantity(1);
+    setTables([]);
   };
 
   const calculateTotal = () => {
@@ -505,8 +529,11 @@ export default function Orders() {
                 <Select
                   value={formData.restaurantId}
                   onValueChange={(value) => {
-                    setFormData({ ...formData, restaurantId: value });
+                    setFormData({ ...formData, restaurantId: value, diningTableId: '' });
                     loadProducts(parseInt(value));
+                    if (formData.orderType === 'DINE_IN') {
+                      loadTables(parseInt(value));
+                    }
                   }}
                   required
                 >
@@ -522,6 +549,88 @@ export default function Orders() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Order Type Selection */}
+              <div className="space-y-2">
+                <Label>Order Type *</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, orderType: 'DELIVERY', diningTableId: '' });
+                    }}
+                    className={`flex flex-col items-center justify-center p-4 border-2 rounded-lg transition-all ${
+                      formData.orderType === 'DELIVERY'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Truck className="h-6 w-6 mb-2" />
+                    <span className="font-medium">Delivery</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, orderType: 'TAKEAWAY', diningTableId: '' });
+                    }}
+                    className={`flex flex-col items-center justify-center p-4 border-2 rounded-lg transition-all ${
+                      formData.orderType === 'TAKEAWAY'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <ShoppingBag className="h-6 w-6 mb-2" />
+                    <span className="font-medium">Takeaway</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData({ ...formData, orderType: 'DINE_IN', diningTableId: '' });
+                      if (formData.restaurantId) {
+                        loadTables(parseInt(formData.restaurantId));
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center p-4 border-2 rounded-lg transition-all ${
+                      formData.orderType === 'DINE_IN'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Utensils className="h-6 w-6 mb-2" />
+                    <span className="font-medium">Dine-In</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Table Selection for Dine-In Orders */}
+              {formData.orderType === 'DINE_IN' && (
+                <div className="space-y-2">
+                  <Label htmlFor="diningTableId">Select Table *</Label>
+                  <Select
+                    value={formData.diningTableId}
+                    onValueChange={(value) => setFormData({ ...formData, diningTableId: value })}
+                    required={formData.orderType === 'DINE_IN'}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a table" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tables.length === 0 ? (
+                        <SelectItem value="no-tables" disabled>
+                          No available tables
+                        </SelectItem>
+                      ) : (
+                        tables.map((table) => (
+                          <SelectItem key={table.id} value={table.id.toString()}>
+                            Table {table.tableNumber} {table.tableName ? `- ${table.tableName}` : ''}
+                            (Capacity: {table.capacity})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -568,45 +677,50 @@ export default function Orders() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="deliveryAddress">Delivery Address *</Label>
-                <Input
-                  id="deliveryAddress"
-                  value={formData.deliveryAddress}
-                  onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-                  required
-                />
-              </div>
+              {/* Delivery Address Fields - Only for Delivery Orders */}
+              {formData.orderType === 'DELIVERY' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="deliveryAddress">Delivery Address *</Label>
+                    <Input
+                      id="deliveryAddress"
+                      value={formData.deliveryAddress}
+                      onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+                      required
+                    />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryCity">City *</Label>
-                  <Input
-                    id="deliveryCity"
-                    value={formData.deliveryCity}
-                    onChange={(e) => setFormData({ ...formData, deliveryCity: e.target.value })}
-                    required
-                  />
-                </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="deliveryCity">City *</Label>
+                      <Input
+                        id="deliveryCity"
+                        value={formData.deliveryCity}
+                        onChange={(e) => setFormData({ ...formData, deliveryCity: e.target.value })}
+                        required
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryState">State</Label>
-                  <Input
-                    id="deliveryState"
-                    value={formData.deliveryState}
-                    onChange={(e) => setFormData({ ...formData, deliveryState: e.target.value })}
-                  />
-                </div>
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="deliveryState">State</Label>
+                      <Input
+                        id="deliveryState"
+                        value={formData.deliveryState}
+                        onChange={(e) => setFormData({ ...formData, deliveryState: e.target.value })}
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="deliveryZipCode">ZIP Code</Label>
-                <Input
-                  id="deliveryZipCode"
-                  value={formData.deliveryZipCode}
-                  onChange={(e) => setFormData({ ...formData, deliveryZipCode: e.target.value })}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="deliveryZipCode">ZIP Code</Label>
+                    <Input
+                      id="deliveryZipCode"
+                      value={formData.deliveryZipCode}
+                      onChange={(e) => setFormData({ ...formData, deliveryZipCode: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="paymentMethod">Payment Method *</Label>
