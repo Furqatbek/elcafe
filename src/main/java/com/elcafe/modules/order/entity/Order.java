@@ -1,17 +1,14 @@
 package com.elcafe.modules.order.entity;
 
 import com.elcafe.modules.customer.entity.Customer;
-import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
-import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.BatchSize;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -28,7 +25,6 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Order {
 
     @Id
@@ -48,33 +44,12 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id")
-    private com.elcafe.modules.waiter.entity.Table table;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "waiter_id")
-    private com.elcafe.modules.waiter.entity.Waiter waiter;
+    private RestaurantTable table;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private OrderStatus status = OrderStatus.NEW;
-
-    @Column(length = 50)
-    private String orderType; // DELIVERY, PICKUP, DINE_IN
-
-    @Enumerated(EnumType.STRING)
-    private OrderSource orderSource; // WEB, MOBILE, PHONE, etc.
-
-    @Column(length = 50)
-    private String paymentMethod; // CASH, CARD, ONLINE
-
-    @Enumerated(EnumType.STRING)
-    private PaymentStatus paymentStatus;
-
-    @Column(length = 200)
-    private String paymentIntentId;
-
-    private LocalDateTime placedAt;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal;
@@ -99,28 +74,7 @@ public class Order {
 
     private LocalDateTime scheduledFor;
 
-    private LocalDateTime acceptedAt;
-
-    private LocalDateTime rejectedAt;
-
-    private LocalDateTime preparingAt;
-
-    private LocalDateTime readyAt;
-
-    private LocalDateTime pickedUpAt;
-
-    private LocalDateTime completedAt;
-
-    private LocalDateTime cancelledAt;
-
-    @Column(length = 1000)
-    private String cancellationReason;
-
-    @Column(length = 100)
-    private String cancelledBy;
-
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    @BatchSize(size = 10)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();
 
@@ -131,7 +85,6 @@ public class Order {
     private Payment payment;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    @BatchSize(size = 10)
     @Builder.Default
     private List<OrderStatusHistory> statusHistory = new ArrayList<>();
 
