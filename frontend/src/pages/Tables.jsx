@@ -53,6 +53,7 @@ const Tables = () => {
       setRestaurants(response.data.data || []);
     } catch (error) {
       console.error('Failed to load restaurants:', error);
+      setRestaurants([]);
     }
   };
 
@@ -63,6 +64,7 @@ const Tables = () => {
       setTables(response.data.data || []);
     } catch (error) {
       console.error('Failed to load tables:', error);
+      setTables([]);
     } finally {
       setLoading(false);
     }
@@ -74,6 +76,7 @@ const Tables = () => {
       setStats(response.data.data || { totalTables: 0, availableTables: 0, occupiedTables: 0, reservedTables: 0 });
     } catch (error) {
       console.error('Failed to load stats:', error);
+      setStats({ totalTables: 0, availableTables: 0, occupiedTables: 0, reservedTables: 0 });
     }
   };
 
@@ -170,13 +173,13 @@ const Tables = () => {
     </span>;
   };
 
-  const filteredTables = tables.filter(table => {
+  const filteredTables = Array.isArray(tables) ? tables.filter(table => {
     const matchesSearch = table.tableNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       table.tableName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       table.section?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || table.status === filterStatus;
     return matchesSearch && matchesStatus;
-  });
+  }) : [];
 
   return (
     <div className="p-6">
