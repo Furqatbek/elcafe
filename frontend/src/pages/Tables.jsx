@@ -52,8 +52,11 @@ const Tables = () => {
       const response = await restaurantAPI.getAll();
       console.log('Restaurants response:', response);
       console.log('Restaurants data:', response.data);
-      console.log('Restaurants array:', response.data.data);
-      const restaurantsData = response?.data?.data;
+
+      // Handle paginated response - restaurants are in content array
+      const restaurantsData = response?.data?.data?.content || response?.data?.data;
+      console.log('Restaurants array:', restaurantsData);
+
       setRestaurants(Array.isArray(restaurantsData) ? restaurantsData : []);
     } catch (error) {
       console.error('Failed to load restaurants:', error);
@@ -67,8 +70,11 @@ const Tables = () => {
       const response = await tablesAPI.getAll(selectedRestaurant);
       console.log('Tables response:', response);
       console.log('Tables data:', response.data);
-      console.log('Tables array:', response.data.data);
-      const tablesData = response?.data?.data;
+
+      // Handle both paginated and non-paginated responses
+      const tablesData = response?.data?.data?.content || response?.data?.data;
+      console.log('Tables array:', tablesData);
+
       setTables(Array.isArray(tablesData) ? tablesData : []);
     } catch (error) {
       console.error('Failed to load tables:', error);
