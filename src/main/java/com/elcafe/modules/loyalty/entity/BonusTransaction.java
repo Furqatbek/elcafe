@@ -1,14 +1,13 @@
 package com.elcafe.modules.loyalty.entity;
 
+import com.elcafe.modules.loyalty.converter.JsonMapConverter;
 import com.elcafe.modules.order.entity.Order;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.Type;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -55,7 +54,7 @@ public class BonusTransaction {
     @Column(name = "idempotency_key", unique = true)
     private String idempotencyKey;
 
-    @Type(JsonBinaryType.class)
+    @Convert(converter = JsonMapConverter.class)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> metadata;
 
