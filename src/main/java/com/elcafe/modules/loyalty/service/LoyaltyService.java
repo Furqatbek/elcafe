@@ -88,13 +88,13 @@ public class LoyaltyService {
 
         // Check minimum order amount
         if (config.getMinOrderAmountForBonus() != null &&
-            order.getTotalAmount().compareTo(config.getMinOrderAmountForBonus()) < 0) {
-            log.debug("Order amount {} below minimum {}", order.getTotalAmount(), config.getMinOrderAmountForBonus());
+            order.getTotal().compareTo(config.getMinOrderAmountForBonus()) < 0) {
+            log.debug("Order amount {} below minimum {}", order.getTotal(), config.getMinOrderAmountForBonus());
             return;
         }
 
         // Calculate base bonus
-        BigDecimal baseBonus = calculateBaseBonus(order.getTotalAmount(), config);
+        BigDecimal baseBonus = calculateBaseBonus(order.getTotal(), config);
 
         // Apply tier multiplier
         BigDecimal tierMultiplier = tierService.getTierMultiplier(loyalty);
@@ -107,7 +107,7 @@ public class LoyaltyService {
         String idempotencyKey = "order-bonus-" + order.getId();
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("orderId", order.getId());
-        metadata.put("orderAmount", order.getTotalAmount());
+        metadata.put("orderAmount", order.getTotal());
         metadata.put("baseBonus", baseBonus);
         metadata.put("tierMultiplier", tierMultiplier);
         metadata.put("restaurantId", order.getRestaurant().getId());
@@ -123,7 +123,7 @@ public class LoyaltyService {
         );
 
         // Update customer stats
-        loyalty.setTotalSpent(loyalty.getTotalSpent().add(order.getTotalAmount()));
+        loyalty.setTotalSpent(loyalty.getTotalSpent().add(order.getTotal()));
         loyalty.setOrderCount(loyalty.getOrderCount() + 1);
         loyalty.setLastOrderDate(LocalDateTime.now());
 
@@ -220,7 +220,7 @@ public class LoyaltyService {
         for (BonusTransaction transaction : orderTransactions) {
             if (transaction.getTransactionType() == BonusTransaction.TransactionType.EARNED) {
                 // Deduct previously earned bonuses
-                BigDecimal amountToDeduct = calculateProportionalBonus(transaction.getAmount(), refundAmount, order.getTotalAmount());
+                BigDecimal amountToDeduct = calculateProportionalBonus(transaction.getAmount(), refundAmount, order.getTotal());
 
                 String idempotencyKey = "refund-deduct-" + order.getId() + "-" + transaction.getId();
                 bonusService.recordTransaction(
@@ -235,7 +235,7 @@ public class LoyaltyService {
 
             } else if (transaction.getTransactionType() == BonusTransaction.TransactionType.SPENT) {
                 // Refund previously spent bonuses
-                BigDecimal amountToRefund = calculateProportionalBonus(transaction.getAmount(), refundAmount, order.getTotalAmount());
+                BigDecimal amountToRefund = calculateProportionalBonus(transaction.getAmount(), refundAmount, order.getTotal());
 
                 String idempotencyKey = "refund-return-" + order.getId() + "-" + transaction.getId();
                 bonusService.recordTransaction(
@@ -381,7 +381,7 @@ public class LoyaltyService {
         BigDecimal finalBonus = baseBonus;
 
         for (LoyaltyPromotion promotion : promotions) {
-            if (!promotion.isCurrentlyActive() || !promotion.isOrderQualified(order.getTotalAmount())) {
+            if (!promotion.isCurrentlyActive() || !promotion.isOrderQualified(order.getTotal())) {
                 continue;
             }
 
