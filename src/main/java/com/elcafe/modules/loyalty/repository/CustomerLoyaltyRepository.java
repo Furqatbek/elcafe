@@ -19,15 +19,17 @@ public interface CustomerLoyaltyRepository extends JpaRepository<CustomerLoyalty
            "cl.lastOrderDate IS NOT NULL AND cl.lastOrderDate < :thresholdDate")
     List<CustomerLoyalty> findInactiveCustomers(@Param("thresholdDate") LocalDateTime thresholdDate);
 
-    @Query("SELECT cl FROM CustomerLoyalty cl WHERE " +
-           "EXTRACT(MONTH FROM cl.customer.birthdate) = :month AND " +
-           "EXTRACT(DAY FROM cl.customer.birthdate) = :day AND " +
-           "(cl.birthdayBonusClaimedYear IS NULL OR cl.birthdayBonusClaimedYear < :currentYear)")
-    List<CustomerLoyalty> findCustomersWithBirthdayToday(
-        @Param("month") int month,
-        @Param("day") int day,
-        @Param("currentYear") int currentYear
-    );
+    // Note: Disabled until Customer entity has birthdate field
+    // Birthday bonuses can be granted manually via API endpoint
+    // @Query("SELECT cl FROM CustomerLoyalty cl WHERE " +
+    //        "EXTRACT(MONTH FROM cl.customer.birthdate) = :month AND " +
+    //        "EXTRACT(DAY FROM cl.customer.birthdate) = :day AND " +
+    //        "(cl.birthdayBonusClaimedYear IS NULL OR cl.birthdayBonusClaimedYear < :currentYear)")
+    // List<CustomerLoyalty> findCustomersWithBirthdayToday(
+    //     @Param("month") int month,
+    //     @Param("day") int day,
+    //     @Param("currentYear") int currentYear
+    // );
 
     @Query("SELECT COUNT(cl) FROM CustomerLoyalty cl WHERE cl.tier.id = :tierId")
     Long countByTierId(@Param("tierId") Long tierId);
