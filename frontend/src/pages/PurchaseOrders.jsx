@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { financialAPI, inventoryAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Check, X, DollarSign, Package } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const PurchaseOrders = () => {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [ingredients, setIngredients] = useState([]);
@@ -87,7 +89,7 @@ const PurchaseOrders = () => {
 
   const handleAddItem = () => {
     if (!itemForm.itemName || !itemForm.quantity || !itemForm.unitPrice) {
-      alert('Please fill in all required fields');
+      alert(t('finance.common.fillRequiredFields'));
       return;
     }
 
@@ -126,19 +128,19 @@ const PurchaseOrders = () => {
   const handleSave = async () => {
     try {
       if (!formData.supplierName || formData.items.length === 0) {
-        alert('Please fill in supplier name and add at least one item');
+        alert(t('finance.purchaseOrders.messages.fillSupplierAndItems'));
         return;
       }
 
       setLoading(true);
       await financialAPI.createPurchaseOrder(formData);
-      alert('Purchase order created successfully!');
+      alert(t('finance.purchaseOrders.messages.createSuccess'));
       setShowModal(false);
       resetForm();
       loadPurchaseOrders(selectedRestaurant);
     } catch (error) {
       console.error('Failed to create purchase order:', error);
-      alert('Failed to create purchase order: ' + (error.response?.data?.message || error.message));
+      alert(t('finance.purchaseOrders.messages.createError') + ': ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
@@ -147,11 +149,11 @@ const PurchaseOrders = () => {
   const handleApprove = async (id) => {
     try {
       await financialAPI.approvePurchaseOrder(id, user?.username);
-      alert('Purchase order approved successfully!');
+      alert(t('finance.purchaseOrders.messages.approveSuccess'));
       loadPurchaseOrders(selectedRestaurant);
     } catch (error) {
       console.error('Failed to approve purchase order:', error);
-      alert('Failed to approve purchase order');
+      alert(t('finance.purchaseOrders.messages.approveError'));
     }
   };
 
@@ -164,13 +166,13 @@ const PurchaseOrders = () => {
       };
 
       await financialAPI.receivePurchaseOrder(selectedPO.id, receiveData);
-      alert('Purchase order received successfully!');
+      alert(t('finance.purchaseOrders.messages.receiveSuccess'));
       setShowReceiveModal(false);
       setSelectedPO(null);
       loadPurchaseOrders(selectedRestaurant);
     } catch (error) {
       console.error('Failed to receive purchase order:', error);
-      alert('Failed to receive purchase order');
+      alert(t('finance.purchaseOrders.messages.receiveError'));
     } finally {
       setLoading(false);
     }
@@ -180,13 +182,13 @@ const PurchaseOrders = () => {
     try {
       setLoading(true);
       await financialAPI.recordPOPayment(selectedPO.id, paymentForm);
-      alert('Payment recorded successfully!');
+      alert(t('finance.purchaseOrders.messages.paymentSuccess'));
       setShowPaymentModal(false);
       setSelectedPO(null);
       loadPurchaseOrders(selectedRestaurant);
     } catch (error) {
       console.error('Failed to record payment:', error);
-      alert('Failed to record payment');
+      alert(t('finance.purchaseOrders.messages.paymentError'));
     } finally {
       setLoading(false);
     }
@@ -256,7 +258,7 @@ const PurchaseOrders = () => {
       CANCELLED: 'bg-red-100 text-red-800'
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
-      {status?.replace(/_/g, ' ')}
+      {t(`finance.purchaseOrders.statuses.${status}`)}
     </span>;
   };
 
@@ -267,7 +269,7 @@ const PurchaseOrders = () => {
       PAID: 'bg-green-100 text-green-800'
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
-      {status?.replace(/_/g, ' ')}
+      {t(`finance.purchaseOrders.paymentStatuses.${status}`)}
     </span>;
   };
 
@@ -292,13 +294,13 @@ const PurchaseOrders = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Purchase Orders</h1>
+        <h1 className="text-2xl font-bold">{t('finance.purchaseOrders.title')}</h1>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus size={20} />
-          Create PO
+          {t('finance.purchaseOrders.createPO')}
         </button>
       </div>
 
@@ -306,7 +308,7 @@ const PurchaseOrders = () => {
       <div className="mb-4 flex gap-4">
         <input
           type="text"
-          placeholder="Search by PO number or supplier..."
+          placeholder={t('finance.purchaseOrders.searchPlaceholder')}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -316,13 +318,13 @@ const PurchaseOrders = () => {
           onChange={(e) => setFilterStatus(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
-          <option value="all">All Status</option>
-          <option value="DRAFT">Draft</option>
-          <option value="PENDING_APPROVAL">Pending Approval</option>
-          <option value="APPROVED">Approved</option>
-          <option value="ORDERED">Ordered</option>
-          <option value="PARTIALLY_RECEIVED">Partially Received</option>
-          <option value="RECEIVED">Received</option>
+          <option value="all">{t('finance.common.allStatus')}</option>
+          <option value="DRAFT">{t('finance.purchaseOrders.statuses.DRAFT')}</option>
+          <option value="PENDING_APPROVAL">{t('finance.purchaseOrders.statuses.PENDING_APPROVAL')}</option>
+          <option value="APPROVED">{t('finance.purchaseOrders.statuses.APPROVED')}</option>
+          <option value="ORDERED">{t('finance.purchaseOrders.statuses.ORDERED')}</option>
+          <option value="PARTIALLY_RECEIVED">{t('finance.purchaseOrders.statuses.PARTIALLY_RECEIVED')}</option>
+          <option value="RECEIVED">{t('finance.purchaseOrders.statuses.RECEIVED')}</option>
         </select>
       </div>
 
@@ -331,23 +333,23 @@ const PurchaseOrders = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PO Number</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.purchaseOrders.poNumber')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.purchaseOrders.supplier')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.purchaseOrders.orderDate')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.totalAmount')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.status')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.payment')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.actions')}</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">Loading...</td>
+                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">{t('finance.common.loading')}</td>
               </tr>
             ) : filteredPOs.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">No purchase orders found</td>
+                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">{t('finance.purchaseOrders.noPurchaseOrders')}</td>
               </tr>
             ) : (
               filteredPOs.map((po) => (
@@ -400,11 +402,11 @@ const PurchaseOrders = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl my-8">
-            <h2 className="text-xl font-bold mb-4">Create Purchase Order</h2>
+            <h2 className="text-xl font-bold mb-4">{t('finance.purchaseOrders.createPO')}</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplierName')} *</label>
                 <input
                   type="text"
                   value={formData.supplierName}
@@ -413,7 +415,7 @@ const PurchaseOrders = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Contact</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplierContact')}</label>
                 <input
                   type="text"
                   value={formData.supplierContact}
@@ -422,7 +424,7 @@ const PurchaseOrders = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Order Date *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.orderDate')} *</label>
                 <input
                   type="date"
                   value={formData.orderDate}
@@ -431,7 +433,7 @@ const PurchaseOrders = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Expected Delivery</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.expectedDelivery')}</label>
                 <input
                   type="date"
                   value={formData.expectedDeliveryDate}
@@ -442,7 +444,7 @@ const PurchaseOrders = () => {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplierAddress')}</label>
               <textarea
                 value={formData.supplierAddress}
                 onChange={(e) => setFormData({ ...formData, supplierAddress: e.target.value })}
@@ -453,23 +455,23 @@ const PurchaseOrders = () => {
 
             {/* Items Section */}
             <div className="mb-4 border-t pt-4">
-              <h3 className="text-lg font-semibold mb-3">Items</h3>
+              <h3 className="text-lg font-semibold mb-3">{t('finance.purchaseOrders.items')}</h3>
 
               {/* Add Item Form */}
               <div className="bg-gray-50 p-4 rounded-lg mb-4">
                 <div className="grid grid-cols-4 gap-2 mb-2">
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.itemName')} *</label>
                     <input
                       type="text"
                       value={itemForm.itemName}
                       onChange={(e) => setItemForm({ ...itemForm, itemName: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="Item name"
+                      placeholder={t('finance.purchaseOrders.itemNamePlaceholder')}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.quantity')} *</label>
                     <input
                       type="number"
                       value={itemForm.quantity}
@@ -480,19 +482,19 @@ const PurchaseOrders = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.unit')}</label>
                     <input
                       type="text"
                       value={itemForm.unit}
                       onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="kg, pcs, etc"
+                      placeholder={t('finance.purchaseOrders.unitPlaceholder')}
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.unitPrice')} *</label>
                     <input
                       type="number"
                       value={itemForm.unitPrice}
@@ -503,7 +505,7 @@ const PurchaseOrders = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.sku')}</label>
                     <input
                       type="text"
                       value={itemForm.sku}
@@ -512,13 +514,13 @@ const PurchaseOrders = () => {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Link to Ingredient (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.linkToIngredient')}</label>
                     <select
                       value={itemForm.ingredientId}
                       onChange={(e) => setItemForm({ ...itemForm, ingredientId: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     >
-                      <option value="">None</option>
+                      <option value="">{t('finance.common.none')}</option>
                       {ingredients.map(ing => (
                         <option key={ing.id} value={ing.id}>{ing.name}</option>
                       ))}
@@ -529,7 +531,7 @@ const PurchaseOrders = () => {
                   onClick={handleAddItem}
                   className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  Add Item
+                  {t('finance.purchaseOrders.addItem')}
                 </button>
               </div>
 
@@ -539,11 +541,11 @@ const PurchaseOrders = () => {
                   <table className="min-w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Item</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Quantity</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Unit Price</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Total</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Actions</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('finance.common.item')}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('finance.common.quantity')}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('finance.common.unitPrice')}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('finance.common.total')}</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('finance.common.actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -573,7 +575,7 @@ const PurchaseOrders = () => {
             <div className="border-t pt-4 mb-4">
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tax Amount</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.taxAmount')}</label>
                   <input
                     type="number"
                     value={formData.taxAmount}
@@ -584,7 +586,7 @@ const PurchaseOrders = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Cost</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.shippingCost')}</label>
                   <input
                     type="number"
                     value={formData.shippingCost}
@@ -598,10 +600,10 @@ const PurchaseOrders = () => {
 
               <div className="text-right space-y-2">
                 <div className="text-lg">
-                  <span className="font-medium">Subtotal:</span> ${calculateSubtotal().toFixed(2)}
+                  <span className="font-medium">{t('finance.common.subtotal')}:</span> ${calculateSubtotal().toFixed(2)}
                 </div>
                 <div className="text-xl font-bold">
-                  <span>Total:</span> ${calculateTotal().toFixed(2)}
+                  <span>{t('finance.common.total')}:</span> ${calculateTotal().toFixed(2)}
                 </div>
               </div>
             </div>
@@ -611,14 +613,14 @@ const PurchaseOrders = () => {
                 onClick={() => { setShowModal(false); resetForm(); }}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                Cancel
+                {t('finance.common.cancel')}
               </button>
               <button
                 onClick={handleSave}
                 disabled={loading}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Create Purchase Order'}
+                {loading ? t('finance.common.saving') : t('finance.purchaseOrders.createPO')}
               </button>
             </div>
           </div>
@@ -629,11 +631,11 @@ const PurchaseOrders = () => {
       {showReceiveModal && selectedPO && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-3xl">
-            <h2 className="text-xl font-bold mb-4">Receive Purchase Order: {selectedPO.poNumber}</h2>
+            <h2 className="text-xl font-bold mb-4">{t('finance.purchaseOrders.receiveModalTitle')}: {selectedPO.poNumber}</h2>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Actual Delivery Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.actualDeliveryDate')}</label>
                 <input
                   type="date"
                   value={receiveForm.actualDeliveryDate}
@@ -642,7 +644,7 @@ const PurchaseOrders = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Received By</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.receivedBy')}</label>
                 <input
                   type="text"
                   value={receiveForm.receivedBy}
@@ -653,15 +655,15 @@ const PurchaseOrders = () => {
             </div>
 
             <div className="mb-4">
-              <h3 className="font-semibold mb-2">Items to Receive</h3>
+              <h3 className="font-semibold mb-2">{t('finance.purchaseOrders.itemsToReceive')}</h3>
               <div className="border rounded-lg overflow-hidden">
                 <table className="min-w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Item</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Ordered</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Already Received</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Receive Now</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('finance.common.item')}</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('finance.purchaseOrders.ordered')}</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('finance.purchaseOrders.alreadyReceived')}</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('finance.purchaseOrders.receiveNow')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -697,14 +699,14 @@ const PurchaseOrders = () => {
                 onClick={() => { setShowReceiveModal(false); setSelectedPO(null); }}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                Cancel
+                {t('finance.common.cancel')}
               </button>
               <button
                 onClick={handleReceive}
                 disabled={loading}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                {loading ? 'Recording...' : 'Record Receipt'}
+                {loading ? t('finance.common.recording') : t('finance.purchaseOrders.recordReceipt')}
               </button>
             </div>
           </div>
@@ -715,20 +717,20 @@ const PurchaseOrders = () => {
       {showPaymentModal && selectedPO && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">Record Payment: {selectedPO.poNumber}</h2>
+            <h2 className="text-xl font-bold mb-4">{t('finance.purchaseOrders.recordPayment')}: {selectedPO.poNumber}</h2>
 
             <div className="mb-4">
               <div className="bg-gray-50 p-3 rounded-lg mb-4">
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm text-gray-600">Total Amount:</span>
+                  <span className="text-sm text-gray-600">{t('finance.common.totalAmount')}:</span>
                   <span className="font-medium">${selectedPO.totalAmount?.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm text-gray-600">Already Paid:</span>
+                  <span className="text-sm text-gray-600">{t('finance.purchaseOrders.alreadyPaid')}:</span>
                   <span className="font-medium">${(selectedPO.paidAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
-                  <span className="text-sm font-semibold">Remaining:</span>
+                  <span className="text-sm font-semibold">{t('finance.common.remaining')}:</span>
                   <span className="font-bold text-red-600">
                     ${(selectedPO.totalAmount - (selectedPO.paidAmount || 0)).toFixed(2)}
                   </span>
@@ -737,7 +739,7 @@ const PurchaseOrders = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.paymentDate')}</label>
                   <input
                     type="date"
                     value={paymentForm.paymentDate}
@@ -746,7 +748,7 @@ const PurchaseOrders = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.amount')}</label>
                   <input
                     type="number"
                     value={paymentForm.amount}
@@ -758,30 +760,30 @@ const PurchaseOrders = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.paymentMethod')}</label>
                   <select
                     value={paymentForm.paymentMethod}
                     onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   >
-                    <option value="CASH">Cash</option>
-                    <option value="CARD">Card</option>
-                    <option value="BANK_TRANSFER">Bank Transfer</option>
-                    <option value="CHECK">Check</option>
+                    <option value="CASH">{t('finance.expenses.paymentMethods.CASH')}</option>
+                    <option value="CARD">{t('finance.expenses.paymentMethods.CARD')}</option>
+                    <option value="BANK_TRANSFER">{t('finance.expenses.paymentMethods.BANK_TRANSFER')}</option>
+                    <option value="CHECK">{t('finance.expenses.paymentMethods.CHECK')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Reference Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.referenceNumber')}</label>
                   <input
                     type="text"
                     value={paymentForm.referenceNumber}
                     onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    placeholder="Transaction ID, Check number, etc."
+                    placeholder={t('finance.purchaseOrders.referenceNumberPlaceholder')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.notes')}</label>
                   <textarea
                     value={paymentForm.notes}
                     onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
@@ -797,14 +799,14 @@ const PurchaseOrders = () => {
                 onClick={() => { setShowPaymentModal(false); setSelectedPO(null); }}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                Cancel
+                {t('finance.common.cancel')}
               </button>
               <button
                 onClick={handleRecordPayment}
                 disabled={loading}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
-                {loading ? 'Recording...' : 'Record Payment'}
+                {loading ? t('finance.common.recording') : t('finance.purchaseOrders.recordPayment')}
               </button>
             </div>
           </div>

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { financialAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3, Calendar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const FinancialReports = () => {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -59,7 +61,7 @@ const FinancialReports = () => {
   };
 
   const renderProfitLoss = () => {
-    if (!profitLossReport) return <div className="text-center py-8">No data available</div>;
+    if (!profitLossReport) return <div className="text-center py-8">{t('finance.common.noDataAvailable')}</div>;
 
     const netMargin = profitLossReport.totalRevenue > 0
       ? (profitLossReport.netIncome / profitLossReport.totalRevenue * 100).toFixed(2)
@@ -71,7 +73,7 @@ const FinancialReports = () => {
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-green-800">Total Revenue</span>
+              <span className="text-sm font-medium text-green-800">{t('finance.reports.totalRevenue')}</span>
               <TrendingUp className="text-green-600" size={20} />
             </div>
             <div className="text-2xl font-bold text-green-900">
@@ -81,7 +83,7 @@ const FinancialReports = () => {
 
           <div className="bg-red-50 p-4 rounded-lg border border-red-200">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-red-800">Total Expenses</span>
+              <span className="text-sm font-medium text-red-800">{t('finance.reports.totalExpenses')}</span>
               <TrendingDown className="text-red-600" size={20} />
             </div>
             <div className="text-2xl font-bold text-red-900">
@@ -92,7 +94,7 @@ const FinancialReports = () => {
           <div className={`p-4 rounded-lg border ${profitLossReport.netIncome >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-red-50 border-red-200'}`}>
             <div className="flex items-center justify-between mb-2">
               <span className={`text-sm font-medium ${profitLossReport.netIncome >= 0 ? 'text-blue-800' : 'text-red-800'}`}>
-                Net Income
+                {t('finance.reports.netIncome')}
               </span>
               <DollarSign className={profitLossReport.netIncome >= 0 ? 'text-blue-600' : 'text-red-600'} size={20} />
             </div>
@@ -100,7 +102,7 @@ const FinancialReports = () => {
               {formatCurrency(profitLossReport.netIncome)}
             </div>
             <div className="text-sm text-gray-600 mt-1">
-              Net Margin: {netMargin}%
+              {t('finance.reports.netMargin')}: {netMargin}%
             </div>
           </div>
         </div>
@@ -110,20 +112,20 @@ const FinancialReports = () => {
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.reports.account')}</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.common.amount')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               <tr className="bg-green-50">
-                <td className="px-6 py-4 font-semibold text-green-900">REVENUE</td>
+                <td className="px-6 py-4 font-semibold text-green-900">{t('finance.reports.revenue').toUpperCase()}</td>
                 <td className="px-6 py-4 text-right font-semibold text-green-900">
                   {formatCurrency(profitLossReport.totalRevenue)}
                 </td>
               </tr>
 
               <tr className="bg-red-50">
-                <td className="px-6 py-4 font-semibold text-red-900">EXPENSES</td>
+                <td className="px-6 py-4 font-semibold text-red-900">{t('finance.reports.expenses').toUpperCase()}</td>
                 <td className="px-6 py-4 text-right font-semibold text-red-900">
                   {formatCurrency(profitLossReport.totalExpenses)}
                 </td>
@@ -132,7 +134,7 @@ const FinancialReports = () => {
               {profitLossReport.expensesByCategory && Object.entries(profitLossReport.expensesByCategory).map(([category, amount]) => (
                 <tr key={category}>
                   <td className="px-6 py-3 pl-12 text-sm text-gray-700">
-                    {category.replace(/_/g, ' ')}
+                    {t(`finance.expenses.categories.${category}`, category.replace(/_/g, ' '))}
                   </td>
                   <td className="px-6 py-3 text-right text-sm text-gray-700">
                     {formatCurrency(amount)}
@@ -141,7 +143,7 @@ const FinancialReports = () => {
               ))}
 
               <tr className={`font-bold ${profitLossReport.netIncome >= 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
-                <td className="px-6 py-4 text-lg">NET INCOME</td>
+                <td className="px-6 py-4 text-lg">{t('finance.reports.netIncome').toUpperCase()}</td>
                 <td className={`px-6 py-4 text-right text-lg ${profitLossReport.netIncome >= 0 ? 'text-blue-900' : 'text-red-900'}`}>
                   {formatCurrency(profitLossReport.netIncome)}
                 </td>
@@ -154,28 +156,28 @@ const FinancialReports = () => {
   };
 
   const renderBalanceSheet = () => {
-    if (!balanceSheet) return <div className="text-center py-8">No data available</div>;
+    if (!balanceSheet) return <div className="text-center py-8">{t('finance.common.noDataAvailable')}</div>;
 
     return (
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <div className="text-sm font-medium text-blue-800 mb-2">Total Assets</div>
+            <div className="text-sm font-medium text-blue-800 mb-2">{t('finance.reports.totalAssets')}</div>
             <div className="text-2xl font-bold text-blue-900">
               {formatCurrency(balanceSheet.totalAssets)}
             </div>
           </div>
 
           <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-            <div className="text-sm font-medium text-red-800 mb-2">Total Liabilities</div>
+            <div className="text-sm font-medium text-red-800 mb-2">{t('finance.reports.totalLiabilities')}</div>
             <div className="text-2xl font-bold text-red-900">
               {formatCurrency(balanceSheet.totalLiabilities)}
             </div>
           </div>
 
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <div className="text-sm font-medium text-green-800 mb-2">Total Equity</div>
+            <div className="text-sm font-medium text-green-800 mb-2">{t('finance.reports.totalEquity')}</div>
             <div className="text-2xl font-bold text-green-900">
               {formatCurrency(balanceSheet.totalEquity)}
             </div>
@@ -187,13 +189,13 @@ const FinancialReports = () => {
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.reports.account')}</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.reports.balance')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               <tr className="bg-blue-50">
-                <td className="px-6 py-4 font-semibold text-blue-900">ASSETS</td>
+                <td className="px-6 py-4 font-semibold text-blue-900">{t('finance.reports.assets').toUpperCase()}</td>
                 <td className="px-6 py-4 text-right font-semibold text-blue-900">
                   {formatCurrency(balanceSheet.totalAssets)}
                 </td>
@@ -211,7 +213,7 @@ const FinancialReports = () => {
               ))}
 
               <tr className="bg-red-50">
-                <td className="px-6 py-4 font-semibold text-red-900">LIABILITIES</td>
+                <td className="px-6 py-4 font-semibold text-red-900">{t('finance.reports.liabilities').toUpperCase()}</td>
                 <td className="px-6 py-4 text-right font-semibold text-red-900">
                   {formatCurrency(balanceSheet.totalLiabilities)}
                 </td>
@@ -229,14 +231,14 @@ const FinancialReports = () => {
               ))}
 
               <tr className="bg-green-50">
-                <td className="px-6 py-4 font-semibold text-green-900">EQUITY</td>
+                <td className="px-6 py-4 font-semibold text-green-900">{t('finance.reports.equity').toUpperCase()}</td>
                 <td className="px-6 py-4 text-right font-semibold text-green-900">
                   {formatCurrency(balanceSheet.totalEquity)}
                 </td>
               </tr>
 
               <tr className="bg-gray-100 font-bold">
-                <td className="px-6 py-4 text-lg">LIABILITIES + EQUITY</td>
+                <td className="px-6 py-4 text-lg">{t('finance.reports.liabilitiesPlusEquity').toUpperCase()}</td>
                 <td className="px-6 py-4 text-right text-lg">
                   {formatCurrency(balanceSheet.totalLiabilities + balanceSheet.totalEquity)}
                 </td>
@@ -253,11 +255,11 @@ const FinancialReports = () => {
         }`}>
           <div className="font-semibold mb-1">
             {Math.abs(balanceSheet.totalAssets - (balanceSheet.totalLiabilities + balanceSheet.totalEquity)) < 0.01
-              ? '✓ Balance Sheet is Balanced'
-              : '⚠ Balance Sheet is Not Balanced'}
+              ? '✓ ' + t('finance.reports.balanceSheetBalanced')
+              : '⚠ ' + t('finance.reports.balanceSheetNotBalanced')}
           </div>
           <div className="text-sm text-gray-600">
-            Assets = Liabilities + Equity
+            {t('finance.reports.balanceEquation')}
           </div>
         </div>
       </div>
@@ -265,21 +267,21 @@ const FinancialReports = () => {
   };
 
   const renderCashFlow = () => {
-    if (!cashFlowReport) return <div className="text-center py-8">No data available</div>;
+    if (!cashFlowReport) return <div className="text-center py-8">{t('finance.common.noDataAvailable')}</div>;
 
     return (
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <div className="text-sm font-medium text-green-800 mb-2">Cash Inflows</div>
+            <div className="text-sm font-medium text-green-800 mb-2">{t('finance.reports.cashInflows')}</div>
             <div className="text-2xl font-bold text-green-900">
               {formatCurrency(cashFlowReport.cashInflows)}
             </div>
           </div>
 
           <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-            <div className="text-sm font-medium text-red-800 mb-2">Cash Outflows</div>
+            <div className="text-sm font-medium text-red-800 mb-2">{t('finance.reports.cashOutflows')}</div>
             <div className="text-2xl font-bold text-red-900">
               {formatCurrency(cashFlowReport.cashOutflows)}
             </div>
@@ -287,7 +289,7 @@ const FinancialReports = () => {
 
           <div className={`p-4 rounded-lg border ${cashFlowReport.netCashFlow >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-red-50 border-red-200'}`}>
             <div className={`text-sm font-medium mb-2 ${cashFlowReport.netCashFlow >= 0 ? 'text-blue-800' : 'text-red-800'}`}>
-              Net Cash Flow
+              {t('finance.reports.netCashFlow')}
             </div>
             <div className={`text-2xl font-bold ${cashFlowReport.netCashFlow >= 0 ? 'text-blue-900' : 'text-red-900'}`}>
               {formatCurrency(cashFlowReport.netCashFlow)}
@@ -300,27 +302,27 @@ const FinancialReports = () => {
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cash Flow Category</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.reports.cashFlowCategory')}</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.common.amount')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               <tr className="bg-green-50">
-                <td className="px-6 py-4 font-semibold text-green-900">Cash Inflows</td>
+                <td className="px-6 py-4 font-semibold text-green-900">{t('finance.reports.cashInflows')}</td>
                 <td className="px-6 py-4 text-right font-semibold text-green-900">
                   {formatCurrency(cashFlowReport.cashInflows)}
                 </td>
               </tr>
 
               <tr className="bg-red-50">
-                <td className="px-6 py-4 font-semibold text-red-900">Cash Outflows</td>
+                <td className="px-6 py-4 font-semibold text-red-900">{t('finance.reports.cashOutflows')}</td>
                 <td className="px-6 py-4 text-right font-semibold text-red-900">
                   {formatCurrency(cashFlowReport.cashOutflows)}
                 </td>
               </tr>
 
               <tr className={`font-bold ${cashFlowReport.netCashFlow >= 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
-                <td className="px-6 py-4 text-lg">NET CASH FLOW</td>
+                <td className="px-6 py-4 text-lg">{t('finance.reports.netCashFlow').toUpperCase()}</td>
                 <td className={`px-6 py-4 text-right text-lg ${cashFlowReport.netCashFlow >= 0 ? 'text-blue-900' : 'text-red-900'}`}>
                   {formatCurrency(cashFlowReport.netCashFlow)}
                 </td>
@@ -333,51 +335,51 @@ const FinancialReports = () => {
   };
 
   const renderCOGS = () => {
-    if (!cogsReport) return <div className="text-center py-8">No data available</div>;
+    if (!cogsReport) return <div className="text-center py-8">{t('finance.common.noDataAvailable')}</div>;
 
     return (
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-            <div className="text-sm font-medium text-green-800 mb-2">Total Revenue</div>
+            <div className="text-sm font-medium text-green-800 mb-2">{t('finance.reports.totalRevenue')}</div>
             <div className="text-2xl font-bold text-green-900">
               {formatCurrency(cogsReport.totalRevenue)}
             </div>
           </div>
 
           <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-            <div className="text-sm font-medium text-red-800 mb-2">Total COGS</div>
+            <div className="text-sm font-medium text-red-800 mb-2">{t('finance.reports.totalCOGS')}</div>
             <div className="text-2xl font-bold text-red-900">
               {formatCurrency(cogsReport.totalCogs)}
             </div>
           </div>
 
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <div className="text-sm font-medium text-blue-800 mb-2">COGS Percentage</div>
+            <div className="text-sm font-medium text-blue-800 mb-2">{t('finance.reports.cogsPercentage')}</div>
             <div className="text-2xl font-bold text-blue-900">
               {formatPercentage(cogsReport.cogsPercentage)}
             </div>
             <div className="text-xs text-gray-600 mt-1">
-              {cogsReport.cogsPercentage < 30 ? 'Excellent' : cogsReport.cogsPercentage < 35 ? 'Good' : cogsReport.cogsPercentage < 40 ? 'Fair' : 'High'}
+              {cogsReport.cogsPercentage < 30 ? t('finance.reports.excellent') : cogsReport.cogsPercentage < 35 ? t('finance.reports.good') : cogsReport.cogsPercentage < 40 ? t('finance.reports.fair') : t('finance.reports.high')}
             </div>
           </div>
         </div>
 
         {/* COGS Analysis */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">COGS Analysis</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('finance.reports.cogsAnalysis')}</h3>
 
           <div className="space-y-4">
             <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-              <span className="font-medium">Gross Profit</span>
+              <span className="font-medium">{t('finance.reports.grossProfit')}</span>
               <span className="text-lg font-bold text-green-600">
                 {formatCurrency(cogsReport.totalRevenue - cogsReport.totalCogs)}
               </span>
             </div>
 
             <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-              <span className="font-medium">Gross Margin</span>
+              <span className="font-medium">{t('finance.reports.grossMargin')}</span>
               <span className="text-lg font-bold text-blue-600">
                 {formatPercentage(cogsReport.totalRevenue > 0
                   ? ((cogsReport.totalRevenue - cogsReport.totalCogs) / cogsReport.totalRevenue * 100)
@@ -388,12 +390,12 @@ const FinancialReports = () => {
           </div>
 
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h4 className="font-semibold text-blue-900 mb-2">Industry Benchmarks</h4>
+            <h4 className="font-semibold text-blue-900 mb-2">{t('finance.reports.industryBenchmarks')}</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Excellent COGS: &lt; 30%</li>
-              <li>• Good COGS: 30-35%</li>
-              <li>• Fair COGS: 35-40%</li>
-              <li>• High COGS: &gt; 40%</li>
+              <li>• {t('finance.reports.excellentCOGS')}: &lt; 30%</li>
+              <li>• {t('finance.reports.goodCOGS')}: 30-35%</li>
+              <li>• {t('finance.reports.fairCOGS')}: 35-40%</li>
+              <li>• {t('finance.reports.highCOGS')}: &gt; 40%</li>
             </ul>
           </div>
         </div>
@@ -404,7 +406,7 @@ const FinancialReports = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Financial Reports</h1>
+        <h1 className="text-2xl font-bold">{t('finance.reports.title')}</h1>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Calendar size={20} className="text-gray-500" />
@@ -414,7 +416,7 @@ const FinancialReports = () => {
               onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
               className="px-3 py-2 border border-gray-300 rounded-lg"
             />
-            <span className="text-gray-500">to</span>
+            <span className="text-gray-500">{t('finance.common.to')}</span>
             <input
               type="date"
               value={dateRange.endDate}
@@ -438,7 +440,7 @@ const FinancialReports = () => {
           >
             <div className="flex items-center gap-2">
               <TrendingUp size={18} />
-              Profit & Loss
+              {t('finance.reports.profitLoss')}
             </div>
           </button>
           <button
@@ -451,7 +453,7 @@ const FinancialReports = () => {
           >
             <div className="flex items-center gap-2">
               <BarChart3 size={18} />
-              Balance Sheet
+              {t('finance.reports.balanceSheet')}
             </div>
           </button>
           <button
@@ -464,7 +466,7 @@ const FinancialReports = () => {
           >
             <div className="flex items-center gap-2">
               <DollarSign size={18} />
-              Cash Flow
+              {t('finance.reports.cashFlow')}
             </div>
           </button>
           <button
@@ -477,7 +479,7 @@ const FinancialReports = () => {
           >
             <div className="flex items-center gap-2">
               <PieChart size={18} />
-              COGS Analysis
+              {t('finance.reports.cogsAnalysis')}
             </div>
           </button>
         </nav>
@@ -486,7 +488,7 @@ const FinancialReports = () => {
       {/* Report Content */}
       {loading ? (
         <div className="flex justify-center items-center py-12">
-          <div className="text-gray-500">Loading reports...</div>
+          <div className="text-gray-500">{t('finance.common.loadingReports')}</div>
         </div>
       ) : (
         <div>
