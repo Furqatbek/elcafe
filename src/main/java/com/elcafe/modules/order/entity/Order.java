@@ -28,7 +28,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "orders")
+@jakarta.persistence.Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
 public class Order {
 
