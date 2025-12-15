@@ -194,13 +194,17 @@ export const operatorAPI = {
 };
 
 export const waiterAPI = {
-  getAll: (restaurantId, params) => api.get(`/restaurants/${restaurantId}/waiters`, { params }),
+  getAll: (params) => api.get('/waiters', { params }),
+  getActive: () => api.get('/waiters/active'),
   getById: (id) => api.get(`/waiters/${id}`),
-  create: (restaurantId, data) => api.post(`/restaurants/${restaurantId}/waiters`, data),
+  create: (data) => api.post('/waiters', data),
   update: (id, data) => api.put(`/waiters/${id}`, data),
   delete: (id) => api.delete(`/waiters/${id}`),
-  getOrders: (id, params) => api.get(`/waiters/${id}/orders`, { params }),
   auth: (pinCode) => api.post('/waiters/auth', { pinCode }),
+  assignToTable: (waiterId, tableId) => api.post(`/waiters/${waiterId}/tables/${tableId}/assign`),
+  unassignFromTable: (waiterId, tableId) => api.post(`/waiters/${waiterId}/tables/${tableId}/unassign`),
+  getMyProfile: () => api.get('/waiters/me'),
+  getMyTables: () => api.get('/waiters/me/tables'),
 };
 
 export const courierAPI = {

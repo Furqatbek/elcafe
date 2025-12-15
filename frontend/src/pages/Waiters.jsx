@@ -1,23 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, Plus, Edit, Trash2, X, Eye, EyeOff, Key, ShieldCheck, UserCircle } from 'lucide-react';
-import { waiterAPI, restaurantAPI } from '../services/api';
-import { format } from 'date-fns';
+import { Search, Plus, Edit, Trash2, X, Eye, EyeOff, Key } from 'lucide-react';
+import { waiterAPI } from '../services/api';
 
 export default function Waiters() {
   const { t } = useTranslation();
   const [waiters, setWaiters] = useState([]);
-  const [restaurants, setRestaurants] = useState([]);
   const [filteredWaiters, setFilteredWaiters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [waiterToDelete, setWaiterToDelete] = useState(null);
   const [editingWaiter, setEditingWaiter] = useState(null);
   const [showPinCode, setShowPinCode] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [sortBy, setSortBy] = useState('id');
+  const [sortDir, setSortDir] = useState('asc');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -26,57 +31,43 @@ export default function Waiters() {
     email: '',
     phoneNumber: '',
     role: 'WAITER',
-    permissions: ['take_orders', 'view_menu', 'request_bill'],
+    permissions: [],
     active: true,
   });
 
   const [errors, setErrors] = useState({});
 
-  const availableRoles = ['WAITER', 'HEAD_WAITER', 'SERVER', 'CAPTAIN'];
+  const availableRoles = ['WAITER', 'HEAD_WAITER', 'SERVER', 'SUPERVISOR'];
   const availablePermissions = [
-    { id: 'take_orders', label: 'Take Orders' },
-    { id: 'view_menu', label: 'View Menu' },
-    { id: 'request_bill', label: 'Request Bill' },
-    { id: 'manage_tables', label: 'Manage Tables' },
-    { id: 'view_reports', label: 'View Reports' },
-    { id: 'handle_payments', label: 'Handle Payments' },
-    { id: 'cancel_orders', label: 'Cancel Orders' },
-    { id: 'apply_discounts', label: 'Apply Discounts' },
+    { id: 'MANAGE_TABLES', label: 'Manage Tables' },
+    { id: 'OVERRIDE_PRICES', label: 'Override Prices' },
+    { id: 'VOID_ITEMS', label: 'Void Items' },
+    { id: 'MERGE_TABLES', label: 'Merge Tables' },
+    { id: 'VIEW_REPORTS', label: 'View Reports' },
+    { id: 'HANDLE_PAYMENTS', label: 'Handle Payments' },
+    { id: 'APPLY_DISCOUNTS', label: 'Apply Discounts' },
+    { id: 'REFUND_ORDERS', label: 'Refund Orders' },
   ];
 
   useEffect(() => {
-    loadRestaurants();
-  }, []);
-
-  useEffect(() => {
-    if (selectedRestaurant) {
-      loadWaiters();
-    }
-  }, [selectedRestaurant]);
-
-  const loadRestaurants = async () => {
-    try {
-      const response = await restaurantAPI.getAll({ page: 0, size: 100 });
-      const restaurantList = response.data.data?.content || response.data.data || [];
-      setRestaurants(restaurantList);
-
-      if (restaurantList.length > 0 && !selectedRestaurant) {
-        setSelectedRestaurant(restaurantList[0].id);
-      }
-    } catch (error) {
-      console.error('Error loading restaurants:', error);
-    }
-  };
+    loadWaiters();
+  }, [currentPage, pageSize, sortBy, sortDir]);
 
   const loadWaiters = async () => {
-    if (!selectedRestaurant) return;
-
     try {
       setLoading(true);
-      const response = await waiterAPI.getAll(selectedRestaurant, { active: true });
-      const waiterList = response.data.data || response.data || [];
-      setWaiters(waiterList);
-      setFilteredWaiters(waiterList);
+      const response = await waiterAPI.getAll({
+        page: currentPage,
+        size: pageSize,
+        sortBy,
+        sortDir,
+      });
+
+      const pageData = response.data.data || response.data;
+      setWaiters(pageData.content || []);
+      setFilteredWaiters(pageData.content || []);
+      setTotalElements(pageData.totalElements || 0);
+      setTotalPages(pageData.totalPages || 0);
     } catch (error) {
       console.error('Error loading waiters:', error);
       setWaiters([]);
@@ -120,13 +111,25 @@ export default function Waiters() {
   const handleOpenModal = (waiter = null) => {
     if (waiter) {
       setEditingWaiter(waiter);
+      // Parse permissions if they're stored as JSON string
+      let permissionsList = [];
+      if (waiter.permissions) {
+        try {
+          permissionsList = typeof waiter.permissions === 'string'
+            ? JSON.parse(waiter.permissions)
+            : waiter.permissions;
+        } catch (e) {
+          permissionsList = [];
+        }
+      }
+
       setFormData({
         name: waiter.name || '',
         pinCode: waiter.pinCode || '',
         email: waiter.email || '',
         phoneNumber: waiter.phoneNumber || '',
         role: waiter.role || 'WAITER',
-        permissions: waiter.permissions || ['take_orders', 'view_menu', 'request_bill'],
+        permissions: permissionsList,
         active: waiter.active !== undefined ? waiter.active : true,
       });
     } else {
@@ -137,7 +140,7 @@ export default function Waiters() {
         email: '',
         phoneNumber: '',
         role: 'WAITER',
-        permissions: ['take_orders', 'view_menu', 'request_bill'],
+        permissions: [],
         active: true,
       });
       generatePinCode();
@@ -210,16 +213,11 @@ export default function Waiters() {
       return;
     }
 
-    if (!selectedRestaurant) {
-      alert('Please select a restaurant first');
-      return;
-    }
-
     try {
       if (editingWaiter) {
         await waiterAPI.update(editingWaiter.id, formData);
       } else {
-        await waiterAPI.create(selectedRestaurant, formData);
+        await waiterAPI.create(formData);
       }
 
       handleCloseModal();
@@ -254,21 +252,10 @@ export default function Waiters() {
       WAITER: 'bg-blue-100 text-blue-800',
       HEAD_WAITER: 'bg-purple-100 text-purple-800',
       SERVER: 'bg-green-100 text-green-800',
-      CAPTAIN: 'bg-red-100 text-red-800',
+      SUPERVISOR: 'bg-red-100 text-red-800',
     };
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
-
-  if (loading && !selectedRestaurant) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6">
@@ -278,25 +265,8 @@ export default function Waiters() {
         <p className="text-gray-600">Manage waiter accounts, PIN codes, roles, and permissions</p>
       </div>
 
-      {/* Restaurant Selector */}
-      <div className="mb-6 bg-white p-4 rounded-lg border border-gray-200">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Select Restaurant</label>
-        <select
-          value={selectedRestaurant || ''}
-          onChange={(e) => setSelectedRestaurant(Number(e.target.value))}
-          className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Select a restaurant...</option>
-          {restaurants.map((restaurant) => (
-            <option key={restaurant.id} value={restaurant.id}>
-              {restaurant.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {selectedRestaurant && (
-        <>
+      {/* Content */}
+      <>
           {/* Filters and Actions */}
           <div className="mb-6 flex flex-col md:flex-row gap-4">
             {/* Search */}
@@ -415,19 +385,35 @@ export default function Waiters() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-1 max-w-xs">
-                            {(waiter.permissions || []).slice(0, 3).map((perm) => (
-                              <span
-                                key={perm}
-                                className="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded"
-                              >
-                                {perm.replace(/_/g, ' ')}
-                              </span>
-                            ))}
-                            {waiter.permissions?.length > 3 && (
-                              <span className="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
-                                +{waiter.permissions.length - 3} more
-                              </span>
-                            )}
+                            {(() => {
+                              let permList = [];
+                              if (waiter.permissions) {
+                                try {
+                                  permList = typeof waiter.permissions === 'string'
+                                    ? JSON.parse(waiter.permissions)
+                                    : waiter.permissions;
+                                } catch (e) {
+                                  permList = [];
+                                }
+                              }
+                              return (
+                                <>
+                                  {permList.slice(0, 3).map((perm) => (
+                                    <span
+                                      key={perm}
+                                      className="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded"
+                                    >
+                                      {perm.replace(/_/g, ' ')}
+                                    </span>
+                                  ))}
+                                  {permList.length > 3 && (
+                                    <span className="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
+                                      +{permList.length - 3} more
+                                    </span>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -467,12 +453,34 @@ export default function Waiters() {
             </div>
           </div>
 
-          {/* Summary */}
-          <div className="mt-4 text-sm text-gray-600">
-            Showing {filteredWaiters.length} of {waiters.length} waiters
+        {/* Summary and Pagination */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Showing {filteredWaiters.length} of {totalElements} waiters
           </div>
-        </>
-      )}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                disabled={currentPage === 0}
+                className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={currentPage >= totalPages - 1}
+                className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
+      </>
 
       {/* Add/Edit Modal */}
       {showModal && (
