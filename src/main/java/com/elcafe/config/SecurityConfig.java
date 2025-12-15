@@ -66,6 +66,8 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/info"
                         ).permitAll()
+                        // Allow GET requests to restaurants and tables for all authenticated users
+                        .requestMatchers(HttpMethod.GET, "/api/v1/restaurants/**").authenticated()
                         // Admin only endpoints
                         .requestMatchers(HttpMethod.POST, "/api/v1/restaurants/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/restaurants/**").hasRole("ADMIN")
