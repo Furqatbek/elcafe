@@ -106,6 +106,7 @@ export default function Layout() {
       path: '/operators',
       subItems: [
         { label: t('nav.sub.operators'), icon: UserCog, path: '/operators' },
+        { label: t('nav.sub.waiters'), icon: UserCircle, path: '/employees/waiters' },
         { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
         { label: t('nav.sub.courierMap'), icon: MapPin, path: '/courier-map' },
         { label: t('nav.sub.schedule'), icon: Calendar, path: '/employees/schedule' },
