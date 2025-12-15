@@ -193,6 +193,16 @@ export const operatorAPI = {
   delete: (id) => api.delete(`/operators/${id}`),
 };
 
+export const waiterAPI = {
+  getAll: (restaurantId, params) => api.get(`/restaurants/${restaurantId}/waiters`, { params }),
+  getById: (id) => api.get(`/waiters/${id}`),
+  create: (restaurantId, data) => api.post(`/restaurants/${restaurantId}/waiters`, data),
+  update: (id, data) => api.put(`/waiters/${id}`, data),
+  delete: (id) => api.delete(`/waiters/${id}`),
+  getOrders: (id, params) => api.get(`/waiters/${id}/orders`, { params }),
+  auth: (pinCode) => api.post('/waiters/auth', { pinCode }),
+};
+
 export const courierAPI = {
   getAll: (page = 0, size = 10) => api.get('/couriers', { params: { page, size } }),
   getById: (id) => api.get(`/couriers/${id}`),
