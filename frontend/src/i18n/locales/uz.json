@@ -29,6 +29,7 @@
   "nav": {
     "dashboard": "Bosh sahifa",
     "orders": "Buyurtmalar",
+    "restaurant": "Restoran",
     "restaurants": "Restoranlar",
     "menu": "Menyu",
     "customers": "Mijozlar",
@@ -56,6 +57,7 @@
       "operators": "Operatorlar",
       "couriers": "Kuryerlar",
       "schedule": "Jadval",
+      "tables": "Stollar",
       "branches": "Filiallar",
       "products": "Mahsulotlar",
       "categories": "Kategoriyalar",

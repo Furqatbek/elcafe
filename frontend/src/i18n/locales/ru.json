@@ -29,6 +29,7 @@
   "nav": {
     "dashboard": "Главная",
     "orders": "Заказы",
+    "restaurant": "Ресторан",
     "restaurants": "Рестораны",
     "menu": "Меню",
     "customers": "Клиенты",
@@ -56,6 +57,7 @@
       "operators": "Операторы",
       "couriers": "Курьеры",
       "schedule": "Расписание",
+      "tables": "Столы",
       "branches": "Филиалы",
       "products": "Продукты",
       "categories": "Категории",

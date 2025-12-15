@@ -254,4 +254,31 @@ export const uploadAPI = {
   deleteImage: (url) => api.delete('/files', { params: { fileUrl: url } }),
 };
 
+export const tablesAPI = {
+  getAll: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables`),
+  getStats: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/stats`),
+  getById: (id) => api.get(`/tables/${id}`),
+  create: (data) => api.post('/tables', data),
+  update: (id, data) => api.put(`/tables/${id}`, data),
+  delete: (id) => api.delete(`/tables/${id}`),
+  updateStatus: (id, status) => api.patch(`/tables/${id}/status`, { status }),
+  getAvailable: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/available`),
+  getSections: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/sections`),
+  getBySection: (restaurantId, section) => api.get(`/restaurants/${restaurantId}/tables/section/${section}`),
+};
+
+export const waiterAPI = {
+  getAll: (params) => api.get('/waiters', { params }),
+  getActive: () => api.get('/waiters/active'),
+  getById: (id) => api.get(`/waiters/${id}`),
+  create: (data) => api.post('/waiters', data),
+  update: (id, data) => api.put(`/waiters/${id}`, data),
+  delete: (id) => api.delete(`/waiters/${id}`),
+  auth: (pinCode) => api.post('/waiters/auth', { pinCode }),
+  assignToTable: (waiterId, tableId) => api.post(`/waiters/${waiterId}/tables/${tableId}/assign`),
+  unassignFromTable: (waiterId, tableId) => api.post(`/waiters/${waiterId}/tables/${tableId}/unassign`),
+  getMyProfile: () => api.get('/waiters/me'),
+  getMyTables: () => api.get('/waiters/me/tables'),
+};
+
 export default api;
