@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
 import Restaurants from './pages/Restaurants';
+import Tables from './pages/Tables';
 import Products from './pages/Products';
 import LinkedItems from './pages/LinkedItems';
 import Menu from './pages/Menu';
@@ -49,6 +50,7 @@ function App() {
           <Route path="dashboard/inventory-analytics" element={<InventoryAnalytics />} />
           <Route path="orders" element={<Orders />} />
           <Route path="restaurants" element={<Restaurants />} />
+          <Route path="restaurants/tables" element={<Tables />} />
           <Route path="products" element={<Products />} />
           <Route path="products/:productId/linked-items" element={<LinkedItems />} />
           <Route path="menu" element={<Menu />} />
