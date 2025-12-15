@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { inventoryAPI } from '../services/api';
+import { inventoryAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -39,6 +39,8 @@ import {
   CheckCircle,
   Search,
   RefreshCw,
+  TrendingUp,
+  History,
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -51,7 +53,18 @@ export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
+  const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [transactionModalOpen, setTransactionModalOpen] = useState(false);
+  const [selectedIngredient, setSelectedIngredient] = useState(null);
+  const [transactions, setTransactions] = useState([]);
   const [editingIngredient, setEditingIngredient] = useState(null);
+  const [stockAction, setStockAction] = useState('add'); // 'add' or 'adjust'
+  const [stockFormData, setStockFormData] = useState({
+    quantity: '',
+    newQuantity: '',
+    notes: '',
+    performedBy: 'Admin',
+  });
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -82,9 +95,8 @@ export default function Inventory() {
 
   const loadRestaurants = async () => {
     try {
-      const response = await fetch('/api/v1/restaurants?page=0&size=100');
-      const result = await response.json();
-      const restaurantList = result.data?.content || [];
+      const response = await restaurantAPI.getAll({ page: 0, size: 100 });
+      const restaurantList = response.data.data?.content || response.data.data || [];
       setRestaurants(restaurantList);
       if (restaurantList.length > 0) {
         setSelectedRestaurant(restaurantList[0].id);
@@ -203,6 +215,56 @@ export default function Inventory() {
     } catch (error) {
       console.error('Failed to delete ingredient:', error);
       alert(t('inventory.errors.deleteFailed'));
+    }
+  };
+
+  const handleStockAction = (ingredient, action) => {
+    setSelectedIngredient(ingredient);
+    setStockAction(action);
+    setStockFormData({
+      quantity: '',
+      newQuantity: action === 'adjust' ? ingredient.currentStock.toString() : '',
+      notes: '',
+      performedBy: 'Admin',
+    });
+    setStockModalOpen(true);
+  };
+
+  const handleStockSubmit = async () => {
+    if (!selectedIngredient) return;
+
+    try {
+      if (stockAction === 'add') {
+        await inventoryAPI.addStock(selectedIngredient.id, {
+          quantity: parseFloat(stockFormData.quantity),
+          notes: stockFormData.notes,
+          performedBy: stockFormData.performedBy,
+        });
+      } else {
+        await inventoryAPI.adjustStock(selectedIngredient.id, {
+          newQuantity: parseFloat(stockFormData.newQuantity),
+          notes: stockFormData.notes,
+          performedBy: stockFormData.performedBy,
+        });
+      }
+
+      setStockModalOpen(false);
+      loadIngredients();
+    } catch (error) {
+      console.error('Failed to update stock:', error);
+      alert('Failed to update stock');
+    }
+  };
+
+  const handleViewTransactions = async (ingredient) => {
+    setSelectedIngredient(ingredient);
+    try {
+      const response = await inventoryAPI.getTransactions(ingredient.id);
+      setTransactions(response.data.data || []);
+      setTransactionModalOpen(true);
+    } catch (error) {
+      console.error('Failed to load transactions:', error);
+      alert('Failed to load transactions');
     }
   };
 
@@ -401,11 +463,28 @@ export default function Inventory() {
                         <Badge className={status.color}>{status.label}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleStockAction(ingredient, 'add')}
+                            title="Add Stock"
+                          >
+                            <TrendingUp className="h-4 w-4 text-green-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewTransactions(ingredient)}
+                            title="View History"
+                          >
+                            <History className="h-4 w-4 text-blue-600" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(ingredient)}
+                            title="Edit"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -413,6 +492,7 @@ export default function Inventory() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDelete(ingredient.id)}
+                            title="Delete"
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
@@ -579,6 +659,137 @@ export default function Inventory() {
             </Button>
             <Button onClick={handleSave}>
               {editingIngredient ? t('common.save') : t('common.create')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Management Modal */}
+      <Dialog open={stockModalOpen} onOpenChange={setStockModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {stockAction === 'add' ? 'Add Stock' : 'Adjust Stock'} - {selectedIngredient?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Current stock: {selectedIngredient?.currentStock} {selectedIngredient?.unit}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {stockAction === 'add' ? (
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Quantity to Add *</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  step="0.001"
+                  value={stockFormData.quantity}
+                  onChange={(e) => setStockFormData({ ...stockFormData, quantity: e.target.value })}
+                  placeholder="0.000"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="newQuantity">New Quantity *</Label>
+                <Input
+                  id="newQuantity"
+                  type="number"
+                  step="0.001"
+                  value={stockFormData.newQuantity}
+                  onChange={(e) => setStockFormData({ ...stockFormData, newQuantity: e.target.value })}
+                  placeholder="0.000"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Input
+                id="notes"
+                value={stockFormData.notes}
+                onChange={(e) => setStockFormData({ ...stockFormData, notes: e.target.value })}
+                placeholder="Optional notes about this stock change"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="performedBy">Performed By</Label>
+              <Input
+                id="performedBy"
+                value={stockFormData.performedBy}
+                onChange={(e) => setStockFormData({ ...stockFormData, performedBy: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStockModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleStockSubmit}>
+              {stockAction === 'add' ? 'Add Stock' : 'Update Stock'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Transaction History Modal */}
+      <Dialog open={transactionModalOpen} onOpenChange={setTransactionModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Transaction History - {selectedIngredient?.name}</DialogTitle>
+            <DialogDescription>
+              All stock movements for this ingredient
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Change</TableHead>
+                  <TableHead>Balance After</TableHead>
+                  <TableHead>Performed By</TableHead>
+                  <TableHead>Notes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      No transactions found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                      <TableCell>{new Date(transaction.createdAt).toLocaleString()}</TableCell>
+                      <TableCell>
+                        <Badge className={
+                          transaction.transactionType === 'PURCHASE' || transaction.transactionType === 'ADJUSTMENT_INCREASE'
+                            ? 'bg-green-100 text-green-800'
+                            : transaction.transactionType === 'USAGE' || transaction.transactionType === 'ADJUSTMENT_DECREASE'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }>
+                          {transaction.transactionType}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className={
+                        transaction.quantityChange > 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
+                      }>
+                        {transaction.quantityChange > 0 ? '+' : ''}{transaction.quantityChange}
+                      </TableCell>
+                      <TableCell>{transaction.balanceAfter}</TableCell>
+                      <TableCell>{transaction.performedBy}</TableCell>
+                      <TableCell className="max-w-xs truncate">{transaction.notes || '-'}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setTransactionModalOpen(false)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
