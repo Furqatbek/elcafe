@@ -67,6 +67,26 @@ public class JwtUtil {
         return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
     }
 
+    /**
+     * Generate access token for waiter using PIN code or email as subject
+     */
+    public String generateWaiterAccessToken(String identifier, Long waiterId, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("waiterId", waiterId);
+        claims.put("role", role);
+        claims.put("type", "waiter");
+        return createToken(claims, identifier, accessTokenExpiration);
+    }
+
+    /**
+     * Generate refresh token for waiter
+     */
+    public String generateWaiterRefreshToken(String identifier) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "waiter_refresh");
+        return createToken(claims, identifier, refreshTokenExpiration);
+    }
+
     private String createToken(Map<String, Object> claims, String subject, Long expiration) {
         return Jwts.builder()
                 .setClaims(claims)
