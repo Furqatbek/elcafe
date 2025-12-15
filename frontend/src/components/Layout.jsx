@@ -43,6 +43,8 @@ import {
   CreditCard,
   Truck,
   MapPin,
+  Store,
+  Table,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -85,6 +87,15 @@ export default function Layout() {
       icon: ShoppingCart,
       path: '/orders',
       subItems: [],
+    },
+    {
+      id: 'restaurant',
+      label: t('nav.restaurant'),
+      icon: Store,
+      path: '/restaurants/tables',
+      subItems: [
+        { label: t('nav.sub.tables'), icon: Table, path: '/restaurants/tables' },
+      ],
     },
     {
       id: 'clients',
