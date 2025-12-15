@@ -13,6 +13,7 @@ import com.elcafe.modules.waiter.entity.WaiterTable;
 import com.elcafe.modules.waiter.repository.TableRepository;
 import com.elcafe.modules.waiter.repository.WaiterRepository;
 import com.elcafe.modules.waiter.repository.WaiterTableRepository;
+import com.elcafe.security.JwtUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +41,7 @@ public class WaiterService {
     private final WaiterTableRepository waiterTableRepository;
     private final TableRepository tableRepository;
     private final ObjectMapper objectMapper;
+    private final JwtUtil jwtUtil;
 
     /**
      * Get all waiters with pagination
@@ -193,8 +195,18 @@ public class WaiterService {
             throw new BadRequestException("Waiter account is inactive");
         }
 
-        // In a real implementation, you would generate a JWT token here
-        String token = "waiter_token_" + waiter.getId(); // Placeholder
+        // Generate JWT token for waiter
+        String identifier = waiter.getEmail() != null && !waiter.getEmail().isEmpty()
+                ? waiter.getEmail()
+                : "waiter_" + waiter.getPinCode();
+
+        String token = jwtUtil.generateWaiterAccessToken(
+                identifier,
+                waiter.getId(),
+                waiter.getRole().name()
+        );
+
+        log.info("Waiter authenticated successfully: {} (ID: {})", waiter.getName(), waiter.getId());
 
         return WaiterAuthResponse.builder()
                 .waiterId(waiter.getId())
