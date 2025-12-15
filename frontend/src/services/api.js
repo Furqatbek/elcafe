@@ -193,20 +193,6 @@ export const operatorAPI = {
   delete: (id) => api.delete(`/operators/${id}`),
 };
 
-export const waiterAPI = {
-  getAll: (params) => api.get('/waiters', { params }),
-  getActive: () => api.get('/waiters/active'),
-  getById: (id) => api.get(`/waiters/${id}`),
-  create: (data) => api.post('/waiters', data),
-  update: (id, data) => api.put(`/waiters/${id}`, data),
-  delete: (id) => api.delete(`/waiters/${id}`),
-  auth: (pinCode) => api.post('/waiters/auth', { pinCode }),
-  assignToTable: (waiterId, tableId) => api.post(`/waiters/${waiterId}/tables/${tableId}/assign`),
-  unassignFromTable: (waiterId, tableId) => api.post(`/waiters/${waiterId}/tables/${tableId}/unassign`),
-  getMyProfile: () => api.get('/waiters/me'),
-  getMyTables: () => api.get('/waiters/me/tables'),
-};
-
 export const courierAPI = {
   getAll: (page = 0, size = 10) => api.get('/couriers', { params: { page, size } }),
   getById: (id) => api.get(`/couriers/${id}`),
@@ -266,100 +252,6 @@ export const uploadAPI = {
     });
   },
   deleteImage: (url) => api.delete('/files', { params: { fileUrl: url } }),
-};
-
-export const posAPI = {
-  createOrder: (data) => api.post('/pos/orders', data),
-  getCategories: (restaurantId = 1) => api.get('/categories', { params: { restaurantId } }),
-  getProducts: (restaurantId = 1) => api.get(`/products/restaurant/${restaurantId}`),
-};
-
-export const inventoryAPI = {
-  // Ingredients
-  getIngredients: (restaurantId) => api.get('/inventory/ingredients', { params: { restaurantId } }),
-  getIngredientById: (id) => api.get(`/inventory/ingredients/${id}`),
-  createIngredient: (data) => api.post('/inventory/ingredients', data),
-  updateIngredient: (id, data) => api.put(`/inventory/ingredients/${id}`, data),
-  deleteIngredient: (id) => api.delete(`/inventory/ingredients/${id}`),
-  getLowStockIngredients: (restaurantId) => api.get('/inventory/ingredients/low-stock', { params: { restaurantId } }),
-  getReorderIngredients: (restaurantId) => api.get('/inventory/ingredients/reorder', { params: { restaurantId } }),
-
-  // Stock management
-  addStock: (ingredientId, data) => api.post(`/inventory/ingredients/${ingredientId}/add-stock`, data),
-  adjustStock: (ingredientId, data) => api.post(`/inventory/ingredients/${ingredientId}/adjust-stock`, data),
-
-  // Transactions
-  getTransactions: (ingredientId) => api.get(`/inventory/ingredients/${ingredientId}/transactions`),
-  getAllTransactions: (restaurantId, params) => api.get('/inventory/transactions', { params: { restaurantId, ...params } }),
-};
-
-export const recipesAPI = {
-  // Product ingredients (recipes)
-  getProductRecipe: (productId) => api.get(`/inventory/recipes/product/${productId}`),
-  getIngredientUsage: (ingredientId) => api.get(`/inventory/recipes/ingredient/${ingredientId}`),
-  createRecipe: (data) => api.post('/inventory/recipes', data),
-  updateRecipe: (id, data) => api.put(`/inventory/recipes/${id}`, data),
-  deleteRecipe: (id) => api.delete(`/inventory/recipes/${id}`),
-
-  // Availability checks
-  checkProductAvailability: (productId, quantity) => api.get(`/inventory/recipes/product/${productId}/check-availability`, { params: { quantity } }),
-};
-
-export const financialAPI = {
-  // Purchase Orders
-  getPurchaseOrders: (restaurantId) => api.get('/financial/purchase-orders', { params: { restaurantId } }),
-  getPurchaseOrderById: (id) => api.get(`/financial/purchase-orders/${id}`),
-  createPurchaseOrder: (data) => api.post('/financial/purchase-orders', data),
-  approvePurchaseOrder: (id, approvedBy) => api.post(`/financial/purchase-orders/${id}/approve`, null, { params: { approvedBy } }),
-  receivePurchaseOrder: (id, data) => api.post(`/financial/purchase-orders/${id}/receive`, data),
-  recordPOPayment: (id, data) => api.post(`/financial/purchase-orders/${id}/payment`, data),
-
-  // Expenses
-  getExpenses: (restaurantId, startDate, endDate) => api.get('/financial/expenses', { params: { restaurantId, startDate, endDate } }),
-  getExpenseById: (id) => api.get(`/financial/expenses/${id}`),
-  getUnpaidExpenses: (restaurantId) => api.get('/financial/expenses/unpaid', { params: { restaurantId } }),
-  createExpense: (data) => api.post('/financial/expenses', data),
-  approveExpense: (id, approvedBy) => api.post(`/financial/expenses/${id}/approve`, null, { params: { approvedBy } }),
-  recordExpensePayment: (id, paymentDate, recordedBy) => api.post(`/financial/expenses/${id}/pay`, null, { params: { paymentDate, recordedBy } }),
-  deleteExpense: (id) => api.delete(`/financial/expenses/${id}`),
-
-  // Reports
-  getProfitLossReport: (restaurantId, startDate, endDate) => api.get('/financial/reports/profit-loss', { params: { restaurantId, startDate, endDate } }),
-  getBalanceSheet: (restaurantId, asOfDate) => api.get('/financial/reports/balance-sheet', { params: { restaurantId, asOfDate } }),
-  getCashFlowReport: (restaurantId, startDate, endDate) => api.get('/financial/reports/cash-flow', { params: { restaurantId, startDate, endDate } }),
-  getCogsReport: (restaurantId, startDate, endDate) => api.get('/financial/reports/cogs', { params: { restaurantId, startDate, endDate } }),
-};
-
-export const workingHoursAPI = {
-  // Get working hours
-  getByRestaurant: (restaurantId) => api.get(`/restaurants/${restaurantId}/working-hours`),
-  getByUser: (userId) => api.get(`/users/${userId}/working-hours`),
-  getByRestaurantAndUser: (restaurantId, userId) => api.get(`/restaurants/${restaurantId}/users/${userId}/working-hours`),
-  getByDay: (restaurantId, dayOfWeek) => api.get(`/restaurants/${restaurantId}/working-hours/day/${dayOfWeek}`),
-  getById: (id) => api.get(`/working-hours/${id}`),
-
-  // Create, update, delete
-  create: (data) => api.post('/working-hours', data),
-  update: (id, data) => api.put(`/working-hours/${id}`, data),
-  delete: (id) => api.delete(`/working-hours/${id}`),
-  deleteByRestaurant: (restaurantId) => api.delete(`/restaurants/${restaurantId}/working-hours`),
-  deleteByUser: (userId) => api.delete(`/users/${userId}/working-hours`),
-};
-
-export const tablesAPI = {
-  // Get tables
-  getAll: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables`),
-  getById: (id) => api.get(`/tables/${id}`),
-  getAvailable: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/available`),
-  getBySection: (restaurantId, section) => api.get(`/restaurants/${restaurantId}/tables/section/${section}`),
-  getSections: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/sections`),
-  getStats: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/stats`),
-
-  // Create, update, delete
-  create: (data) => api.post('/tables', data),
-  update: (id, data) => api.put(`/tables/${id}`, data),
-  updateStatus: (id, status) => api.patch(`/tables/${id}/status`, { status }),
-  delete: (id) => api.delete(`/tables/${id}`),
 };
 
 export default api;

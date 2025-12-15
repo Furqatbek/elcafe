@@ -170,7 +170,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to create product:', error);
-      alert(t('menu.messages.createProductError') + ': ' + (error.response?.data?.message || error.message));
+      alert('Failed to create product: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -229,7 +229,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to update product:', error);
-      alert(t('menu.messages.updateProductError') + ': ' + (error.response?.data?.message || error.message));
+      alert('Failed to update product: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -248,7 +248,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to delete product:', error);
-      alert(t('menu.messages.deleteProductError') + ': ' + (error.response?.data?.message || error.message));
+      alert('Failed to delete product: ' + (error.response?.data?.message || error.message));
     }
   };
 

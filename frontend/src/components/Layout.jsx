@@ -43,9 +43,6 @@ import {
   CreditCard,
   Truck,
   MapPin,
-  DollarSign,
-  Receipt,
-  FileText,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -106,7 +103,6 @@ export default function Layout() {
       path: '/operators',
       subItems: [
         { label: t('nav.sub.operators'), icon: UserCog, path: '/operators' },
-        { label: t('nav.sub.waiters'), icon: UserCircle, path: '/employees/waiters' },
         { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
         { label: t('nav.sub.courierMap'), icon: MapPin, path: '/courier-map' },
         { label: t('nav.sub.schedule'), icon: Calendar, path: '/employees/schedule' },
@@ -146,17 +142,6 @@ export default function Layout() {
         { label: t('nav.sub.kitchenDashboard'), icon: Utensils, path: '/kitchen' },
         { label: t('nav.sub.recipes'), icon: Soup, path: '/kitchen/recipes' },
         { label: t('nav.sub.inventory'), icon: Cookie, path: '/kitchen/inventory' },
-      ],
-    },
-    {
-      id: 'finance',
-      label: t('nav.finance'),
-      icon: DollarSign,
-      path: '/finance/reports',
-      subItems: [
-        { label: t('nav.sub.purchaseOrders'), icon: Receipt, path: '/finance/purchase-orders' },
-        { label: t('nav.sub.expenses'), icon: CreditCard, path: '/finance/expenses' },
-        { label: t('nav.sub.financialReports'), icon: FileText, path: '/finance/reports' },
       ],
     },
     {
