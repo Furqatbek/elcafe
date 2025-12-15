@@ -281,4 +281,8 @@ export const waiterAPI = {
   getMyTables: () => api.get('/waiters/me/tables'),
 };
 
+export const posAPI = {
+  createOrder: (orderData) => api.post('/pos/orders', orderData),
+};
+
 export default api;

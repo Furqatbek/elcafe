@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { posAPI } from '../../services/api';
 
 /**
  * POS Store - Centralized state management for POS operations
@@ -247,6 +248,71 @@ const usePOSStore = create(
           lastFetched: new Date().toISOString(),
         },
       }),
+
+      // Actions: Submit Order to Backend
+      submitOrder: async (restaurantId) => {
+        const state = get();
+        set((s) => ({ ui: { ...s.ui, isLoading: true, error: null } }));
+
+        try {
+          // Map POS store data to backend API format
+          const orderData = {
+            restaurantId,
+            orderType: state.currentOrder.type, // DELIVERY, TAKEAWAY, DINE_IN
+            orderSource: 'WALK_IN',
+            customerInfo: {
+              name: state.customer.name,
+              phone: state.customer.phone,
+              email: state.customer.email || null,
+            },
+            items: state.currentOrder.items.map(item => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: item.basePrice,
+              modifiers: item.modifiers?.map(mod => ({
+                name: mod.name,
+                price: mod.price,
+              })) || [],
+              notes: item.notes || null,
+            })),
+            deliveryInfo: state.currentOrder.type === 'DELIVERY' && state.customer.address ? {
+              street: state.customer.address.street,
+              city: state.customer.address.city,
+              state: state.customer.address.state || null,
+              zipCode: state.customer.address.zipCode || null,
+              deliveryInstructions: state.customer.deliveryInstructions || null,
+            } : null,
+            dineInInfo: state.currentOrder.type === 'DINE_IN' ? {
+              tableNumber: state.customer.tableNumber,
+              guestCount: state.customer.guestCount,
+            } : null,
+            orderNotes: state.currentOrder.notes || null,
+            paymentMethod: state.payment.method, // CASH, CARD, MOBILE
+            subtotal: state.currentOrder.subtotal,
+            tax: state.currentOrder.tax,
+            deliveryFee: state.currentOrder.deliveryFee,
+            total: state.currentOrder.total,
+            amountTendered: state.payment.amountTendered || null,
+            changeDue: state.payment.changeDue || null,
+          };
+
+          const response = await posAPI.createOrder(orderData);
+          const orderNumber = response.data.data.orderNumber;
+
+          set((s) => ({
+            currentOrder: { ...s.currentOrder, orderNumber },
+            ui: { ...s.ui, isLoading: false },
+          }));
+
+          return { success: true, orderNumber };
+        } catch (error) {
+          const errorMessage = error.response?.data?.message || error.message || 'Failed to submit order';
+          set((s) => ({
+            ui: { ...s.ui, isLoading: false, error: errorMessage },
+          }));
+          return { success: false, error: errorMessage };
+        }
+      },
 
       // Actions: Complete Order & Reset
       completeOrder: () => set((state) => {
