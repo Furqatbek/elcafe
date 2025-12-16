@@ -22,6 +22,7 @@ import FinancialAnalytics from './pages/FinancialAnalytics';
 import OperationalAnalytics from './pages/OperationalAnalytics';
 import CustomerAnalytics from './pages/CustomerAnalytics';
 import InventoryAnalytics from './pages/InventoryAnalytics';
+import POSApp from './pos/POSApp';
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -62,6 +63,7 @@ function App() {
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
+          <Route path="pos" element={<POSApp />} />
         </Route>
       </Routes>
     </BrowserRouter>
