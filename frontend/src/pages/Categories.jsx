@@ -130,7 +130,7 @@ export default function Categories() {
       loadCategories();
     } catch (error) {
       console.error('Failed to create category:', error);
-      alert('Failed to create category: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.createCategoryError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -156,19 +156,19 @@ export default function Categories() {
       loadCategories();
     } catch (error) {
       console.error('Failed to update category:', error);
-      alert('Failed to update category: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.updateCategoryError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (!confirm('Are you sure you want to delete this category?')) return;
+    if (!confirm(t('menu.messages.confirmDeleteCategory'))) return;
 
     try {
       await menuAPI.deleteCategory(categoryId);
       loadCategories();
     } catch (error) {
       console.error('Failed to delete category:', error);
-      alert('Failed to delete category: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.deleteCategoryError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -286,7 +286,7 @@ export default function Categories() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium">
-              Filtered Results
+              {t('menu.filteredResults')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -339,10 +339,10 @@ export default function Categories() {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <Package className="h-4 w-4" />
-                    <span>{category.products?.length || 0} products</span>
+                    <span>{category.products?.length || 0} {t('menu.products')}</span>
                   </div>
                   <div>
-                    Sort Order: {category.sortOrder || 0}
+                    {t('menu.sortOrder')}: {category.sortOrder || 0}
                   </div>
                 </div>
 
@@ -376,7 +376,7 @@ export default function Categories() {
           <DialogHeader>
             <DialogTitle>{t('menu.createCategory')}</DialogTitle>
             <DialogDescription>
-              Fill in the details to create a new category
+              {t('menu.createCategoryDescription')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateCategory}>
@@ -404,7 +404,7 @@ export default function Categories() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="imageFile">Category Image</Label>
+                <Label htmlFor="imageFile">{t('menu.categoryImage')}</Label>
                 <Input
                   id="imageFile"
                   type="file"
@@ -421,7 +421,7 @@ export default function Categories() {
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Or enter image URL instead:
+                  {t('menu.orEnterImageUrl')}
                 </p>
                 <div className="flex gap-2">
                   <ImageIcon className="h-5 w-5 text-muted-foreground mt-2" />
@@ -476,7 +476,7 @@ export default function Categories() {
           <DialogHeader>
             <DialogTitle>{t('menu.editCategory')}</DialogTitle>
             <DialogDescription>
-              Update the category details
+              {t('menu.updateCategoryDescription')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditCategory}>
@@ -504,7 +504,7 @@ export default function Categories() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-imageFile">Category Image</Label>
+                <Label htmlFor="edit-imageFile">{t('menu.categoryImage')}</Label>
                 <Input
                   id="edit-imageFile"
                   type="file"
@@ -521,7 +521,7 @@ export default function Categories() {
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Or enter image URL instead:
+                  {t('menu.orEnterImageUrl')}
                 </p>
                 <div className="flex gap-2">
                   <ImageIcon className="h-5 w-5 text-muted-foreground mt-2" />
