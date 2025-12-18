@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,6 +23,7 @@ public class DeliveryInfo {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
+    @JsonIgnore
     private Order order;
 
     @Column(nullable = false, length = 500)
@@ -49,11 +51,23 @@ public class DeliveryInfo {
     @Column(length = 500)
     private String deliveryInstructions;
 
+    private Long courierId;
+
+    @Column(length = 200)
+    private String courierName;
+
+    @Column(length = 20)
+    private String courierPhone;
+
     private String courierProviderId;
 
     private String courierTrackingId;
 
+    private LocalDateTime pickupTime;
+
     private LocalDateTime estimatedDeliveryTime;
+
+    private LocalDateTime deliveryTime;
 
     private LocalDateTime actualDeliveryTime;
 }

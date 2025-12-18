@@ -18,6 +18,9 @@ public class DeliveryZoneResponse {
     @Schema(description = "ID")
     private Long id;
 
+    @Schema(description = "Restaurant ID")
+    private Long restaurantId;
+
     @Schema(description = "Zone name")
     private String name;
 

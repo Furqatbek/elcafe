@@ -19,6 +19,9 @@ public class BusinessHoursResponse {
     @Schema(description = "ID")
     private Long id;
 
+    @Schema(description = "Restaurant ID")
+    private Long restaurantId;
+
     @Schema(description = "Day of week")
     private DayOfWeek dayOfWeek;
 
