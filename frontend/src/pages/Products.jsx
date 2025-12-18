@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { menuAPI, restaurantAPI, uploadAPI } from '../services/api';
+import { menuAPI, restaurantAPI, uploadAPI, productVariantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -29,7 +29,8 @@ import {
   Plus,
   Star,
   Edit,
-  Trash2
+  Trash2,
+  List
 } from 'lucide-react';
 
 export default function Products() {
@@ -58,6 +59,22 @@ export default function Products() {
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+
+  // Variant management state
+  const [variantsModalOpen, setVariantsModalOpen] = useState(false);
+  const [variants, setVariants] = useState([]);
+  const [selectedProductForVariants, setSelectedProductForVariants] = useState(null);
+  const [variantFormData, setVariantFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    inStock: true,
+    sortOrder: 0
+  });
+  const [createVariantModalOpen, setCreateVariantModalOpen] = useState(false);
+  const [editVariantModalOpen, setEditVariantModalOpen] = useState(false);
+  const [deleteVariantDialogOpen, setDeleteVariantDialogOpen] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState(null);
 
   useEffect(() => {
     loadRestaurants();
@@ -170,7 +187,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to create product:', error);
-      alert('Failed to create product: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.createProductError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -229,7 +246,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to update product:', error);
-      alert('Failed to update product: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.updateProductError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -248,7 +265,102 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to delete product:', error);
-      alert('Failed to delete product: ' + (error.response?.data?.message || error.message));
+      alert(t('menu.messages.deleteProductError') + ': ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  // Variant management handlers
+  const handleViewVariants = async (product) => {
+    setSelectedProductForVariants(product);
+    setVariantsModalOpen(true);
+    await loadVariants(product.id);
+  };
+
+  const loadVariants = async (productId) => {
+    try {
+      const response = await productVariantAPI.getAllNoPaging(productId);
+      setVariants(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load variants:', error);
+      setVariants([]);
+    }
+  };
+
+  const resetVariantForm = () => {
+    setVariantFormData({
+      name: '',
+      description: '',
+      price: '',
+      inStock: true,
+      sortOrder: 0
+    });
+  };
+
+  const handleCreateVariant = async (e) => {
+    e.preventDefault();
+    if (!selectedProductForVariants) return;
+
+    try {
+      await productVariantAPI.create(selectedProductForVariants.id, {
+        ...variantFormData,
+        price: parseFloat(variantFormData.price)
+      });
+      setCreateVariantModalOpen(false);
+      resetVariantForm();
+      await loadVariants(selectedProductForVariants.id);
+    } catch (error) {
+      console.error('Failed to create variant:', error);
+      alert('Failed to create variant: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleEditVariantClick = (variant) => {
+    setSelectedVariant(variant);
+    setVariantFormData({
+      name: variant.name,
+      description: variant.description || '',
+      price: variant.price?.toString() || '',
+      inStock: variant.inStock ?? true,
+      sortOrder: variant.sortOrder || 0
+    });
+    setEditVariantModalOpen(true);
+  };
+
+  const handleUpdateVariant = async (e) => {
+    e.preventDefault();
+    if (!selectedProductForVariants || !selectedVariant) return;
+
+    try {
+      await productVariantAPI.update(selectedProductForVariants.id, selectedVariant.id, {
+        ...variantFormData,
+        price: parseFloat(variantFormData.price)
+      });
+      setEditVariantModalOpen(false);
+      resetVariantForm();
+      setSelectedVariant(null);
+      await loadVariants(selectedProductForVariants.id);
+    } catch (error) {
+      console.error('Failed to update variant:', error);
+      alert('Failed to update variant: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteVariantClick = (variant) => {
+    setSelectedVariant(variant);
+    setDeleteVariantDialogOpen(true);
+  };
+
+  const handleConfirmDeleteVariant = async () => {
+    if (!selectedProductForVariants || !selectedVariant) return;
+
+    try {
+      await productVariantAPI.delete(selectedProductForVariants.id, selectedVariant.id);
+      setDeleteVariantDialogOpen(false);
+      setSelectedVariant(null);
+      await loadVariants(selectedProductForVariants.id);
+    } catch (error) {
+      console.error('Failed to delete variant:', error);
+      alert('Failed to delete variant: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -376,11 +488,11 @@ export default function Products() {
                     <span>{product.price?.toFixed(2)}</span>
                   </div>
                 </div>
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2 pt-2 flex-wrap">
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 min-w-[80px]"
                     onClick={() => handleEditClick(product)}
                   >
                     <Edit className="h-4 w-4 mr-1" />
@@ -389,7 +501,16 @@ export default function Products() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="flex-1 min-w-[80px]"
+                    onClick={() => handleViewVariants(product)}
+                  >
+                    <List className="h-4 w-4 mr-1" />
+                    Variants
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 min-w-[80px] text-red-600 hover:text-red-700 hover:bg-red-50"
                     onClick={() => handleDeleteClick(product)}
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
@@ -706,6 +827,271 @@ export default function Products() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Variants Modal */}
+      <Dialog open={variantsModalOpen} onOpenChange={setVariantsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Product Variants - {selectedProductForVariants?.name}</DialogTitle>
+            <DialogDescription>
+              Manage variants for this product
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Variants ({variants.length})</h3>
+              <Button onClick={() => setCreateVariantModalOpen(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Variant
+              </Button>
+            </div>
+            {variants.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                No variants found. Click "Add Variant" to create one.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {variants.map((variant) => (
+                  <Card key={variant.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{variant.name}</h4>
+                            <Badge variant={variant.inStock ? 'default' : 'secondary'}>
+                              {variant.inStock ? 'In Stock' : 'Out of Stock'}
+                            </Badge>
+                          </div>
+                          {variant.description && (
+                            <p className="text-sm text-muted-foreground mt-1">{variant.description}</p>
+                          )}
+                          <div className="flex items-center gap-4 mt-2">
+                            <div className="flex items-center text-green-600 font-semibold">
+                              <DollarSign className="h-4 w-4" />
+                              <span>{variant.price?.toFixed(2)}</span>
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              Sort Order: {variant.sortOrder}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditVariantClick(variant)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteVariantClick(variant)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVariantsModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Variant Modal */}
+      <Dialog open={createVariantModalOpen} onOpenChange={setCreateVariantModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Product Variant</DialogTitle>
+            <DialogDescription>
+              Add a new variant for {selectedProductForVariants?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateVariant}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="variant-name">Variant Name *</Label>
+                <Input
+                  id="variant-name"
+                  value={variantFormData.name}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, name: e.target.value })}
+                  required
+                  maxLength={200}
+                  placeholder="e.g., Small, Medium, Large"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="variant-description">Description</Label>
+                <Textarea
+                  id="variant-description"
+                  value={variantFormData.description}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, description: e.target.value })}
+                  maxLength={500}
+                  rows={3}
+                  placeholder="Optional description"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="variant-price">Price *</Label>
+                  <Input
+                    id="variant-price"
+                    type="number"
+                    step="0.01"
+                    value={variantFormData.price}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, price: e.target.value })}
+                    required
+                    min="0"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="variant-sortOrder">Sort Order</Label>
+                  <Input
+                    id="variant-sortOrder"
+                    type="number"
+                    value={variantFormData.sortOrder}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, sortOrder: parseInt(e.target.value) || 0 })}
+                    min={0}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="variant-inStock"
+                  checked={variantFormData.inStock}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, inStock: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="variant-inStock">In Stock</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setCreateVariantModalOpen(false); resetVariantForm(); }}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Create Variant
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Variant Modal */}
+      <Dialog open={editVariantModalOpen} onOpenChange={setEditVariantModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Product Variant</DialogTitle>
+            <DialogDescription>
+              Update variant details for {selectedProductForVariants?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateVariant}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-variant-name">Variant Name *</Label>
+                <Input
+                  id="edit-variant-name"
+                  value={variantFormData.name}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, name: e.target.value })}
+                  required
+                  maxLength={200}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-variant-description">Description</Label>
+                <Textarea
+                  id="edit-variant-description"
+                  value={variantFormData.description}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, description: e.target.value })}
+                  maxLength={500}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-variant-price">Price *</Label>
+                  <Input
+                    id="edit-variant-price"
+                    type="number"
+                    step="0.01"
+                    value={variantFormData.price}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, price: e.target.value })}
+                    required
+                    min="0"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-variant-sortOrder">Sort Order</Label>
+                  <Input
+                    id="edit-variant-sortOrder"
+                    type="number"
+                    value={variantFormData.sortOrder}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, sortOrder: parseInt(e.target.value) || 0 })}
+                    min={0}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-variant-inStock"
+                  checked={variantFormData.inStock}
+                  onChange={(e) => setVariantFormData({ ...variantFormData, inStock: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="edit-variant-inStock">In Stock</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setEditVariantModalOpen(false); resetVariantForm(); setSelectedVariant(null); }}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Update Variant
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Variant Confirmation Dialog */}
+      <Dialog open={deleteVariantDialogOpen} onOpenChange={setDeleteVariantDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Variant</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the variant "{selectedVariant?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteVariantDialogOpen(false); setSelectedVariant(null); }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteVariant}>
               Delete
             </Button>
           </DialogFooter>

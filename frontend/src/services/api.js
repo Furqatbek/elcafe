@@ -162,6 +162,17 @@ export const linkedItemAPI = {
   deleteLinkedItem: (productId, id) => api.delete(`/products/${productId}/linked-items/${id}`),
 };
 
+export const productVariantAPI = {
+  getAll: (productId, params) => api.get(`/products/${productId}/variants`, { params }),
+  getAllNoPaging: (productId) => api.get(`/products/${productId}/variants/all`),
+  getById: (productId, variantId) => api.get(`/products/${productId}/variants/${variantId}`),
+  create: (productId, data) => api.post(`/products/${productId}/variants`, data),
+  update: (productId, variantId, data) => api.put(`/products/${productId}/variants/${variantId}`, data),
+  delete: (productId, variantId) => api.delete(`/products/${productId}/variants/${variantId}`),
+  search: (productId, query, params) => api.get(`/products/${productId}/variants/search`, { params: { query, ...params } }),
+  getInStock: (productId) => api.get(`/products/${productId}/variants/in-stock`),
+};
+
 export const orderAPI = {
   create: (data) => api.post('/orders', data),
   getById: (id) => api.get(`/orders/${id}`),
