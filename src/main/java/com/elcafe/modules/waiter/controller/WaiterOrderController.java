@@ -144,4 +144,22 @@ public class WaiterOrderController {
         List<OrderEventResponse> events = orderEventService.getOrderHistory(orderId);
         return ResponseEntity.ok(ApiResponse.success("Order history retrieved successfully", events));
     }
+
+    @GetMapping("/waiter/{waiterId}/history")
+    @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR', 'ADMIN', 'OPERATOR')")
+    @Operation(summary = "Get waiter order history", description = "Get all completed and cancelled orders for a waiter")
+    public ResponseEntity<ApiResponse<List<Order>>> getWaiterOrderHistory(
+            @PathVariable Long waiterId) {
+        List<Order> orders = waiterOrderService.getWaiterOrderHistory(waiterId);
+        return ResponseEntity.ok(ApiResponse.success("Waiter order history retrieved successfully", orders));
+    }
+
+    @GetMapping("/waiter/{waiterId}/ongoing")
+    @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR', 'ADMIN', 'OPERATOR')")
+    @Operation(summary = "Get waiter ongoing orders", description = "Get all active orders for a waiter")
+    public ResponseEntity<ApiResponse<List<Order>>> getWaiterOngoingOrders(
+            @PathVariable Long waiterId) {
+        List<Order> orders = waiterOrderService.getWaiterOngoingOrders(waiterId);
+        return ResponseEntity.ok(ApiResponse.success("Waiter ongoing orders retrieved successfully", orders));
+    }
 }

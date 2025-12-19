@@ -445,6 +445,34 @@ public class WaiterOrderService {
     }
 
     /**
+     * Get order history for a waiter (completed and cancelled orders)
+     */
+    @Transactional(readOnly = true)
+    public List<Order> getWaiterOrderHistory(Long waiterId) {
+        Waiter waiter = waiterRepository.findById(waiterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
+
+        return orderRepository.findByWaiterAndStatusInOrderByCreatedAtDesc(
+                waiter,
+                List.of(OrderStatus.COMPLETED, OrderStatus.CANCELLED)
+        );
+    }
+
+    /**
+     * Get ongoing orders for a waiter (active orders)
+     */
+    @Transactional(readOnly = true)
+    public List<Order> getWaiterOngoingOrders(Long waiterId) {
+        Waiter waiter = waiterRepository.findById(waiterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
+
+        return orderRepository.findByWaiterAndStatusInOrderByCreatedAtDesc(
+                waiter,
+                List.of(OrderStatus.NEW, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.DELIVERING)
+        );
+    }
+
+    /**
      * Generate unique order number (short format)
      */
     private String generateOrderNumber() {
