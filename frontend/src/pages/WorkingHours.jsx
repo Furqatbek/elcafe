@@ -41,7 +41,7 @@ const WorkingHours = () => {
   const loadWorkingHours = async () => {
     try {
       setLoading(true);
-      const response = await restaurantAPI.getWorkingHours(selectedRestaurant);
+      const response = await restaurantAPI.getBusinessHours(selectedRestaurant);
       const hours = response?.data?.data || {};
 
       // Convert array to object indexed by day
@@ -54,7 +54,7 @@ const WorkingHours = () => {
 
       setWorkingHours(hoursMap);
     } catch (error) {
-      console.error('Failed to load working hours:', error);
+      console.error('Failed to load business hours:', error);
       // Initialize with default structure
       const defaultHours = {};
       DAYS_OF_WEEK.forEach(day => {
@@ -90,11 +90,11 @@ const WorkingHours = () => {
     try {
       setSaving(true);
       const hoursArray = Object.values(workingHours);
-      await restaurantAPI.updateWorkingHours(selectedRestaurant, hoursArray);
-      alert(t('workingHours.messages.saveSuccess') || 'Working hours saved successfully');
+      await restaurantAPI.updateBusinessHours(selectedRestaurant, hoursArray);
+      alert(t('workingHours.messages.saveSuccess') || 'Business hours saved successfully');
     } catch (error) {
-      console.error('Failed to save working hours:', error);
-      alert(t('workingHours.messages.saveError') || 'Failed to save working hours');
+      console.error('Failed to save business hours:', error);
+      alert(t('workingHours.messages.saveError') || 'Failed to save business hours');
     } finally {
       setSaving(false);
     }

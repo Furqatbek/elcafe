@@ -90,21 +90,21 @@ public class RestaurantController {
         return ResponseEntity.ok(ApiResponse.success("Restaurant deleted successfully", null));
     }
 
-    @GetMapping("/{restaurantId}/working-hours")
-    @Operation(summary = "Get working hours", description = "Get all working hours for a restaurant")
-    public ResponseEntity<ApiResponse<List<BusinessHoursResponse>>> getWorkingHours(@PathVariable Long restaurantId) {
+    @GetMapping("/{restaurantId}/business-hours")
+    @Operation(summary = "Get business hours", description = "Get restaurant operating hours (when the restaurant is open/closed)")
+    public ResponseEntity<ApiResponse<List<BusinessHoursResponse>>> getBusinessHours(@PathVariable Long restaurantId) {
         List<BusinessHoursResponse> response = businessHoursService.getAllByRestaurantId(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @PutMapping("/{restaurantId}/working-hours")
+    @PutMapping("/{restaurantId}/business-hours")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    @Operation(summary = "Update working hours", description = "Update all working hours for a restaurant")
-    public ResponseEntity<ApiResponse<List<BusinessHoursResponse>>> updateWorkingHours(
+    @Operation(summary = "Update business hours", description = "Update restaurant operating hours (when the restaurant is open/closed)")
+    public ResponseEntity<ApiResponse<List<BusinessHoursResponse>>> updateBusinessHours(
             @PathVariable Long restaurantId,
             @Valid @RequestBody List<UpdateBusinessHoursRequest> requests
     ) {
         List<BusinessHoursResponse> response = businessHoursService.updateAllByRestaurantId(restaurantId, requests);
-        return ResponseEntity.ok(ApiResponse.success("Working hours updated successfully", response));
+        return ResponseEntity.ok(ApiResponse.success("Business hours updated successfully", response));
     }
 }
