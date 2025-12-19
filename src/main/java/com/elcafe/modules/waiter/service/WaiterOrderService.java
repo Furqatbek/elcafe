@@ -55,6 +55,11 @@ public class WaiterOrderService {
      */
     @Transactional
     public Order createOrder(CreateOrderRequest request, Long waiterId) {
+        log.info("Creating order for tableId: {}, waiterId: {}", request.getTableId(), waiterId);
+        log.info("All tables in database: {}", tableRepository.findAll().stream()
+                .map(t -> "id=" + t.getId() + ",number=" + t.getNumber() + ",status=" + t.getStatus())
+                .toList());
+
         Table table = tableRepository.findById(request.getTableId())
                 .orElseThrow(() -> new ResourceNotFoundException("Table not found with id: " + request.getTableId()));
 
