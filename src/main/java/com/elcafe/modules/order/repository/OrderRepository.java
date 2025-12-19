@@ -2,10 +2,8 @@ package com.elcafe.modules.order.repository;
 
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
-import com.elcafe.modules.order.enums.OrderSource;
-import org.springframework.data.domain.Page;
+import com.elcafe.modules.waiter.entity.Waiter;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -20,17 +18,7 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
-    @EntityGraph(attributePaths = {
-        "restaurant",
-        "customer",
-        "deliveryInfo"
-    })
-    @Query("SELECT o FROM Order o")
-    Page<Order> findAllWithRelations(Pageable pageable);
-
     Optional<Order> findByOrderNumber(String orderNumber);
-
-    Optional<Order> findByPaymentIntentId(String paymentIntentId);
 
     List<Order> findByRestaurantIdAndStatusOrderByCreatedAtDesc(Long restaurantId, OrderStatus status);
 
@@ -44,24 +32,24 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     List<Order> findByStatusOrderByCreatedAtAsc(OrderStatus status);
 
-    // For background jobs
-    List<Order> findByStatusAndPlacedAtBefore(OrderStatus status, LocalDateTime placedAt);
+    List<Order> findByWaiterAndStatusInOrderByCreatedAtDesc(Waiter waiter, List<OrderStatus> statuses);
 
-    List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime createdAt);
+    // Waiter metrics queries
+    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED')")
+    BigDecimal calculateTotalRevenueByWaiter(@Param("waiterId") Long waiterId);
 
-    List<Order> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED')")
+    Long countValidOrdersByWaiter(@Param("waiterId") Long waiterId);
 
-    // Additional methods for courier and customer activity
-    List<Order> findByRestaurantIdAndStatus(Long restaurantId, OrderStatus status);
+    @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') ORDER BY o.createdAt DESC")
+    List<Order> findRecentOrdersByWaiter(@Param("waiterId") Long waiterId, Pageable pageable);
 
-    List<Order> findByStatus(OrderStatus status);
-
-    @Query("SELECT o FROM Order o WHERE o.deliveryInfo.courierId = :courierId ORDER BY o.createdAt DESC")
-    List<Order> findByCourierId(@Param("courierId") Long courierId);
-
-    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.customer.id = :customerId")
-    BigDecimal sumTotalByCustomerId(@Param("customerId") Long customerId);
-
-    @Query("SELECT DISTINCT o.orderSource FROM Order o WHERE o.customer.id = :customerId")
-    List<OrderSource> findDistinctOrderSourcesByCustomerId(@Param("customerId") Long customerId);
+    @Query("SELECT CAST(o.createdAt AS LocalDate) as date, COALESCE(SUM(o.total), 0) as revenue, COUNT(o) as orderCount " +
+           "FROM Order o " +
+           "WHERE o.waiter.id = :waiterId " +
+           "AND o.status NOT IN ('PENDING', 'CANCELLED') " +
+           "AND o.createdAt >= :startDate " +
+           "GROUP BY CAST(o.createdAt AS LocalDate) " +
+           "ORDER BY CAST(o.createdAt AS LocalDate) DESC")
+    List<Object[]> findDailyRevenueByWaiter(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
 }

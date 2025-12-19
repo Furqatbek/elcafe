@@ -15,7 +15,10 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.waiter.dto.AddOrderItemRequest;
 import com.elcafe.modules.waiter.dto.CreateOrderRequest;
+import com.elcafe.modules.waiter.dto.DailyRevenueData;
+import com.elcafe.modules.waiter.dto.RecentTransactionData;
 import com.elcafe.modules.waiter.dto.UpdateOrderItemRequest;
+import com.elcafe.modules.waiter.dto.WaiterMetricsResponse;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.entity.RestaurantTable.TableStatus;
 import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
@@ -24,16 +27,21 @@ import com.elcafe.modules.waiter.enums.OrderEventType;
 import com.elcafe.modules.waiter.repository.WaiterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.Date;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Service for managing orders from waiter's perspective
@@ -442,6 +450,91 @@ public class WaiterOrderService {
         return table.getOrders().stream()
                 .filter(o -> o.getStatus() != OrderStatus.COMPLETED && o.getStatus() != OrderStatus.CANCELLED)
                 .toList();
+    }
+
+    /**
+     * Get order history for a waiter (completed and cancelled orders)
+     */
+    @Transactional(readOnly = true)
+    public List<Order> getWaiterOrderHistory(Long waiterId) {
+        Waiter waiter = waiterRepository.findById(waiterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
+
+        return orderRepository.findByWaiterAndStatusInOrderByCreatedAtDesc(
+                waiter,
+                List.of(OrderStatus.COMPLETED, OrderStatus.CANCELLED)
+        );
+    }
+
+    /**
+     * Get ongoing orders for a waiter (active orders)
+     */
+    @Transactional(readOnly = true)
+    public List<Order> getWaiterOngoingOrders(Long waiterId) {
+        Waiter waiter = waiterRepository.findById(waiterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
+
+        return orderRepository.findByWaiterAndStatusInOrderByCreatedAtDesc(
+                waiter,
+                List.of(OrderStatus.NEW, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.DELIVERING)
+        );
+    }
+
+    /**
+     * Get waiter performance metrics
+     */
+    @Transactional(readOnly = true)
+    public WaiterMetricsResponse getWaiterMetrics(Long waiterId) {
+        // Verify waiter exists
+        Waiter waiter = waiterRepository.findById(waiterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
+
+        // Calculate total revenue (excluding PENDING and CANCELLED)
+        BigDecimal totalRevenue = orderRepository.calculateTotalRevenueByWaiter(waiterId);
+
+        // Count valid orders (excluding PENDING and CANCELLED)
+        Long totalOrders = orderRepository.countValidOrdersByWaiter(waiterId);
+
+        // Calculate average ticket
+        BigDecimal averageTicket = BigDecimal.ZERO;
+        if (totalOrders > 0) {
+            averageTicket = totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP);
+        }
+
+        // Get weekly activity (last 7 days)
+        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+        List<Object[]> dailyData = orderRepository.findDailyRevenueByWaiter(waiterId, sevenDaysAgo);
+
+        List<DailyRevenueData> weeklyActivity = dailyData.stream()
+                .map(row -> DailyRevenueData.builder()
+                        .date(((Date) row[0]).toLocalDate())
+                        .revenue((BigDecimal) row[1])
+                        .orderCount((Long) row[2])
+                        .build())
+                .collect(Collectors.toList());
+
+        // Get recent transactions (last 5 orders)
+        List<Order> recentOrders = orderRepository.findRecentOrdersByWaiter(waiterId, PageRequest.of(0, 5));
+
+        List<RecentTransactionData> recentTransactions = recentOrders.stream()
+                .map(order -> RecentTransactionData.builder()
+                        .orderId(order.getId())
+                        .orderNumber(order.getOrderNumber())
+                        .tableId(order.getDiningTable() != null ? order.getDiningTable().getId() : null)
+                        .tableNumber(order.getDiningTable() != null ? order.getDiningTable().getTableNumber() : null)
+                        .createdAt(order.getCreatedAt())
+                        .status(order.getStatus())
+                        .total(order.getTotal())
+                        .build())
+                .collect(Collectors.toList());
+
+        return WaiterMetricsResponse.builder()
+                .totalRevenue(totalRevenue)
+                .totalOrders(totalOrders)
+                .averageTicket(averageTicket)
+                .weeklyActivity(weeklyActivity)
+                .recentTransactions(recentTransactions)
+                .build();
     }
 
     /**
