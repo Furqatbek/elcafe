@@ -135,9 +135,21 @@ export default function Orders() {
   const loadOrders = async () => {
     try {
       const response = await orderAPI.getAll({ page: 0, size: 100, sort: 'createdAt,desc' });
-      setOrders(response.data.data.content || []);
+      console.log('Orders response:', response);
+      console.log('Orders data:', response?.data);
+      console.log('Orders data.data:', response?.data?.data);
+
+      // Handle different response structures
+      const ordersData = response?.data?.data?.content ||
+                        response?.data?.data ||
+                        response?.data ||
+                        [];
+
+      console.log('Extracted orders:', ordersData);
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
     } catch (error) {
       console.error('Failed to load orders:', error);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
