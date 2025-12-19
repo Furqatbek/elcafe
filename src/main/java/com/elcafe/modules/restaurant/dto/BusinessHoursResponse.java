@@ -33,4 +33,9 @@ public class BusinessHoursResponse {
 
     @Schema(description = "Is closed")
     private Boolean closed;
+
+    @Schema(description = "Is open (opposite of closed)")
+    public Boolean getIsOpen() {
+        return closed != null ? !closed : true;
+    }
 }

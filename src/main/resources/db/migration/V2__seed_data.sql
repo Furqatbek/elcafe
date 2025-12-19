@@ -10,13 +10,4 @@ VALUES ('operator@elcafe.com', '$2b$10$ROuAr99Uk52NYdO5J/JyCe0C/8axTGDCvROewQgFI
 INSERT INTO restaurants (name, description, address, city, state, zip_code, country, phone, email, active, accepting_orders, delivery_fee, estimated_delivery_time_minutes)
 VALUES ('El Cafe', 'Best coffee and food in town', '123 Main Street', 'New York', 'NY', '10001', 'USA', '+1234567890', 'info@elcafe.com', TRUE, TRUE, 5.00, 30);
 
--- Insert business hours for the sample restaurant
-INSERT INTO business_hours (restaurant_id, day_of_week, open_time, close_time, closed)
-VALUES
-    (1, 'MONDAY', '09:00:00', '22:00:00', FALSE),
-    (1, 'TUESDAY', '09:00:00', '22:00:00', FALSE),
-    (1, 'WEDNESDAY', '09:00:00', '22:00:00', FALSE),
-    (1, 'THURSDAY', '09:00:00', '22:00:00', FALSE),
-    (1, 'FRIDAY', '09:00:00', '23:00:00', FALSE),
-    (1, 'SATURDAY', '10:00:00', '23:00:00', FALSE),
-    (1, 'SUNDAY', '10:00:00', '21:00:00', FALSE);
+-- Business hours can now be configured through the Working Hours interface
