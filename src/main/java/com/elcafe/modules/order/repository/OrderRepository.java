@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.repository;
 
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.waiter.entity.Waiter;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +34,26 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Order> findByStatusOrderByCreatedAtAsc(OrderStatus status);
 
     List<Order> findByWaiterAndStatusInOrderByCreatedAtDesc(Waiter waiter, List<OrderStatus> statuses);
+
+    List<Order> findByRestaurantIdAndStatus(Long restaurantId, OrderStatus status);
+
+    List<Order> findByStatus(OrderStatus status);
+
+    List<Order> findByCourierId(Long courierId);
+
+    List<Order> findByStatusAndPlacedAtBefore(OrderStatus status, LocalDateTime placedAt);
+
+    List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime createdAt);
+
+    List<Order> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    Optional<Order> findByPaymentIntentId(String paymentIntentId);
+
+    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.customer.id = :customerId")
+    BigDecimal sumTotalByCustomerId(@Param("customerId") Long customerId);
+
+    @Query("SELECT DISTINCT o.orderSource FROM Order o WHERE o.customer.id = :customerId")
+    List<OrderSource> findDistinctOrderSourcesByCustomerId(@Param("customerId") Long customerId);
 
     // Waiter metrics queries
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED')")
