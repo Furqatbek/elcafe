@@ -296,4 +296,34 @@ export const posAPI = {
   createOrder: (orderData) => api.post('/pos/orders', orderData),
 };
 
+export const waiterOrderAPI = {
+  createOrder: (orderData, waiterId) => api.post('/waiter/orders', orderData, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  getOrder: (orderId) => api.get(`/waiter/orders/${orderId}`),
+  getTableOrders: (tableId) => api.get(`/waiter/orders/table/${tableId}`),
+  addItems: (orderId, items, waiterId) => api.post(`/waiter/orders/${orderId}/items`, items, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  updateItem: (orderId, itemId, data, waiterId) => api.put(`/waiter/orders/${orderId}/items/${itemId}`, data, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  removeItem: (orderId, itemId, waiterId) => api.delete(`/waiter/orders/${orderId}/items/${itemId}`, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  submitToKitchen: (orderId, waiterId) => api.post(`/waiter/orders/${orderId}/submit`, {}, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  markItemDelivered: (orderId, itemId, waiterId) => api.post(`/waiter/orders/${orderId}/items/${itemId}/deliver`, {}, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  requestBill: (orderId, waiterId) => api.post(`/waiter/orders/${orderId}/bill`, {}, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  closeOrder: (orderId, waiterId) => api.post(`/waiter/orders/${orderId}/close`, {}, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  getOrderHistory: (orderId) => api.get(`/waiter/orders/${orderId}/history`),
+};
+
 export default api;
