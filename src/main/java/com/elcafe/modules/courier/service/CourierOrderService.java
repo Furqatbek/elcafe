@@ -41,7 +41,7 @@ public class CourierOrderService {
      * Get orders assigned to a specific courier
      */
     public List<Order> getCourierOrders(Long courierId) {
-        return orderRepository.findByCourierId(courierId);
+        return orderRepository.findByDeliveryInfo_CourierId(courierId);
     }
 
     /**

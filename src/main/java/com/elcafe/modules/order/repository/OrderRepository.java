@@ -39,7 +39,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     List<Order> findByStatus(OrderStatus status);
 
-    List<Order> findByCourierId(Long courierId);
+    List<Order> findByDeliveryInfo_CourierId(Long courierId);
 
     List<Order> findByStatusAndPlacedAtBefore(OrderStatus status, LocalDateTime placedAt);
 
