@@ -29,6 +29,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final InventoryService inventoryService;
+    private final DailyOrderSequenceService dailyOrderSequenceService;
 
     @Autowired
     @Lazy
@@ -175,7 +176,7 @@ public class OrderService {
     }
 
     private String generateOrderNumber() {
-        return "ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        return dailyOrderSequenceService.generateNextOrderNumber();
     }
 
     private boolean isValidStatusTransition(OrderStatus current, OrderStatus next) {

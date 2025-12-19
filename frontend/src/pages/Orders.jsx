@@ -431,13 +431,41 @@ export default function Orders() {
             <Card key={order.id}>
               <CardHeader>
                 <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">
-                      {t('orders.orderNumber')}: #{order.orderNumber}
-                    </CardTitle>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CardTitle className="text-lg">
+                        {t('orders.orderNumber')}: #{order.orderNumber}
+                      </CardTitle>
+                      {/* Order Type Icon and Badge */}
+                      {order.orderType === 'DELIVERY' && (
+                        <Badge variant="outline" className="gap-1">
+                          <Truck className="h-3 w-3" />
+                          {t('orders.types.delivery') || 'Delivery'}
+                        </Badge>
+                      )}
+                      {order.orderType === 'TAKEAWAY' && (
+                        <Badge variant="outline" className="gap-1">
+                          <ShoppingBag className="h-3 w-3" />
+                          {t('orders.types.takeaway') || 'Takeaway'}
+                        </Badge>
+                      )}
+                      {order.orderType === 'DINE_IN' && (
+                        <Badge variant="outline" className="gap-1">
+                          <Utensils className="h-3 w-3" />
+                          {t('orders.types.dineIn') || 'Dine In'}
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground mt-1">
                       {order.restaurant?.name || 'Restaurant'}
                     </p>
+                    {/* Table Info for Dine-In Orders */}
+                    {order.orderType === 'DINE_IN' && order.diningTable && (
+                      <p className="text-sm font-medium text-blue-600">
+                        {t('orders.table') || 'Table'}: {order.diningTable.tableNumber}
+                        {order.diningTable.section && ` - ${order.diningTable.section}`}
+                      </p>
+                    )}
                     <p className="text-sm text-muted-foreground">
                       {order.createdAt && format(new Date(order.createdAt), 'PPpp')}
                     </p>

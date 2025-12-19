@@ -24,6 +24,8 @@ import FinancialAnalytics from './pages/FinancialAnalytics';
 import OperationalAnalytics from './pages/OperationalAnalytics';
 import CustomerAnalytics from './pages/CustomerAnalytics';
 import InventoryAnalytics from './pages/InventoryAnalytics';
+import PurchaseOrders from './pages/PurchaseOrders';
+import Expenses from './pages/Expenses';
 import POSApp from './pos/POSApp';
 
 function PrivateRoute({ children }) {
@@ -67,6 +69,8 @@ function App() {
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
+          <Route path="finance/purchase-orders" element={<PurchaseOrders />} />
+          <Route path="finance/expenses" element={<Expenses />} />
           <Route path="pos" element={<POSApp />} />
         </Route>
       </Routes>
