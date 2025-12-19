@@ -8,6 +8,7 @@ import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.waiter.entity.Waiter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,6 +30,7 @@ import java.util.List;
 @Entity
 @jakarta.persistence.Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Order {
 
     @Id
@@ -40,18 +42,22 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
+    @JsonIgnoreProperties({"tables", "menuCategories", "products", "orders", "hibernateLazyInitializer", "handler"})
     private Restaurant restaurant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
+    @JsonIgnoreProperties({"orders", "addresses", "loyaltyInfo", "hibernateLazyInitializer", "handler"})
     private Customer customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dining_table_id")
+    @JsonIgnoreProperties({"restaurant", "orders", "hibernateLazyInitializer", "handler"})
     private RestaurantTable diningTable;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "waiter_id")
+    @JsonIgnoreProperties({"orders", "assignedTables", "hibernateLazyInitializer", "handler"})
     private Waiter waiter;
 
     @Enumerated(EnumType.STRING)
@@ -136,13 +142,16 @@ public class Order {
     private List<OrderItem> items = new ArrayList<>();
 
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties({"order", "courier", "hibernateLazyInitializer", "handler"})
     private DeliveryInfo deliveryInfo;
 
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnoreProperties({"order", "hibernateLazyInitializer", "handler"})
     private Payment payment;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnoreProperties({"order", "hibernateLazyInitializer", "handler"})
     private List<OrderStatusHistory> statusHistory = new ArrayList<>();
 
     @CreatedDate

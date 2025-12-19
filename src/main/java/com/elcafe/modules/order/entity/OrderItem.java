@@ -23,7 +23,7 @@ public class OrderItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
-    @JsonIgnore  // Prevent circular reference during JSON serialization
+    @JsonIgnore
     private Order order;
 
     @Column(nullable = false)
