@@ -51,7 +51,7 @@ public class WaiterOrderService {
     private final OrderEventService orderEventService;
 
     /**
-     * Create a new order for a table
+     * Create a new order for a table (with optional items)
      */
     @Transactional
     public Order createOrder(CreateOrderRequest request, Long waiterId) {
@@ -64,9 +64,9 @@ public class WaiterOrderService {
         Customer customer = customerRepository.findById(request.getCustomerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found with id: " + request.getCustomerId()));
 
-        // Update table status
+        // Update table status to OCCUPIED when order is created
         if (table.getStatus() == TableStatus.FREE) {
-            table.setStatus(TableStatus.ORDERING);
+            table.setStatus(TableStatus.OCCUPIED);
             table.setOpenedAt(LocalDateTime.now());
         }
         table.setCurrentWaiter(waiter);
@@ -91,11 +91,52 @@ public class WaiterOrderService {
 
         Order savedOrder = orderRepository.save(order);
 
+        // Add items if provided in the request
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            for (AddOrderItemRequest itemRequest : request.getItems()) {
+                Product product = productRepository.findById(itemRequest.getProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + itemRequest.getProductId()));
+
+                BigDecimal unitPrice = product.getPrice();
+                String variantName = null;
+
+                // Handle variant if specified
+                if (itemRequest.getVariantId() != null) {
+                    ProductVariant variant = productVariantRepository.findById(itemRequest.getVariantId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + itemRequest.getVariantId()));
+                    unitPrice = variant.getPrice();
+                    variantName = variant.getName();
+                }
+
+                BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+
+                OrderItem orderItem = OrderItem.builder()
+                        .order(savedOrder)
+                        .productId(product.getId())
+                        .productName(product.getName())
+                        .variantId(itemRequest.getVariantId())
+                        .variantName(variantName)
+                        .quantity(itemRequest.getQuantity())
+                        .unitPrice(unitPrice)
+                        .totalPrice(totalPrice)
+                        .addOns(itemRequest.getAddOns())
+                        .specialInstructions(itemRequest.getSpecialInstructions())
+                        .build();
+
+                savedOrder.addItem(orderItem);
+            }
+
+            // Recalculate totals if items were added
+            recalculateOrderTotals(savedOrder);
+            savedOrder = orderRepository.save(savedOrder);
+        }
+
         // Record event
         orderEventService.recordEvent(savedOrder, OrderEventType.ORDER_CREATED, waiter.getName());
 
-        log.info("Created order {} for table {} by waiter {}",
-                savedOrder.getOrderNumber(), table.getNumber(), waiter.getName());
+        log.info("Created order {} for table {} by waiter {} with {} items",
+                savedOrder.getOrderNumber(), table.getNumber(), waiter.getName(),
+                savedOrder.getItems().size());
 
         return savedOrder;
     }
