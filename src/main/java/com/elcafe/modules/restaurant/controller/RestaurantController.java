@@ -1,7 +1,10 @@
 package com.elcafe.modules.restaurant.controller;
 
+import com.elcafe.modules.restaurant.dto.BusinessHoursResponse;
 import com.elcafe.modules.restaurant.dto.RestaurantRequest;
 import com.elcafe.modules.restaurant.dto.RestaurantResponse;
+import com.elcafe.modules.restaurant.dto.UpdateBusinessHoursRequest;
+import com.elcafe.modules.restaurant.service.BusinessHoursService;
 import com.elcafe.modules.restaurant.service.RestaurantService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +29,7 @@ import java.util.List;
 public class RestaurantController {
 
     private final RestaurantService restaurantService;
+    private final BusinessHoursService businessHoursService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -84,5 +88,23 @@ public class RestaurantController {
     public ResponseEntity<ApiResponse<Void>> deleteRestaurant(@PathVariable Long id) {
         restaurantService.deleteRestaurant(id);
         return ResponseEntity.ok(ApiResponse.success("Restaurant deleted successfully", null));
+    }
+
+    @GetMapping("/{restaurantId}/working-hours")
+    @Operation(summary = "Get working hours", description = "Get all working hours for a restaurant")
+    public ResponseEntity<ApiResponse<List<BusinessHoursResponse>>> getWorkingHours(@PathVariable Long restaurantId) {
+        List<BusinessHoursResponse> response = businessHoursService.getAllByRestaurantId(restaurantId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PutMapping("/{restaurantId}/working-hours")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @Operation(summary = "Update working hours", description = "Update all working hours for a restaurant")
+    public ResponseEntity<ApiResponse<List<BusinessHoursResponse>>> updateWorkingHours(
+            @PathVariable Long restaurantId,
+            @Valid @RequestBody List<UpdateBusinessHoursRequest> requests
+    ) {
+        List<BusinessHoursResponse> response = businessHoursService.updateAllByRestaurantId(restaurantId, requests);
+        return ResponseEntity.ok(ApiResponse.success("Working hours updated successfully", response));
     }
 }

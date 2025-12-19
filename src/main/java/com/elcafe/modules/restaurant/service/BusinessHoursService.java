@@ -137,4 +137,52 @@ public class BusinessHoursService {
         businessHoursRepository.deleteByRestaurantId(restaurantId);
         log.info("All business hours deleted for restaurant ID: {}", restaurantId);
     }
+
+    @Transactional
+    public List<BusinessHoursResponse> updateAllByRestaurantId(Long restaurantId, List<UpdateBusinessHoursRequest> requests) {
+        log.info("Updating all business hours for restaurant ID: {}", restaurantId);
+
+        // Verify restaurant exists
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
+
+        // Get existing business hours
+        List<BusinessHours> existingHours = businessHoursRepository.findByRestaurantId(restaurantId);
+
+        // Process each request
+        for (UpdateBusinessHoursRequest request : requests) {
+            // Find existing business hours for this day
+            BusinessHours existing = existingHours.stream()
+                    .filter(bh -> bh.getDayOfWeek().equals(request.getDayOfWeek()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (existing != null) {
+                // Update existing
+                if (request.getOpenTime() != null) {
+                    existing.setOpenTime(request.getOpenTime());
+                }
+                if (request.getCloseTime() != null) {
+                    existing.setCloseTime(request.getCloseTime());
+                }
+                if (request.getClosed() != null) {
+                    existing.setClosed(request.getClosed());
+                }
+                businessHoursRepository.save(existing);
+            } else {
+                // Create new
+                BusinessHours newHours = BusinessHours.builder()
+                        .restaurant(restaurant)
+                        .dayOfWeek(request.getDayOfWeek())
+                        .openTime(request.getOpenTime())
+                        .closeTime(request.getCloseTime())
+                        .closed(request.getClosed() != null ? request.getClosed() : false)
+                        .build();
+                businessHoursRepository.save(newHours);
+            }
+        }
+
+        log.info("Business hours updated for restaurant ID: {}", restaurantId);
+        return getAllByRestaurantId(restaurantId);
+    }
 }

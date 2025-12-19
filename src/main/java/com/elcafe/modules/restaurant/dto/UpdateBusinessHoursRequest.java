@@ -30,4 +30,14 @@ public class UpdateBusinessHoursRequest {
 
     @Schema(description = "Is closed on this day", example = "false")
     private Boolean closed;
+
+    @Schema(description = "Is open on this day (opposite of closed)", example = "true")
+    public void setIsOpen(Boolean isOpen) {
+        this.closed = isOpen != null ? !isOpen : null;
+    }
+
+    @Schema(description = "Is open on this day (computed from closed)")
+    public Boolean getIsOpen() {
+        return closed != null ? !closed : null;
+    }
 }

@@ -94,7 +94,9 @@ export default function Layout() {
       icon: Store,
       path: '/restaurants/tables',
       subItems: [
+        { label: t('nav.sub.branches'), icon: Grid, path: '/restaurants' },
         { label: t('nav.sub.tables'), icon: Table, path: '/restaurants/tables' },
+        { label: t('nav.sub.workingHours'), icon: Clock, path: '/restaurants/working-hours' },
       ],
     },
     {
@@ -117,7 +119,6 @@ export default function Layout() {
         { label: t('nav.sub.waiters'), icon: UserCheck, path: '/employees/waiters' },
         { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
         { label: t('nav.sub.courierMap'), icon: MapPin, path: '/courier-map' },
-        { label: t('nav.sub.schedule'), icon: Calendar, path: '/employees/schedule' },
         { label: t('nav.sub.performance'), icon: Award, path: '/employees/performance' },
       ],
     },
@@ -125,9 +126,8 @@ export default function Layout() {
       id: 'catalog',
       label: t('nav.catalog'),
       icon: BookOpen,
-      path: '/restaurants',
+      path: '/products',
       subItems: [
-        { label: t('nav.sub.branches'), icon: Grid, path: '/restaurants' },
         { label: t('nav.sub.products'), icon: Package, path: '/products' },
         { label: t('nav.sub.categories'), icon: List, path: '/catalog/categories' },
         { label: t('nav.sub.menuCollections'), icon: Package, path: '/menu-collections' },
