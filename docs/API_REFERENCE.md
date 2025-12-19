@@ -984,18 +984,63 @@ Authorization: Bearer {token}
 ```http
 POST /api/v1/waiter/orders
 Authorization: Bearer {token}
+X-Waiter-Id: {waiterId}
 Content-Type: application/json
 
 {
   "tableId": 1,
-  "numberOfGuests": 4,
+  "customerId": 5,
+  "customerNotes": "VIP guest",
   "items": [
     {
-      "productId": 1,
+      "productId": 10,
+      "variantId": 25,
       "quantity": 2,
-      "specialInstructions": "Extra hot"
+      "addOns": "extra cheese, no onions",
+      "specialInstructions": "Well done"
+    },
+    {
+      "productId": 15,
+      "quantity": 1,
+      "specialInstructions": "Extra spicy"
     }
   ]
+}
+```
+
+**Note**: Items can be included in the create order request or added later. The `X-Waiter-Id` header is required for all waiter order operations.
+
+**Table Status Changes:**
+- When order is created: Table status changes from `FREE` → `OCCUPIED`
+- When order is closed: Table status changes from `OCCUPIED` → `CLEANING`
+
+**Response**: 201 Created
+```json
+{
+  "success": true,
+  "message": "Order created successfully",
+  "data": {
+    "id": 123,
+    "orderNumber": "ORD-1733412345678-A1B2C3D4",
+    "status": "NEW",
+    "table": {
+      "id": 1,
+      "number": "T-01",
+      "status": "OCCUPIED"
+    },
+    "items": [
+      {
+        "id": 1,
+        "productName": "Margherita Pizza",
+        "variantName": "Large",
+        "quantity": 2,
+        "unitPrice": 12.50,
+        "totalPrice": 25.00
+      }
+    ],
+    "subtotal": 25.00,
+    "total": 25.00
+  }
 }
 ```
 
@@ -1009,27 +1054,30 @@ Authorization: Bearer {token}
 ```http
 POST /api/v1/waiter/orders/{orderId}/items
 Authorization: Bearer {token}
+X-Waiter-Id: {waiterId}
 Content-Type: application/json
 
-{
-  "items": [
-    {
-      "productId": 2,
-      "quantity": 1,
-      "specialInstructions": "No sugar"
-    }
-  ]
-}
+[
+  {
+    "productId": 2,
+    "variantId": null,
+    "quantity": 1,
+    "addOns": null,
+    "specialInstructions": "No sugar"
+  }
+]
 ```
 
 #### Update Order Item (Waiter/Supervisor)
 ```http
 PUT /api/v1/waiter/orders/{orderId}/items/{itemId}
 Authorization: Bearer {token}
+X-Waiter-Id: {waiterId}
 Content-Type: application/json
 
 {
   "quantity": 3,
+  "addOns": "extra sauce",
   "specialInstructions": "Updated instructions"
 }
 ```
@@ -1038,38 +1086,49 @@ Content-Type: application/json
 ```http
 DELETE /api/v1/waiter/orders/{orderId}/items/{itemId}
 Authorization: Bearer {token}
+X-Waiter-Id: {waiterId}
 ```
 
 #### Submit Order to Kitchen (Waiter/Supervisor)
 ```http
 POST /api/v1/waiter/orders/{orderId}/submit
 Authorization: Bearer {token}
+X-Waiter-Id: {waiterId}
 ```
+
+**Effects:**
+- Order status changes to `ACCEPTED`
+- Order is sent to kitchen queue
+- Table status remains `OCCUPIED`
 
 #### Mark Item Delivered (Waiter/Supervisor)
 ```http
 POST /api/v1/waiter/orders/{orderId}/items/{itemId}/deliver
 Authorization: Bearer {token}
+X-Waiter-Id: {waiterId}
 ```
 
 #### Request Bill (Waiter/Supervisor)
 ```http
 POST /api/v1/waiter/orders/{orderId}/bill
 Authorization: Bearer {token}
+X-Waiter-Id: {waiterId}
 ```
+
+**Effects:**
+- Table status changes to `BILL_REQUESTED`
 
 #### Close Order (Waiter/Supervisor)
 ```http
 POST /api/v1/waiter/orders/{orderId}/close
 Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "paymentMethod": "CASH",
-  "paidAmount": 50000,
-  "tip": 5000
-}
+X-Waiter-Id: {waiterId}
 ```
+
+**Effects:**
+- Order status changes to `COMPLETED`
+- Table status changes to `CLEANING`
+- Table's `closedAt` timestamp is set
 
 ---
 
