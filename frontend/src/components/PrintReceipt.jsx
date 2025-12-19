@@ -27,7 +27,6 @@ const generateReceiptHTML = (order) => {
 <head>
   <meta charset="UTF-8">
   <title>Receipt - ${order.orderNumber}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -36,7 +35,7 @@ const generateReceiptHTML = (order) => {
     }
 
     @page {
-      size: A5;
+      size: 80mm auto;
       margin: 0;
     }
 
@@ -44,308 +43,290 @@ const generateReceiptHTML = (order) => {
       body {
         margin: 0;
         padding: 0;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
       }
-
       .no-print {
         display: none !important;
       }
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 14px;
-      line-height: 1.6;
-      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-      padding: 20px;
-      color: #2d3748;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 16px;
+      line-height: 1.4;
+      width: 80mm;
+      margin: 0 auto;
+      padding: 0;
+      background: white;
+      color: black;
     }
 
     .receipt {
-      max-width: 400px;
-      margin: 0 auto;
-      background: white;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-      border-radius: 16px;
-      overflow: hidden;
+      width: 100%;
+      padding: 10mm 5mm;
     }
 
     /* Header */
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
       text-align: center;
-      padding: 30px 20px;
-      position: relative;
-    }
-
-    .header::after {
-      content: '';
-      position: absolute;
-      bottom: -20px;
-      left: 0;
-      right: 0;
-      height: 20px;
-      background: white;
-      border-radius: 20px 20px 0 0;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 3px solid black;
     }
 
     .brand-name {
-      font-size: 36px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      margin-bottom: 8px;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      font-size: 32px;
+      font-weight: bold;
+      letter-spacing: 4px;
+      margin-bottom: 5px;
+      text-transform: uppercase;
     }
 
     .restaurant-name {
-      font-size: 14px;
-      font-weight: 400;
-      opacity: 0.95;
-      letter-spacing: 1px;
-    }
-
-    /* Content */
-    .content {
-      padding: 30px 25px;
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 5px;
     }
 
     /* Subheader */
     .subheader {
-      background: #f7fafc;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      border-left: 4px solid #667eea;
+      margin: 15px 0;
+      padding: 10px;
+      border: 2px solid black;
+      background: white;
     }
 
     .subheader-line {
       display: flex;
       justify-content: space-between;
       margin: 5px 0;
-      font-size: 13px;
-      color: #4a5568;
+      font-size: 16px;
+      line-height: 1.6;
     }
 
     .subheader-line .label {
-      font-weight: 600;
-      color: #2d3748;
+      font-weight: bold;
     }
 
-    .order-badge {
-      display: inline-block;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 14px;
-      margin-bottom: 10px;
+    .subheader-line .value {
+      text-align: right;
+    }
+
+    .order-number {
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      margin: 15px 0;
+      padding: 10px;
+      border: 3px solid black;
     }
 
     /* Customer Info */
     .customer-info {
-      background: #edf2f7;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      border-left: 4px solid #48bb78;
+      margin: 15px 0;
+      padding: 10px;
+      border: 2px solid black;
     }
 
     .customer-info-title {
-      font-weight: 600;
-      color: #2d3748;
+      font-weight: bold;
+      font-size: 18px;
       margin-bottom: 8px;
-      font-size: 14px;
+      text-decoration: underline;
     }
 
     .customer-info-line {
-      font-size: 13px;
-      color: #4a5568;
-      margin: 4px 0;
+      font-size: 16px;
+      margin: 5px 0;
+      line-height: 1.5;
     }
 
-    /* Items Section */
+    /* Items Table */
     .items-section {
-      margin: 20px 0;
+      margin: 15px 0;
     }
 
     .items-title {
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+      padding: 8px;
+      border: 3px solid black;
+      background: white;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+
+    .items-table th {
+      border: 2px solid black;
+      padding: 8px 4px;
+      text-align: left;
+      font-weight: bold;
       font-size: 16px;
-      font-weight: 600;
-      color: #2d3748;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 2px solid #e2e8f0;
+      background: black;
+      color: white;
     }
 
-    .item-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      padding: 12px 0;
-      border-bottom: 1px solid #edf2f7;
+    .items-table th.qty {
+      width: 15%;
+      text-align: center;
     }
 
-    .item-row:last-child {
-      border-bottom: 2px solid #cbd5e0;
+    .items-table th.name {
+      width: 50%;
     }
 
-    .item-details {
-      flex: 1;
+    .items-table th.price {
+      width: 35%;
+      text-align: right;
     }
 
-    .item-name {
-      font-weight: 600;
-      color: #2d3748;
-      font-size: 14px;
-      margin-bottom: 2px;
+    .items-table td {
+      border: 2px solid black;
+      padding: 8px 4px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .items-table td.qty {
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .items-table td.name {
+      font-weight: bold;
+    }
+
+    .items-table td.price {
+      text-align: right;
+      font-weight: bold;
     }
 
     .item-variant {
-      font-size: 12px;
-      color: #718096;
-      font-style: italic;
-    }
-
-    .item-qty {
-      background: #edf2f7;
-      padding: 4px 12px;
-      border-radius: 6px;
-      font-weight: 600;
-      color: #4a5568;
-      font-size: 13px;
-      margin: 0 10px;
-      white-space: nowrap;
-    }
-
-    .item-price {
-      font-weight: 600;
-      color: #2d3748;
       font-size: 14px;
-      min-width: 70px;
-      text-align: right;
+      font-weight: normal;
+      font-style: italic;
+      margin-top: 2px;
     }
 
     /* Totals */
     .totals {
-      margin: 20px 0;
-      padding: 15px;
-      background: #f7fafc;
-      border-radius: 10px;
+      margin: 15px 0;
+      border: 3px solid black;
+      padding: 10px;
     }
 
     .total-line {
       display: flex;
       justify-content: space-between;
       margin: 8px 0;
-      font-size: 14px;
+      font-size: 18px;
+      padding: 5px 0;
     }
 
     .total-line .label {
-      color: #4a5568;
-      font-weight: 500;
+      font-weight: bold;
     }
 
     .total-line .amount {
-      font-weight: 600;
-      color: #2d3748;
+      font-weight: bold;
+      text-align: right;
+    }
+
+    .total-line.subtotal {
+      border-bottom: 1px solid black;
+      padding-bottom: 8px;
     }
 
     .total-line.grand-total {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 2px solid #cbd5e0;
-      font-size: 18px;
+      border-top: 3px solid black;
+      border-bottom: 3px solid black;
+      padding: 12px 0;
+      margin-top: 10px;
+      font-size: 24px;
     }
 
     .total-line.grand-total .label {
-      color: #2d3748;
-      font-weight: 700;
+      font-weight: bold;
+      text-transform: uppercase;
     }
 
     .total-line.grand-total .amount {
-      color: #667eea;
-      font-weight: 700;
-      font-size: 22px;
+      font-weight: bold;
+      font-size: 28px;
     }
 
     /* Payment Info */
     .payment-info {
-      background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-      color: white;
-      padding: 12px 15px;
-      border-radius: 10px;
       margin: 15px 0;
+      padding: 10px;
+      border: 2px solid black;
       text-align: center;
-    }
-
-    .payment-method {
-      font-weight: 600;
-      font-size: 14px;
+      font-size: 18px;
+      font-weight: bold;
     }
 
     /* Notes */
     .notes-section {
-      background: #fff5f5;
-      border-left: 4px solid #fc8181;
-      padding: 12px 15px;
-      border-radius: 10px;
       margin: 15px 0;
+      padding: 10px;
+      border: 2px solid black;
     }
 
     .notes-title {
-      font-weight: 600;
-      color: #c53030;
+      font-weight: bold;
+      font-size: 18px;
       margin-bottom: 5px;
-      font-size: 13px;
     }
 
     .notes-content {
-      color: #742a2a;
-      font-size: 13px;
+      font-size: 16px;
       font-style: italic;
+      line-height: 1.5;
     }
 
     /* Footer */
     .footer {
-      background: #2d3748;
-      color: white;
-      text-align: center;
-      padding: 25px 20px;
       margin-top: 20px;
+      padding-top: 15px;
+      border-top: 3px solid black;
+      text-align: center;
     }
 
     .contact-info {
       margin: 10px 0;
-      font-size: 13px;
-      opacity: 0.9;
+      font-size: 16px;
+      line-height: 1.8;
     }
 
     .contact-info div {
       margin: 5px 0;
+      font-weight: bold;
     }
 
     .thank-you {
-      font-size: 20px;
-      font-weight: 700;
-      margin: 15px 0 8px 0;
-      color: #ffd700;
+      font-size: 24px;
+      font-weight: bold;
+      margin: 15px 0;
+      padding: 10px;
+      border: 3px solid black;
     }
 
     .visit-again {
-      font-size: 14px;
-      font-style: italic;
-      opacity: 0.9;
+      font-size: 18px;
+      font-weight: bold;
+      margin: 10px 0;
     }
 
     .timestamp {
       margin-top: 15px;
-      font-size: 11px;
-      opacity: 0.7;
-      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 14px;
       padding-top: 10px;
+      border-top: 2px solid black;
     }
 
     /* Print button */
@@ -353,44 +334,28 @@ const generateReceiptHTML = (order) => {
       position: fixed;
       top: 20px;
       right: 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: black;
       color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 14px;
+      border: 3px solid black;
+      padding: 15px 30px;
+      font-weight: bold;
+      font-size: 16px;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-      transition: transform 0.2s;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
 
     .print-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+      background: #333;
     }
 
-    @media print {
-      .print-button {
-        display: none;
-      }
-
-      body {
-        background: white;
-        padding: 0;
-      }
-
-      .receipt {
-        box-shadow: none;
-        border-radius: 0;
-        max-width: 100%;
-      }
+    .print-button:active {
+      background: #555;
     }
   </style>
 </head>
 <body>
   <!-- Print Button -->
-  <button class="print-button no-print" onclick="window.print()">🖨️ Print Receipt</button>
+  <button class="print-button no-print" onclick="window.print()">PRINT RECEIPT</button>
 
   <div class="receipt">
     <!-- Header -->
@@ -399,132 +364,139 @@ const generateReceiptHTML = (order) => {
       <div class="restaurant-name">${order.restaurant?.name || 'Restaurant'}</div>
     </div>
 
-    <!-- Content -->
-    <div class="content">
-      <!-- Order Badge -->
-      <div style="text-align: center; margin-bottom: 20px;">
-        <span class="order-badge">Order #${order.orderNumber}</span>
-      </div>
+    <!-- Order Number -->
+    <div class="order-number">
+      ORDER #${order.orderNumber}
+    </div>
 
-      <!-- Subheader Info -->
-      <div class="subheader">
-        <div class="subheader-line">
-          <span class="label">Date & Time:</span>
-          <span>${currentDate}</span>
-        </div>
-        <div class="subheader-line">
-          <span class="label">Cashier:</span>
-          <span>${cashier}</span>
-        </div>
-        ${order.orderType ? `
-        <div class="subheader-line">
-          <span class="label">Order Type:</span>
-          <span>${order.orderType.replace(/_/g, ' ')}</span>
-        </div>
-        ` : ''}
-        ${order.diningTable ? `
-        <div class="subheader-line">
-          <span class="label">Table:</span>
-          <span>${order.diningTable.tableNumber}${order.diningTable.section ? ' - ' + order.diningTable.section : ''}</span>
-        </div>
-        ` : ''}
+    <!-- Subheader Info -->
+    <div class="subheader">
+      <div class="subheader-line">
+        <span class="label">Date & Time:</span>
+        <span class="value">${currentDate}</span>
       </div>
-
-      <!-- Customer Info -->
-      ${order.deliveryInfo ? `
-      <div class="customer-info">
-        <div class="customer-info-title">👤 Customer Information</div>
-        <div class="customer-info-line">
-          <strong>Name:</strong> ${order.deliveryInfo.contactName || 'N/A'}
-        </div>
-        <div class="customer-info-line">
-          <strong>Phone:</strong> ${order.deliveryInfo.contactPhone || 'N/A'}
-        </div>
-        ${order.deliveryInfo.address ? `
-        <div class="customer-info-line">
-          <strong>Address:</strong> ${order.deliveryInfo.address}, ${order.deliveryInfo.city || ''}
-        </div>
-        ` : ''}
+      <div class="subheader-line">
+        <span class="label">Cashier:</span>
+        <span class="value">${cashier}</span>
+      </div>
+      ${order.orderType ? `
+      <div class="subheader-line">
+        <span class="label">Type:</span>
+        <span class="value">${order.orderType.replace(/_/g, ' ')}</span>
       </div>
       ` : ''}
-
-      <!-- Items Section -->
-      <div class="items-section">
-        <div class="items-title">📋 Order Items</div>
-        ${(order.items || []).map(item => `
-        <div class="item-row">
-          <div class="item-details">
-            <div class="item-name">${item.productName}</div>
-            ${item.variantName ? `<div class="item-variant">${item.variantName}</div>` : ''}
-          </div>
-          <div class="item-qty">×${item.quantity}</div>
-          <div class="item-price">$${(item.totalPrice || 0).toFixed(2)}</div>
-        </div>
-        `).join('')}
-      </div>
-
-      <!-- Totals -->
-      <div class="totals">
-        <div class="total-line">
-          <span class="label">Subtotal</span>
-          <span class="amount">$${(order.subtotal || 0).toFixed(2)}</span>
-        </div>
-
-        ${order.tax ? `
-        <div class="total-line">
-          <span class="label">Tax</span>
-          <span class="amount">$${(order.tax || 0).toFixed(2)}</span>
-        </div>
-        ` : ''}
-
-        ${order.deliveryFee && order.deliveryFee > 0 ? `
-        <div class="total-line">
-          <span class="label">Delivery Fee</span>
-          <span class="amount">$${(order.deliveryFee || 0).toFixed(2)}</span>
-        </div>
-        ` : ''}
-
-        ${order.discount && order.discount > 0 ? `
-        <div class="total-line">
-          <span class="label">Discount</span>
-          <span class="amount">-$${(order.discount || 0).toFixed(2)}</span>
-        </div>
-        ` : ''}
-
-        <div class="total-line grand-total">
-          <span class="label">TOTAL</span>
-          <span class="amount">$${(order.total || 0).toFixed(2)}</span>
-        </div>
-      </div>
-
-      <!-- Payment Info -->
-      ${order.payment ? `
-      <div class="payment-info">
-        <div class="payment-method">
-          💳 ${order.payment.method || 'Payment'} • ${order.payment.status || 'Status'}
-        </div>
-      </div>
-      ` : ''}
-
-      <!-- Notes -->
-      ${order.customerNotes ? `
-      <div class="notes-section">
-        <div class="notes-title">📝 Special Notes</div>
-        <div class="notes-content">${order.customerNotes}</div>
+      ${order.diningTable ? `
+      <div class="subheader-line">
+        <span class="label">Table:</span>
+        <span class="value">${order.diningTable.tableNumber}${order.diningTable.section ? ' - ' + order.diningTable.section : ''}</span>
       </div>
       ` : ''}
     </div>
 
+    <!-- Customer Info -->
+    ${order.deliveryInfo ? `
+    <div class="customer-info">
+      <div class="customer-info-title">CUSTOMER INFORMATION</div>
+      <div class="customer-info-line">
+        <strong>Name:</strong> ${order.deliveryInfo.contactName || 'N/A'}
+      </div>
+      <div class="customer-info-line">
+        <strong>Phone:</strong> ${order.deliveryInfo.contactPhone || 'N/A'}
+      </div>
+      ${order.deliveryInfo.address ? `
+      <div class="customer-info-line">
+        <strong>Address:</strong> ${order.deliveryInfo.address}, ${order.deliveryInfo.city || ''}
+      </div>
+      ` : ''}
+    </div>
+    ` : ''}
+
+    <!-- Items Section -->
+    <div class="items-section">
+      <div class="items-title">ORDER ITEMS</div>
+
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th class="qty">QTY</th>
+            <th class="name">ITEM</th>
+            <th class="price">PRICE</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(order.items || []).map(item => `
+          <tr>
+            <td class="qty">${item.quantity}</td>
+            <td class="name">
+              ${item.productName}
+              ${item.variantName ? `<div class="item-variant">(${item.variantName})</div>` : ''}
+            </td>
+            <td class="price">$${(item.totalPrice || 0).toFixed(2)}</td>
+          </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Totals -->
+    <div class="totals">
+      <div class="total-line subtotal">
+        <span class="label">Subtotal:</span>
+        <span class="amount">$${(order.subtotal || 0).toFixed(2)}</span>
+      </div>
+
+      ${order.tax ? `
+      <div class="total-line">
+        <span class="label">Tax:</span>
+        <span class="amount">$${(order.tax || 0).toFixed(2)}</span>
+      </div>
+      ` : ''}
+
+      ${order.deliveryFee && order.deliveryFee > 0 ? `
+      <div class="total-line">
+        <span class="label">Delivery Fee:</span>
+        <span class="amount">$${(order.deliveryFee || 0).toFixed(2)}</span>
+      </div>
+      ` : ''}
+
+      ${order.discount && order.discount > 0 ? `
+      <div class="total-line">
+        <span class="label">Discount:</span>
+        <span class="amount">-$${(order.discount || 0).toFixed(2)}</span>
+      </div>
+      ` : ''}
+
+      <div class="total-line grand-total">
+        <span class="label">TOTAL:</span>
+        <span class="amount">$${(order.total || 0).toFixed(2)}</span>
+      </div>
+    </div>
+
+    <!-- Payment Info -->
+    ${order.payment ? `
+    <div class="payment-info">
+      PAYMENT: ${order.payment.method || 'N/A'} - ${order.payment.status || 'N/A'}
+    </div>
+    ` : ''}
+
+    <!-- Notes -->
+    ${order.customerNotes ? `
+    <div class="notes-section">
+      <div class="notes-title">SPECIAL NOTES:</div>
+      <div class="notes-content">${order.customerNotes}</div>
+    </div>
+    ` : ''}
+
     <!-- Footer -->
     <div class="footer">
       <div class="contact-info">
-        <div>📞 +1 (555) 123-4567</div>
-        <div>✉️ info@lacasa.com</div>
-        <div>🌐 www.lacasa.com</div>
+        <div>Phone: +1 (555) 123-4567</div>
+        <div>Email: info@lacasa.com</div>
+        <div>www.lacasa.com</div>
       </div>
 
-      <div class="thank-you">★ Thank You! ★</div>
-      <div class="visit-again">We appreciate your business!</div>
+      <div class="thank-you">*** THANK YOU! ***</div>
+      <div class="visit-again">Please visit us again!</div>
 
       <div class="timestamp">${currentDate}</div>
     </div>
