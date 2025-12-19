@@ -1,12 +1,12 @@
 package com.elcafe.modules.waiter.controller;
 
+import com.elcafe.modules.restaurant.entity.RestaurantTable.TableStatus;
+import com.elcafe.modules.restaurant.service.TableService;
 import com.elcafe.modules.waiter.dto.AssignWaiterRequest;
 import com.elcafe.modules.waiter.dto.CreateTableRequest;
 import com.elcafe.modules.waiter.dto.TableMergeRequest;
 import com.elcafe.modules.waiter.dto.TableResponse;
 import com.elcafe.modules.waiter.dto.UpdateTableRequest;
-import com.elcafe.modules.waiter.enums.TableStatus;
-import com.elcafe.modules.waiter.service.TableService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;

@@ -1,7 +1,7 @@
 package com.elcafe.modules.waiter.event;
 
+import com.elcafe.modules.restaurant.entity.RestaurantTable.TableStatus;
 import com.elcafe.modules.waiter.enums.OrderEventType;
-import com.elcafe.modules.waiter.enums.TableStatus;
 import lombok.Getter;
 
 /**
