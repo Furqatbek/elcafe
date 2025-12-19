@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.entity;
 
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -39,7 +40,7 @@ public class WaiterTable {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id", nullable = false)
     @JsonIgnore
-    private Table table;
+    private RestaurantTable table;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

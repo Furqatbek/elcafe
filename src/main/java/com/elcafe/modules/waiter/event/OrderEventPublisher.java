@@ -1,8 +1,8 @@
 package com.elcafe.modules.waiter.event;
 
 import com.elcafe.modules.order.entity.Order;
-import com.elcafe.modules.waiter.entity.Table;
-import com.elcafe.modules.waiter.enums.TableStatus;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.restaurant.entity.RestaurantTable.TableStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -33,7 +33,7 @@ public class OrderEventPublisher {
                 this,
                 order.getId(),
                 order.getOrderNumber(),
-                order.getTable() != null ? order.getTable().getId() : null,
+                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
                 order.getWaiter() != null ? order.getWaiter().getId() : null,
                 triggeredBy,
                 order.getItems() != null ? order.getItems().size() : 0
@@ -53,7 +53,7 @@ public class OrderEventPublisher {
                 this,
                 order.getId(),
                 order.getOrderNumber(),
-                order.getTable() != null ? order.getTable().getId() : null,
+                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
                 order.getWaiter() != null ? order.getWaiter().getId() : null,
                 triggeredBy,
                 order.getTotal(),
@@ -74,7 +74,7 @@ public class OrderEventPublisher {
                 this,
                 order.getId(),
                 order.getOrderNumber(),
-                order.getTable() != null ? order.getTable().getId() : null,
+                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
                 order.getWaiter() != null ? order.getWaiter().getId() : null,
                 triggeredBy,
                 kitchenOrderId
@@ -94,7 +94,7 @@ public class OrderEventPublisher {
                 this,
                 order.getId(),
                 order.getOrderNumber(),
-                order.getTable() != null ? order.getTable().getId() : null,
+                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
                 order.getWaiter() != null ? order.getWaiter().getId() : null,
                 triggeredBy,
                 order.getTotal(),
@@ -120,7 +120,7 @@ public class OrderEventPublisher {
                 this,
                 order.getId(),
                 order.getOrderNumber(),
-                order.getTable() != null ? order.getTable().getId() : null,
+                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
                 order.getWaiter() != null ? order.getWaiter().getId() : null,
                 triggeredBy,
                 amount,
@@ -147,7 +147,7 @@ public class OrderEventPublisher {
                 this,
                 order.getId(),
                 order.getOrderNumber(),
-                order.getTable() != null ? order.getTable().getId() : null,
+                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
                 order.getWaiter() != null ? order.getWaiter().getId() : null,
                 triggeredBy,
                 itemName,
@@ -173,7 +173,7 @@ public class OrderEventPublisher {
                 this,
                 order.getId(),
                 order.getOrderNumber(),
-                order.getTable() != null ? order.getTable().getId() : null,
+                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
                 order.getWaiter() != null ? order.getWaiter().getId() : null,
                 triggeredBy,
                 itemName,
@@ -188,17 +188,17 @@ public class OrderEventPublisher {
      */
     @Async
     public void publishTableStatusChanged(
-            Table table,
+            RestaurantTable table,
             TableStatus oldStatus,
             TableStatus newStatus,
             String triggeredBy) {
-        log.info("Publishing table status changed event for table: {}", table.getNumber());
+        log.info("Publishing table status changed event for table: {}", table.getTableNumber());
 
         TableStatusChangedEvent event = new TableStatusChangedEvent(
                 this,
                 table.getId(),
-                table.getNumber(),
-                table.getCurrentWaiter() != null ? table.getCurrentWaiter().getId() : null,
+                Integer.parseInt(table.getTableNumber()),
+                null, // No currentWaiter in RestaurantTable
                 triggeredBy,
                 oldStatus,
                 newStatus

@@ -16,11 +16,11 @@ import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.waiter.dto.AddOrderItemRequest;
 import com.elcafe.modules.waiter.dto.CreateOrderRequest;
 import com.elcafe.modules.waiter.dto.UpdateOrderItemRequest;
-import com.elcafe.modules.waiter.entity.Table;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.restaurant.entity.RestaurantTable.TableStatus;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.waiter.entity.Waiter;
 import com.elcafe.modules.waiter.enums.OrderEventType;
-import com.elcafe.modules.waiter.enums.TableStatus;
-import com.elcafe.modules.waiter.repository.TableRepository;
 import com.elcafe.modules.waiter.repository.WaiterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +43,7 @@ import java.util.UUID;
 public class WaiterOrderService {
 
     private final OrderRepository orderRepository;
-    private final TableRepository tableRepository;
+    private final RestaurantTableRepository tableRepository;
     private final WaiterRepository waiterRepository;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
@@ -55,7 +55,7 @@ public class WaiterOrderService {
      */
     @Transactional
     public Order createOrder(CreateOrderRequest request, Long waiterId) {
-        Table table = tableRepository.findById(request.getTableId())
+        RestaurantTable table = tableRepository.findById(request.getTableId())
                 .orElseThrow(() -> new ResourceNotFoundException("Table not found with id: " + request.getTableId()));
 
         Waiter waiter = waiterRepository.findById(waiterId)
@@ -69,11 +69,9 @@ public class WaiterOrderService {
         }
 
         // Update table status to OCCUPIED when order is created
-        if (table.getStatus() == TableStatus.FREE) {
+        if (table.getStatus() == TableStatus.AVAILABLE) {
             table.setStatus(TableStatus.OCCUPIED);
-            table.setOpenedAt(LocalDateTime.now());
         }
-        table.setCurrentWaiter(waiter);
         tableRepository.save(table);
 
         // Create order
@@ -81,7 +79,7 @@ public class WaiterOrderService {
                 .orderNumber(generateOrderNumber())
                 .restaurant(table.getRestaurant())
                 .customer(customer)
-                .table(table)
+                .diningTable(table)
                 .waiter(waiter)
                 .status(OrderStatus.NEW)
                 .orderSource(OrderSource.WAITER)
@@ -438,7 +436,7 @@ public class WaiterOrderService {
      */
     @Transactional(readOnly = true)
     public List<Order> getTableOrders(Long tableId) {
-        Table table = tableRepository.findById(tableId)
+        RestaurantTable table = tableRepository.findById(tableId)
                 .orElseThrow(() -> new ResourceNotFoundException("Table not found with id: " + tableId));
 
         return table.getOrders().stream()

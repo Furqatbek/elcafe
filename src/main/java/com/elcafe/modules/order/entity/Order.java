@@ -7,7 +7,6 @@ import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
-import com.elcafe.modules.waiter.entity.Table;
 import com.elcafe.modules.waiter.entity.Waiter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -46,10 +45,6 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "table_id")
-    private Table table;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dining_table_id")
