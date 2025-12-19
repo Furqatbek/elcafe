@@ -29,7 +29,7 @@ public class ProductVariantController {
     private final ProductVariantService productVariantService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get all variants for a product", description = "Get paginated list of product variants")
     public ResponseEntity<ApiResponse<Page<ProductVariantResponse>>> getAllVariants(
             @PathVariable Long productId,
@@ -43,7 +43,7 @@ public class ProductVariantController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get all variants without pagination")
     public ResponseEntity<ApiResponse<List<ProductVariantResponse>>> getAllVariantsNoPaging(
             @PathVariable Long productId
@@ -53,7 +53,7 @@ public class ProductVariantController {
     }
 
     @GetMapping("/{variantId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get variant by ID")
     public ResponseEntity<ApiResponse<ProductVariantResponse>> getVariantById(
             @PathVariable Long productId,
@@ -64,7 +64,7 @@ public class ProductVariantController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Search product variants")
     public ResponseEntity<ApiResponse<Page<ProductVariantResponse>>> searchVariants(
             @PathVariable Long productId,
@@ -78,7 +78,7 @@ public class ProductVariantController {
     }
 
     @GetMapping("/in-stock")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get in-stock variants")
     public ResponseEntity<ApiResponse<List<ProductVariantResponse>>> getInStockVariants(
             @PathVariable Long productId

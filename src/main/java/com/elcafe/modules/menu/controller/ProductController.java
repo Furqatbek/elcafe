@@ -64,7 +64,7 @@ public class ProductController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get product by ID", description = "Get a single product by its ID")
     public ResponseEntity<ApiResponse<Product>> getProductById(@PathVariable Long id) {
         log.info("Fetching product: {}", id);
@@ -75,7 +75,7 @@ public class ProductController {
     }
 
     @GetMapping("/restaurant/{restaurantId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get products by restaurant", description = "Get all products for a specific restaurant")
     public ResponseEntity<ApiResponse<List<ProductListDTO>>> getProductsByRestaurant(@PathVariable Long restaurantId) {
         log.info("Fetching products for restaurant: {}", restaurantId);
@@ -86,7 +86,7 @@ public class ProductController {
     }
 
     @GetMapping("/category/{categoryId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get products by category", description = "Get all products for a specific category")
     public ResponseEntity<ApiResponse<List<Product>>> getProductsByCategory(@PathVariable Long categoryId) {
         log.info("Fetching products for category: {}", categoryId);
