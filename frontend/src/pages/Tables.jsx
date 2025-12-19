@@ -352,7 +352,18 @@ const Tables = () => {
           <div className="col-span-full text-center py-8 text-gray-500">{t('tables.noTables')}</div>
         ) : (
           filteredTables.map((table) => (
-            <div key={table.id} className={`bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow ${selectedTables.includes(table.id) ? 'ring-2 ring-purple-500' : ''}`}>
+            <div key={table.id} className={`bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow ${selectedTables.includes(table.id) ? 'ring-2 ring-purple-500' : ''} ${table.mergedTable ? 'border-2 border-purple-300' : ''}`}>
+              {/* Merged Table Indicator Badge */}
+              {table.mergedTable && (
+                <div className="mb-2 flex items-center gap-2 px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-xs font-medium">
+                  <GitMerge size={14} />
+                  <span>{t('tables.merged') || 'Merged Table'}</span>
+                  {table.originalCapacity && (
+                    <span className="text-purple-600">({t('tables.originalCapacity') || 'Original'}: {table.originalCapacity})</span>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-between items-start mb-3">
                 <div className="flex items-start gap-2 flex-1">
                   <input
@@ -370,8 +381,8 @@ const Tables = () => {
                   {table.mergedTable && (
                     <button
                       onClick={() => handleUnmergeTables(table.id)}
-                      className="p-1 text-purple-600 hover:bg-purple-50 rounded"
-                      title="Unmerge"
+                      className="p-1 text-white bg-purple-600 hover:bg-purple-700 rounded"
+                      title={t('tables.unmerge') || 'Unmerge tables'}
                     >
                       <GitBranch size={16} />
                     </button>
@@ -389,6 +400,9 @@ const Tables = () => {
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Users size={16} />
                   <span>{t('tables.capacity')}: {table.capacity}</span>
+                  {table.mergedTable && table.originalCapacity && table.capacity !== table.originalCapacity && (
+                    <span className="text-purple-600 font-medium">↑ {t('tables.increased') || 'Increased'}</span>
+                  )}
                 </div>
                 {table.section && (
                   <div className="flex items-center gap-2 text-sm text-gray-600">
