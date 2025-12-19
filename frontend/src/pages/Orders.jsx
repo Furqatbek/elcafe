@@ -29,9 +29,11 @@ import {
   X,
   Truck,
   ShoppingBag,
-  Utensils
+  Utensils,
+  Printer
 } from 'lucide-react';
 import { format } from 'date-fns';
+import PrintReceipt from '../components/PrintReceipt';
 
 const statusColors = {
   NEW: 'bg-blue-100 text-blue-800',
@@ -538,25 +540,39 @@ export default function Orders() {
                   </div>
                 )}
 
-                {nextStatusMap[order.status] && (
-                  <div className="mt-4 flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => updateOrderStatus(order.id, nextStatusMap[order.status])}
-                    >
-                      {t('orders.updateStatus')}: {t(`orders.statuses.${nextStatusMap[order.status]}`)}
-                    </Button>
-                    {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                <div className="mt-4 flex gap-2 flex-wrap">
+                  {/* Print Button - Always visible */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => PrintReceipt({ order })}
+                    className="gap-1"
+                  >
+                    <Printer className="h-4 w-4" />
+                    {t('orders.printReceipt') || 'Print Receipt'}
+                  </Button>
+
+                  {/* Status Update Buttons */}
+                  {nextStatusMap[order.status] && (
+                    <>
                       <Button
-                        variant="outline"
                         size="sm"
-                        onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
+                        onClick={() => updateOrderStatus(order.id, nextStatusMap[order.status])}
                       >
-                        {t('orders.cancelOrder')}
+                        {t('orders.updateStatus')}: {t(`orders.statuses.${nextStatusMap[order.status]}`)}
                       </Button>
-                    )}
-                  </div>
-                )}
+                      {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
+                        >
+                          {t('orders.cancelOrder')}
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))

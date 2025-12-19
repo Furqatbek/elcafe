@@ -334,17 +334,35 @@ export const waiterOrderAPI = {
 export const financialAPI = {
   // Purchase Orders
   getPurchaseOrders: (restaurantId) => api.get('/financial/purchase-orders', { params: { restaurantId } }),
+  getPurchaseOrderById: (id) => api.get(`/financial/purchase-orders/${id}`),
   createPurchaseOrder: (data) => api.post('/financial/purchase-orders', data),
-  approvePurchaseOrder: (id, username) => api.post(`/financial/purchase-orders/${id}/approve`, { approvedBy: username }),
+  approvePurchaseOrder: (id, approvedBy) => api.post(`/financial/purchase-orders/${id}/approve`, null, { params: { approvedBy } }),
   receivePurchaseOrder: (id, data) => api.post(`/financial/purchase-orders/${id}/receive`, data),
   recordPOPayment: (id, data) => api.post(`/financial/purchase-orders/${id}/payment`, data),
 
   // Expenses
-  getExpenses: (restaurantId, params) => api.get('/financial/expenses', { params: { restaurantId, ...params } }),
+  getExpenses: (restaurantId, startDate = null, endDate = null) => {
+    const params = { restaurantId };
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    return api.get('/financial/expenses', { params });
+  },
+  getExpenseById: (id) => api.get(`/financial/expenses/${id}`),
+  getUnpaidExpenses: (restaurantId) => api.get('/financial/expenses/unpaid', { params: { restaurantId } }),
   createExpense: (data) => api.post('/financial/expenses', data),
-  approveExpense: (id, username) => api.post(`/financial/expenses/${id}/approve`, { approvedBy: username }),
-  recordExpensePayment: (id, data) => api.post(`/financial/expenses/${id}/payment`, data),
+  approveExpense: (id, approvedBy) => api.post(`/financial/expenses/${id}/approve`, null, { params: { approvedBy } }),
+  recordExpensePayment: (id, paymentDate, recordedBy) => api.post(`/financial/expenses/${id}/pay`, null, { params: { paymentDate, recordedBy } }),
   deleteExpense: (id) => api.delete(`/financial/expenses/${id}`),
+
+  // Financial Reports
+  getProfitLossReport: (restaurantId, startDate, endDate) =>
+    api.get('/financial/reports/profit-loss', { params: { restaurantId, startDate, endDate } }),
+  getBalanceSheet: (restaurantId, asOfDate) =>
+    api.get('/financial/reports/balance-sheet', { params: { restaurantId, asOfDate } }),
+  getCashFlowReport: (restaurantId, startDate, endDate) =>
+    api.get('/financial/reports/cash-flow', { params: { restaurantId, startDate, endDate } }),
+  getCogsReport: (restaurantId, startDate, endDate) =>
+    api.get('/financial/reports/cogs', { params: { restaurantId, startDate, endDate } }),
 };
 
 export const inventoryAPI = {

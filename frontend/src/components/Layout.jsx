@@ -167,6 +167,7 @@ export default function Layout() {
       subItems: [
         { label: t('nav.sub.purchaseOrders'), icon: FileText, path: '/finance/purchase-orders' },
         { label: t('nav.sub.expenses'), icon: Receipt, path: '/finance/expenses' },
+        { label: t('nav.sub.financialReports'), icon: BarChart3, path: '/finance/reports' },
       ],
     },
     {
