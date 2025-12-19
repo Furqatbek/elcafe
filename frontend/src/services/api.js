@@ -331,4 +331,33 @@ export const waiterOrderAPI = {
   getOrderHistory: (orderId) => api.get(`/waiter/orders/${orderId}/history`),
 };
 
+export const financialAPI = {
+  // Purchase Orders
+  getPurchaseOrders: (restaurantId) => api.get('/financial/purchase-orders', { params: { restaurantId } }),
+  createPurchaseOrder: (data) => api.post('/financial/purchase-orders', data),
+  approvePurchaseOrder: (id, username) => api.post(`/financial/purchase-orders/${id}/approve`, { approvedBy: username }),
+  receivePurchaseOrder: (id, data) => api.post(`/financial/purchase-orders/${id}/receive`, data),
+  recordPOPayment: (id, data) => api.post(`/financial/purchase-orders/${id}/payment`, data),
+
+  // Expenses
+  getExpenses: (restaurantId, params) => api.get('/financial/expenses', { params: { restaurantId, ...params } }),
+  createExpense: (data) => api.post('/financial/expenses', data),
+  approveExpense: (id, username) => api.post(`/financial/expenses/${id}/approve`, { approvedBy: username }),
+  recordExpensePayment: (id, data) => api.post(`/financial/expenses/${id}/payment`, data),
+  deleteExpense: (id) => api.delete(`/financial/expenses/${id}`),
+};
+
+export const inventoryAPI = {
+  getIngredients: (restaurantId) => api.get('/inventory/ingredients', { params: { restaurantId } }),
+  getIngredientById: (id) => api.get(`/inventory/ingredients/${id}`),
+  createIngredient: (data) => api.post('/inventory/ingredients', data),
+  updateIngredient: (id, data) => api.put(`/inventory/ingredients/${id}`, data),
+  deleteIngredient: (id) => api.delete(`/inventory/ingredients/${id}`),
+
+  // Stock management
+  getStock: (restaurantId) => api.get('/inventory/stock', { params: { restaurantId } }),
+  updateStock: (id, data) => api.put(`/inventory/stock/${id}`, data),
+  recordStockMovement: (data) => api.post('/inventory/stock/movement', data),
+};
+
 export default api;
