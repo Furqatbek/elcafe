@@ -95,4 +95,15 @@ public class BusinessHoursController {
         businessHoursService.deleteAllByRestaurantId(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("All business hours deleted successfully", null));
     }
+
+    @PutMapping("/bulk")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @Operation(summary = "Bulk update business hours", description = "Update all business hours for a restaurant at once")
+    public ResponseEntity<ApiResponse<List<BusinessHoursResponse>>> bulkUpdateBusinessHours(
+            @PathVariable Long restaurantId,
+            @Valid @RequestBody List<UpdateBusinessHoursRequest> requests
+    ) {
+        List<BusinessHoursResponse> response = businessHoursService.updateAllByRestaurantId(restaurantId, requests);
+        return ResponseEntity.ok(ApiResponse.success("Business hours updated successfully", response));
+    }
 }
