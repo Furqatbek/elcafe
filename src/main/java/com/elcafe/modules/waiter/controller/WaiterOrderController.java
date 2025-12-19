@@ -5,6 +5,7 @@ import com.elcafe.modules.waiter.dto.AddOrderItemRequest;
 import com.elcafe.modules.waiter.dto.CreateOrderRequest;
 import com.elcafe.modules.waiter.dto.OrderEventResponse;
 import com.elcafe.modules.waiter.dto.UpdateOrderItemRequest;
+import com.elcafe.modules.waiter.dto.WaiterMetricsResponse;
 import com.elcafe.modules.waiter.service.OrderEventService;
 import com.elcafe.modules.waiter.service.WaiterOrderService;
 import com.elcafe.utils.ApiResponse;
@@ -161,5 +162,15 @@ public class WaiterOrderController {
             @PathVariable Long waiterId) {
         List<Order> orders = waiterOrderService.getWaiterOngoingOrders(waiterId);
         return ResponseEntity.ok(ApiResponse.success("Waiter ongoing orders retrieved successfully", orders));
+    }
+
+    @GetMapping("/waiter/{waiterId}/metrics")
+    @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR', 'ADMIN', 'OPERATOR')")
+    @Operation(summary = "Get waiter performance metrics",
+            description = "Get comprehensive performance metrics including total revenue, order count, average ticket, weekly activity chart, and recent transactions")
+    public ResponseEntity<ApiResponse<WaiterMetricsResponse>> getWaiterMetrics(
+            @PathVariable Long waiterId) {
+        WaiterMetricsResponse metrics = waiterOrderService.getWaiterMetrics(waiterId);
+        return ResponseEntity.ok(ApiResponse.success("Waiter metrics retrieved successfully", metrics));
     }
 }
