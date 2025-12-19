@@ -33,7 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -507,7 +506,7 @@ public class WaiterOrderService {
 
         List<DailyRevenueData> weeklyActivity = dailyData.stream()
                 .map(row -> DailyRevenueData.builder()
-                        .date(((Date) row[0]).toLocalDate())
+                        .date((LocalDate) row[0])
                         .revenue((BigDecimal) row[1])
                         .orderCount((Long) row[2])
                         .build())
