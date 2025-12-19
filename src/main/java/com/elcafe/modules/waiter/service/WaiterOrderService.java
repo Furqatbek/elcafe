@@ -476,7 +476,7 @@ public class WaiterOrderService {
 
         return orderRepository.findByWaiterAndStatusInOrderByCreatedAtDesc(
                 waiter,
-                List.of(OrderStatus.NEW, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.DELIVERING)
+                List.of(OrderStatus.NEW, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.ON_DELIVERY)
         );
     }
 
