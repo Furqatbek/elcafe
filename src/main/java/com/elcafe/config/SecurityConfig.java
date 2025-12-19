@@ -64,7 +64,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/actuator/health",
-                                "/actuator/info"
+                                "/actuator/info",
+                                "/uploads/**"
                         ).permitAll()
                         // Allow GET requests to restaurants and tables for all authenticated users
                         .requestMatchers(HttpMethod.GET, "/api/v1/restaurants/**").authenticated()
