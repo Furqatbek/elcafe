@@ -14,6 +14,7 @@ import Categories from './pages/Categories';
 import Customers from './pages/Customers';
 import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
+import Waiters from './pages/Waiters';
 import Couriers from './pages/Couriers';
 import CourierMap from './pages/CourierMap';
 import MenuCollections from './pages/MenuCollections';
@@ -60,6 +61,7 @@ function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="operators" element={<Operators />} />
+          <Route path="employees/waiters" element={<Waiters />} />
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
