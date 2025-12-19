@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { tablesAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Users, Grid, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Grid, CheckCircle, XCircle, GitMerge, GitBranch } from 'lucide-react';
 
 const Tables = () => {
   const { t } = useTranslation();
@@ -16,6 +16,7 @@ const Tables = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [stats, setStats] = useState({ totalTables: 0, availableTables: 0, occupiedTables: 0, reservedTables: 0 });
+  const [selectedTables, setSelectedTables] = useState([]);
 
   const [formData, setFormData] = useState({
     restaurantId: '',
@@ -57,7 +58,15 @@ const Tables = () => {
       const restaurantsData = response?.data?.data?.content || response?.data?.data;
       console.log('Restaurants array:', restaurantsData);
 
-      setRestaurants(Array.isArray(restaurantsData) ? restaurantsData : []);
+      const restaurantsArray = Array.isArray(restaurantsData) ? restaurantsData : [];
+      setRestaurants(restaurantsArray);
+
+      // Set first restaurant as default if no restaurant selected and user has no restaurant assigned
+      if (!selectedRestaurant && restaurantsArray.length > 0 && !user?.restaurantId) {
+        const firstRestaurantId = restaurantsArray[0].id;
+        setSelectedRestaurant(firstRestaurantId);
+        setFormData(prev => ({ ...prev, restaurantId: firstRestaurantId }));
+      }
     } catch (error) {
       console.error('Failed to load restaurants:', error);
       setRestaurants([]);
@@ -174,6 +183,58 @@ const Tables = () => {
     });
   };
 
+  const toggleTableSelection = (tableId) => {
+    setSelectedTables(prev => {
+      if (prev.includes(tableId)) {
+        return prev.filter(id => id !== tableId);
+      } else {
+        return [...prev, tableId];
+      }
+    });
+  };
+
+  const handleMergeTables = async () => {
+    if (selectedTables.length < 2) {
+      alert(t('tables.messages.selectAtLeast2Tables') || 'Please select at least 2 tables to merge');
+      return;
+    }
+
+    const mainTableId = selectedTables[0];
+    const tableIdsToMerge = selectedTables.slice(1);
+
+    try {
+      setLoading(true);
+      await tablesAPI.merge({ mainTableId, tableIdsToMerge });
+      alert(t('tables.messages.mergeSuccess') || 'Tables merged successfully');
+      setSelectedTables([]);
+      loadTables();
+      loadStats();
+    } catch (error) {
+      console.error('Failed to merge tables:', error);
+      alert(t('tables.messages.mergeError') || 'Failed to merge tables: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUnmergeTables = async (tableId) => {
+    if (!window.confirm(t('tables.confirmUnmerge') || 'Are you sure you want to unmerge these tables?')) return;
+
+    try {
+      setLoading(true);
+      await tablesAPI.unmerge(tableId);
+      alert(t('tables.messages.unmergeSuccess') || 'Tables unmerged successfully');
+      setSelectedTables([]);
+      loadTables();
+      loadStats();
+    } catch (error) {
+      console.error('Failed to unmerge tables:', error);
+      alert(t('tables.messages.unmergeError') || 'Failed to unmerge tables');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusColors = {
       AVAILABLE: 'bg-green-100 text-green-800',
@@ -199,13 +260,24 @@ const Tables = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('tables.title')}</h1>
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus size={20} />
-          {t('tables.createNew')}
-        </button>
+        <div className="flex gap-2">
+          {selectedTables.length >= 2 && (
+            <button
+              onClick={handleMergeTables}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+            >
+              <GitMerge size={20} />
+              {t('tables.mergeTables') || `Merge ${selectedTables.length} Tables`}
+            </button>
+          )}
+          <button
+            onClick={() => { resetForm(); setShowModal(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus size={20} />
+            {t('tables.createNew')}
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -280,13 +352,30 @@ const Tables = () => {
           <div className="col-span-full text-center py-8 text-gray-500">{t('tables.noTables')}</div>
         ) : (
           filteredTables.map((table) => (
-            <div key={table.id} className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow">
+            <div key={table.id} className={`bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow ${selectedTables.includes(table.id) ? 'ring-2 ring-purple-500' : ''}`}>
               <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">{table.tableNumber}</h3>
-                  {table.tableName && <p className="text-sm text-gray-600">{table.tableName}</p>}
+                <div className="flex items-start gap-2 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedTables.includes(table.id)}
+                    onChange={() => toggleTableSelection(table.id)}
+                    className="mt-1 h-4 w-4 text-purple-600 rounded"
+                  />
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">{table.tableNumber}</h3>
+                    {table.tableName && <p className="text-sm text-gray-600">{table.tableName}</p>}
+                  </div>
                 </div>
                 <div className="flex gap-1">
+                  {table.mergedTable && (
+                    <button
+                      onClick={() => handleUnmergeTables(table.id)}
+                      className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+                      title="Unmerge"
+                    >
+                      <GitBranch size={16} />
+                    </button>
+                  )}
                   <button onClick={() => handleEdit(table)} className="p-1 text-blue-600 hover:bg-blue-50 rounded">
                     <Edit size={16} />
                   </button>

@@ -1,7 +1,9 @@
 package com.elcafe.modules.restaurant.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.restaurant.dto.CreateTableRequest;
+import com.elcafe.modules.restaurant.dto.MergeTablesRequest;
 import com.elcafe.modules.restaurant.dto.TableResponse;
 import com.elcafe.modules.restaurant.dto.UpdateTableRequest;
 import com.elcafe.modules.restaurant.entity.Restaurant;
@@ -14,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -143,5 +146,160 @@ public class TableService {
     @Transactional(readOnly = true)
     public Long countTablesByStatus(Long restaurantId, RestaurantTable.TableStatus status) {
         return tableRepository.countByRestaurantIdAndStatus(restaurantId, status);
+    }
+
+    @Transactional
+    public List<TableResponse> mergeTables(MergeTablesRequest request) {
+        log.info("Merging tables - main: {}, others: {}", request.getMainTableId(), request.getTableIdsToMerge());
+
+        // Validate main table
+        RestaurantTable mainTable = tableRepository.findById(request.getMainTableId())
+                .orElseThrow(() -> new ResourceNotFoundException("Table", "id", request.getMainTableId()));
+
+        // Check if main table is already merged
+        if (mainTable.getMergedTable() != null) {
+            throw new BadRequestException("Main table is already merged with another table");
+        }
+
+        // Validate and get all tables to merge
+        List<RestaurantTable> tablesToMerge = new ArrayList<>();
+        int totalCapacity = mainTable.getCapacity();
+
+        for (Long tableId : request.getTableIdsToMerge()) {
+            if (tableId.equals(request.getMainTableId())) {
+                throw new BadRequestException("Cannot merge a table with itself");
+            }
+
+            RestaurantTable table = tableRepository.findById(tableId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Table", "id", tableId));
+
+            // Check if table is already merged
+            if (table.getMergedTable() != null) {
+                throw new BadRequestException("Table " + table.getTableNumber() + " is already merged");
+            }
+
+            // Check if tables are in the same restaurant
+            if (!table.getRestaurant().getId().equals(mainTable.getRestaurant().getId())) {
+                throw new BadRequestException("All tables must be in the same restaurant");
+            }
+
+            tablesToMerge.add(table);
+            totalCapacity += table.getCapacity();
+        }
+
+        // Save original capacity for main table if not already saved
+        if (mainTable.getOriginalCapacity() == null) {
+            mainTable.setOriginalCapacity(mainTable.getCapacity());
+        }
+
+        // Update main table capacity
+        mainTable.setCapacity(totalCapacity);
+        tableRepository.save(mainTable);
+
+        // Merge other tables
+        for (RestaurantTable table : tablesToMerge) {
+            // Save original capacity if not already saved
+            if (table.getOriginalCapacity() == null) {
+                table.setOriginalCapacity(table.getCapacity());
+            }
+
+            table.setMergedTable(mainTable);
+            table.setStatus(RestaurantTable.TableStatus.RESERVED); // Mark as reserved since it's part of a merge
+            tableRepository.save(table);
+        }
+
+        log.info("Successfully merged {} tables with main table {}", tablesToMerge.size(), mainTable.getId());
+
+        // Return all affected tables
+        List<TableResponse> responses = new ArrayList<>();
+        responses.add(tableMapper.toResponse(mainTable));
+        responses.addAll(tablesToMerge.stream()
+                .map(tableMapper::toResponse)
+                .collect(Collectors.toList()));
+
+        return responses;
+    }
+
+    @Transactional
+    public List<TableResponse> unmergeTables(Long tableId) {
+        log.info("Unmerging tables for table: {}", tableId);
+
+        RestaurantTable table = tableRepository.findById(tableId)
+                .orElseThrow(() -> new ResourceNotFoundException("Table", "id", tableId));
+
+        List<RestaurantTable> affectedTables = new ArrayList<>();
+        RestaurantTable mainTable;
+
+        // Check if this is a main table or a merged table
+        if (table.getMergedTable() != null) {
+            // This is a merged table, get the main table
+            mainTable = table.getMergedTable();
+        } else {
+            // This might be a main table, check if other tables are merged with it
+            mainTable = table;
+        }
+
+        // Find all tables merged with the main table
+        List<RestaurantTable> mergedTables = tableRepository.findByMergedTable(mainTable);
+
+        if (mergedTables.isEmpty() && mainTable.getMergedTable() == null) {
+            throw new BadRequestException("Table is not part of any merge");
+        }
+
+        // Restore main table capacity
+        if (mainTable.getOriginalCapacity() != null) {
+            mainTable.setCapacity(mainTable.getOriginalCapacity());
+            mainTable.setOriginalCapacity(null);
+        }
+        affectedTables.add(mainTable);
+
+        // Unmerge all merged tables
+        for (RestaurantTable mergedTable : mergedTables) {
+            mergedTable.setMergedTable(null);
+            mergedTable.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+
+            // Restore original capacity
+            if (mergedTable.getOriginalCapacity() != null) {
+                mergedTable.setCapacity(mergedTable.getOriginalCapacity());
+                mergedTable.setOriginalCapacity(null);
+            }
+
+            tableRepository.save(mergedTable);
+            affectedTables.add(mergedTable);
+        }
+
+        tableRepository.save(mainTable);
+
+        log.info("Successfully unmerged {} tables", affectedTables.size());
+
+        return affectedTables.stream()
+                .map(tableMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<TableResponse> getMergedTables(Long tableId) {
+        log.info("Getting merged tables for table: {}", tableId);
+
+        RestaurantTable table = tableRepository.findById(tableId)
+                .orElseThrow(() -> new ResourceNotFoundException("Table", "id", tableId));
+
+        List<RestaurantTable> mergedTables;
+
+        if (table.getMergedTable() != null) {
+            // This table is merged with another, get all tables in the merge group
+            mergedTables = tableRepository.findByMergedTable(table.getMergedTable());
+            mergedTables.add(table.getMergedTable());
+        } else {
+            // This might be a main table, get tables merged with it
+            mergedTables = tableRepository.findByMergedTable(table);
+            if (!mergedTables.isEmpty()) {
+                mergedTables.add(table);
+            }
+        }
+
+        return mergedTables.stream()
+                .map(tableMapper::toResponse)
+                .collect(Collectors.toList());
     }
 }
