@@ -545,7 +545,7 @@ export default function Orders() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => PrintReceipt({ order })}
+                    onClick={() => PrintReceipt(order)}
                     className="gap-1"
                   >
                     <Printer className="h-4 w-4" />

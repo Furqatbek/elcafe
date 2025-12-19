@@ -1,25 +1,23 @@
-import React from 'react';
 import { format } from 'date-fns';
 
-const PrintReceipt = ({ order, onPrint }) => {
-  const printReceipt = () => {
-    const printWindow = window.open('', '_blank');
-    const receiptHTML = generateReceiptHTML(order);
+const PrintReceipt = (order, onPrint) => {
+  const printWindow = window.open('', '_blank');
+  const receiptHTML = generateReceiptHTML(order);
 
-    printWindow.document.write(receiptHTML);
-    printWindow.document.close();
+  printWindow.document.write(receiptHTML);
+  printWindow.document.close();
 
-    // Wait for content to load then print
-    printWindow.onload = () => {
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
-    };
-
-    if (onPrint) onPrint();
+  // Wait for content to load then print
+  printWindow.onload = () => {
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
-  const generateReceiptHTML = (order) => {
+  if (onPrint) onPrint();
+};
+
+const generateReceiptHTML = (order) => {
     const currentDate = format(new Date(), 'dd/MM/yyyy HH:mm:ss');
     const cashier = order.createdBy || 'System';
 
@@ -377,9 +375,6 @@ const PrintReceipt = ({ order, onPrint }) => {
 </body>
 </html>
     `;
-  };
-
-  return printReceipt;
 };
 
 export default PrintReceipt;
