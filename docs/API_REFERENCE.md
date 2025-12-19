@@ -1008,7 +1008,10 @@ Content-Type: application/json
 }
 ```
 
-**Note**: Items can be included in the create order request or added later. The `X-Waiter-Id` header is required for all waiter order operations.
+**Note**:
+- `customerId` is **optional** - can be added later when customer is identified
+- `items` are **optional** - can be included in create request or added later
+- The `X-Waiter-Id` header is **required** for all waiter order operations
 
 **Table Status Changes:**
 - When order is created: Table status changes from `FREE` → `OCCUPIED`
