@@ -1,6 +1,6 @@
 package com.elcafe.modules.waiter.dto;
 
-import com.elcafe.modules.waiter.enums.TableStatus;
+import com.elcafe.modules.restaurant.entity.RestaurantTable.TableStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
