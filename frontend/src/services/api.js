@@ -127,7 +127,7 @@ export const restaurantAPI = {
   getActive: () => api.get('/restaurants/active'),
   getAcceptingOrders: () => api.get('/restaurants/accepting-orders'),
   getBusinessHours: (restaurantId) => api.get(`/restaurants/${restaurantId}/business-hours`),
-  updateBusinessHours: (restaurantId, data) => api.put(`/restaurants/${restaurantId}/business-hours`, data),
+  updateBusinessHours: (restaurantId, data) => api.put(`/restaurants/${restaurantId}/business-hours/bulk`, data),
 };
 
 export const menuAPI = {
