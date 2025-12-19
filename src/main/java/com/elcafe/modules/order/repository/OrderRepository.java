@@ -22,13 +22,16 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
-    @EntityGraph(attributePaths = {"items"})
+    @Override
+    @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)
     Page<Order> findAll(Specification<Order> spec, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"items"})
+    @Override
+    @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)
     List<Order> findAll(Specification<Order> spec);
 
-    @EntityGraph(attributePaths = {"items"})
+    @Override
+    @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)
     Optional<Order> findById(Long id);
 
     Optional<Order> findByOrderNumber(String orderNumber);

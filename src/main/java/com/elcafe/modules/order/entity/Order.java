@@ -32,6 +32,10 @@ import java.util.List;
 @jakarta.persistence.Table(name = "orders")
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@NamedEntityGraph(
+    name = "Order.withItems",
+    attributeNodes = @NamedAttributeNode("items")
+)
 public class Order {
 
     @Id
