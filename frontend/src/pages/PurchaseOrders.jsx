@@ -218,7 +218,7 @@ const PurchaseOrders = () => {
     setReceiveForm({
       actualDeliveryDate: new Date().toISOString().split('T')[0],
       receivedBy: user?.username || '',
-      items: po.items.map(item => ({
+      items: (Array.isArray(po.items) ? po.items : []).map(item => ({
         itemId: item.id,
         receivedQuantity: item.quantity - (item.receivedQuantity || 0),
         notes: ''
@@ -335,7 +335,7 @@ const PurchaseOrders = () => {
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="">{t('finance.common.selectRestaurant')}</option>
-          {restaurants.map(restaurant => (
+          {(Array.isArray(restaurants) ? restaurants : []).map(restaurant => (
             <option key={restaurant.id} value={restaurant.id}>
               {restaurant.name}
             </option>
@@ -556,7 +556,7 @@ const PurchaseOrders = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     >
                       <option value="">{t('finance.common.none')}</option>
-                      {ingredients.map(ing => (
+                      {(Array.isArray(ingredients) ? ingredients : []).map(ing => (
                         <option key={ing.id} value={ing.id}>{ing.name}</option>
                       ))}
                     </select>
@@ -702,7 +702,7 @@ const PurchaseOrders = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {selectedPO.items.map((item, index) => (
+                    {(Array.isArray(selectedPO.items) ? selectedPO.items : []).map((item, index) => (
                       <tr key={item.id}>
                         <td className="px-4 py-2 text-sm">{item.itemName}</td>
                         <td className="px-4 py-2 text-sm">{item.quantity} {item.unit}</td>
