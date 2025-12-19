@@ -46,7 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         jwt = authHeader.substring(7);
         try {
             username = jwtUtil.extractUsername(jwt);
-            logger.debug("Extracted username from JWT: {}", username);
+            logger.debug("Extracted username from JWT: " + username);
 
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 // Check if this is a waiter token
@@ -57,7 +57,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // Handle waiter authentication
                     String role = claims.get("role", String.class);
                     Long waiterId = claims.get("waiterId", Long.class);
-                    logger.debug("Processing waiter token - role: {}, waiterId: {}", role, waiterId);
+                    logger.debug("Processing waiter token - role: " + role + ", waiterId: " + waiterId);
 
                     if (role != null && jwtUtil.isTokenExpired(jwt) == false) {
                         // Create UserDetails for waiter with proper role
@@ -91,14 +91,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         );
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authToken);
-                        logger.debug("User authentication set successfully for: {}", username);
+                        logger.debug("User authentication set successfully for: " + username);
                     } else {
-                        logger.warn("Token validation failed for user: {}", username);
+                        logger.warn("Token validation failed for user: " + username);
                     }
                 }
             }
         } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e.getMessage(), e);
+            logger.error("Cannot set user authentication: " + e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);
