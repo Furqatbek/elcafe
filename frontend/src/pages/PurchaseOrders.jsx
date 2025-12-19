@@ -292,7 +292,7 @@ const PurchaseOrders = () => {
     </span>;
   };
 
-  const filteredPOs = purchaseOrders.filter(po => {
+  const filteredPOs = (Array.isArray(purchaseOrders) ? purchaseOrders : []).filter(po => {
     const matchesSearch = po.poNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          po.supplierName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === 'all' || po.status === filterStatus;

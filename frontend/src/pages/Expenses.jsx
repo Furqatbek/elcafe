@@ -212,7 +212,7 @@ const Expenses = () => {
     </span>;
   };
 
-  const filteredExpenses = expenses.filter(expense => {
+  const filteredExpenses = (Array.isArray(expenses) ? expenses : []).filter(expense => {
     const matchesSearch = expense.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          expense.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          expense.expenseNumber?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -221,8 +221,8 @@ const Expenses = () => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + (exp.totalAmount || 0), 0);
-  const unpaidExpenses = filteredExpenses.filter(exp => exp.paymentStatus === 'UNPAID')
+  const totalExpenses = (Array.isArray(filteredExpenses) ? filteredExpenses : []).reduce((sum, exp) => sum + (exp.totalAmount || 0), 0);
+  const unpaidExpenses = (Array.isArray(filteredExpenses) ? filteredExpenses : []).filter(exp => exp.paymentStatus === 'UNPAID')
     .reduce((sum, exp) => sum + (exp.totalAmount || 0), 0);
 
   return (
