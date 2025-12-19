@@ -137,7 +137,7 @@ public class WaiterOrderService {
         orderEventService.recordEvent(savedOrder, OrderEventType.ORDER_CREATED, waiter.getName());
 
         log.info("Created order {} for table {} by waiter {} with {} items",
-                savedOrder.getOrderNumber(), table.getNumber(), waiter.getName(),
+                savedOrder.getOrderNumber(), table.getTableNumber(), waiter.getName(),
                 savedOrder.getItems().size());
 
         return savedOrder;
@@ -319,9 +319,9 @@ public class WaiterOrderService {
         order.setStatus(OrderStatus.PREPARING);
 
         // Update table status
-        if (order.getTable() != null) {
-            order.getTable().setStatus(TableStatus.WAITING);
-            tableRepository.save(order.getTable());
+        if (order.getDiningTable() != null) {
+            order.getDiningTable().setStatus(TableStatus.OCCUPIED);
+            tableRepository.save(order.getDiningTable());
         }
 
         Order updatedOrder = orderRepository.save(order);
@@ -351,9 +351,9 @@ public class WaiterOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order item not found with id: " + itemId));
 
         // Update table status to served
-        if (order.getTable() != null && order.getTable().getStatus() == TableStatus.WAITING) {
-            order.getTable().setStatus(TableStatus.SERVED);
-            tableRepository.save(order.getTable());
+        if (order.getDiningTable() != null && order.getDiningTable().getStatus() == TableStatus.OCCUPIED) {
+            order.getDiningTable().setStatus(TableStatus.OCCUPIED);
+            tableRepository.save(order.getDiningTable());
         }
 
         // Record event
@@ -379,9 +379,9 @@ public class WaiterOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
         // Update table status
-        if (order.getTable() != null) {
-            order.getTable().setStatus(TableStatus.BILL_REQUESTED);
-            tableRepository.save(order.getTable());
+        if (order.getDiningTable() != null) {
+            order.getDiningTable().setStatus(TableStatus.RESERVED);
+            tableRepository.save(order.getDiningTable());
         }
 
         // Record event
@@ -406,10 +406,9 @@ public class WaiterOrderService {
         order.setStatus(OrderStatus.COMPLETED);
 
         // Update table status to cleaning
-        if (order.getTable() != null) {
-            order.getTable().setStatus(TableStatus.CLEANING);
-            order.getTable().setClosedAt(LocalDateTime.now());
-            tableRepository.save(order.getTable());
+        if (order.getDiningTable() != null) {
+            order.getDiningTable().setStatus(TableStatus.CLEANING);
+            tableRepository.save(order.getDiningTable());
         }
 
         Order updatedOrder = orderRepository.save(order);
