@@ -276,6 +276,9 @@ export const tablesAPI = {
   getAvailable: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/available`),
   getSections: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/sections`),
   getBySection: (restaurantId, section) => api.get(`/restaurants/${restaurantId}/tables/section/${section}`),
+  merge: (data) => api.post('/tables/merge', data),
+  unmerge: (tableId) => api.post(`/tables/${tableId}/unmerge`),
+  getMerged: (tableId) => api.get(`/tables/${tableId}/merged`),
 };
 
 export const waiterAPI = {

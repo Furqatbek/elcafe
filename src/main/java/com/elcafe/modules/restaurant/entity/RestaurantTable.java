@@ -39,6 +39,13 @@ public class RestaurantTable {
     @Column(nullable = false)
     private Integer capacity;
 
+    @Column(name = "original_capacity")
+    private Integer originalCapacity;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "merged_table_id")
+    private RestaurantTable mergedTable;
+
     @Column(length = 100)
     private String section;
 

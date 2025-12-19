@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.controller;
 
 import com.elcafe.modules.restaurant.dto.CreateTableRequest;
+import com.elcafe.modules.restaurant.dto.MergeTablesRequest;
 import com.elcafe.modules.restaurant.dto.TableResponse;
 import com.elcafe.modules.restaurant.dto.UpdateTableRequest;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
@@ -148,5 +149,35 @@ public class TableController {
         );
 
         return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    @PostMapping("/tables/merge")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'WAITER')")
+    @Operation(summary = "Merge tables", description = "Merge multiple tables into one main table")
+    public ResponseEntity<ApiResponse<List<TableResponse>>> mergeTables(
+            @Valid @RequestBody MergeTablesRequest request) {
+        log.info("Merging tables - main: {}, others: {}", request.getMainTableId(), request.getTableIdsToMerge());
+
+        List<TableResponse> response = tableService.mergeTables(request);
+        return ResponseEntity.ok(ApiResponse.success("Tables merged successfully", response));
+    }
+
+    @PostMapping("/tables/{tableId}/unmerge")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'WAITER')")
+    @Operation(summary = "Unmerge tables", description = "Unmerge all tables in a merge group")
+    public ResponseEntity<ApiResponse<List<TableResponse>>> unmergeTables(@PathVariable Long tableId) {
+        log.info("Unmerging tables for table: {}", tableId);
+
+        List<TableResponse> response = tableService.unmergeTables(tableId);
+        return ResponseEntity.ok(ApiResponse.success("Tables unmerged successfully", response));
+    }
+
+    @GetMapping("/tables/{tableId}/merged")
+    @Operation(summary = "Get merged tables", description = "Get all tables in a merge group")
+    public ResponseEntity<ApiResponse<List<TableResponse>>> getMergedTables(@PathVariable Long tableId) {
+        log.info("Getting merged tables for table: {}", tableId);
+
+        List<TableResponse> response = tableService.getMergedTables(tableId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

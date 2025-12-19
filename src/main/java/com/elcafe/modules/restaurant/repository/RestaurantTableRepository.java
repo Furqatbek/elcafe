@@ -27,5 +27,7 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
     @Query("SELECT COUNT(t) FROM RestaurantTable t WHERE t.restaurant.id = :restaurantId AND t.status = :status")
     Long countByRestaurantIdAndStatus(Long restaurantId, RestaurantTable.TableStatus status);
 
+    List<RestaurantTable> findByMergedTable(RestaurantTable mergedTable);
+
     void deleteByRestaurantId(Long restaurantId);
 }

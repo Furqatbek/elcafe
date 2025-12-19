@@ -89,6 +89,7 @@ public class WaiterOrderService {
                 .discount(BigDecimal.ZERO)
                 .total(BigDecimal.ZERO)
                 .customerNotes(request.getCustomerNotes())
+                .items(new ArrayList<>())
                 .build();
 
         Order savedOrder = orderRepository.save(order);
@@ -113,7 +114,6 @@ public class WaiterOrderService {
                 BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
 
                 OrderItem orderItem = OrderItem.builder()
-                        .order(savedOrder)
                         .productId(product.getId())
                         .productName(product.getName())
                         .variantId(itemRequest.getVariantId())
@@ -444,10 +444,12 @@ public class WaiterOrderService {
     }
 
     /**
-     * Generate unique order number
+     * Generate unique order number (short format)
      */
     private String generateOrderNumber() {
-        return "ORD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        long timestamp = System.currentTimeMillis();
+        int random = (int) (Math.random() * 1000);
+        return String.format("W%d%03d", timestamp % 1000000, random);
     }
 
     /**
