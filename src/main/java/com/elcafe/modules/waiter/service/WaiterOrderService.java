@@ -460,7 +460,7 @@ public class WaiterOrderService {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
-        return orderRepository.findByWaiterAndStatusInOrderByCreatedAtDesc(
+        return orderRepository.findByWaiterAndStatusInWithItemsOrderByCreatedAtDesc(
                 waiter,
                 List.of(OrderStatus.COMPLETED, OrderStatus.CANCELLED)
         );
@@ -474,7 +474,7 @@ public class WaiterOrderService {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
-        return orderRepository.findByWaiterAndStatusInOrderByCreatedAtDesc(
+        return orderRepository.findByWaiterAndStatusInWithItemsOrderByCreatedAtDesc(
                 waiter,
                 List.of(OrderStatus.NEW, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.ON_DELIVERY)
         );
