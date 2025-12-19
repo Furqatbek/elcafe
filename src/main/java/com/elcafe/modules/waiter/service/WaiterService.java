@@ -7,10 +7,10 @@ import com.elcafe.modules.waiter.dto.UpdateWaiterRequest;
 import com.elcafe.modules.waiter.dto.WaiterAuthRequest;
 import com.elcafe.modules.waiter.dto.WaiterAuthResponse;
 import com.elcafe.modules.waiter.dto.WaiterResponse;
-import com.elcafe.modules.waiter.entity.Table;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.waiter.entity.Waiter;
 import com.elcafe.modules.waiter.entity.WaiterTable;
-import com.elcafe.modules.waiter.repository.TableRepository;
 import com.elcafe.modules.waiter.repository.WaiterRepository;
 import com.elcafe.modules.waiter.repository.WaiterTableRepository;
 import com.elcafe.security.JwtUtil;
@@ -39,7 +39,7 @@ public class WaiterService {
 
     private final WaiterRepository waiterRepository;
     private final WaiterTableRepository waiterTableRepository;
-    private final TableRepository tableRepository;
+    private final RestaurantTableRepository tableRepository;
     private final ObjectMapper objectMapper;
     private final JwtUtil jwtUtil;
 
@@ -224,7 +224,7 @@ public class WaiterService {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
-        Table table = tableRepository.findById(tableId)
+        RestaurantTable table = tableRepository.findById(tableId)
                 .orElseThrow(() -> new ResourceNotFoundException("Table not found with id: " + tableId));
 
         // Check if table already has an active assignment
@@ -242,11 +242,7 @@ public class WaiterService {
 
         waiterTableRepository.save(assignment);
 
-        // Update table's current waiter
-        table.setCurrentWaiter(waiter);
-        tableRepository.save(table);
-
-        log.info("Assigned waiter {} to table {}", waiter.getName(), table.getNumber());
+        log.info("Assigned waiter {} to table {}", waiter.getName(), table.getTableNumber());
     }
 
     /**
@@ -260,20 +256,17 @@ public class WaiterService {
         assignment.unassign();
         waiterTableRepository.save(assignment);
 
-        // Clear table's current waiter
-        Table table = assignment.getTable();
-        table.setCurrentWaiter(null);
-        tableRepository.save(table);
-
-        log.info("Unassigned waiter from table {}", table.getNumber());
+        log.info("Unassigned waiter from table {}", assignment.getTable().getTableNumber());
     }
 
     /**
      * Get active tables for a waiter
      */
     @Transactional(readOnly = true)
-    public List<Table> getActiveTables(Long waiterId) {
-        return tableRepository.findByWaiterId(waiterId);
+    public List<RestaurantTable> getActiveTables(Long waiterId) {
+        return waiterTableRepository.findByWaiterIdAndActiveTrue(waiterId).stream()
+                .map(WaiterTable::getTable)
+                .toList();
     }
 
     /**

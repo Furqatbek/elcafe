@@ -2,10 +2,10 @@ package com.elcafe.modules.waiter.controller;
 
 import com.elcafe.modules.waiter.dto.CreateWaiterRequest;
 import com.elcafe.modules.waiter.dto.UpdateWaiterRequest;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.waiter.dto.WaiterAuthRequest;
 import com.elcafe.modules.waiter.dto.WaiterAuthResponse;
 import com.elcafe.modules.waiter.dto.WaiterResponse;
-import com.elcafe.modules.waiter.entity.Table;
 import com.elcafe.modules.waiter.service.WaiterService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -91,9 +91,9 @@ public class WaiterController {
     @GetMapping("/me/tables")
     @PreAuthorize("hasRole('WAITER')")
     @Operation(summary = "Get assigned tables", description = "Get tables assigned to authenticated waiter")
-    public ResponseEntity<ApiResponse<List<Table>>> getMyTables(
+    public ResponseEntity<ApiResponse<List<RestaurantTable>>> getMyTables(
             @RequestHeader("X-Waiter-Id") Long waiterId) {
-        List<Table> tables = waiterService.getActiveTables(waiterId);
+        List<RestaurantTable> tables = waiterService.getActiveTables(waiterId);
         return ResponseEntity.ok(ApiResponse.success("Tables retrieved successfully", tables));
     }
 
