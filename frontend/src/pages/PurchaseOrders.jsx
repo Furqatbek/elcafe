@@ -167,12 +167,12 @@ const PurchaseOrders = () => {
 
   const handleApprove = async (id) => {
     try {
-      await financialAPI.approvePurchaseOrder(id, user?.username);
+      await financialAPI.approvePurchaseOrder(id, user?.username || 'ADMIN');
       alert(t('finance.purchaseOrders.messages.approveSuccess'));
       loadPurchaseOrders(selectedRestaurant);
     } catch (error) {
       console.error('Failed to approve purchase order:', error);
-      alert(t('finance.purchaseOrders.messages.approveError'));
+      alert(t('finance.purchaseOrders.messages.approveError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 

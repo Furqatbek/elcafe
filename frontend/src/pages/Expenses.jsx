@@ -118,30 +118,28 @@ const Expenses = () => {
 
   const handleApprove = async (id) => {
     try {
-      await financialAPI.approveExpense(id, user?.username);
+      await financialAPI.approveExpense(id, user?.username || 'ADMIN');
       alert(t('finance.expenses.messages.approveSuccess'));
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to approve expense:', error);
-      alert(t('finance.expenses.messages.approveError'));
+      alert(t('finance.expenses.messages.approveError') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleRecordPayment = async () => {
     try {
       setLoading(true);
-      await financialAPI.recordExpensePayment(
-        selectedExpense.id,
-        new Date().toISOString().split('T')[0],
-        user?.username
-      );
+      const paymentDate = new Date().toISOString().split('T')[0];
+      const recordedBy = user?.username || 'ADMIN';
+      await financialAPI.recordExpensePayment(selectedExpense.id, paymentDate, recordedBy);
       alert(t('finance.expenses.messages.paymentSuccess'));
       setShowPaymentModal(false);
       setSelectedExpense(null);
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to record payment:', error);
-      alert(t('finance.expenses.messages.paymentError'));
+      alert(t('finance.expenses.messages.paymentError') + ': ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
