@@ -4,7 +4,10 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.waiter.entity.Waiter;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -19,9 +22,21 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
+    @EntityGraph(attributePaths = {"items"})
+    Page<Order> findAll(Specification<Order> spec, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"items"})
+    List<Order> findAll(Specification<Order> spec);
+
+    @EntityGraph(attributePaths = {"items"})
+    Optional<Order> findById(Long id);
+
     Optional<Order> findByOrderNumber(String orderNumber);
 
     List<Order> findByRestaurantIdAndStatusOrderByCreatedAtDesc(Long restaurantId, OrderStatus status);
+
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.status = :status ORDER BY o.createdAt DESC")
+    List<Order> findByRestaurantIdAndStatusWithItemsOrderByCreatedAtDesc(@Param("restaurantId") Long restaurantId, @Param("status") OrderStatus status);
 
     List<Order> findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
             Long restaurantId,
@@ -29,7 +44,17 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             LocalDateTime endDate
     );
 
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
+    List<Order> findByRestaurantIdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
+            @Param("restaurantId") Long restaurantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
     List<Order> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
+
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.customer.id = :customerId ORDER BY o.createdAt DESC")
+    List<Order> findByCustomerIdWithItemsOrderByCreatedAtDesc(@Param("customerId") Long customerId);
 
     List<Order> findByStatusOrderByCreatedAtAsc(OrderStatus status);
 
