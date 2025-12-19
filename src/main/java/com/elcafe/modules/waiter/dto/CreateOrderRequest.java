@@ -19,7 +19,6 @@ public class CreateOrderRequest {
     @NotNull(message = "Table ID is required")
     private Long tableId;
 
-    @NotNull(message = "Customer ID is required")
     private Long customerId;
 
     @Size(max = 1000, message = "Customer notes must not exceed 1000 characters")
