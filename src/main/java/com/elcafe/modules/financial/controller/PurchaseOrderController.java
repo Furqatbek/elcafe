@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -46,8 +47,8 @@ public class PurchaseOrderController {
                 .supplierAddress(request.getSupplierAddress())
                 .orderDate(request.getOrderDate())
                 .expectedDeliveryDate(request.getExpectedDeliveryDate())
-                .taxAmount(request.getTaxAmount())
-                .shippingCost(request.getShippingCost())
+                .taxAmount(request.getTaxAmount() != null ? request.getTaxAmount() : BigDecimal.ZERO)
+                .shippingCost(request.getShippingCost() != null ? request.getShippingCost() : BigDecimal.ZERO)
                 .notes(request.getNotes())
                 .build();
 
