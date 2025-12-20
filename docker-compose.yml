@@ -83,7 +83,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "9090:80"  # Expose frontend on port 9090
+      - "3000:80"  # Expose admin panel on port 3000
     networks:
       - elcafe-network
     volumes:
