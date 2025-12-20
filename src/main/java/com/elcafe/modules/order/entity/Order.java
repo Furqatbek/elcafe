@@ -190,4 +190,18 @@ public class Order {
             payment.setOrder(this);
         }
     }
+
+    /**
+     * Initialize BigDecimal fields to ZERO if null to prevent constraint violations
+     */
+    @PrePersist
+    @PreUpdate
+    protected void initializeDefaults() {
+        if (subtotal == null) subtotal = BigDecimal.ZERO;
+        if (deliveryFee == null) deliveryFee = BigDecimal.ZERO;
+        if (tax == null) tax = BigDecimal.ZERO;
+        if (discount == null) discount = BigDecimal.ZERO;
+        if (total == null) total = BigDecimal.ZERO;
+        if (bonusUsed == null) bonusUsed = BigDecimal.ZERO;
+    }
 }
