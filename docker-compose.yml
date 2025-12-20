@@ -64,13 +64,11 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
-      - "443:443"
+      - "9090:80"  # Expose frontend on port 9090
     networks:
       - elcafe-network
     volumes:
       - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro  # Optional: for SSL certificates
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
       interval: 30s
