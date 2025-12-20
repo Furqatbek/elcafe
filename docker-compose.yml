@@ -59,7 +59,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-default_jwt_secret_change_in_production}
-      CORS_ORIGINS: ${CORS_ORIGINS:-https://lacasa.uz,https://www.lacasa.uz}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
     ports:
       - "8080:8080"
     networks:
