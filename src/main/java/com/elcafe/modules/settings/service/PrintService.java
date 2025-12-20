@@ -152,24 +152,24 @@ public class PrintService {
                 .setFontSize(Style.FontSize._1, Style.FontSize._1);
 
         // Header
-        escpos.writeLF(titleStyle, "*** KITCHEN ORDER ***");
+        escpos.writeLF(titleStyle, "*** OSHXONA BUYURTMASI ***");
         escpos.feed(1);
 
         // Order details
-        escpos.writeLF(headerStyle, "ORDER #" + order.getOrderNumber());
+        escpos.writeLF(headerStyle, "BUYURTMA #" + order.getOrderNumber());
         escpos.writeLF(normalStyle, order.getRestaurant().getName());
         escpos.writeLF(normalStyle, DATE_TIME_FORMATTER.format(order.getCreatedAt()));
         escpos.feed(1);
 
         // Order type and table
         if (order.getOrderType() != null) {
-            escpos.writeLF(normalStyle, "Type: " + order.getOrderType().toString().replace("_", " "));
+            escpos.writeLF(normalStyle, "Turi: " + order.getOrderType().toString().replace("_", " "));
         }
 
         if (order.getDiningTable() != null) {
-            escpos.writeLF(headerStyle, "TABLE: " + order.getDiningTable().getTableNumber());
+            escpos.writeLF(headerStyle, "STOL: " + order.getDiningTable().getTableNumber());
             if (order.getDiningTable().getSection() != null) {
-                escpos.writeLF(normalStyle, "Section: " + order.getDiningTable().getSection());
+                escpos.writeLF(normalStyle, "Bo'lim: " + order.getDiningTable().getSection());
             }
         }
 
@@ -177,7 +177,7 @@ public class PrintService {
         escpos.writeLF("================================");
 
         // Items
-        escpos.writeLF(headerStyle, "ITEMS:");
+        escpos.writeLF(headerStyle, "MAHSULOTLAR:");
         escpos.feed(1);
 
         for (var item : order.getItems()) {
@@ -196,7 +196,7 @@ public class PrintService {
             }
 
             if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
-                escpos.writeLF(normalStyle, "  Special: " + item.getCustomizations());
+                escpos.writeLF(normalStyle, "  Maxsus: " + item.getCustomizations());
             }
 
             escpos.feed(1);
@@ -207,7 +207,7 @@ public class PrintService {
         // Customer notes
         if (order.getCustomerNotes() != null && !order.getCustomerNotes().isEmpty()) {
             escpos.feed(1);
-            escpos.writeLF(headerStyle, "SPECIAL NOTES:");
+            escpos.writeLF(headerStyle, "MAXSUS ESLATMALAR:");
             escpos.writeLF(normalStyle, order.getCustomerNotes());
             escpos.feed(1);
             escpos.writeLF("================================");
@@ -216,17 +216,17 @@ public class PrintService {
         // Delivery info
         if (order.getDeliveryInfo() != null) {
             escpos.feed(1);
-            escpos.writeLF(headerStyle, "DELIVERY INFO:");
-            escpos.writeLF(normalStyle, "Name: " + (order.getDeliveryInfo().getContactName() != null ? order.getDeliveryInfo().getContactName() : "N/A"));
-            escpos.writeLF(normalStyle, "Phone: " + (order.getDeliveryInfo().getContactPhone() != null ? order.getDeliveryInfo().getContactPhone() : "N/A"));
+            escpos.writeLF(headerStyle, "YETKAZIB BERISH:");
+            escpos.writeLF(normalStyle, "Ism: " + (order.getDeliveryInfo().getContactName() != null ? order.getDeliveryInfo().getContactName() : "N/A"));
+            escpos.writeLF(normalStyle, "Telefon: " + (order.getDeliveryInfo().getContactPhone() != null ? order.getDeliveryInfo().getContactPhone() : "N/A"));
             if (order.getDeliveryInfo().getAddress() != null) {
-                escpos.writeLF(normalStyle, "Address: " + order.getDeliveryInfo().getAddress());
+                escpos.writeLF(normalStyle, "Manzil: " + order.getDeliveryInfo().getAddress());
             }
             escpos.writeLF("================================");
         }
 
         escpos.feed(1);
-        escpos.writeLF(titleStyle, "PREPARE NOW!");
+        escpos.writeLF(titleStyle, "HOZIR TAYYORLANG!");
         escpos.feed(1);
     }
 
@@ -257,25 +257,25 @@ public class PrintService {
         html.append("<body>");
 
         // Header
-        html.append("<div class='header'>*** KITCHEN ORDER ***</div>");
+        html.append("<div class='header'>*** OSHXONA BUYURTMASI ***</div>");
 
         // Order info
         html.append("<div class='section'>");
-        html.append("<div class='section-title'>ORDER #").append(order.getOrderNumber()).append("</div>");
+        html.append("<div class='section-title'>BUYURTMA #").append(order.getOrderNumber()).append("</div>");
         html.append("<div>").append(order.getRestaurant().getName()).append("</div>");
         html.append("<div>").append(DATE_TIME_FORMATTER.format(order.getCreatedAt())).append("</div>");
         if (order.getOrderType() != null) {
-            html.append("<div>Type: ").append(order.getOrderType().toString().replace("_", " ")).append("</div>");
+            html.append("<div>Turi: ").append(order.getOrderType().toString().replace("_", " ")).append("</div>");
         }
         if (order.getDiningTable() != null) {
-            html.append("<div style='font-size: 20px; font-weight: bold; margin-top: 5px;'>TABLE: ")
+            html.append("<div style='font-size: 20px; font-weight: bold; margin-top: 5px;'>STOL: ")
                     .append(order.getDiningTable().getTableNumber()).append("</div>");
         }
         html.append("</div>");
 
         // Items
         html.append("<div class='section'>");
-        html.append("<div class='section-title'>ITEMS:</div>");
+        html.append("<div class='section-title'>MAHSULOTLAR:</div>");
         for (var item : order.getItems()) {
             html.append("<div class='item'>");
             html.append("<span class='item-quantity'>").append(item.getQuantity()).append("x</span>");
@@ -284,7 +284,7 @@ public class PrintService {
                 html.append("<div>(").append(item.getVariantName()).append(")</div>");
             }
             if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
-                html.append("<div class='notes'>Special: ").append(item.getCustomizations()).append("</div>");
+                html.append("<div class='notes'>Maxsus: ").append(item.getCustomizations()).append("</div>");
             }
             html.append("</div>");
         }
@@ -293,7 +293,7 @@ public class PrintService {
         // Customer notes
         if (order.getCustomerNotes() != null && !order.getCustomerNotes().isEmpty()) {
             html.append("<div class='section'>");
-            html.append("<div class='section-title'>SPECIAL NOTES:</div>");
+            html.append("<div class='section-title'>MAXSUS ESLATMALAR:</div>");
             html.append("<div class='notes'>").append(order.getCustomerNotes()).append("</div>");
             html.append("</div>");
         }
@@ -301,16 +301,16 @@ public class PrintService {
         // Delivery info
         if (order.getDeliveryInfo() != null) {
             html.append("<div class='section'>");
-            html.append("<div class='section-title'>DELIVERY INFO:</div>");
-            html.append("<div>Name: ").append(order.getDeliveryInfo().getContactName() != null ? order.getDeliveryInfo().getContactName() : "N/A").append("</div>");
-            html.append("<div>Phone: ").append(order.getDeliveryInfo().getContactPhone() != null ? order.getDeliveryInfo().getContactPhone() : "N/A").append("</div>");
+            html.append("<div class='section-title'>YETKAZIB BERISH MA'LUMOTLARI:</div>");
+            html.append("<div>Ism: ").append(order.getDeliveryInfo().getContactName() != null ? order.getDeliveryInfo().getContactName() : "N/A").append("</div>");
+            html.append("<div>Telefon: ").append(order.getDeliveryInfo().getContactPhone() != null ? order.getDeliveryInfo().getContactPhone() : "N/A").append("</div>");
             if (order.getDeliveryInfo().getAddress() != null) {
-                html.append("<div>Address: ").append(order.getDeliveryInfo().getAddress()).append("</div>");
+                html.append("<div>Manzil: ").append(order.getDeliveryInfo().getAddress()).append("</div>");
             }
             html.append("</div>");
         }
 
-        html.append("<div class='footer'>PREPARE NOW!</div>");
+        html.append("<div class='footer'>HOZIR TAYYORLANG!</div>");
 
         html.append("</body>");
         html.append("</html>");
