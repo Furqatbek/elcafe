@@ -146,13 +146,7 @@ const generateReceiptHTML = (order) => {
     }
 
     .items-title {
-      font-size: 20px;
-      font-weight: bold;
-      text-align: center;
-      margin-bottom: 10px;
-      padding: 8px;
-      border: 3px solid black;
-      background: white;
+      display: none;
     }
 
     .items-table {
@@ -162,27 +156,7 @@ const generateReceiptHTML = (order) => {
     }
 
     .items-table th {
-      border: 2px solid black;
-      padding: 8px 4px;
-      text-align: left;
-      font-weight: bold;
-      font-size: 16px;
-      background: black;
-      color: white;
-    }
-
-    .items-table th.qty {
-      width: 15%;
-      text-align: center;
-    }
-
-    .items-table th.name {
-      width: 50%;
-    }
-
-    .items-table th.price {
-      width: 35%;
-      text-align: right;
+      display: none;
     }
 
     .items-table td {
@@ -355,7 +329,7 @@ const generateReceiptHTML = (order) => {
 </head>
 <body>
   <!-- Print Button -->
-  <button class="print-button no-print" onclick="window.print()">PRINT RECEIPT</button>
+  <button class="print-button no-print" onclick="window.print()">CHEK CHOP ETISH</button>
 
   <div class="receipt">
     <!-- Header -->
@@ -366,28 +340,28 @@ const generateReceiptHTML = (order) => {
 
     <!-- Order Number -->
     <div class="order-number">
-      ORDER #${order.orderNumber}
+      BUYURTMA #${order.orderNumber}
     </div>
 
     <!-- Subheader Info -->
     <div class="subheader">
       <div class="subheader-line">
-        <span class="label">Date & Time:</span>
+        <span class="label">Sana va Vaqt:</span>
         <span class="value">${currentDate}</span>
       </div>
       <div class="subheader-line">
-        <span class="label">Cashier:</span>
+        <span class="label">Kassir:</span>
         <span class="value">${cashier}</span>
       </div>
       ${order.orderType ? `
       <div class="subheader-line">
-        <span class="label">Type:</span>
+        <span class="label">Turi:</span>
         <span class="value">${order.orderType.replace(/_/g, ' ')}</span>
       </div>
       ` : ''}
       ${order.diningTable ? `
       <div class="subheader-line">
-        <span class="label">Table:</span>
+        <span class="label">Stol:</span>
         <span class="value">${order.diningTable.tableNumber}${order.diningTable.section ? ' - ' + order.diningTable.section : ''}</span>
       </div>
       ` : ''}
@@ -396,16 +370,16 @@ const generateReceiptHTML = (order) => {
     <!-- Customer Info -->
     ${order.deliveryInfo ? `
     <div class="customer-info">
-      <div class="customer-info-title">CUSTOMER INFORMATION</div>
+      <div class="customer-info-title">MIJOZ MA'LUMOTLARI</div>
       <div class="customer-info-line">
-        <strong>Name:</strong> ${order.deliveryInfo.contactName || 'N/A'}
+        <strong>Ism:</strong> ${order.deliveryInfo.contactName || 'N/A'}
       </div>
       <div class="customer-info-line">
-        <strong>Phone:</strong> ${order.deliveryInfo.contactPhone || 'N/A'}
+        <strong>Telefon:</strong> ${order.deliveryInfo.contactPhone || 'N/A'}
       </div>
       ${order.deliveryInfo.address ? `
       <div class="customer-info-line">
-        <strong>Address:</strong> ${order.deliveryInfo.address}, ${order.deliveryInfo.city || ''}
+        <strong>Manzil:</strong> ${order.deliveryInfo.address}, ${order.deliveryInfo.city || ''}
       </div>
       ` : ''}
     </div>
@@ -413,23 +387,14 @@ const generateReceiptHTML = (order) => {
 
     <!-- Items Section -->
     <div class="items-section">
-      <div class="items-title">ORDER ITEMS</div>
-
       <table class="items-table">
-        <thead>
-          <tr>
-            <th class="qty">QTY</th>
-            <th class="name">ITEM</th>
-            <th class="price">PRICE</th>
-          </tr>
-        </thead>
         <tbody>
           ${(order.items || []).map(item => `
           <tr>
             <td class="qty">${item.quantity}</td>
             <td class="name">
-              ${item.productName}
-              ${item.variantName ? `<div class="item-variant">(${item.variantName})</div>` : ''}
+              ${item.quantity} x ${item.productName}
+              ${item.variantName ? ` (${item.variantName})` : ''}
             </td>
             <td class="price">$${(item.totalPrice || 0).toFixed(2)}</td>
           </tr>
@@ -441,33 +406,33 @@ const generateReceiptHTML = (order) => {
     <!-- Totals -->
     <div class="totals">
       <div class="total-line subtotal">
-        <span class="label">Subtotal:</span>
+        <span class="label">Oraliq summa:</span>
         <span class="amount">$${(order.subtotal || 0).toFixed(2)}</span>
       </div>
 
       ${order.tax ? `
       <div class="total-line">
-        <span class="label">Tax:</span>
+        <span class="label">Soliq:</span>
         <span class="amount">$${(order.tax || 0).toFixed(2)}</span>
       </div>
       ` : ''}
 
       ${order.deliveryFee && order.deliveryFee > 0 ? `
       <div class="total-line">
-        <span class="label">Delivery Fee:</span>
+        <span class="label">Yetkazib berish:</span>
         <span class="amount">$${(order.deliveryFee || 0).toFixed(2)}</span>
       </div>
       ` : ''}
 
       ${order.discount && order.discount > 0 ? `
       <div class="total-line">
-        <span class="label">Discount:</span>
+        <span class="label">Chegirma:</span>
         <span class="amount">-$${(order.discount || 0).toFixed(2)}</span>
       </div>
       ` : ''}
 
       <div class="total-line grand-total">
-        <span class="label">TOTAL:</span>
+        <span class="label">JAMI:</span>
         <span class="amount">$${(order.total || 0).toFixed(2)}</span>
       </div>
     </div>
@@ -475,14 +440,14 @@ const generateReceiptHTML = (order) => {
     <!-- Payment Info -->
     ${order.payment ? `
     <div class="payment-info">
-      PAYMENT: ${order.payment.method || 'N/A'} - ${order.payment.status || 'N/A'}
+      TO'LOV: ${order.payment.method || 'N/A'} - ${order.payment.status || 'N/A'}
     </div>
     ` : ''}
 
     <!-- Notes -->
     ${order.customerNotes ? `
     <div class="notes-section">
-      <div class="notes-title">SPECIAL NOTES:</div>
+      <div class="notes-title">MAXSUS ESLATMALAR:</div>
       <div class="notes-content">${order.customerNotes}</div>
     </div>
     ` : ''}
@@ -490,13 +455,13 @@ const generateReceiptHTML = (order) => {
     <!-- Footer -->
     <div class="footer">
       <div class="contact-info">
-        <div>Phone: +1 (555) 123-4567</div>
+        <div>Telefon: +1 (555) 123-4567</div>
         <div>Email: info@lacasa.com</div>
         <div>www.lacasa.com</div>
       </div>
 
-      <div class="thank-you">*** THANK YOU! ***</div>
-      <div class="visit-again">Please visit us again!</div>
+      <div class="thank-you">*** RAHMAT! ***</div>
+      <div class="visit-again">Yana tashrif buyuring!</div>
 
       <div class="timestamp">${currentDate}</div>
     </div>
