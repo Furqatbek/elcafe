@@ -335,36 +335,11 @@ const generateReceiptHTML = (order) => {
     <!-- Header -->
     <div class="header">
       <div class="brand-name">LaCasa</div>
-      <div class="restaurant-name">${order.restaurant?.name}</div>
     </div>
 
     <!-- Order Number -->
     <div class="order-number">
       BUYURTMA #${order.orderNumber}
-    </div>
-
-    <!-- Subheader Info -->
-    <div class="subheader">
-      <div class="subheader-line">
-        <span class="label">Sana va Vaqt:</span>
-        <span class="value">${currentDate}</span>
-      </div>
-      <div class="subheader-line">
-        <span class="label">Kassir:</span>
-        <span class="value">${cashier}</span>
-      </div>
-      ${order.orderType ? `
-      <div class="subheader-line">
-        <span class="label">Turi:</span>
-        <span class="value">${order.orderType.replace(/_/g, ' ')}</span>
-      </div>
-      ` : ''}
-      ${order.diningTable ? `
-      <div class="subheader-line">
-        <span class="label">Stol:</span>
-        <span class="value">${order.diningTable.tableNumber}${order.diningTable.section ? ' - ' + order.diningTable.section : ''}</span>
-      </div>
-      ` : ''}
     </div>
 
     <!-- Customer Info -->
