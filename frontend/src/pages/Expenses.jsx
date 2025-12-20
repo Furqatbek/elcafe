@@ -363,7 +363,7 @@ const Expenses = () => {
                         <button
                           onClick={() => handleApprove(expense.id)}
                           className="text-green-600 hover:text-green-900"
-                          title="Approve"
+                          title={t("common.buttons.approve")}
                         >
                           <Check size={18} />
                         </button>
@@ -372,7 +372,7 @@ const Expenses = () => {
                         <button
                           onClick={() => { setSelectedExpense(expense); setShowPaymentModal(true); }}
                           className="text-blue-600 hover:text-blue-900"
-                          title="Record Payment"
+                          title={t("common.buttons.recordPayment")}
                         >
                           <DollarSign size={18} />
                         </button>
@@ -381,7 +381,7 @@ const Expenses = () => {
                         <button
                           onClick={() => handleDelete(expense.id)}
                           className="text-red-600 hover:text-red-900"
-                          title="Delete"
+                          title={t("common.buttons.delete")}
                         >
                           <Trash2 size={18} />
                         </button>

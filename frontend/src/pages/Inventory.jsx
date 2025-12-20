@@ -468,7 +468,7 @@ export default function Inventory() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleStockAction(ingredient, 'add')}
-                            title="Add Stock"
+                            title={t("common.buttons.addStock")}
                           >
                             <TrendingUp className="h-4 w-4 text-green-600" />
                           </Button>
@@ -476,7 +476,7 @@ export default function Inventory() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleViewTransactions(ingredient)}
-                            title="View History"
+                            title={t("common.buttons.viewHistory")}
                           >
                             <History className="h-4 w-4 text-blue-600" />
                           </Button>
@@ -484,7 +484,7 @@ export default function Inventory() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(ingredient)}
-                            title="Edit"
+                            title={t("common.buttons.edit")}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -492,7 +492,7 @@ export default function Inventory() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDelete(ingredient.id)}
-                            title="Delete"
+                            title={t("common.buttons.delete")}
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
@@ -587,7 +587,7 @@ export default function Inventory() {
                   step="0.001"
                   value={formData.currentStock}
                   onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-                  placeholder="0.000"
+                  placeholder={t("common.placeholders.decimalValue")}
                 />
               </div>
               <div className="space-y-2">
@@ -598,7 +598,7 @@ export default function Inventory() {
                   step="0.001"
                   value={formData.minimumStock}
                   onChange={(e) => setFormData({ ...formData, minimumStock: e.target.value })}
-                  placeholder="0.000"
+                  placeholder={t("common.placeholders.decimalValue")}
                 />
               </div>
               <div className="space-y-2">
@@ -609,7 +609,7 @@ export default function Inventory() {
                   step="0.001"
                   value={formData.reorderLevel}
                   onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
-                  placeholder="0.000"
+                  placeholder={t("common.placeholders.decimalValue")}
                 />
               </div>
             </div>
@@ -622,7 +622,7 @@ export default function Inventory() {
                 step="0.01"
                 value={formData.costPerUnit}
                 onChange={(e) => setFormData({ ...formData, costPerUnit: e.target.value })}
-                placeholder="0.00"
+                placeholder={t("common.placeholders.priceValue")}
               />
             </div>
 
@@ -685,7 +685,7 @@ export default function Inventory() {
                   step="0.001"
                   value={stockFormData.quantity}
                   onChange={(e) => setStockFormData({ ...stockFormData, quantity: e.target.value })}
-                  placeholder="0.000"
+                  placeholder={t("common.placeholders.decimalValue")}
                 />
               </div>
             ) : (
@@ -697,7 +697,7 @@ export default function Inventory() {
                   step="0.001"
                   value={stockFormData.newQuantity}
                   onChange={(e) => setStockFormData({ ...stockFormData, newQuantity: e.target.value })}
-                  placeholder="0.000"
+                  placeholder={t("common.placeholders.decimalValue")}
                 />
               </div>
             )}
@@ -707,7 +707,7 @@ export default function Inventory() {
                 id="notes"
                 value={stockFormData.notes}
                 onChange={(e) => setStockFormData({ ...stockFormData, notes: e.target.value })}
-                placeholder="Optional notes about this stock change"
+                placeholder={t("common.placeholders.optionalNotes")}
               />
             </div>
             <div className="space-y-2">

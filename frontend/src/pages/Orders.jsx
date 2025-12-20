@@ -363,7 +363,7 @@ export default function Orders() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by order #"
+                placeholder={t("common.placeholders.searchOrderNumber")}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -372,24 +372,24 @@ export default function Orders() {
 
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
               <SelectTrigger>
-                <SelectValue placeholder="All Statuses" />
+                <SelectValue placeholder={t("common.placeholders.allStatuses")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="NEW">New</SelectItem>
-                <SelectItem value="ACCEPTED">Accepted</SelectItem>
-                <SelectItem value="PREPARING">Preparing</SelectItem>
-                <SelectItem value="READY">Ready</SelectItem>
+                <SelectItem value="all">{t("orders.status.all")}</SelectItem>
+                <SelectItem value="NEW">{t("orders.status.new")}</SelectItem>
+                <SelectItem value="ACCEPTED">{t("orders.status.accepted")}</SelectItem>
+                <SelectItem value="PREPARING">{t("orders.status.preparing")}</SelectItem>
+                <SelectItem value="READY">{t("orders.status.ready")}</SelectItem>
                 <SelectItem value="COURIER_ASSIGNED">Courier Assigned</SelectItem>
                 <SelectItem value="ON_DELIVERY">On Delivery</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
-                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                <SelectItem value="DELIVERED">{t("orders.status.delivered")}</SelectItem>
+                <SelectItem value="CANCELLED">{t("orders.status.cancelled")}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
               <SelectTrigger>
-                <SelectValue placeholder="All Restaurants" />
+                <SelectValue placeholder={t("common.placeholders.allRestaurants")} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Restaurants</SelectItem>
@@ -403,14 +403,14 @@ export default function Orders() {
 
             <Input
               type="date"
-              placeholder="Start Date"
+              placeholder={t("common.placeholders.startDate")}
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
 
             <Input
               type="date"
-              placeholder="End Date"
+              placeholder={t("common.placeholders.endDate")}
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
@@ -604,7 +604,7 @@ export default function Orders() {
                   required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select restaurant" />
+                    <SelectValue placeholder={t("common.placeholders.selectRestaurant")} />
                   </SelectTrigger>
                   <SelectContent>
                     {restaurants.map((restaurant) => (
@@ -678,7 +678,7 @@ export default function Orders() {
                     required={formData.orderType === 'DINE_IN'}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a table" />
+                      <SelectValue placeholder={t("common.placeholders.selectTable")} />
                     </SelectTrigger>
                     <SelectContent>
                       {tables.length === 0 ? (
@@ -798,9 +798,9 @@ export default function Orders() {
                     <SelectValue placeholder="Select payment method" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CARD">Card</SelectItem>
-                    <SelectItem value="CASH">Cash</SelectItem>
-                    <SelectItem value="ONLINE">Online</SelectItem>
+                    <SelectItem value="CARD">{t("orders.paymentMethod.card")}</SelectItem>
+                    <SelectItem value="CASH">{t("orders.paymentMethod.cash")}</SelectItem>
+                    <SelectItem value="ONLINE">{t("orders.paymentMethod.online")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -826,7 +826,7 @@ export default function Orders() {
                       disabled={!formData.restaurantId}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select product" />
+                        <SelectValue placeholder={t("common.placeholders.selectProduct")} />
                       </SelectTrigger>
                       <SelectContent>
                         {products.map((product) => (
@@ -843,7 +843,7 @@ export default function Orders() {
                       min="1"
                       value={selectedQuantity}
                       onChange={(e) => setSelectedQuantity(parseInt(e.target.value) || 1)}
-                      placeholder="Qty"
+                      placeholder={t("common.placeholders.quantity")}
                     />
                     <Button type="button" onClick={handleAddItem} disabled={!selectedProduct}>
                       <Plus className="h-4 w-4" />
