@@ -72,10 +72,20 @@ const Expenses = () => {
 
   const loadRestaurants = async () => {
     try {
-      const response = await restaurantAPI.getAll();
-      setRestaurants(response.data.data || []);
+      const response = await restaurantAPI.getAll({ page: 0, size: 100 });
+      // Handle both paginated and non-paginated responses
+      const restaurantsData = response.data.data?.content || response.data.data || [];
+      setRestaurants(Array.isArray(restaurantsData) ? restaurantsData : []);
+
+      // Set first restaurant as default if none selected
+      if (!selectedRestaurant && restaurantsData.length > 0 && !user?.restaurantId) {
+        const firstRestaurantId = restaurantsData[0].id;
+        setSelectedRestaurant(firstRestaurantId);
+        setFormData(prev => ({ ...prev, restaurantId: firstRestaurantId }));
+      }
     } catch (error) {
       console.error('Failed to load restaurants:', error);
+      setRestaurants([]);
     }
   };
 
