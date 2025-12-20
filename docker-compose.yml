@@ -22,6 +22,23 @@ services:
       timeout: 5s
       retries: 5
 
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: elcafe-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - elcafe-network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
   # Backend Spring Boot Application
   backend:
     build:
@@ -32,11 +49,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME:-elcafe}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-elcafe}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-elcafe_secret}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-default_jwt_secret_change_in_production}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://lacasa.uz,https://www.lacasa.uz}
     ports:
@@ -81,6 +102,8 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  redis_data:
     driver: local
   uploads:
     driver: local

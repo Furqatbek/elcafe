@@ -43,6 +43,7 @@ That's it! 🎉
 The stack includes:
 
 - **PostgreSQL 15** - Database with persistent storage
+- **Redis 7** - Cache and session management
 - **Spring Boot Backend** - REST API on port 8080
 - **React Frontend** - SPA served by NGINX on port 80
 - **NGINX Reverse Proxy** - Routes /api to backend
