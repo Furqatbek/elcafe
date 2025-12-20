@@ -329,7 +329,7 @@ export default function Customers() {
                       id="tags"
                       value={formData.tags}
                       onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                      placeholder="VIP, Regular, etc."
+                      placeholder={t("common.placeholders.tags")}
                       className="pl-10"
                     />
                   </div>

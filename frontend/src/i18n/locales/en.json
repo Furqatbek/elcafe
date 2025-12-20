@@ -267,6 +267,15 @@
     "back": "Back",
     "next": "Next",
     "previous": "Previous",
+    "view": "View",
+    "create": "Create",
+    "refresh": "Refresh",
+    "active": "Active",
+    "inactive": "Inactive",
+    "page": "Page",
+    "of": "of",
+    "selectRestaurant": "Select Restaurant",
+    "unavailable": "Unavailable",
     "loading": "Loading...",
     "saving": "Saving...",
     "noData": "No data available",
@@ -281,29 +290,77 @@
     "max": "Max",
     "reset": "Reset",
     "allStatuses": "All Statuses",
-    "dateRange": "Date Range",
-    "startDate": "Start Date",
-    "endDate": "End Date",
-    "apply": "Apply",
-    "date": "Date",
-    "category": "Category",
-    "product": "Product",
-    "ingredient": "Ingredient",
-    "status": "Status",
-    "cash": "Cash",
-    "card": "Card",
-    "online": "Online",
-    "average": "Average",
-    "median": "Median",
-    "total": "Total",
-    "days": "days",
-    "day": "Day",
-    "hour": "Hour",
-    "margin": "Margin",
     "languages": {
       "en": "English",
       "ru": "Русский",
       "uz": "O'zbek"
+    },
+    "placeholders": {
+      "searchOrderNumber": "Search by order #",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "quantity": "Qty",
+      "selectRestaurant": "Select Restaurant",
+      "selectCategory": "Select a category",
+      "selectTable": "Select a table",
+      "selectProduct": "Select product",
+      "selectPaymentMethod": "Select payment method",
+      "allStatuses": "All Statuses",
+      "allRestaurants": "All Restaurants",
+      "allCategories": "All Categories",
+      "email": "admin@elcafe.com",
+      "password": "••••••••",
+      "searchProducts": "Search products...",
+      "searchWaiters": "Search waiters...",
+      "imageUrl": "https://example.com/image.jpg",
+      "optionalDescription": "Optional description",
+      "optionalNotes": "Optional notes about this stock change",
+      "tags": "VIP, Regular, etc.",
+      "variantExample": "e.g., Small, Medium, Large",
+      "name": "John Doe",
+      "employeeId": "1234",
+      "contactEmail": "john@example.com",
+      "phone": "+998901234567",
+      "ipAddress": "192.168.1.100",
+      "decimalValue": "0.000",
+      "priceValue": "0.00"
+    },
+    "buttons": {
+      "create": "Create",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save",
+      "update": "Update",
+      "reset": "Reset",
+      "filter": "Filter",
+      "search": "Search",
+      "addVariant": "Add Variant",
+      "createVariant": "Create Variant",
+      "updateVariant": "Update Variant",
+      "approve": "Approve",
+      "recordPayment": "Record Payment",
+      "addStock": "Add Stock",
+      "viewHistory": "View History"
+    },
+    "labels": {
+      "total": "Total",
+      "sortOrder": "Sort Order",
+      "inStock": "In Stock",
+      "outOfStock": "Out of Stock",
+      "featured": "Featured",
+      "active": "Active",
+      "inactive": "Inactive",
+      "filters": "Filters",
+      "orderItems": "Order Items"
+    },
+    "messages": {
+      "noDataFound": "No data found",
+      "noProductsFound": "No products found",
+      "noVariantsFound": "No variants found. Click \"Add Variant\" to create one.",
+      "noAvailableTables": "No available tables",
+      "confirmDelete": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+      "confirmUnmerge": "Are you sure you want to unmerge these tables?"
     }
   },
   "orders": {
@@ -315,7 +372,17 @@
     "orderNumber": "Order Number",
     "customer": "Customer",
     "restaurant": "Restaurant",
-    "status": "Status",
+    "status": {
+      "all": "All Statuses",
+      "new": "New",
+      "accepted": "Accepted",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "courierAssigned": "Courier Assigned",
+      "onDelivery": "On Delivery",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled"
+    },
     "total": "Total",
     "subtotal": "Subtotal",
     "deliveryFee": "Delivery Fee",
@@ -363,7 +430,34 @@
       "estimatedTime": "Estimated Delivery Time",
       "actualTime": "Actual Delivery Time"
     },
-    "printReceipt": "Print Receipt"
+    "printReceipt": "Print Receipt",
+    "createNewOrder": "Create New Order",
+    "createOrderDescription": "Create a new order for a customer",
+    "orderType": {
+      "label": "Order Type *",
+      "delivery": "Delivery",
+      "takeaway": "Takeaway",
+      "dineIn": "Dine-In"
+    },
+    "paymentMethod": {
+      "label": "Payment Method *",
+      "card": "Card",
+      "cash": "Cash",
+      "online": "Online"
+    },
+    "form": {
+      "restaurant": "Restaurant *",
+      "selectTable": "Select Table *",
+      "firstName": "First Name *",
+      "lastName": "Last Name *",
+      "customerPhone": "Customer Phone *",
+      "customerEmail": "Customer Email",
+      "deliveryAddress": "Delivery Address *",
+      "city": "City *",
+      "state": "State",
+      "zipCode": "ZIP Code",
+      "customerNotes": "Customer Notes"
+    }
   },
   "restaurants": {
     "title": "Restaurants",
@@ -430,7 +524,8 @@
     "status": {
       "DRAFT": "Draft",
       "LIVE": "Live"
-    }
+    },
+    "completeMenuDescription": "Complete menu with categories and products"
   },
   "menuCollections": {
     "title": "Menu Collections",
@@ -516,157 +611,25 @@
       "phonecall": "Phone Call",
       "walkin": "Walk-in",
       "other": "Other"
+    },
+    "exportHeaders": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "city": "City",
+      "state": "State",
+      "zipCode": "ZIP Code",
+      "tags": "Tags",
+      "status": "Status",
+      "createdAt": "Created At"
     }
   },
   "customerSegments": {
     "title": "Customer Segments",
     "totalSegments": "Total Segments",
     "description": "RFM analysis and customer segmentation based on Recency, Frequency, and Monetary value"
-  },
-  "couriers": {
-    "title": "Couriers",
-    "allCouriers": "All Couriers",
-    "activeCouriers": "Active Couriers",
-    "courierDetails": "Courier Details",
-    "trackingId": "Tracking ID",
-    "status": "Status",
-    "currentLocation": "Current Location",
-    "assignedOrders": "Assigned Orders",
-    "deliveryHistory": "Delivery History"
-  },
-  "courier": {
-    "status": {
-      "online": "Online",
-      "offline": "Offline",
-      "onDelivery": "On Delivery",
-      "busy": "Busy"
-    },
-    "map": {
-      "title": "Courier Map",
-      "subtitle": "Real-time courier tracking and status monitoring",
-      "lastUpdate": "Last updated",
-      "lastSeen": "Last seen",
-      "couriersList": "All Couriers",
-      "noCouriers": "No couriers found",
-      "neverSeen": "Never",
-      "justNow": "Just now",
-      "minutesAgo": "{{minutes}}m ago",
-      "hoursAgo": "{{hours}}h ago",
-      "stats": {
-        "online": "Online",
-        "offline": "Offline",
-        "onDelivery": "On Delivery",
-        "busy": "Busy"
-      },
-      "mapPlaceholder": {
-        "title": "Interactive Map View",
-        "description": "Install react-leaflet to see couriers on an interactive map"
-      }
-    }
-  },
-  "common": {
-    "search": "Search",
-    "filter": "Filter",
-    "sort": "Sort",
-    "export": "Export",
-    "all": "All",
-    "actions": "Actions",
-    "edit": "Edit",
-    "delete": "Delete",
-    "save": "Save",
-    "cancel": "Cancel",
-    "submit": "Submit",
-    "close": "Close",
-    "back": "Back",
-    "next": "Next",
-    "previous": "Previous",
-    "view": "View",
-    "create": "Create",
-    "refresh": "Refresh",
-    "active": "Active",
-    "inactive": "Inactive",
-    "page": "Page",
-    "of": "of",
-    "selectRestaurant": "Select Restaurant",
-    "unavailable": "Unavailable",
-    "loading": "Loading...",
-    "saving": "Saving...",
-    "noData": "No data available",
-    "error": "An error occurred",
-    "success": "Success",
-    "confirm": "Confirm",
-    "yes": "Yes",
-    "no": "No",
-    "selectLanguage": "Select Language",
-    "language": "Language",
-    "min": "Min",
-    "max": "Max",
-    "reset": "Reset",
-    "allStatuses": "All Statuses",
-    "languages": {
-      "en": "English",
-      "ru": "Русский",
-      "uz": "O'zbek"
-    }
-  },
-  "validation": {
-    "required": "This field is required",
-    "email": "Please enter a valid email",
-    "phone": "Please enter a valid phone number",
-    "minLength": "Minimum length is {{min}} characters",
-    "maxLength": "Maximum length is {{max}} characters",
-    "passwordMatch": "Passwords do not match"
-  },
-  "operators": {
-    "title": "Operators",
-    "description": "Manage system operators and their access",
-    "id": "ID",
-    "email": "Email",
-    "firstName": "First Name",
-    "lastName": "Last Name",
-    "phone": "Phone",
-    "password": "Password",
-    "status": "Status",
-    "emailVerified": "Email Verified",
-    "createdAt": "Created At",
-    "actions": "Actions",
-    "active": "Active",
-    "inactive": "Inactive",
-    "yes": "Yes",
-    "no": "No",
-    "search": "Search by name, email or phone",
-    "allStatuses": "All Statuses",
-    "createNew": "Create New Operator",
-    "export": "Export to CSV",
-    "edit": "Edit",
-    "delete": "Delete",
-    "loading": "Loading...",
-    "noData": "No operators found",
-    "createOperator": "Create Operator",
-    "editOperator": "Edit Operator",
-    "cancel": "Cancel",
-    "create": "Create",
-    "update": "Update",
-    "activeStatus": "Active",
-    "passwordPlaceholder": "Leave blank to keep current password",
-    "confirmDelete": "Confirm Delete",
-    "deleteMessage": "Are you sure you want to delete operator {{name}}? This action cannot be undone.",
-    "deleteError": "Failed to delete operator",
-    "saveError": "Failed to save operator",
-    "perPage": "per page",
-    "showing": "Showing",
-    "to": "to",
-    "of": "of",
-    "results": "results",
-    "page": "Page",
-    "validation": {
-      "emailRequired": "Email is required",
-      "emailInvalid": "Invalid email format",
-      "passwordRequired": "Password is required",
-      "passwordMin": "Password must be at least 8 characters",
-      "firstNameRequired": "First name is required",
-      "lastNameRequired": "Last name is required"
-    }
   },
   "couriers": {
     "title": "Couriers",
@@ -744,6 +707,95 @@
       "car": "Car",
       "on_foot": "On Foot"
     },
+    "validation": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Invalid email format",
+      "passwordRequired": "Password is required",
+      "passwordMin": "Password must be at least 8 characters",
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required"
+    }
+  },
+  "courier": {
+    "status": {
+      "online": "Online",
+      "offline": "Offline",
+      "onDelivery": "On Delivery",
+      "busy": "Busy"
+    },
+    "map": {
+      "title": "Courier Map",
+      "subtitle": "Real-time courier tracking and status monitoring",
+      "lastUpdate": "Last updated",
+      "lastSeen": "Last seen",
+      "couriersList": "All Couriers",
+      "noCouriers": "No couriers found",
+      "neverSeen": "Never",
+      "justNow": "Just now",
+      "minutesAgo": "{{minutes}}m ago",
+      "hoursAgo": "{{hours}}h ago",
+      "stats": {
+        "online": "Online",
+        "offline": "Offline",
+        "onDelivery": "On Delivery",
+        "busy": "Busy"
+      },
+      "mapPlaceholder": {
+        "title": "Interactive Map View",
+        "description": "Install react-leaflet to see couriers on an interactive map"
+      }
+    }
+  },
+  "validation": {
+    "required": "This field is required",
+    "email": "Please enter a valid email",
+    "phone": "Please enter a valid phone number",
+    "minLength": "Minimum length is {{min}} characters",
+    "maxLength": "Maximum length is {{max}} characters",
+    "passwordMatch": "Passwords do not match"
+  },
+  "operators": {
+    "title": "Operators",
+    "description": "Manage system operators and their access",
+    "id": "ID",
+    "email": "Email",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "phone": "Phone",
+    "password": "Password",
+    "status": "Status",
+    "emailVerified": "Email Verified",
+    "createdAt": "Created At",
+    "actions": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "yes": "Yes",
+    "no": "No",
+    "search": "Search by name, email or phone",
+    "allStatuses": "All Statuses",
+    "createNew": "Create New Operator",
+    "export": "Export to CSV",
+    "edit": "Edit",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "noData": "No operators found",
+    "createOperator": "Create Operator",
+    "editOperator": "Edit Operator",
+    "cancel": "Cancel",
+    "create": "Create",
+    "update": "Update",
+    "activeStatus": "Active",
+    "passwordPlaceholder": "Leave blank to keep current password",
+    "confirmDelete": "Confirm Delete",
+    "deleteMessage": "Are you sure you want to delete operator {{name}}? This action cannot be undone.",
+    "deleteError": "Failed to delete operator",
+    "saveError": "Failed to save operator",
+    "perPage": "per page",
+    "showing": "Showing",
+    "to": "to",
+    "of": "of",
+    "results": "results",
+    "page": "Page",
     "validation": {
       "emailRequired": "Email is required",
       "emailInvalid": "Invalid email format",
@@ -1105,5 +1157,49 @@
       "testFailed": "Printer test failed",
       "testError": "Failed to test printer"
     }
+  },
+  "products": {
+    "title": "Products",
+    "description": "Browse all food items",
+    "newProduct": "New Product",
+    "editProduct": "Edit Product",
+    "deleteProduct": "Delete Product",
+    "createProductDescription": "Fill in the details to create a new product",
+    "updateProductDescription": "Update the product details",
+    "manageVariants": "Manage variants for this product",
+    "variants": {
+      "title": "Variants ({count})",
+      "create": "Create Product Variant",
+      "edit": "Edit Product Variant",
+      "delete": "Delete Variant",
+      "createDescription": "Add a new variant for {productName}",
+      "editDescription": "Update variant details for {productName}",
+      "deleteConfirm": "Are you sure you want to delete the variant \"{variantName}\"? This action cannot be undone."
+    },
+    "form": {
+      "productName": "Product Name *",
+      "category": "Category *",
+      "description": "Description",
+      "productImage": "Product Image",
+      "orEnterUrl": "Or enter image URL instead:",
+      "price": "Price *",
+      "sortOrder": "Sort Order",
+      "inStock": "In Stock",
+      "featured": "Featured",
+      "variantName": "Variant Name *",
+      "variantDescription": "Description"
+    }
+  },
+  "login": {
+    "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
+  },
+  "inventory": {
+    "form": {
+      "newQuantity": "New Quantity *",
+      "notes": "Notes"
+    }
+  },
+  "linkedItems": {
+    "totalLinkedItems": "Total Linked Items"
   }
 }

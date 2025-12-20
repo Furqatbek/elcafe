@@ -431,7 +431,7 @@ export default function Categories() {
                     value={formData.imageUrl}
                     onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                     maxLength={500}
-                    placeholder="https://example.com/image.jpg"
+                    placeholder={t("common.placeholders.imageUrl")}
                   />
                 </div>
               </div>
@@ -531,7 +531,7 @@ export default function Categories() {
                     value={formData.imageUrl}
                     onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                     maxLength={500}
-                    placeholder="https://example.com/image.jpg"
+                    placeholder={t("common.placeholders.imageUrl")}
                   />
                 </div>
               </div>

@@ -404,7 +404,7 @@ export default function Products() {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search products..."
+            placeholder={t("common.placeholders.searchProducts")}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -412,7 +412,7 @@ export default function Products() {
         </div>
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="All Categories" />
+            <SelectValue placeholder={t("common.placeholders.allCategories")} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
@@ -430,7 +430,7 @@ export default function Products() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
-              No products found
+              {t("common.messages.noProductsFound")}
             </p>
           </CardContent>
         </Card>
@@ -553,7 +553,7 @@ export default function Products() {
                   required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder={t("common.placeholders.selectCategory")} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
@@ -599,7 +599,7 @@ export default function Products() {
                 <Input
                   id="imageUrl"
                   type="url"
-                  placeholder="https://example.com/image.jpg"
+                  placeholder={t("common.placeholders.imageUrl")}
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                   maxLength={500}
@@ -698,7 +698,7 @@ export default function Products() {
                   required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
+                    <SelectValue placeholder={t("common.placeholders.selectCategory")} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
@@ -744,7 +744,7 @@ export default function Products() {
                 <Input
                   id="edit-imageUrl"
                   type="url"
-                  placeholder="https://example.com/image.jpg"
+                  placeholder={t("common.placeholders.imageUrl")}
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                   maxLength={500}
@@ -931,7 +931,7 @@ export default function Products() {
                   onChange={(e) => setVariantFormData({ ...variantFormData, name: e.target.value })}
                   required
                   maxLength={200}
-                  placeholder="e.g., Small, Medium, Large"
+                  placeholder={t("common.placeholders.variantExample")}
                 />
               </div>
 
@@ -943,7 +943,7 @@ export default function Products() {
                   onChange={(e) => setVariantFormData({ ...variantFormData, description: e.target.value })}
                   maxLength={500}
                   rows={3}
-                  placeholder="Optional description"
+                  placeholder={t("common.placeholders.optionalDescription")}
                 />
               </div>
 
