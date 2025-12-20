@@ -110,6 +110,7 @@ app:
       secret: ${JWT_SECRET:f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1}
       access-token-expiration: 3600000 # 1 hour
       refresh-token-expiration: 86400000 # 24 hours
+      waiter-token-expiration: 2592000000 # 30 days (effectively non-expiring for waiters)
     cors:
       allowed-origins: ${CORS_ORIGINS:*}
       allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS

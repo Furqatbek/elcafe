@@ -26,6 +26,9 @@ public class JwtUtil {
     @Value("${app.security.jwt.refresh-token-expiration}")
     private Long refreshTokenExpiration;
 
+    @Value("${app.security.jwt.waiter-token-expiration}")
+    private Long waiterTokenExpiration;
+
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
@@ -68,13 +71,14 @@ public class JwtUtil {
 
     /**
      * Generate access token for waiter authentication
+     * Uses extended expiration time (30 days) for waiters
      */
     public String generateWaiterAccessToken(String identifier, Long waiterId, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("waiterId", waiterId);
         claims.put("role", role);
         claims.put("type", "waiter");
-        return createToken(claims, identifier, accessTokenExpiration);
+        return createToken(claims, identifier, waiterTokenExpiration);
     }
 
     /**
