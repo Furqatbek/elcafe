@@ -80,6 +80,7 @@
       "operationalAnalytics": "Операционная аналитика",
       "customerAnalytics": "Аналитика клиентов",
       "inventoryAnalytics": "Аналитика инвентаря",
+      "printers": "Настройки принтеров",
       "general": "Общие настройки",
       "security": "Безопасность",
       "billing": "Оплата и счета"
@@ -719,5 +720,47 @@
     "updateSuccess": "Обновлено успешно",
     "deleteSuccess": "Удалено успешно",
     "error": "Произошла ошибка. Попробуйте еще раз"
+  },
+  "printers": {
+    "title": "Настройки принтеров",
+    "addPrinter": "Добавить принтер",
+    "editPrinter": "Редактировать принтер",
+    "noPrinters": "Принтеры не настроены",
+    "printerName": "Название принтера",
+    "selectPrinter": "Выберите принтер",
+    "type": "Тип принтера",
+    "connection": "Подключение",
+    "connectionType": "Тип подключения",
+    "ipAddress": "IP адрес",
+    "port": "Порт",
+    "paperWidth": "Ширина бумаги",
+    "fontSize": "Размер шрифта",
+    "autoPrint": "Автоматическая печать",
+    "enabled": "Включен",
+    "disabled": "Выключен",
+    "status": "Статус",
+    "test": "Проверить принтер",
+    "types": {
+      "kitchen": "Кухня",
+      "customer": "Клиент",
+      "label": "Этикетка",
+      "report": "Отчет"
+    },
+    "connectionTypes": {
+      "network": "Сеть",
+      "bluetooth": "Bluetooth"
+    },
+    "messages": {
+      "fillRequiredFields": "Пожалуйста, заполните все обязательные поля",
+      "createSuccess": "Принтер создан успешно",
+      "updateSuccess": "Принтер обновлен успешно",
+      "deleteSuccess": "Принтер удален успешно",
+      "saveError": "Ошибка сохранения принтера",
+      "deleteError": "Ошибка удаления принтера",
+      "confirmDelete": "Вы уверены, что хотите удалить этот принтер?",
+      "testSuccess": "Тест принтера успешен!",
+      "testFailed": "Тест принтера не пройден",
+      "testError": "Ошибка проверки принтера"
+    }
   }
 }

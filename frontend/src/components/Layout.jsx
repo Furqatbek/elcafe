@@ -45,6 +45,7 @@ import {
   MapPin,
   Store,
   Table,
+  Printer,
   Wallet,
   FileText,
   Receipt,
@@ -176,6 +177,7 @@ export default function Layout() {
       icon: Settings,
       path: '/settings',
       subItems: [
+        { label: t('nav.sub.printers'), icon: Printer, path: '/settings/printers' },
         { label: t('nav.sub.general'), icon: Wrench, path: '/settings/general' },
         { label: t('nav.sub.security'), icon: Shield, path: '/settings/security' },
         { label: t('nav.sub.billing'), icon: CreditCard, path: '/settings/billing' },

@@ -80,6 +80,7 @@
       "operationalAnalytics": "Operatsion tahlil",
       "customerAnalytics": "Mijozlar tahlili",
       "inventoryAnalytics": "Inventar tahlili",
+      "printers": "Printer sozlamalari",
       "general": "Umumiy sozlamalar",
       "security": "Xavfsizlik",
       "billing": "To'lovlar va hisob-kitoblar"
@@ -719,5 +720,47 @@
     "updateSuccess": "Muvaffaqiyatli yangilandi",
     "deleteSuccess": "Muvaffaqiyatli o'chirildi",
     "error": "Xatolik yuz berdi. Qayta urinib ko'ring"
+  },
+  "printers": {
+    "title": "Printer sozlamalari",
+    "addPrinter": "Printer qo'shish",
+    "editPrinter": "Printerni tahrirlash",
+    "noPrinters": "Hech qanday printer sozlanmagan",
+    "printerName": "Printer nomi",
+    "selectPrinter": "Printer tanlang",
+    "type": "Printer turi",
+    "connection": "Ulanish",
+    "connectionType": "Ulanish turi",
+    "ipAddress": "IP manzil",
+    "port": "Port",
+    "paperWidth": "Qog'oz kengligi",
+    "fontSize": "Shrift o'lchami",
+    "autoPrint": "Avtomatik chop etish",
+    "enabled": "Yoqilgan",
+    "disabled": "O'chirilgan",
+    "status": "Holat",
+    "test": "Printerni sinab ko'rish",
+    "types": {
+      "kitchen": "Oshxona",
+      "customer": "Mijoz",
+      "label": "Yorliq",
+      "report": "Hisobot"
+    },
+    "connectionTypes": {
+      "network": "Tarmoq",
+      "bluetooth": "Bluetooth"
+    },
+    "messages": {
+      "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
+      "createSuccess": "Printer muvaffaqiyatli yaratildi",
+      "updateSuccess": "Printer muvaffaqiyatli yangilandi",
+      "deleteSuccess": "Printer muvaffaqiyatli o'chirildi",
+      "saveError": "Printerni saqlashda xatolik",
+      "deleteError": "Printerni o'chirishda xatolik",
+      "confirmDelete": "Ushbu printerni o'chirishga ishonchingiz komilmi?",
+      "testSuccess": "Printer sinovi muvaffaqiyatli!",
+      "testFailed": "Printer sinovi muvaffaqiyatsiz",
+      "testError": "Printerni sinashda xatolik"
+    }
   }
 }

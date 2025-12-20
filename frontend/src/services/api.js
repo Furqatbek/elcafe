@@ -378,4 +378,17 @@ export const inventoryAPI = {
   recordStockMovement: (data) => api.post('/inventory/stock/movement', data),
 };
 
+export const printerAPI = {
+  // Printer CRUD
+  getPrinters: (restaurantId) => api.get('/settings/printers', { params: { restaurantId } }),
+  getPrinterById: (id) => api.get(`/settings/printers/${id}`),
+  createPrinter: (data) => api.post('/settings/printers', data),
+  updatePrinter: (id, data) => api.put(`/settings/printers/${id}`, data),
+  deletePrinter: (id) => api.delete(`/settings/printers/${id}`),
+
+  // Utility functions
+  getAvailablePrinters: () => api.get('/settings/printers/available'),
+  testPrinter: (id) => api.post(`/settings/printers/${id}/test`),
+};
+
 export default api;

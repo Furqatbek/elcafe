@@ -27,6 +27,7 @@ import InventoryAnalytics from './pages/InventoryAnalytics';
 import PurchaseOrders from './pages/PurchaseOrders';
 import Expenses from './pages/Expenses';
 import FinancialReports from './pages/FinancialReports';
+import PrinterSettings from './pages/PrinterSettings';
 import POSApp from './pos/POSApp';
 
 function PrivateRoute({ children }) {
@@ -73,6 +74,7 @@ function App() {
           <Route path="finance/purchase-orders" element={<PurchaseOrders />} />
           <Route path="finance/expenses" element={<Expenses />} />
           <Route path="finance/reports" element={<FinancialReports />} />
+          <Route path="settings/printers" element={<PrinterSettings />} />
           <Route path="pos" element={<POSApp />} />
         </Route>
       </Routes>

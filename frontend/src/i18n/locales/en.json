@@ -80,6 +80,7 @@
       "purchaseOrders": "Purchase Orders",
       "expenses": "Expenses",
       "financialReports": "Financial Reports",
+      "printers": "Printer Settings",
       "general": "General Settings",
       "security": "Security",
       "billing": "Billing & Payments"
@@ -1062,5 +1063,47 @@
     "updateSuccess": "Updated successfully",
     "deleteSuccess": "Deleted successfully",
     "error": "An error occurred. Please try again"
+  },
+  "printers": {
+    "title": "Printer Settings",
+    "addPrinter": "Add Printer",
+    "editPrinter": "Edit Printer",
+    "noPrinters": "No printers configured",
+    "printerName": "Printer Name",
+    "selectPrinter": "Select Printer",
+    "type": "Printer Type",
+    "connection": "Connection",
+    "connectionType": "Connection Type",
+    "ipAddress": "IP Address",
+    "port": "Port",
+    "paperWidth": "Paper Width",
+    "fontSize": "Font Size",
+    "autoPrint": "Auto Print",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "status": "Status",
+    "test": "Test Printer",
+    "types": {
+      "kitchen": "Kitchen",
+      "customer": "Customer",
+      "label": "Label",
+      "report": "Report"
+    },
+    "connectionTypes": {
+      "network": "Network",
+      "bluetooth": "Bluetooth"
+    },
+    "messages": {
+      "fillRequiredFields": "Please fill in all required fields",
+      "createSuccess": "Printer created successfully",
+      "updateSuccess": "Printer updated successfully",
+      "deleteSuccess": "Printer deleted successfully",
+      "saveError": "Failed to save printer",
+      "deleteError": "Failed to delete printer",
+      "confirmDelete": "Are you sure you want to delete this printer?",
+      "testSuccess": "Printer test successful!",
+      "testFailed": "Printer test failed",
+      "testError": "Failed to test printer"
+    }
   }
 }
