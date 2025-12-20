@@ -4,6 +4,7 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.service.OrderService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.security.CurrentUser;
 import com.elcafe.security.UserPrincipal;
 import com.elcafe.utils.ApiResponse;
@@ -28,6 +29,7 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final RestaurantRepository restaurantRepository;
 
     @PostMapping
     @Operation(summary = "Create order", description = "Create a new order")
@@ -35,10 +37,12 @@ public class OrderController {
             @Valid @RequestBody Order order,
             @CurrentUser UserPrincipal currentUser
     ) {
-        // Set restaurant from authenticated user
-        if (currentUser.getRestaurantId() != null) {
-            Restaurant restaurant = new Restaurant();
-            restaurant.setId(currentUser.getRestaurantId());
+        // Set restaurant if not provided in the request
+        if (order.getRestaurant() == null || order.getRestaurant().getId() == null) {
+            // Get the first available restaurant as default
+            Restaurant restaurant = restaurantRepository.findAll().stream()
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("No restaurant found in the system"));
             order.setRestaurant(restaurant);
         }
 
