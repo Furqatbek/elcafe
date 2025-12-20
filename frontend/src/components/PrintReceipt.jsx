@@ -21,10 +21,7 @@ const generateReceiptHTML = (order) => {
     const currentDate = format(new Date(), 'dd/MM/yyyy HH:mm:ss');
     const cashier = order.createdBy || 'System';
 
-};
-export default PrintReceipt;
-
-return `
+    return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -464,3 +461,6 @@ return `
 </body>
 </html>
     `;
+};
+
+export default PrintReceipt;
