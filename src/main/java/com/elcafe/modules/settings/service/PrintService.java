@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import javax.print.PrintService;
 import javax.print.PrintServiceLookup;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
@@ -105,7 +104,7 @@ public class PrintService {
      */
     private void printToUSBPrinter(Order order, PrinterSettings settings) {
         try {
-            PrintService printService = findPrintService(settings.getPrinterName());
+            javax.print.PrintService printService = findPrintService(settings.getPrinterName());
             if (printService == null) {
                 log.error("Printer not found: {}", settings.getPrinterName());
                 return;
@@ -321,9 +320,9 @@ public class PrintService {
     /**
      * Find system print service by name
      */
-    private PrintService findPrintService(String printerName) {
-        PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
-        for (PrintService printService : printServices) {
+    private javax.print.PrintService findPrintService(String printerName) {
+        javax.print.PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
+        for (javax.print.PrintService printService : printServices) {
             if (printService.getName().equalsIgnoreCase(printerName)) {
                 return printService;
             }
@@ -335,7 +334,7 @@ public class PrintService {
      * Get all available printers
      */
     public String[] getAvailablePrinters() {
-        PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
+        javax.print.PrintService[] printServices = PrintServiceLookup.lookupPrintServices(null, null);
         String[] printerNames = new String[printServices.length];
         for (int i = 0; i < printServices.length; i++) {
             printerNames[i] = printServices[i].getName();
@@ -351,7 +350,7 @@ public class PrintService {
             PrinterSettings settings = printerSettingsRepository.findById(printerSettingsId)
                     .orElseThrow(() -> new RuntimeException("Printer settings not found"));
 
-            PrintService printService = findPrintService(settings.getPrinterName());
+            javax.print.PrintService printService = findPrintService(settings.getPrinterName());
             return printService != null;
         } catch (Exception e) {
             log.error("Failed to test printer", e);
