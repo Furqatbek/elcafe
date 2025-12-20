@@ -148,14 +148,30 @@ public class Expense {
     }
 
     /**
-     * Calculate total amount including tax
+     * Calculate total amount including tax and initialize defaults
      */
     @PrePersist
     @PreUpdate
     public void calculateTotal() {
+        // Initialize defaults
+        if (taxAmount == null) {
+            taxAmount = BigDecimal.ZERO;
+        }
+        if (recurring == null) {
+            recurring = false;
+        }
+        if (paymentMethod == null) {
+            paymentMethod = PaymentMethod.CASH;
+        }
+        if (paymentStatus == null) {
+            paymentStatus = PaymentStatus.UNPAID;
+        }
+
+        // Calculate total
         if (amount != null) {
-            BigDecimal tax = taxAmount != null ? taxAmount : BigDecimal.ZERO;
-            totalAmount = amount.add(tax);
+            totalAmount = amount.add(taxAmount);
+        } else if (totalAmount == null) {
+            totalAmount = BigDecimal.ZERO;
         }
     }
 }

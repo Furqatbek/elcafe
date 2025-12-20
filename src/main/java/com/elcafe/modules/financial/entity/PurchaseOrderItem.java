@@ -70,13 +70,21 @@ public class PurchaseOrderItem {
     private LocalDateTime updatedAt;
 
     /**
-     * Calculate total price based on quantity and unit price
+     * Calculate total price based on quantity and unit price, and initialize defaults
      */
     @PrePersist
     @PreUpdate
     public void calculateTotalPrice() {
+        // Initialize defaults
+        if (receivedQuantity == null) {
+            receivedQuantity = BigDecimal.ZERO;
+        }
+
+        // Calculate total price
         if (quantity != null && unitPrice != null) {
             totalPrice = quantity.multiply(unitPrice);
+        } else if (totalPrice == null) {
+            totalPrice = BigDecimal.ZERO;
         }
     }
 

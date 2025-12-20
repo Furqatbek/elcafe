@@ -132,6 +132,35 @@ public class PurchaseOrder {
     }
 
     /**
+     * Initialize default values before persisting
+     */
+    @PrePersist
+    @PreUpdate
+    protected void initializeDefaults() {
+        if (subtotal == null) {
+            subtotal = BigDecimal.ZERO;
+        }
+        if (taxAmount == null) {
+            taxAmount = BigDecimal.ZERO;
+        }
+        if (shippingCost == null) {
+            shippingCost = BigDecimal.ZERO;
+        }
+        if (totalAmount == null) {
+            totalAmount = BigDecimal.ZERO;
+        }
+        if (paidAmount == null) {
+            paidAmount = BigDecimal.ZERO;
+        }
+        if (status == null) {
+            status = Status.DRAFT;
+        }
+        if (paymentStatus == null) {
+            paymentStatus = PaymentStatus.UNPAID;
+        }
+    }
+
+    /**
      * Add an item to this purchase order
      */
     public void addItem(PurchaseOrderItem item) {
