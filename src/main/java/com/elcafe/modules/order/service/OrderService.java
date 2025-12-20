@@ -8,6 +8,7 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.settings.service.PrintService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +36,10 @@ public class OrderService {
     @Lazy
     private RevenueService revenueService;
 
+    @Autowired
+    @Lazy
+    private PrintService printService;
+
     @Transactional
     public Order createOrder(Order order) {
         log.info("Creating new order");
@@ -51,6 +56,14 @@ public class OrderService {
 
         order = orderRepository.save(order);
         log.info("Order created with number: {}", order.getOrderNumber());
+
+        // Print kitchen order if enabled
+        try {
+            printService.printKitchenOrder(order);
+        } catch (Exception e) {
+            log.error("Failed to print kitchen order, but order was created successfully", e);
+            // Don't fail order creation if printing fails
+        }
 
         return order;
     }
