@@ -60,15 +60,26 @@
       "schedule": "Расписание",
       "tables": "Столы",
       "branches": "Филиалы",
+      "workingHours": "Часы работы",
       "products": "Продукты",
       "categories": "Категории",
+      "menuCollections": "Коллекции меню",
       "pricing": "Цены",
       "campaigns": "Кампании",
       "emails": "Email-маркетинг",
       "notifications": "Уведомления",
       "activeOrders": "Активные заказы",
+      "kitchenDashboard": "Панель кухни",
       "recipes": "Рецепты",
       "inventory": "Инвентарь",
+      "purchaseOrders": "Заказы на закупку",
+      "expenses": "Расходы",
+      "financialReports": "Финансовые отчеты",
+      "courierMap": "Карта курьеров",
+      "financialAnalytics": "Финансовая аналитика",
+      "operationalAnalytics": "Операционная аналитика",
+      "customerAnalytics": "Аналитика клиентов",
+      "inventoryAnalytics": "Аналитика инвентаря",
       "general": "Общие настройки",
       "security": "Безопасность",
       "billing": "Оплата и счета"
@@ -464,6 +475,40 @@
       "passwordMin": "Пароль должен содержать не менее 8 символов",
       "firstNameRequired": "Имя обязательно",
       "lastNameRequired": "Фамилия обязательна"
+    }
+  },
+  "waiters": {
+    "permissions": {
+      "MANAGE_TABLES": "Управление столами",
+      "OVERRIDE_PRICES": "Изменение цен",
+      "VOID_ITEMS": "Отмена позиций",
+      "MERGE_TABLES": "Объединение столов",
+      "VIEW_REPORTS": "Просмотр отчетов",
+      "HANDLE_PAYMENTS": "Обработка платежей",
+      "APPLY_DISCOUNTS": "Применение скидок",
+      "REFUND_ORDERS": "Возврат заказов"
+    }
+  },
+  "workingHours": {
+    "title": "Часы работы",
+    "selectRestaurant": "Выберите ресторан",
+    "dayOfWeek": "День недели",
+    "openTime": "Время открытия",
+    "closeTime": "Время закрытия",
+    "isOpen": "Открыт",
+    "closed": "Закрыт",
+    "days": {
+      "MONDAY": "Понедельник",
+      "TUESDAY": "Вторник",
+      "WEDNESDAY": "Среда",
+      "THURSDAY": "Четверг",
+      "FRIDAY": "Пятница",
+      "SATURDAY": "Суббота",
+      "SUNDAY": "Воскресенье"
+    },
+    "messages": {
+      "saveSuccess": "Часы работы успешно сохранены",
+      "saveError": "Не удалось сохранить часы работы"
     }
   },
   "finance": {

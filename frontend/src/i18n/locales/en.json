@@ -65,6 +65,7 @@
       "schedule": "Schedule",
       "tables": "Tables",
       "branches": "Branches",
+      "workingHours": "Working Hours",
       "products": "Products",
       "categories": "Categories",
       "menuCollections": "Menu Collections",
@@ -76,6 +77,9 @@
       "kitchenDashboard": "Kitchen Dashboard",
       "recipes": "Recipes",
       "inventory": "Inventory",
+      "purchaseOrders": "Purchase Orders",
+      "expenses": "Expenses",
+      "financialReports": "Financial Reports",
       "general": "General Settings",
       "security": "Security",
       "billing": "Billing & Payments"
@@ -814,6 +818,40 @@
     },
     "empty": {
       "noOrders": "No orders in this section"
+    }
+  },
+  "waiters": {
+    "permissions": {
+      "MANAGE_TABLES": "Manage Tables",
+      "OVERRIDE_PRICES": "Override Prices",
+      "VOID_ITEMS": "Void Items",
+      "MERGE_TABLES": "Merge Tables",
+      "VIEW_REPORTS": "View Reports",
+      "HANDLE_PAYMENTS": "Handle Payments",
+      "APPLY_DISCOUNTS": "Apply Discounts",
+      "REFUND_ORDERS": "Refund Orders"
+    }
+  },
+  "workingHours": {
+    "title": "Working Hours",
+    "selectRestaurant": "Select Restaurant",
+    "dayOfWeek": "Day of Week",
+    "openTime": "Open Time",
+    "closeTime": "Close Time",
+    "isOpen": "Is Open",
+    "closed": "Closed",
+    "days": {
+      "MONDAY": "Monday",
+      "TUESDAY": "Tuesday",
+      "WEDNESDAY": "Wednesday",
+      "THURSDAY": "Thursday",
+      "FRIDAY": "Friday",
+      "SATURDAY": "Saturday",
+      "SUNDAY": "Sunday"
+    },
+    "messages": {
+      "saveSuccess": "Working hours saved successfully",
+      "saveError": "Failed to save working hours"
     }
   },
   "finance": {

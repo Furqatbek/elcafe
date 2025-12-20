@@ -60,15 +60,26 @@
       "schedule": "Jadval",
       "tables": "Stollar",
       "branches": "Filiallar",
+      "workingHours": "Ish vaqti",
       "products": "Mahsulotlar",
       "categories": "Kategoriyalar",
+      "menuCollections": "Menyu to'plamlari",
       "pricing": "Narxlar",
       "campaigns": "Kampaniyalar",
       "emails": "Email marketing",
       "notifications": "Bildirishnomalar",
       "activeOrders": "Faol buyurtmalar",
+      "kitchenDashboard": "Oshxona paneli",
       "recipes": "Retseptlar",
       "inventory": "Inventar",
+      "purchaseOrders": "Xarid buyurtmalari",
+      "expenses": "Xarajatlar",
+      "financialReports": "Moliyaviy hisobotlar",
+      "courierMap": "Kuryer xaritasi",
+      "financialAnalytics": "Moliyaviy tahlil",
+      "operationalAnalytics": "Operatsion tahlil",
+      "customerAnalytics": "Mijozlar tahlili",
+      "inventoryAnalytics": "Inventar tahlili",
       "general": "Umumiy sozlamalar",
       "security": "Xavfsizlik",
       "billing": "To'lovlar va hisob-kitoblar"
@@ -464,6 +475,40 @@
       "passwordMin": "Parol kamida 8 ta belgidan iborat bo'lishi kerak",
       "firstNameRequired": "Ism majburiy",
       "lastNameRequired": "Familiya majburiy"
+    }
+  },
+  "waiters": {
+    "permissions": {
+      "MANAGE_TABLES": "Stollarni boshqarish",
+      "OVERRIDE_PRICES": "Narxlarni o'zgartirish",
+      "VOID_ITEMS": "Mahsulotlarni bekor qilish",
+      "MERGE_TABLES": "Stollarni birlashtirish",
+      "VIEW_REPORTS": "Hisobotlarni ko'rish",
+      "HANDLE_PAYMENTS": "To'lovlarni amalga oshirish",
+      "APPLY_DISCOUNTS": "Chegirmalarni qo'llash",
+      "REFUND_ORDERS": "Buyurtmalarni qaytarish"
+    }
+  },
+  "workingHours": {
+    "title": "Ish vaqti",
+    "selectRestaurant": "Restoranni tanlang",
+    "dayOfWeek": "Hafta kuni",
+    "openTime": "Ochilish vaqti",
+    "closeTime": "Yopilish vaqti",
+    "isOpen": "Ochiq",
+    "closed": "Yopiq",
+    "days": {
+      "MONDAY": "Dushanba",
+      "TUESDAY": "Seshanba",
+      "WEDNESDAY": "Chorshanba",
+      "THURSDAY": "Payshanba",
+      "FRIDAY": "Juma",
+      "SATURDAY": "Shanba",
+      "SUNDAY": "Yakshanba"
+    },
+    "messages": {
+      "saveSuccess": "Ish vaqti muvaffaqiyatli saqlandi",
+      "saveError": "Ish vaqtini saqlab bo'lmadi"
     }
   },
   "finance": {
