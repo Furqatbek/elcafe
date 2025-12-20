@@ -21,7 +21,10 @@ const generateReceiptHTML = (order) => {
     const currentDate = format(new Date(), 'dd/MM/yyyy HH:mm:ss');
     const cashier = order.createdBy || 'System';
 
-    return `
+};
+export default PrintReceipt;
+
+return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -335,7 +338,7 @@ const generateReceiptHTML = (order) => {
     <!-- Header -->
     <div class="header">
       <div class="brand-name">LaCasa</div>
-      <div class="restaurant-name">${order.restaurant?.name || 'Restaurant'}</div>
+      <div class="restaurant-name">${order.restaurant?.name}</div>
     </div>
 
     <!-- Order Number -->
@@ -391,11 +394,11 @@ const generateReceiptHTML = (order) => {
         <tbody>
           ${(order.items || []).map(item => `
           <tr>
-            <td class="qty">${item.quantity}</td>
             <td class="name">
-              ${item.quantity} x ${item.productName}
+              ${item.productName}
               ${item.variantName ? ` (${item.variantName})` : ''}
             </td>
+            <td class="qty">${item.quantity}</td>
             <td class="price">$${(item.totalPrice || 0).toFixed(2)}</td>
           </tr>
           `).join('')}
@@ -409,13 +412,6 @@ const generateReceiptHTML = (order) => {
         <span class="label">Oraliq summa:</span>
         <span class="amount">$${(order.subtotal || 0).toFixed(2)}</span>
       </div>
-
-      ${order.tax ? `
-      <div class="total-line">
-        <span class="label">Soliq:</span>
-        <span class="amount">$${(order.tax || 0).toFixed(2)}</span>
-      </div>
-      ` : ''}
 
       ${order.deliveryFee && order.deliveryFee > 0 ? `
       <div class="total-line">
@@ -455,9 +451,8 @@ const generateReceiptHTML = (order) => {
     <!-- Footer -->
     <div class="footer">
       <div class="contact-info">
-        <div>Telefon: +1 (555) 123-4567</div>
-        <div>Email: info@lacasa.com</div>
-        <div>www.lacasa.com</div>
+        <div>Telefon: +99 (897) 421 8989</div>
+        <div>www.lacasa.uz</div>
       </div>
 
       <div class="thank-you">*** RAHMAT! ***</div>
@@ -469,6 +464,3 @@ const generateReceiptHTML = (order) => {
 </body>
 </html>
     `;
-};
-
-export default PrintReceipt;
