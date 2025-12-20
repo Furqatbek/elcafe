@@ -194,8 +194,8 @@ public class PrintService {
                 escpos.writeLF(normalStyle, "  (" + item.getVariantName() + ")");
             }
 
-            if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
-                escpos.writeLF(normalStyle, "  Maxsus: " + item.getCustomizations());
+            if (item.getSpecialInstructions() != null && !item.getSpecialInstructions().isEmpty()) {
+                escpos.writeLF(normalStyle, "  Maxsus: " + item.getSpecialInstructions());
             }
 
             escpos.feed(1);
@@ -282,8 +282,8 @@ public class PrintService {
             if (item.getVariantName() != null && !item.getVariantName().isEmpty()) {
                 html.append("<div>(").append(item.getVariantName()).append(")</div>");
             }
-            if (item.getCustomizations() != null && !item.getCustomizations().isEmpty()) {
-                html.append("<div class='notes'>Maxsus: ").append(item.getCustomizations()).append("</div>");
+            if (item.getSpecialInstructions() != null && !item.getSpecialInstructions().isEmpty()) {
+                html.append("<div class='notes'>Maxsus: ").append(item.getSpecialInstructions()).append("</div>");
             }
             html.append("</div>");
         }
