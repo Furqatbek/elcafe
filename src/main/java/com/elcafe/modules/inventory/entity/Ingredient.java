@@ -52,6 +52,9 @@ public class Ingredient {
     private BigDecimal reorderLevel = BigDecimal.ZERO;
 
     @Column(precision = 10, scale = 2)
+    private BigDecimal reorderQuantity;
+
+    @Column(precision = 10, scale = 2)
     private BigDecimal costPerUnit;
 
     @Column(length = 100)

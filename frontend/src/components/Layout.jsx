@@ -161,6 +161,7 @@ export default function Layout() {
         { label: t('nav.sub.inventory'), icon: Cookie, path: '/kitchen/inventory' },
         { label: t('nav.sub.suppliers'), icon: Truck, path: '/kitchen/suppliers' },
         { label: t('nav.sub.stockAlerts'), icon: AlertTriangle, path: '/kitchen/stock-alerts' },
+        { label: t('nav.sub.poSuggestions'), icon: ShoppingCart, path: '/kitchen/po-suggestions' },
       ],
     },
     {

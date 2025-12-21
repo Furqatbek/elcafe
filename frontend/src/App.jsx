@@ -25,6 +25,7 @@ import OperationalAnalytics from './pages/OperationalAnalytics';
 import CustomerAnalytics from './pages/CustomerAnalytics';
 import InventoryAnalytics from './pages/InventoryAnalytics';
 import PurchaseOrders from './pages/PurchaseOrders';
+import POSuggestions from './pages/POSuggestions';
 import Expenses from './pages/Expenses';
 import FinancialReports from './pages/FinancialReports';
 import PrinterSettings from './pages/PrinterSettings';
@@ -76,6 +77,7 @@ function App() {
           <Route path="kitchen/recipes" element={<Inventory />} />
           <Route path="kitchen/suppliers" element={<Inventory />} />
           <Route path="kitchen/stock-alerts" element={<Inventory />} />
+          <Route path="kitchen/po-suggestions" element={<POSuggestions />} />
           <Route path="finance/purchase-orders" element={<PurchaseOrders />} />
           <Route path="finance/expenses" element={<Expenses />} />
           <Route path="finance/reports" element={<FinancialReports />} />

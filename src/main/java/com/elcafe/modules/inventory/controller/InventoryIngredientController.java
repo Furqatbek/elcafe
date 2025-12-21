@@ -105,6 +105,7 @@ public class InventoryIngredientController {
                 .currentStock(request.getCurrentStock())
                 .minimumStock(request.getMinimumStock())
                 .reorderLevel(request.getReorderLevel())
+                .reorderQuantity(request.getReorderQuantity())
                 .costPerUnit(request.getCostPerUnit())
                 .supplier(request.getSupplier())
                 .supplierEntity(supplier)
@@ -140,6 +141,7 @@ public class InventoryIngredientController {
         ingredient.setCurrentStock(request.getCurrentStock());
         ingredient.setMinimumStock(request.getMinimumStock());
         ingredient.setReorderLevel(request.getReorderLevel());
+        ingredient.setReorderQuantity(request.getReorderQuantity());
         ingredient.setCostPerUnit(request.getCostPerUnit());
         ingredient.setSupplier(request.getSupplier());
         ingredient.setSupplierEntity(supplier);
@@ -228,6 +230,7 @@ public class InventoryIngredientController {
                 .currentStock(ingredient.getCurrentStock())
                 .minimumStock(ingredient.getMinimumStock())
                 .reorderLevel(ingredient.getReorderLevel())
+                .reorderQuantity(ingredient.getReorderQuantity())
                 .costPerUnit(ingredient.getCostPerUnit())
                 .supplier(ingredient.getSupplier())
                 .supplierId(supplierEntity != null ? supplierEntity.getId() : null)

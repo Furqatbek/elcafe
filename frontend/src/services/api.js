@@ -420,6 +420,16 @@ export const supplierAPI = {
   toggle: (id) => api.post(`/inventory/suppliers/${id}/toggle`),
 };
 
+export const poSuggestionAPI = {
+  getSuggestions: (restaurantId) =>
+    api.get('/inventory/po-suggestions', { params: { restaurantId } }),
+  getCount: (restaurantId) =>
+    api.get('/inventory/po-suggestions/count', { params: { restaurantId } }),
+  generate: (data) => api.post('/inventory/po-suggestions/generate', data),
+  generateAll: (restaurantId) =>
+    api.post('/inventory/po-suggestions/generate-all', null, { params: { restaurantId } }),
+};
+
 export const printerAPI = {
   // Printer CRUD
   getPrinters: (restaurantId) => api.get('/settings/printers', { params: { restaurantId } }),

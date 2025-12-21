@@ -76,6 +76,7 @@
       "inventory": "Inventar",
       "suppliers": "Yetkazib beruvchilar",
       "stockAlerts": "Zaxira ogohlantirishlari",
+      "poSuggestions": "Xarid takliflari",
       "purchaseOrders": "Xarid buyurtmalari",
       "expenses": "Xarajatlar",
       "financialReports": "Moliyaviy hisobotlar",
@@ -1288,6 +1289,38 @@
       "errors": {
         "saveFailed": "Obunani saqlab bo'lmadi",
         "triggerFailed": "Ogohlantirishni yuborib bo'lmadi"
+      }
+    },
+    "poSuggestions": {
+      "title": "Xarid buyurtmasi takliflari",
+      "subtitle": "Qayta buyurtma darajalariga asoslangan avtomatik takliflar",
+      "noSuggestions": "Barcha mahsulotlar yetarli",
+      "allStocked": "Hozirda qayta buyurtma talab qiladigan mahsulotlar yo'q.",
+      "createPO": "XB yaratish",
+      "createAllPOs": "Barcha XBlarni yaratish",
+      "confirmGenerateAll": "Barcha taklif etilgan yetkazib beruvchilar uchun xarid buyurtmalarini yaratmoqchimisiz?",
+      "totalSuppliers": "Yetkazib beruvchilar",
+      "totalItems": "Buyurtma kerak bo'lgan mahsulotlar",
+      "estimatedCost": "Taxminiy narx",
+      "ingredient": "Ingredient",
+      "sku": "SKU",
+      "currentStock": "Joriy zaxira",
+      "reorderLevel": "Buyurtma darajasi",
+      "suggestedQty": "Taklif etilgan miqdor",
+      "unitPrice": "Birlik narxi",
+      "estimatedCostCol": "Taxminiy narx",
+      "itemsNeedReorder": "ta mahsulot buyurtma talab qiladi",
+      "total": "Jami",
+      "paymentTerms": "To'lov shartlari",
+      "urgency": {
+        "CRITICAL": "Juda muhim - Mavjud emas",
+        "HIGH": "Yuqori - Minimal darajadan past",
+        "MEDIUM": "O'rtacha - Buyurtma darajasidan past"
+      },
+      "messages": {
+        "poCreated": "Xarid buyurtmasi muvaffaqiyatli yaratildi!",
+        "allPOsCreated": "Barcha xarid buyurtmalari muvaffaqiyatli yaratildi!",
+        "poCreateError": "Xarid buyurtmasini yaratib bo'lmadi"
       }
     },
     "suppliers": {

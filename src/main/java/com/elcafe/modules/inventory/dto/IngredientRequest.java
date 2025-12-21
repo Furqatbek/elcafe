@@ -39,6 +39,9 @@ public class IngredientRequest {
     @PositiveOrZero(message = "Reorder level must be zero or positive")
     private BigDecimal reorderLevel;
 
+    @PositiveOrZero(message = "Reorder quantity must be zero or positive")
+    private BigDecimal reorderQuantity;
+
     @PositiveOrZero(message = "Cost per unit must be zero or positive")
     private BigDecimal costPerUnit;
 

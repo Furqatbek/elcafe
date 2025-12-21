@@ -81,6 +81,7 @@
       "inventory": "Inventory",
       "suppliers": "Suppliers",
       "stockAlerts": "Stock Alerts",
+      "poSuggestions": "PO Suggestions",
       "purchaseOrders": "Purchase Orders",
       "expenses": "Expenses",
       "financialReports": "Financial Reports",
@@ -1362,6 +1363,38 @@
       "errors": {
         "saveFailed": "Failed to save subscription",
         "triggerFailed": "Failed to trigger alert"
+      }
+    },
+    "poSuggestions": {
+      "title": "Purchase Order Suggestions",
+      "subtitle": "Auto-generated suggestions based on reorder levels",
+      "noSuggestions": "All Items Well-Stocked",
+      "allStocked": "No items need reordering at this time.",
+      "createPO": "Create PO",
+      "createAllPOs": "Create All POs",
+      "confirmGenerateAll": "Create purchase orders for all suggested suppliers?",
+      "totalSuppliers": "Suppliers",
+      "totalItems": "Items to Reorder",
+      "estimatedCost": "Estimated Cost",
+      "ingredient": "Ingredient",
+      "sku": "SKU",
+      "currentStock": "Current Stock",
+      "reorderLevel": "Reorder Level",
+      "suggestedQty": "Suggested Qty",
+      "unitPrice": "Unit Price",
+      "estimatedCostCol": "Est. Cost",
+      "itemsNeedReorder": "items need reorder",
+      "total": "Total",
+      "paymentTerms": "Payment Terms",
+      "urgency": {
+        "CRITICAL": "Critical - Out of Stock",
+        "HIGH": "High - Below Minimum",
+        "MEDIUM": "Medium - Below Reorder Level"
+      },
+      "messages": {
+        "poCreated": "Purchase order created successfully!",
+        "allPOsCreated": "All purchase orders created successfully!",
+        "poCreateError": "Failed to create purchase order"
       }
     },
     "suppliers": {

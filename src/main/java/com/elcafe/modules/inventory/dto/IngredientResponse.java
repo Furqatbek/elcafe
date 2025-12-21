@@ -23,6 +23,7 @@ public class IngredientResponse {
     private BigDecimal currentStock;
     private BigDecimal minimumStock;
     private BigDecimal reorderLevel;
+    private BigDecimal reorderQuantity;
     private BigDecimal costPerUnit;
     private String supplier;
     private Long supplierId;
