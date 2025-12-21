@@ -2,8 +2,13 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { valuationAPI } from '../../services/api';
 import { useInventory } from '../../context/InventoryContext';
-import { formatCurrency } from '../../utils/formatters';
 import InventoryLayout from './InventoryLayout';
+
+// Format number to 2 decimal places
+const formatNumber = (value) => {
+  if (value == null) return '-';
+  return Number(value).toFixed(2);
+};
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -185,7 +190,7 @@ export default function InventoryValuation() {
     const isPositive = value > 0;
     return (
       <span className={isPositive ? 'text-red-600' : 'text-green-600'}>
-        {isPositive ? '+' : ''}{formatCurrency(value)}
+        {isPositive ? '+' : ''}{formatNumber(value)}
       </span>
     );
   };
@@ -285,7 +290,7 @@ export default function InventoryValuation() {
                     {loading ? (
                       <Loader2 className="h-6 w-6 animate-spin" />
                     ) : inventoryValue ? (
-                      formatCurrency(inventoryValue.totalValue)
+                      formatNumber(inventoryValue.totalValue)
                     ) : (
                       '-'
                     )}
@@ -355,7 +360,7 @@ export default function InventoryValuation() {
                         {t('inventory.valuation.comparison.fifoValue')}
                       </div>
                       <div className="text-xl font-bold">
-                        {formatCurrency(comparison.fifoValue)}
+                        {formatNumber(comparison.fifoValue)}
                       </div>
                     </div>
                     <div className="p-4 border rounded-lg">
@@ -363,7 +368,7 @@ export default function InventoryValuation() {
                         {t('inventory.valuation.comparison.lifoValue')}
                       </div>
                       <div className="text-xl font-bold">
-                        {formatCurrency(comparison.lifoValue)}
+                        {formatNumber(comparison.lifoValue)}
                       </div>
                     </div>
                     <div className="p-4 border rounded-lg">
@@ -371,7 +376,7 @@ export default function InventoryValuation() {
                         {t('inventory.valuation.comparison.wacValue')}
                       </div>
                       <div className="text-xl font-bold">
-                        {formatCurrency(comparison.weightedAverageValue)}
+                        {formatNumber(comparison.weightedAverageValue)}
                       </div>
                     </div>
                   </div>
@@ -413,10 +418,10 @@ export default function InventoryValuation() {
                               {item.quantity?.toFixed(2)} {item.unit}
                             </TableCell>
                             <TableCell className="text-right">
-                              {formatCurrency(item.costPerUnit)}
+                              {formatNumber(item.costPerUnit)}
                             </TableCell>
                             <TableCell className="text-right font-medium">
-                              {formatCurrency(item.value)}
+                              {formatNumber(item.value)}
                             </TableCell>
                           </TableRow>
                         ))
@@ -453,20 +458,20 @@ export default function InventoryValuation() {
                   <div className="grid gap-4 md:grid-cols-4">
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">FIFO</div>
-                      <div className="text-xl font-bold">{formatCurrency(comparisonReport.fifoValue)}</div>
+                      <div className="text-xl font-bold">{formatNumber(comparisonReport.fifoValue)}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">LIFO</div>
-                      <div className="text-xl font-bold">{formatCurrency(comparisonReport.lifoValue)}</div>
+                      <div className="text-xl font-bold">{formatNumber(comparisonReport.lifoValue)}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">WAC</div>
-                      <div className="text-xl font-bold">{formatCurrency(comparisonReport.weightedAverageValue)}</div>
+                      <div className="text-xl font-bold">{formatNumber(comparisonReport.weightedAverageValue)}</div>
                     </div>
                     <div className="p-4 border rounded-lg bg-blue-50">
                       <div className="text-sm text-muted-foreground mb-1">{t('inventory.valuation.currentMethod')}</div>
                       <div className="text-lg font-bold">{comparisonReport.currentMethod}</div>
-                      <div className="text-sm">{formatCurrency(comparisonReport.currentMethodValue)}</div>
+                      <div className="text-sm">{formatNumber(comparisonReport.currentMethodValue)}</div>
                     </div>
                   </div>
 
@@ -520,10 +525,10 @@ export default function InventoryValuation() {
                             <TableRow key={item.ingredientId}>
                               <TableCell className="font-medium">{item.ingredientName}</TableCell>
                               <TableCell>{item.category}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(item.fifoValue)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(item.lifoValue)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(item.wacValue)}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(item.maxVariance)}</TableCell>
+                              <TableCell className="text-right">{formatNumber(item.fifoValue)}</TableCell>
+                              <TableCell className="text-right">{formatNumber(item.lifoValue)}</TableCell>
+                              <TableCell className="text-right">{formatNumber(item.wacValue)}</TableCell>
+                              <TableCell className="text-right">{formatNumber(item.maxVariance)}</TableCell>
                               <TableCell className="text-right">
                                 <Badge variant={item.variancePercent > 10 ? 'destructive' : 'secondary'}>
                                   {item.variancePercent?.toFixed(1)}%
@@ -570,7 +575,7 @@ export default function InventoryValuation() {
                   <div className="grid gap-4 md:grid-cols-4">
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">{t('inventory.valuation.totalValue')}</div>
-                      <div className="text-xl font-bold">{formatCurrency(inventoryReport.totalInventoryValue)}</div>
+                      <div className="text-xl font-bold">{formatNumber(inventoryReport.totalInventoryValue)}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">{t('inventory.stats.total')}</div>
@@ -582,7 +587,7 @@ export default function InventoryValuation() {
                     </div>
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">{t('inventory.valuation.reports.inventory.averageCost')}</div>
-                      <div className="text-xl font-bold">{formatCurrency(inventoryReport.averageCostPerUnit)}</div>
+                      <div className="text-xl font-bold">{formatNumber(inventoryReport.averageCostPerUnit)}</div>
                     </div>
                   </div>
 
@@ -597,7 +602,7 @@ export default function InventoryValuation() {
                               <div className="font-medium">{cat.category}</div>
                               <Badge variant="secondary">{cat.ingredientCount} items</Badge>
                             </div>
-                            <div className="text-xl font-bold">{formatCurrency(cat.totalValue)}</div>
+                            <div className="text-xl font-bold">{formatNumber(cat.totalValue)}</div>
                             <div className="text-sm text-muted-foreground">{cat.percentageOfTotal?.toFixed(1)}% of total</div>
                           </div>
                         ))}
@@ -627,8 +632,8 @@ export default function InventoryValuation() {
                               <TableCell className="font-medium">{item.ingredientName}</TableCell>
                               <TableCell>{item.category}</TableCell>
                               <TableCell className="text-right">{item.currentStock?.toFixed(2)} {item.unit}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(item.costPerUnit)}</TableCell>
-                              <TableCell className="text-right font-medium">{formatCurrency(item.totalValue)}</TableCell>
+                              <TableCell className="text-right">{formatNumber(item.costPerUnit)}</TableCell>
+                              <TableCell className="text-right font-medium">{formatNumber(item.totalValue)}</TableCell>
                               <TableCell className="text-right">{item.percentageOfTotal?.toFixed(1)}%</TableCell>
                               <TableCell className="text-right">{item.activeBatches}</TableCell>
                             </TableRow>
@@ -692,11 +697,11 @@ export default function InventoryValuation() {
                   <div className="grid gap-4 md:grid-cols-4">
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">{t('inventory.valuation.reports.variance.actualCost')}</div>
-                      <div className="text-xl font-bold">{formatCurrency(varianceReport.totalActualCost)}</div>
+                      <div className="text-xl font-bold">{formatNumber(varianceReport.totalActualCost)}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">{t('inventory.valuation.reports.variance.standardCost')}</div>
-                      <div className="text-xl font-bold">{formatCurrency(varianceReport.totalStandardCost)}</div>
+                      <div className="text-xl font-bold">{formatNumber(varianceReport.totalStandardCost)}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
                       <div className="text-sm text-muted-foreground mb-1">{t('inventory.valuation.reports.variance.totalVariance')}</div>
@@ -711,7 +716,7 @@ export default function InventoryValuation() {
                             <span className="text-sm">{t('inventory.valuation.reports.variance.favorable')}</span>
                           </div>
                           <div className="font-bold">{varianceReport.favorableVariances}</div>
-                          <div className="text-xs text-muted-foreground">{formatCurrency(varianceReport.totalFavorable)}</div>
+                          <div className="text-xs text-muted-foreground">{formatNumber(varianceReport.totalFavorable)}</div>
                         </div>
                         <div>
                           <div className="flex items-center gap-1 text-red-600">
@@ -719,7 +724,7 @@ export default function InventoryValuation() {
                             <span className="text-sm">{t('inventory.valuation.reports.variance.unfavorable')}</span>
                           </div>
                           <div className="font-bold">{varianceReport.unfavorableVariances}</div>
-                          <div className="text-xs text-muted-foreground">{formatCurrency(varianceReport.totalUnfavorable)}</div>
+                          <div className="text-xs text-muted-foreground">{formatNumber(varianceReport.totalUnfavorable)}</div>
                         </div>
                       </div>
                     </div>
@@ -745,8 +750,8 @@ export default function InventoryValuation() {
                             <TableCell className="font-medium">{item.ingredientName}</TableCell>
                             <TableCell>{item.category}</TableCell>
                             <TableCell className="text-right">{item.quantityConsumed?.toFixed(2)} {item.unit}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(item.actualTotalCost)}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(item.standardTotalCost)}</TableCell>
+                            <TableCell className="text-right">{formatNumber(item.actualTotalCost)}</TableCell>
+                            <TableCell className="text-right">{formatNumber(item.standardTotalCost)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-1">
                                 {item.favorable ? (
