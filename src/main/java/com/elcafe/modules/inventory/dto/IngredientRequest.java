@@ -54,4 +54,13 @@ public class IngredientRequest {
     private Boolean active;
 
     private Boolean trackInventory;
+
+    // Expiry tracking fields
+    private Boolean trackExpiry;
+
+    @PositiveOrZero(message = "Default shelf life days must be zero or positive")
+    private Integer defaultShelfLifeDays;
+
+    @PositiveOrZero(message = "Expiry alert days must be zero or positive")
+    private Integer expiryAlertDays;
 }

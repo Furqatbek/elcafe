@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { inventoryAPI, restaurantAPI, menuAPI, stockAlertAPI, supplierAPI } from '../services/api';
+import { inventoryAPI, inventoryBatchAPI, restaurantAPI, menuAPI, stockAlertAPI, supplierAPI } from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -54,6 +54,10 @@ import {
   Phone,
   Mail,
   MapPin,
+  Calendar,
+  Clock,
+  XCircle,
+  Layers,
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -65,6 +69,7 @@ export default function Inventory() {
     if (location.pathname.includes('recipes')) return 'recipes';
     if (location.pathname.includes('stock-alerts')) return 'alerts';
     if (location.pathname.includes('suppliers')) return 'suppliers';
+    if (location.pathname.includes('expiry')) return 'expiry';
     return 'ingredients';
   };
 
@@ -110,6 +115,9 @@ export default function Inventory() {
     sku: '',
     active: true,
     trackInventory: true,
+    trackExpiry: false,
+    defaultShelfLifeDays: '',
+    expiryAlertDays: '7',
   });
 
   // Recipes state
@@ -155,6 +163,28 @@ export default function Inventory() {
     notes: '',
   });
 
+  // Expiry/Batch state
+  const [expirySummary, setExpirySummary] = useState(null);
+  const [expiringBatches, setExpiringBatches] = useState([]);
+  const [expiredBatches, setExpiredBatches] = useState([]);
+  const [selectedIngredientBatches, setSelectedIngredientBatches] = useState([]);
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [batchDetailModalOpen, setBatchDetailModalOpen] = useState(false);
+  const [writeOffModalOpen, setWriteOffModalOpen] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState(null);
+  const [writeOffReason, setWriteOffReason] = useState('');
+  const [batchFormData, setBatchFormData] = useState({
+    ingredientId: '',
+    batchNumber: '',
+    quantity: '',
+    receivedDate: new Date().toISOString().split('T')[0],
+    expiryDate: '',
+    costPerUnit: '',
+    supplierId: '',
+    poReference: '',
+    notes: '',
+  });
+
   useEffect(() => {
     loadRestaurants();
   }, []);
@@ -166,6 +196,9 @@ export default function Inventory() {
       loadSubscriptions();
       loadAlertSummary();
       loadSuppliers();
+      loadExpirySummary();
+      loadExpiringBatches();
+      loadExpiredBatches();
     }
   }, [selectedRestaurant]);
 
@@ -234,6 +267,42 @@ export default function Inventory() {
     }
   };
 
+  const loadExpirySummary = async () => {
+    try {
+      const response = await inventoryBatchAPI.getExpirySummary(selectedRestaurant);
+      setExpirySummary(response.data.data || null);
+    } catch (error) {
+      console.error('Failed to load expiry summary:', error);
+    }
+  };
+
+  const loadExpiringBatches = async () => {
+    try {
+      const response = await inventoryBatchAPI.getExpiringBatches(selectedRestaurant, 7);
+      setExpiringBatches(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load expiring batches:', error);
+    }
+  };
+
+  const loadExpiredBatches = async () => {
+    try {
+      const response = await inventoryBatchAPI.getExpiredBatches(selectedRestaurant);
+      setExpiredBatches(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load expired batches:', error);
+    }
+  };
+
+  const loadBatchesForIngredient = async (ingredientId) => {
+    try {
+      const response = await inventoryBatchAPI.getBatchesByIngredient(ingredientId);
+      setSelectedIngredientBatches(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load batches:', error);
+    }
+  };
+
   const loadRecipesForProduct = async (productId) => {
     try {
       const response = await inventoryAPI.getRecipesByProduct(productId);
@@ -283,6 +352,9 @@ export default function Inventory() {
       sku: '',
       active: true,
       trackInventory: true,
+      trackExpiry: false,
+      defaultShelfLifeDays: '',
+      expiryAlertDays: '7',
     });
     setModalOpen(true);
   };
@@ -301,6 +373,9 @@ export default function Inventory() {
       sku: ingredient.sku || '',
       active: ingredient.active,
       trackInventory: ingredient.trackInventory,
+      trackExpiry: ingredient.trackExpiry || false,
+      defaultShelfLifeDays: ingredient.defaultShelfLifeDays?.toString() || '',
+      expiryAlertDays: ingredient.expiryAlertDays?.toString() || '7',
     });
     setModalOpen(true);
   };
@@ -315,6 +390,9 @@ export default function Inventory() {
         reorderLevel: parseFloat(formData.reorderLevel) || 0,
         costPerUnit: formData.costPerUnit ? parseFloat(formData.costPerUnit) : null,
         supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
+        trackExpiry: formData.trackExpiry,
+        defaultShelfLifeDays: formData.defaultShelfLifeDays ? parseInt(formData.defaultShelfLifeDays) : null,
+        expiryAlertDays: formData.expiryAlertDays ? parseInt(formData.expiryAlertDays) : 7,
       };
 
       if (editingIngredient) {
@@ -615,6 +693,100 @@ export default function Inventory() {
     }
   };
 
+  // Batch handlers
+  const handleAddBatch = () => {
+    setBatchFormData({
+      ingredientId: '',
+      batchNumber: `BATCH-${Date.now()}`,
+      quantity: '',
+      receivedDate: new Date().toISOString().split('T')[0],
+      expiryDate: '',
+      costPerUnit: '',
+      supplierId: '',
+      poReference: '',
+      notes: '',
+    });
+    setBatchModalOpen(true);
+  };
+
+  const handleSaveBatch = async () => {
+    try {
+      const data = {
+        ingredientId: parseInt(batchFormData.ingredientId),
+        batchNumber: batchFormData.batchNumber,
+        quantity: parseFloat(batchFormData.quantity),
+        receivedDate: batchFormData.receivedDate,
+        expiryDate: batchFormData.expiryDate || null,
+        costPerUnit: batchFormData.costPerUnit ? parseFloat(batchFormData.costPerUnit) : null,
+        supplierId: batchFormData.supplierId ? parseInt(batchFormData.supplierId) : null,
+        poReference: batchFormData.poReference || null,
+        notes: batchFormData.notes || null,
+      };
+
+      await inventoryBatchAPI.createBatch(data);
+      setBatchModalOpen(false);
+      loadExpiringBatches();
+      loadExpiredBatches();
+      loadExpirySummary();
+      loadIngredients();
+    } catch (error) {
+      console.error('Failed to save batch:', error);
+      alert(t('inventory.expiry.errors.saveFailed', 'Failed to save batch'));
+    }
+  };
+
+  const handleViewBatches = async (ingredient) => {
+    setSelectedIngredient(ingredient);
+    await loadBatchesForIngredient(ingredient.id);
+    setBatchDetailModalOpen(true);
+  };
+
+  const handleWriteOff = (batch) => {
+    setSelectedBatch(batch);
+    setWriteOffReason('');
+    setWriteOffModalOpen(true);
+  };
+
+  const handleConfirmWriteOff = async () => {
+    if (!selectedBatch || !writeOffReason.trim()) return;
+
+    try {
+      await inventoryBatchAPI.writeOffBatch(selectedBatch.id, writeOffReason);
+      setWriteOffModalOpen(false);
+      loadExpiringBatches();
+      loadExpiredBatches();
+      loadExpirySummary();
+      loadIngredients();
+      if (selectedIngredient) {
+        loadBatchesForIngredient(selectedIngredient.id);
+      }
+    } catch (error) {
+      console.error('Failed to write off batch:', error);
+      alert(t('inventory.expiry.errors.writeOffFailed', 'Failed to write off batch'));
+    }
+  };
+
+  const handleMarkExpiredBatches = async () => {
+    try {
+      await inventoryBatchAPI.markExpiredBatches(selectedRestaurant);
+      loadExpiringBatches();
+      loadExpiredBatches();
+      loadExpirySummary();
+    } catch (error) {
+      console.error('Failed to mark expired batches:', error);
+    }
+  };
+
+  const getExpiryStatusBadge = (batch) => {
+    if (batch.isExpired) {
+      return <Badge className="bg-red-100 text-red-800">{t('inventory.expiry.status.expired', 'Expired')}</Badge>;
+    }
+    if (batch.isExpiringSoon) {
+      return <Badge className="bg-yellow-100 text-yellow-800">{t('inventory.expiry.status.expiringSoon', 'Expiring Soon')}</Badge>;
+    }
+    return <Badge className="bg-green-100 text-green-800">{t('inventory.expiry.status.fresh', 'Fresh')}</Badge>;
+  };
+
   const getStockStatus = (ingredient) => {
     if (!ingredient.trackInventory) {
       return { label: t('inventory.status.notTracked', 'Not Tracked'), color: 'bg-gray-100 text-gray-800' };
@@ -668,7 +840,7 @@ export default function Inventory() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="ingredients" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             {t('inventory.tabs.ingredients', 'Ingredients')}
@@ -676,6 +848,15 @@ export default function Inventory() {
           <TabsTrigger value="recipes" className="flex items-center gap-2">
             <UtensilsCrossed className="h-4 w-4" />
             {t('inventory.tabs.recipes', 'Recipes')}
+          </TabsTrigger>
+          <TabsTrigger value="expiry" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            {t('inventory.tabs.expiry', 'Expiry')}
+            {expirySummary && (expirySummary.expiredCount > 0 || expirySummary.expiringCount > 0) && (
+              <span className="ml-1 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
+                {(expirySummary.expiredCount || 0) + (expirySummary.expiringCount || 0)}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger value="suppliers" className="flex items-center gap-2">
             <Truck className="h-4 w-4" />
@@ -1006,6 +1187,269 @@ export default function Inventory() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Expiry Tab */}
+        <TabsContent value="expiry" className="space-y-6">
+          {/* Expiry Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.expiry.stats.expired', 'Expired Batches')}
+                </CardTitle>
+                <XCircle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {expirySummary?.expiredCount || 0}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.expiry.stats.expiringSoon', 'Expiring Soon')}
+                </CardTitle>
+                <Clock className="h-4 w-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {expirySummary?.expiringCount || 0}
+                </div>
+                <p className="text-xs text-muted-foreground">{t('inventory.expiry.within7Days', 'Within 7 days')}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.expiry.stats.activeBatches', 'Active Batches')}
+                </CardTitle>
+                <Layers className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {expirySummary?.activeBatchCount || 0}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.expiry.stats.tracked', 'Tracked Ingredients')}
+                </CardTitle>
+                <Calendar className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {expirySummary?.ingredientsWithExpiryCount || 0}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Actions Row */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex gap-4 items-center justify-between">
+                <div className="flex gap-2">
+                  <Button onClick={handleAddBatch}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('inventory.expiry.addBatch', 'Add Batch')}
+                  </Button>
+                  <Button onClick={handleMarkExpiredBatches} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    {t('inventory.expiry.markExpired', 'Update Expiry Status')}
+                  </Button>
+                </div>
+                <Button
+                  onClick={() => {
+                    loadExpiringBatches();
+                    loadExpiredBatches();
+                    loadExpirySummary();
+                  }}
+                  variant="outline"
+                  size="icon"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Expired Batches Table */}
+          {expiredBatches.length > 0 && (
+            <Card className="border-red-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-red-600">
+                  <XCircle className="h-5 w-5" />
+                  {t('inventory.expiry.expiredBatches', 'Expired Batches')}
+                </CardTitle>
+                <CardDescription>
+                  {t('inventory.expiry.expiredBatchesDesc', 'These batches have passed their expiry date and should be written off')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('inventory.expiry.fields.ingredient', 'Ingredient')}</TableHead>
+                      <TableHead>{t('inventory.expiry.fields.batchNumber', 'Batch #')}</TableHead>
+                      <TableHead>{t('inventory.expiry.fields.quantity', 'Quantity')}</TableHead>
+                      <TableHead>{t('inventory.expiry.fields.expiryDate', 'Expiry Date')}</TableHead>
+                      <TableHead>{t('inventory.expiry.fields.daysExpired', 'Days Expired')}</TableHead>
+                      <TableHead className="text-right">{t('common.actions')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expiredBatches.map((batch) => (
+                      <TableRow key={batch.id} className="bg-red-50">
+                        <TableCell className="font-medium">{batch.ingredientName}</TableCell>
+                        <TableCell>{batch.batchNumber}</TableCell>
+                        <TableCell>{batch.quantity} {batch.unit}</TableCell>
+                        <TableCell>{batch.expiryDate}</TableCell>
+                        <TableCell className="text-red-600 font-semibold">
+                          {Math.abs(batch.daysUntilExpiry)} {t('common.days', 'days')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleWriteOff(batch)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {t('inventory.expiry.writeOff', 'Write Off')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Expiring Soon Batches Table */}
+          {expiringBatches.length > 0 && (
+            <Card className="border-yellow-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-yellow-600">
+                  <Clock className="h-5 w-5" />
+                  {t('inventory.expiry.expiringBatches', 'Expiring Soon')}
+                </CardTitle>
+                <CardDescription>
+                  {t('inventory.expiry.expiringBatchesDesc', 'These batches will expire within the next 7 days')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('inventory.expiry.fields.ingredient', 'Ingredient')}</TableHead>
+                      <TableHead>{t('inventory.expiry.fields.batchNumber', 'Batch #')}</TableHead>
+                      <TableHead>{t('inventory.expiry.fields.quantity', 'Quantity')}</TableHead>
+                      <TableHead>{t('inventory.expiry.fields.expiryDate', 'Expiry Date')}</TableHead>
+                      <TableHead>{t('inventory.expiry.fields.daysRemaining', 'Days Left')}</TableHead>
+                      <TableHead>{t('inventory.expiry.fields.status', 'Status')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expiringBatches.map((batch) => (
+                      <TableRow key={batch.id} className="bg-yellow-50">
+                        <TableCell className="font-medium">{batch.ingredientName}</TableCell>
+                        <TableCell>{batch.batchNumber}</TableCell>
+                        <TableCell>{batch.quantity} {batch.unit}</TableCell>
+                        <TableCell>{batch.expiryDate}</TableCell>
+                        <TableCell className="text-yellow-600 font-semibold">
+                          {batch.daysUntilExpiry} {t('common.days', 'days')}
+                        </TableCell>
+                        <TableCell>{getExpiryStatusBadge(batch)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Ingredients with Expiry Tracking */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                {t('inventory.expiry.ingredientsWithExpiry', 'Ingredients with Expiry Tracking')}
+              </CardTitle>
+              <CardDescription>
+                {t('inventory.expiry.ingredientsWithExpiryDesc', 'Ingredients configured to track expiry dates')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('inventory.fields.name', 'Name')}</TableHead>
+                    <TableHead>{t('inventory.fields.sku', 'SKU')}</TableHead>
+                    <TableHead>{t('inventory.expiry.fields.shelfLife', 'Shelf Life')}</TableHead>
+                    <TableHead>{t('inventory.expiry.fields.alertDays', 'Alert Days')}</TableHead>
+                    <TableHead>{t('inventory.expiry.fields.activeBatches', 'Active Batches')}</TableHead>
+                    <TableHead>{t('inventory.expiry.fields.expiringBatches', 'Expiring')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ingredients.filter(ing => ing.trackExpiry).length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        {t('inventory.expiry.noExpiryTracking', 'No ingredients have expiry tracking enabled. Edit an ingredient to enable it.')}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    ingredients.filter(ing => ing.trackExpiry).map((ingredient) => (
+                      <TableRow key={ingredient.id}>
+                        <TableCell className="font-medium">{ingredient.name}</TableCell>
+                        <TableCell>{ingredient.sku || '-'}</TableCell>
+                        <TableCell>
+                          {ingredient.defaultShelfLifeDays
+                            ? `${ingredient.defaultShelfLifeDays} ${t('common.days', 'days')}`
+                            : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {ingredient.expiryAlertDays} {t('common.days', 'days')}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-green-100 text-green-800">
+                            {ingredient.activeBatchCount || 0}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {(ingredient.expiringBatchCount || 0) > 0 ? (
+                            <Badge className="bg-yellow-100 text-yellow-800">
+                              {ingredient.expiringBatchCount}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-800">0</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewBatches(ingredient)}
+                          >
+                            <Layers className="h-4 w-4 mr-2" />
+                            {t('inventory.expiry.viewBatches', 'View Batches')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Suppliers Tab */}
@@ -1526,7 +1970,44 @@ export default function Inventory() {
                   {t('inventory.fields.trackInventory')}
                 </Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="trackExpiry"
+                  checked={formData.trackExpiry}
+                  onChange={(e) => setFormData({ ...formData, trackExpiry: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="trackExpiry" className="font-normal cursor-pointer">
+                  {t('inventory.fields.trackExpiry', 'Track Expiry')}
+                </Label>
+              </div>
             </div>
+
+            {formData.trackExpiry && (
+              <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
+                <div className="space-y-2">
+                  <Label htmlFor="defaultShelfLifeDays">{t('inventory.expiry.fields.shelfLife', 'Default Shelf Life (days)')}</Label>
+                  <Input
+                    id="defaultShelfLifeDays"
+                    type="number"
+                    value={formData.defaultShelfLifeDays}
+                    onChange={(e) => setFormData({ ...formData, defaultShelfLifeDays: e.target.value })}
+                    placeholder={t('inventory.expiry.placeholders.shelfLife', 'e.g., 30')}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expiryAlertDays">{t('inventory.expiry.fields.alertDays', 'Alert Before Expiry (days)')}</Label>
+                  <Input
+                    id="expiryAlertDays"
+                    type="number"
+                    value={formData.expiryAlertDays}
+                    onChange={(e) => setFormData({ ...formData, expiryAlertDays: e.target.value })}
+                    placeholder={t('inventory.expiry.placeholders.alertDays', 'e.g., 7')}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>
@@ -1975,6 +2456,253 @@ export default function Inventory() {
             </Button>
             <Button onClick={handleSaveSupplier}>
               {editingSupplier ? t('common.save') : t('common.create')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Batch Modal */}
+      <Dialog open={batchModalOpen} onOpenChange={setBatchModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t('inventory.expiry.addBatch', 'Add New Batch')}</DialogTitle>
+            <DialogDescription>
+              {t('inventory.expiry.addBatchDesc', 'Create a new batch with expiry tracking')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="batchIngredientId">{t('inventory.expiry.fields.ingredient', 'Ingredient')} *</Label>
+                <Select
+                  value={batchFormData.ingredientId}
+                  onValueChange={(value) => setBatchFormData({ ...batchFormData, ingredientId: value })}
+                >
+                  <SelectTrigger id="batchIngredientId">
+                    <SelectValue placeholder={t('inventory.expiry.placeholders.selectIngredient', 'Select ingredient')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ingredients.filter(ing => ing.trackExpiry).map((ingredient) => (
+                      <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
+                        {ingredient.name} ({ingredient.unit})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="batchNumber">{t('inventory.expiry.fields.batchNumber', 'Batch Number')} *</Label>
+                <Input
+                  id="batchNumber"
+                  value={batchFormData.batchNumber}
+                  onChange={(e) => setBatchFormData({ ...batchFormData, batchNumber: e.target.value })}
+                  placeholder={t('inventory.expiry.placeholders.batchNumber', 'e.g., BATCH-001')}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="batchQuantity">{t('inventory.expiry.fields.quantity', 'Quantity')} *</Label>
+                <Input
+                  id="batchQuantity"
+                  type="number"
+                  step="0.001"
+                  value={batchFormData.quantity}
+                  onChange={(e) => setBatchFormData({ ...batchFormData, quantity: e.target.value })}
+                  placeholder="0.000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="costPerUnit">{t('inventory.expiry.fields.costPerUnit', 'Cost Per Unit')}</Label>
+                <Input
+                  id="costPerUnit"
+                  type="number"
+                  step="0.01"
+                  value={batchFormData.costPerUnit}
+                  onChange={(e) => setBatchFormData({ ...batchFormData, costPerUnit: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="receivedDate">{t('inventory.expiry.fields.receivedDate', 'Received Date')} *</Label>
+                <Input
+                  id="receivedDate"
+                  type="date"
+                  value={batchFormData.receivedDate}
+                  onChange={(e) => setBatchFormData({ ...batchFormData, receivedDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiryDate">{t('inventory.expiry.fields.expiryDate', 'Expiry Date')}</Label>
+                <Input
+                  id="expiryDate"
+                  type="date"
+                  value={batchFormData.expiryDate}
+                  onChange={(e) => setBatchFormData({ ...batchFormData, expiryDate: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="batchSupplierId">{t('inventory.expiry.fields.supplier', 'Supplier')}</Label>
+                <Select
+                  value={batchFormData.supplierId || 'none'}
+                  onValueChange={(value) => setBatchFormData({ ...batchFormData, supplierId: value === 'none' ? '' : value })}
+                >
+                  <SelectTrigger id="batchSupplierId">
+                    <SelectValue placeholder={t('common.none', 'None')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('common.none', 'None')}</SelectItem>
+                    {suppliers.filter(s => s.active).map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="poReference">{t('inventory.expiry.fields.poReference', 'PO Reference')}</Label>
+                <Input
+                  id="poReference"
+                  value={batchFormData.poReference}
+                  onChange={(e) => setBatchFormData({ ...batchFormData, poReference: e.target.value })}
+                  placeholder={t('inventory.expiry.placeholders.poReference', 'e.g., PO-2024-001')}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="batchNotes">{t('common.notes', 'Notes')}</Label>
+              <Input
+                id="batchNotes"
+                value={batchFormData.notes}
+                onChange={(e) => setBatchFormData({ ...batchFormData, notes: e.target.value })}
+                placeholder={t('common.placeholders.optionalNotes', 'Optional notes...')}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSaveBatch}>
+              {t('common.create')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Details Modal */}
+      <Dialog open={batchDetailModalOpen} onOpenChange={setBatchDetailModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {t('inventory.expiry.batchesFor', 'Batches for')} {selectedIngredient?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {t('inventory.expiry.batchesDesc', 'All active batches for this ingredient (FEFO order)')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('inventory.expiry.fields.batchNumber', 'Batch #')}</TableHead>
+                  <TableHead>{t('inventory.expiry.fields.quantity', 'Quantity')}</TableHead>
+                  <TableHead>{t('inventory.expiry.fields.receivedDate', 'Received')}</TableHead>
+                  <TableHead>{t('inventory.expiry.fields.expiryDate', 'Expiry')}</TableHead>
+                  <TableHead>{t('inventory.expiry.fields.daysRemaining', 'Days Left')}</TableHead>
+                  <TableHead>{t('inventory.expiry.fields.status', 'Status')}</TableHead>
+                  <TableHead className="text-right">{t('common.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedIngredientBatches.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {t('inventory.expiry.noBatches', 'No batches found for this ingredient')}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  selectedIngredientBatches.map((batch) => (
+                    <TableRow key={batch.id} className={batch.isExpired ? 'bg-red-50' : batch.isExpiringSoon ? 'bg-yellow-50' : ''}>
+                      <TableCell className="font-medium">{batch.batchNumber}</TableCell>
+                      <TableCell>{batch.quantity} {selectedIngredient?.unit}</TableCell>
+                      <TableCell>{batch.receivedDate}</TableCell>
+                      <TableCell>{batch.expiryDate || '-'}</TableCell>
+                      <TableCell className={batch.isExpired ? 'text-red-600 font-semibold' : batch.isExpiringSoon ? 'text-yellow-600 font-semibold' : ''}>
+                        {batch.daysUntilExpiry !== null ? `${batch.daysUntilExpiry} ${t('common.days', 'days')}` : '-'}
+                      </TableCell>
+                      <TableCell>{getExpiryStatusBadge(batch)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleWriteOff(batch)}
+                          disabled={batch.status === 'WRITTEN_OFF'}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setBatchDetailModalOpen(false)}>
+              {t('common.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Write-Off Modal */}
+      <Dialog open={writeOffModalOpen} onOpenChange={setWriteOffModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">
+              {t('inventory.expiry.writeOffBatch', 'Write Off Batch')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('inventory.expiry.writeOffDesc', 'This will permanently mark this batch as written off and remove the stock.')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="p-4 border rounded-lg bg-muted/50">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>{t('inventory.expiry.fields.batchNumber', 'Batch #')}:</div>
+                <div className="font-medium">{selectedBatch?.batchNumber}</div>
+                <div>{t('inventory.expiry.fields.quantity', 'Quantity')}:</div>
+                <div className="font-medium">{selectedBatch?.quantity} {selectedBatch?.unit}</div>
+                <div>{t('inventory.expiry.fields.expiryDate', 'Expiry Date')}:</div>
+                <div className="font-medium">{selectedBatch?.expiryDate || '-'}</div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="writeOffReason">{t('inventory.expiry.fields.reason', 'Reason for Write-Off')} *</Label>
+              <Input
+                id="writeOffReason"
+                value={writeOffReason}
+                onChange={(e) => setWriteOffReason(e.target.value)}
+                placeholder={t('inventory.expiry.placeholders.reason', 'e.g., Expired, Damaged, Quality issue')}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWriteOffModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmWriteOff} disabled={!writeOffReason.trim()}>
+              {t('inventory.expiry.confirmWriteOff', 'Confirm Write-Off')}
             </Button>
           </DialogFooter>
         </DialogContent>

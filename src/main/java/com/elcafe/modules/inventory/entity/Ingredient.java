@@ -75,6 +75,18 @@ public class Ingredient {
     @Builder.Default
     private Boolean trackInventory = true;
 
+    // Expiry tracking fields
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean trackExpiry = false;
+
+    @Column
+    private Integer defaultShelfLifeDays; // Auto-calculate expiry date from this
+
+    @Column
+    @Builder.Default
+    private Integer expiryAlertDays = 7; // Days before expiry to trigger alert
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -1197,7 +1197,8 @@
       "costPerUnit": "Birlik narxi",
       "status": "Holat",
       "active": "Faol",
-      "trackInventory": "Inventarni kuzatish"
+      "trackInventory": "Inventarni kuzatish",
+      "trackExpiry": "Yaroqlilik muddatini kuzatish"
     },
     "placeholders": {
       "name": "masalan, Pomidor, Tovuq go'shti",
@@ -1234,6 +1235,7 @@
     "tabs": {
       "ingredients": "Ingredientlar",
       "recipes": "Retseptlar",
+      "expiry": "Yaroqlilik muddati",
       "suppliers": "Yetkazib beruvchilar",
       "stockAlerts": "Zaxira ogohlantirishlari"
     },
@@ -1372,6 +1374,68 @@
         "saveFailed": "Yetkazib beruvchini saqlab bo'lmadi",
         "deleteFailed": "Yetkazib beruvchini o'chirib bo'lmadi",
         "loadFailed": "Yetkazib beruvchilarni yuklab bo'lmadi"
+      }
+    },
+    "expiry": {
+      "stats": {
+        "expired": "Muddati o'tgan partiyalar",
+        "expiringSoon": "Tez orada tugaydi",
+        "activeBatches": "Faol partiyalar",
+        "tracked": "Kuzatilayotgan ingredientlar"
+      },
+      "within7Days": "7 kun ichida",
+      "addBatch": "Partiya qo'shish",
+      "addBatchDesc": "Yaroqlilik muddatini kuzatish bilan yangi partiya yaratish",
+      "markExpired": "Holatni yangilash",
+      "expiredBatches": "Muddati o'tgan partiyalar",
+      "expiredBatchesDesc": "Bu partiyalar muddati o'tgan va hisobdan chiqarilishi kerak",
+      "expiringBatches": "Tez orada tugaydi",
+      "expiringBatchesDesc": "Bu partiyalar keyingi 7 kun ichida tugaydi",
+      "ingredientsWithExpiry": "Yaroqlilik muddati kuzatiladigan ingredientlar",
+      "ingredientsWithExpiryDesc": "Yaroqlilik muddatini kuzatish uchun sozlangan ingredientlar",
+      "noExpiryTracking": "Hech bir ingredient yaroqlilik muddatini kuzatishga ega emas. Uni yoqish uchun ingredientni tahrirlang.",
+      "viewBatches": "Partiyalarni ko'rish",
+      "batchesFor": "Partiyalar",
+      "batchesDesc": "Ushbu ingredient uchun barcha faol partiyalar (FEFO tartibi)",
+      "noBatches": "Ushbu ingredient uchun partiyalar topilmadi",
+      "writeOff": "Hisobdan chiqarish",
+      "writeOffBatch": "Partiyani hisobdan chiqarish",
+      "writeOffDesc": "Bu partiyani doimiy ravishda hisobdan chiqarilgan deb belgilaydi va zaxirani olib tashlaydi.",
+      "confirmWriteOff": "Hisobdan chiqarishni tasdiqlash",
+      "fields": {
+        "ingredient": "Ingredient",
+        "batchNumber": "Partiya №",
+        "quantity": "Miqdor",
+        "expiryDate": "Yaroqlilik muddati",
+        "receivedDate": "Qabul qilingan sana",
+        "daysRemaining": "Qolgan kunlar",
+        "daysExpired": "O'tgan kunlar",
+        "status": "Holat",
+        "shelfLife": "Standart saqlash muddati (kun)",
+        "alertDays": "Tugashidan oldin ogohlantirish (kun)",
+        "activeBatches": "Faol partiyalar",
+        "expiringBatches": "Tugayotgan",
+        "costPerUnit": "Birlik narxi",
+        "supplier": "Yetkazib beruvchi",
+        "poReference": "XB raqami",
+        "reason": "Hisobdan chiqarish sababi"
+      },
+      "placeholders": {
+        "selectIngredient": "Ingredientni tanlang",
+        "batchNumber": "masalan, PARTIYA-001",
+        "poReference": "masalan, XB-2024-001",
+        "reason": "masalan, Muddati o'tgan, Shikastlangan, Sifat muammosi",
+        "shelfLife": "masalan, 30",
+        "alertDays": "masalan, 7"
+      },
+      "status": {
+        "expired": "Muddati o'tgan",
+        "expiringSoon": "Tez orada tugaydi",
+        "fresh": "Yangi"
+      },
+      "errors": {
+        "saveFailed": "Partiyani saqlab bo'lmadi",
+        "writeOffFailed": "Partiyani hisobdan chiqarib bo'lmadi"
       }
     }
   },

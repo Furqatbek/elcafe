@@ -112,6 +112,9 @@ public class InventoryIngredientController {
                 .sku(request.getSku())
                 .active(request.getActive() != null ? request.getActive() : true)
                 .trackInventory(request.getTrackInventory() != null ? request.getTrackInventory() : true)
+                .trackExpiry(request.getTrackExpiry() != null ? request.getTrackExpiry() : false)
+                .defaultShelfLifeDays(request.getDefaultShelfLifeDays())
+                .expiryAlertDays(request.getExpiryAlertDays() != null ? request.getExpiryAlertDays() : 7)
                 .build();
 
         Ingredient savedIngredient = ingredientRepository.save(ingredient);
@@ -148,6 +151,9 @@ public class InventoryIngredientController {
         ingredient.setSku(request.getSku());
         ingredient.setActive(request.getActive());
         ingredient.setTrackInventory(request.getTrackInventory());
+        ingredient.setTrackExpiry(request.getTrackExpiry());
+        ingredient.setDefaultShelfLifeDays(request.getDefaultShelfLifeDays());
+        ingredient.setExpiryAlertDays(request.getExpiryAlertDays());
 
         Ingredient updatedIngredient = ingredientRepository.save(ingredient);
 
@@ -238,6 +244,9 @@ public class InventoryIngredientController {
                 .sku(ingredient.getSku())
                 .active(ingredient.getActive())
                 .trackInventory(ingredient.getTrackInventory())
+                .trackExpiry(ingredient.getTrackExpiry())
+                .defaultShelfLifeDays(ingredient.getDefaultShelfLifeDays())
+                .expiryAlertDays(ingredient.getExpiryAlertDays())
                 .createdAt(ingredient.getCreatedAt())
                 .updatedAt(ingredient.getUpdatedAt())
                 .build();

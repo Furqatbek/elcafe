@@ -1267,7 +1267,8 @@
       "costPerUnit": "Cost Per Unit",
       "status": "Status",
       "active": "Active",
-      "trackInventory": "Track Inventory"
+      "trackInventory": "Track Inventory",
+      "trackExpiry": "Track Expiry"
     },
     "placeholders": {
       "name": "e.g., Tomatoes, Chicken Breast",
@@ -1308,6 +1309,7 @@
     "tabs": {
       "ingredients": "Ingredients",
       "recipes": "Recipes",
+      "expiry": "Expiry",
       "suppliers": "Suppliers",
       "stockAlerts": "Stock Alerts"
     },
@@ -1446,6 +1448,68 @@
         "saveFailed": "Failed to save supplier",
         "deleteFailed": "Failed to delete supplier",
         "loadFailed": "Failed to load suppliers"
+      }
+    },
+    "expiry": {
+      "stats": {
+        "expired": "Expired Batches",
+        "expiringSoon": "Expiring Soon",
+        "activeBatches": "Active Batches",
+        "tracked": "Tracked Ingredients"
+      },
+      "within7Days": "Within 7 days",
+      "addBatch": "Add Batch",
+      "addBatchDesc": "Create a new batch with expiry tracking",
+      "markExpired": "Update Expiry Status",
+      "expiredBatches": "Expired Batches",
+      "expiredBatchesDesc": "These batches have passed their expiry date and should be written off",
+      "expiringBatches": "Expiring Soon",
+      "expiringBatchesDesc": "These batches will expire within the next 7 days",
+      "ingredientsWithExpiry": "Ingredients with Expiry Tracking",
+      "ingredientsWithExpiryDesc": "Ingredients configured to track expiry dates",
+      "noExpiryTracking": "No ingredients have expiry tracking enabled. Edit an ingredient to enable it.",
+      "viewBatches": "View Batches",
+      "batchesFor": "Batches for",
+      "batchesDesc": "All active batches for this ingredient (FEFO order)",
+      "noBatches": "No batches found for this ingredient",
+      "writeOff": "Write Off",
+      "writeOffBatch": "Write Off Batch",
+      "writeOffDesc": "This will permanently mark this batch as written off and remove the stock.",
+      "confirmWriteOff": "Confirm Write-Off",
+      "fields": {
+        "ingredient": "Ingredient",
+        "batchNumber": "Batch #",
+        "quantity": "Quantity",
+        "expiryDate": "Expiry Date",
+        "receivedDate": "Received Date",
+        "daysRemaining": "Days Left",
+        "daysExpired": "Days Expired",
+        "status": "Status",
+        "shelfLife": "Default Shelf Life (days)",
+        "alertDays": "Alert Before Expiry (days)",
+        "activeBatches": "Active Batches",
+        "expiringBatches": "Expiring",
+        "costPerUnit": "Cost Per Unit",
+        "supplier": "Supplier",
+        "poReference": "PO Reference",
+        "reason": "Reason for Write-Off"
+      },
+      "placeholders": {
+        "selectIngredient": "Select ingredient",
+        "batchNumber": "e.g., BATCH-001",
+        "poReference": "e.g., PO-2024-001",
+        "reason": "e.g., Expired, Damaged, Quality issue",
+        "shelfLife": "e.g., 30",
+        "alertDays": "e.g., 7"
+      },
+      "status": {
+        "expired": "Expired",
+        "expiringSoon": "Expiring Soon",
+        "fresh": "Fresh"
+      },
+      "errors": {
+        "saveFailed": "Failed to save batch",
+        "writeOffFailed": "Failed to write off batch"
       }
     }
   },

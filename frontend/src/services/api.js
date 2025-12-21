@@ -396,6 +396,26 @@ export const inventoryAPI = {
     api.get(`/inventory/recipes/product/${productId}/check-availability`, { params: { quantity } }),
 };
 
+export const inventoryBatchAPI = {
+  // Batch CRUD
+  createBatch: (data) => api.post('/inventory/batches', data),
+  getBatchesByIngredient: (ingredientId) => api.get(`/inventory/batches/ingredient/${ingredientId}`),
+  updateBatchExpiry: (batchId, expiryDate) =>
+    api.patch(`/inventory/batches/${batchId}/expiry`, { expiryDate }),
+  writeOffBatch: (batchId, reason) =>
+    api.post(`/inventory/batches/${batchId}/write-off`, { reason }),
+
+  // Expiry management
+  getExpiringBatches: (restaurantId, withinDays = 7) =>
+    api.get('/inventory/batches/expiring', { params: { restaurantId, withinDays } }),
+  getExpiredBatches: (restaurantId) =>
+    api.get('/inventory/batches/expired', { params: { restaurantId } }),
+  getExpirySummary: (restaurantId, alertDays = 7) =>
+    api.get('/inventory/batches/summary', { params: { restaurantId, alertDays } }),
+  markExpiredBatches: (restaurantId) =>
+    api.post('/inventory/batches/mark-expired', null, { params: { restaurantId } }),
+};
+
 export const stockAlertAPI = {
   // Subscriptions
   getSubscriptions: (restaurantId) => api.get('/stock-alerts/subscriptions', { params: { restaurantId } }),
