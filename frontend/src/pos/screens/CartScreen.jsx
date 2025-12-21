@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { ChevronLeft, Plus, Trash2, CreditCard } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
@@ -10,6 +11,7 @@ import usePOSStore from '../store/posStore';
  * Edit quantities, remove items, view totals, proceed to payment
  */
 const CartScreen = () => {
+  const { t } = useTranslation();
   const {
     currentOrder,
     updateItemQuantity,
@@ -30,7 +32,7 @@ const CartScreen = () => {
   };
 
   const handleClearCart = () => {
-    if (window.confirm('Are you sure you want to clear the entire cart?')) {
+    if (window.confirm(t('pos.cart.confirmClear', 'Are you sure you want to clear the entire cart?'))) {
       clearCart();
     }
   };
@@ -46,12 +48,12 @@ const CartScreen = () => {
             onClick={handleContinueShopping}
             icon={<ChevronLeft className="w-6 h-6" />}
           >
-            Continue Shopping
+            {t('pos.cart.continueShopping', 'Continue Shopping')}
           </TouchButton>
 
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Order Summary</h1>
-            <p className="text-sm text-gray-600">{type} Order</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('pos.cart.orderSummary', 'Order Summary')}</h1>
+            <p className="text-sm text-gray-600">{t('pos.cart.orderTypeLabel', '{{type}} Order', { type })}</p>
           </div>
 
           {items.length > 0 && (
@@ -61,7 +63,7 @@ const CartScreen = () => {
               onClick={handleClearCart}
               icon={<Trash2 className="w-5 h-5" />}
             >
-              Clear Cart
+              {t('pos.cart.clearCart', 'Clear Cart')}
             </TouchButton>
           )}
 
@@ -91,10 +93,10 @@ const CartScreen = () => {
                 </svg>
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Your cart is empty
+                {t('pos.cart.emptyCart', 'Your cart is empty')}
               </h2>
               <p className="text-lg text-gray-600 mb-6">
-                Add some items from the menu to get started
+                {t('pos.cart.emptyCartMessage', 'Add some items from the menu to get started')}
               </p>
               <TouchButton
                 variant="primary"
@@ -102,7 +104,7 @@ const CartScreen = () => {
                 onClick={handleContinueShopping}
                 icon={<Plus className="w-6 h-6" />}
               >
-                Browse Menu
+                {t('pos.cart.browseMenu', 'Browse Menu')}
               </TouchButton>
             </div>
           ) : (
@@ -127,7 +129,7 @@ const CartScreen = () => {
               {/* Order Type */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">
-                  Order Type
+                  {t('pos.cart.orderType', 'Order Type')}
                 </h3>
                 <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
                   <p className="text-lg font-bold text-blue-900">{type}</p>
@@ -137,12 +139,12 @@ const CartScreen = () => {
               {/* Order Notes */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">
-                  Order Notes
+                  {t('pos.cart.orderNotes', 'Order Notes')}
                 </h3>
                 <textarea
                   value={notes}
                   onChange={(e) => usePOSStore.getState().updateOrderNotes(e.target.value)}
-                  placeholder="Add special instructions..."
+                  placeholder={t('pos.cart.notesPlaceholder', 'Add special instructions...')}
                   rows={3}
                   className={cn(
                     'w-full px-4 py-3 rounded-lg',
@@ -157,18 +159,18 @@ const CartScreen = () => {
               {/* Price Breakdown */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">
-                  Price Breakdown
+                  {t('pos.cart.priceBreakdown', 'Price Breakdown')}
                 </h3>
                 <div className="space-y-3 bg-gray-50 rounded-lg p-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-700">Subtotal</span>
+                    <span className="text-gray-700">{t('pos.cart.subtotal', 'Subtotal')}</span>
                     <span className="text-lg font-semibold text-gray-900">
                       ${subtotal.toFixed(2)}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-700">Tax (8%)</span>
+                    <span className="text-gray-700">{t('pos.cart.tax', 'Tax (8%)')}</span>
                     <span className="text-lg font-semibold text-gray-900">
                       ${tax.toFixed(2)}
                     </span>
@@ -176,7 +178,7 @@ const CartScreen = () => {
 
                   {deliveryFee > 0 && (
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-700">Delivery Fee</span>
+                      <span className="text-gray-700">{t('pos.cart.deliveryFee', 'Delivery Fee')}</span>
                       <span className="text-lg font-semibold text-gray-900">
                         ${deliveryFee.toFixed(2)}
                       </span>
@@ -185,7 +187,7 @@ const CartScreen = () => {
 
                   <div className="pt-3 border-t-2 border-gray-300">
                     <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-gray-900">Total</span>
+                      <span className="text-lg font-bold text-gray-900">{t('pos.cart.total', 'Total')}</span>
                       <span className="text-3xl font-bold text-gray-900">
                         ${total.toFixed(2)}
                       </span>
@@ -196,7 +198,7 @@ const CartScreen = () => {
 
               {/* Item Count */}
               <div className="bg-blue-50 rounded-lg p-4 text-center">
-                <p className="text-sm text-blue-700 mb-1">Total Items</p>
+                <p className="text-sm text-blue-700 mb-1">{t('pos.cart.totalItems', 'Total Items')}</p>
                 <p className="text-3xl font-bold text-blue-900">
                   {items.reduce((sum, item) => sum + item.quantity, 0)}
                 </p>
@@ -212,7 +214,7 @@ const CartScreen = () => {
                 onClick={handleProceedToDetails}
                 icon={<CreditCard className="w-6 h-6" />}
               >
-                Proceed to Details
+                {t('pos.cart.proceedToDetails', 'Proceed to Details')}
               </TouchButton>
 
               <TouchButton
@@ -221,7 +223,7 @@ const CartScreen = () => {
                 fullWidth
                 onClick={handleContinueShopping}
               >
-                Add More Items
+                {t('pos.cart.addMoreItems', 'Add More Items')}
               </TouchButton>
             </div>
           </div>
