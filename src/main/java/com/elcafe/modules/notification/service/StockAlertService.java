@@ -9,6 +9,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class StockAlertService {
 
@@ -36,7 +38,7 @@ public class StockAlertService {
      * Scheduled task to check stock levels and send alerts
      * Runs based on configuration (default: every 30 minutes)
      */
-    @Scheduled(fixedRateString = "${stock-alert.check-interval-minutes:30}000")
+    @Scheduled(fixedRateString = "#{${stock-alert.check-interval-minutes:30} * 60000}", initialDelayString = "60000")
     @Transactional
     public void checkAndSendAlerts() {
         if (!alertConfig.isEnabled()) {

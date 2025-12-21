@@ -4,6 +4,7 @@ import com.elcafe.modules.notification.config.TelegramConfig;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
@@ -17,6 +18,7 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
  */
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class TelegramBotService {
 
