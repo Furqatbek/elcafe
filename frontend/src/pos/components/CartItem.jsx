@@ -50,7 +50,7 @@ const CartItem = ({
             {name}
           </h4>
           <p className="text-sm text-gray-600 mt-0.5">
-            ${basePrice.toFixed(2)} each
+            {basePrice.toFixed(2)} each
           </p>
         </div>
 
@@ -77,7 +77,7 @@ const CartItem = ({
                 {modifier.name}
               </span>
               {modifier.price > 0 && (
-                <span>${modifier.price.toFixed(2)}</span>
+                <span>{modifier.price.toFixed(2)}</span>
               )}
             </div>
           ))}
@@ -121,7 +121,7 @@ const CartItem = ({
         {/* Item Total */}
         <div className="text-right">
           <div className="text-xl font-bold text-gray-900">
-            ${itemTotal.toFixed(2)}
+            {itemTotal.toFixed(2)}
           </div>
         </div>
       </div>

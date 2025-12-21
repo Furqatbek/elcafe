@@ -95,7 +95,7 @@ const ProductCard = ({
 
         <div className="mt-auto pt-3 flex items-center justify-between">
           <span className="text-2xl font-bold text-gray-900">
-            ${price.toFixed(2)}
+            {price.toFixed(2)}
           </span>
         </div>
       </div>

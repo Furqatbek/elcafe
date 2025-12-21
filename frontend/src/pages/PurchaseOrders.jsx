@@ -402,7 +402,7 @@ const PurchaseOrders = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{po.poNumber}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{po.supplierName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{po.orderDate}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${po.totalAmount?.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{po.totalAmount?.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(po.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getPaymentStatusBadge(po.paymentStatus)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -598,8 +598,8 @@ const PurchaseOrders = () => {
                         <tr key={index}>
                           <td className="px-4 py-2 text-sm">{item.itemName}</td>
                           <td className="px-4 py-2 text-sm">{item.quantity} {item.unit}</td>
-                          <td className="px-4 py-2 text-sm">${item.unitPrice}</td>
-                          <td className="px-4 py-2 text-sm">${(item.quantity * item.unitPrice).toFixed(2)}</td>
+                          <td className="px-4 py-2 text-sm">{item.unitPrice}</td>
+                          <td className="px-4 py-2 text-sm">{(item.quantity * item.unitPrice).toFixed(2)}</td>
                           <td className="px-4 py-2 text-sm">
                             <button
                               onClick={() => handleRemoveItem(index)}
@@ -645,10 +645,10 @@ const PurchaseOrders = () => {
 
               <div className="text-right space-y-2">
                 <div className="text-lg">
-                  <span className="font-medium">{t('finance.common.subtotal')}:</span> ${calculateSubtotal().toFixed(2)}
+                  <span className="font-medium">{t('finance.common.subtotal')}:</span> {calculateSubtotal().toFixed(2)}
                 </div>
                 <div className="text-xl font-bold">
-                  <span>{t('finance.common.total')}:</span> ${calculateTotal().toFixed(2)}
+                  <span>{t('finance.common.total')}:</span> {calculateTotal().toFixed(2)}
                 </div>
               </div>
             </div>
@@ -768,16 +768,16 @@ const PurchaseOrders = () => {
               <div className="bg-gray-50 p-3 rounded-lg mb-4">
                 <div className="flex justify-between mb-2">
                   <span className="text-sm text-gray-600">{t('finance.common.totalAmount')}:</span>
-                  <span className="font-medium">${selectedPO.totalAmount?.toFixed(2)}</span>
+                  <span className="font-medium">{selectedPO.totalAmount?.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm text-gray-600">{t('finance.purchaseOrders.alreadyPaid')}:</span>
-                  <span className="font-medium">${(selectedPO.paidAmount || 0).toFixed(2)}</span>
+                  <span className="font-medium">{(selectedPO.paidAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                   <span className="text-sm font-semibold">{t('finance.common.remaining')}:</span>
                   <span className="font-bold text-red-600">
-                    ${(selectedPO.totalAmount - (selectedPO.paidAmount || 0)).toFixed(2)}
+                    {(selectedPO.totalAmount - (selectedPO.paidAmount || 0)).toFixed(2)}
                   </span>
                 </div>
               </div>

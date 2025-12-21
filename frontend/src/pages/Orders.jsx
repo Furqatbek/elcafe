@@ -481,15 +481,15 @@ export default function Orders() {
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <p className="text-sm font-medium">{t('orders.subtotal')}</p>
-                    <p className="text-lg font-bold">${order.subtotal?.toFixed(2)}</p>
+                    <p className="text-lg font-bold">{order.subtotal?.toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">{t('orders.deliveryFee')}</p>
-                    <p className="text-lg font-bold">${order.deliveryFee?.toFixed(2)}</p>
+                    <p className="text-lg font-bold">{order.deliveryFee?.toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium">{t('orders.total')}</p>
-                    <p className="text-2xl font-bold">${order.total?.toFixed(2)}</p>
+                    <p className="text-2xl font-bold">{order.total?.toFixed(2)}</p>
                   </div>
                 </div>
 
@@ -500,7 +500,7 @@ export default function Orders() {
                       {order.items.map((item, idx) => (
                         <div key={idx} className="text-sm text-muted-foreground flex justify-between">
                           <span>{item.quantity}x {item.productName} {item.variantName ? `(${item.variantName})` : ''}</span>
-                          <span>${item.totalPrice?.toFixed(2)}</span>
+                          <span>{item.totalPrice?.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
@@ -831,7 +831,7 @@ export default function Orders() {
                       <SelectContent>
                         {products.map((product) => (
                           <SelectItem key={product.id} value={product.id.toString()}>
-                            {product.name} - ${product.price?.toFixed(2)}
+                            {product.name} - {product.price?.toFixed(2)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -860,7 +860,7 @@ export default function Orders() {
                           {item.quantity}x {item.productName}
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">${item.totalPrice.toFixed(2)}</span>
+                          <span className="text-sm font-medium">{item.totalPrice.toFixed(2)}</span>
                           <Button
                             type="button"
                             variant="ghost"
@@ -874,7 +874,7 @@ export default function Orders() {
                     ))}
                     <div className="flex justify-between items-center p-2 bg-blue-50 rounded font-semibold">
                       <span>{t('pages.orders.total', 'Total')}</span>
-                      <span>${calculateTotal().toFixed(2)}</span>
+                      <span>{calculateTotal().toFixed(2)}</span>
                     </div>
                   </div>
                 )}

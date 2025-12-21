@@ -783,10 +783,10 @@ export default function CustomerSegments() {
                       {customer.phone}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      ${customer.averageCheck?.toFixed(2) || '0.00'}
+                      {customer.averageCheck?.toFixed(2) || '0.00'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      ${customer.monetary?.toFixed(2) || '0.00'}
+                      {customer.monetary?.toFixed(2) || '0.00'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       {customer.recency !== null ? (

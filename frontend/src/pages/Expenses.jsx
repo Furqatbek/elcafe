@@ -250,11 +250,11 @@ const Expenses = () => {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-sm text-gray-600 mb-1">{t('finance.expenses.totalExpenses')}</div>
-          <div className="text-2xl font-bold text-gray-900">${totalExpenses.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-gray-900">{totalExpenses.toFixed(2)}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-sm text-gray-600 mb-1">{t('finance.expenses.unpaidExpenses')}</div>
-          <div className="text-2xl font-bold text-red-600">${unpaidExpenses.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-red-600">{unpaidExpenses.toFixed(2)}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-sm text-gray-600 mb-1">{t('finance.expenses.totalItems')}</div>
@@ -355,7 +355,7 @@ const Expenses = () => {
                   <td className="px-6 py-4 whitespace-nowrap">{getCategoryBadge(expense.category)}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{expense.description}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.vendor || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.totalAmount?.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.totalAmount?.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(expense.paymentStatus)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex gap-2">
@@ -534,13 +534,13 @@ const Expenses = () => {
             <div className="border-t pt-4 mb-4">
               <div className="text-right space-y-2">
                 <div className="text-lg">
-                  <span className="font-medium">{t('finance.expenses.amount')}:</span> ${(parseFloat(formData.amount) || 0).toFixed(2)}
+                  <span className="font-medium">{t('finance.expenses.amount')}:</span> {(parseFloat(formData.amount) || 0).toFixed(2)}
                 </div>
                 <div className="text-lg">
-                  <span className="font-medium">{t('finance.expenses.taxAmount')}:</span> ${(parseFloat(formData.taxAmount) || 0).toFixed(2)}
+                  <span className="font-medium">{t('finance.expenses.taxAmount')}:</span> {(parseFloat(formData.taxAmount) || 0).toFixed(2)}
                 </div>
                 <div className="text-xl font-bold">
-                  <span>{t('finance.common.total')}:</span> ${((parseFloat(formData.amount) || 0) + (parseFloat(formData.taxAmount) || 0)).toFixed(2)}
+                  <span>{t('finance.common.total')}:</span> {((parseFloat(formData.amount) || 0) + (parseFloat(formData.taxAmount) || 0)).toFixed(2)}
                 </div>
               </div>
             </div>
@@ -581,7 +581,7 @@ const Expenses = () => {
               </div>
               <div className="border-t pt-2 mt-2">
                 <div className="text-sm text-gray-600">{t('finance.expenses.amountToPay')}</div>
-                <div className="text-2xl font-bold text-green-600">${selectedExpense.totalAmount?.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-green-600">{selectedExpense.totalAmount?.toFixed(2)}</div>
               </div>
             </div>
 

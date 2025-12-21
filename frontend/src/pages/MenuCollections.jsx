@@ -562,7 +562,7 @@ export default function MenuCollections() {
                   <div className="flex-1">
                     <p className="font-medium">{product.name}</p>
                     <p className="text-sm text-muted-foreground">{product.description}</p>
-                    <p className="text-sm font-medium mt-1">${product.price?.toFixed(2)}</p>
+                    <p className="text-sm font-medium mt-1">{product.price?.toFixed(2)}</p>
                   </div>
                   {!product.available && (
                     <Badge variant="secondary">{t('common.unavailable')}</Badge>
