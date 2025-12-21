@@ -7,6 +7,7 @@ import com.elcafe.modules.notification.repository.NotificationRepository;
 import com.elcafe.modules.order.entity.Order;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
+@Lazy
 @RequiredArgsConstructor
 public class NotificationService {
 

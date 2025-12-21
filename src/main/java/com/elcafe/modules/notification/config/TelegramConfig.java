@@ -2,10 +2,10 @@ package com.elcafe.modules.notification.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 @Data
-@Configuration
+@Component
 @ConfigurationProperties(prefix = "telegram.bot")
 public class TelegramConfig {
     private boolean enabled = true;
