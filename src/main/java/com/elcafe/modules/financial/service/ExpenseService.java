@@ -156,7 +156,7 @@ public class ExpenseService {
             case UTILITIES -> Account.AccountCategory.UTILITIES;
             case SUPPLIES -> Account.AccountCategory.SUPPLIES;
             case INVENTORY -> Account.AccountCategory.INVENTORY;
-            case COST_OF_GOODS_SOLD -> Account.AccountCategory.COST_OF_GOODS;
+            case COST_OF_GOODS_SOLD -> Account.AccountCategory.COGS;
             case MARKETING -> Account.AccountCategory.MARKETING;
             case DELIVERY_COSTS -> Account.AccountCategory.DELIVERY_COSTS;
             default -> Account.AccountCategory.OTHER_EXPENSE;
