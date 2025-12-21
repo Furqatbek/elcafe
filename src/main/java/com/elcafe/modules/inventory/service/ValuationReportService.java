@@ -184,13 +184,14 @@ public class ValuationReportService {
         }
 
         // Build category valuations
+        final BigDecimal finalTotalValue = totalValue;
         List<CategoryValuation> categoryValuations = byCategory.entrySet().stream()
                 .map(entry -> {
                     BigDecimal catTotal = entry.getValue().stream()
                             .map(IngredientValuationDetail::getTotalValue)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    BigDecimal pct = totalValue.compareTo(BigDecimal.ZERO) > 0
-                            ? catTotal.divide(totalValue, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
+                    BigDecimal pct = finalTotalValue.compareTo(BigDecimal.ZERO) > 0
+                            ? catTotal.divide(finalTotalValue, 4, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(100))
                             : BigDecimal.ZERO;
                     return CategoryValuation.builder()
                             .category(entry.getKey())
