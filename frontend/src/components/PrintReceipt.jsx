@@ -380,11 +380,6 @@ const generateReceiptHTML = (order) => {
 
     <!-- Totals -->
     <div class="totals">
-      <div class="total-line subtotal">
-        <span class="label">Oraliq summa:</span>
-        <span class="amount">${(order.subtotal || 0).toFixed(2)}</span>
-      </div>
-
       ${order.deliveryFee && order.deliveryFee > 0 ? `
       <div class="total-line">
         <span class="label">Yetkazib berish:</span>
