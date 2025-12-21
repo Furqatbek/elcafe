@@ -24,7 +24,8 @@
     "welcomeBack": "Xush kelibsiz",
     "createAccount": "Akkount yaratish",
     "enterCredentials": "Kirishingiz uchun ma'lumotlaringizni kiriting",
-    "fillDetails": "Akkount yaratish uchun ma'lumotlarni to'ldiring"
+    "fillDetails": "Akkount yaratish uchun ma'lumotlarni to'ldiring",
+    "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
   },
   "nav": {
     "dashboard": "Bosh sahifa",
@@ -421,7 +422,10 @@
       "passwordMin": "Parol kamida 8 ta belgidan iborat bo'lishi kerak",
       "firstNameRequired": "Ism majburiy",
       "lastNameRequired": "Familiya majburiy"
-    }
+    },
+    "generatePasswordTitle": "Xavfsiz parol yaratish",
+    "generate": "Yaratish",
+    "passwordCopied": "Parol nusxalandi"
   },
   "common": {
     "search": "Qidirish",
@@ -453,6 +457,10 @@
     "max": "Maks",
     "reset": "Tozalash",
     "allStatuses": "Barcha holatlar",
+    "notes": "Izohlar",
+    "items": "ta",
+    "total": "Jami",
+    "update": "Yangilash",
     "languages": {
       "en": "English",
       "ru": "Русский",
@@ -583,7 +591,10 @@
       "passwordMin": "Parol kamida 8 ta belgidan iborat bo'lishi kerak",
       "firstNameRequired": "Ism majburiy",
       "lastNameRequired": "Familiya majburiy"
-    }
+    },
+    "generatePasswordTitle": "Xavfsiz parol yaratish",
+    "generate": "Yaratish",
+    "passwordCopied": "Parol nusxalandi"
   },
   "waiters": {
     "permissions": {
@@ -1051,6 +1062,163 @@
       "back": "Orqaga",
       "next": "Keyingi",
       "finish": "Tugatish"
+    }
+  },
+  "inventory": {
+    "title": "Inventar boshqaruvi",
+    "subtitle": "Ingredientlar va zaxiralarni boshqarish",
+    "addIngredient": "Ingredient qo'shish",
+    "editIngredient": "Ingredientni tahrirlash",
+    "addDescription": "Inventar kuzatuvi uchun yangi ingredient yaratish",
+    "editDescription": "Ingredient ma'lumotlarini yangilash",
+    "ingredientsList": "Ingredientlar ro'yxati",
+    "ingredientsDescription": "Barcha ingredientlarni boshqarish va kuzatish",
+    "noIngredients": "Ingredientlar topilmadi",
+    "searchPlaceholder": "Nom, SKU yoki yetkazib beruvchi bo'yicha qidirish...",
+    "confirmDelete": "Ushbu ingredientni o'chirishga ishonchingiz komilmi?",
+    "addStock": "Zaxira qo'shish",
+    "adjustStock": "Zaxirani sozlash",
+    "updateStock": "Zaxirani yangilash",
+    "currentStockLabel": "Joriy zaxira: {{currentStock}} {{unit}}",
+    "quantityToAdd": "Qo'shiladigan miqdor",
+    "newQuantity": "Yangi miqdor",
+    "performedBy": "Bajaruvchi",
+    "transactionHistory": "Tranzaksiyalar tarixi",
+    "transactionHistoryDesc": "Ushbu ingredient uchun barcha zaxira harakatlari",
+    "noTransactions": "Tranzaksiyalar topilmadi",
+    "stats": {
+      "total": "Jami ingredientlar",
+      "active": "faol",
+      "lowStock": "Kam zaxira",
+      "needsAttention": "E'tibor talab etadi",
+      "reorder": "Tez orada buyurtma bering",
+      "reorderSoon": "Tez orada buyurtma bering",
+      "tracked": "Kuzatilayotgan mahsulotlar",
+      "monitoring": "Monitoring"
+    },
+    "filters": {
+      "all": "Barcha ingredientlar",
+      "active": "Faqat faol",
+      "inactive": "Faqat faol emas",
+      "lowStock": "Kam zaxira",
+      "reorder": "Qayta buyurtma darajasi"
+    },
+    "fields": {
+      "name": "Ingredient nomi",
+      "sku": "SKU",
+      "description": "Tavsif",
+      "unit": "O'lchov birligi",
+      "supplier": "Yetkazib beruvchi",
+      "currentStock": "Joriy zaxira",
+      "minimumStock": "Minimal zaxira",
+      "reorderLevel": "Qayta buyurtma darajasi",
+      "costPerUnit": "Birlik narxi",
+      "status": "Holat",
+      "active": "Faol",
+      "trackInventory": "Inventarni kuzatish"
+    },
+    "placeholders": {
+      "name": "masalan, Pomidor, Tovuq go'shti",
+      "sku": "masalan, ING-001",
+      "description": "Ingredient haqida qisqacha tavsif",
+      "supplier": "masalan, ABC Oziq-ovqat yetkazib beruvchilar"
+    },
+    "units": {
+      "kg": "Kilogramm (kg)",
+      "g": "Gramm (g)",
+      "L": "Litr (L)",
+      "ml": "Millilitr (ml)",
+      "pieces": "Dona",
+      "dozens": "O'nlab"
+    },
+    "status": {
+      "notTracked": "Kuzatilmaydi",
+      "lowStock": "Kam zaxira",
+      "reorderSoon": "Tez orada buyurtma bering",
+      "inStock": "Omborda bor"
+    },
+    "transactionFields": {
+      "date": "Sana",
+      "type": "Tur",
+      "change": "O'zgarish",
+      "balanceAfter": "Qoldiqdan keyin",
+      "performedBy": "Bajaruvchi",
+      "notes": "Izohlar"
+    },
+    "errors": {
+      "saveFailed": "Ingredientni saqlab bo'lmadi",
+      "deleteFailed": "Ingredientni o'chirib bo'lmadi"
+    }
+  },
+  "pages": {
+    "menu": {
+      "description": "Kategoriyalar va mahsulotlar bilan to'liq menyu",
+      "items": "ta"
+    },
+    "products": {
+      "title": "Mahsulotlar",
+      "subtitle": "Barcha oziq-ovqat mahsulotlarini ko'rish",
+      "newProduct": "Yangi mahsulot",
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "variants": "Variantlar",
+      "inStock": "Omborda bor",
+      "outOfStock": "Omborda yo'q",
+      "createVariant": "Mahsulot varianti yaratish",
+      "editVariant": "Mahsulot variantini tahrirlash",
+      "addVariantFor": "{{name}} uchun yangi variant qo'shish",
+      "editVariantFor": "{{name}} uchun variant ma'lumotlarini yangilash",
+      "confirmDeleteVariant": "\"{{name}}\" variantini o'chirishga ishonchingiz komilmi?",
+      "errors": {
+        "createVariantFailed": "Variant yaratib bo'lmadi",
+        "updateVariantFailed": "Variantni yangilab bo'lmadi",
+        "deleteVariantFailed": "Variantni o'chirib bo'lmadi"
+      }
+    },
+    "orders": {
+      "createOrder": "Buyurtma yaratish",
+      "delivery": "Yetkazib berish",
+      "takeaway": "Olib ketish",
+      "dineIn": "Joyida iste'mol qilish",
+      "selectTable": "Stolni tanlang",
+      "noAvailableTables": "Bo'sh stollar yo'q",
+      "table": "Stol",
+      "capacity": "Sig'im"
+    },
+    "waiters": {
+      "title": "Ofitsiantlar boshqaruvi",
+      "permissions": {
+        "manageTables": "Stollarni boshqarish",
+        "overridePrices": "Narxlarni o'zgartirish",
+        "voidItems": "Mahsulotlarni bekor qilish",
+        "mergeTables": "Stollarni birlashtirish",
+        "viewReports": "Hisobotlarni ko'rish",
+        "handlePayments": "To'lovlarni boshqarish",
+        "applyDiscounts": "Chegirmalarni qo'llash",
+        "refundOrders": "Buyurtmalarni qaytarish"
+      },
+      "errors": {
+        "nameRequired": "Ism majburiy",
+        "pinCodeRequired": "PIN kod majburiy",
+        "pinMust4Digits": "PIN 4 raqamdan iborat bo'lishi kerak"
+      },
+      "showingWaiters": "{{total}} dan {{count}} ta ko'rsatilmoqda",
+      "confirmDeletion": "O'chirishni tasdiqlang",
+      "deleteConfirmationMessage": "\"{{name}}\" ofitsiantni o'chirishga ishonchingiz komilmi? Bu amalni bekor qilib bo'lmaydi."
+    },
+    "customers": {
+      "id": "ID",
+      "firstName": "Ism",
+      "lastName": "Familiya",
+      "email": "Email",
+      "phone": "Telefon",
+      "address": "Manzil",
+      "city": "Shahar",
+      "state": "Viloyat",
+      "zipCode": "Pochta indeksi",
+      "tags": "Teglar",
+      "status": "Holat",
+      "createdAt": "Yaratilgan sana"
     }
   }
 }
