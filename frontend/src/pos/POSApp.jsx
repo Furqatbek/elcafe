@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import usePOSStore from './store/posStore';
 
 // Screens
@@ -15,6 +16,7 @@ import OrderConfirmationScreen from './screens/OrderConfirmationScreen';
  * Touch-optimized restaurant point-of-sale system
  */
 const POSApp = () => {
+  const { t } = useTranslation();
   const { ui } = usePOSStore();
 
   // Prevent accidental page navigation
@@ -70,7 +72,7 @@ const POSApp = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-2xl p-8 shadow-2xl text-center">
             <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-xl font-semibold text-gray-900">Loading...</p>
+            <p className="text-xl font-semibold text-gray-900">{t('pos.loading', 'Loading...')}</p>
           </div>
         </div>
       )}
@@ -87,7 +89,7 @@ const POSApp = () => {
               />
             </svg>
             <div>
-              <p className="font-semibold">Error</p>
+              <p className="font-semibold">{t('common.error', 'Error')}</p>
               <p className="text-sm">{ui.error}</p>
             </div>
             <button
