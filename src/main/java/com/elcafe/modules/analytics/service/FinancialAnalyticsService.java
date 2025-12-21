@@ -1,6 +1,7 @@
 package com.elcafe.modules.analytics.service;
 
 import com.elcafe.modules.analytics.dto.*;
+import com.elcafe.modules.inventory.service.BatchConsumptionService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
@@ -31,6 +32,7 @@ public class FinancialAnalyticsService {
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final BatchConsumptionService batchConsumptionService;
 
     /**
      * Calculate daily revenue for a date range
@@ -162,6 +164,7 @@ public class FinancialAnalyticsService {
 
     /**
      * Calculate COGS and food cost percentage
+     * Uses actual batch consumption data when available, falls back to product cost prices
      */
     public COGSAnalyticsDTO getCOGSAnalytics(LocalDate startDate, LocalDate endDate, Long restaurantId) {
         LocalDateTime startDateTime = startDate.atStartOfDay();
@@ -173,8 +176,18 @@ public class FinancialAnalyticsService {
                 .map(Order::getTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Calculate COGS based on product cost prices
-        BigDecimal totalCOGS = orders.stream()
+        // Try to get COGS from actual batch consumption records first
+        BigDecimal batchBasedCOGS = BigDecimal.ZERO;
+        if (restaurantId != null) {
+            try {
+                batchBasedCOGS = batchConsumptionService.calculateTotalCOGS(restaurantId, startDateTime, endDateTime);
+            } catch (Exception e) {
+                log.debug("Could not calculate batch-based COGS: {}", e.getMessage());
+            }
+        }
+
+        // Calculate COGS based on product cost prices as fallback/comparison
+        BigDecimal productBasedCOGS = orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .map(item -> {
                     Product product = productRepository.findById(item.getProductId()).orElse(null);
@@ -184,6 +197,11 @@ public class FinancialAnalyticsService {
                     return BigDecimal.ZERO;
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Use batch-based COGS if available and meaningful, otherwise use product-based
+        BigDecimal totalCOGS = batchBasedCOGS.compareTo(BigDecimal.ZERO) > 0
+                ? batchBasedCOGS
+                : productBasedCOGS;
 
         BigDecimal grossProfit = totalRevenue.subtract(totalCOGS);
 

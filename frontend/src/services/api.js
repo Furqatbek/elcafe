@@ -489,6 +489,65 @@ export const poSuggestionAPI = {
     api.post('/inventory/po-suggestions/generate-all', null, { params: { restaurantId } }),
 };
 
+export const valuationAPI = {
+  // Valuation Settings
+  getValuationMethod: (restaurantId) =>
+    api.get('/inventory/valuation/settings', { params: { restaurantId } }),
+  setValuationMethod: (data) => api.post('/inventory/valuation/settings', data),
+
+  // Inventory Valuation
+  calculateInventoryValue: (restaurantId, method = null) => {
+    const params = { restaurantId };
+    if (method) params.method = method;
+    return api.get('/inventory/valuation/calculate', { params });
+  },
+  compareValuationMethods: (restaurantId) =>
+    api.get('/inventory/valuation/compare', { params: { restaurantId } }),
+  getIngredientValuation: (ingredientId, method = null) => {
+    const params = method ? { method } : {};
+    return api.get(`/inventory/valuation/ingredient/${ingredientId}`, { params });
+  },
+  recalculateWAC: (ingredientId) =>
+    api.post(`/inventory/valuation/ingredient/${ingredientId}/recalculate-wac`),
+
+  // Cost History
+  getCostHistory: (ingredientId) =>
+    api.get(`/inventory/valuation/cost-history/${ingredientId}`),
+  getCostHistoryPaginated: (ingredientId, page = 0, size = 20) =>
+    api.get(`/inventory/valuation/cost-history/${ingredientId}/paginated`, {
+      params: { page, size }
+    }),
+  getCostHistoryInRange: (ingredientId, startDate, endDate) =>
+    api.get(`/inventory/valuation/cost-history/${ingredientId}/range`, {
+      params: { startDate, endDate }
+    }),
+  recordCostChange: (ingredientId, data) =>
+    api.post(`/inventory/valuation/cost-history/${ingredientId}`, data),
+  getCostVariance: (ingredientId, startDate, endDate) =>
+    api.get(`/inventory/valuation/cost-variance/${ingredientId}`, {
+      params: { startDate, endDate }
+    }),
+
+  // Consumption History
+  getConsumptionHistory: (ingredientId) =>
+    api.get(`/inventory/valuation/consumption/${ingredientId}`),
+  getConsumptionSummary: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/valuation/consumption/summary', {
+      params: { restaurantId, startDate, endDate }
+    }),
+  getConsumptionStats: (ingredientId, startDate, endDate) =>
+    api.get(`/inventory/valuation/consumption/${ingredientId}/stats`, {
+      params: { startDate, endDate }
+    }),
+
+  // COGS
+  getOrderCOGS: (orderId) => api.get(`/inventory/valuation/cogs/order/${orderId}`),
+  getTotalCOGS: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/valuation/cogs/total', {
+      params: { restaurantId, startDate, endDate }
+    }),
+};
+
 export const printerAPI = {
   // Printer CRUD
   getPrinters: (restaurantId) => api.get('/settings/printers', { params: { restaurantId } }),

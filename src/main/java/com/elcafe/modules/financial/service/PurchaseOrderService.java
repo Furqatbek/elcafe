@@ -7,8 +7,14 @@ import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.repository.PurchaseOrderItemRepository;
 import com.elcafe.modules.financial.repository.PurchaseOrderRepository;
 import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.entity.InventoryBatch;
+import com.elcafe.modules.inventory.enums.CostChangeReason;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
+import com.elcafe.modules.inventory.service.CostHistoryService;
+import com.elcafe.modules.inventory.service.InventoryBatchService;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.inventory.service.InventoryValuationService;
+import com.elcafe.modules.inventory.dto.BatchRequest;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +41,9 @@ public class PurchaseOrderService {
     private final JournalService journalService;
     private final InventoryService inventoryService;
     private final ExpenseService expenseService;
+    private final InventoryBatchService batchService;
+    private final CostHistoryService costHistoryService;
+    private final InventoryValuationService valuationService;
 
     @Transactional
     public PurchaseOrder createPurchaseOrder(PurchaseOrder purchaseOrder, List<PurchaseOrderItem> items) {
@@ -112,12 +121,50 @@ public class PurchaseOrderService {
 
             // Add to inventory if linked to an ingredient
             if (item.getIngredient() != null) {
-                inventoryService.addStock(
-                        item.getIngredient().getId(),
-                        receivedItem.getReceivedQuantity(),
-                        "PO Receipt: " + po.getPoNumber(),
-                        receivedBy
-                );
+                Ingredient ingredient = item.getIngredient();
+                BigDecimal quantity = receivedItem.getReceivedQuantity();
+                BigDecimal unitPrice = item.getUnitPrice();
+
+                // Create a batch with cost tracking
+                try {
+                    BatchRequest batchRequest = new BatchRequest();
+                    batchRequest.setIngredientId(ingredient.getId());
+                    batchRequest.setQuantity(quantity);
+                    batchRequest.setReceivedDate(actualDeliveryDate);
+                    batchRequest.setCostPerUnit(unitPrice);
+                    batchRequest.setPoReference(po.getPoNumber());
+                    batchRequest.setNotes("Auto-created from PO: " + po.getPoNumber());
+
+                    InventoryBatch batch = batchService.createBatch(batchRequest);
+
+                    // Update weighted average cost
+                    ingredient.updateWeightedAverageCost(quantity, unitPrice);
+                    ingredientRepository.save(ingredient);
+
+                    // Record cost history if cost changed significantly
+                    if (unitPrice != null && ingredient.getCostPerUnit() != null &&
+                        unitPrice.compareTo(ingredient.getCostPerUnit()) != 0) {
+                        costHistoryService.recordCostChangeFromPurchase(
+                                ingredient.getId(), unitPrice, batch, po.getId(), receivedBy);
+                    }
+
+                    // Recalculate WAC from all active batches
+                    valuationService.recalculateWAC(ingredient.getId());
+
+                    log.info("Created batch {} with cost {} for ingredient {}",
+                            batch.getBatchNumber(), unitPrice, ingredient.getName());
+
+                } catch (Exception e) {
+                    log.warn("Failed to create batch for PO item, falling back to simple stock add: {}",
+                            e.getMessage());
+                    // Fallback to simple stock add
+                    inventoryService.addStock(
+                            ingredient.getId(),
+                            quantity,
+                            "PO Receipt: " + po.getPoNumber(),
+                            receivedBy
+                    );
+                }
             }
 
             // Check if fully received

@@ -1602,6 +1602,87 @@
         "saveFailed": "Failed to save batch",
         "writeOffFailed": "Failed to write off batch"
       }
+    },
+    "valuation": {
+      "title": "Inventory Valuation",
+      "subtitle": "Calculate inventory costs using different valuation methods",
+      "settings": "Valuation Settings",
+      "settingsDesc": "Configure how inventory costs are calculated",
+      "currentMethod": "Current Method",
+      "changeMethod": "Change Valuation Method",
+      "methodChanged": "Valuation method updated successfully",
+      "methods": {
+        "FIFO": "FIFO (First-In-First-Out)",
+        "LIFO": "LIFO (Last-In-First-Out)",
+        "WEIGHTED_AVERAGE": "Weighted Average Cost",
+        "FEFO": "FEFO (First-Expired-First-Out)"
+      },
+      "methodDescriptions": {
+        "FIFO": "Oldest inventory is used first. Generally results in lower COGS during inflation.",
+        "LIFO": "Newest inventory is used first. Generally results in higher COGS during inflation.",
+        "WEIGHTED_AVERAGE": "Average cost of all units in inventory. Smooths out cost fluctuations.",
+        "FEFO": "Batches closest to expiry are used first. Best for perishable goods."
+      },
+      "inventoryValue": "Inventory Value",
+      "totalValue": "Total Inventory Value",
+      "calculateValue": "Calculate Value",
+      "compareValues": "Compare Methods",
+      "comparison": {
+        "title": "Valuation Comparison",
+        "description": "Compare inventory value across different methods",
+        "fifoValue": "FIFO Value",
+        "lifoValue": "LIFO Value",
+        "wacValue": "Weighted Average Value",
+        "difference": "Difference"
+      },
+      "costHistory": {
+        "title": "Cost History",
+        "description": "Track changes in ingredient costs over time",
+        "previousCost": "Previous Cost",
+        "newCost": "New Cost",
+        "change": "Change",
+        "reason": "Reason",
+        "effectiveFrom": "Effective From",
+        "recordCostChange": "Record Cost Change",
+        "noCostHistory": "No cost history found for this ingredient"
+      },
+      "costVariance": {
+        "title": "Cost Variance",
+        "description": "Compare current costs with historical averages",
+        "currentCost": "Current Cost",
+        "averageCost": "Average Cost",
+        "variance": "Variance",
+        "variancePercent": "Variance %"
+      },
+      "consumption": {
+        "title": "Consumption History",
+        "description": "Track how inventory was consumed",
+        "summary": "Consumption Summary",
+        "byIngredient": "Consumption by Ingredient",
+        "totalQuantity": "Total Quantity",
+        "totalCost": "Total Cost",
+        "averageCost": "Average Cost",
+        "batchNumber": "Batch #"
+      },
+      "cogs": {
+        "title": "Cost of Goods Sold",
+        "description": "COGS calculated using actual batch costs",
+        "orderCOGS": "Order COGS",
+        "totalCOGS": "Total COGS",
+        "period": "Period"
+      },
+      "wac": {
+        "title": "Weighted Average Cost",
+        "recalculate": "Recalculate WAC",
+        "recalculated": "WAC recalculated successfully",
+        "currentWAC": "Current WAC",
+        "lastUpdated": "Last Updated"
+      },
+      "errors": {
+        "loadFailed": "Failed to load valuation data",
+        "saveFailed": "Failed to save valuation settings",
+        "calculateFailed": "Failed to calculate inventory value"
+      }
     }
   },
   "linkedItems": {
