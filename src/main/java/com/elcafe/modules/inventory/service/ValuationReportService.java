@@ -74,7 +74,7 @@ public class ValuationReportService {
             comparisons.add(IngredientValuationComparison.builder()
                     .ingredientId(ingredient.getId())
                     .ingredientName(ingredient.getName())
-                    .category(ingredient.getCategory() != null ? ingredient.getCategory().name() : "UNKNOWN")
+                    .category("GENERAL")
                     .currentStock(ingredient.getCurrentStock())
                     .unit(ingredient.getUnit())
                     .fifoValue(fifoValue)
@@ -156,7 +156,7 @@ public class ValuationReportService {
                         .map(b -> b.getCostPerUnit() != null ? b.getCostPerUnit() : BigDecimal.ZERO)
                         .orElse(BigDecimal.ZERO);
 
-            String category = ingredient.getCategory() != null ? ingredient.getCategory().name() : "UNKNOWN";
+            String category = "GENERAL";
 
             IngredientValuationDetail detail = IngredientValuationDetail.builder()
                     .ingredientId(ingredient.getId())
@@ -301,7 +301,7 @@ public class ValuationReportService {
             variances.add(IngredientCostVariance.builder()
                     .ingredientId(ingredientId)
                     .ingredientName(ingredient.getName())
-                    .category(ingredient.getCategory() != null ? ingredient.getCategory().name() : "UNKNOWN")
+                    .category("GENERAL")
                     .quantityConsumed(totalQty)
                     .unit(ingredient.getUnit())
                     .actualCostPerUnit(actualPerUnit)
