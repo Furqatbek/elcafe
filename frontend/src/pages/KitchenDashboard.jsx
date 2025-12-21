@@ -58,6 +58,16 @@ export default function KitchenDashboard() {
   });
   const stompClientRef = useRef(null);
   const audioInitializedRef = useRef(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Update current time every second for live timers
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     loadRestaurants();
@@ -326,9 +336,48 @@ export default function KitchenDashboard() {
   const getElapsedTime = (startTime) => {
     if (!startTime) return '';
     const start = new Date(startTime);
-    const now = new Date();
+    const now = currentTime;
     const minutes = Math.floor((now - start) / 60000);
     return `${minutes} min`;
+  };
+
+  const getElapsedSeconds = (startTime) => {
+    if (!startTime) return 0;
+    const start = new Date(startTime);
+    const now = currentTime;
+    return Math.floor((now - start) / 1000);
+  };
+
+  const formatElapsedTime = (startTime) => {
+    if (!startTime) return '0:00';
+    const seconds = getElapsedSeconds(startTime);
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getTimeColor = (startTime, estimatedMinutes) => {
+    if (!startTime || !estimatedMinutes) return 'text-gray-600';
+
+    const elapsedMinutes = getElapsedSeconds(startTime) / 60;
+    const percentage = (elapsedMinutes / estimatedMinutes) * 100;
+
+    if (percentage >= 100) return 'text-red-600 font-bold'; // Overdue
+    if (percentage >= 80) return 'text-orange-600 font-semibold'; // Warning
+    if (percentage >= 60) return 'text-yellow-600'; // Caution
+    return 'text-green-600'; // On time
+  };
+
+  const getTimerBadgeColor = (startTime, estimatedMinutes) => {
+    if (!startTime || !estimatedMinutes) return 'bg-gray-100 text-gray-800';
+
+    const elapsedMinutes = getElapsedSeconds(startTime) / 60;
+    const percentage = (elapsedMinutes / estimatedMinutes) * 100;
+
+    if (percentage >= 100) return 'bg-red-100 text-red-800 border-red-300 animate-pulse';
+    if (percentage >= 80) return 'bg-orange-100 text-orange-800 border-orange-300';
+    if (percentage >= 60) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+    return 'bg-green-100 text-green-800 border-green-300';
   };
 
   if (loading && activeOrders.length === 0 && readyOrders.length === 0) {
@@ -503,11 +552,42 @@ export default function KitchenDashboard() {
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <div className="text-sm">
-                      <span className="font-medium">{t('kitchen.fields.estimatedTime')}:</span>
-                      <span className="ml-2">{order.estimatedPreparationTimeMinutes} {t('common.minutes')}</span>
+                  {/* Live Timer */}
+                  <div className="border-2 border-dashed rounded-lg p-3 bg-gradient-to-r from-gray-50 to-white">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-gray-700">Waiting Time</div>
+                      <Badge className={`font-mono text-lg ${getTimerBadgeColor(order.createdAt, order.estimatedPreparationTimeMinutes)}`}>
+                        <Timer className="h-4 w-4 mr-1" />
+                        {formatElapsedTime(order.createdAt)}
+                      </Badge>
                     </div>
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-gray-600 mb-1">
+                        <span>Target: {order.estimatedPreparationTimeMinutes} min</span>
+                        <span className={getTimeColor(order.createdAt, order.estimatedPreparationTimeMinutes)}>
+                          {Math.floor(getElapsedSeconds(order.createdAt) / 60)} / {order.estimatedPreparationTimeMinutes} min
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            getElapsedSeconds(order.createdAt) / 60 >= order.estimatedPreparationTimeMinutes
+                              ? 'bg-red-500'
+                              : getElapsedSeconds(order.createdAt) / 60 >= order.estimatedPreparationTimeMinutes * 0.8
+                              ? 'bg-orange-500'
+                              : getElapsedSeconds(order.createdAt) / 60 >= order.estimatedPreparationTimeMinutes * 0.6
+                              ? 'bg-yellow-500'
+                              : 'bg-green-500'
+                          }`}
+                          style={{
+                            width: `${Math.min(100, (getElapsedSeconds(order.createdAt) / 60 / order.estimatedPreparationTimeMinutes) * 100)}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     {order.notes && (
                       <div className="text-sm">
                         <span className="font-medium">{t('common.notes')}:</span>
@@ -619,21 +699,41 @@ export default function KitchenDashboard() {
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{t('kitchen.fields.startedAt')}:</span>
-                      <span>{formatTime(order.preparationStartedAt)}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{t('kitchen.fields.elapsed')}:</span>
-                      <Badge variant="outline" className="font-mono">
-                        <Timer className="h-3 w-3 mr-1" />
-                        {getElapsedTime(order.preparationStartedAt)}
+                  {/* Live Cooking Timer */}
+                  <div className="border-2 border-dashed border-blue-300 rounded-lg p-3 bg-gradient-to-r from-blue-50 to-white">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium text-blue-900">
+                        <Flame className="h-4 w-4 inline mr-1" />
+                        Cooking Time
+                      </div>
+                      <Badge className={`font-mono text-lg ${getTimerBadgeColor(order.preparationStartedAt, order.estimatedPreparationTimeMinutes)}`}>
+                        <Timer className="h-4 w-4 mr-1" />
+                        {formatElapsedTime(order.preparationStartedAt)}
                       </Badge>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{t('kitchen.fields.estimated')}:</span>
-                      <span>{order.estimatedPreparationTimeMinutes} {t('common.minutes')}</span>
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-gray-600">Started: {formatTime(order.preparationStartedAt)}</span>
+                        <span className={getTimeColor(order.preparationStartedAt, order.estimatedPreparationTimeMinutes)}>
+                          {Math.floor(getElapsedSeconds(order.preparationStartedAt) / 60)} / {order.estimatedPreparationTimeMinutes} min
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            getElapsedSeconds(order.preparationStartedAt) / 60 >= order.estimatedPreparationTimeMinutes
+                              ? 'bg-red-500 animate-pulse'
+                              : getElapsedSeconds(order.preparationStartedAt) / 60 >= order.estimatedPreparationTimeMinutes * 0.8
+                              ? 'bg-orange-500'
+                              : getElapsedSeconds(order.preparationStartedAt) / 60 >= order.estimatedPreparationTimeMinutes * 0.6
+                              ? 'bg-yellow-500'
+                              : 'bg-blue-500'
+                          }`}
+                          style={{
+                            width: `${Math.min(100, (getElapsedSeconds(order.preparationStartedAt) / 60 / order.estimatedPreparationTimeMinutes) * 100)}%`
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
 
