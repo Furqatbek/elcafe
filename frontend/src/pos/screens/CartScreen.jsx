@@ -20,7 +20,7 @@ const CartScreen = () => {
     setCurrentScreen,
   } = usePOSStore();
 
-  const { items, subtotal, tax, deliveryFee, total, type, notes } = currentOrder;
+  const { items, subtotal, deliveryFee, total, type, notes } = currentOrder;
 
   const handleProceedToDetails = () => {
     // Navigate to order details screen based on type
@@ -166,13 +166,6 @@ const CartScreen = () => {
                     <span className="text-gray-700">{t('pos.cart.subtotal', 'Subtotal')}</span>
                     <span className="text-lg font-semibold text-gray-900">
                       {subtotal.toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700">{t('pos.cart.tax', 'Tax (8%)')}</span>
-                    <span className="text-lg font-semibold text-gray-900">
-                      {tax.toFixed(2)}
                     </span>
                   </div>
 
