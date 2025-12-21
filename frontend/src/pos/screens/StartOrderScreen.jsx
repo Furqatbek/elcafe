@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { Truck, ShoppingBag, UtensilsCrossed, Clock } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
@@ -9,29 +10,30 @@ import usePOSStore from '../store/posStore';
  * Large touch targets for Delivery, Takeaway, Dine-in options
  */
 const StartOrderScreen = () => {
+  const { t } = useTranslation();
   const { startNewOrder, currentOrder } = usePOSStore();
 
   const orderTypes = [
     {
       type: 'DELIVERY',
-      label: 'Delivery',
+      label: t('pos.startOrder.delivery'),
       icon: <Truck className="w-16 h-16" />,
       color: 'blue',
-      description: 'Order will be delivered to customer address',
+      description: t('pos.startOrder.deliveryDesc'),
     },
     {
       type: 'TAKEAWAY',
-      label: 'Takeaway',
+      label: t('pos.startOrder.takeaway'),
       icon: <ShoppingBag className="w-16 h-16" />,
       color: 'green',
-      description: 'Customer will pick up the order',
+      description: t('pos.startOrder.takeawayDesc'),
     },
     {
       type: 'DINE_IN',
-      label: 'Dine In',
+      label: t('pos.startOrder.dineIn'),
       icon: <UtensilsCrossed className="w-16 h-16" />,
       color: 'purple',
-      description: 'Customer will eat at the restaurant',
+      description: t('pos.startOrder.dineInDesc'),
     },
   ];
 
@@ -72,10 +74,10 @@ const StartOrderScreen = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Start New Order
+            {t('pos.startOrder.title')}
           </h1>
           <p className="text-xl text-gray-600">
-            Select order type to begin
+            {t('pos.startOrder.subtitle')}
           </p>
         </div>
 
@@ -125,11 +127,11 @@ const StartOrderScreen = () => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Clock className="w-6 h-6 text-gray-500" />
-              Recent Orders
+              {t('common.recentOrders', 'Recent Orders')}
             </h3>
           </div>
           <div className="text-center py-8 text-gray-500">
-            No recent orders to display
+            {t('common.noRecentOrders', 'No recent orders to display')}
           </div>
         </div>
 
@@ -139,10 +141,13 @@ const StartOrderScreen = () => {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-amber-900 mb-1">
-                  Active Order in Progress
+                  {t('common.activeOrderInProgress', 'Active Order in Progress')}
                 </h3>
                 <p className="text-amber-700">
-                  You have an incomplete {currentOrder.type?.toLowerCase()} order with {currentOrder.items.length} item(s)
+                  {t('common.incompleteOrderMessage', 'You have an incomplete {{type}} order with {{count}} item(s)', {
+                    type: currentOrder.type?.toLowerCase(),
+                    count: currentOrder.items.length
+                  })}
                 </p>
               </div>
               <TouchButton
@@ -150,7 +155,7 @@ const StartOrderScreen = () => {
                 size="medium"
                 onClick={() => usePOSStore.getState().setCurrentScreen('cart')}
               >
-                View Cart
+                {t('pos.cart.title')}
               </TouchButton>
             </div>
           </div>
