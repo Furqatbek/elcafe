@@ -18,9 +18,10 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TelegramBotService extends TelegramLongPollingBot {
+public class TelegramBotService {
 
     private final TelegramConfig telegramConfig;
+    private ElCafeBot bot;
 
     @PostConstruct
     public void init() {
@@ -35,51 +36,12 @@ public class TelegramBotService extends TelegramLongPollingBot {
         }
 
         try {
+            bot = new ElCafeBot(telegramConfig.getToken(), telegramConfig.getUsername());
             TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-            botsApi.registerBot(this);
+            botsApi.registerBot(bot);
             log.info("Telegram bot registered successfully: @{}", telegramConfig.getUsername());
         } catch (TelegramApiException e) {
             log.error("Failed to register Telegram bot: {}", e.getMessage());
-        }
-    }
-
-    @Override
-    public String getBotUsername() {
-        return telegramConfig.getUsername();
-    }
-
-    @Override
-    public String getBotToken() {
-        return telegramConfig.getToken();
-    }
-
-    @Override
-    public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageText = update.getMessage().getText();
-            Long chatId = update.getMessage().getChatId();
-            String userName = update.getMessage().getFrom().getUserName();
-
-            log.info("Received message from @{} (chatId: {}): {}", userName, chatId, messageText);
-
-            // Handle /start command - show chat ID for subscription
-            if (messageText.equals("/start")) {
-                String welcomeMessage = String.format(
-                    "👋 Добро пожаловать в ElCafe Stock Alert Bot!\n\n" +
-                    "🆔 Ваш Chat ID: %d\n\n" +
-                    "Используйте этот ID для подписки на уведомления о низком уровне запасов в панели управления.\n\n" +
-                    "📦 Вы будете получать уведомления когда:\n" +
-                    "• Запасы ингредиентов заканчиваются\n" +
-                    "• Требуется повторный заказ\n\n" +
-                    "Команды:\n" +
-                    "/start - Показать Chat ID\n" +
-                    "/status - Проверить статус подписки",
-                    chatId
-                );
-                sendMessage(chatId, welcomeMessage);
-            } else if (messageText.equals("/status")) {
-                sendMessage(chatId, "✅ Бот активен и готов отправлять уведомления.");
-            }
         }
     }
 
@@ -91,8 +53,8 @@ public class TelegramBotService extends TelegramLongPollingBot {
      * @return true if message was sent successfully
      */
     public boolean sendMessage(Long chatId, String message) {
-        if (!telegramConfig.isEnabled()) {
-            log.debug("Telegram bot is disabled, skipping message to chatId: {}", chatId);
+        if (!telegramConfig.isEnabled() || bot == null) {
+            log.debug("Telegram bot is disabled or not initialized, skipping message to chatId: {}", chatId);
             return false;
         }
 
@@ -106,7 +68,7 @@ public class TelegramBotService extends TelegramLongPollingBot {
             sendMessage.setChatId(chatId.toString());
             sendMessage.setText(message);
             sendMessage.setParseMode("HTML");
-            execute(sendMessage);
+            bot.execute(sendMessage);
             log.debug("Message sent to chatId {}: {}", chatId, message.substring(0, Math.min(50, message.length())));
             return true;
         } catch (TelegramApiException e) {
@@ -140,5 +102,60 @@ public class TelegramBotService extends TelegramLongPollingBot {
         );
 
         return sendMessage(chatId, message);
+    }
+
+    /**
+     * Inner class for the actual Telegram bot implementation
+     */
+    private static class ElCafeBot extends TelegramLongPollingBot {
+        private final String username;
+
+        public ElCafeBot(String token, String username) {
+            super(token);
+            this.username = username;
+        }
+
+        @Override
+        public String getBotUsername() {
+            return username;
+        }
+
+        @Override
+        public void onUpdateReceived(Update update) {
+            if (update.hasMessage() && update.getMessage().hasText()) {
+                String messageText = update.getMessage().getText();
+                Long chatId = update.getMessage().getChatId();
+
+                // Handle /start command - show chat ID for subscription
+                if (messageText.equals("/start")) {
+                    String welcomeMessage = String.format(
+                        "👋 Добро пожаловать в ElCafe Stock Alert Bot!\n\n" +
+                        "🆔 Ваш Chat ID: %d\n\n" +
+                        "Используйте этот ID для подписки на уведомления о низком уровне запасов в панели управления.\n\n" +
+                        "📦 Вы будете получать уведомления когда:\n" +
+                        "• Запасы ингредиентов заканчиваются\n" +
+                        "• Требуется повторный заказ\n\n" +
+                        "Команды:\n" +
+                        "/start - Показать Chat ID\n" +
+                        "/status - Проверить статус подписки",
+                        chatId
+                    );
+                    sendReply(chatId, welcomeMessage);
+                } else if (messageText.equals("/status")) {
+                    sendReply(chatId, "✅ Бот активен и готов отправлять уведомления.");
+                }
+            }
+        }
+
+        private void sendReply(Long chatId, String text) {
+            try {
+                SendMessage message = new SendMessage();
+                message.setChatId(chatId.toString());
+                message.setText(text);
+                execute(message);
+            } catch (TelegramApiException e) {
+                // Log error silently
+            }
+        }
     }
 }
