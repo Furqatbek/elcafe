@@ -385,6 +385,29 @@ export const inventoryAPI = {
 
   // Transaction history
   getTransactions: (id) => api.get(`/inventory/ingredients/${id}/transactions`),
+
+  // Recipes
+  getRecipesByProduct: (productId) => api.get(`/inventory/recipes/product/${productId}`),
+  getRecipesByIngredient: (ingredientId) => api.get(`/inventory/recipes/ingredient/${ingredientId}`),
+  createRecipe: (data) => api.post('/inventory/recipes', data),
+  updateRecipe: (id, data) => api.put(`/inventory/recipes/${id}`, data),
+  deleteRecipe: (id) => api.delete(`/inventory/recipes/${id}`),
+  checkProductAvailability: (productId, quantity = 1) =>
+    api.get(`/inventory/recipes/product/${productId}/check-availability`, { params: { quantity } }),
+};
+
+export const stockAlertAPI = {
+  // Subscriptions
+  getSubscriptions: (restaurantId) => api.get('/stock-alerts/subscriptions', { params: { restaurantId } }),
+  getSubscriptionById: (id) => api.get(`/stock-alerts/subscriptions/${id}`),
+  createSubscription: (data) => api.post('/stock-alerts/subscriptions', data),
+  updateSubscription: (id, data) => api.put(`/stock-alerts/subscriptions/${id}`, data),
+  toggleSubscription: (id) => api.patch(`/stock-alerts/subscriptions/${id}/toggle`),
+  deleteSubscription: (id) => api.delete(`/stock-alerts/subscriptions/${id}`),
+
+  // Alerts
+  triggerAlert: (restaurantId) => api.post(`/stock-alerts/trigger/${restaurantId}`),
+  getSummary: (restaurantId) => api.get(`/stock-alerts/summary/${restaurantId}`),
 };
 
 export const printerAPI = {
