@@ -357,7 +357,7 @@ export default function Inventory() {
   const handleAddRecipe = () => {
     setEditingRecipe(null);
     setRecipeFormData({
-      productId: '',
+      productId: selectedProduct?.id?.toString() || '',
       ingredientId: '',
       quantityRequired: '',
       unit: 'kg',
