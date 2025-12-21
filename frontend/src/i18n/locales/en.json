@@ -24,7 +24,8 @@
     "welcomeBack": "Welcome Back",
     "createAccount": "Create Account",
     "enterCredentials": "Enter your credentials to access your account",
-    "fillDetails": "Fill in your details to create an account"
+    "fillDetails": "Fill in your details to create an account",
+    "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -290,6 +291,10 @@
     "max": "Max",
     "reset": "Reset",
     "allStatuses": "All Statuses",
+    "notes": "Notes",
+    "items": "items",
+    "total": "Total",
+    "update": "Update",
     "languages": {
       "en": "English",
       "ru": "Русский",
@@ -714,7 +719,10 @@
       "passwordMin": "Password must be at least 8 characters",
       "firstNameRequired": "First name is required",
       "lastNameRequired": "Last name is required"
-    }
+    },
+    "generatePasswordTitle": "Generate secure password",
+    "generate": "Generate",
+    "passwordCopied": "Password copied to clipboard"
   },
   "courier": {
     "status": {
@@ -803,7 +811,10 @@
       "passwordMin": "Password must be at least 8 characters",
       "firstNameRequired": "First name is required",
       "lastNameRequired": "Last name is required"
-    }
+    },
+    "generatePasswordTitle": "Generate secure password",
+    "generate": "Generate",
+    "passwordCopied": "Password copied to clipboard"
   },
   "kitchen": {
     "title": "Kitchen Dashboard",
@@ -1194,6 +1205,90 @@
     "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
   },
   "inventory": {
+    "title": "Inventory Management",
+    "subtitle": "Manage ingredients and stock levels",
+    "addIngredient": "Add Ingredient",
+    "editIngredient": "Edit Ingredient",
+    "addDescription": "Create a new ingredient for inventory tracking",
+    "editDescription": "Update ingredient details",
+    "ingredientsList": "Ingredients List",
+    "ingredientsDescription": "Manage and track all ingredients",
+    "noIngredients": "No ingredients found",
+    "searchPlaceholder": "Search by name, SKU or supplier...",
+    "confirmDelete": "Are you sure you want to delete this ingredient?",
+    "addStock": "Add Stock",
+    "adjustStock": "Adjust Stock",
+    "updateStock": "Update Stock",
+    "currentStockLabel": "Current stock: {{currentStock}} {{unit}}",
+    "quantityToAdd": "Quantity to Add",
+    "newQuantity": "New Quantity",
+    "performedBy": "Performed By",
+    "transactionHistory": "Transaction History",
+    "transactionHistoryDesc": "All stock movements for this ingredient",
+    "noTransactions": "No transactions found",
+    "stats": {
+      "total": "Total Ingredients",
+      "active": "active",
+      "lowStock": "Low Stock",
+      "needsAttention": "Needs attention",
+      "reorder": "Reorder Soon",
+      "reorderSoon": "Reorder soon",
+      "tracked": "Tracked Items",
+      "monitoring": "Monitoring"
+    },
+    "filters": {
+      "all": "All Ingredients",
+      "active": "Active Only",
+      "inactive": "Inactive Only",
+      "lowStock": "Low Stock",
+      "reorder": "Reorder Level"
+    },
+    "fields": {
+      "name": "Ingredient Name",
+      "sku": "SKU",
+      "description": "Description",
+      "unit": "Unit",
+      "supplier": "Supplier",
+      "currentStock": "Current Stock",
+      "minimumStock": "Minimum Stock",
+      "reorderLevel": "Reorder Level",
+      "costPerUnit": "Cost Per Unit",
+      "status": "Status",
+      "active": "Active",
+      "trackInventory": "Track Inventory"
+    },
+    "placeholders": {
+      "name": "e.g., Tomatoes, Chicken Breast",
+      "sku": "e.g., ING-001",
+      "description": "Brief description of the ingredient",
+      "supplier": "e.g., ABC Food Suppliers"
+    },
+    "units": {
+      "kg": "Kilograms (kg)",
+      "g": "Grams (g)",
+      "L": "Liters (L)",
+      "ml": "Milliliters (ml)",
+      "pieces": "Pieces",
+      "dozens": "Dozens"
+    },
+    "status": {
+      "notTracked": "Not Tracked",
+      "lowStock": "Low Stock",
+      "reorderSoon": "Reorder Soon",
+      "inStock": "In Stock"
+    },
+    "transactionFields": {
+      "date": "Date",
+      "type": "Type",
+      "change": "Change",
+      "balanceAfter": "Balance After",
+      "performedBy": "Performed By",
+      "notes": "Notes"
+    },
+    "errors": {
+      "saveFailed": "Failed to save ingredient",
+      "deleteFailed": "Failed to delete ingredient"
+    },
     "form": {
       "newQuantity": "New Quantity *",
       "notes": "Notes"
@@ -1339,6 +1434,77 @@
       "back": "Back",
       "next": "Next",
       "finish": "Finish"
+    }
+  },
+  "pages": {
+    "menu": {
+      "description": "Complete menu with categories and products",
+      "items": "items"
+    },
+    "products": {
+      "title": "Products",
+      "subtitle": "Browse all food items",
+      "newProduct": "New Product",
+      "edit": "Edit",
+      "delete": "Delete",
+      "variants": "Variants",
+      "inStock": "In Stock",
+      "outOfStock": "Out of Stock",
+      "createVariant": "Create Product Variant",
+      "editVariant": "Edit Product Variant",
+      "addVariantFor": "Add a new variant for {{name}}",
+      "editVariantFor": "Update variant details for {{name}}",
+      "confirmDeleteVariant": "Are you sure you want to delete the variant \"{{name}}\"?",
+      "errors": {
+        "createVariantFailed": "Failed to create variant",
+        "updateVariantFailed": "Failed to update variant",
+        "deleteVariantFailed": "Failed to delete variant"
+      }
+    },
+    "orders": {
+      "createOrder": "Create Order",
+      "delivery": "Delivery",
+      "takeaway": "Takeaway",
+      "dineIn": "Dine-In",
+      "selectTable": "Select Table",
+      "noAvailableTables": "No available tables",
+      "table": "Table",
+      "capacity": "Capacity"
+    },
+    "waiters": {
+      "title": "Waiters Management",
+      "permissions": {
+        "manageTables": "Manage Tables",
+        "overridePrices": "Override Prices",
+        "voidItems": "Void Items",
+        "mergeTables": "Merge Tables",
+        "viewReports": "View Reports",
+        "handlePayments": "Handle Payments",
+        "applyDiscounts": "Apply Discounts",
+        "refundOrders": "Refund Orders"
+      },
+      "errors": {
+        "nameRequired": "Name is required",
+        "pinCodeRequired": "PIN code is required",
+        "pinMust4Digits": "PIN must be 4 digits"
+      },
+      "showingWaiters": "Showing {{count}} of {{total}} waiters",
+      "confirmDeletion": "Confirm Deletion",
+      "deleteConfirmationMessage": "Are you sure you want to delete waiter \"{{name}}\"? This action cannot be undone."
+    },
+    "customers": {
+      "id": "ID",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phone": "Phone",
+      "address": "Address",
+      "city": "City",
+      "state": "State",
+      "zipCode": "ZIP Code",
+      "tags": "Tags",
+      "status": "Status",
+      "createdAt": "Created At"
     }
   }
 }
