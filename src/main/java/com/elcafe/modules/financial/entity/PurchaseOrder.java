@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.entity;
 
+import com.elcafe.modules.inventory.entity.Supplier;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
@@ -17,6 +18,7 @@ import java.util.List;
         @Index(name = "idx_purchase_order_restaurant", columnList = "restaurant_id"),
         @Index(name = "idx_purchase_order_number", columnList = "po_number"),
         @Index(name = "idx_purchase_order_supplier", columnList = "supplier_name"),
+        @Index(name = "idx_purchase_order_supplier_id", columnList = "supplier_id"),
         @Index(name = "idx_purchase_order_date", columnList = "order_date")
 })
 @Getter
@@ -36,6 +38,10 @@ public class PurchaseOrder {
 
     @Column(nullable = false, unique = true, length = 50)
     private String poNumber; // e.g., "PO-2025-001"
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id")
+    private Supplier supplier;
 
     @Column(nullable = false, length = 200)
     private String supplierName;

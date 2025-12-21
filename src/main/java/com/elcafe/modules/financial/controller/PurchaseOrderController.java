@@ -5,7 +5,9 @@ import com.elcafe.modules.financial.entity.PurchaseOrder;
 import com.elcafe.modules.financial.entity.PurchaseOrderItem;
 import com.elcafe.modules.financial.service.PurchaseOrderService;
 import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.entity.Supplier;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
+import com.elcafe.modules.inventory.repository.SupplierRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.utils.ApiResponse;
@@ -30,6 +32,7 @@ public class PurchaseOrderController {
     private final PurchaseOrderService purchaseOrderService;
     private final RestaurantRepository restaurantRepository;
     private final InventoryIngredientRepository ingredientRepository;
+    private final SupplierRepository supplierRepository;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -40,11 +43,34 @@ public class PurchaseOrderController {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
+        Supplier supplier = null;
+        String supplierName = request.getSupplierName();
+        String supplierContact = request.getSupplierContact();
+        String supplierAddress = request.getSupplierAddress();
+
+        if (request.getSupplierId() != null) {
+            supplier = supplierRepository.findById(request.getSupplierId())
+                    .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
+            // Auto-populate from supplier entity if not provided
+            if (supplierName == null || supplierName.isBlank()) {
+                supplierName = supplier.getName();
+            }
+            if (supplierContact == null || supplierContact.isBlank()) {
+                supplierContact = supplier.getContactPerson() != null ?
+                        supplier.getContactPerson() + (supplier.getPhone() != null ? " - " + supplier.getPhone() : "") :
+                        supplier.getPhone();
+            }
+            if (supplierAddress == null || supplierAddress.isBlank()) {
+                supplierAddress = supplier.getAddress();
+            }
+        }
+
         PurchaseOrder po = PurchaseOrder.builder()
                 .restaurant(restaurant)
-                .supplierName(request.getSupplierName())
-                .supplierContact(request.getSupplierContact())
-                .supplierAddress(request.getSupplierAddress())
+                .supplier(supplier)
+                .supplierName(supplierName)
+                .supplierContact(supplierContact)
+                .supplierAddress(supplierAddress)
                 .orderDate(request.getOrderDate())
                 .expectedDeliveryDate(request.getExpectedDeliveryDate())
                 .taxAmount(request.getTaxAmount() != null ? request.getTaxAmount() : BigDecimal.ZERO)
@@ -169,14 +195,17 @@ public class PurchaseOrderController {
                         .build())
                 .collect(Collectors.toList());
 
+        Supplier supplierEntity = po.getSupplier();
         return PurchaseOrderResponse.builder()
                 .id(po.getId())
                 .restaurantId(po.getRestaurant().getId())
                 .restaurantName(po.getRestaurant().getName())
                 .poNumber(po.getPoNumber())
+                .supplierId(supplierEntity != null ? supplierEntity.getId() : null)
                 .supplierName(po.getSupplierName())
                 .supplierContact(po.getSupplierContact())
                 .supplierAddress(po.getSupplierAddress())
+                .supplierPaymentTerms(supplierEntity != null ? supplierEntity.getPaymentTerms() : null)
                 .orderDate(po.getOrderDate())
                 .expectedDeliveryDate(po.getExpectedDeliveryDate())
                 .actualDeliveryDate(po.getActualDeliveryDate())
