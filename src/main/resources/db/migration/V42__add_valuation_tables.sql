@@ -1,59 +1,54 @@
 -- Valuation Settings Table
 CREATE TABLE valuation_settings (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    restaurant_id BIGINT NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    restaurant_id BIGINT NOT NULL REFERENCES restaurants(id),
     valuation_method VARCHAR(20) NOT NULL,
-    effective_from DATETIME NOT NULL,
+    effective_from TIMESTAMP NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_by VARCHAR(100),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    INDEX idx_valuation_restaurant (restaurant_id),
-    INDEX idx_valuation_active (is_active),
-    CONSTRAINT fk_valuation_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_valuation_restaurant ON valuation_settings(restaurant_id);
+CREATE INDEX idx_valuation_active ON valuation_settings(is_active);
 
 -- Ingredient Cost History Table
 CREATE TABLE ingredient_cost_history (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    ingredient_id BIGINT NOT NULL,
+    id BIGSERIAL PRIMARY KEY,
+    ingredient_id BIGINT NOT NULL REFERENCES inventory_ingredients(id),
     cost_per_unit DECIMAL(15, 4) NOT NULL,
     previous_cost DECIMAL(15, 4),
-    effective_from DATETIME NOT NULL,
-    effective_to DATETIME,
+    effective_from TIMESTAMP NOT NULL,
+    effective_to TIMESTAMP,
     reason VARCHAR(50) NOT NULL,
     source_reference VARCHAR(100),
     notes TEXT,
     created_by VARCHAR(100),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    INDEX idx_cost_history_ingredient (ingredient_id),
-    INDEX idx_cost_history_date (effective_from),
-    CONSTRAINT fk_cost_history_ingredient FOREIGN KEY (ingredient_id) REFERENCES inventory_ingredients(id)
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_cost_history_ingredient ON ingredient_cost_history(ingredient_id);
+CREATE INDEX idx_cost_history_date ON ingredient_cost_history(effective_from);
 
 -- Batch Consumption Table
 CREATE TABLE batch_consumptions (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    ingredient_id BIGINT NOT NULL,
-    batch_id BIGINT NOT NULL,
-    transaction_id BIGINT,
+    id BIGSERIAL PRIMARY KEY,
+    ingredient_id BIGINT NOT NULL REFERENCES inventory_ingredients(id),
+    batch_id BIGINT NOT NULL REFERENCES inventory_batches(id),
+    transaction_id BIGINT REFERENCES inventory_transactions(id),
     order_id BIGINT,
     order_item_id BIGINT,
     quantity DECIMAL(10, 3) NOT NULL,
     cost_per_unit DECIMAL(15, 4) NOT NULL,
     total_cost DECIMAL(15, 4) NOT NULL,
     valuation_method VARCHAR(20) NOT NULL,
-    consumed_at DATETIME NOT NULL,
+    consumed_at TIMESTAMP NOT NULL,
     batch_number VARCHAR(100),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    INDEX idx_consumption_batch (batch_id),
-    INDEX idx_consumption_transaction (transaction_id),
-    INDEX idx_consumption_order (order_id),
-    INDEX idx_consumption_ingredient (ingredient_id),
-    INDEX idx_consumption_date (consumed_at),
-    CONSTRAINT fk_consumption_ingredient FOREIGN KEY (ingredient_id) REFERENCES inventory_ingredients(id),
-    CONSTRAINT fk_consumption_batch FOREIGN KEY (batch_id) REFERENCES inventory_batches(id),
-    CONSTRAINT fk_consumption_transaction FOREIGN KEY (transaction_id) REFERENCES inventory_transactions(id)
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE INDEX idx_consumption_batch ON batch_consumptions(batch_id);
+CREATE INDEX idx_consumption_transaction ON batch_consumptions(transaction_id);
+CREATE INDEX idx_consumption_order ON batch_consumptions(order_id);
+CREATE INDEX idx_consumption_ingredient ON batch_consumptions(ingredient_id);
+CREATE INDEX idx_consumption_date ON batch_consumptions(consumed_at);
