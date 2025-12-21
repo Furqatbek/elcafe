@@ -155,10 +155,19 @@ public class InventoryService {
     }
 
     /**
-     * Add stock to an ingredient
+     * Add stock to an ingredient (uses ingredient's effective cost)
      */
     @Transactional
     public void addStock(Long ingredientId, BigDecimal quantity, String notes, String performedBy) {
+        addStock(ingredientId, quantity, null, notes, performedBy);
+    }
+
+    /**
+     * Add stock to an ingredient with cost tracking
+     */
+    @Transactional
+    public void addStock(Long ingredientId, BigDecimal quantity, BigDecimal costPerUnit,
+                         String notes, String performedBy) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
                 .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
 
@@ -166,27 +175,37 @@ public class InventoryService {
         ingredient.addStock(quantity);
         BigDecimal balanceAfter = ingredient.getCurrentStock();
 
+        // Use provided cost or ingredient's effective cost
+        BigDecimal effectiveCost = costPerUnit != null ? costPerUnit : ingredient.getEffectiveCost();
+
+        // Update WAC if cost is provided
+        if (costPerUnit != null && costPerUnit.compareTo(BigDecimal.ZERO) > 0) {
+            ingredient.updateWeightedAverageCost(quantity, costPerUnit);
+        }
+
         ingredientRepository.save(ingredient);
 
-        // Record transaction
+        // Record transaction with cost
         InventoryTransaction transaction = InventoryTransaction.builder()
                 .ingredient(ingredient)
                 .type(TransactionType.PURCHASE)
                 .quantity(quantity)
                 .balanceBefore(balanceBefore)
                 .balanceAfter(balanceAfter)
+                .costPerUnit(effectiveCost)
+                .totalCost(effectiveCost.multiply(quantity))
                 .notes(notes)
                 .performedBy(performedBy)
                 .build();
 
         transactionRepository.save(transaction);
 
-        log.info("Added {} {} of {} by {}",
-                quantity, ingredient.getUnit(), ingredient.getName(), performedBy);
+        log.info("Added {} {} of {} by {} (cost: {})",
+                quantity, ingredient.getUnit(), ingredient.getName(), performedBy, effectiveCost);
     }
 
     /**
-     * Adjust stock manually
+     * Adjust stock manually with cost tracking using effective cost (WAC or costPerUnit)
      */
     @Transactional
     public void adjustStock(Long ingredientId, BigDecimal newQuantity, String reason, String performedBy) {
@@ -199,21 +218,27 @@ public class InventoryService {
         ingredient.setCurrentStock(newQuantity);
         ingredientRepository.save(ingredient);
 
-        // Record transaction
+        // Use ingredient's effective cost (WAC if available, else costPerUnit)
+        BigDecimal effectiveCost = ingredient.getEffectiveCost();
+        BigDecimal totalCostImpact = effectiveCost.multiply(difference.abs());
+
+        // Record transaction with cost information
         InventoryTransaction transaction = InventoryTransaction.builder()
                 .ingredient(ingredient)
                 .type(TransactionType.ADJUSTMENT)
                 .quantity(difference.abs())
                 .balanceBefore(balanceBefore)
                 .balanceAfter(newQuantity)
+                .costPerUnit(effectiveCost)
+                .totalCost(totalCostImpact)
                 .notes(reason)
                 .performedBy(performedBy)
                 .build();
 
         transactionRepository.save(transaction);
 
-        log.info("Adjusted {} stock from {} to {} by {} (reason: {})",
-                ingredient.getName(), balanceBefore, newQuantity, performedBy, reason);
+        log.info("Adjusted {} stock from {} to {} by {} (reason: {}, cost impact: {})",
+                ingredient.getName(), balanceBefore, newQuantity, performedBy, reason, totalCostImpact);
     }
 
     /**

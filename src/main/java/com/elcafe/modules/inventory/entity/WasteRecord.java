@@ -110,10 +110,15 @@ public class WasteRecord {
 
     /**
      * Set unit cost from ingredient if not provided
+     * Uses ingredient's effective cost (WAC if available, else costPerUnit)
      */
     public void setUnitCostFromIngredient() {
-        if (unitCost == null && ingredient != null && ingredient.getCostPerUnit() != null) {
-            this.unitCost = ingredient.getCostPerUnit();
+        if (unitCost == null && ingredient != null) {
+            // Use effective cost which prefers WAC over static costPerUnit
+            BigDecimal effectiveCost = ingredient.getEffectiveCost();
+            if (effectiveCost != null && effectiveCost.compareTo(BigDecimal.ZERO) > 0) {
+                this.unitCost = effectiveCost;
+            }
         }
     }
 

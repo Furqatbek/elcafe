@@ -35,7 +35,8 @@ public class WasteService {
     private final InventoryService inventoryService;
 
     /**
-     * Record a waste event
+     * Record a waste event with cost tracking
+     * Cost priority: 1) Provided unitCost, 2) Batch cost, 3) Ingredient effective cost (WAC)
      */
     @Transactional
     public WasteRecord recordWaste(WasteRecordRequest request) {
@@ -54,13 +55,22 @@ public class WasteService {
                     .orElseThrow(() -> new RuntimeException("Batch not found"));
         }
 
+        // Determine unit cost using priority: provided > batch > ingredient effective cost (WAC)
+        BigDecimal unitCost = request.getUnitCost();
+        if (unitCost == null && batch != null && batch.getCostPerUnit() != null) {
+            unitCost = batch.getCostPerUnit();
+        }
+        if (unitCost == null) {
+            unitCost = ingredient.getEffectiveCost();
+        }
+
         WasteRecord wasteRecord = WasteRecord.builder()
                 .restaurant(restaurant)
                 .ingredient(ingredient)
                 .batch(batch)
                 .wasteDate(request.getWasteDate() != null ? request.getWasteDate() : LocalDate.now())
                 .quantity(request.getQuantity())
-                .unitCost(request.getUnitCost())
+                .unitCost(unitCost)
                 .wasteReason(request.getWasteReason())
                 .recordedBy(request.getRecordedBy())
                 .notes(request.getNotes())
@@ -68,7 +78,7 @@ public class WasteService {
 
         WasteRecord savedRecord = wasteRecordRepository.save(wasteRecord);
 
-        // Deduct from inventory
+        // Deduct from inventory (adjustStock now tracks cost)
         try {
             inventoryService.adjustStock(
                     ingredient.getId(),
@@ -81,9 +91,9 @@ public class WasteService {
             log.warn("Failed to deduct waste from inventory: {}", e.getMessage());
         }
 
-        log.info("Waste recorded: {} {} of {} (reason: {})",
+        log.info("Waste recorded: {} {} of {} at {} per unit (reason: {}, total cost: {})",
                 request.getQuantity(), ingredient.getUnit(), ingredient.getName(),
-                request.getWasteReason().getLabel());
+                unitCost, request.getWasteReason().getLabel(), savedRecord.getTotalCost());
 
         return savedRecord;
     }

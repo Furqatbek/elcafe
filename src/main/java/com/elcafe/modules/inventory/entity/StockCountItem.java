@@ -105,15 +105,19 @@ public class StockCountItem {
 
     /**
      * Calculate variance between system and counted quantities
+     * Uses ingredient's effective cost (WAC if available) for variance value
      */
     public void calculateVariance() {
         if (countedQuantity != null && systemQuantity != null) {
             this.varianceQuantity = countedQuantity.subtract(systemQuantity);
 
-            // Calculate variance value using ingredient's cost per unit
-            if (ingredient != null && ingredient.getCostPerUnit() != null) {
-                this.varianceValue = varianceQuantity.multiply(ingredient.getCostPerUnit())
-                        .setScale(2, RoundingMode.HALF_UP);
+            // Calculate variance value using ingredient's effective cost (WAC or costPerUnit)
+            if (ingredient != null) {
+                BigDecimal effectiveCost = ingredient.getEffectiveCost();
+                if (effectiveCost != null && effectiveCost.compareTo(BigDecimal.ZERO) > 0) {
+                    this.varianceValue = varianceQuantity.multiply(effectiveCost)
+                            .setScale(2, RoundingMode.HALF_UP);
+                }
             }
         }
     }
