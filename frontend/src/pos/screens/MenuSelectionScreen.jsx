@@ -230,7 +230,7 @@ const MenuSelectionScreen = () => {
             <div>
               <p className="text-sm text-gray-600">{t('pos.menu.currentOrder', 'Current Order')}</p>
               <p className="text-2xl font-bold text-gray-900">
-                ${currentOrder.total.toFixed(2)}
+                {currentOrder.total.toFixed(2)}
               </p>
             </div>
             <div className="flex items-center gap-3">

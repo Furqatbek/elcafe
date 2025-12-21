@@ -99,7 +99,7 @@ const OrderConfirmationScreen = () => {
               <div className="flex justify-between">
                 <span className="text-gray-700">{t('pos.confirmation.totalAmount', 'Total Amount')}</span>
                 <span className="text-2xl font-bold text-gray-900">
-                  ${currentOrder.total?.toFixed(2) || '0.00'}
+                  {currentOrder.total?.toFixed(2) || '0.00'}
                 </span>
               </div>
               <div className="flex justify-between">

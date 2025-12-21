@@ -320,7 +320,7 @@ const OrderDetailsScreen = () => {
               </div>
               <div className="flex justify-between text-xl font-bold">
                 <span>{t('pos.cart.total', 'Total')}:</span>
-                <span>${currentOrder.total.toFixed(2)}</span>
+                <span>{currentOrder.total.toFixed(2)}</span>
               </div>
             </div>
           </div>

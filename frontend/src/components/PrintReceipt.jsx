@@ -371,7 +371,7 @@ const generateReceiptHTML = (order) => {
               ${item.variantName ? ` (${item.variantName})` : ''}
             </td>
             <td class="qty">${item.quantity}</td>
-            <td class="price">${(item.totalPrice || 0).toFixed(2)}</td>
+            <td class="price">{(item.totalPrice || 0).toFixed(2)}</td>
           </tr>
           `).join('')}
         </tbody>
@@ -382,26 +382,26 @@ const generateReceiptHTML = (order) => {
     <div class="totals">
       <div class="total-line subtotal">
         <span class="label">Oraliq summa:</span>
-        <span class="amount">${(order.subtotal || 0).toFixed(2)}</span>
+        <span class="amount">{(order.subtotal || 0).toFixed(2)}</span>
       </div>
 
       ${order.deliveryFee && order.deliveryFee > 0 ? `
       <div class="total-line">
         <span class="label">Yetkazib berish:</span>
-        <span class="amount">${(order.deliveryFee || 0).toFixed(2)}</span>
+        <span class="amount">{(order.deliveryFee || 0).toFixed(2)}</span>
       </div>
       ` : ''}
 
       ${order.discount && order.discount > 0 ? `
       <div class="total-line">
         <span class="label">Chegirma:</span>
-        <span class="amount">-${(order.discount || 0).toFixed(2)}</span>
+        <span class="amount">-{(order.discount || 0).toFixed(2)}</span>
       </div>
       ` : ''}
 
       <div class="total-line grand-total">
         <span class="label">JAMI:</span>
-        <span class="amount">${(order.total || 0).toFixed(2)}</span>
+        <span class="amount">{(order.total || 0).toFixed(2)}</span>
       </div>
     </div>
 

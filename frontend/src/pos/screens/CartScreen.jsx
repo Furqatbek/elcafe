@@ -165,14 +165,14 @@ const CartScreen = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-700">{t('pos.cart.subtotal', 'Subtotal')}</span>
                     <span className="text-lg font-semibold text-gray-900">
-                      ${subtotal.toFixed(2)}
+                      {subtotal.toFixed(2)}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center">
                     <span className="text-gray-700">{t('pos.cart.tax', 'Tax (8%)')}</span>
                     <span className="text-lg font-semibold text-gray-900">
-                      ${tax.toFixed(2)}
+                      {tax.toFixed(2)}
                     </span>
                   </div>
 
@@ -180,7 +180,7 @@ const CartScreen = () => {
                     <div className="flex justify-between items-center">
                       <span className="text-gray-700">{t('pos.cart.deliveryFee', 'Delivery Fee')}</span>
                       <span className="text-lg font-semibold text-gray-900">
-                        ${deliveryFee.toFixed(2)}
+                        {deliveryFee.toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -189,7 +189,7 @@ const CartScreen = () => {
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-gray-900">{t('pos.cart.total', 'Total')}</span>
                       <span className="text-3xl font-bold text-gray-900">
-                        ${total.toFixed(2)}
+                        {total.toFixed(2)}
                       </span>
                     </div>
                   </div>

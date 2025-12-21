@@ -66,7 +66,7 @@ const PaymentScreen = () => {
     const amount = parseFloat(cashAmount);
 
     if (!amount || amount < currentOrder.total) {
-      alert(t('pos.payment.insufficientAmount', 'Amount must be at least ${{total}}', { total: currentOrder.total.toFixed(2) }));
+      alert(t('pos.payment.insufficientAmount', 'Amount must be at least {{total}}', { total: currentOrder.total.toFixed(2) }));
       return;
     }
 
@@ -214,7 +214,7 @@ const PaymentScreen = () => {
             {/* Total Amount Due */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white">
               <p className="text-xl mb-2 opacity-90">{t('pos.payment.amountDue', 'Amount Due')}</p>
-              <p className="text-6xl font-bold">${currentOrder.total.toFixed(2)}</p>
+              <p className="text-6xl font-bold">{currentOrder.total.toFixed(2)}</p>
             </div>
 
             {/* Payment Methods */}
@@ -272,7 +272,7 @@ const PaymentScreen = () => {
                         size="large"
                         onClick={() => setCashAmount(amount.toFixed(2))}
                       >
-                        ${amount.toFixed(2)}
+                        {amount.toFixed(2)}
                       </TouchButton>
                     ))}
                   </div>
@@ -294,7 +294,7 @@ const PaymentScreen = () => {
                         <div>
                           <p className="text-sm text-green-700 mb-1">{t('pos.payment.changeDue', 'Change Due')}</p>
                           <p className="text-5xl font-bold text-green-900">
-                            ${changeDue.toFixed(2)}
+                            {changeDue.toFixed(2)}
                           </p>
                         </div>
                         <CheckCircle className="w-16 h-16 text-green-500" />
@@ -365,7 +365,7 @@ const PaymentScreen = () => {
                   {item.quantity}x {item.name}
                 </span>
                 <span className="font-semibold text-gray-900">
-                  ${item.itemTotal.toFixed(2)}
+                  {item.itemTotal.toFixed(2)}
                 </span>
               </div>
             ))}
@@ -375,21 +375,21 @@ const PaymentScreen = () => {
           <div className="border-t-2 border-gray-200 pt-4 space-y-2">
             <div className="flex justify-between text-gray-700">
               <span>{t('pos.cart.subtotal', 'Subtotal')}</span>
-              <span>${currentOrder.subtotal.toFixed(2)}</span>
+              <span>{currentOrder.subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-700">
               <span>{t('pos.cart.tax', 'Tax')}</span>
-              <span>${currentOrder.tax.toFixed(2)}</span>
+              <span>{currentOrder.tax.toFixed(2)}</span>
             </div>
             {currentOrder.deliveryFee > 0 && (
               <div className="flex justify-between text-gray-700">
                 <span>{t('pos.cart.deliveryFee', 'Delivery')}</span>
-                <span>${currentOrder.deliveryFee.toFixed(2)}</span>
+                <span>{currentOrder.deliveryFee.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t-2 border-gray-200">
               <span>{t('pos.cart.total', 'Total')}</span>
-              <span>${currentOrder.total.toFixed(2)}</span>
+              <span>{currentOrder.total.toFixed(2)}</span>
             </div>
           </div>
         </div>
