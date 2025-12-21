@@ -80,13 +80,19 @@ public class PurchaseOrderController {
 
         List<PurchaseOrderItem> items = request.getItems().stream()
                 .map(itemReq -> {
+                    BigDecimal quantity = itemReq.getQuantity() != null ? itemReq.getQuantity() : BigDecimal.ZERO;
+                    BigDecimal unitPrice = itemReq.getUnitPrice() != null ? itemReq.getUnitPrice() : BigDecimal.ZERO;
+                    BigDecimal totalPrice = quantity.multiply(unitPrice);
+
                     PurchaseOrderItem item = PurchaseOrderItem.builder()
                             .itemName(itemReq.getItemName())
                             .description(itemReq.getDescription())
                             .sku(itemReq.getSku())
-                            .quantity(itemReq.getQuantity())
-                            .unit(itemReq.getUnit())
-                            .unitPrice(itemReq.getUnitPrice())
+                            .quantity(quantity)
+                            .unit(itemReq.getUnit() != null ? itemReq.getUnit() : "")
+                            .unitPrice(unitPrice)
+                            .totalPrice(totalPrice)
+                            .receivedQuantity(BigDecimal.ZERO)
                             .notes(itemReq.getNotes())
                             .build();
 

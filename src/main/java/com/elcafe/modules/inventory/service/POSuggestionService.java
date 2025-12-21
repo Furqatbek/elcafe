@@ -143,14 +143,19 @@ public class POSuggestionService {
         List<PurchaseOrderItem> items = ingredients.stream()
                 .map(ing -> {
                     BigDecimal suggestedQty = calculateSuggestedQuantity(ing);
+                    BigDecimal unitPrice = ing.getCostPerUnit() != null ? ing.getCostPerUnit() : BigDecimal.ZERO;
+                    BigDecimal totalPrice = suggestedQty.multiply(unitPrice);
+
                     return PurchaseOrderItem.builder()
                             .ingredient(ing)
                             .itemName(ing.getName())
                             .description(ing.getDescription())
                             .sku(ing.getSku())
                             .quantity(suggestedQty)
-                            .unit(ing.getUnit())
-                            .unitPrice(ing.getCostPerUnit() != null ? ing.getCostPerUnit() : BigDecimal.ZERO)
+                            .unit(ing.getUnit() != null ? ing.getUnit() : "")
+                            .unitPrice(unitPrice)
+                            .totalPrice(totalPrice)
+                            .receivedQuantity(BigDecimal.ZERO)
                             .build();
                 })
                 .collect(Collectors.toList());
