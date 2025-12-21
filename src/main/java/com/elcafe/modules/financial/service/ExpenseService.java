@@ -155,6 +155,8 @@ public class ExpenseService {
             case RENT -> Account.AccountCategory.RENT;
             case UTILITIES -> Account.AccountCategory.UTILITIES;
             case SUPPLIES -> Account.AccountCategory.SUPPLIES;
+            case INVENTORY -> Account.AccountCategory.INVENTORY;
+            case COST_OF_GOODS_SOLD -> Account.AccountCategory.COST_OF_GOODS;
             case MARKETING -> Account.AccountCategory.MARKETING;
             case DELIVERY_COSTS -> Account.AccountCategory.DELIVERY_COSTS;
             default -> Account.AccountCategory.OTHER_EXPENSE;
@@ -162,6 +164,48 @@ public class ExpenseService {
 
         return accountRepository.findByRestaurantIdAndCategory(restaurantId, accountCategory)
                 .stream().findFirst().orElse(null);
+    }
+
+    /**
+     * Create an expense record from a received purchase order
+     */
+    @Transactional
+    public Expense createExpenseFromPurchaseOrder(
+            Restaurant restaurant,
+            Long purchaseOrderId,
+            String poNumber,
+            String supplierName,
+            BigDecimal subtotal,
+            BigDecimal taxAmount,
+            LocalDate expenseDate,
+            String createdBy
+    ) {
+        log.info("Creating expense from PO: {} for restaurant: {}", poNumber, restaurant.getId());
+
+        String expenseNumber = generateExpenseNumber(restaurant.getId());
+
+        Expense expense = Expense.builder()
+                .restaurant(restaurant)
+                .expenseNumber(expenseNumber)
+                .expenseDate(expenseDate)
+                .category(Expense.ExpenseCategory.INVENTORY)
+                .description("Purchase Order: " + poNumber)
+                .vendor(supplierName)
+                .amount(subtotal)
+                .taxAmount(taxAmount != null ? taxAmount : BigDecimal.ZERO)
+                .totalAmount(subtotal.add(taxAmount != null ? taxAmount : BigDecimal.ZERO))
+                .paymentMethod(Expense.PaymentMethod.BANK_TRANSFER)
+                .paymentStatus(Expense.PaymentStatus.UNPAID)
+                .referenceNumber(poNumber)
+                .purchaseOrderId(purchaseOrderId)
+                .createdBy(createdBy)
+                .recurring(false)
+                .build();
+
+        Expense savedExpense = expenseRepository.save(expense);
+
+        log.info("Expense created from PO: {} -> {}", poNumber, expenseNumber);
+        return savedExpense;
     }
 
     private String generateExpenseNumber(Long restaurantId) {

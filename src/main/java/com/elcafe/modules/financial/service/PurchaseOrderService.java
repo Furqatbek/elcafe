@@ -34,6 +34,7 @@ public class PurchaseOrderService {
     private final AccountRepository accountRepository;
     private final JournalService journalService;
     private final InventoryService inventoryService;
+    private final ExpenseService expenseService;
 
     @Transactional
     public PurchaseOrder createPurchaseOrder(PurchaseOrder purchaseOrder, List<PurchaseOrderItem> items) {
@@ -132,6 +133,22 @@ public class PurchaseOrderService {
         // Create journal entry for inventory and accounts payable
         if (fullyReceived) {
             createPurchaseJournalEntry(savedPo, receivedBy);
+
+            // Create expense record for the purchase order
+            try {
+                expenseService.createExpenseFromPurchaseOrder(
+                        savedPo.getRestaurant(),
+                        savedPo.getId(),
+                        savedPo.getPoNumber(),
+                        savedPo.getSupplierName(),
+                        savedPo.getSubtotal(),
+                        savedPo.getTaxAmount(),
+                        actualDeliveryDate,
+                        receivedBy
+                );
+            } catch (Exception e) {
+                log.warn("Failed to create expense for PO {}: {}", savedPo.getPoNumber(), e.getMessage());
+            }
         }
 
         log.info("Purchase order received: {}", po.getPoNumber());
