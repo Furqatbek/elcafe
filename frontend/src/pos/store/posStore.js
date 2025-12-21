@@ -249,6 +249,38 @@ const usePOSStore = create(
         },
       }),
 
+      fetchMenuData: async (restaurantId) => {
+        set((s) => ({ ui: { ...s.ui, isLoading: true, error: null } }));
+
+        try {
+          // Fetch categories and products in parallel
+          const [categoriesRes, productsRes] = await Promise.all([
+            posAPI.getCategories(restaurantId),
+            posAPI.getProducts(restaurantId),
+          ]);
+
+          const categories = categoriesRes.data.data || categoriesRes.data || [];
+          const products = productsRes.data.data || productsRes.data || [];
+
+          set({
+            menu: {
+              categories,
+              products,
+              lastFetched: new Date().toISOString(),
+            },
+            ui: { ...get().ui, isLoading: false },
+          });
+
+          return { success: true, categories, products };
+        } catch (error) {
+          const errorMessage = error.response?.data?.message || error.message || 'Failed to load menu';
+          set((s) => ({
+            ui: { ...s.ui, isLoading: false, error: errorMessage },
+          }));
+          return { success: false, error: errorMessage };
+        }
+      },
+
       // Actions: Submit Order to Backend
       submitOrder: async (restaurantId) => {
         const state = get();

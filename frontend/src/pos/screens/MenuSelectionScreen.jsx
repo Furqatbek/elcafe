@@ -14,7 +14,7 @@ const MenuSelectionScreen = () => {
   const {
     currentOrder,
     menu,
-    setMenuData,
+    fetchMenuData,
     setSelectedProduct,
     setCurrentScreen,
     ui,
@@ -25,20 +25,14 @@ const MenuSelectionScreen = () => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [loading, setLoading] = useState(true);
 
-  // Fetch menu data
+  // Fetch menu data from backend
   useEffect(() => {
-    const fetchMenu = async () => {
+    const loadMenu = async () => {
       try {
         setLoading(true);
-        const [categoriesRes, productsRes] = await Promise.all([
-          posAPI.getCategories(),
-          posAPI.getProducts(),
-        ]);
-
-        setMenuData(
-          categoriesRes.data.data || [],
-          productsRes.data.data || []
-        );
+        // Use restaurant ID 1 as default (first restaurant)
+        // TODO: Add restaurant selector if multiple restaurants
+        await fetchMenuData(1);
       } catch (error) {
         console.error('Failed to fetch menu:', error);
       } finally {
@@ -51,7 +45,7 @@ const MenuSelectionScreen = () => {
       (new Date() - new Date(menu.lastFetched)) > 5 * 60 * 1000;
 
     if (isStale) {
-      fetchMenu();
+      loadMenu();
     } else {
       setLoading(false);
     }

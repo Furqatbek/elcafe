@@ -299,6 +299,8 @@ export const waiterAPI = {
 
 export const posAPI = {
   createOrder: (orderData) => api.post('/pos/orders', orderData),
+  getCategories: (restaurantId) => api.get(`/menu/restaurants/${restaurantId}/categories`),
+  getProducts: (restaurantId) => api.get(`/products/restaurant/${restaurantId}`),
 };
 
 export const waiterOrderAPI = {
