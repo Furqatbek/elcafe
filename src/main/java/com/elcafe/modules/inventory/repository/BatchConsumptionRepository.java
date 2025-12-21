@@ -116,4 +116,15 @@ public interface BatchConsumptionRepository extends JpaRepository<BatchConsumpti
      * Delete consumptions for an order (for order cancellation)
      */
     void deleteByOrderId(Long orderId);
+
+    /**
+     * Find all consumptions for a restaurant in a date range
+     */
+    @Query("SELECT bc FROM BatchConsumption bc WHERE bc.ingredient.restaurant.id = :restaurantId " +
+           "AND bc.consumedAt >= :startDate AND bc.consumedAt <= :endDate " +
+           "ORDER BY bc.consumedAt DESC")
+    List<BatchConsumption> findByRestaurantAndDateRange(
+            @Param("restaurantId") Long restaurantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 }

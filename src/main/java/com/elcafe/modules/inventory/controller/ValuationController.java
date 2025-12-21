@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.modules.inventory.dto.ValuationReportDTO.*;
 import com.elcafe.modules.inventory.entity.BatchConsumption;
 import com.elcafe.modules.inventory.entity.IngredientCostHistory;
 import com.elcafe.modules.inventory.entity.ValuationSettings;
@@ -8,6 +9,7 @@ import com.elcafe.modules.inventory.enums.ValuationMethod;
 import com.elcafe.modules.inventory.service.BatchConsumptionService;
 import com.elcafe.modules.inventory.service.CostHistoryService;
 import com.elcafe.modules.inventory.service.InventoryValuationService;
+import com.elcafe.modules.inventory.service.ValuationReportService;
 import com.elcafe.utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,7 @@ public class ValuationController {
     private final InventoryValuationService valuationService;
     private final CostHistoryService costHistoryService;
     private final BatchConsumptionService consumptionService;
+    private final ValuationReportService reportService;
 
     // ==================== Valuation Settings ====================
 
@@ -279,6 +282,49 @@ public class ValuationController {
         return ResponseEntity.ok(ApiResponse.success("Total COGS calculated",
                 Map.of("restaurantId", restaurantId, "startDate", startDate,
                         "endDate", endDate, "totalCOGS", cogs)));
+    }
+
+    // ==================== Valuation Reports ====================
+
+    /**
+     * Generate valuation comparison report (FIFO vs LIFO vs WAC)
+     */
+    @GetMapping("/reports/comparison")
+    public ResponseEntity<ApiResponse<ValuationComparisonReport>> getValuationComparisonReport(
+            @RequestParam Long restaurantId) {
+        log.info("Generating valuation comparison report for restaurant {}", restaurantId);
+
+        ValuationComparisonReport report = reportService.generateComparisonReport(restaurantId);
+        return ResponseEntity.ok(ApiResponse.success("Valuation comparison report generated", report));
+    }
+
+    /**
+     * Generate full inventory valuation report
+     */
+    @GetMapping("/reports/inventory")
+    public ResponseEntity<ApiResponse<InventoryValuationReport>> getInventoryValuationReport(
+            @RequestParam Long restaurantId,
+            @RequestParam(required = false) ValuationMethod method) {
+        log.info("Generating inventory valuation report for restaurant {} using method {}",
+                restaurantId, method);
+
+        InventoryValuationReport report = reportService.generateValuationReport(restaurantId, method);
+        return ResponseEntity.ok(ApiResponse.success("Inventory valuation report generated", report));
+    }
+
+    /**
+     * Generate cost variance report (Actual vs Standard)
+     */
+    @GetMapping("/reports/variance")
+    public ResponseEntity<ApiResponse<CostVarianceReport>> getCostVarianceReport(
+            @RequestParam Long restaurantId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+        log.info("Generating cost variance report for restaurant {} from {} to {}",
+                restaurantId, startDate, endDate);
+
+        CostVarianceReport report = reportService.generateCostVarianceReport(restaurantId, startDate, endDate);
+        return ResponseEntity.ok(ApiResponse.success("Cost variance report generated", report));
     }
 
     // ==================== Request/Response DTOs ====================
