@@ -340,7 +340,7 @@ export default function Orders() {
         </div>
         <Button onClick={() => setCreateModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Order
+          {t('pages.orders.createOrder', 'Create Order')}
         </Button>
       </div>
 
@@ -350,11 +350,11 @@ export default function Orders() {
           <div className="flex justify-between items-center">
             <CardTitle className="text-lg">
               <Filter className="h-5 w-5 inline mr-2" />
-              Filters
+              {t('pages.orders.filters', 'Filters')}
             </CardTitle>
             <Button variant="outline" size="sm" onClick={resetFilters}>
               <X className="h-4 w-4 mr-1" />
-              Reset
+              {t('pages.orders.reset', 'Reset')}
             </Button>
           </div>
         </CardHeader>
@@ -380,8 +380,8 @@ export default function Orders() {
                 <SelectItem value="ACCEPTED">{t("orders.status.accepted")}</SelectItem>
                 <SelectItem value="PREPARING">{t("orders.status.preparing")}</SelectItem>
                 <SelectItem value="READY">{t("orders.status.ready")}</SelectItem>
-                <SelectItem value="COURIER_ASSIGNED">Courier Assigned</SelectItem>
-                <SelectItem value="ON_DELIVERY">On Delivery</SelectItem>
+                <SelectItem value="COURIER_ASSIGNED">{t("orders.status.courierAssigned", "Courier Assigned")}</SelectItem>
+                <SelectItem value="ON_DELIVERY">{t("orders.status.onDelivery", "On Delivery")}</SelectItem>
                 <SelectItem value="DELIVERED">{t("orders.status.delivered")}</SelectItem>
                 <SelectItem value="CANCELLED">{t("orders.status.cancelled")}</SelectItem>
               </SelectContent>
@@ -392,7 +392,7 @@ export default function Orders() {
                 <SelectValue placeholder={t("common.placeholders.allRestaurants")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Restaurants</SelectItem>
+                <SelectItem value="all">{t("pages.orders.allRestaurants", "All Restaurants")}</SelectItem>
                 {restaurants.map((restaurant) => (
                   <SelectItem key={restaurant.id} value={restaurant.id.toString()}>
                     {restaurant.name}
@@ -583,15 +583,15 @@ export default function Orders() {
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Create New Order</DialogTitle>
+            <DialogTitle>{t('pages.orders.createNewOrder', 'Create New Order')}</DialogTitle>
             <DialogDescription>
-              Create a new order for a customer
+              {t('pages.orders.createOrderDescription', 'Create a new order for a customer')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateOrder}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="restaurantId">Restaurant *</Label>
+                <Label htmlFor="restaurantId">{t('pages.orders.restaurant', 'Restaurant')} *</Label>
                 <Select
                   value={formData.restaurantId}
                   onValueChange={(value) => {
@@ -618,7 +618,7 @@ export default function Orders() {
 
               {/* Order Type Selection */}
               <div className="space-y-2">
-                <Label>Order Type *</Label>
+                <Label>{t('pages.orders.orderType', 'Order Type')} *</Label>
                 <div className="grid grid-cols-3 gap-3">
                   <button
                     type="button"
@@ -632,7 +632,7 @@ export default function Orders() {
                     }`}
                   >
                     <Truck className="h-6 w-6 mb-2" />
-                    <span className="font-medium">Delivery</span>
+                    <span className="font-medium">{t('pages.orders.delivery', 'Delivery')}</span>
                   </button>
                   <button
                     type="button"
@@ -646,7 +646,7 @@ export default function Orders() {
                     }`}
                   >
                     <ShoppingBag className="h-6 w-6 mb-2" />
-                    <span className="font-medium">Takeaway</span>
+                    <span className="font-medium">{t('pages.orders.takeaway', 'Takeaway')}</span>
                   </button>
                   <button
                     type="button"
@@ -663,7 +663,7 @@ export default function Orders() {
                     }`}
                   >
                     <Utensils className="h-6 w-6 mb-2" />
-                    <span className="font-medium">Dine-In</span>
+                    <span className="font-medium">{t('pages.orders.dineIn', 'Dine-In')}</span>
                   </button>
                 </div>
               </div>
@@ -671,7 +671,7 @@ export default function Orders() {
               {/* Table Selection for Dine-In Orders */}
               {formData.orderType === 'DINE_IN' && (
                 <div className="space-y-2">
-                  <Label htmlFor="diningTableId">Select Table *</Label>
+                  <Label htmlFor="diningTableId">{t('pages.orders.selectTable', 'Select Table')} *</Label>
                   <Select
                     value={formData.diningTableId}
                     onValueChange={(value) => setFormData({ ...formData, diningTableId: value })}
@@ -683,13 +683,13 @@ export default function Orders() {
                     <SelectContent>
                       {tables.length === 0 ? (
                         <SelectItem value="no-tables" disabled>
-                          No available tables
+                          {t('pages.orders.noAvailableTables', 'No available tables')}
                         </SelectItem>
                       ) : (
                         tables.map((table) => (
                           <SelectItem key={table.id} value={table.id.toString()}>
-                            Table {table.tableNumber} {table.tableName ? `- ${table.tableName}` : ''}
-                            (Capacity: {table.capacity})
+                            {t('pages.orders.table', 'Table')} {table.tableNumber} {table.tableName ? `- ${table.tableName}` : ''}
+                            ({t('pages.orders.capacity', 'Capacity')}: {table.capacity})
                           </SelectItem>
                         ))
                       )}
@@ -700,7 +700,7 @@ export default function Orders() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="customerFirstName">First Name *</Label>
+                  <Label htmlFor="customerFirstName">{t('pages.orders.firstName', 'First Name')} *</Label>
                   <Input
                     id="customerFirstName"
                     value={formData.customerFirstName}
@@ -710,7 +710,7 @@ export default function Orders() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="customerLastName">Last Name *</Label>
+                  <Label htmlFor="customerLastName">{t('pages.orders.lastName', 'Last Name')} *</Label>
                   <Input
                     id="customerLastName"
                     value={formData.customerLastName}
@@ -722,7 +722,7 @@ export default function Orders() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="customerPhone">Customer Phone *</Label>
+                  <Label htmlFor="customerPhone">{t('pages.orders.customerPhone', 'Customer Phone')} *</Label>
                   <Input
                     id="customerPhone"
                     type="tel"
@@ -733,7 +733,7 @@ export default function Orders() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="customerEmail">Customer Email</Label>
+                  <Label htmlFor="customerEmail">{t('pages.orders.customerEmail', 'Customer Email')}</Label>
                   <Input
                     id="customerEmail"
                     type="email"
@@ -747,7 +747,7 @@ export default function Orders() {
               {formData.orderType === 'DELIVERY' && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="deliveryAddress">Delivery Address *</Label>
+                    <Label htmlFor="deliveryAddress">{t('pages.orders.deliveryAddress', 'Delivery Address')} *</Label>
                     <Input
                       id="deliveryAddress"
                       value={formData.deliveryAddress}
@@ -758,7 +758,7 @@ export default function Orders() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="deliveryCity">City *</Label>
+                      <Label htmlFor="deliveryCity">{t('pages.orders.city', 'City')} *</Label>
                       <Input
                         id="deliveryCity"
                         value={formData.deliveryCity}
@@ -768,7 +768,7 @@ export default function Orders() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="deliveryState">State</Label>
+                      <Label htmlFor="deliveryState">{t('pages.orders.state', 'State')}</Label>
                       <Input
                         id="deliveryState"
                         value={formData.deliveryState}
@@ -778,7 +778,7 @@ export default function Orders() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="deliveryZipCode">ZIP Code</Label>
+                    <Label htmlFor="deliveryZipCode">{t('pages.orders.zipCode', 'ZIP Code')}</Label>
                     <Input
                       id="deliveryZipCode"
                       value={formData.deliveryZipCode}
@@ -789,13 +789,13 @@ export default function Orders() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="paymentMethod">Payment Method *</Label>
+                <Label htmlFor="paymentMethod">{t('pages.orders.paymentMethod', 'Payment Method')} *</Label>
                 <Select
                   value={formData.paymentMethod}
                   onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select payment method" />
+                    <SelectValue placeholder={t('pages.orders.selectPaymentMethod', 'Select payment method')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="CARD">{t("orders.paymentMethod.card")}</SelectItem>
@@ -806,7 +806,7 @@ export default function Orders() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="customerNotes">Customer Notes</Label>
+                <Label htmlFor="customerNotes">{t('pages.orders.customerNotes', 'Customer Notes')}</Label>
                 <Textarea
                   id="customerNotes"
                   value={formData.customerNotes}
@@ -817,7 +817,7 @@ export default function Orders() {
 
               {/* Add Items Section */}
               <div className="border-t pt-4">
-                <Label className="text-base font-semibold">Order Items</Label>
+                <Label className="text-base font-semibold">{t('pages.orders.orderItems', 'Order Items')}</Label>
                 <div className="grid grid-cols-3 gap-2 mt-2">
                   <div className="col-span-2">
                     <Select
@@ -873,7 +873,7 @@ export default function Orders() {
                       </div>
                     ))}
                     <div className="flex justify-between items-center p-2 bg-blue-50 rounded font-semibold">
-                      <span>Total</span>
+                      <span>{t('pages.orders.total', 'Total')}</span>
                       <span>${calculateTotal().toFixed(2)}</span>
                     </div>
                   </div>
@@ -882,10 +882,10 @@ export default function Orders() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setCreateModalOpen(false); resetForm(); }}>
-                Cancel
+                {t('pages.orders.cancel', 'Cancel')}
               </Button>
               <Button type="submit" disabled={formData.items.length === 0}>
-                Create Order
+                {t('pages.orders.createOrder', 'Create Order')}
               </Button>
             </DialogFooter>
           </form>
