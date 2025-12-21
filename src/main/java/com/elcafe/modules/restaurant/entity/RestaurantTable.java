@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.entity;
 
 import com.elcafe.modules.order.entity.Order;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -60,6 +61,7 @@ public class RestaurantTable {
     private String qrCode;
 
     @OneToMany(mappedBy = "diningTable", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Order> orders;
 
     @CreationTimestamp

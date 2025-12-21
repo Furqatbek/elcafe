@@ -280,10 +280,17 @@ export default function KitchenDashboard() {
               <Card key={order.id} className="border-l-4 border-l-yellow-500">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">
-                        {order.order.orderNumber}
-                      </CardTitle>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg">
+                          {order.order.orderNumber}
+                        </CardTitle>
+                        {order.order.diningTable && (
+                          <Badge variant="outline" className="text-xs font-semibold">
+                            Table {order.order.diningTable.tableNumber}
+                          </Badge>
+                        )}
+                      </div>
                       <CardDescription className="flex items-center gap-2 mt-1">
                         <Clock className="h-3 w-3" />
                         {formatTime(order.createdAt)}
@@ -295,6 +302,38 @@ export default function KitchenDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Order Items */}
+                  {order.order.items && order.order.items.length > 0 && (
+                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-3 bg-gray-50">
+                      <div className="space-y-2">
+                        {order.order.items.map((item, idx) => (
+                          <div key={idx} className="text-sm">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <span className="font-semibold text-gray-900">
+                                  {item.quantity}x {item.productName}
+                                </span>
+                                {item.variantName && (
+                                  <span className="text-gray-600 ml-1">({item.variantName})</span>
+                                )}
+                              </div>
+                            </div>
+                            {item.addOns && (
+                              <div className="text-xs text-gray-600 ml-4 mt-1">
+                                + {item.addOns}
+                              </div>
+                            )}
+                            {item.specialInstructions && (
+                              <div className="text-xs text-orange-600 ml-4 mt-1 font-medium">
+                                ⚠️ {item.specialInstructions}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <div className="text-sm">
                       <span className="font-medium">{t('kitchen.fields.estimatedTime')}:</span>
@@ -343,10 +382,17 @@ export default function KitchenDashboard() {
               <Card key={order.id} className="border-l-4 border-l-blue-500">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">
-                        {order.order.orderNumber}
-                      </CardTitle>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg">
+                          {order.order.orderNumber}
+                        </CardTitle>
+                        {order.order.diningTable && (
+                          <Badge variant="outline" className="text-xs font-semibold">
+                            Table {order.order.diningTable.tableNumber}
+                          </Badge>
+                        )}
+                      </div>
                       <CardDescription className="flex items-center gap-2 mt-1">
                         <User className="h-3 w-3" />
                         {order.assignedChef}
@@ -358,6 +404,38 @@ export default function KitchenDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Order Items */}
+                  {order.order.items && order.order.items.length > 0 && (
+                    <div className="border-2 border-dashed border-blue-200 rounded-lg p-3 bg-blue-50">
+                      <div className="space-y-2">
+                        {order.order.items.map((item, idx) => (
+                          <div key={idx} className="text-sm">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <span className="font-semibold text-gray-900">
+                                  {item.quantity}x {item.productName}
+                                </span>
+                                {item.variantName && (
+                                  <span className="text-gray-600 ml-1">({item.variantName})</span>
+                                )}
+                              </div>
+                            </div>
+                            {item.addOns && (
+                              <div className="text-xs text-gray-600 ml-4 mt-1">
+                                + {item.addOns}
+                              </div>
+                            )}
+                            {item.specialInstructions && (
+                              <div className="text-xs text-orange-600 ml-4 mt-1 font-medium">
+                                ⚠️ {item.specialInstructions}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{t('kitchen.fields.startedAt')}:</span>
@@ -403,10 +481,17 @@ export default function KitchenDashboard() {
               <Card key={order.id} className="border-l-4 border-l-green-500">
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg">
-                        {order.order.orderNumber}
-                      </CardTitle>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg">
+                          {order.order.orderNumber}
+                        </CardTitle>
+                        {order.order.diningTable && (
+                          <Badge variant="outline" className="text-xs font-semibold">
+                            Table {order.order.diningTable.tableNumber}
+                          </Badge>
+                        )}
+                      </div>
                       <CardDescription className="flex items-center gap-2 mt-1">
                         <CheckCircle className="h-3 w-3" />
                         {formatTime(order.preparationCompletedAt)}
@@ -418,6 +503,38 @@ export default function KitchenDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Order Items */}
+                  {order.order.items && order.order.items.length > 0 && (
+                    <div className="border-2 border-dashed border-green-200 rounded-lg p-3 bg-green-50">
+                      <div className="space-y-2">
+                        {order.order.items.map((item, idx) => (
+                          <div key={idx} className="text-sm">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <span className="font-semibold text-gray-900">
+                                  {item.quantity}x {item.productName}
+                                </span>
+                                {item.variantName && (
+                                  <span className="text-gray-600 ml-1">({item.variantName})</span>
+                                )}
+                              </div>
+                            </div>
+                            {item.addOns && (
+                              <div className="text-xs text-gray-600 ml-4 mt-1">
+                                + {item.addOns}
+                              </div>
+                            )}
+                            {item.specialInstructions && (
+                              <div className="text-xs text-orange-600 ml-4 mt-1 font-medium">
+                                ⚠️ {item.specialInstructions}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{t('kitchen.fields.preparedBy')}:</span>

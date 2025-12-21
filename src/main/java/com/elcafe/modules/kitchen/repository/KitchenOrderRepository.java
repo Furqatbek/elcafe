@@ -16,11 +16,28 @@ public interface KitchenOrderRepository extends JpaRepository<KitchenOrder, Long
 
     Optional<KitchenOrder> findByOrderId(Long orderId);
 
-    List<KitchenOrder> findByStatusOrderByCreatedAtAsc(KitchenOrderStatus status);
+    @Query("SELECT DISTINCT ko FROM KitchenOrder ko " +
+           "LEFT JOIN FETCH ko.order o " +
+           "LEFT JOIN FETCH o.items " +
+           "LEFT JOIN FETCH o.diningTable " +
+           "WHERE ko.status = :status " +
+           "ORDER BY ko.createdAt ASC")
+    List<KitchenOrder> findByStatusOrderByCreatedAtAsc(@Param("status") KitchenOrderStatus status);
 
-    List<KitchenOrder> findByStatusInOrderByPriorityDescCreatedAtAsc(List<KitchenOrderStatus> statuses);
+    @Query("SELECT DISTINCT ko FROM KitchenOrder ko " +
+           "LEFT JOIN FETCH ko.order o " +
+           "LEFT JOIN FETCH o.items " +
+           "LEFT JOIN FETCH o.diningTable " +
+           "WHERE ko.status IN :statuses " +
+           "ORDER BY ko.priority DESC, ko.createdAt ASC")
+    List<KitchenOrder> findByStatusInOrderByPriorityDescCreatedAtAsc(@Param("statuses") List<KitchenOrderStatus> statuses);
 
-    @Query("SELECT ko FROM KitchenOrder ko WHERE ko.order.restaurant.id = :restaurantId AND ko.status IN :statuses ORDER BY ko.priority DESC, ko.createdAt ASC")
+    @Query("SELECT DISTINCT ko FROM KitchenOrder ko " +
+           "LEFT JOIN FETCH ko.order o " +
+           "LEFT JOIN FETCH o.items " +
+           "LEFT JOIN FETCH o.diningTable " +
+           "WHERE o.restaurant.id = :restaurantId AND ko.status IN :statuses " +
+           "ORDER BY ko.priority DESC, ko.createdAt ASC")
     List<KitchenOrder> findByRestaurantAndStatuses(@Param("restaurantId") Long restaurantId, @Param("statuses") List<KitchenOrderStatus> statuses);
 
     List<KitchenOrder> findByAssignedChef(String chefName);

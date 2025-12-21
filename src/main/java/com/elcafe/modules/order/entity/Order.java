@@ -57,7 +57,6 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dining_table_id")
-    @JsonIgnore
     private RestaurantTable diningTable;
 
     @ManyToOne(fetch = FetchType.LAZY)
