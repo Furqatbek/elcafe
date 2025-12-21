@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { kitchenAPI } from '../services/api';
+import audioNotificationService from '../utils/audioNotifications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -34,6 +35,8 @@ import {
   User,
   ArrowRight,
   TrendingUp,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 
 export default function KitchenDashboard() {
@@ -48,11 +51,36 @@ export default function KitchenDashboard() {
   const [chefName, setChefName] = useState('');
   const [priorityModalOpen, setPriorityModalOpen] = useState(false);
   const [selectedPriority, setSelectedPriority] = useState('NORMAL');
+  const [audioMuted, setAudioMuted] = useState(() => {
+    // Load mute state from localStorage
+    const saved = localStorage.getItem('kitchenAudioMuted');
+    return saved === 'true';
+  });
   const stompClientRef = useRef(null);
+  const audioInitializedRef = useRef(false);
 
   useEffect(() => {
     loadRestaurants();
-  }, []);
+
+    // Initialize audio on first user interaction
+    const initAudio = () => {
+      if (!audioInitializedRef.current) {
+        audioNotificationService.initialize();
+        audioNotificationService.setMuted(audioMuted);
+        audioInitializedRef.current = true;
+        console.log('Audio initialized on user interaction');
+      }
+    };
+
+    // Listen for any user interaction to initialize audio
+    document.addEventListener('click', initAudio, { once: true });
+    document.addEventListener('keydown', initAudio, { once: true });
+
+    return () => {
+      document.removeEventListener('click', initAudio);
+      document.removeEventListener('keydown', initAudio);
+    };
+  }, [audioMuted]);
 
   // WebSocket connection effect
   useEffect(() => {
@@ -133,18 +161,47 @@ export default function KitchenDashboard() {
     console.log('Received kitchen event:', event);
 
     const eventType = event.data?.eventType;
+    const eventData = event.data;
 
     switch (eventType) {
       case 'kitchen.order.created':
+        // Play new order sound
+        audioNotificationService.playNewOrderSound();
+        loadOrders();
+        break;
       case 'kitchen.order.preparing':
+        loadOrders();
+        break;
       case 'kitchen.order.ready':
+        // Play order ready sound
+        audioNotificationService.playOrderReadySound();
+        loadOrders();
+        break;
       case 'kitchen.order.picked_up':
+        loadOrders();
+        break;
       case 'kitchen.order.priority_updated':
-        // Reload orders to get fresh data
+        // Play urgent sound if priority is URGENT
+        if (eventData?.priority === 'URGENT') {
+          audioNotificationService.playUrgentSound();
+        } else {
+          audioNotificationService.playPriorityChangeSound();
+        }
         loadOrders();
         break;
       default:
         console.log('Unknown kitchen event type:', eventType);
+    }
+  };
+
+  const toggleAudioMute = () => {
+    const newMutedState = audioNotificationService.toggleMute();
+    setAudioMuted(newMutedState);
+    localStorage.setItem('kitchenAudioMuted', newMutedState.toString());
+
+    // Play test sound when unmuting
+    if (!newMutedState) {
+      setTimeout(() => audioNotificationService.playPriorityChangeSound(), 100);
     }
   };
 
@@ -305,6 +362,14 @@ export default function KitchenDashboard() {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            onClick={toggleAudioMute}
+            variant="outline"
+            size="icon"
+            title={audioMuted ? 'Unmute audio alerts' : 'Mute audio alerts'}
+          >
+            {audioMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
           <Button onClick={loadOrders} variant="outline">
             {t('common.refresh')}
           </Button>
