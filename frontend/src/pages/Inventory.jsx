@@ -106,7 +106,7 @@ export default function Inventory() {
     minimumStock: '',
     reorderLevel: '',
     costPerUnit: '',
-    supplier: '',
+    supplierId: '',
     sku: '',
     active: true,
     trackInventory: true,
@@ -251,7 +251,7 @@ export default function Inventory() {
         (ing) =>
           ing.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           ing.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          ing.supplier?.toLowerCase().includes(searchTerm.toLowerCase())
+          ing.supplierName?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -279,7 +279,7 @@ export default function Inventory() {
       minimumStock: '',
       reorderLevel: '',
       costPerUnit: '',
-      supplier: '',
+      supplierId: '',
       sku: '',
       active: true,
       trackInventory: true,
@@ -297,7 +297,7 @@ export default function Inventory() {
       minimumStock: ingredient.minimumStock,
       reorderLevel: ingredient.reorderLevel,
       costPerUnit: ingredient.costPerUnit || '',
-      supplier: ingredient.supplier || '',
+      supplierId: ingredient.supplierId?.toString() || '',
       sku: ingredient.sku || '',
       active: ingredient.active,
       trackInventory: ingredient.trackInventory,
@@ -314,6 +314,7 @@ export default function Inventory() {
         minimumStock: parseFloat(formData.minimumStock) || 0,
         reorderLevel: parseFloat(formData.reorderLevel) || 0,
         costPerUnit: formData.costPerUnit ? parseFloat(formData.costPerUnit) : null,
+        supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
       };
 
       if (editingIngredient) {
@@ -827,7 +828,7 @@ export default function Inventory() {
                           </TableCell>
                           <TableCell>{ingredient.minimumStock}</TableCell>
                           <TableCell>{ingredient.unit}</TableCell>
-                          <TableCell>{ingredient.supplier || '-'}</TableCell>
+                          <TableCell>{ingredient.supplierName || '-'}</TableCell>
                           <TableCell>
                             <Badge className={status.color}>{status.label}</Badge>
                           </TableCell>
@@ -1432,13 +1433,23 @@ export default function Inventory() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="supplier">{t('inventory.fields.supplier')}</Label>
-                <Input
-                  id="supplier"
-                  value={formData.supplier}
-                  onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                  placeholder={t('inventory.placeholders.supplier')}
-                />
+                <Label htmlFor="supplierId">{t('inventory.fields.supplier')}</Label>
+                <Select
+                  value={formData.supplierId}
+                  onValueChange={(value) => setFormData({ ...formData, supplierId: value })}
+                >
+                  <SelectTrigger id="supplierId">
+                    <SelectValue placeholder={t('inventory.placeholders.selectSupplier', 'Select supplier')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">{t('common.none', 'None')}</SelectItem>
+                    {suppliers.filter(s => s.active).map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

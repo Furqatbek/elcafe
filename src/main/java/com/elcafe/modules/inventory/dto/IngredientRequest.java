@@ -44,6 +44,8 @@ public class IngredientRequest {
 
     private String supplier;
 
+    private Long supplierId;
+
     private String sku;
 
     private Boolean active;

@@ -7,7 +7,9 @@ import com.elcafe.modules.inventory.dto.IngredientRequest;
 import com.elcafe.modules.inventory.dto.IngredientResponse;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
+import com.elcafe.modules.inventory.entity.Supplier;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
+import com.elcafe.modules.inventory.repository.SupplierRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -29,6 +31,7 @@ public class InventoryIngredientController {
 
     private final InventoryIngredientRepository ingredientRepository;
     private final RestaurantRepository restaurantRepository;
+    private final SupplierRepository supplierRepository;
     private final InventoryService inventoryService;
 
     @GetMapping
@@ -88,6 +91,12 @@ public class InventoryIngredientController {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + request.getRestaurantId()));
 
+        Supplier supplier = null;
+        if (request.getSupplierId() != null) {
+            supplier = supplierRepository.findById(request.getSupplierId())
+                    .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
+        }
+
         Ingredient ingredient = Ingredient.builder()
                 .restaurant(restaurant)
                 .name(request.getName())
@@ -98,6 +107,7 @@ public class InventoryIngredientController {
                 .reorderLevel(request.getReorderLevel())
                 .costPerUnit(request.getCostPerUnit())
                 .supplier(request.getSupplier())
+                .supplierEntity(supplier)
                 .sku(request.getSku())
                 .active(request.getActive() != null ? request.getActive() : true)
                 .trackInventory(request.getTrackInventory() != null ? request.getTrackInventory() : true)
@@ -118,6 +128,12 @@ public class InventoryIngredientController {
         Ingredient ingredient = ingredientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
 
+        Supplier supplier = null;
+        if (request.getSupplierId() != null) {
+            supplier = supplierRepository.findById(request.getSupplierId())
+                    .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
+        }
+
         ingredient.setName(request.getName());
         ingredient.setDescription(request.getDescription());
         ingredient.setUnit(request.getUnit());
@@ -126,6 +142,7 @@ public class InventoryIngredientController {
         ingredient.setReorderLevel(request.getReorderLevel());
         ingredient.setCostPerUnit(request.getCostPerUnit());
         ingredient.setSupplier(request.getSupplier());
+        ingredient.setSupplierEntity(supplier);
         ingredient.setSku(request.getSku());
         ingredient.setActive(request.getActive());
         ingredient.setTrackInventory(request.getTrackInventory());
@@ -200,6 +217,7 @@ public class InventoryIngredientController {
     }
 
     private IngredientResponse mapToResponse(Ingredient ingredient) {
+        Supplier supplierEntity = ingredient.getSupplierEntity();
         return IngredientResponse.builder()
                 .id(ingredient.getId())
                 .restaurantId(ingredient.getRestaurant().getId())
@@ -212,6 +230,8 @@ public class InventoryIngredientController {
                 .reorderLevel(ingredient.getReorderLevel())
                 .costPerUnit(ingredient.getCostPerUnit())
                 .supplier(ingredient.getSupplier())
+                .supplierId(supplierEntity != null ? supplierEntity.getId() : null)
+                .supplierName(supplierEntity != null ? supplierEntity.getName() : ingredient.getSupplier())
                 .sku(ingredient.getSku())
                 .active(ingredient.getActive())
                 .trackInventory(ingredient.getTrackInventory())

@@ -25,6 +25,8 @@ public class IngredientResponse {
     private BigDecimal reorderLevel;
     private BigDecimal costPerUnit;
     private String supplier;
+    private Long supplierId;
+    private String supplierName;
     private String sku;
     private Boolean active;
     private Boolean trackInventory;
