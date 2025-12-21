@@ -74,6 +74,7 @@ function App() {
           <Route path="kitchen" element={<KitchenDashboard />} />
           <Route path="kitchen/inventory" element={<Inventory />} />
           <Route path="kitchen/recipes" element={<Inventory />} />
+          <Route path="kitchen/suppliers" element={<Inventory />} />
           <Route path="kitchen/stock-alerts" element={<Inventory />} />
           <Route path="finance/purchase-orders" element={<PurchaseOrders />} />
           <Route path="finance/expenses" element={<Expenses />} />

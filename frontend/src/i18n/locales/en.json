@@ -79,6 +79,7 @@
       "kitchenDashboard": "Kitchen Dashboard",
       "recipes": "Recipes",
       "inventory": "Inventory",
+      "suppliers": "Suppliers",
       "stockAlerts": "Stock Alerts",
       "purchaseOrders": "Purchase Orders",
       "expenses": "Expenses",
@@ -1304,6 +1305,7 @@
     "tabs": {
       "ingredients": "Ingredients",
       "recipes": "Recipes",
+      "suppliers": "Suppliers",
       "stockAlerts": "Stock Alerts"
     },
     "recipes": {
@@ -1358,6 +1360,57 @@
       "errors": {
         "saveFailed": "Failed to save subscription",
         "triggerFailed": "Failed to trigger alert"
+      }
+    },
+    "suppliers": {
+      "title": "Suppliers",
+      "subtitle": "Manage your ingredient suppliers",
+      "addSupplier": "Add Supplier",
+      "editSupplier": "Edit Supplier",
+      "noSuppliers": "No suppliers found. Add your first supplier.",
+      "confirmDelete": "Are you sure you want to delete this supplier?",
+      "fields": {
+        "name": "Company Name",
+        "code": "Supplier Code",
+        "contactPerson": "Contact Person",
+        "phone": "Phone",
+        "email": "Email",
+        "address": "Address",
+        "paymentTerms": "Payment Terms",
+        "creditLimit": "Credit Limit",
+        "currency": "Currency",
+        "rating": "Rating",
+        "totalOrders": "Total Orders",
+        "onTimeDeliveryRate": "On-Time Delivery",
+        "active": "Active",
+        "notes": "Notes"
+      },
+      "placeholders": {
+        "name": "Enter company name",
+        "code": "e.g., SUP-001",
+        "contactPerson": "Contact person name",
+        "phone": "+998 XX XXX XX XX",
+        "email": "supplier@example.com",
+        "address": "Full address",
+        "notes": "Additional notes..."
+      },
+      "paymentTerms": {
+        "cod": "Cash on Delivery",
+        "net15": "Net 15 Days",
+        "net30": "Net 30 Days",
+        "net60": "Net 60 Days",
+        "prepaid": "Prepaid"
+      },
+      "stats": {
+        "total": "Total Suppliers",
+        "active": "Active",
+        "avgRating": "Avg. Rating",
+        "topPerformer": "Top Performer"
+      },
+      "errors": {
+        "saveFailed": "Failed to save supplier",
+        "deleteFailed": "Failed to delete supplier",
+        "loadFailed": "Failed to load suppliers"
       }
     }
   },

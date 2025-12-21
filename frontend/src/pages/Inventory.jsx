@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { inventoryAPI, restaurantAPI, menuAPI, stockAlertAPI } from '../services/api';
+import { inventoryAPI, restaurantAPI, menuAPI, stockAlertAPI, supplierAPI } from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -49,6 +49,11 @@ import {
   Send,
   Power,
   Link2,
+  Truck,
+  Star,
+  Phone,
+  Mail,
+  MapPin,
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -59,6 +64,7 @@ export default function Inventory() {
   const getInitialTab = () => {
     if (location.pathname.includes('recipes')) return 'recipes';
     if (location.pathname.includes('stock-alerts')) return 'alerts';
+    if (location.pathname.includes('suppliers')) return 'suppliers';
     return 'ingredients';
   };
 
@@ -131,6 +137,24 @@ export default function Inventory() {
     alertOnReorder: true,
   });
 
+  // Suppliers state
+  const [suppliers, setSuppliers] = useState([]);
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState(null);
+  const [supplierFormData, setSupplierFormData] = useState({
+    name: '',
+    code: '',
+    contactPerson: '',
+    phone: '',
+    email: '',
+    address: '',
+    paymentTerms: '',
+    creditLimit: '',
+    currency: 'UZS',
+    active: true,
+    notes: '',
+  });
+
   useEffect(() => {
     loadRestaurants();
   }, []);
@@ -141,6 +165,7 @@ export default function Inventory() {
       loadProducts();
       loadSubscriptions();
       loadAlertSummary();
+      loadSuppliers();
     }
   }, [selectedRestaurant]);
 
@@ -197,6 +222,15 @@ export default function Inventory() {
       setAlertSummary(response.data.data || null);
     } catch (error) {
       console.error('Failed to load alert summary:', error);
+    }
+  };
+
+  const loadSuppliers = async () => {
+    try {
+      const response = await supplierAPI.getAll(selectedRestaurant);
+      setSuppliers(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load suppliers:', error);
     }
   };
 
@@ -491,6 +525,95 @@ export default function Inventory() {
     }
   };
 
+  // Supplier handlers
+  const handleAddSupplier = () => {
+    setEditingSupplier(null);
+    setSupplierFormData({
+      name: '',
+      code: '',
+      contactPerson: '',
+      phone: '',
+      email: '',
+      address: '',
+      paymentTerms: '',
+      creditLimit: '',
+      currency: 'UZS',
+      active: true,
+      notes: '',
+    });
+    setSupplierModalOpen(true);
+  };
+
+  const handleEditSupplier = (supplier) => {
+    setEditingSupplier(supplier);
+    setSupplierFormData({
+      name: supplier.name,
+      code: supplier.code || '',
+      contactPerson: supplier.contactPerson || '',
+      phone: supplier.phone || '',
+      email: supplier.email || '',
+      address: supplier.address || '',
+      paymentTerms: supplier.paymentTerms || '',
+      creditLimit: supplier.creditLimit?.toString() || '',
+      currency: supplier.currency || 'UZS',
+      active: supplier.active,
+      notes: supplier.notes || '',
+    });
+    setSupplierModalOpen(true);
+  };
+
+  const handleSaveSupplier = async () => {
+    try {
+      const data = {
+        restaurantId: selectedRestaurant,
+        name: supplierFormData.name,
+        code: supplierFormData.code || null,
+        contactPerson: supplierFormData.contactPerson || null,
+        phone: supplierFormData.phone || null,
+        email: supplierFormData.email || null,
+        address: supplierFormData.address || null,
+        paymentTerms: supplierFormData.paymentTerms || null,
+        creditLimit: supplierFormData.creditLimit ? parseFloat(supplierFormData.creditLimit) : null,
+        currency: supplierFormData.currency,
+        active: supplierFormData.active,
+        notes: supplierFormData.notes || null,
+      };
+
+      if (editingSupplier) {
+        await supplierAPI.update(editingSupplier.id, data);
+      } else {
+        await supplierAPI.create(data);
+      }
+
+      setSupplierModalOpen(false);
+      loadSuppliers();
+    } catch (error) {
+      console.error('Failed to save supplier:', error);
+      alert(t('inventory.suppliers.errors.saveFailed', 'Failed to save supplier'));
+    }
+  };
+
+  const handleDeleteSupplier = async (id) => {
+    if (!confirm(t('inventory.suppliers.confirmDelete', 'Are you sure you want to delete this supplier?'))) return;
+
+    try {
+      await supplierAPI.delete(id);
+      loadSuppliers();
+    } catch (error) {
+      console.error('Failed to delete supplier:', error);
+      alert(t('inventory.suppliers.errors.deleteFailed', 'Failed to delete supplier'));
+    }
+  };
+
+  const handleToggleSupplier = async (id) => {
+    try {
+      await supplierAPI.toggle(id);
+      loadSuppliers();
+    } catch (error) {
+      console.error('Failed to toggle supplier:', error);
+    }
+  };
+
   const getStockStatus = (ingredient) => {
     if (!ingredient.trackInventory) {
       return { label: t('inventory.status.notTracked', 'Not Tracked'), color: 'bg-gray-100 text-gray-800' };
@@ -544,7 +667,7 @@ export default function Inventory() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="ingredients" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             {t('inventory.tabs.ingredients', 'Ingredients')}
@@ -552,6 +675,10 @@ export default function Inventory() {
           <TabsTrigger value="recipes" className="flex items-center gap-2">
             <UtensilsCrossed className="h-4 w-4" />
             {t('inventory.tabs.recipes', 'Recipes')}
+          </TabsTrigger>
+          <TabsTrigger value="suppliers" className="flex items-center gap-2">
+            <Truck className="h-4 w-4" />
+            {t('inventory.tabs.suppliers', 'Suppliers')}
           </TabsTrigger>
           <TabsTrigger value="alerts" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
@@ -878,6 +1005,182 @@ export default function Inventory() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Suppliers Tab */}
+        <TabsContent value="suppliers" className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.suppliers.stats.total', 'Total Suppliers')}
+                </CardTitle>
+                <Truck className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{suppliers.length}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.suppliers.stats.active', 'Active')}
+                </CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {suppliers.filter((s) => s.active).length}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.suppliers.stats.avgRating', 'Avg. Rating')}
+                </CardTitle>
+                <Star className="h-4 w-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {suppliers.length > 0
+                    ? (suppliers.reduce((sum, s) => sum + (parseFloat(s.rating) || 0), 0) / suppliers.length).toFixed(1)
+                    : '0.0'}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.suppliers.stats.topPerformer', 'Top Performer')}
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-bold truncate">
+                  {suppliers.length > 0
+                    ? suppliers.reduce((top, s) => (parseFloat(s.rating) || 0) > (parseFloat(top.rating) || 0) ? s : top, suppliers[0])?.name || '-'
+                    : '-'}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Suppliers Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" />
+                    {t('inventory.suppliers.title', 'Suppliers')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('inventory.suppliers.subtitle', 'Manage your ingredient suppliers')}
+                  </CardDescription>
+                </div>
+                <Button onClick={handleAddSupplier}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('inventory.suppliers.addSupplier', 'Add Supplier')}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('inventory.suppliers.fields.name', 'Company Name')}</TableHead>
+                    <TableHead>{t('inventory.suppliers.fields.code', 'Code')}</TableHead>
+                    <TableHead>{t('inventory.suppliers.fields.contactPerson', 'Contact')}</TableHead>
+                    <TableHead>{t('inventory.suppliers.fields.phone', 'Phone')}</TableHead>
+                    <TableHead>{t('inventory.suppliers.fields.paymentTerms', 'Payment Terms')}</TableHead>
+                    <TableHead>{t('inventory.suppliers.fields.rating', 'Rating')}</TableHead>
+                    <TableHead>{t('inventory.stockAlerts.status', 'Status')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {suppliers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        {t('inventory.suppliers.noSuppliers', 'No suppliers found. Add your first supplier.')}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    suppliers.map((supplier) => (
+                      <TableRow key={supplier.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <div>{supplier.name}</div>
+                            {supplier.email && (
+                              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {supplier.email}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{supplier.code || '-'}</TableCell>
+                        <TableCell>{supplier.contactPerson || '-'}</TableCell>
+                        <TableCell>
+                          {supplier.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {supplier.phone}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>{supplier.paymentTerms || '-'}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Star className="h-4 w-4 text-yellow-500" />
+                            {supplier.rating || '0.0'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={supplier.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                            {supplier.active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleSupplier(supplier.id)}
+                              title={supplier.active ? t('common.deactivate', 'Deactivate') : t('common.activate', 'Activate')}
+                            >
+                              <Power className={`h-4 w-4 ${supplier.active ? 'text-green-600' : 'text-gray-400'}`} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditSupplier(supplier)}
+                              title={t('common.edit', 'Edit')}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteSupplier(supplier.id)}
+                              title={t('common.delete', 'Delete')}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Stock Alerts Tab */}
@@ -1501,6 +1804,166 @@ export default function Inventory() {
             </Button>
             <Button onClick={handleSaveSubscription}>
               {editingSubscription ? t('common.save') : t('common.create')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Supplier Modal */}
+      <Dialog open={supplierModalOpen} onOpenChange={setSupplierModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingSupplier
+                ? t('inventory.suppliers.editSupplier', 'Edit Supplier')
+                : t('inventory.suppliers.addSupplier', 'Add Supplier')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('inventory.suppliers.subtitle', 'Manage your ingredient suppliers')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="supplierName">{t('inventory.suppliers.fields.name', 'Company Name')} *</Label>
+                <Input
+                  id="supplierName"
+                  value={supplierFormData.name}
+                  onChange={(e) => setSupplierFormData({ ...supplierFormData, name: e.target.value })}
+                  placeholder={t('inventory.suppliers.placeholders.name', 'Enter company name')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supplierCode">{t('inventory.suppliers.fields.code', 'Supplier Code')}</Label>
+                <Input
+                  id="supplierCode"
+                  value={supplierFormData.code}
+                  onChange={(e) => setSupplierFormData({ ...supplierFormData, code: e.target.value })}
+                  placeholder={t('inventory.suppliers.placeholders.code', 'e.g., SUP-001')}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contactPerson">{t('inventory.suppliers.fields.contactPerson', 'Contact Person')}</Label>
+                <Input
+                  id="contactPerson"
+                  value={supplierFormData.contactPerson}
+                  onChange={(e) => setSupplierFormData({ ...supplierFormData, contactPerson: e.target.value })}
+                  placeholder={t('inventory.suppliers.placeholders.contactPerson', 'Contact person name')}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="supplierPhone">{t('inventory.suppliers.fields.phone', 'Phone')}</Label>
+                <Input
+                  id="supplierPhone"
+                  value={supplierFormData.phone}
+                  onChange={(e) => setSupplierFormData({ ...supplierFormData, phone: e.target.value })}
+                  placeholder={t('inventory.suppliers.placeholders.phone', '+998 XX XXX XX XX')}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="supplierEmail">{t('inventory.suppliers.fields.email', 'Email')}</Label>
+              <Input
+                id="supplierEmail"
+                type="email"
+                value={supplierFormData.email}
+                onChange={(e) => setSupplierFormData({ ...supplierFormData, email: e.target.value })}
+                placeholder={t('inventory.suppliers.placeholders.email', 'supplier@example.com')}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="supplierAddress">{t('inventory.suppliers.fields.address', 'Address')}</Label>
+              <Input
+                id="supplierAddress"
+                value={supplierFormData.address}
+                onChange={(e) => setSupplierFormData({ ...supplierFormData, address: e.target.value })}
+                placeholder={t('inventory.suppliers.placeholders.address', 'Full address')}
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="paymentTerms">{t('inventory.suppliers.fields.paymentTerms', 'Payment Terms')}</Label>
+                <Select
+                  value={supplierFormData.paymentTerms}
+                  onValueChange={(value) => setSupplierFormData({ ...supplierFormData, paymentTerms: value })}
+                >
+                  <SelectTrigger id="paymentTerms">
+                    <SelectValue placeholder={t('common.select', 'Select...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="COD">{t('inventory.suppliers.paymentTerms.cod', 'Cash on Delivery')}</SelectItem>
+                    <SelectItem value="NET15">{t('inventory.suppliers.paymentTerms.net15', 'Net 15 Days')}</SelectItem>
+                    <SelectItem value="NET30">{t('inventory.suppliers.paymentTerms.net30', 'Net 30 Days')}</SelectItem>
+                    <SelectItem value="NET60">{t('inventory.suppliers.paymentTerms.net60', 'Net 60 Days')}</SelectItem>
+                    <SelectItem value="PREPAID">{t('inventory.suppliers.paymentTerms.prepaid', 'Prepaid')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="creditLimit">{t('inventory.suppliers.fields.creditLimit', 'Credit Limit')}</Label>
+                <Input
+                  id="creditLimit"
+                  type="number"
+                  step="0.01"
+                  value={supplierFormData.creditLimit}
+                  onChange={(e) => setSupplierFormData({ ...supplierFormData, creditLimit: e.target.value })}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="currency">{t('inventory.suppliers.fields.currency', 'Currency')}</Label>
+                <Select
+                  value={supplierFormData.currency}
+                  onValueChange={(value) => setSupplierFormData({ ...supplierFormData, currency: value })}
+                >
+                  <SelectTrigger id="currency">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="UZS">UZS</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="RUB">RUB</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="supplierNotes">{t('inventory.suppliers.fields.notes', 'Notes')}</Label>
+              <Input
+                id="supplierNotes"
+                value={supplierFormData.notes}
+                onChange={(e) => setSupplierFormData({ ...supplierFormData, notes: e.target.value })}
+                placeholder={t('inventory.suppliers.placeholders.notes', 'Additional notes...')}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="supplierActive"
+                checked={supplierFormData.active}
+                onChange={(e) => setSupplierFormData({ ...supplierFormData, active: e.target.checked })}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="supplierActive" className="font-normal cursor-pointer">
+                {t('inventory.suppliers.fields.active', 'Active')}
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSupplierModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSaveSupplier}>
+              {editingSupplier ? t('common.save') : t('common.create')}
             </Button>
           </DialogFooter>
         </DialogContent>

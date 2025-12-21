@@ -74,6 +74,7 @@
       "kitchenDashboard": "Oshxona paneli",
       "recipes": "Retseptlar",
       "inventory": "Inventar",
+      "suppliers": "Yetkazib beruvchilar",
       "stockAlerts": "Zaxira ogohlantirishlari",
       "purchaseOrders": "Xarid buyurtmalari",
       "expenses": "Xarajatlar",
@@ -1230,6 +1231,7 @@
     "tabs": {
       "ingredients": "Ingredientlar",
       "recipes": "Retseptlar",
+      "suppliers": "Yetkazib beruvchilar",
       "stockAlerts": "Zaxira ogohlantirishlari"
     },
     "recipes": {
@@ -1284,6 +1286,57 @@
       "errors": {
         "saveFailed": "Obunani saqlab bo'lmadi",
         "triggerFailed": "Ogohlantirishni yuborib bo'lmadi"
+      }
+    },
+    "suppliers": {
+      "title": "Yetkazib beruvchilar",
+      "subtitle": "Ingredient yetkazib beruvchilarini boshqarish",
+      "addSupplier": "Yetkazib beruvchi qo'shish",
+      "editSupplier": "Yetkazib beruvchini tahrirlash",
+      "noSuppliers": "Yetkazib beruvchilar topilmadi. Birinchi yetkazib beruvchini qo'shing.",
+      "confirmDelete": "Ushbu yetkazib beruvchini o'chirishni xohlaysizmi?",
+      "fields": {
+        "name": "Kompaniya nomi",
+        "code": "Yetkazib beruvchi kodi",
+        "contactPerson": "Aloqa shaxsi",
+        "phone": "Telefon",
+        "email": "Elektron pochta",
+        "address": "Manzil",
+        "paymentTerms": "To'lov shartlari",
+        "creditLimit": "Kredit limiti",
+        "currency": "Valyuta",
+        "rating": "Reyting",
+        "totalOrders": "Jami buyurtmalar",
+        "onTimeDeliveryRate": "O'z vaqtida yetkazish",
+        "active": "Faol",
+        "notes": "Izohlar"
+      },
+      "placeholders": {
+        "name": "Kompaniya nomini kiriting",
+        "code": "masalan, SUP-001",
+        "contactPerson": "Aloqa shaxsi ismi",
+        "phone": "+998 XX XXX XX XX",
+        "email": "supplier@example.com",
+        "address": "To'liq manzil",
+        "notes": "Qo'shimcha izohlar..."
+      },
+      "paymentTerms": {
+        "cod": "Yetkazib berishda to'lov",
+        "net15": "15 kun ichida to'lov",
+        "net30": "30 kun ichida to'lov",
+        "net60": "60 kun ichida to'lov",
+        "prepaid": "Oldindan to'lov"
+      },
+      "stats": {
+        "total": "Jami yetkazib beruvchilar",
+        "active": "Faol",
+        "avgRating": "O'rtacha reyting",
+        "topPerformer": "Eng yaxshi yetkazib beruvchi"
+      },
+      "errors": {
+        "saveFailed": "Yetkazib beruvchini saqlab bo'lmadi",
+        "deleteFailed": "Yetkazib beruvchini o'chirib bo'lmadi",
+        "loadFailed": "Yetkazib beruvchilarni yuklab bo'lmadi"
       }
     }
   },

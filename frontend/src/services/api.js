@@ -410,6 +410,16 @@ export const stockAlertAPI = {
   getSummary: (restaurantId) => api.get(`/stock-alerts/summary/${restaurantId}`),
 };
 
+export const supplierAPI = {
+  getAll: (restaurantId, activeOnly = false) =>
+    api.get('/inventory/suppliers', { params: { restaurantId, activeOnly } }),
+  getById: (id) => api.get(`/inventory/suppliers/${id}`),
+  create: (data) => api.post('/inventory/suppliers', data),
+  update: (id, data) => api.put(`/inventory/suppliers/${id}`, data),
+  delete: (id) => api.delete(`/inventory/suppliers/${id}`),
+  toggle: (id) => api.post(`/inventory/suppliers/${id}/toggle`),
+};
+
 export const printerAPI = {
   // Printer CRUD
   getPrinters: (restaurantId) => api.get('/settings/printers', { params: { restaurantId } }),

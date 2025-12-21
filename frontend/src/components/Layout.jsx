@@ -159,6 +159,7 @@ export default function Layout() {
         { label: t('nav.sub.kitchenDashboard'), icon: Utensils, path: '/kitchen' },
         { label: t('nav.sub.recipes'), icon: Soup, path: '/kitchen/recipes' },
         { label: t('nav.sub.inventory'), icon: Cookie, path: '/kitchen/inventory' },
+        { label: t('nav.sub.suppliers'), icon: Truck, path: '/kitchen/suppliers' },
         { label: t('nav.sub.stockAlerts'), icon: AlertTriangle, path: '/kitchen/stock-alerts' },
       ],
     },

@@ -57,6 +57,10 @@ public class Ingredient {
     @Column(length = 100)
     private String supplier;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id")
+    private Supplier supplierEntity;
+
     @Column(length = 50)
     private String sku;
 
