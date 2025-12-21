@@ -32,9 +32,17 @@ public class ExpenseService {
 
         String expenseNumber = generateExpenseNumber(expense.getRestaurant().getId());
         expense.setExpenseNumber(expenseNumber);
-        expense.setPaymentStatus(Expense.PaymentStatus.UNPAID);
+        expense.setPaymentStatus(Expense.PaymentStatus.PAID);  // Created as paid
+        if (expense.getPaymentDate() == null) {
+            expense.setPaymentDate(expense.getExpenseDate());  // Set payment date to expense date
+        }
 
         Expense savedExpense = expenseRepository.save(expense);
+
+        // Create journal entry for the paid expense
+        if (expense.getCreatedBy() != null) {
+            createExpenseJournalEntry(savedExpense, expense.getCreatedBy());
+        }
 
         log.info("Expense created: {}", expenseNumber);
         return savedExpense;
@@ -206,6 +214,23 @@ public class ExpenseService {
 
         log.info("Expense created from PO: {} -> {}", poNumber, expenseNumber);
         return savedExpense;
+    }
+
+    /**
+     * Update expense payment status when linked PO payment is recorded
+     */
+    @Transactional
+    public void updateExpensePaymentByPurchaseOrderId(Long purchaseOrderId, LocalDate paymentDate, String recordedBy) {
+        expenseRepository.findByPurchaseOrderId(purchaseOrderId).ifPresent(expense -> {
+            expense.setPaymentDate(paymentDate);
+            expense.setPaymentStatus(Expense.PaymentStatus.PAID);
+            expenseRepository.save(expense);
+
+            // Create journal entry for the expense payment
+            createExpenseJournalEntry(expense, recordedBy);
+
+            log.info("Expense {} marked as paid for PO ID: {}", expense.getExpenseNumber(), purchaseOrderId);
+        });
     }
 
     private String generateExpenseNumber(Long restaurantId) {

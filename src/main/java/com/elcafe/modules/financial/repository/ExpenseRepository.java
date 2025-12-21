@@ -57,4 +57,6 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
            "AND e.paymentStatus = 'PAID' " +
            "GROUP BY e.category")
     List<Object[]> getExpensesByCategory(Long restaurantId, LocalDate startDate, LocalDate endDate);
+
+    Optional<Expense> findByPurchaseOrderId(Long purchaseOrderId);
 }

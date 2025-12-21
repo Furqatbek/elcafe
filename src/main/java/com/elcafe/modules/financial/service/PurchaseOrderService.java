@@ -43,7 +43,7 @@ public class PurchaseOrderService {
         // Generate PO number
         String poNumber = generatePoNumber(purchaseOrder.getRestaurant().getId());
         purchaseOrder.setPoNumber(poNumber);
-        purchaseOrder.setStatus(PurchaseOrder.Status.DRAFT);
+        purchaseOrder.setStatus(PurchaseOrder.Status.APPROVED);  // Created as approved
         purchaseOrder.setPaymentStatus(PurchaseOrder.PaymentStatus.UNPAID);
 
         PurchaseOrder savedPo = purchaseOrderRepository.save(purchaseOrder);
@@ -177,6 +177,15 @@ public class PurchaseOrderService {
 
         // Create journal entry for payment
         createPaymentJournalEntry(savedPo, amount, paymentMethod, paymentDate, recordedBy);
+
+        // Update linked expense payment status when PO is fully paid
+        if (savedPo.getPaymentStatus() == PurchaseOrder.PaymentStatus.PAID) {
+            try {
+                expenseService.updateExpensePaymentByPurchaseOrderId(savedPo.getId(), paymentDate, recordedBy);
+            } catch (Exception e) {
+                log.warn("Failed to update expense payment for PO {}: {}", savedPo.getPoNumber(), e.getMessage());
+            }
+        }
 
         log.info("Payment recorded for PO: {}, amount: {}", po.getPoNumber(), amount);
         return savedPo;
