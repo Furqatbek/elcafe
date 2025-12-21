@@ -36,7 +36,7 @@ import {
   TrendingUp,
   TrendingDown,
   BarChart3,
-  DollarSign,
+  Hash,
   Package,
   Loader2,
   FileText,
@@ -283,7 +283,7 @@ export default function InventoryValuation() {
                   <CardTitle className="text-sm font-medium">
                     {t('inventory.valuation.totalValue')}
                   </CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <Hash className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
