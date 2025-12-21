@@ -3,10 +3,13 @@ CREATE TABLE valuation_settings (
     id BIGSERIAL PRIMARY KEY,
     restaurant_id BIGINT NOT NULL REFERENCES restaurants(id),
     valuation_method VARCHAR(20) NOT NULL,
-    effective_from TIMESTAMP NOT NULL,
+    effective_from DATE NOT NULL,
+    effective_to DATE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    notes TEXT,
     created_by VARCHAR(100),
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_valuation_restaurant ON valuation_settings(restaurant_id);
@@ -16,19 +19,22 @@ CREATE INDEX idx_valuation_active ON valuation_settings(is_active);
 CREATE TABLE ingredient_cost_history (
     id BIGSERIAL PRIMARY KEY,
     ingredient_id BIGINT NOT NULL REFERENCES inventory_ingredients(id),
-    cost_per_unit DECIMAL(15, 4) NOT NULL,
-    previous_cost DECIMAL(15, 4),
+    previous_cost DECIMAL(15, 4) NOT NULL,
+    new_cost DECIMAL(15, 4) NOT NULL,
+    weighted_average_cost DECIMAL(15, 4),
+    reason VARCHAR(30) NOT NULL,
     effective_from TIMESTAMP NOT NULL,
     effective_to TIMESTAMP,
-    reason VARCHAR(50) NOT NULL,
-    source_reference VARCHAR(100),
+    batch_id BIGINT REFERENCES inventory_batches(id),
+    purchase_order_id BIGINT,
     notes TEXT,
     created_by VARCHAR(100),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_cost_history_ingredient ON ingredient_cost_history(ingredient_id);
-CREATE INDEX idx_cost_history_date ON ingredient_cost_history(effective_from);
+CREATE INDEX idx_cost_history_effective ON ingredient_cost_history(effective_from);
+CREATE INDEX idx_cost_history_batch ON ingredient_cost_history(batch_id);
 
 -- Batch Consumption Table
 CREATE TABLE batch_consumptions (
