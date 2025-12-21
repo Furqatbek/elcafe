@@ -24,7 +24,8 @@
     "welcomeBack": "С возвращением",
     "createAccount": "Создать аккаунт",
     "enterCredentials": "Введите свои данные для входа",
-    "fillDetails": "Заполните данные для создания аккаунта"
+    "fillDetails": "Заполните данные для создания аккаунта",
+    "demoCredentials": "Демо: admin@elcafe.com / Admin123!"
   },
   "nav": {
     "dashboard": "Главная",
@@ -421,7 +422,10 @@
       "passwordMin": "Пароль должен содержать не менее 8 символов",
       "firstNameRequired": "Имя обязательно",
       "lastNameRequired": "Фамилия обязательна"
-    }
+    },
+    "generatePasswordTitle": "Создать безопасный пароль",
+    "generate": "Создать",
+    "passwordCopied": "Пароль скопирован в буфер обмена"
   },
   "common": {
     "search": "Поиск",
@@ -453,6 +457,10 @@
     "max": "Макс",
     "reset": "Сбросить",
     "allStatuses": "Все статусы",
+    "notes": "Примечания",
+    "items": "шт.",
+    "total": "Всего",
+    "update": "Обновить",
     "languages": {
       "en": "English",
       "ru": "Русский",
@@ -583,7 +591,10 @@
       "passwordMin": "Пароль должен содержать не менее 8 символов",
       "firstNameRequired": "Имя обязательно",
       "lastNameRequired": "Фамилия обязательна"
-    }
+    },
+    "generatePasswordTitle": "Создать безопасный пароль",
+    "generate": "Создать",
+    "passwordCopied": "Пароль скопирован в буфер обмена"
   },
   "waiters": {
     "permissions": {
@@ -1051,6 +1062,163 @@
       "back": "Назад",
       "next": "Далее",
       "finish": "Завершить"
+    }
+  },
+  "inventory": {
+    "title": "Управление запасами",
+    "subtitle": "Управление ингредиентами и уровнями запасов",
+    "addIngredient": "Добавить ингредиент",
+    "editIngredient": "Редактировать ингредиент",
+    "addDescription": "Создать новый ингредиент для отслеживания запасов",
+    "editDescription": "Обновить информацию об ингредиенте",
+    "ingredientsList": "Список ингредиентов",
+    "ingredientsDescription": "Управление и отслеживание всех ингредиентов",
+    "noIngredients": "Ингредиенты не найдены",
+    "searchPlaceholder": "Поиск по названию, SKU или поставщику...",
+    "confirmDelete": "Вы уверены, что хотите удалить этот ингредиент?",
+    "addStock": "Добавить запас",
+    "adjustStock": "Скорректировать запас",
+    "updateStock": "Обновить запас",
+    "currentStockLabel": "Текущий запас: {{currentStock}} {{unit}}",
+    "quantityToAdd": "Количество для добавления",
+    "newQuantity": "Новое количество",
+    "performedBy": "Выполнено",
+    "transactionHistory": "История транзакций",
+    "transactionHistoryDesc": "Все движения запасов для этого ингредиента",
+    "noTransactions": "Транзакции не найдены",
+    "stats": {
+      "total": "Всего ингредиентов",
+      "active": "активно",
+      "lowStock": "Мало на складе",
+      "needsAttention": "Требует внимания",
+      "reorder": "Скоро заказать",
+      "reorderSoon": "Скоро заказать",
+      "tracked": "Отслеживаемые товары",
+      "monitoring": "Мониторинг"
+    },
+    "filters": {
+      "all": "Все ингредиенты",
+      "active": "Только активные",
+      "inactive": "Только неактивные",
+      "lowStock": "Мало на складе",
+      "reorder": "Уровень повторного заказа"
+    },
+    "fields": {
+      "name": "Название ингредиента",
+      "sku": "SKU",
+      "description": "Описание",
+      "unit": "Единица измерения",
+      "supplier": "Поставщик",
+      "currentStock": "Текущий запас",
+      "minimumStock": "Минимальный запас",
+      "reorderLevel": "Уровень повторного заказа",
+      "costPerUnit": "Стоимость за единицу",
+      "status": "Статус",
+      "active": "Активно",
+      "trackInventory": "Отслеживать запасы"
+    },
+    "placeholders": {
+      "name": "напр., Помидоры, Куриная грудка",
+      "sku": "напр., ING-001",
+      "description": "Краткое описание ингредиента",
+      "supplier": "напр., ABC Поставщики продуктов"
+    },
+    "units": {
+      "kg": "Килограммы (кг)",
+      "g": "Граммы (г)",
+      "L": "Литры (л)",
+      "ml": "Миллилитры (мл)",
+      "pieces": "Штуки",
+      "dozens": "Дюжины"
+    },
+    "status": {
+      "notTracked": "Не отслеживается",
+      "lowStock": "Мало на складе",
+      "reorderSoon": "Скоро заказать",
+      "inStock": "В наличии"
+    },
+    "transactionFields": {
+      "date": "Дата",
+      "type": "Тип",
+      "change": "Изменение",
+      "balanceAfter": "Остаток после",
+      "performedBy": "Выполнено",
+      "notes": "Примечания"
+    },
+    "errors": {
+      "saveFailed": "Не удалось сохранить ингредиент",
+      "deleteFailed": "Не удалось удалить ингредиент"
+    }
+  },
+  "pages": {
+    "menu": {
+      "description": "Полное меню с категориями и продуктами",
+      "items": "шт."
+    },
+    "products": {
+      "title": "Продукты",
+      "subtitle": "Просмотр всех продуктов питания",
+      "newProduct": "Новый продукт",
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "variants": "Варианты",
+      "inStock": "В наличии",
+      "outOfStock": "Нет в наличии",
+      "createVariant": "Создать вариант продукта",
+      "editVariant": "Редактировать вариант продукта",
+      "addVariantFor": "Добавить новый вариант для {{name}}",
+      "editVariantFor": "Обновить информацию о варианте для {{name}}",
+      "confirmDeleteVariant": "Вы уверены, что хотите удалить вариант \"{{name}}\"?",
+      "errors": {
+        "createVariantFailed": "Не удалось создать вариант",
+        "updateVariantFailed": "Не удалось обновить вариант",
+        "deleteVariantFailed": "Не удалось удалить вариант"
+      }
+    },
+    "orders": {
+      "createOrder": "Создать заказ",
+      "delivery": "Доставка",
+      "takeaway": "Самовывоз",
+      "dineIn": "В ресторане",
+      "selectTable": "Выберите стол",
+      "noAvailableTables": "Нет свободных столов",
+      "table": "Стол",
+      "capacity": "Вместимость"
+    },
+    "waiters": {
+      "title": "Управление официантами",
+      "permissions": {
+        "manageTables": "Управление столами",
+        "overridePrices": "Изменение цен",
+        "voidItems": "Отмена позиций",
+        "mergeTables": "Объединение столов",
+        "viewReports": "Просмотр отчетов",
+        "handlePayments": "Управление платежами",
+        "applyDiscounts": "Применение скидок",
+        "refundOrders": "Возврат заказов"
+      },
+      "errors": {
+        "nameRequired": "Имя обязательно",
+        "pinCodeRequired": "PIN-код обязателен",
+        "pinMust4Digits": "PIN должен состоять из 4 цифр"
+      },
+      "showingWaiters": "Показано {{count}} из {{total}} официантов",
+      "confirmDeletion": "Подтверждение удаления",
+      "deleteConfirmationMessage": "Вы уверены, что хотите удалить официанта \"{{name}}\"? Это действие нельзя отменить."
+    },
+    "customers": {
+      "id": "ID",
+      "firstName": "Имя",
+      "lastName": "Фамилия",
+      "email": "Email",
+      "phone": "Телефон",
+      "address": "Адрес",
+      "city": "Город",
+      "state": "Регион",
+      "zipCode": "Почтовый индекс",
+      "tags": "Теги",
+      "status": "Статус",
+      "createdAt": "Дата создания"
     }
   }
 }
