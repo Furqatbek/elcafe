@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import Layout from './components/Layout';
 import SessionManager from './components/SessionManager';
+import { InventoryProvider } from './context/InventoryContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Orders from './pages/Orders';
@@ -29,12 +30,24 @@ import POSuggestions from './pages/POSuggestions';
 import Expenses from './pages/Expenses';
 import FinancialReports from './pages/FinancialReports';
 import PrinterSettings from './pages/PrinterSettings';
-import Inventory from './pages/Inventory';
+import {
+  InventoryIngredients,
+  InventoryRecipes,
+  InventoryExpiry,
+  InventoryStockCounts,
+  InventoryWaste,
+  InventorySuppliers,
+  InventoryAlerts,
+} from './pages/inventory';
 import POSApp from './pos/POSApp';
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return isAuthenticated ? children : <Navigate to="/login" />;
+}
+
+function InventoryWrapper({ children }) {
+  return <InventoryProvider>{children}</InventoryProvider>;
 }
 
 function App() {
@@ -73,10 +86,14 @@ function App() {
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
-          <Route path="kitchen/inventory" element={<Inventory />} />
-          <Route path="kitchen/recipes" element={<Inventory />} />
-          <Route path="kitchen/suppliers" element={<Inventory />} />
-          <Route path="kitchen/stock-alerts" element={<Inventory />} />
+          {/* Inventory Routes - each wrapped with InventoryProvider */}
+          <Route path="kitchen/inventory" element={<InventoryWrapper><InventoryIngredients /></InventoryWrapper>} />
+          <Route path="kitchen/recipes" element={<InventoryWrapper><InventoryRecipes /></InventoryWrapper>} />
+          <Route path="kitchen/expiry" element={<InventoryWrapper><InventoryExpiry /></InventoryWrapper>} />
+          <Route path="kitchen/stock-counts" element={<InventoryWrapper><InventoryStockCounts /></InventoryWrapper>} />
+          <Route path="kitchen/waste" element={<InventoryWrapper><InventoryWaste /></InventoryWrapper>} />
+          <Route path="kitchen/suppliers" element={<InventoryWrapper><InventorySuppliers /></InventoryWrapper>} />
+          <Route path="kitchen/stock-alerts" element={<InventoryWrapper><InventoryAlerts /></InventoryWrapper>} />
           <Route path="kitchen/po-suggestions" element={<POSuggestions />} />
           <Route path="finance/purchase-orders" element={<PurchaseOrders />} />
           <Route path="finance/expenses" element={<Expenses />} />

@@ -50,6 +50,8 @@ import {
   FileText,
   Receipt,
   AlertTriangle,
+  ClipboardCheck,
+  Trash2,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -157,8 +159,11 @@ export default function Layout() {
       path: '/kitchen',
       subItems: [
         { label: t('nav.sub.kitchenDashboard'), icon: Utensils, path: '/kitchen' },
-        { label: t('nav.sub.recipes'), icon: Soup, path: '/kitchen/recipes' },
         { label: t('nav.sub.inventory'), icon: Cookie, path: '/kitchen/inventory' },
+        { label: t('nav.sub.recipes'), icon: Soup, path: '/kitchen/recipes' },
+        { label: t('nav.sub.expiry'), icon: Calendar, path: '/kitchen/expiry' },
+        { label: t('nav.sub.stockCounts'), icon: ClipboardCheck, path: '/kitchen/stock-counts' },
+        { label: t('nav.sub.waste'), icon: Trash2, path: '/kitchen/waste' },
         { label: t('nav.sub.suppliers'), icon: Truck, path: '/kitchen/suppliers' },
         { label: t('nav.sub.stockAlerts'), icon: AlertTriangle, path: '/kitchen/stock-alerts' },
         { label: t('nav.sub.poSuggestions'), icon: ShoppingCart, path: '/kitchen/po-suggestions' },
