@@ -160,3 +160,16 @@ eskiz:
     read-timeout: 30000
     token-expiration-ms: 2505600000 # 29 days
     callback-url: ${ESKIZ_SMS_CALLBACK_URL:}
+
+# Telegram Bot Configuration
+telegram:
+  bot:
+    enabled: ${TELEGRAM_BOT_ENABLED:true}
+    token: ${TELEGRAM_BOT_TOKEN:}
+    username: ${TELEGRAM_BOT_USERNAME:}
+
+# Stock Alert Configuration
+stock-alert:
+  enabled: ${STOCK_ALERT_ENABLED:true}
+  check-interval-minutes: ${STOCK_ALERT_CHECK_INTERVAL:30}
+  alert-cooldown-hours: ${STOCK_ALERT_COOLDOWN:4}
