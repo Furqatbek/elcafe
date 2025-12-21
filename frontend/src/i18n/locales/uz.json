@@ -913,5 +913,144 @@
   },
   "linkedItems": {
     "totalLinkedItems": "Jami bog'langan mahsulotlar"
+  },
+  "pos": {
+    "title": "Savdo nuqtasi",
+    "loading": "Yuklanmoqda...",
+    "startOrder": {
+      "title": "Yangi buyurtma boshlash",
+      "subtitle": "Boshlash uchun buyurtma turini tanlang",
+      "delivery": "Yetkazib berish",
+      "deliveryDesc": "Mijozga yetkazib berish",
+      "takeaway": "Olib ketish",
+      "takeawayDesc": "Mijoz olib ketadi",
+      "dineIn": "Joyida iste'mol qilish",
+      "dineInDesc": "Mijoz restoranda ovqatlanadi"
+    },
+    "menu": {
+      "title": "Menyu tanlash",
+      "searchPlaceholder": "Menyuni qidirish...",
+      "allCategories": "Barcha kategoriyalar",
+      "noProducts": "Mahsulotlar topilmadi",
+      "addToCart": "Savatchaga qo'shish",
+      "viewMode": {
+        "grid": "Panjara ko'rinishi",
+        "list": "Ro'yxat ko'rinishi"
+      }
+    },
+    "cart": {
+      "title": "Savatcha",
+      "empty": "Savatchangiz bo'sh",
+      "subtotal": "Jami summa",
+      "tax": "Soliq",
+      "delivery": "Yetkazib berish",
+      "total": "Umumiy",
+      "items": "Mahsulotlar",
+      "addMore": "Ko'proq qo'shish",
+      "checkout": "To'lovga o'tish",
+      "clear": "Savatchani tozalash",
+      "removeItem": "Mahsulotni olib tashlash",
+      "increaseQty": "Sonini oshirish",
+      "decreaseQty": "Sonini kamaytirish",
+      "specialInstructions": "Maxsus ko'rsatmalar qo'shing...",
+      "itemNotes": "Mahsulot izohlari"
+    },
+    "modifiers": {
+      "title": "Buyurtmangizni moslashtiring",
+      "selectOptions": "Variantlarni tanlang",
+      "quantity": "Miqdor",
+      "addToCart": "Savatchaga qo'shish",
+      "cancel": "Bekor qilish",
+      "required": "Majburiy",
+      "optional": "Ixtiyoriy",
+      "noModifiers": "Moslashtirish parametrlari mavjud emas"
+    },
+    "orderDetails": {
+      "title": "Buyurtma tafsilotlari",
+      "customerInfo": "Mijoz ma'lumotlari",
+      "deliveryInfo": "Yetkazib berish ma'lumotlari",
+      "dineInInfo": "Joyida iste'mol qilish ma'lumotlari",
+      "orderSummary": "Buyurtma xulosasi",
+      "back": "Savatchaga qaytish",
+      "continue": "To'lovga o'tish",
+      "form": {
+        "customerName": "Mijoz ismi",
+        "customerNamePlaceholder": "Mijoz ismini kiriting",
+        "phoneNumber": "Telefon raqami",
+        "phonePlaceholder": "+998 90 123 45 67",
+        "email": "Email (Ixtiyoriy)",
+        "emailPlaceholder": "mijoz@example.com",
+        "streetAddress": "Ko'cha manzili",
+        "addressPlaceholder": "Toshkent shahri, Chilonzor tumani",
+        "city": "Shahar",
+        "cityPlaceholder": "Toshkent",
+        "state": "Viloyat/Hudud",
+        "zipCode": "Pochta indeksi",
+        "deliveryInstructions": "Yetkazib berish ko'rsatmalari",
+        "instructionsPlaceholder": "Qo'ng'iroq qiling, eshik oldiga qoldiring va h.k.",
+        "tableNumber": "Stol raqami",
+        "tablePlaceholder": "Stol raqamini kiriting",
+        "guestCount": "Mehmonlar soni",
+        "guestPlaceholder": "2"
+      }
+    },
+    "payment": {
+      "title": "To'lov",
+      "selectMethod": "To'lov usulini tanlang",
+      "methods": {
+        "cash": "Naqd pul",
+        "card": "Karta",
+        "mobile": "Mobil to'lov"
+      },
+      "cashPayment": {
+        "title": "Naqd to'lov",
+        "amountTendered": "Berilgan summa",
+        "amountPlaceholder": "Qabul qilingan summani kiriting",
+        "changeDue": "Qaytim",
+        "quickAmounts": "Tez summalar"
+      },
+      "summary": {
+        "orderSummary": "Buyurtma xulosasi",
+        "subtotal": "Jami summa",
+        "tax": "Soliq",
+        "delivery": "Yetkazib berish",
+        "total": "Umumiy"
+      },
+      "actions": {
+        "back": "Orqaga",
+        "completeOrder": "Buyurtmani yakunlash",
+        "processing": "Qayta ishlanmoqda..."
+      }
+    },
+    "confirmation": {
+      "title": "Buyurtma tasdiqlandi!",
+      "success": "Buyurtmangiz muvaffaqiyatli qabul qilindi",
+      "orderNumber": "Buyurtma raqami",
+      "printReceipt": "Chekni chop etish",
+      "newOrder": "Yangi buyurtma boshlash",
+      "viewOrders": "Buyurtmalarni ko'rish"
+    },
+    "errors": {
+      "loadMenuFailed": "Menyuni yuklashda xatolik",
+      "submitOrderFailed": "Buyurtmani yuborishda xatolik",
+      "noRestaurantFound": "Tizimda restoran topilmadi",
+      "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
+      "invalidPhone": "Iltimos, to'g'ri telefon raqamini kiriting",
+      "invalidEmail": "Iltimos, to'g'ri email manzilini kiriting"
+    },
+    "buttons": {
+      "cancel": "Bekor qilish",
+      "save": "Saqlash",
+      "confirm": "Tasdiqlash",
+      "close": "Yopish",
+      "add": "Qo'shish",
+      "remove": "O'chirish",
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "print": "Chop etish",
+      "back": "Orqaga",
+      "next": "Keyingi",
+      "finish": "Tugatish"
+    }
   }
 }

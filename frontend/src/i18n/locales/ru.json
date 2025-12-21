@@ -913,5 +913,144 @@
   },
   "linkedItems": {
     "totalLinkedItems": "Всего связанных товаров"
+  },
+  "pos": {
+    "title": "Точка продаж",
+    "loading": "Загрузка...",
+    "startOrder": {
+      "title": "Начать новый заказ",
+      "subtitle": "Выберите тип заказа для начала",
+      "delivery": "Доставка",
+      "deliveryDesc": "Доставка клиенту",
+      "takeaway": "Самовывоз",
+      "takeawayDesc": "Клиент заберет сам",
+      "dineIn": "В зале",
+      "dineInDesc": "Клиент будет есть в ресторане"
+    },
+    "menu": {
+      "title": "Выбор меню",
+      "searchPlaceholder": "Поиск в меню...",
+      "allCategories": "Все категории",
+      "noProducts": "Продукты не найдены",
+      "addToCart": "Добавить в корзину",
+      "viewMode": {
+        "grid": "Сетка",
+        "list": "Список"
+      }
+    },
+    "cart": {
+      "title": "Корзина",
+      "empty": "Ваша корзина пуста",
+      "subtotal": "Промежуточный итог",
+      "tax": "Налог",
+      "delivery": "Доставка",
+      "total": "Итого",
+      "items": "Товары",
+      "addMore": "Добавить ещё",
+      "checkout": "Перейти к оплате",
+      "clear": "Очистить корзину",
+      "removeItem": "Удалить товар",
+      "increaseQty": "Увеличить количество",
+      "decreaseQty": "Уменьшить количество",
+      "specialInstructions": "Добавить специальные инструкции...",
+      "itemNotes": "Примечания к товару"
+    },
+    "modifiers": {
+      "title": "Настроить заказ",
+      "selectOptions": "Выберите опции",
+      "quantity": "Количество",
+      "addToCart": "Добавить в корзину",
+      "cancel": "Отмена",
+      "required": "Обязательно",
+      "optional": "Необязательно",
+      "noModifiers": "Опции настройки недоступны"
+    },
+    "orderDetails": {
+      "title": "Детали заказа",
+      "customerInfo": "Информация о клиенте",
+      "deliveryInfo": "Информация о доставке",
+      "dineInInfo": "Информация о посещении",
+      "orderSummary": "Сводка заказа",
+      "back": "Вернуться в корзину",
+      "continue": "Перейти к оплате",
+      "form": {
+        "customerName": "Имя клиента",
+        "customerNamePlaceholder": "Введите имя клиента",
+        "phoneNumber": "Номер телефона",
+        "phonePlaceholder": "+998 90 123 45 67",
+        "email": "Email (Необязательно)",
+        "emailPlaceholder": "client@example.com",
+        "streetAddress": "Адрес улицы",
+        "addressPlaceholder": "ул. Главная, д. 123, кв. 4Б",
+        "city": "Город",
+        "cityPlaceholder": "Ташкент",
+        "state": "Регион/Область",
+        "zipCode": "Почтовый индекс",
+        "deliveryInstructions": "Инструкции по доставке",
+        "instructionsPlaceholder": "Позвоните в дверь, оставьте у двери и т.д.",
+        "tableNumber": "Номер стола",
+        "tablePlaceholder": "Введите номер стола",
+        "guestCount": "Количество гостей",
+        "guestPlaceholder": "2"
+      }
+    },
+    "payment": {
+      "title": "Оплата",
+      "selectMethod": "Выберите способ оплаты",
+      "methods": {
+        "cash": "Наличные",
+        "card": "Карта",
+        "mobile": "Мобильный платеж"
+      },
+      "cashPayment": {
+        "title": "Оплата наличными",
+        "amountTendered": "Внесенная сумма",
+        "amountPlaceholder": "Введите полученную сумму",
+        "changeDue": "Сдача",
+        "quickAmounts": "Быстрые суммы"
+      },
+      "summary": {
+        "orderSummary": "Сводка заказа",
+        "subtotal": "Промежуточный итог",
+        "tax": "Налог",
+        "delivery": "Доставка",
+        "total": "Итого"
+      },
+      "actions": {
+        "back": "Назад",
+        "completeOrder": "Завершить заказ",
+        "processing": "Обработка..."
+      }
+    },
+    "confirmation": {
+      "title": "Заказ подтвержден!",
+      "success": "Ваш заказ успешно размещен",
+      "orderNumber": "Номер заказа",
+      "printReceipt": "Распечатать чек",
+      "newOrder": "Начать новый заказ",
+      "viewOrders": "Просмотр заказов"
+    },
+    "errors": {
+      "loadMenuFailed": "Не удалось загрузить меню",
+      "submitOrderFailed": "Не удалось отправить заказ",
+      "noRestaurantFound": "Ресторан не найден в системе",
+      "fillRequiredFields": "Пожалуйста, заполните все обязательные поля",
+      "invalidPhone": "Пожалуйста, введите правильный номер телефона",
+      "invalidEmail": "Пожалуйста, введите правильный email адрес"
+    },
+    "buttons": {
+      "cancel": "Отмена",
+      "save": "Сохранить",
+      "confirm": "Подтвердить",
+      "close": "Закрыть",
+      "add": "Добавить",
+      "remove": "Удалить",
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "print": "Печать",
+      "back": "Назад",
+      "next": "Далее",
+      "finish": "Завершить"
+    }
   }
 }

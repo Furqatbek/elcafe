@@ -1201,5 +1201,144 @@
   },
   "linkedItems": {
     "totalLinkedItems": "Total Linked Items"
+  },
+  "pos": {
+    "title": "Point of Sale",
+    "loading": "Loading...",
+    "startOrder": {
+      "title": "Start New Order",
+      "subtitle": "Select order type to begin",
+      "delivery": "Delivery",
+      "deliveryDesc": "Customer delivery order",
+      "takeaway": "Takeaway",
+      "takeawayDesc": "Customer pickup order",
+      "dineIn": "Dine In",
+      "dineInDesc": "Customer will eat at the restaurant"
+    },
+    "menu": {
+      "title": "Menu Selection",
+      "searchPlaceholder": "Search menu...",
+      "allCategories": "All Categories",
+      "noProducts": "No products found",
+      "addToCart": "Add to Cart",
+      "viewMode": {
+        "grid": "Grid View",
+        "list": "List View"
+      }
+    },
+    "cart": {
+      "title": "Cart",
+      "empty": "Your cart is empty",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "delivery": "Delivery",
+      "total": "Total",
+      "items": "Items",
+      "addMore": "Add More Items",
+      "checkout": "Proceed to Checkout",
+      "clear": "Clear Cart",
+      "removeItem": "Remove item",
+      "increaseQty": "Increase quantity",
+      "decreaseQty": "Decrease quantity",
+      "specialInstructions": "Add special instructions...",
+      "itemNotes": "Item Notes"
+    },
+    "modifiers": {
+      "title": "Customize Your Order",
+      "selectOptions": "Select your options",
+      "quantity": "Quantity",
+      "addToCart": "Add to Cart",
+      "cancel": "Cancel",
+      "required": "Required",
+      "optional": "Optional",
+      "noModifiers": "No customization options available"
+    },
+    "orderDetails": {
+      "title": "Order Details",
+      "customerInfo": "Customer Information",
+      "deliveryInfo": "Delivery Information",
+      "dineInInfo": "Dine-In Information",
+      "orderSummary": "Order Summary",
+      "back": "Back to Cart",
+      "continue": "Continue to Payment",
+      "form": {
+        "customerName": "Customer Name",
+        "customerNamePlaceholder": "Enter customer name",
+        "phoneNumber": "Phone Number",
+        "phonePlaceholder": "+998 90 123 45 67",
+        "email": "Email (Optional)",
+        "emailPlaceholder": "customer@example.com",
+        "streetAddress": "Street Address",
+        "addressPlaceholder": "123 Main Street, Apt 4B",
+        "city": "City",
+        "cityPlaceholder": "Tashkent",
+        "state": "State/Region",
+        "zipCode": "ZIP Code",
+        "deliveryInstructions": "Delivery Instructions",
+        "instructionsPlaceholder": "Ring doorbell, leave at door, etc.",
+        "tableNumber": "Table Number",
+        "tablePlaceholder": "Enter table number",
+        "guestCount": "Number of Guests",
+        "guestPlaceholder": "2"
+      }
+    },
+    "payment": {
+      "title": "Payment",
+      "selectMethod": "Select Payment Method",
+      "methods": {
+        "cash": "Cash",
+        "card": "Card",
+        "mobile": "Mobile Payment"
+      },
+      "cashPayment": {
+        "title": "Cash Payment",
+        "amountTendered": "Amount Tendered",
+        "amountPlaceholder": "Enter amount received",
+        "changeDue": "Change Due",
+        "quickAmounts": "Quick Amounts"
+      },
+      "summary": {
+        "orderSummary": "Order Summary",
+        "subtotal": "Subtotal",
+        "tax": "Tax",
+        "delivery": "Delivery",
+        "total": "Total"
+      },
+      "actions": {
+        "back": "Back",
+        "completeOrder": "Complete Order",
+        "processing": "Processing..."
+      }
+    },
+    "confirmation": {
+      "title": "Order Confirmed!",
+      "success": "Your order has been successfully placed",
+      "orderNumber": "Order Number",
+      "printReceipt": "Print Receipt",
+      "newOrder": "Start New Order",
+      "viewOrders": "View Orders"
+    },
+    "errors": {
+      "loadMenuFailed": "Failed to load menu",
+      "submitOrderFailed": "Failed to submit order",
+      "noRestaurantFound": "No restaurant found in the system",
+      "fillRequiredFields": "Please fill in all required fields",
+      "invalidPhone": "Please enter a valid phone number",
+      "invalidEmail": "Please enter a valid email address"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "save": "Save",
+      "confirm": "Confirm",
+      "close": "Close",
+      "add": "Add",
+      "remove": "Remove",
+      "edit": "Edit",
+      "delete": "Delete",
+      "print": "Print",
+      "back": "Back",
+      "next": "Next",
+      "finish": "Finish"
+    }
   }
 }
