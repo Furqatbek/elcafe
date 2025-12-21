@@ -64,6 +64,7 @@ services:
       - elcafe-network
     volumes:
       - uploads:/app/uploads
+      - ./logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 30s
