@@ -1368,6 +1368,12 @@
         "countedQty": "Counted Qty",
         "variance": "Variance",
         "status": "Status"
+      },
+      "itemStatus": {
+        "pending": "Pending",
+        "counted": "Counted",
+        "recounted": "Recounted",
+        "verified": "Verified"
       }
     },
     "waste": {

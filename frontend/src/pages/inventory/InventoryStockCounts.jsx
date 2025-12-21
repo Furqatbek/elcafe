@@ -395,7 +395,12 @@ export default function InventoryStockCounts() {
                         ) : '-'}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={item.status === 'COUNTED' ? 'success' : 'secondary'}>{item.status}</Badge>
+                        <Badge variant={item.status === 'COUNTED' ? 'success' : 'secondary'}>
+                          {item.status === 'PENDING' && t('inventory.stockCounts.itemStatus.pending', 'Pending')}
+                          {item.status === 'COUNTED' && t('inventory.stockCounts.itemStatus.counted', 'Counted')}
+                          {item.status === 'RECOUNTED' && t('inventory.stockCounts.itemStatus.recounted', 'Recounted')}
+                          {item.status === 'VERIFIED' && t('inventory.stockCounts.itemStatus.verified', 'Verified')}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}

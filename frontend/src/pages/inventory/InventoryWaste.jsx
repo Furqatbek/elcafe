@@ -147,7 +147,7 @@ export default function InventoryWaste() {
               <Trash2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">${wasteReport?.totalWasteCost?.toFixed(2) || '0.00'}</div>
+              <div className="text-2xl font-bold text-red-600">{wasteReport?.totalWasteCost?.toFixed(2) || '0.00'}</div>
               <p className="text-xs text-muted-foreground">{wasteReport?.recordCount || 0} {t('inventory.waste.records', 'records')}</p>
             </CardContent>
           </Card>
@@ -177,7 +177,7 @@ export default function InventoryWaste() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                ${wasteReport?.recordCount > 0 ? (wasteReport.totalWasteCost / wasteReport.recordCount).toFixed(2) : '0.00'}
+                {wasteReport?.recordCount > 0 ? (wasteReport.totalWasteCost / wasteReport.recordCount).toFixed(2) : '0.00'}
               </div>
             </CardContent>
           </Card>
@@ -227,7 +227,7 @@ export default function InventoryWaste() {
                       <TableCell className="font-medium">{record.ingredientName}</TableCell>
                       <TableCell>{record.quantity} {record.unit}</TableCell>
                       <TableCell>{getWasteReasonBadge(record.wasteReason)}</TableCell>
-                      <TableCell className="text-red-600 font-medium">${record.totalCost?.toFixed(2) || '0.00'}</TableCell>
+                      <TableCell className="text-red-600 font-medium">{record.totalCost?.toFixed(2) || '0.00'}</TableCell>
                       <TableCell>{record.recordedBy || '-'}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleDeleteWaste(record.id)}>
@@ -265,7 +265,7 @@ export default function InventoryWaste() {
                       <TableCell>{getWasteReasonBadge(item.reason)}</TableCell>
                       <TableCell className="text-right">{item.recordCount}</TableCell>
                       <TableCell className="text-right">{item.totalQuantity?.toFixed(2)}</TableCell>
-                      <TableCell className="text-right text-red-600">${item.totalCost?.toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-red-600">{item.totalCost?.toFixed(2)}</TableCell>
                       <TableCell className="text-right">{item.percentageOfTotal?.toFixed(1)}%</TableCell>
                     </TableRow>
                   ))}
@@ -297,7 +297,7 @@ export default function InventoryWaste() {
                       <TableCell className="font-medium">{item.ingredientName}</TableCell>
                       <TableCell className="text-right">{item.recordCount}</TableCell>
                       <TableCell className="text-right">{item.totalQuantity?.toFixed(2)}</TableCell>
-                      <TableCell className="text-right text-red-600">${item.totalCost?.toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-red-600">{item.totalCost?.toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
