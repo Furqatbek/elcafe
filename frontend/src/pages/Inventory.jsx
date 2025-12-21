@@ -1435,14 +1435,14 @@ export default function Inventory() {
               <div className="space-y-2">
                 <Label htmlFor="supplierId">{t('inventory.fields.supplier')}</Label>
                 <Select
-                  value={formData.supplierId}
-                  onValueChange={(value) => setFormData({ ...formData, supplierId: value })}
+                  value={formData.supplierId || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, supplierId: value === 'none' ? '' : value })}
                 >
                   <SelectTrigger id="supplierId">
                     <SelectValue placeholder={t('inventory.placeholders.selectSupplier', 'Select supplier')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">{t('common.none', 'None')}</SelectItem>
+                    <SelectItem value="none">{t('common.none', 'None')}</SelectItem>
                     {suppliers.filter(s => s.active).map((supplier) => (
                       <SelectItem key={supplier.id} value={supplier.id.toString()}>
                         {supplier.name}
