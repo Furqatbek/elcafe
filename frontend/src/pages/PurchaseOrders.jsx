@@ -154,6 +154,33 @@ const PurchaseOrders = () => {
     }
   };
 
+  const handleIngredientChange = (ingredientId) => {
+    if (!ingredientId) {
+      setItemForm(prev => ({
+        ...prev,
+        ingredientId: '',
+        itemName: '',
+        sku: '',
+        unit: '',
+        unitPrice: 0
+      }));
+      return;
+    }
+
+    const ingredient = ingredients.find(i => i.id === parseInt(ingredientId));
+    if (ingredient) {
+      setItemForm(prev => ({
+        ...prev,
+        ingredientId: ingredient.id.toString(),
+        itemName: ingredient.name,
+        sku: ingredient.sku || '',
+        unit: ingredient.unit || '',
+        unitPrice: ingredient.costPerUnit || 0,
+        quantity: ingredient.reorderQuantity || prev.quantity
+      }));
+    }
+  };
+
   const handleAddItem = () => {
     if (!itemForm.itemName || !itemForm.quantity || !itemForm.unitPrice) {
       alert(t('finance.common.fillRequiredFields'));
@@ -557,15 +584,35 @@ const PurchaseOrders = () => {
               <div className="bg-gray-50 p-4 rounded-lg mb-4">
                 <div className="grid grid-cols-4 gap-2 mb-2">
                   <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.linkToIngredient')}</label>
+                    <select
+                      value={itemForm.ingredientId}
+                      onChange={(e) => handleIngredientChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="">{t('finance.common.none')}</option>
+                      {(Array.isArray(ingredients) ? ingredients : []).map(ing => (
+                        <option key={ing.id} value={ing.id}>
+                          {ing.name} {ing.sku ? `(${ing.sku})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {itemForm.ingredientId && (
+                      <p className="text-xs text-blue-600 mt-1">{t('finance.purchaseOrders.autoPopulated')}</p>
+                    )}
+                  </div>
+                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.itemName')} *</label>
                     <input
                       type="text"
                       value={itemForm.itemName}
                       onChange={(e) => setItemForm({ ...itemForm, itemName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${itemForm.ingredientId ? 'bg-gray-50' : ''}`}
                       placeholder={t('finance.purchaseOrders.itemNamePlaceholder')}
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2 mb-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.quantity')} *</label>
                     <input
@@ -583,19 +630,17 @@ const PurchaseOrders = () => {
                       type="text"
                       value={itemForm.unit}
                       onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${itemForm.ingredientId ? 'bg-gray-50' : ''}`}
                       placeholder={t('finance.purchaseOrders.unitPlaceholder')}
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.unitPrice')} *</label>
                     <input
                       type="number"
                       value={itemForm.unitPrice}
                       onChange={(e) => setItemForm({ ...itemForm, unitPrice: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${itemForm.ingredientId ? 'bg-gray-50' : ''}`}
                       min="0"
                       step="0.01"
                     />
@@ -606,21 +651,8 @@ const PurchaseOrders = () => {
                       type="text"
                       value={itemForm.sku}
                       onChange={(e) => setItemForm({ ...itemForm, sku: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${itemForm.ingredientId ? 'bg-gray-50' : ''}`}
                     />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.linkToIngredient')}</label>
-                    <select
-                      value={itemForm.ingredientId}
-                      onChange={(e) => setItemForm({ ...itemForm, ingredientId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">{t('finance.common.none')}</option>
-                      {(Array.isArray(ingredients) ? ingredients : []).map(ing => (
-                        <option key={ing.id} value={ing.id}>{ing.name}</option>
-                      ))}
-                    </select>
                   </div>
                 </div>
                 <button
