@@ -1239,6 +1239,7 @@
       "recipes": "Retseptlar",
       "expiry": "Yaroqlilik muddati",
       "stockCounts": "Inventarizatsiya",
+      "waste": "Isrofgarchilik",
       "suppliers": "Yetkazib beruvchilar",
       "stockAlerts": "Zaxira ogohlantirishlari"
     },
@@ -1286,6 +1287,44 @@
         "countedQty": "Hisoblangan",
         "variance": "Farq",
         "status": "Holat"
+      }
+    },
+    "waste": {
+      "title": "Isrofgarchilik boshqaruvi",
+      "records": "Isrofgarchilik yozuvlari",
+      "recordsDesc": "Inventar bo'yicha isrofgarchilikni kuzatish va tahlil qilish",
+      "recordWaste": "Isrofgarchilikni yozish",
+      "recordWasteDesc": "Ingredient uchun isrofgarchilik hodisasini qayd etish",
+      "selectIngredient": "Ingredientni tanlang",
+      "noRecords": "Isrofgarchilik yozuvlari topilmadi. Birinchi yozuvni qo'shish uchun \"Isrofgarchilikni yozish\" tugmasini bosing.",
+      "totalWaste": "Jami isrofgarchilik (30 kun)",
+      "mostCommonReason": "Eng ko'p sabab",
+      "totalQuantity": "Jami miqdor",
+      "avgPerRecord": "O'rtacha narx",
+      "units": "birlik isrof qilindi",
+      "date": "Sana",
+      "quantity": "Miqdor",
+      "reason": "Sabab",
+      "cost": "Narx",
+      "totalCost": "Jami narx",
+      "recordedBy": "Yozuvchi",
+      "notes": "Izohlar",
+      "notesPlaceholder": "Isrofgarchilik haqida ixtiyoriy izohlar",
+      "record": "Yozish",
+      "byReason": "Sabab bo'yicha isrofgarchilik",
+      "topWasted": "Eng ko'p isrof qilingan ingredientlar",
+      "percentage": "Jami %",
+      "reasons": {
+        "expired": "Muddati o'tgan",
+        "spoiled": "Buzilgan",
+        "damaged": "Shikastlangan",
+        "preparation": "Tayyorlash",
+        "overProduction": "Ortiqcha ishlab chiqarish",
+        "customerReturn": "Mijoz qaytarishi",
+        "qualityIssue": "Sifat muammosi",
+        "contamination": "Ifloslanish",
+        "theft": "O'g'irlik",
+        "other": "Boshqa"
       }
     },
     "recipes": {

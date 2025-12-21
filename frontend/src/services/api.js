@@ -439,6 +439,22 @@ export const stockCountAPI = {
     api.get('/inventory/stock-counts/variance-report', { params: { restaurantId, startDate, endDate } }),
 };
 
+export const wasteAPI = {
+  // Waste Records CRUD
+  getAll: (restaurantId, params = {}) =>
+    api.get('/inventory/waste', { params: { restaurantId, ...params } }),
+  getById: (id) => api.get(`/inventory/waste/${id}`),
+  record: (data) => api.post('/inventory/waste', data),
+  delete: (id) => api.delete(`/inventory/waste/${id}`),
+
+  // Waste Reports
+  getReport: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/waste/report', { params: { restaurantId, startDate, endDate } }),
+
+  // Get waste reasons
+  getReasons: () => api.get('/inventory/waste/reasons'),
+};
+
 export const stockAlertAPI = {
   // Subscriptions
   getSubscriptions: (restaurantId) => api.get('/stock-alerts/subscriptions', { params: { restaurantId } }),

@@ -1313,6 +1313,7 @@
       "recipes": "Recipes",
       "expiry": "Expiry",
       "stockCounts": "Stock Counts",
+      "waste": "Waste",
       "suppliers": "Suppliers",
       "stockAlerts": "Stock Alerts"
     },
@@ -1360,6 +1361,44 @@
         "countedQty": "Counted Qty",
         "variance": "Variance",
         "status": "Status"
+      }
+    },
+    "waste": {
+      "title": "Waste Management",
+      "records": "Waste Records",
+      "recordsDesc": "Track and analyze waste across your inventory",
+      "recordWaste": "Record Waste",
+      "recordWasteDesc": "Record a waste event for an ingredient",
+      "selectIngredient": "Select ingredient",
+      "noRecords": "No waste records found. Click \"Record Waste\" to add your first record.",
+      "totalWaste": "Total Waste (30 days)",
+      "mostCommonReason": "Most Common Reason",
+      "totalQuantity": "Total Quantity",
+      "avgPerRecord": "Avg Cost per Record",
+      "units": "units wasted",
+      "date": "Date",
+      "quantity": "Quantity",
+      "reason": "Reason",
+      "cost": "Cost",
+      "totalCost": "Total Cost",
+      "recordedBy": "Recorded By",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional notes about this waste",
+      "record": "Record",
+      "byReason": "Waste by Reason",
+      "topWasted": "Top Wasted Ingredients",
+      "percentage": "% of Total",
+      "reasons": {
+        "expired": "Expired",
+        "spoiled": "Spoiled",
+        "damaged": "Damaged",
+        "preparation": "Preparation",
+        "overProduction": "Over Production",
+        "customerReturn": "Customer Return",
+        "qualityIssue": "Quality Issue",
+        "contamination": "Contamination",
+        "theft": "Theft",
+        "other": "Other"
       }
     },
     "recipes": {

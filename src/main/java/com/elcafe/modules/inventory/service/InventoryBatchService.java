@@ -5,6 +5,7 @@ import com.elcafe.modules.inventory.dto.BatchResponse;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryBatch;
 import com.elcafe.modules.inventory.entity.Supplier;
+import com.elcafe.modules.inventory.entity.WasteRecord;
 import com.elcafe.modules.inventory.repository.InventoryBatchRepository;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.SupplierRepository;
@@ -28,6 +29,7 @@ public class InventoryBatchService {
     private final InventoryBatchRepository batchRepository;
     private final InventoryIngredientRepository ingredientRepository;
     private final SupplierRepository supplierRepository;
+    private final WasteService wasteService;
 
     /**
      * Create a new batch for an ingredient
@@ -187,12 +189,31 @@ public class InventoryBatchService {
      */
     @Transactional
     public void writeOffBatch(Long batchId, String reason) {
+        writeOffBatch(batchId, reason, "SYSTEM");
+    }
+
+    /**
+     * Write off a batch with recorded by information
+     */
+    @Transactional
+    public void writeOffBatch(Long batchId, String reason, String recordedBy) {
         log.info("Writing off batch: {}, reason: {}", batchId, reason);
 
         InventoryBatch batch = batchRepository.findById(batchId)
                 .orElseThrow(() -> new RuntimeException("Batch not found"));
 
         BigDecimal quantity = batch.getQuantity();
+
+        // Determine waste reason based on batch status and reason text
+        WasteRecord.WasteReason wasteReason = determineWasteReason(batch, reason);
+
+        // Create waste record before modifying batch
+        try {
+            wasteService.recordWasteFromBatch(batch, wasteReason, recordedBy, reason);
+        } catch (Exception e) {
+            log.warn("Failed to create waste record for batch {}: {}", batchId, e.getMessage());
+        }
+
         batch.writeOff(reason);
         batchRepository.save(batch);
 
@@ -202,6 +223,28 @@ public class InventoryBatchService {
         ingredientRepository.save(ingredient);
 
         log.info("Batch {} written off, quantity: {}", batch.getBatchNumber(), quantity);
+    }
+
+    /**
+     * Determine waste reason based on batch status and reason text
+     */
+    private WasteRecord.WasteReason determineWasteReason(InventoryBatch batch, String reason) {
+        if (batch.isExpired() || batch.getStatus() == InventoryBatch.Status.EXPIRED) {
+            return WasteRecord.WasteReason.EXPIRED;
+        }
+
+        String lowerReason = reason != null ? reason.toLowerCase() : "";
+        if (lowerReason.contains("spoil") || lowerReason.contains("rot")) {
+            return WasteRecord.WasteReason.SPOILED;
+        } else if (lowerReason.contains("damage")) {
+            return WasteRecord.WasteReason.DAMAGED;
+        } else if (lowerReason.contains("quality")) {
+            return WasteRecord.WasteReason.QUALITY_ISSUE;
+        } else if (lowerReason.contains("contam")) {
+            return WasteRecord.WasteReason.CONTAMINATION;
+        }
+
+        return WasteRecord.WasteReason.OTHER;
     }
 
     /**
