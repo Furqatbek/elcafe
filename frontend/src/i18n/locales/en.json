@@ -966,6 +966,8 @@
       "poNumber": "PO Number",
       "supplier": "Supplier",
       "supplierName": "Supplier Name",
+      "selectSupplier": "Select supplier",
+      "autoPopulated": "Auto-populated from supplier",
       "supplierContact": "Supplier Contact",
       "supplierAddress": "Supplier Address",
       "orderDate": "Order Date",

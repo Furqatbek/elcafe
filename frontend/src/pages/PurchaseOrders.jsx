@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { financialAPI, inventoryAPI, restaurantAPI } from '../services/api';
+import { financialAPI, inventoryAPI, restaurantAPI, supplierAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Check, X, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ const PurchaseOrders = () => {
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [ingredients, setIngredients] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -21,6 +22,7 @@ const PurchaseOrders = () => {
 
   const [formData, setFormData] = useState({
     restaurantId: '',
+    supplierId: '',
     supplierName: '',
     supplierContact: '',
     supplierAddress: '',
@@ -73,6 +75,7 @@ const PurchaseOrders = () => {
     if (selectedRestaurant) {
       loadPurchaseOrders(selectedRestaurant);
       loadIngredients(selectedRestaurant);
+      loadSuppliers(selectedRestaurant);
     }
   }, [selectedRestaurant]);
 
@@ -116,6 +119,41 @@ const PurchaseOrders = () => {
     }
   };
 
+  const loadSuppliers = async (restaurantId) => {
+    try {
+      const response = await supplierAPI.getAll(restaurantId, true); // activeOnly = true
+      setSuppliers(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load suppliers:', error);
+    }
+  };
+
+  const handleSupplierChange = (supplierId) => {
+    if (!supplierId) {
+      setFormData(prev => ({
+        ...prev,
+        supplierId: '',
+        supplierName: '',
+        supplierContact: '',
+        supplierAddress: ''
+      }));
+      return;
+    }
+
+    const supplier = suppliers.find(s => s.id === parseInt(supplierId));
+    if (supplier) {
+      setFormData(prev => ({
+        ...prev,
+        supplierId: supplier.id.toString(),
+        supplierName: supplier.name,
+        supplierContact: supplier.contactPerson ?
+          `${supplier.contactPerson}${supplier.phone ? ' - ' + supplier.phone : ''}` :
+          supplier.phone || '',
+        supplierAddress: supplier.address || ''
+      }));
+    }
+  };
+
   const handleAddItem = () => {
     if (!itemForm.itemName || !itemForm.quantity || !itemForm.unitPrice) {
       alert(t('finance.common.fillRequiredFields'));
@@ -156,13 +194,17 @@ const PurchaseOrders = () => {
 
   const handleSave = async () => {
     try {
-      if (!formData.supplierName || formData.items.length === 0) {
+      if (!formData.supplierId || formData.items.length === 0) {
         alert(t('finance.purchaseOrders.messages.fillSupplierAndItems'));
         return;
       }
 
       setLoading(true);
-      await financialAPI.createPurchaseOrder(formData);
+      const submitData = {
+        ...formData,
+        supplierId: parseInt(formData.supplierId)
+      };
+      await financialAPI.createPurchaseOrder(submitData);
       alert(t('finance.purchaseOrders.messages.createSuccess'));
       setShowModal(false);
       resetForm();
@@ -254,6 +296,7 @@ const PurchaseOrders = () => {
   const resetForm = () => {
     setFormData({
       restaurantId: selectedRestaurant,
+      supplierId: '',
       supplierName: '',
       supplierContact: '',
       supplierAddress: '',
@@ -451,13 +494,19 @@ const PurchaseOrders = () => {
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplierName')} *</label>
-                <input
-                  type="text"
-                  value={formData.supplierName}
-                  onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplier')} *</label>
+                <select
+                  value={formData.supplierId}
+                  onChange={(e) => handleSupplierChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">{t('finance.purchaseOrders.selectSupplier')}</option>
+                  {suppliers.map(supplier => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name} {supplier.code ? `(${supplier.code})` : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplierContact')}</label>
@@ -465,7 +514,8 @@ const PurchaseOrders = () => {
                   type="text"
                   value={formData.supplierContact}
                   onChange={(e) => setFormData({ ...formData, supplierContact: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                  placeholder={t('finance.purchaseOrders.autoPopulated')}
                 />
               </div>
               <div>
@@ -493,8 +543,9 @@ const PurchaseOrders = () => {
               <textarea
                 value={formData.supplierAddress}
                 onChange={(e) => setFormData({ ...formData, supplierAddress: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
                 rows="2"
+                placeholder={t('finance.purchaseOrders.autoPopulated')}
               />
             </div>
 

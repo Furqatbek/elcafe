@@ -678,6 +678,8 @@
       "poNumber": "Номер заказа",
       "supplier": "Поставщик",
       "supplierName": "Имя поставщика",
+      "selectSupplier": "Выберите поставщика",
+      "autoPopulated": "Автоматически заполнено из данных поставщика",
       "supplierContact": "Контакт поставщика",
       "supplierAddress": "Адрес поставщика",
       "orderDate": "Дата заказа",

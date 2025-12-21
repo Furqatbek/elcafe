@@ -678,6 +678,8 @@
       "poNumber": "Buyurtma raqami",
       "supplier": "Yetkazib beruvchi",
       "supplierName": "Yetkazib beruvchi nomi",
+      "selectSupplier": "Yetkazib beruvchini tanlang",
+      "autoPopulated": "Yetkazib beruvchi ma'lumotlaridan avtomatik to'ldirilgan",
       "supplierContact": "Yetkazib beruvchi aloqasi",
       "supplierAddress": "Yetkazib beruvchi manzili",
       "orderDate": "Buyurtma sanasi",
