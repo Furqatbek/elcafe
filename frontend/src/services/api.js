@@ -546,6 +546,19 @@ export const valuationAPI = {
     api.get('/inventory/valuation/cogs/total', {
       params: { restaurantId, startDate, endDate }
     }),
+
+  // Valuation Reports
+  getComparisonReport: (restaurantId) =>
+    api.get('/inventory/valuation/reports/comparison', { params: { restaurantId } }),
+  getInventoryValuationReport: (restaurantId, method = null) => {
+    const params = { restaurantId };
+    if (method) params.method = method;
+    return api.get('/inventory/valuation/reports/inventory', { params });
+  },
+  getCostVarianceReport: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/valuation/reports/variance', {
+      params: { restaurantId, startDate, endDate }
+    }),
 };
 
 export const printerAPI = {

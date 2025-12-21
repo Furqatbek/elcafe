@@ -290,6 +290,9 @@
     "error": "An error occurred",
     "success": "Success",
     "confirm": "Confirm",
+    "from": "From",
+    "to": "To",
+    "clickRefresh": "Click refresh to load data",
     "yes": "Yes",
     "no": "No",
     "selectLanguage": "Select Language",
@@ -1683,6 +1686,47 @@
         "loadFailed": "Failed to load valuation data",
         "saveFailed": "Failed to save valuation settings",
         "calculateFailed": "Failed to calculate inventory value"
+      },
+      "reports": {
+        "title": "Valuation Reports",
+        "comparison": {
+          "title": "Cost Comparison Report",
+          "description": "Compare inventory value across FIFO, LIFO, and Weighted Average methods",
+          "recommendation": "Recommendation",
+          "fifoVsLifo": "FIFO vs LIFO",
+          "fifoVsWac": "FIFO vs WAC",
+          "lifoVsWac": "LIFO vs WAC",
+          "variance": "Variance",
+          "variancePercent": "Variance %",
+          "maxVariance": "Max Variance",
+          "ingredientComparisons": "Ingredient Comparisons"
+        },
+        "inventory": {
+          "title": "Inventory Valuation Report",
+          "description": "Detailed inventory valuation breakdown by category and ingredient",
+          "byCategory": "By Category",
+          "byIngredient": "By Ingredient",
+          "percentOfTotal": "% of Total",
+          "activeBatches": "Active Batches",
+          "oldestBatchCost": "Oldest Batch Cost",
+          "newestBatchCost": "Newest Batch Cost",
+          "ingredientsWithStock": "Ingredients with Stock",
+          "averageCost": "Average Cost"
+        },
+        "variance": {
+          "title": "Cost Variance Report",
+          "description": "Analyze actual vs standard cost variances",
+          "actualCost": "Actual Cost",
+          "standardCost": "Standard Cost",
+          "totalVariance": "Total Variance",
+          "favorable": "Favorable",
+          "unfavorable": "Unfavorable",
+          "favorableVariances": "Favorable Variances",
+          "unfavorableVariances": "Unfavorable Variances",
+          "varianceReason": "Variance Reason",
+          "selectDateRange": "Select Date Range",
+          "generate": "Generate Report"
+        }
       }
     }
   },
