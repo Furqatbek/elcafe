@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { ChevronLeft, Phone, User, MapPin, Users, Hash } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
@@ -11,6 +12,7 @@ import usePOSStore from '../store/posStore';
  * Dine-in: table number, guest count
  */
 const OrderDetailsScreen = () => {
+  const { t } = useTranslation();
   const { currentOrder, customer, setCustomerInfo, setCurrentScreen } = usePOSStore();
 
   const [formData, setFormData] = useState({
@@ -40,32 +42,32 @@ const OrderDetailsScreen = () => {
 
     // Common validations
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('pos.details.errors.nameRequired', 'Name is required');
     }
 
     if (currentOrder.type === 'DELIVERY') {
       if (!formData.phone.trim()) {
-        newErrors.phone = 'Phone number is required';
+        newErrors.phone = t('pos.details.errors.phoneRequired', 'Phone number is required');
       }
       if (!formData.address.trim()) {
-        newErrors.address = 'Address is required';
+        newErrors.address = t('pos.details.errors.addressRequired', 'Address is required');
       }
       if (!formData.city.trim()) {
-        newErrors.city = 'City is required';
+        newErrors.city = t('pos.details.errors.cityRequired', 'City is required');
       }
       if (!formData.zipCode.trim()) {
-        newErrors.zipCode = 'ZIP code is required';
+        newErrors.zipCode = t('pos.details.errors.zipRequired', 'ZIP code is required');
       }
     } else if (currentOrder.type === 'TAKEAWAY') {
       if (!formData.phone.trim()) {
-        newErrors.phone = 'Phone number is required';
+        newErrors.phone = t('pos.details.errors.phoneRequired', 'Phone number is required');
       }
     } else if (currentOrder.type === 'DINE_IN') {
       if (!formData.tableNumber.trim()) {
-        newErrors.tableNumber = 'Table number is required';
+        newErrors.tableNumber = t('pos.details.errors.tableRequired', 'Table number is required');
       }
       if (!formData.guestCount || formData.guestCount < 1) {
-        newErrors.guestCount = 'Guest count must be at least 1';
+        newErrors.guestCount = t('pos.details.errors.guestCountMin', 'Guest count must be at least 1');
       }
     }
 
@@ -146,12 +148,12 @@ const OrderDetailsScreen = () => {
             onClick={() => setCurrentScreen('cart')}
             icon={<ChevronLeft className="w-6 h-6" />}
           >
-            Back to Cart
+            {t('pos.details.backToCart', 'Back to Cart')}
           </TouchButton>
 
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Order Details</h1>
-            <p className="text-sm text-gray-600">{currentOrder.type} Order</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('pos.details.title', 'Order Details')}</h1>
+            <p className="text-sm text-gray-600">{t('pos.cart.orderTypeLabel', '{{type}} Order', { type: currentOrder.type })}</p>
           </div>
 
           <div className="w-[140px]" /> {/* Spacer */}
@@ -163,32 +165,32 @@ const OrderDetailsScreen = () => {
         <div className="max-w-2xl mx-auto space-y-6">
           {/* Common Fields - Customer Info */}
           <div className="bg-white rounded-xl p-6 border-2 border-gray-200 space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Customer Information</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{t('pos.details.customerInfo', 'Customer Information')}</h2>
 
             <InputField
-              label="Customer Name"
+              label={t('pos.details.customerName', 'Customer Name')}
               icon={<User className="w-5 h-5" />}
               field="name"
               required
-              placeholder="Enter customer name"
+              placeholder={t('pos.details.namePlaceholder', 'Enter customer name')}
             />
 
             {(currentOrder.type === 'DELIVERY' || currentOrder.type === 'TAKEAWAY') && (
               <>
                 <InputField
-                  label="Phone Number"
+                  label={t('pos.details.phoneNumber', 'Phone Number')}
                   icon={<Phone className="w-5 h-5" />}
                   field="phone"
                   type="tel"
                   required
-                  placeholder="(555) 123-4567"
+                  placeholder={t('pos.details.phonePlaceholder', '(555) 123-4567')}
                 />
 
                 <InputField
-                  label="Email (Optional)"
+                  label={t('pos.details.emailOptional', 'Email (Optional)')}
                   field="email"
                   type="email"
-                  placeholder="customer@example.com"
+                  placeholder={t('pos.details.emailPlaceholder', 'customer@example.com')}
                 />
               </>
             )}
@@ -197,40 +199,40 @@ const OrderDetailsScreen = () => {
           {/* Delivery-Specific Fields */}
           {currentOrder.type === 'DELIVERY' && (
             <div className="bg-white rounded-xl p-6 border-2 border-gray-200 space-y-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Delivery Address</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{t('pos.details.deliveryAddress', 'Delivery Address')}</h2>
 
               <InputField
-                label="Street Address"
+                label={t('pos.details.streetAddress', 'Street Address')}
                 icon={<MapPin className="w-5 h-5" />}
                 field="address"
                 required
-                placeholder="123 Main Street"
+                placeholder={t('pos.details.addressPlaceholder', '123 Main Street')}
               />
 
               <div className="grid grid-cols-2 gap-4">
                 <InputField
-                  label="City"
+                  label={t('pos.details.city', 'City')}
                   field="city"
                   required
-                  placeholder="New York"
+                  placeholder={t('pos.details.cityPlaceholder', 'New York')}
                 />
 
                 <InputField
-                  label="ZIP Code"
+                  label={t('pos.details.zipCode', 'ZIP Code')}
                   field="zipCode"
                   required
-                  placeholder="10001"
+                  placeholder={t('pos.details.zipPlaceholder', '10001')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Delivery Instructions (Optional)
+                  {t('pos.details.deliveryInstructions', 'Delivery Instructions (Optional)')}
                 </label>
                 <textarea
                   value={formData.deliveryInstructions}
                   onChange={(e) => handleChange('deliveryInstructions', e.target.value)}
-                  placeholder="E.g., Ring doorbell, Leave at door..."
+                  placeholder={t('pos.details.instructionsPlaceholder', 'E.g., Ring doorbell, Leave at door...')}
                   rows={3}
                   className={cn(
                     'w-full px-4 py-3 rounded-lg',
@@ -247,19 +249,19 @@ const OrderDetailsScreen = () => {
           {/* Dine-In Specific Fields */}
           {currentOrder.type === 'DINE_IN' && (
             <div className="bg-white rounded-xl p-6 border-2 border-gray-200 space-y-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Table Information</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{t('pos.details.tableInfo', 'Table Information')}</h2>
 
               <InputField
-                label="Table Number"
+                label={t('pos.details.tableNumber', 'Table Number')}
                 icon={<Hash className="w-5 h-5" />}
                 field="tableNumber"
                 required
-                placeholder="e.g., 12, A5"
+                placeholder={t('pos.details.tablePlaceholder', 'e.g., 12, A5')}
               />
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Number of Guests <span className="text-red-500">*</span>
+                  {t('pos.details.numberOfGuests', 'Number of Guests')} <span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center gap-3">
                   <TouchButton
@@ -308,16 +310,16 @@ const OrderDetailsScreen = () => {
 
           {/* Order Summary Preview */}
           <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
-            <h3 className="text-lg font-bold text-blue-900 mb-3">Order Summary</h3>
+            <h3 className="text-lg font-bold text-blue-900 mb-3">{t('pos.cart.orderSummary', 'Order Summary')}</h3>
             <div className="space-y-2 text-blue-800">
               <div className="flex justify-between">
-                <span>Items:</span>
+                <span>{t('pos.cart.items', 'Items')}:</span>
                 <span className="font-semibold">
                   {currentOrder.items.reduce((sum, item) => sum + item.quantity, 0)}
                 </span>
               </div>
               <div className="flex justify-between text-xl font-bold">
-                <span>Total:</span>
+                <span>{t('pos.cart.total', 'Total')}:</span>
                 <span>${currentOrder.total.toFixed(2)}</span>
               </div>
             </div>
@@ -334,7 +336,7 @@ const OrderDetailsScreen = () => {
             fullWidth
             onClick={handleProceedToPayment}
           >
-            Proceed to Payment
+            {t('pos.details.proceedToPayment', 'Proceed to Payment')}
           </TouchButton>
         </div>
       </div>
