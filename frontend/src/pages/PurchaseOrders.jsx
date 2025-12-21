@@ -137,6 +137,15 @@ const PurchaseOrders = () => {
         supplierContact: '',
         supplierAddress: ''
       }));
+      // Clear ingredient selection when supplier is cleared
+      setItemForm(prev => ({
+        ...prev,
+        ingredientId: '',
+        itemName: '',
+        sku: '',
+        unit: '',
+        unitPrice: 0
+      }));
       return;
     }
 
@@ -151,8 +160,22 @@ const PurchaseOrders = () => {
           supplier.phone || '',
         supplierAddress: supplier.address || ''
       }));
+      // Clear ingredient selection when supplier changes
+      setItemForm(prev => ({
+        ...prev,
+        ingredientId: '',
+        itemName: '',
+        sku: '',
+        unit: '',
+        unitPrice: 0
+      }));
     }
   };
+
+  // Filter ingredients by selected supplier
+  const filteredIngredients = formData.supplierId
+    ? ingredients.filter(ing => ing.supplierId === parseInt(formData.supplierId))
+    : ingredients;
 
   const handleIngredientChange = (ingredientId) => {
     if (!ingredientId) {
@@ -589,9 +612,10 @@ const PurchaseOrders = () => {
                       value={itemForm.ingredientId}
                       onChange={(e) => handleIngredientChange(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      disabled={!formData.supplierId}
                     >
-                      <option value="">{t('finance.common.none')}</option>
-                      {(Array.isArray(ingredients) ? ingredients : []).map(ing => (
+                      <option value="">{formData.supplierId ? t('finance.common.none') : t('finance.purchaseOrders.selectSupplierFirst')}</option>
+                      {(Array.isArray(filteredIngredients) ? filteredIngredients : []).map(ing => (
                         <option key={ing.id} value={ing.id}>
                           {ing.name} {ing.sku ? `(${ing.sku})` : ''}
                         </option>
@@ -599,6 +623,9 @@ const PurchaseOrders = () => {
                     </select>
                     {itemForm.ingredientId && (
                       <p className="text-xs text-blue-600 mt-1">{t('finance.purchaseOrders.autoPopulated')}</p>
+                    )}
+                    {formData.supplierId && filteredIngredients.length === 0 && (
+                      <p className="text-xs text-orange-600 mt-1">{t('finance.purchaseOrders.noIngredientsForSupplier')}</p>
                     )}
                   </div>
                   <div className="col-span-2">

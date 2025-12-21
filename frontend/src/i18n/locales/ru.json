@@ -692,6 +692,8 @@
       "unitPlaceholder": "например, кг, шт, фунт",
       "sku": "Артикул",
       "linkToIngredient": "Связать с ингредиентом",
+      "selectSupplierFirst": "Сначала выберите поставщика",
+      "noIngredientsForSupplier": "Нет ингредиентов, связанных с этим поставщиком",
       "addItem": "Добавить позицию",
       "itemsToReceive": "Позиции к получению",
       "ordered": "Заказано",

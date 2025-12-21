@@ -980,6 +980,8 @@
       "unitPlaceholder": "e.g., kg, pcs, lbs",
       "sku": "SKU",
       "linkToIngredient": "Link to Ingredient",
+      "selectSupplierFirst": "Select supplier first",
+      "noIngredientsForSupplier": "No ingredients linked to this supplier",
       "addItem": "Add Item",
       "itemsToReceive": "Items to Receive",
       "ordered": "Ordered",

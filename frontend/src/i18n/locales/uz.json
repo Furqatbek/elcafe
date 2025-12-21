@@ -692,6 +692,8 @@
       "unitPlaceholder": "masalan, kg, dona, funt",
       "sku": "SKU",
       "linkToIngredient": "Ingredientga bog'lash",
+      "selectSupplierFirst": "Avval yetkazib beruvchini tanlang",
+      "noIngredientsForSupplier": "Bu yetkazib beruvchi bilan bog'langan ingredientlar yo'q",
       "addItem": "Mahsulot qo'shish",
       "itemsToReceive": "Qabul qilinadigan mahsulotlar",
       "ordered": "Buyurtma qilingan",
