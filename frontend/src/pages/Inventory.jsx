@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { inventoryAPI, inventoryBatchAPI, restaurantAPI, menuAPI, stockAlertAPI, supplierAPI } from '../services/api';
+import { inventoryAPI, inventoryBatchAPI, restaurantAPI, menuAPI, stockAlertAPI, supplierAPI, stockCountAPI } from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -58,6 +58,10 @@ import {
   Clock,
   XCircle,
   Layers,
+  ClipboardCheck,
+  Play,
+  Eye,
+  FileCheck,
 } from 'lucide-react';
 
 export default function Inventory() {
@@ -70,6 +74,7 @@ export default function Inventory() {
     if (location.pathname.includes('stock-alerts')) return 'alerts';
     if (location.pathname.includes('suppliers')) return 'suppliers';
     if (location.pathname.includes('expiry')) return 'expiry';
+    if (location.pathname.includes('stock-counts')) return 'stockCounts';
     return 'ingredients';
   };
 
@@ -185,6 +190,19 @@ export default function Inventory() {
     notes: '',
   });
 
+  // Stock Counts state
+  const [stockCounts, setStockCounts] = useState([]);
+  const [selectedStockCount, setSelectedStockCount] = useState(null);
+  const [stockCountModalOpen, setStockCountModalOpen] = useState(false);
+  const [stockCountDetailModalOpen, setStockCountDetailModalOpen] = useState(false);
+  const [stockCountFormData, setStockCountFormData] = useState({
+    countType: 'FULL',
+    scheduledDate: new Date().toISOString().split('T')[0],
+    notes: '',
+    initiatedBy: 'Admin',
+    ingredientIds: [],
+  });
+
   useEffect(() => {
     loadRestaurants();
   }, []);
@@ -199,6 +217,7 @@ export default function Inventory() {
       loadExpirySummary();
       loadExpiringBatches();
       loadExpiredBatches();
+      loadStockCounts();
     }
   }, [selectedRestaurant]);
 
@@ -292,6 +311,125 @@ export default function Inventory() {
     } catch (error) {
       console.error('Failed to load expired batches:', error);
     }
+  };
+
+  const loadStockCounts = async () => {
+    try {
+      const response = await stockCountAPI.getAll(selectedRestaurant);
+      setStockCounts(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load stock counts:', error);
+    }
+  };
+
+  const handleCreateStockCount = async () => {
+    try {
+      await stockCountAPI.create({
+        restaurantId: selectedRestaurant,
+        ...stockCountFormData,
+      });
+      setStockCountModalOpen(false);
+      setStockCountFormData({
+        countType: 'FULL',
+        scheduledDate: new Date().toISOString().split('T')[0],
+        notes: '',
+        initiatedBy: 'Admin',
+        ingredientIds: [],
+      });
+      loadStockCounts();
+    } catch (error) {
+      console.error('Failed to create stock count:', error);
+    }
+  };
+
+  const handleStartStockCount = async (id) => {
+    try {
+      await stockCountAPI.start(id, 'Admin');
+      loadStockCounts();
+    } catch (error) {
+      console.error('Failed to start stock count:', error);
+    }
+  };
+
+  const handleViewStockCount = async (id) => {
+    try {
+      const response = await stockCountAPI.getById(id);
+      setSelectedStockCount(response.data.data);
+      setStockCountDetailModalOpen(true);
+    } catch (error) {
+      console.error('Failed to load stock count details:', error);
+    }
+  };
+
+  const handleRecordCount = async (itemId, countedQuantity) => {
+    try {
+      await stockCountAPI.recordCount({
+        itemId,
+        countedQuantity,
+        countedBy: 'Admin',
+      });
+      // Reload the current stock count
+      if (selectedStockCount) {
+        handleViewStockCount(selectedStockCount.id);
+      }
+    } catch (error) {
+      console.error('Failed to record count:', error);
+    }
+  };
+
+  const handleSubmitForReview = async (id) => {
+    try {
+      await stockCountAPI.submitForReview(id, 'Admin');
+      loadStockCounts();
+      setStockCountDetailModalOpen(false);
+    } catch (error) {
+      console.error('Failed to submit for review:', error);
+    }
+  };
+
+  const handleApproveStockCount = async (id, adjustInventory = true) => {
+    try {
+      await stockCountAPI.approve(id, {
+        approvedBy: 'Admin',
+        adjustInventory,
+      });
+      loadStockCounts();
+      loadIngredients();
+      setStockCountDetailModalOpen(false);
+    } catch (error) {
+      console.error('Failed to approve stock count:', error);
+    }
+  };
+
+  const handleCancelStockCount = async (id) => {
+    try {
+      await stockCountAPI.cancel(id, 'Cancelled by user', 'Admin');
+      loadStockCounts();
+    } catch (error) {
+      console.error('Failed to cancel stock count:', error);
+    }
+  };
+
+  const getStockCountStatusBadge = (status) => {
+    const statusConfig = {
+      DRAFT: { variant: 'secondary', label: t('inventory.stockCounts.status.draft', 'Draft') },
+      IN_PROGRESS: { variant: 'default', label: t('inventory.stockCounts.status.inProgress', 'In Progress') },
+      PENDING_REVIEW: { variant: 'warning', label: t('inventory.stockCounts.status.pendingReview', 'Pending Review') },
+      APPROVED: { variant: 'success', label: t('inventory.stockCounts.status.approved', 'Approved') },
+      CANCELLED: { variant: 'destructive', label: t('inventory.stockCounts.status.cancelled', 'Cancelled') },
+    };
+    const config = statusConfig[status] || { variant: 'secondary', label: status };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
+  };
+
+  const getCountTypeBadge = (type) => {
+    const typeConfig = {
+      FULL: { variant: 'default', label: t('inventory.stockCounts.type.full', 'Full Count') },
+      CYCLE: { variant: 'outline', label: t('inventory.stockCounts.type.cycle', 'Cycle Count') },
+      SPOT_CHECK: { variant: 'secondary', label: t('inventory.stockCounts.type.spotCheck', 'Spot Check') },
+    };
+    const config = typeConfig[type] || { variant: 'secondary', label: type };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   const loadBatchesForIngredient = async (ingredientId) => {
@@ -840,7 +978,7 @@ export default function Inventory() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="ingredients" className="flex items-center gap-2">
             <Package className="h-4 w-4" />
             {t('inventory.tabs.ingredients', 'Ingredients')}
@@ -857,6 +995,10 @@ export default function Inventory() {
                 {(expirySummary.expiredCount || 0) + (expirySummary.expiringCount || 0)}
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="stockCounts" className="flex items-center gap-2">
+            <ClipboardCheck className="h-4 w-4" />
+            {t('inventory.tabs.stockCounts', 'Stock Counts')}
           </TabsTrigger>
           <TabsTrigger value="suppliers" className="flex items-center gap-2">
             <Truck className="h-4 w-4" />
@@ -1442,6 +1584,179 @@ export default function Inventory() {
                             <Layers className="h-4 w-4 mr-2" />
                             {t('inventory.expiry.viewBatches', 'View Batches')}
                           </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Stock Counts Tab */}
+        <TabsContent value="stockCounts" className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.stockCounts.stats.total', 'Total Counts')}
+                </CardTitle>
+                <ClipboardCheck className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stockCounts.length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.stockCounts.stats.inProgress', 'In Progress')}
+                </CardTitle>
+                <Play className="h-4 w-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stockCounts.filter(sc => sc.status === 'IN_PROGRESS').length}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.stockCounts.stats.pendingReview', 'Pending Review')}
+                </CardTitle>
+                <Eye className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stockCounts.filter(sc => sc.status === 'PENDING_REVIEW').length}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {t('inventory.stockCounts.stats.approved', 'Approved')}
+                </CardTitle>
+                <FileCheck className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stockCounts.filter(sc => sc.status === 'APPROVED').length}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end">
+            <Button onClick={() => setStockCountModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('inventory.stockCounts.newCount', 'New Stock Count')}
+            </Button>
+          </div>
+
+          {/* Stock Counts Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('inventory.stockCounts.title', 'Stock Counts')}</CardTitle>
+              <CardDescription>
+                {t('inventory.stockCounts.description', 'Physical inventory counts and audits')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('inventory.stockCounts.countNumber', 'Count #')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.type', 'Type')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.status', 'Status')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.progress', 'Progress')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.variance', 'Variance')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.scheduledDate', 'Scheduled')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions', 'Actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stockCounts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        {t('inventory.stockCounts.noData', 'No stock counts found')}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    stockCounts.map((count) => (
+                      <TableRow key={count.id}>
+                        <TableCell className="font-medium">{count.countNumber}</TableCell>
+                        <TableCell>{getCountTypeBadge(count.countType)}</TableCell>
+                        <TableCell>{getStockCountStatusBadge(count.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-blue-600 h-2 rounded-full"
+                                style={{ width: `${count.totalItems > 0 ? (count.countedItems / count.totalItems) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              {count.countedItems}/{count.totalItems}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {count.varianceCount > 0 ? (
+                            <span className="text-red-600 font-medium">
+                              {count.varianceCount} {t('inventory.stockCounts.items', 'items')}
+                              {count.totalVarianceValue && ` (${count.totalVarianceValue.toLocaleString()})`}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {count.scheduledDate ? new Date(count.scheduledDate).toLocaleDateString() : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewStockCount(count.id)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {count.status === 'DRAFT' && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleStartStockCount(count.id)}
+                                >
+                                  <Play className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleCancelStockCount(count.id)}
+                                  className="text-red-600"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            {count.status === 'PENDING_REVIEW' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleApproveStockCount(count.id)}
+                                className="text-green-600"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -2705,6 +3020,186 @@ export default function Inventory() {
               {t('inventory.expiry.confirmWriteOff', 'Confirm Write-Off')}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Count Create Modal */}
+      <Dialog open={stockCountModalOpen} onOpenChange={setStockCountModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('inventory.stockCounts.createTitle', 'Create Stock Count')}</DialogTitle>
+            <DialogDescription>
+              {t('inventory.stockCounts.createDescription', 'Start a new physical inventory count')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="countType">{t('inventory.stockCounts.fields.type', 'Count Type')}</Label>
+              <Select
+                value={stockCountFormData.countType}
+                onValueChange={(value) => setStockCountFormData({ ...stockCountFormData, countType: value })}
+              >
+                <SelectTrigger id="countType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FULL">{t('inventory.stockCounts.type.full', 'Full Count')}</SelectItem>
+                  <SelectItem value="CYCLE">{t('inventory.stockCounts.type.cycle', 'Cycle Count')}</SelectItem>
+                  <SelectItem value="SPOT_CHECK">{t('inventory.stockCounts.type.spotCheck', 'Spot Check')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="scheduledDate">{t('inventory.stockCounts.fields.scheduledDate', 'Scheduled Date')}</Label>
+              <Input
+                id="scheduledDate"
+                type="date"
+                value={stockCountFormData.scheduledDate}
+                onChange={(e) => setStockCountFormData({ ...stockCountFormData, scheduledDate: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="countNotes">{t('common.notes', 'Notes')}</Label>
+              <Input
+                id="countNotes"
+                value={stockCountFormData.notes}
+                onChange={(e) => setStockCountFormData({ ...stockCountFormData, notes: e.target.value })}
+                placeholder={t('common.placeholders.optionalNotes', 'Optional notes...')}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStockCountModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleCreateStockCount}>
+              {t('common.create')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock Count Detail Modal */}
+      <Dialog open={stockCountDetailModalOpen} onOpenChange={setStockCountDetailModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedStockCount?.countNumber}
+              {selectedStockCount && getStockCountStatusBadge(selectedStockCount.status)}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedStockCount && getCountTypeBadge(selectedStockCount.countType)}
+              {selectedStockCount?.scheduledDate && (
+                <span className="ml-2">
+                  {t('inventory.stockCounts.scheduled', 'Scheduled')}: {new Date(selectedStockCount.scheduledDate).toLocaleDateString()}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedStockCount && (
+            <div className="space-y-4 py-4">
+              {/* Progress */}
+              <div className="flex items-center gap-4">
+                <div className="flex-1">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>{t('inventory.stockCounts.progress', 'Progress')}</span>
+                    <span>{selectedStockCount.countedItems}/{selectedStockCount.totalItems} {t('inventory.stockCounts.items', 'items')}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full"
+                      style={{ width: `${selectedStockCount.totalItems > 0 ? (selectedStockCount.countedItems / selectedStockCount.totalItems) * 100 : 0}%` }}
+                    />
+                  </div>
+                </div>
+                {selectedStockCount.varianceCount > 0 && (
+                  <div className="text-right">
+                    <div className="text-sm text-muted-foreground">{t('inventory.stockCounts.variances', 'Variances')}</div>
+                    <div className="text-red-600 font-medium">
+                      {selectedStockCount.varianceCount} {t('inventory.stockCounts.items', 'items')}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Items Table */}
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('inventory.stockCounts.fields.ingredient', 'Ingredient')}</TableHead>
+                    <TableHead className="text-right">{t('inventory.stockCounts.fields.systemQty', 'System Qty')}</TableHead>
+                    <TableHead className="text-right">{t('inventory.stockCounts.fields.countedQty', 'Counted Qty')}</TableHead>
+                    <TableHead className="text-right">{t('inventory.stockCounts.fields.variance', 'Variance')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.fields.status', 'Status')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedStockCount.items?.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div className="font-medium">{item.ingredientName}</div>
+                        <div className="text-sm text-muted-foreground">{item.unit}</div>
+                      </TableCell>
+                      <TableCell className="text-right">{item.systemQuantity}</TableCell>
+                      <TableCell className="text-right">
+                        {selectedStockCount.status === 'IN_PROGRESS' && item.status === 'PENDING' ? (
+                          <Input
+                            type="number"
+                            step="0.001"
+                            className="w-24 text-right"
+                            placeholder="0"
+                            onBlur={(e) => {
+                              if (e.target.value) {
+                                handleRecordCount(item.id, parseFloat(e.target.value));
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && e.target.value) {
+                                handleRecordCount(item.id, parseFloat(e.target.value));
+                              }
+                            }}
+                          />
+                        ) : (
+                          item.countedQuantity ?? '-'
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {item.varianceQuantity != null ? (
+                          <span className={item.varianceQuantity !== 0 ? 'text-red-600 font-medium' : ''}>
+                            {item.varianceQuantity > 0 ? '+' : ''}{item.varianceQuantity}
+                            {item.variancePercentage != null && ` (${item.variancePercentage}%)`}
+                          </span>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={item.status === 'COUNTED' ? 'success' : 'secondary'}>
+                          {item.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Actions */}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setStockCountDetailModalOpen(false)}>
+                  {t('common.close')}
+                </Button>
+                {selectedStockCount.status === 'IN_PROGRESS' && selectedStockCount.countedItems === selectedStockCount.totalItems && (
+                  <Button onClick={() => handleSubmitForReview(selectedStockCount.id)}>
+                    {t('inventory.stockCounts.submitForReview', 'Submit for Review')}
+                  </Button>
+                )}
+                {selectedStockCount.status === 'PENDING_REVIEW' && (
+                  <Button onClick={() => handleApproveStockCount(selectedStockCount.id)} className="bg-green-600 hover:bg-green-700">
+                    {t('inventory.stockCounts.approveAndAdjust', 'Approve & Adjust Inventory')}
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

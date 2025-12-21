@@ -416,6 +416,29 @@ export const inventoryBatchAPI = {
     api.post('/inventory/batches/mark-expired', null, { params: { restaurantId } }),
 };
 
+export const stockCountAPI = {
+  // Stock Count CRUD
+  getAll: (restaurantId) => api.get('/inventory/stock-counts', { params: { restaurantId } }),
+  getActive: (restaurantId) => api.get('/inventory/stock-counts/active', { params: { restaurantId } }),
+  getById: (id) => api.get(`/inventory/stock-counts/${id}`),
+  create: (data) => api.post('/inventory/stock-counts', data),
+
+  // Stock Count workflow
+  start: (id, countedBy) => api.post(`/inventory/stock-counts/${id}/start`, null, { params: { countedBy } }),
+  submitForReview: (id, reviewedBy) => api.post(`/inventory/stock-counts/${id}/submit-review`, null, { params: { reviewedBy } }),
+  approve: (id, data) => api.post(`/inventory/stock-counts/${id}/approve`, data),
+  cancel: (id, reason, cancelledBy) => api.post(`/inventory/stock-counts/${id}/cancel`, null, { params: { reason, cancelledBy } }),
+
+  // Stock Count Items
+  recordCount: (data) => api.post('/inventory/stock-counts/items/record-count', data),
+  setVarianceReason: (data) => api.post('/inventory/stock-counts/items/variance-reason', data),
+  getItemsWithVariance: (id) => api.get(`/inventory/stock-counts/${id}/variances`),
+
+  // Variance Reports
+  getVarianceReport: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/stock-counts/variance-report', { params: { restaurantId, startDate, endDate } }),
+};
+
 export const stockAlertAPI = {
   // Subscriptions
   getSubscriptions: (restaurantId) => api.get('/stock-alerts/subscriptions', { params: { restaurantId } }),

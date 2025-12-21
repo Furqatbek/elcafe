@@ -1238,8 +1238,55 @@
       "ingredients": "Ингредиенты",
       "recipes": "Рецепты",
       "expiry": "Срок годности",
+      "stockCounts": "Инвентаризация",
       "suppliers": "Поставщики",
       "stockAlerts": "Уведомления о запасах"
+    },
+    "stockCounts": {
+      "title": "Инвентаризация",
+      "description": "Физический подсчёт и аудит запасов",
+      "newCount": "Новый подсчёт",
+      "createTitle": "Создать инвентаризацию",
+      "createDescription": "Начать новый физический подсчёт запасов",
+      "noData": "Инвентаризации не найдены",
+      "scheduled": "Запланировано",
+      "progress": "Прогресс",
+      "items": "позиций",
+      "variances": "Расхождения",
+      "countNumber": "№ подсчёта",
+      "type": "Тип",
+      "status": "Статус",
+      "variance": "Расхождение",
+      "scheduledDate": "Запланировано",
+      "submitForReview": "Отправить на проверку",
+      "approveAndAdjust": "Утвердить и скорректировать",
+      "stats": {
+        "total": "Всего подсчётов",
+        "inProgress": "В процессе",
+        "pendingReview": "На проверке",
+        "approved": "Утверждено"
+      },
+      "type": {
+        "full": "Полный подсчёт",
+        "cycle": "Цикличный подсчёт",
+        "spotCheck": "Выборочная проверка"
+      },
+      "status": {
+        "draft": "Черновик",
+        "inProgress": "В процессе",
+        "pendingReview": "На проверке",
+        "approved": "Утверждено",
+        "cancelled": "Отменено"
+      },
+      "fields": {
+        "type": "Тип подсчёта",
+        "scheduledDate": "Дата",
+        "ingredient": "Ингредиент",
+        "systemQty": "По системе",
+        "countedQty": "Подсчитано",
+        "variance": "Расхождение",
+        "status": "Статус"
+      }
     },
     "recipes": {
       "selectProduct": "Выберите продукт",

@@ -1312,8 +1312,55 @@
       "ingredients": "Ingredients",
       "recipes": "Recipes",
       "expiry": "Expiry",
+      "stockCounts": "Stock Counts",
       "suppliers": "Suppliers",
       "stockAlerts": "Stock Alerts"
+    },
+    "stockCounts": {
+      "title": "Stock Counts",
+      "description": "Physical inventory counts and audits",
+      "newCount": "New Stock Count",
+      "createTitle": "Create Stock Count",
+      "createDescription": "Start a new physical inventory count",
+      "noData": "No stock counts found",
+      "scheduled": "Scheduled",
+      "progress": "Progress",
+      "items": "items",
+      "variances": "Variances",
+      "countNumber": "Count #",
+      "type": "Type",
+      "status": "Status",
+      "variance": "Variance",
+      "scheduledDate": "Scheduled",
+      "submitForReview": "Submit for Review",
+      "approveAndAdjust": "Approve & Adjust Inventory",
+      "stats": {
+        "total": "Total Counts",
+        "inProgress": "In Progress",
+        "pendingReview": "Pending Review",
+        "approved": "Approved"
+      },
+      "type": {
+        "full": "Full Count",
+        "cycle": "Cycle Count",
+        "spotCheck": "Spot Check"
+      },
+      "status": {
+        "draft": "Draft",
+        "inProgress": "In Progress",
+        "pendingReview": "Pending Review",
+        "approved": "Approved",
+        "cancelled": "Cancelled"
+      },
+      "fields": {
+        "type": "Count Type",
+        "scheduledDate": "Scheduled Date",
+        "ingredient": "Ingredient",
+        "systemQty": "System Qty",
+        "countedQty": "Counted Qty",
+        "variance": "Variance",
+        "status": "Status"
+      }
     },
     "recipes": {
       "selectProduct": "Select Product",

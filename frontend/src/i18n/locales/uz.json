@@ -1238,8 +1238,55 @@
       "ingredients": "Ingredientlar",
       "recipes": "Retseptlar",
       "expiry": "Yaroqlilik muddati",
+      "stockCounts": "Inventarizatsiya",
       "suppliers": "Yetkazib beruvchilar",
       "stockAlerts": "Zaxira ogohlantirishlari"
+    },
+    "stockCounts": {
+      "title": "Inventarizatsiya",
+      "description": "Fizik inventar hisob-kitobi va tekshiruvi",
+      "newCount": "Yangi hisob-kitob",
+      "createTitle": "Inventarizatsiya yaratish",
+      "createDescription": "Yangi fizik inventar hisob-kitobini boshlash",
+      "noData": "Inventarizatsiyalar topilmadi",
+      "scheduled": "Rejalashtirilgan",
+      "progress": "Progress",
+      "items": "ta element",
+      "variances": "Farqlar",
+      "countNumber": "Hisob №",
+      "type": "Turi",
+      "status": "Holat",
+      "variance": "Farq",
+      "scheduledDate": "Rejalashtirilgan",
+      "submitForReview": "Tekshiruvga yuborish",
+      "approveAndAdjust": "Tasdiqlash va tuzatish",
+      "stats": {
+        "total": "Jami hisoblar",
+        "inProgress": "Jarayonda",
+        "pendingReview": "Tekshiruvda",
+        "approved": "Tasdiqlangan"
+      },
+      "type": {
+        "full": "To'liq hisob-kitob",
+        "cycle": "Tsiklik hisob-kitob",
+        "spotCheck": "Tanlab tekshirish"
+      },
+      "status": {
+        "draft": "Qoralama",
+        "inProgress": "Jarayonda",
+        "pendingReview": "Tekshiruvda",
+        "approved": "Tasdiqlangan",
+        "cancelled": "Bekor qilingan"
+      },
+      "fields": {
+        "type": "Hisob turi",
+        "scheduledDate": "Sana",
+        "ingredient": "Ingredient",
+        "systemQty": "Tizimda",
+        "countedQty": "Hisoblangan",
+        "variance": "Farq",
+        "status": "Holat"
+      }
     },
     "recipes": {
       "selectProduct": "Mahsulotni tanlang",
