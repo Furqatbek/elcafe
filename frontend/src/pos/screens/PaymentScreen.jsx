@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { ChevronLeft, CreditCard, Banknote, Smartphone, CheckCircle } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
@@ -12,6 +13,7 @@ import { posAPI } from '../../services/api';
  * Cash change calculator, payment confirmation
  */
 const PaymentScreen = () => {
+  const { t } = useTranslation();
   const {
     currentOrder,
     customer,
@@ -30,24 +32,24 @@ const PaymentScreen = () => {
   const paymentMethods = [
     {
       id: 'CASH',
-      label: 'Cash',
+      label: t('pos.payment.cash', 'Cash'),
       icon: <Banknote className="w-10 h-10" />,
       color: 'green',
-      description: 'Accept cash payment',
+      description: t('pos.payment.cashDesc', 'Accept cash payment'),
     },
     {
       id: 'CARD',
-      label: 'Card',
+      label: t('pos.payment.card', 'Card'),
       icon: <CreditCard className="w-10 h-10" />,
       color: 'blue',
-      description: 'Credit/Debit card',
+      description: t('pos.payment.cardDesc', 'Credit/Debit card'),
     },
     {
       id: 'MOBILE',
-      label: 'Mobile Pay',
+      label: t('pos.payment.mobile', 'Mobile Pay'),
       icon: <Smartphone className="w-10 h-10" />,
       color: 'purple',
-      description: 'Apple Pay, Google Pay',
+      description: t('pos.payment.mobileDesc', 'Apple Pay, Google Pay'),
     },
   ];
 
@@ -64,7 +66,7 @@ const PaymentScreen = () => {
     const amount = parseFloat(cashAmount);
 
     if (!amount || amount < currentOrder.total) {
-      alert(`Amount must be at least $${currentOrder.total.toFixed(2)}`);
+      alert(t('pos.payment.insufficientAmount', 'Amount must be at least ${{total}}', { total: currentOrder.total.toFixed(2) }));
       return;
     }
 
@@ -110,7 +112,7 @@ const PaymentScreen = () => {
       // Add type-specific data
       if (currentOrder.type === 'DELIVERY') {
         if (!customer.address) {
-          throw new Error('Delivery address is required for delivery orders');
+          throw new Error(t('pos.payment.errors.deliveryAddressRequired', 'Delivery address is required for delivery orders'));
         }
         orderData.deliveryInfo = {
           street: customer.address.street,
@@ -140,7 +142,7 @@ const PaymentScreen = () => {
     } catch (error) {
       console.error('Payment failed:', error);
       setPaymentStatus('FAILED');
-      const errorMessage = error.response?.data?.message || error.message || 'Payment failed. Please try again.';
+      const errorMessage = error.response?.data?.message || error.message || t('pos.payment.errors.paymentFailed', 'Payment failed. Please try again.');
       alert(errorMessage);
     } finally {
       setProcessingPayment(false);
@@ -192,12 +194,12 @@ const PaymentScreen = () => {
             icon={<ChevronLeft className="w-6 h-6" />}
             disabled={processingPayment}
           >
-            Back
+            {t('common.buttons.back', 'Back')}
           </TouchButton>
 
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Payment</h1>
-            <p className="text-sm text-gray-600">Select payment method</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('pos.payment.title', 'Payment')}</h1>
+            <p className="text-sm text-gray-600">{t('pos.payment.selectMethod', 'Select payment method')}</p>
           </div>
 
           <div className="w-[140px]" />
@@ -211,14 +213,14 @@ const PaymentScreen = () => {
           <div className="max-w-4xl mx-auto space-y-6">
             {/* Total Amount Due */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white">
-              <p className="text-xl mb-2 opacity-90">Amount Due</p>
+              <p className="text-xl mb-2 opacity-90">{t('pos.payment.amountDue', 'Amount Due')}</p>
               <p className="text-6xl font-bold">${currentOrder.total.toFixed(2)}</p>
             </div>
 
             {/* Payment Methods */}
             {!payment.method ? (
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Choose Payment Method</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('pos.payment.chooseMethod', 'Choose Payment Method')}</h2>
                 <div className="grid grid-cols-3 gap-4">
                   {paymentMethods.map(({ id, label, icon, color, description }) => {
                     const colors = colorClasses[color];
@@ -259,7 +261,7 @@ const PaymentScreen = () => {
               /* Cash Payment Interface */
               <div className="space-y-6">
                 <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Cash Payment</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('pos.payment.cashPayment', 'Cash Payment')}</h2>
 
                   {/* Quick Amount Buttons */}
                   <div className="grid grid-cols-4 gap-3 mb-6">
@@ -279,8 +281,8 @@ const PaymentScreen = () => {
                   <NumericKeypad
                     value={cashAmount}
                     onValueChange={setCashAmount}
-                    label="Amount Tendered"
-                    placeholder="0.00"
+                    label={t('pos.payment.amountTendered', 'Amount Tendered')}
+                    placeholder={t('pos.payment.amountPlaceholder', '0.00')}
                     allowDecimal={true}
                     maxLength={8}
                   />
@@ -290,7 +292,7 @@ const PaymentScreen = () => {
                     <div className="mt-6 bg-green-50 border-2 border-green-200 rounded-xl p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-green-700 mb-1">Change Due</p>
+                          <p className="text-sm text-green-700 mb-1">{t('pos.payment.changeDue', 'Change Due')}</p>
                           <p className="text-5xl font-bold text-green-900">
                             ${changeDue.toFixed(2)}
                           </p>
@@ -308,7 +310,7 @@ const PaymentScreen = () => {
                       onClick={() => setPaymentMethod(null)}
                       disabled={processingPayment}
                     >
-                      Cancel
+                      {t('common.buttons.cancel', 'Cancel')}
                     </TouchButton>
                     <TouchButton
                       variant="success"
@@ -318,7 +320,7 @@ const PaymentScreen = () => {
                       disabled={!cashAmount || changeDue < 0 || processingPayment}
                       loading={processingPayment}
                     >
-                      Complete Payment
+                      {t('pos.payment.completePayment', 'Complete Payment')}
                     </TouchButton>
                   </div>
                 </div>
@@ -329,12 +331,12 @@ const PaymentScreen = () => {
                 <div className="text-center">
                   <div className="w-24 h-24 border-8 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                    Processing Payment...
+                    {t('pos.payment.processing', 'Processing Payment...')}
                   </h2>
                   <p className="text-lg text-gray-600">
-                    {payment.method === 'CARD' && 'Waiting for card...'}
-                    {payment.method === 'MOBILE' && 'Waiting for mobile payment...'}
-                    {payment.method === 'CASH' && 'Finalizing transaction...'}
+                    {payment.method === 'CARD' && t('pos.payment.waitingCard', 'Waiting for card...')}
+                    {payment.method === 'MOBILE' && t('pos.payment.waitingMobile', 'Waiting for mobile payment...')}
+                    {payment.method === 'CASH' && t('pos.payment.finalizing', 'Finalizing transaction...')}
                   </p>
                 </div>
               </div>
@@ -344,11 +346,11 @@ const PaymentScreen = () => {
 
         {/* Order Summary Sidebar */}
         <div className="w-[360px] bg-white border-l-2 border-gray-200 p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Order Summary</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">{t('pos.cart.orderSummary', 'Order Summary')}</h3>
 
           {/* Customer Info */}
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600 mb-1">Customer</p>
+            <p className="text-sm text-gray-600 mb-1">{t('pos.payment.customer', 'Customer')}</p>
             <p className="font-semibold text-gray-900">{customer.name}</p>
             {customer.phone && (
               <p className="text-sm text-gray-600">{customer.phone}</p>
@@ -372,21 +374,21 @@ const PaymentScreen = () => {
           {/* Totals */}
           <div className="border-t-2 border-gray-200 pt-4 space-y-2">
             <div className="flex justify-between text-gray-700">
-              <span>Subtotal</span>
+              <span>{t('pos.cart.subtotal', 'Subtotal')}</span>
               <span>${currentOrder.subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-700">
-              <span>Tax</span>
+              <span>{t('pos.cart.tax', 'Tax')}</span>
               <span>${currentOrder.tax.toFixed(2)}</span>
             </div>
             {currentOrder.deliveryFee > 0 && (
               <div className="flex justify-between text-gray-700">
-                <span>Delivery</span>
+                <span>{t('pos.cart.deliveryFee', 'Delivery')}</span>
                 <span>${currentOrder.deliveryFee.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t-2 border-gray-200">
-              <span>Total</span>
+              <span>{t('pos.cart.total', 'Total')}</span>
               <span>${currentOrder.total.toFixed(2)}</span>
             </div>
           </div>
