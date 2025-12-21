@@ -16,7 +16,6 @@ const usePOSStore = create(
         type: null, // 'DELIVERY' | 'TAKEAWAY' | 'DINE_IN'
         items: [],
         subtotal: 0,
-        tax: 0,
         deliveryFee: 0,
         total: 0,
         notes: '',
@@ -68,9 +67,8 @@ const usePOSStore = create(
           type,
           items: [],
           subtotal: 0,
-          tax: 0,
           deliveryFee: type === 'DELIVERY' ? 5.00 : 0,
-          total: 0,
+          total: type === 'DELIVERY' ? 5.00 : 0,
           notes: '',
         },
         ui: { ...state.ui, currentScreen: 'menu' },
@@ -91,16 +89,14 @@ const usePOSStore = create(
 
         const items = [...state.currentOrder.items, item];
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
-        const tax = subtotal * 0.08; // 8% tax
         const deliveryFee = state.currentOrder.deliveryFee;
-        const total = subtotal + tax + deliveryFee;
+        const total = subtotal + deliveryFee;
 
         return {
           currentOrder: {
             ...state.currentOrder,
             items,
             subtotal,
-            tax,
             total,
           },
         };
@@ -120,16 +116,14 @@ const usePOSStore = create(
         });
 
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
-        const tax = subtotal * 0.08;
         const deliveryFee = state.currentOrder.deliveryFee;
-        const total = subtotal + tax + deliveryFee;
+        const total = subtotal + deliveryFee;
 
         return {
           currentOrder: {
             ...state.currentOrder,
             items,
             subtotal,
-            tax,
             total,
           },
         };
@@ -138,16 +132,14 @@ const usePOSStore = create(
       removeItemFromCart: (itemId) => set((state) => {
         const items = state.currentOrder.items.filter(item => item.id !== itemId);
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
-        const tax = subtotal * 0.08;
         const deliveryFee = state.currentOrder.deliveryFee;
-        const total = subtotal + tax + deliveryFee;
+        const total = subtotal + deliveryFee;
 
         return {
           currentOrder: {
             ...state.currentOrder,
             items,
             subtotal,
-            tax,
             total,
           },
         };
@@ -165,7 +157,6 @@ const usePOSStore = create(
           ...state.currentOrder,
           items: [],
           subtotal: 0,
-          tax: 0,
           total: state.currentOrder.deliveryFee,
         },
       })),
@@ -321,7 +312,6 @@ const usePOSStore = create(
             orderNotes: state.currentOrder.notes || null,
             paymentMethod: state.payment.method, // CASH, CARD, MOBILE
             subtotal: state.currentOrder.subtotal,
-            tax: state.currentOrder.tax,
             deliveryFee: state.currentOrder.deliveryFee,
             total: state.currentOrder.total,
             amountTendered: state.payment.amountTendered || null,
@@ -357,7 +347,6 @@ const usePOSStore = create(
             type: null,
             items: [],
             subtotal: 0,
-            tax: 0,
             deliveryFee: 0,
             total: 0,
             notes: '',
@@ -392,7 +381,6 @@ const usePOSStore = create(
           type: null,
           items: [],
           subtotal: 0,
-          tax: 0,
           deliveryFee: 0,
           total: 0,
           notes: '',

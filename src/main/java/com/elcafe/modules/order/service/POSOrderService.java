@@ -53,12 +53,12 @@ public class POSOrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setCustomerNotes(request.getOrderNotes());
 
-        // Set pricing
+        // Set pricing (no tax)
         order.setSubtotal(request.getSubtotal());
-        order.setTax(request.getTax());
+        order.setTax(BigDecimal.ZERO);
         order.setDeliveryFee(request.getDeliveryFee() != null ? request.getDeliveryFee() : BigDecimal.ZERO);
         order.setDiscount(BigDecimal.ZERO);
-        order.setTotal(request.getTotal());
+        order.setTotal(request.getSubtotal().add(order.getDeliveryFee()));
 
         // Add order items
         List<OrderItem> orderItems = request.getItems().stream()
@@ -168,7 +168,6 @@ public class POSOrderService {
                 .customerName(order.getCustomer().getFirstName() + " " + order.getCustomer().getLastName())
                 .customerPhone(order.getCustomer().getPhone())
                 .subtotal(order.getSubtotal())
-                .tax(order.getTax())
                 .deliveryFee(order.getDeliveryFee())
                 .total(order.getTotal())
                 .orderNotes(order.getCustomerNotes())

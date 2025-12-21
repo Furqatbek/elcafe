@@ -102,7 +102,6 @@ const PaymentScreen = () => {
         orderNotes: currentOrder.notes || null,
         paymentMethod: method,
         subtotal: currentOrder.subtotal,
-        tax: currentOrder.tax,
         deliveryFee: currentOrder.deliveryFee,
         total: currentOrder.total,
         amountTendered: method === 'CASH' ? cashTendered : currentOrder.total,
@@ -376,10 +375,6 @@ const PaymentScreen = () => {
             <div className="flex justify-between text-gray-700">
               <span>{t('pos.cart.subtotal', 'Subtotal')}</span>
               <span>${currentOrder.subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-gray-700">
-              <span>{t('pos.cart.tax', 'Tax')}</span>
-              <span>${currentOrder.tax.toFixed(2)}</span>
             </div>
             {currentOrder.deliveryFee > 0 && (
               <div className="flex justify-between text-gray-700">

@@ -52,10 +52,6 @@ public class CreatePOSOrderRequest {
     @DecimalMin(value = "0.0", inclusive = false, message = "Subtotal must be greater than 0")
     private BigDecimal subtotal;
 
-    @NotNull(message = "Tax is required")
-    @DecimalMin(value = "0.0", message = "Tax must be 0 or greater")
-    private BigDecimal tax;
-
     @DecimalMin(value = "0.0", message = "Delivery fee must be 0 or greater")
     @Builder.Default
     private BigDecimal deliveryFee = BigDecimal.ZERO;

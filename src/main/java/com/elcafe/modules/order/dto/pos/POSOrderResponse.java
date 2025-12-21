@@ -24,7 +24,6 @@ public class POSOrderResponse {
     private String customerPhone;
     private List<OrderItemResponse> items;
     private BigDecimal subtotal;
-    private BigDecimal tax;
     private BigDecimal deliveryFee;
     private BigDecimal total;
     private String paymentMethod;

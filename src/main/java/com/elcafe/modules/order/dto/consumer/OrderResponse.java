@@ -23,7 +23,6 @@ public class OrderResponse {
     private OrderSource orderSource;
     private BigDecimal subtotal;
     private BigDecimal deliveryFee;
-    private BigDecimal tax;
     private BigDecimal discount;
     private BigDecimal total;
     private String customerNotes;
