@@ -23,7 +23,6 @@ import {
   Tag,
   FileText,
   Calendar,
-  DollarSign,
   ShoppingCart,
   Clock,
   TrendingUp,
@@ -693,8 +692,7 @@ export default function CustomerSegments() {
 
             {/* Monetary Filter */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
+              <Label className="text-sm font-medium">
                 {t('customers.monetary')} ($)
               </Label>
               <div className="grid grid-cols-2 gap-2">

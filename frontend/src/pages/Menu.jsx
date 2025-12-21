@@ -20,7 +20,6 @@ import {
 import {
   ChefHat,
   Package,
-  DollarSign,
   UtensilsCrossed,
   Grid,
   List
@@ -230,8 +229,7 @@ export default function Menu() {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center font-semibold text-lg">
-                            <DollarSign className="h-5 w-5 mr-1" />
+                          <div className="font-semibold text-lg">
                             <span>{product.price?.toFixed(2)}</span>
                           </div>
                           {product.isFeatured && (
@@ -295,8 +293,7 @@ export default function Menu() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center font-semibold text-lg">
-                          <DollarSign className="h-5 w-5 mr-1" />
+                        <div className="font-semibold text-lg">
                           <span>{product.price?.toFixed(2)}</span>
                         </div>
                         {product.isFeatured && (

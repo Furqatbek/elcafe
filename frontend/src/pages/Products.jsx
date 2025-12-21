@@ -25,7 +25,6 @@ import { Textarea } from '../components/ui/textarea';
 import {
   Package,
   Search,
-  DollarSign,
   Plus,
   Star,
   Edit,
@@ -483,8 +482,7 @@ export default function Products() {
                     <Package className="h-4 w-4 mr-2" />
                     <span>{product.categoryName}</span>
                   </div>
-                  <div className="flex items-center font-semibold text-lg text-green-600">
-                    <DollarSign className="h-5 w-5" />
+                  <div className="font-semibold text-lg text-green-600">
                     <span>{product.price?.toFixed(2)}</span>
                   </div>
                 </div>
@@ -871,8 +869,7 @@ export default function Products() {
                             <p className="text-sm text-muted-foreground mt-1">{variant.description}</p>
                           )}
                           <div className="flex items-center gap-4 mt-2">
-                            <div className="flex items-center text-green-600 font-semibold">
-                              <DollarSign className="h-4 w-4" />
+                            <div className="text-green-600 font-semibold">
                               <span>{variant.price?.toFixed(2)}</span>
                             </div>
                             <span className="text-sm text-muted-foreground">

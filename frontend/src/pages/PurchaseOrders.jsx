@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { financialAPI, inventoryAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { Plus, Edit, Trash2, Check, X, DollarSign, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Check, X, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const PurchaseOrders = () => {
@@ -431,7 +431,7 @@ const PurchaseOrders = () => {
                           className="text-green-600 hover:text-green-900"
                           title="Record Payment"
                         >
-                          <DollarSign size={18} />
+                          <Check size={18} />
                         </button>
                       )}
                     </div>

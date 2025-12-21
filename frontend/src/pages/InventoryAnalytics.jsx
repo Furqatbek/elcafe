@@ -11,7 +11,6 @@ import {
   BarChart3,
   AlertTriangle,
   Calendar,
-  DollarSign,
   Activity,
 } from 'lucide-react';
 
@@ -168,7 +167,7 @@ export default function InventoryAnalytics() {
             <CardTitle className="text-sm font-medium">
               {t('analytics.inventory.inventoryValue')}
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-purple-600" />
+            <Package className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">

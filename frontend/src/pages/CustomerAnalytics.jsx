@@ -10,7 +10,6 @@ import {
   TrendingDown,
   Heart,
   Star,
-  DollarSign,
   UserPlus,
   UserCheck,
   Calendar,
@@ -155,7 +154,7 @@ export default function CustomerAnalytics() {
             <CardTitle className="text-sm font-medium">
               {t('analytics.customer.avgLTV')}
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-600" />
+            <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">

@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
-  DollarSign,
   TrendingUp,
   TrendingDown,
   Package,
@@ -148,7 +147,7 @@ export default function FinancialAnalytics() {
             <CardTitle className="text-sm font-medium">
               {t('analytics.financial.totalRevenue')}
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { financialAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { TrendingUp, TrendingDown, DollarSign, PieChart, BarChart3, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const FinancialReports = () => {
@@ -92,11 +92,10 @@ const FinancialReports = () => {
           </div>
 
           <div className={`p-4 rounded-lg border ${profitLossReport.netIncome >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-red-50 border-red-200'}`}>
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2">
               <span className={`text-sm font-medium ${profitLossReport.netIncome >= 0 ? 'text-blue-800' : 'text-red-800'}`}>
                 {t('finance.reports.netIncome')}
               </span>
-              <DollarSign className={profitLossReport.netIncome >= 0 ? 'text-blue-600' : 'text-red-600'} size={20} />
             </div>
             <div className={`text-2xl font-bold ${profitLossReport.netIncome >= 0 ? 'text-blue-900' : 'text-red-900'}`}>
               {formatCurrency(profitLossReport.netIncome)}
@@ -464,10 +463,7 @@ const FinancialReports = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            <div className="flex items-center gap-2">
-              <DollarSign size={18} />
-              {t('finance.reports.cashFlow')}
-            </div>
+            {t('finance.reports.cashFlow')}
           </button>
           <button
             onClick={() => setActiveTab('cogs')}

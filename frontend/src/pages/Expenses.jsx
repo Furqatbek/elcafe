@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Check, DollarSign, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Check, Calendar } from 'lucide-react';
 
 const Expenses = () => {
   const { t } = useTranslation();
@@ -374,7 +374,7 @@ const Expenses = () => {
                           className="text-blue-600 hover:text-blue-900"
                           title={t("common.buttons.recordPayment")}
                         >
-                          <DollarSign size={18} />
+                          <Check size={18} />
                         </button>
                       )}
                       {expense.paymentStatus === 'UNPAID' && (
