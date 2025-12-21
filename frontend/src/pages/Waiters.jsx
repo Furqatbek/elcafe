@@ -39,14 +39,14 @@ export default function Waiters() {
 
   const availableRoles = ['WAITER', 'HEAD_WAITER', 'SERVER', 'SUPERVISOR'];
   const availablePermissions = [
-    { id: 'MANAGE_TABLES', label: 'Manage Tables' },
-    { id: 'OVERRIDE_PRICES', label: 'Override Prices' },
-    { id: 'VOID_ITEMS', label: 'Void Items' },
-    { id: 'MERGE_TABLES', label: 'Merge Tables' },
-    { id: 'VIEW_REPORTS', label: 'View Reports' },
-    { id: 'HANDLE_PAYMENTS', label: 'Handle Payments' },
-    { id: 'APPLY_DISCOUNTS', label: 'Apply Discounts' },
-    { id: 'REFUND_ORDERS', label: 'Refund Orders' },
+    { id: 'MANAGE_TABLES', label: t('pages.waiters.permissions.manageTables', 'Manage Tables') },
+    { id: 'OVERRIDE_PRICES', label: t('pages.waiters.permissions.overridePrices', 'Override Prices') },
+    { id: 'VOID_ITEMS', label: t('pages.waiters.permissions.voidItems', 'Void Items') },
+    { id: 'MERGE_TABLES', label: t('pages.waiters.permissions.mergeTables', 'Merge Tables') },
+    { id: 'VIEW_REPORTS', label: t('pages.waiters.permissions.viewReports', 'View Reports') },
+    { id: 'HANDLE_PAYMENTS', label: t('pages.waiters.permissions.handlePayments', 'Handle Payments') },
+    { id: 'APPLY_DISCOUNTS', label: t('pages.waiters.permissions.applyDiscounts', 'Apply Discounts') },
+    { id: 'REFUND_ORDERS', label: t('pages.waiters.permissions.refundOrders', 'Refund Orders') },
   ];
 
   useEffect(() => {
@@ -185,21 +185,21 @@ export default function Waiters() {
     const newErrors = {};
 
     if (!formData.name?.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('pages.waiters.errors.nameRequired', 'Name is required');
     }
 
     if (!formData.pinCode?.trim()) {
-      newErrors.pinCode = 'PIN code is required';
+      newErrors.pinCode = t('pages.waiters.errors.pinCodeRequired', 'PIN code is required');
     } else if (!/^\d{4}$/.test(formData.pinCode)) {
-      newErrors.pinCode = 'PIN must be 4 digits';
+      newErrors.pinCode = t('pages.waiters.errors.pinMust4Digits', 'PIN must be 4 digits');
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = t('pages.waiters.errors.invalidEmail', 'Invalid email format');
     }
 
     if (!formData.role) {
-      newErrors.role = 'Role is required';
+      newErrors.role = t('pages.waiters.errors.roleRequired', 'Role is required');
     }
 
     setErrors(newErrors);
@@ -224,7 +224,7 @@ export default function Waiters() {
       loadWaiters();
     } catch (error) {
       console.error('Error saving waiter:', error);
-      alert('Error saving waiter: ' + (error.response?.data?.message || error.message));
+      alert(t('pages.waiters.errors.saveFailed', 'Error saving waiter') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -243,7 +243,7 @@ export default function Waiters() {
       loadWaiters();
     } catch (error) {
       console.error('Error deleting waiter:', error);
-      alert('Error deleting waiter: ' + (error.response?.data?.message || error.message));
+      alert(t('pages.waiters.errors.deleteFailed', 'Error deleting waiter') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -261,8 +261,8 @@ export default function Waiters() {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Waiters Management</h1>
-        <p className="text-gray-600">Manage waiter accounts, PIN codes, roles, and permissions</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('pages.waiters.title', 'Waiters Management')}</h1>
+        <p className="text-gray-600">{t('pages.waiters.description', 'Manage waiter accounts, PIN codes, roles, and permissions')}</p>
       </div>
 
       {/* Content */}
@@ -289,9 +289,9 @@ export default function Waiters() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="all">{t('pages.waiters.allStatus', 'All Status')}</option>
+              <option value="active">{t('pages.waiters.active', 'Active')}</option>
+              <option value="inactive">{t('pages.waiters.inactive', 'Inactive')}</option>
             </select>
 
             {/* Add Button */}
@@ -300,7 +300,7 @@ export default function Waiters() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="h-5 w-5" />
-              Add Waiter
+              {t('pages.waiters.addWaiter', 'Add Waiter')}
             </button>
           </div>
 
@@ -311,25 +311,25 @@ export default function Waiters() {
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
+                      {t('pages.waiters.name', 'Name')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      PIN Code
+                      {t('pages.waiters.pinCode', 'PIN Code')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact
+                      {t('pages.waiters.contact', 'Contact')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Role
+                      {t('pages.waiters.role', 'Role')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Permissions
+                      {t('pages.waiters.permissions', 'Permissions')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
+                      {t('pages.waiters.status', 'Status')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
+                      {t('pages.waiters.actions', 'Actions')}
                     </th>
                   </tr>
                 </thead>
@@ -339,7 +339,7 @@ export default function Waiters() {
                       <td colSpan="7" className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                          <p className="mt-2 text-gray-500">Loading waiters...</p>
+                          <p className="mt-2 text-gray-500">{t('pages.waiters.loadingWaiters', 'Loading waiters...')}</p>
                         </div>
                       </td>
                     </tr>
@@ -347,8 +347,8 @@ export default function Waiters() {
                     <tr>
                       <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
                         {searchTerm || statusFilter !== 'all'
-                          ? 'No waiters found matching your filters'
-                          : 'No waiters yet. Click "Add Waiter" to create one.'}
+                          ? t('pages.waiters.noWaitersFound', 'No waiters found matching your filters')
+                          : t('pages.waiters.noWaitersYet', 'No waiters yet. Click "Add Waiter" to create one.')}
                       </td>
                     </tr>
                   ) : (
@@ -408,7 +408,7 @@ export default function Waiters() {
                                   ))}
                                   {permList.length > 3 && (
                                     <span className="inline-flex px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded">
-                                      +{permList.length - 3} more
+                                      {t('pages.waiters.morePermissions', '+{{count}} more', { count: permList.length - 3 })}
                                     </span>
                                   )}
                                 </>
@@ -424,7 +424,7 @@ export default function Waiters() {
                                 : 'bg-red-100 text-red-800'
                             }`}
                           >
-                            {waiter.active ? 'Active' : 'Inactive'}
+                            {waiter.active ? t('pages.waiters.active', 'Active') : t('pages.waiters.inactive', 'Inactive')}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -432,14 +432,14 @@ export default function Waiters() {
                             <button
                               onClick={() => handleOpenModal(waiter)}
                               className="text-blue-600 hover:text-blue-900"
-                              title="Edit"
+                              title={t('pages.waiters.edit', 'Edit')}
                             >
                               <Edit className="h-5 w-5" />
                             </button>
                             <button
                               onClick={() => handleDeleteClick(waiter)}
                               className="text-red-600 hover:text-red-900"
-                              title="Delete"
+                              title={t('pages.waiters.delete', 'Delete')}
                             >
                               <Trash2 className="h-5 w-5" />
                             </button>
@@ -456,7 +456,7 @@ export default function Waiters() {
         {/* Summary and Pagination */}
         <div className="mt-4 flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            Showing {filteredWaiters.length} of {totalElements} waiters
+            {t('pages.waiters.showingWaiters', 'Showing {{count}} of {{total}} waiters', { count: filteredWaiters.length, total: totalElements })}
           </div>
           {totalPages > 1 && (
             <div className="flex items-center gap-2">
@@ -465,17 +465,17 @@ export default function Waiters() {
                 disabled={currentPage === 0}
                 className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
+                {t('pages.waiters.previous', 'Previous')}
               </button>
               <span className="text-sm text-gray-600">
-                Page {currentPage + 1} of {totalPages}
+                {t('pages.waiters.pageOf', 'Page {{current}} of {{total}}', { current: currentPage + 1, total: totalPages })}
               </span>
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={currentPage >= totalPages - 1}
                 className="px-3 py-1 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next
+                {t('pages.waiters.next', 'Next')}
               </button>
             </div>
           )}
@@ -489,7 +489,7 @@ export default function Waiters() {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-gray-900">
-                  {editingWaiter ? 'Edit Waiter' : 'Add New Waiter'}
+                  {editingWaiter ? t('pages.waiters.editWaiter', 'Edit Waiter') : t('pages.waiters.addNewWaiter', 'Add New Waiter')}
                 </h2>
                 <button
                   onClick={handleCloseModal}
@@ -503,7 +503,7 @@ export default function Waiters() {
                 {/* Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Name <span className="text-red-500">*</span>
+                    {t('pages.waiters.nameLabel', 'Name')} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -521,7 +521,7 @@ export default function Waiters() {
                 {/* PIN Code */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    PIN Code (4 digits) <span className="text-red-500">*</span>
+                    {t('pages.waiters.pinCodeLabel', 'PIN Code (4 digits)')} <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -548,9 +548,9 @@ export default function Waiters() {
                       type="button"
                       onClick={generatePinCode}
                       className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
-                      title="Generate PIN"
+                      title={t('pages.waiters.generatePinTitle', 'Generate PIN')}
                     >
-                      Generate
+                      {t('pages.waiters.generate', 'Generate')}
                     </button>
                   </div>
                   {errors.pinCode && <p className="mt-1 text-sm text-red-500">{errors.pinCode}</p>}
@@ -558,7 +558,7 @@ export default function Waiters() {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('pages.waiters.emailLabel', 'Email')}</label>
                   <input
                     type="email"
                     name="email"
@@ -575,7 +575,7 @@ export default function Waiters() {
                 {/* Phone Number */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number
+                    {t('pages.waiters.phoneNumberLabel', 'Phone Number')}
                   </label>
                   <input
                     type="tel"
@@ -590,7 +590,7 @@ export default function Waiters() {
                 {/* Role */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Role <span className="text-red-500">*</span>
+                    {t('pages.waiters.roleLabel', 'Role')} <span className="text-red-500">*</span>
                   </label>
                   <select
                     name="role"
@@ -612,7 +612,7 @@ export default function Waiters() {
                 {/* Permissions */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Permissions
+                    {t('pages.waiters.permissionsLabel', 'Permissions')}
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {availablePermissions.map((permission) => (
@@ -643,7 +643,7 @@ export default function Waiters() {
                     className="rounded text-blue-600 focus:ring-blue-500"
                   />
                   <label htmlFor="active" className="text-sm font-medium text-gray-700">
-                    Active
+                    {t('pages.waiters.activeLabel', 'Active')}
                   </label>
                 </div>
 
@@ -654,13 +654,13 @@ export default function Waiters() {
                     onClick={handleCloseModal}
                     className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
                   >
-                    Cancel
+                    {t('pages.waiters.cancel', 'Cancel')}
                   </button>
                   <button
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
-                    {editingWaiter ? 'Update Waiter' : 'Create Waiter'}
+                    {editingWaiter ? t('pages.waiters.updateWaiter', 'Update Waiter') : t('pages.waiters.createWaiter', 'Create Waiter')}
                   </button>
                 </div>
               </form>
@@ -674,23 +674,22 @@ export default function Waiters() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Deletion</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('pages.waiters.confirmDeletion', 'Confirm Deletion')}</h3>
               <p className="text-gray-600 mb-6">
-                Are you sure you want to delete waiter "{waiterToDelete?.name}"? This action
-                cannot be undone.
+                {t('pages.waiters.deleteConfirmationMessage', 'Are you sure you want to delete waiter "{{name}}"? This action cannot be undone.', { name: waiterToDelete?.name })}
               </p>
               <div className="flex justify-end gap-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
                   className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
                 >
-                  Cancel
+                  {t('pages.waiters.cancel', 'Cancel')}
                 </button>
                 <button
                   onClick={handleDeleteConfirm}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                 >
-                  Delete
+                  {t('pages.waiters.delete', 'Delete')}
                 </button>
               </div>
             </div>
