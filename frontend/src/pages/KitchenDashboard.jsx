@@ -40,6 +40,9 @@ import {
   Search,
   X,
   Filter,
+  Activity,
+  Target,
+  Award,
 } from 'lucide-react';
 
 export default function KitchenDashboard() {
@@ -415,6 +418,50 @@ export default function KitchenDashboard() {
 
   const hasActiveFilters = searchQuery || filterOrderType !== 'ALL' || filterPriority !== 'ALL';
 
+  // Performance Metrics Calculations
+  const calculateMetrics = () => {
+    const allOrders = [...activeOrders, ...readyOrders];
+
+    // Orders completed today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const completedToday = readyOrders.filter(order => {
+      if (!order.preparationCompletedAt) return false;
+      const completedDate = new Date(order.preparationCompletedAt);
+      return completedDate >= today;
+    });
+
+    // Average preparation time (in minutes)
+    const ordersWithPrepTime = allOrders.filter(order => order.actualPreparationTimeMinutes);
+    const avgPrepTime = ordersWithPrepTime.length > 0
+      ? Math.round(ordersWithPrepTime.reduce((sum, order) => sum + order.actualPreparationTimeMinutes, 0) / ordersWithPrepTime.length)
+      : 0;
+
+    // On-time performance
+    const ordersWithTimes = allOrders.filter(order =>
+      order.actualPreparationTimeMinutes && order.estimatedPreparationTimeMinutes
+    );
+    const onTimeOrders = ordersWithTimes.filter(order =>
+      order.actualPreparationTimeMinutes <= order.estimatedPreparationTimeMinutes
+    );
+    const onTimePercentage = ordersWithTimes.length > 0
+      ? Math.round((onTimeOrders.length / ordersWithTimes.length) * 100)
+      : 0;
+
+    // Currently active orders count
+    const activeCount = activeOrders.length + readyOrders.length;
+
+    return {
+      completedToday: completedToday.length,
+      avgPrepTime,
+      onTimePercentage,
+      activeCount,
+      totalProcessed: allOrders.length
+    };
+  };
+
+  const metrics = calculateMetrics();
+
   if (loading && activeOrders.length === 0 && readyOrders.length === 0) {
     return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
   }
@@ -548,6 +595,83 @@ export default function KitchenDashboard() {
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Performance Metrics */}
+      <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-purple-900">
+            <Activity className="h-5 w-5" />
+            Kitchen Performance Today
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-green-100 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{metrics.completedToday}</div>
+                <div className="text-xs text-gray-600">Completed Today</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <Timer className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{metrics.avgPrepTime} min</div>
+                <div className="text-xs text-gray-600">Avg Prep Time</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-orange-100 rounded-lg">
+                <Target className="h-6 w-6 text-orange-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{metrics.onTimePercentage}%</div>
+                <div className="text-xs text-gray-600">On-Time Rate</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <Award className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{metrics.activeCount}</div>
+                <div className="text-xs text-gray-600">Currently Active</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Progress Bar for On-Time Performance */}
+          <div className="mt-4">
+            <div className="flex justify-between text-xs text-gray-600 mb-1">
+              <span>Efficiency Score</span>
+              <span className={`font-semibold ${
+                metrics.onTimePercentage >= 90 ? 'text-green-600' :
+                metrics.onTimePercentage >= 70 ? 'text-orange-600' :
+                'text-red-600'
+              }`}>
+                {metrics.onTimePercentage}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div
+                className={`h-3 rounded-full transition-all ${
+                  metrics.onTimePercentage >= 90 ? 'bg-green-500' :
+                  metrics.onTimePercentage >= 70 ? 'bg-orange-500' :
+                  'bg-red-500'
+                }`}
+                style={{ width: `${metrics.onTimePercentage}%` }}
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
