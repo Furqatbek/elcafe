@@ -281,13 +281,19 @@ export default function KitchenDashboard() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <CardTitle className="text-lg">
                           {order.order.orderNumber}
                         </CardTitle>
                         {order.order.diningTable && (
                           <Badge variant="outline" className="text-xs font-semibold">
                             Table {order.order.diningTable.tableNumber}
+                          </Badge>
+                        )}
+                        {order.order.orderType && (
+                          <Badge variant="secondary" className="text-xs">
+                            {order.order.orderType === 'DINE_IN' ? 'Dine-in' :
+                             order.order.orderType === 'DELIVERY' ? 'Delivery' : 'Takeaway'}
                           </Badge>
                         )}
                       </div>
@@ -331,6 +337,14 @@ export default function KitchenDashboard() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Customer Notes */}
+                  {order.order.customerNotes && (
+                    <div className="border-l-4 border-l-orange-400 bg-orange-50 rounded p-3">
+                      <div className="text-xs font-semibold text-orange-800 mb-1">CUSTOMER NOTES:</div>
+                      <div className="text-sm text-orange-900">{order.order.customerNotes}</div>
                     </div>
                   )}
 
@@ -383,13 +397,19 @@ export default function KitchenDashboard() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <CardTitle className="text-lg">
                           {order.order.orderNumber}
                         </CardTitle>
                         {order.order.diningTable && (
                           <Badge variant="outline" className="text-xs font-semibold">
                             Table {order.order.diningTable.tableNumber}
+                          </Badge>
+                        )}
+                        {order.order.orderType && (
+                          <Badge variant="secondary" className="text-xs">
+                            {order.order.orderType === 'DINE_IN' ? 'Dine-in' :
+                             order.order.orderType === 'DELIVERY' ? 'Delivery' : 'Takeaway'}
                           </Badge>
                         )}
                       </div>
@@ -433,6 +453,14 @@ export default function KitchenDashboard() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Customer Notes */}
+                  {order.order.customerNotes && (
+                    <div className="border-l-4 border-l-orange-400 bg-orange-50 rounded p-3">
+                      <div className="text-xs font-semibold text-orange-800 mb-1">CUSTOMER NOTES:</div>
+                      <div className="text-sm text-orange-900">{order.order.customerNotes}</div>
                     </div>
                   )}
 
@@ -482,13 +510,19 @@ export default function KitchenDashboard() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <CardTitle className="text-lg">
                           {order.order.orderNumber}
                         </CardTitle>
                         {order.order.diningTable && (
                           <Badge variant="outline" className="text-xs font-semibold">
                             Table {order.order.diningTable.tableNumber}
+                          </Badge>
+                        )}
+                        {order.order.orderType && (
+                          <Badge variant="secondary" className="text-xs">
+                            {order.order.orderType === 'DINE_IN' ? 'Dine-in' :
+                             order.order.orderType === 'DELIVERY' ? 'Delivery' : 'Takeaway'}
                           </Badge>
                         )}
                       </div>
@@ -532,6 +566,14 @@ export default function KitchenDashboard() {
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Customer Notes */}
+                  {order.order.customerNotes && (
+                    <div className="border-l-4 border-l-orange-400 bg-orange-50 rounded p-3">
+                      <div className="text-xs font-semibold text-orange-800 mb-1">CUSTOMER NOTES:</div>
+                      <div className="text-sm text-orange-900">{order.order.customerNotes}</div>
                     </div>
                   )}
 
