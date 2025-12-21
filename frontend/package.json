@@ -30,7 +30,9 @@
     "i18next": "^23.7.16",
     "react-i18next": "^14.0.0",
     "leaflet": "^1.9.4",
-    "react-leaflet": "^4.2.1"
+    "react-leaflet": "^4.2.1",
+    "sockjs-client": "^1.6.1",
+    "@stomp/stompjs": "^7.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",

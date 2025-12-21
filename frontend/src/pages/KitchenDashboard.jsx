@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 import { kitchenAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -46,17 +48,105 @@ export default function KitchenDashboard() {
   const [chefName, setChefName] = useState('');
   const [priorityModalOpen, setPriorityModalOpen] = useState(false);
   const [selectedPriority, setSelectedPriority] = useState('NORMAL');
+  const stompClientRef = useRef(null);
 
   useEffect(() => {
     loadRestaurants();
+  }, []);
+
+  // WebSocket connection effect
+  useEffect(() => {
+    if (!selectedRestaurant) return;
+
+    // Initial load
+    loadOrders();
+
+    // Connect to WebSocket
+    connectWebSocket();
+
+    // Fallback polling (in case WebSocket fails)
     const interval = setInterval(() => {
       if (selectedRestaurant) {
         loadOrders();
       }
-    }, 10000); // Refresh every 10 seconds
+    }, 30000); // Refresh every 30 seconds as fallback
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      disconnectWebSocket();
+    };
   }, [selectedRestaurant]);
+
+  const connectWebSocket = () => {
+    try {
+      const socket = new SockJS('/api/ws-waiter');
+      const client = new Client({
+        webSocketFactory: () => socket,
+        debug: (str) => {
+          console.log('STOMP: ' + str);
+        },
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000,
+        onConnect: () => {
+          console.log('WebSocket connected for kitchen dashboard');
+
+          // Subscribe to restaurant-specific kitchen topic
+          client.subscribe(
+            `/topic/restaurant/${selectedRestaurant}/kitchen`,
+            (message) => {
+              try {
+                const event = JSON.parse(message.body);
+                handleKitchenEvent(event);
+              } catch (error) {
+                console.error('Error parsing WebSocket message:', error);
+              }
+            }
+          );
+
+          console.log('Subscribed to kitchen updates for restaurant:', selectedRestaurant);
+        },
+        onStompError: (frame) => {
+          console.error('STOMP error:', frame);
+        },
+        onWebSocketError: (error) => {
+          console.error('WebSocket error:', error);
+        },
+      });
+
+      client.activate();
+      stompClientRef.current = client;
+    } catch (error) {
+      console.error('Failed to connect to WebSocket:', error);
+    }
+  };
+
+  const disconnectWebSocket = () => {
+    if (stompClientRef.current) {
+      stompClientRef.current.deactivate();
+      stompClientRef.current = null;
+      console.log('WebSocket disconnected');
+    }
+  };
+
+  const handleKitchenEvent = (event) => {
+    console.log('Received kitchen event:', event);
+
+    const eventType = event.data?.eventType;
+
+    switch (eventType) {
+      case 'kitchen.order.created':
+      case 'kitchen.order.preparing':
+      case 'kitchen.order.ready':
+      case 'kitchen.order.picked_up':
+      case 'kitchen.order.priority_updated':
+        // Reload orders to get fresh data
+        loadOrders();
+        break;
+      default:
+        console.log('Unknown kitchen event type:', eventType);
+    }
+  };
 
   const loadRestaurants = async () => {
     try {

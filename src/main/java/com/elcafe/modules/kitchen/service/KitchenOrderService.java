@@ -25,6 +25,7 @@ public class KitchenOrderService {
     private final KitchenOrderRepository kitchenOrderRepository;
     private final OrderRepository orderRepository;
     private final NotificationService notificationService;
+    private final KitchenOrderEventBroadcaster kitchenOrderEventBroadcaster;
 
     @Transactional
     public KitchenOrder createKitchenOrder(Order order) {
@@ -35,7 +36,12 @@ public class KitchenOrderService {
                 .estimatedPreparationTimeMinutes(30) // Default 30 minutes
                 .build();
 
-        return kitchenOrderRepository.save(kitchenOrder);
+        KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
+
+        // Broadcast WebSocket event for real-time updates
+        kitchenOrderEventBroadcaster.broadcastOrderCreated(savedOrder);
+
+        return savedOrder;
     }
 
     public List<KitchenOrder> getActiveOrders(Long restaurantId) {
@@ -87,6 +93,9 @@ public class KitchenOrderService {
         // Notify
         notificationService.notifyOrderPreparing(order);
 
+        // Broadcast WebSocket event for real-time updates
+        kitchenOrderEventBroadcaster.broadcastPreparationStarted(savedOrder);
+
         log.info("Kitchen order {} started preparation by {}", kitchenOrder.getId(), chefName);
         return savedOrder;
     }
@@ -119,6 +128,9 @@ public class KitchenOrderService {
         // Notify couriers and customer
         notificationService.notifyOrderReady(order);
 
+        // Broadcast WebSocket event for real-time updates
+        kitchenOrderEventBroadcaster.broadcastOrderReady(savedOrder);
+
         log.info("Kitchen order {} marked as ready", kitchenOrder.getId());
         return savedOrder;
     }
@@ -129,7 +141,12 @@ public class KitchenOrderService {
                 .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
 
         kitchenOrder.setStatus(KitchenOrderStatus.PICKED_UP);
-        return kitchenOrderRepository.save(kitchenOrder);
+        KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
+
+        // Broadcast WebSocket event for real-time updates
+        kitchenOrderEventBroadcaster.broadcastOrderPickedUp(savedOrder);
+
+        return savedOrder;
     }
 
     @Transactional
@@ -138,6 +155,11 @@ public class KitchenOrderService {
                 .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
 
         kitchenOrder.setPriority(priority);
-        return kitchenOrderRepository.save(kitchenOrder);
+        KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
+
+        // Broadcast WebSocket event for real-time updates
+        kitchenOrderEventBroadcaster.broadcastPriorityUpdated(savedOrder);
+
+        return savedOrder;
     }
 }
