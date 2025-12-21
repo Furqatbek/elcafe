@@ -764,22 +764,22 @@ export default function Inventory() {
                       <TableCell>{new Date(transaction.createdAt).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge className={
-                          transaction.transactionType === 'PURCHASE' || transaction.transactionType === 'ADJUSTMENT_INCREASE'
+                          transaction.type === 'PURCHASE' || transaction.type === 'RESTOCK' || transaction.type === 'INITIAL_STOCK'
                             ? 'bg-green-100 text-green-800'
-                            : transaction.transactionType === 'USAGE' || transaction.transactionType === 'ADJUSTMENT_DECREASE'
+                            : transaction.type === 'ORDER_DEDUCTION' || transaction.type === 'WASTE'
                             ? 'bg-red-100 text-red-800'
                             : 'bg-blue-100 text-blue-800'
                         }>
-                          {transaction.transactionType}
+                          {transaction.type}
                         </Badge>
                       </TableCell>
                       <TableCell className={
-                        transaction.quantityChange > 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
+                        transaction.quantity > 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
                       }>
-                        {transaction.quantityChange > 0 ? '+' : ''}{transaction.quantityChange}
+                        {transaction.quantity > 0 ? '+' : ''}{transaction.quantity}
                       </TableCell>
                       <TableCell>{transaction.balanceAfter}</TableCell>
-                      <TableCell>{transaction.performedBy}</TableCell>
+                      <TableCell>{transaction.performedBy || '-'}</TableCell>
                       <TableCell className="max-w-xs truncate">{transaction.notes || '-'}</TableCell>
                     </TableRow>
                   ))

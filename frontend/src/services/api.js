@@ -368,16 +368,23 @@ export const financialAPI = {
 };
 
 export const inventoryAPI = {
+  // Ingredients CRUD
   getIngredients: (restaurantId) => api.get('/inventory/ingredients', { params: { restaurantId } }),
   getIngredientById: (id) => api.get(`/inventory/ingredients/${id}`),
   createIngredient: (data) => api.post('/inventory/ingredients', data),
   updateIngredient: (id, data) => api.put(`/inventory/ingredients/${id}`, data),
   deleteIngredient: (id) => api.delete(`/inventory/ingredients/${id}`),
 
+  // Stock alerts
+  getLowStock: (restaurantId) => api.get('/inventory/ingredients/low-stock', { params: { restaurantId } }),
+  getReorderIngredients: (restaurantId) => api.get('/inventory/ingredients/reorder', { params: { restaurantId } }),
+
   // Stock management
-  getStock: (restaurantId) => api.get('/inventory/stock', { params: { restaurantId } }),
-  updateStock: (id, data) => api.put(`/inventory/stock/${id}`, data),
-  recordStockMovement: (data) => api.post('/inventory/stock/movement', data),
+  addStock: (id, data) => api.post(`/inventory/ingredients/${id}/add-stock`, data),
+  adjustStock: (id, data) => api.post(`/inventory/ingredients/${id}/adjust-stock`, data),
+
+  // Transaction history
+  getTransactions: (id) => api.get(`/inventory/ingredients/${id}/transactions`),
 };
 
 export const printerAPI = {
