@@ -51,7 +51,7 @@ spring:
       indent-output: true
     deserialization:
       fail-on-unknown-properties: false
-    time-zone: UTC
+    time-zone: Asia/Tashkent
 
   servlet:
     multipart:

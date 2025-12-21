@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { menuCollectionAPI, restaurantAPI, menuAPI } from '../services/api';
+import { formatDate } from '../utils/dateUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -182,12 +183,6 @@ export default function MenuCollections() {
       sortOrder: 0,
       productIds: []
     });
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
   };
 
   if (loading && collections.length === 0) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { inventoryAPI, restaurantAPI } from '../services/api';
+import { formatDateTime } from '../utils/dateUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -761,7 +762,7 @@ export default function Inventory() {
                 ) : (
                   transactions.map((transaction) => (
                     <TableRow key={transaction.id}>
-                      <TableCell>{new Date(transaction.createdAt).toLocaleString()}</TableCell>
+                      <TableCell>{formatDateTime(transaction.createdAt)}</TableCell>
                       <TableCell>
                         <Badge className={
                           transaction.type === 'PURCHASE' || transaction.type === 'RESTOCK' || transaction.type === 'INITIAL_STOCK'
