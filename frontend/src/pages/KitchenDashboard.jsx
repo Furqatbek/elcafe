@@ -43,6 +43,7 @@ import {
   Activity,
   Target,
   Award,
+  Printer,
 } from 'lucide-react';
 
 export default function KitchenDashboard() {
@@ -448,6 +449,190 @@ export default function KitchenDashboard() {
     }
     setStationModalOpen(false);
     setSelectedStation('');
+  };
+
+  const handlePrintTicket = (order) => {
+    const printWindow = window.open('', '_blank');
+    const restaurantName = restaurants.find(r => r.id === selectedRestaurant)?.name || 'Restaurant';
+    const stationInfo = orderStations[order.id]
+      ? `${STATIONS[orderStations[order.id]]?.icon} ${STATIONS[orderStations[order.id]]?.name}`
+      : '';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Kitchen Ticket - ${order.order.orderNumber}</title>
+          <style>
+            @page {
+              size: 80mm auto;
+              margin: 5mm;
+            }
+            body {
+              font-family: 'Courier New', monospace;
+              font-size: 12px;
+              line-height: 1.4;
+              margin: 0;
+              padding: 10px;
+              max-width: 80mm;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px dashed #000;
+              padding-bottom: 10px;
+              margin-bottom: 10px;
+            }
+            .restaurant-name {
+              font-size: 16px;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .order-number {
+              font-size: 20px;
+              font-weight: bold;
+              margin: 10px 0;
+            }
+            .section {
+              margin: 10px 0;
+              padding: 5px 0;
+            }
+            .section-title {
+              font-weight: bold;
+              text-transform: uppercase;
+              margin-bottom: 5px;
+              border-bottom: 1px solid #000;
+            }
+            .item {
+              margin: 5px 0;
+              padding-left: 10px;
+            }
+            .item-quantity {
+              font-weight: bold;
+              display: inline-block;
+              width: 30px;
+            }
+            .item-name {
+              font-weight: bold;
+            }
+            .item-variant {
+              font-style: italic;
+              margin-left: 5px;
+            }
+            .item-addons {
+              margin-left: 40px;
+              font-size: 11px;
+            }
+            .special-instructions {
+              background: #000;
+              color: #fff;
+              padding: 5px;
+              margin: 5px 0;
+              font-weight: bold;
+            }
+            .customer-notes {
+              background: #f0f0f0;
+              border: 2px solid #000;
+              padding: 5px;
+              margin: 5px 0;
+              font-weight: bold;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin: 3px 0;
+            }
+            .badge {
+              display: inline-block;
+              padding: 2px 8px;
+              border: 1px solid #000;
+              margin: 2px;
+              font-weight: bold;
+            }
+            .footer {
+              text-align: center;
+              border-top: 2px dashed #000;
+              padding-top: 10px;
+              margin-top: 10px;
+              font-size: 10px;
+            }
+            @media print {
+              body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="restaurant-name">${restaurantName}</div>
+            <div class="order-number">ORDER #${order.order.orderNumber}</div>
+            <div style="margin-top: 5px;">
+              ${order.order.diningTable ? `<span class="badge">TABLE ${order.order.diningTable.tableNumber}</span>` : ''}
+              <span class="badge">${order.order.orderType === 'DINE_IN' ? 'DINE-IN' : order.order.orderType}</span>
+              <span class="badge">PRIORITY: ${order.priority}</span>
+              ${stationInfo ? `<span class="badge">STATION: ${stationInfo}</span>` : ''}
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">Order Items</div>
+            ${order.order.items.map(item => `
+              <div class="item">
+                <span class="item-quantity">${item.quantity}x</span>
+                <span class="item-name">${item.productName}</span>
+                ${item.variantName ? `<span class="item-variant">(${item.variantName})</span>` : ''}
+                ${item.addOns ? `<div class="item-addons">+ ${item.addOns}</div>` : ''}
+                ${item.specialInstructions ? `<div class="special-instructions">⚠️ ${item.specialInstructions}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+
+          ${order.order.customerNotes ? `
+            <div class="customer-notes">
+              <div style="font-size: 10px; margin-bottom: 3px;">CUSTOMER NOTES:</div>
+              ${order.order.customerNotes}
+            </div>
+          ` : ''}
+
+          <div class="section">
+            <div class="info-row">
+              <span>Ordered:</span>
+              <span>${formatTime(order.createdAt)}</span>
+            </div>
+            ${order.assignedChef ? `
+              <div class="info-row">
+                <span>Chef:</span>
+                <span>${order.assignedChef}</span>
+              </div>
+            ` : ''}
+            ${order.estimatedPreparationTimeMinutes ? `
+              <div class="info-row">
+                <span>Est. Prep Time:</span>
+                <span>${order.estimatedPreparationTimeMinutes} minutes</span>
+              </div>
+            ` : ''}
+            ${order.preparationStartedAt ? `
+              <div class="info-row">
+                <span>Started:</span>
+                <span>${formatTime(order.preparationStartedAt)}</span>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="footer">
+            Printed: ${new Date().toLocaleString()}<br>
+            Kitchen Display System
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+
+    // Print after a short delay to ensure content is loaded
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   const clearFilters = () => {
@@ -928,6 +1113,14 @@ export default function KitchenDashboard() {
                     <Button
                       variant="outline"
                       size="icon"
+                      onClick={() => handlePrintTicket(order)}
+                      title="Print Ticket"
+                    >
+                      <Printer className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
                       onClick={() => handleChangePriority(order)}
                       title="Change Priority"
                     >
@@ -1084,6 +1277,14 @@ export default function KitchenDashboard() {
                     <Button
                       variant="outline"
                       size="icon"
+                      onClick={() => handlePrintTicket(order)}
+                      title="Print Ticket"
+                    >
+                      <Printer className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
                       onClick={() => handleAssignStation(order)}
                       title="Assign Station"
                     >
@@ -1195,14 +1396,24 @@ export default function KitchenDashboard() {
                     </div>
                   </div>
 
-                  <Button
-                    className="w-full"
-                    variant="secondary"
-                    onClick={() => handleMarkPickedUp(order.id)}
-                  >
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                    {t('kitchen.actions.markPickedUp')}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1"
+                      variant="secondary"
+                      onClick={() => handleMarkPickedUp(order.id)}
+                    >
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      {t('kitchen.actions.markPickedUp')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handlePrintTicket(order)}
+                      title="Print Ticket"
+                    >
+                      <Printer className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
