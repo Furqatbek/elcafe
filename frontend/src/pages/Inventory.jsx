@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { inventoryAPI, restaurantAPI } from '../services/api';
+import { inventoryAPI, restaurantAPI, menuAPI, stockAlertAPI } from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -42,15 +43,25 @@ import {
   RefreshCw,
   TrendingUp,
   History,
+  UtensilsCrossed,
+  Bell,
+  Send,
+  Power,
+  Link2,
 } from 'lucide-react';
 
 export default function Inventory() {
   const { t } = useTranslation();
-  const [ingredients, setIngredients] = useState([]);
-  const [filteredIngredients, setFilteredIngredients] = useState([]);
+  const [activeTab, setActiveTab] = useState('ingredients');
+
+  // Common state
   const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Ingredients state
+  const [ingredients, setIngredients] = useState([]);
+  const [filteredIngredients, setFilteredIngredients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [modalOpen, setModalOpen] = useState(false);
@@ -59,7 +70,7 @@ export default function Inventory() {
   const [selectedIngredient, setSelectedIngredient] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [editingIngredient, setEditingIngredient] = useState(null);
-  const [stockAction, setStockAction] = useState('add'); // 'add' or 'adjust'
+  const [stockAction, setStockAction] = useState('add');
   const [stockFormData, setStockFormData] = useState({
     quantity: '',
     newQuantity: '',
@@ -80,6 +91,31 @@ export default function Inventory() {
     trackInventory: true,
   });
 
+  // Recipes state
+  const [products, setProducts] = useState([]);
+  const [recipes, setRecipes] = useState([]);
+  const [recipeModalOpen, setRecipeModalOpen] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [recipeFormData, setRecipeFormData] = useState({
+    productId: '',
+    ingredientId: '',
+    quantityRequired: '',
+    unit: 'kg',
+  });
+
+  // Stock Alerts state
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [alertSummary, setAlertSummary] = useState(null);
+  const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
+  const [editingSubscription, setEditingSubscription] = useState(null);
+  const [subscriptionFormData, setSubscriptionFormData] = useState({
+    telegramChatId: '',
+    subscriberName: '',
+    alertOnLowStock: true,
+    alertOnReorder: true,
+  });
+
   useEffect(() => {
     loadRestaurants();
   }, []);
@@ -87,6 +123,9 @@ export default function Inventory() {
   useEffect(() => {
     if (selectedRestaurant) {
       loadIngredients();
+      loadProducts();
+      loadSubscriptions();
+      loadAlertSummary();
     }
   }, [selectedRestaurant]);
 
@@ -119,10 +158,45 @@ export default function Inventory() {
     }
   };
 
+  const loadProducts = async () => {
+    try {
+      const response = await menuAPI.getProductsByRestaurant(selectedRestaurant);
+      setProducts(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load products:', error);
+    }
+  };
+
+  const loadSubscriptions = async () => {
+    try {
+      const response = await stockAlertAPI.getSubscriptions(selectedRestaurant);
+      setSubscriptions(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load subscriptions:', error);
+    }
+  };
+
+  const loadAlertSummary = async () => {
+    try {
+      const response = await stockAlertAPI.getSummary(selectedRestaurant);
+      setAlertSummary(response.data.data || null);
+    } catch (error) {
+      console.error('Failed to load alert summary:', error);
+    }
+  };
+
+  const loadRecipesForProduct = async (productId) => {
+    try {
+      const response = await inventoryAPI.getRecipesByProduct(productId);
+      setRecipes(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load recipes:', error);
+    }
+  };
+
   const filterIngredients = () => {
     let filtered = ingredients;
 
-    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(
         (ing) =>
@@ -132,7 +206,6 @@ export default function Inventory() {
       );
     }
 
-    // Filter by status
     if (filterStatus === 'low') {
       filtered = filtered.filter((ing) => ing.currentStock <= ing.minimumStock);
     } else if (filterStatus === 'reorder') {
@@ -146,6 +219,7 @@ export default function Inventory() {
     setFilteredIngredients(filtered);
   };
 
+  // Ingredient handlers
   const handleAddNew = () => {
     setEditingIngredient(null);
     setFormData({
@@ -269,6 +343,139 @@ export default function Inventory() {
     }
   };
 
+  // Recipe handlers
+  const handleAddRecipe = () => {
+    setEditingRecipe(null);
+    setRecipeFormData({
+      productId: '',
+      ingredientId: '',
+      quantityRequired: '',
+      unit: 'kg',
+    });
+    setRecipeModalOpen(true);
+  };
+
+  const handleSaveRecipe = async () => {
+    try {
+      const data = {
+        productId: parseInt(recipeFormData.productId),
+        ingredientId: parseInt(recipeFormData.ingredientId),
+        quantityRequired: parseFloat(recipeFormData.quantityRequired),
+        unit: recipeFormData.unit,
+      };
+
+      if (editingRecipe) {
+        await inventoryAPI.updateRecipe(editingRecipe.id, data);
+      } else {
+        await inventoryAPI.createRecipe(data);
+      }
+
+      setRecipeModalOpen(false);
+      if (selectedProduct) {
+        loadRecipesForProduct(selectedProduct.id);
+      }
+    } catch (error) {
+      console.error('Failed to save recipe:', error);
+      alert(t('inventory.recipes.errors.saveFailed', 'Failed to save recipe'));
+    }
+  };
+
+  const handleDeleteRecipe = async (id) => {
+    if (!confirm(t('inventory.recipes.confirmDelete', 'Are you sure you want to delete this recipe?'))) return;
+
+    try {
+      await inventoryAPI.deleteRecipe(id);
+      if (selectedProduct) {
+        loadRecipesForProduct(selectedProduct.id);
+      }
+    } catch (error) {
+      console.error('Failed to delete recipe:', error);
+      alert(t('inventory.recipes.errors.deleteFailed', 'Failed to delete recipe'));
+    }
+  };
+
+  const handleSelectProduct = (product) => {
+    setSelectedProduct(product);
+    loadRecipesForProduct(product.id);
+  };
+
+  // Subscription handlers
+  const handleAddSubscription = () => {
+    setEditingSubscription(null);
+    setSubscriptionFormData({
+      telegramChatId: '',
+      subscriberName: '',
+      alertOnLowStock: true,
+      alertOnReorder: true,
+    });
+    setSubscriptionModalOpen(true);
+  };
+
+  const handleEditSubscription = (subscription) => {
+    setEditingSubscription(subscription);
+    setSubscriptionFormData({
+      telegramChatId: subscription.telegramChatId.toString(),
+      subscriberName: subscription.subscriberName || '',
+      alertOnLowStock: subscription.alertOnLowStock,
+      alertOnReorder: subscription.alertOnReorder,
+    });
+    setSubscriptionModalOpen(true);
+  };
+
+  const handleSaveSubscription = async () => {
+    try {
+      const data = {
+        restaurantId: selectedRestaurant,
+        telegramChatId: parseInt(subscriptionFormData.telegramChatId),
+        subscriberName: subscriptionFormData.subscriberName,
+        alertOnLowStock: subscriptionFormData.alertOnLowStock,
+        alertOnReorder: subscriptionFormData.alertOnReorder,
+      };
+
+      if (editingSubscription) {
+        await stockAlertAPI.updateSubscription(editingSubscription.id, data);
+      } else {
+        await stockAlertAPI.createSubscription(data);
+      }
+
+      setSubscriptionModalOpen(false);
+      loadSubscriptions();
+    } catch (error) {
+      console.error('Failed to save subscription:', error);
+      alert(t('inventory.stockAlerts.errors.saveFailed', 'Failed to save subscription'));
+    }
+  };
+
+  const handleToggleSubscription = async (id) => {
+    try {
+      await stockAlertAPI.toggleSubscription(id);
+      loadSubscriptions();
+    } catch (error) {
+      console.error('Failed to toggle subscription:', error);
+    }
+  };
+
+  const handleDeleteSubscription = async (id) => {
+    if (!confirm(t('inventory.stockAlerts.confirmDelete', 'Are you sure you want to delete this subscription?'))) return;
+
+    try {
+      await stockAlertAPI.deleteSubscription(id);
+      loadSubscriptions();
+    } catch (error) {
+      console.error('Failed to delete subscription:', error);
+    }
+  };
+
+  const handleTriggerAlert = async () => {
+    try {
+      await stockAlertAPI.triggerAlert(selectedRestaurant);
+      alert(t('inventory.stockAlerts.alertTriggered', 'Stock alert sent successfully!'));
+    } catch (error) {
+      console.error('Failed to trigger alert:', error);
+      alert(t('inventory.stockAlerts.errors.triggerFailed', 'Failed to trigger alert'));
+    }
+  };
+
   const getStockStatus = (ingredient) => {
     if (!ingredient.trackInventory) {
       return { label: t('inventory.status.notTracked', 'Not Tracked'), color: 'bg-gray-100 text-gray-800' };
@@ -314,201 +521,539 @@ export default function Inventory() {
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={loadIngredients} variant="outline" size="icon">
+          <Button onClick={() => { loadIngredients(); loadSubscriptions(); loadAlertSummary(); }} variant="outline" size="icon">
             <RefreshCw className="h-4 w-4" />
-          </Button>
-          <Button onClick={handleAddNew}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('inventory.addIngredient')}
           </Button>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('inventory.stats.total')}</CardTitle>
-            <Package className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{ingredients.length}</div>
-            <p className="text-xs text-muted-foreground">{activeCount} {t('inventory.stats.active')}</p>
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="ingredients" className="flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            {t('inventory.tabs.ingredients', 'Ingredients')}
+          </TabsTrigger>
+          <TabsTrigger value="recipes" className="flex items-center gap-2">
+            <UtensilsCrossed className="h-4 w-4" />
+            {t('inventory.tabs.recipes', 'Recipes')}
+          </TabsTrigger>
+          <TabsTrigger value="alerts" className="flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            {t('inventory.tabs.stockAlerts', 'Stock Alerts')}
+          </TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('inventory.stats.lowStock')}</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{lowStockCount}</div>
-            <p className="text-xs text-muted-foreground">{t('inventory.stats.needsAttention')}</p>
-          </CardContent>
-        </Card>
+        {/* Ingredients Tab */}
+        <TabsContent value="ingredients" className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('inventory.stats.total')}</CardTitle>
+                <Package className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{ingredients.length}</div>
+                <p className="text-xs text-muted-foreground">{activeCount} {t('inventory.stats.active')}</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('inventory.stats.reorder')}</CardTitle>
-            <TrendingDown className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{reorderCount}</div>
-            <p className="text-xs text-muted-foreground">{t('inventory.stats.reorderSoon')}</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('inventory.stats.lowStock')}</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{lowStockCount}</div>
+                <p className="text-xs text-muted-foreground">{t('inventory.stats.needsAttention')}</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('inventory.stats.tracked')}</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {ingredients.filter((ing) => ing.trackInventory).length}
-            </div>
-            <p className="text-xs text-muted-foreground">{t('inventory.stats.monitoring')}</p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('inventory.stats.reorder')}</CardTitle>
+                <TrendingDown className="h-4 w-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-yellow-600">{reorderCount}</div>
+                <p className="text-xs text-muted-foreground">{t('inventory.stats.reorderSoon')}</p>
+              </CardContent>
+            </Card>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <Label htmlFor="search">{t('common.search')}</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder={t('inventory.searchPlaceholder')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <div className="w-[200px]">
-              <Label htmlFor="filter">{t('common.filter')}</Label>
-              <Select value={filterStatus} onValueChange={setFilterStatus}>
-                <SelectTrigger id="filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('inventory.filters.all')}</SelectItem>
-                  <SelectItem value="active">{t('inventory.filters.active')}</SelectItem>
-                  <SelectItem value="inactive">{t('inventory.filters.inactive')}</SelectItem>
-                  <SelectItem value="low">{t('inventory.filters.lowStock')}</SelectItem>
-                  <SelectItem value="reorder">{t('inventory.filters.reorder')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('inventory.stats.tracked')}</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {ingredients.filter((ing) => ing.trackInventory).length}
+                </div>
+                <p className="text-xs text-muted-foreground">{t('inventory.stats.monitoring')}</p>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Ingredients Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('inventory.ingredientsList')}</CardTitle>
-          <CardDescription>
-            {t('inventory.ingredientsDescription')} ({filteredIngredients.length} {t('common.items')})
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('inventory.fields.name')}</TableHead>
-                <TableHead>{t('inventory.fields.sku')}</TableHead>
-                <TableHead>{t('inventory.fields.currentStock')}</TableHead>
-                <TableHead>{t('inventory.fields.minimumStock')}</TableHead>
-                <TableHead>{t('inventory.fields.unit')}</TableHead>
-                <TableHead>{t('inventory.fields.supplier')}</TableHead>
-                <TableHead>{t('inventory.fields.status')}</TableHead>
-                <TableHead className="text-right">{t('common.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredIngredients.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    {t('inventory.noIngredients')}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredIngredients.map((ingredient) => {
-                  const status = getStockStatus(ingredient);
-                  return (
-                    <TableRow key={ingredient.id}>
-                      <TableCell className="font-medium">
-                        <div>
-                          <div>{ingredient.name}</div>
-                          {ingredient.description && (
-                            <div className="text-xs text-muted-foreground">{ingredient.description}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{ingredient.sku || '-'}</TableCell>
-                      <TableCell>
-                        <span className={ingredient.currentStock <= ingredient.minimumStock ? 'text-red-600 font-semibold' : ''}>
-                          {ingredient.currentStock}
-                        </span>
-                      </TableCell>
-                      <TableCell>{ingredient.minimumStock}</TableCell>
-                      <TableCell>{ingredient.unit}</TableCell>
-                      <TableCell>{ingredient.supplier || '-'}</TableCell>
-                      <TableCell>
-                        <Badge className={status.color}>{status.label}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleStockAction(ingredient, 'add')}
-                            title={t("common.buttons.addStock")}
-                          >
-                            <TrendingUp className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewTransactions(ingredient)}
-                            title={t("common.buttons.viewHistory")}
-                          >
-                            <History className="h-4 w-4 text-blue-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(ingredient)}
-                            title={t("common.buttons.edit")}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(ingredient.id)}
-                            title={t("common.buttons.delete")}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600" />
-                          </Button>
-                        </div>
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex gap-4 items-end">
+                <div className="flex-1">
+                  <Label htmlFor="search">{t('common.search')}</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="search"
+                      placeholder={t('inventory.searchPlaceholder')}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="w-[200px]">
+                  <Label htmlFor="filter">{t('common.filter')}</Label>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger id="filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('inventory.filters.all')}</SelectItem>
+                      <SelectItem value="active">{t('inventory.filters.active')}</SelectItem>
+                      <SelectItem value="inactive">{t('inventory.filters.inactive')}</SelectItem>
+                      <SelectItem value="low">{t('inventory.filters.lowStock')}</SelectItem>
+                      <SelectItem value="reorder">{t('inventory.filters.reorder')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={handleAddNew}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('inventory.addIngredient')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Ingredients Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('inventory.ingredientsList')}</CardTitle>
+              <CardDescription>
+                {t('inventory.ingredientsDescription')} ({filteredIngredients.length} {t('common.items')})
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('inventory.fields.name')}</TableHead>
+                    <TableHead>{t('inventory.fields.sku')}</TableHead>
+                    <TableHead>{t('inventory.fields.currentStock')}</TableHead>
+                    <TableHead>{t('inventory.fields.minimumStock')}</TableHead>
+                    <TableHead>{t('inventory.fields.unit')}</TableHead>
+                    <TableHead>{t('inventory.fields.supplier')}</TableHead>
+                    <TableHead>{t('inventory.fields.status')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredIngredients.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        {t('inventory.noIngredients')}
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  ) : (
+                    filteredIngredients.map((ingredient) => {
+                      const status = getStockStatus(ingredient);
+                      return (
+                        <TableRow key={ingredient.id}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <div>{ingredient.name}</div>
+                              {ingredient.description && (
+                                <div className="text-xs text-muted-foreground">{ingredient.description}</div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{ingredient.sku || '-'}</TableCell>
+                          <TableCell>
+                            <span className={ingredient.currentStock <= ingredient.minimumStock ? 'text-red-600 font-semibold' : ''}>
+                              {ingredient.currentStock}
+                            </span>
+                          </TableCell>
+                          <TableCell>{ingredient.minimumStock}</TableCell>
+                          <TableCell>{ingredient.unit}</TableCell>
+                          <TableCell>{ingredient.supplier || '-'}</TableCell>
+                          <TableCell>
+                            <Badge className={status.color}>{status.label}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleStockAction(ingredient, 'add')}
+                                title={t("common.buttons.addStock")}
+                              >
+                                <TrendingUp className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleViewTransactions(ingredient)}
+                                title={t("common.buttons.viewHistory")}
+                              >
+                                <History className="h-4 w-4 text-blue-600" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(ingredient)}
+                                title={t("common.buttons.edit")}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(ingredient.id)}
+                                title={t("common.buttons.delete")}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-600" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Add/Edit Modal */}
+        {/* Recipes Tab */}
+        <TabsContent value="recipes" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Products List */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UtensilsCrossed className="h-5 w-5" />
+                  {t('inventory.recipes.selectProduct', 'Select Product')}
+                </CardTitle>
+                <CardDescription>
+                  {t('inventory.recipes.selectProductDesc', 'Select a product to view and manage its recipe')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-[500px] overflow-y-auto">
+                  {products.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      {t('inventory.recipes.noProducts', 'No products available')}
+                    </p>
+                  ) : (
+                    products.map((product) => (
+                      <div
+                        key={product.id}
+                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                          selectedProduct?.id === product.id
+                            ? 'bg-primary/10 border-primary'
+                            : 'hover:bg-muted'
+                        }`}
+                        onClick={() => handleSelectProduct(product)}
+                      >
+                        <div className="flex items-center gap-3">
+                          {product.imageUrl ? (
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="w-12 h-12 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded bg-muted flex items-center justify-center">
+                              <UtensilsCrossed className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-medium">{product.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {product.categoryName || 'Uncategorized'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Recipe Details */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Link2 className="h-5 w-5" />
+                      {t('inventory.recipes.ingredientLinks', 'Ingredient Links')}
+                    </CardTitle>
+                    <CardDescription>
+                      {selectedProduct
+                        ? `${t('inventory.recipes.for', 'Recipe for')} ${selectedProduct.name}`
+                        : t('inventory.recipes.selectProductFirst', 'Select a product to view its recipe')}
+                    </CardDescription>
+                  </div>
+                  {selectedProduct && (
+                    <Button onClick={handleAddRecipe} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t('inventory.recipes.addIngredient', 'Add Ingredient')}
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!selectedProduct ? (
+                  <div className="text-center text-muted-foreground py-12">
+                    <UtensilsCrossed className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>{t('inventory.recipes.selectProductFirst', 'Select a product to view its recipe')}</p>
+                  </div>
+                ) : recipes.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-12">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>{t('inventory.recipes.noIngredients', 'No ingredients linked to this product')}</p>
+                    <Button onClick={handleAddRecipe} variant="outline" className="mt-4">
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t('inventory.recipes.addFirst', 'Add first ingredient')}
+                    </Button>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('inventory.recipes.ingredient', 'Ingredient')}</TableHead>
+                        <TableHead>{t('inventory.recipes.quantity', 'Quantity')}</TableHead>
+                        <TableHead>{t('inventory.recipes.unit', 'Unit')}</TableHead>
+                        <TableHead className="text-right">{t('common.actions')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recipes.map((recipe) => (
+                        <TableRow key={recipe.id}>
+                          <TableCell className="font-medium">{recipe.ingredientName}</TableCell>
+                          <TableCell>{recipe.quantityRequired}</TableCell>
+                          <TableCell>{recipe.unit}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteRecipe(recipe.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Stock Alerts Tab */}
+        <TabsContent value="alerts" className="space-y-6">
+          {/* Alert Summary */}
+          {alertSummary && (
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {t('inventory.stockAlerts.lowStockItems', 'Low Stock Items')}
+                  </CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">
+                    {alertSummary.lowStockCount || 0}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {t('inventory.stockAlerts.reorderItems', 'Reorder Items')}
+                  </CardTitle>
+                  <TrendingDown className="h-4 w-4 text-yellow-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {alertSummary.reorderCount || 0}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {t('inventory.stockAlerts.activeSubscriptions', 'Active Subscriptions')}
+                  </CardTitle>
+                  <Bell className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {subscriptions.filter((s) => s.active).length}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {t('inventory.stockAlerts.sendAlert', 'Send Alert')}
+                  </CardTitle>
+                  <Send className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    onClick={handleTriggerAlert}
+                    size="sm"
+                    className="w-full"
+                    disabled={subscriptions.filter((s) => s.active).length === 0}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    {t('inventory.stockAlerts.trigger', 'Trigger Now')}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Subscriptions Table */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    {t('inventory.stockAlerts.subscriptions', 'Telegram Subscriptions')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('inventory.stockAlerts.subscriptionsDesc', 'Manage Telegram chat subscriptions for stock alerts')}
+                  </CardDescription>
+                </div>
+                <Button onClick={handleAddSubscription}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('inventory.stockAlerts.addSubscription', 'Add Subscription')}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('inventory.stockAlerts.subscriberName', 'Subscriber')}</TableHead>
+                    <TableHead>{t('inventory.stockAlerts.chatId', 'Telegram Chat ID')}</TableHead>
+                    <TableHead>{t('inventory.stockAlerts.lowStockAlerts', 'Low Stock')}</TableHead>
+                    <TableHead>{t('inventory.stockAlerts.reorderAlerts', 'Reorder')}</TableHead>
+                    <TableHead>{t('inventory.stockAlerts.status', 'Status')}</TableHead>
+                    <TableHead>{t('inventory.stockAlerts.lastAlert', 'Last Alert')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {subscriptions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        {t('inventory.stockAlerts.noSubscriptions', 'No subscriptions found. Add a Telegram chat to receive stock alerts.')}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    subscriptions.map((subscription) => (
+                      <TableRow key={subscription.id}>
+                        <TableCell className="font-medium">
+                          {subscription.subscriberName || '-'}
+                        </TableCell>
+                        <TableCell>{subscription.telegramChatId}</TableCell>
+                        <TableCell>
+                          <Badge className={subscription.alertOnLowStock ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {subscription.alertOnLowStock ? t('common.yes', 'Yes') : t('common.no', 'No')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={subscription.alertOnReorder ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                            {subscription.alertOnReorder ? t('common.yes', 'Yes') : t('common.no', 'No')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={subscription.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                            {subscription.active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {subscription.lastAlertSentAt
+                            ? formatDateTime(subscription.lastAlertSentAt)
+                            : t('inventory.stockAlerts.never', 'Never')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleSubscription(subscription.id)}
+                              title={subscription.active ? t('common.deactivate', 'Deactivate') : t('common.activate', 'Activate')}
+                            >
+                              <Power className={`h-4 w-4 ${subscription.active ? 'text-green-600' : 'text-gray-400'}`} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditSubscription(subscription)}
+                              title={t('common.edit', 'Edit')}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteSubscription(subscription.id)}
+                              title={t('common.delete', 'Delete')}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Instructions Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('inventory.stockAlerts.howToSetup', 'How to Get Telegram Chat ID')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                <li>{t('inventory.stockAlerts.step1', 'Start a chat with your Telegram bot')}</li>
+                <li>{t('inventory.stockAlerts.step2', 'Send the /start command to the bot')}</li>
+                <li>{t('inventory.stockAlerts.step3', 'The bot will reply with your Chat ID')}</li>
+                <li>{t('inventory.stockAlerts.step4', 'Copy the Chat ID and add it as a subscription here')}</li>
+              </ol>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Add/Edit Ingredient Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -791,6 +1336,156 @@ export default function Inventory() {
           <DialogFooter>
             <Button onClick={() => setTransactionModalOpen(false)}>
               {t('common.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Recipe Modal */}
+      <Dialog open={recipeModalOpen} onOpenChange={setRecipeModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingRecipe
+                ? t('inventory.recipes.editIngredient', 'Edit Ingredient Link')
+                : t('inventory.recipes.addIngredient', 'Add Ingredient to Recipe')}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedProduct
+                ? `${t('inventory.recipes.for', 'For')} ${selectedProduct.name}`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="ingredientId">{t('inventory.recipes.ingredient', 'Ingredient')} *</Label>
+              <Select
+                value={recipeFormData.ingredientId}
+                onValueChange={(value) => setRecipeFormData({ ...recipeFormData, ingredientId: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('inventory.recipes.selectIngredient', 'Select an ingredient')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {ingredients.map((ingredient) => (
+                    <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
+                      {ingredient.name} ({ingredient.unit})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="quantityRequired">{t('inventory.recipes.quantity', 'Quantity Required')} *</Label>
+                <Input
+                  id="quantityRequired"
+                  type="number"
+                  step="0.001"
+                  value={recipeFormData.quantityRequired}
+                  onChange={(e) => setRecipeFormData({ ...recipeFormData, quantityRequired: e.target.value })}
+                  placeholder={t("common.placeholders.decimalValue")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recipeUnit">{t('inventory.recipes.unit', 'Unit')} *</Label>
+                <Select
+                  value={recipeFormData.unit}
+                  onValueChange={(value) => setRecipeFormData({ ...recipeFormData, unit: value })}
+                >
+                  <SelectTrigger id="recipeUnit">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kg">{t('inventory.units.kg')}</SelectItem>
+                    <SelectItem value="g">{t('inventory.units.g')}</SelectItem>
+                    <SelectItem value="L">{t('inventory.units.L')}</SelectItem>
+                    <SelectItem value="ml">{t('inventory.units.ml')}</SelectItem>
+                    <SelectItem value="pieces">{t('inventory.units.pieces')}</SelectItem>
+                    <SelectItem value="dozens">{t('inventory.units.dozens')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecipeModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSaveRecipe}>
+              {editingRecipe ? t('common.save') : t('common.create')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Subscription Modal */}
+      <Dialog open={subscriptionModalOpen} onOpenChange={setSubscriptionModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingSubscription
+                ? t('inventory.stockAlerts.editSubscription', 'Edit Subscription')
+                : t('inventory.stockAlerts.addSubscription', 'Add Subscription')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('inventory.stockAlerts.subscriptionDesc', 'Configure Telegram alerts for stock notifications')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="telegramChatId">{t('inventory.stockAlerts.chatId', 'Telegram Chat ID')} *</Label>
+              <Input
+                id="telegramChatId"
+                type="number"
+                value={subscriptionFormData.telegramChatId}
+                onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, telegramChatId: e.target.value })}
+                placeholder="123456789"
+                disabled={!!editingSubscription}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subscriberName">{t('inventory.stockAlerts.subscriberName', 'Subscriber Name')}</Label>
+              <Input
+                id="subscriberName"
+                value={subscriptionFormData.subscriberName}
+                onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, subscriberName: e.target.value })}
+                placeholder={t('inventory.stockAlerts.namePlaceholder', 'e.g., Manager John')}
+              />
+            </div>
+            <div className="flex gap-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="alertOnLowStock"
+                  checked={subscriptionFormData.alertOnLowStock}
+                  onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, alertOnLowStock: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="alertOnLowStock" className="font-normal cursor-pointer">
+                  {t('inventory.stockAlerts.alertOnLowStock', 'Alert on Low Stock')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="alertOnReorder"
+                  checked={subscriptionFormData.alertOnReorder}
+                  onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, alertOnReorder: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="alertOnReorder" className="font-normal cursor-pointer">
+                  {t('inventory.stockAlerts.alertOnReorder', 'Alert on Reorder Level')}
+                </Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubscriptionModalOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSaveSubscription}>
+              {editingSubscription ? t('common.save') : t('common.create')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1224,6 +1224,65 @@
     "errors": {
       "saveFailed": "Не удалось сохранить ингредиент",
       "deleteFailed": "Не удалось удалить ингредиент"
+    },
+    "tabs": {
+      "ingredients": "Ингредиенты",
+      "recipes": "Рецепты",
+      "stockAlerts": "Уведомления о запасах"
+    },
+    "recipes": {
+      "selectProduct": "Выберите продукт",
+      "selectProductDesc": "Выберите продукт для просмотра и управления рецептом",
+      "selectProductFirst": "Выберите продукт для просмотра рецепта",
+      "noProducts": "Нет доступных продуктов",
+      "ingredientLinks": "Связи с ингредиентами",
+      "for": "Рецепт для",
+      "addIngredient": "Добавить ингредиент",
+      "noIngredients": "К этому продукту не привязаны ингредиенты",
+      "addFirst": "Добавить первый ингредиент",
+      "ingredient": "Ингредиент",
+      "quantity": "Количество",
+      "unit": "Единица",
+      "selectIngredient": "Выберите ингредиент",
+      "confirmDelete": "Вы уверены, что хотите удалить этот рецепт?",
+      "errors": {
+        "saveFailed": "Не удалось сохранить рецепт",
+        "deleteFailed": "Не удалось удалить рецепт"
+      }
+    },
+    "stockAlerts": {
+      "lowStockItems": "Низкий запас",
+      "reorderItems": "Требуется заказ",
+      "activeSubscriptions": "Активные подписки",
+      "sendAlert": "Отправить уведомление",
+      "trigger": "Отправить сейчас",
+      "subscriptions": "Telegram подписки",
+      "subscriptionsDesc": "Управление подписками Telegram для уведомлений о запасах",
+      "addSubscription": "Добавить подписку",
+      "editSubscription": "Редактировать подписку",
+      "subscriberName": "Подписчик",
+      "chatId": "Telegram Chat ID",
+      "lowStockAlerts": "Низкий запас",
+      "reorderAlerts": "Заказ",
+      "status": "Статус",
+      "lastAlert": "Последнее уведомление",
+      "never": "Никогда",
+      "noSubscriptions": "Подписки не найдены. Добавьте чат Telegram для получения уведомлений.",
+      "subscriptionDesc": "Настройка Telegram уведомлений о запасах",
+      "namePlaceholder": "напр., Менеджер Иван",
+      "alertOnLowStock": "Уведомлять о низком запасе",
+      "alertOnReorder": "Уведомлять о необходимости заказа",
+      "alertTriggered": "Уведомление о запасах отправлено!",
+      "confirmDelete": "Вы уверены, что хотите удалить эту подписку?",
+      "howToSetup": "Как получить Telegram Chat ID",
+      "step1": "Начните чат с вашим Telegram ботом",
+      "step2": "Отправьте команду /start боту",
+      "step3": "Бот ответит вашим Chat ID",
+      "step4": "Скопируйте Chat ID и добавьте его как подписку",
+      "errors": {
+        "saveFailed": "Не удалось сохранить подписку",
+        "triggerFailed": "Не удалось отправить уведомление"
+      }
     }
   },
   "pages": {

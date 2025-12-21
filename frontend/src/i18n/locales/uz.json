@@ -1224,6 +1224,65 @@
     "errors": {
       "saveFailed": "Ingredientni saqlab bo'lmadi",
       "deleteFailed": "Ingredientni o'chirib bo'lmadi"
+    },
+    "tabs": {
+      "ingredients": "Ingredientlar",
+      "recipes": "Retseptlar",
+      "stockAlerts": "Zaxira ogohlantirishlari"
+    },
+    "recipes": {
+      "selectProduct": "Mahsulotni tanlang",
+      "selectProductDesc": "Retseptni ko'rish va boshqarish uchun mahsulotni tanlang",
+      "selectProductFirst": "Retseptni ko'rish uchun mahsulotni tanlang",
+      "noProducts": "Mavjud mahsulotlar yo'q",
+      "ingredientLinks": "Ingredient bog'lanishlari",
+      "for": "Retsept uchun",
+      "addIngredient": "Ingredient qo'shish",
+      "noIngredients": "Bu mahsulotga ingredientlar bog'lanmagan",
+      "addFirst": "Birinchi ingredientni qo'shish",
+      "ingredient": "Ingredient",
+      "quantity": "Miqdor",
+      "unit": "Birlik",
+      "selectIngredient": "Ingredientni tanlang",
+      "confirmDelete": "Ushbu retseptni o'chirishga ishonchingiz komilmi?",
+      "errors": {
+        "saveFailed": "Retseptni saqlab bo'lmadi",
+        "deleteFailed": "Retseptni o'chirib bo'lmadi"
+      }
+    },
+    "stockAlerts": {
+      "lowStockItems": "Kam zaxira mahsulotlar",
+      "reorderItems": "Buyurtma kerak",
+      "activeSubscriptions": "Faol obunalar",
+      "sendAlert": "Ogohlantirish yuborish",
+      "trigger": "Hozir yuborish",
+      "subscriptions": "Telegram obunalari",
+      "subscriptionsDesc": "Zaxira ogohlantirishlari uchun Telegram chat obunalarini boshqarish",
+      "addSubscription": "Obuna qo'shish",
+      "editSubscription": "Obunani tahrirlash",
+      "subscriberName": "Obunachi",
+      "chatId": "Telegram Chat ID",
+      "lowStockAlerts": "Kam zaxira",
+      "reorderAlerts": "Buyurtma",
+      "status": "Holat",
+      "lastAlert": "Oxirgi ogohlantirish",
+      "never": "Hech qachon",
+      "noSubscriptions": "Obunalar topilmadi. Ogohlantirish olish uchun Telegram chat qo'shing.",
+      "subscriptionDesc": "Zaxira ogohlantirishlari uchun Telegram sozlamalari",
+      "namePlaceholder": "masalan, Menejer Javohir",
+      "alertOnLowStock": "Kam zaxirada ogohlantirish",
+      "alertOnReorder": "Buyurtma kerakligida ogohlantirish",
+      "alertTriggered": "Zaxira ogohlantirishlari muvaffaqiyatli yuborildi!",
+      "confirmDelete": "Ushbu obunani o'chirishga ishonchingiz komilmi?",
+      "howToSetup": "Telegram Chat ID ni qanday olish mumkin",
+      "step1": "Telegram botingiz bilan chat boshlang",
+      "step2": "Botga /start buyrug'ini yuboring",
+      "step3": "Bot sizga Chat ID ni yuboradi",
+      "step4": "Chat ID ni nusxalang va shu yerga obuna sifatida qo'shing",
+      "errors": {
+        "saveFailed": "Obunani saqlab bo'lmadi",
+        "triggerFailed": "Ogohlantirishni yuborib bo'lmadi"
+      }
     }
   },
   "pages": {
