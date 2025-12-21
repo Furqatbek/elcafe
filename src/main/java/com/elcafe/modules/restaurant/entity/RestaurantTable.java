@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.entity;
 
 import com.elcafe.modules.order.entity.Order;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,6 +17,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class RestaurantTable {
 
     @Id
