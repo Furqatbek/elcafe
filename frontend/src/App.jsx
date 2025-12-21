@@ -28,6 +28,7 @@ import PurchaseOrders from './pages/PurchaseOrders';
 import Expenses from './pages/Expenses';
 import FinancialReports from './pages/FinancialReports';
 import PrinterSettings from './pages/PrinterSettings';
+import Inventory from './pages/Inventory';
 import POSApp from './pos/POSApp';
 
 function PrivateRoute({ children }) {
@@ -71,6 +72,9 @@ function App() {
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
+          <Route path="kitchen/inventory" element={<Inventory />} />
+          <Route path="kitchen/recipes" element={<Inventory />} />
+          <Route path="kitchen/stock-alerts" element={<Inventory />} />
           <Route path="finance/purchase-orders" element={<PurchaseOrders />} />
           <Route path="finance/expenses" element={<Expenses />} />
           <Route path="finance/reports" element={<FinancialReports />} />

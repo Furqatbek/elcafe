@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { inventoryAPI, restaurantAPI, menuAPI, stockAlertAPI } from '../services/api';
 import { formatDateTime } from '../utils/dateUtils';
@@ -52,7 +53,16 @@ import {
 
 export default function Inventory() {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState('ingredients');
+  const location = useLocation();
+
+  // Determine initial tab based on route
+  const getInitialTab = () => {
+    if (location.pathname.includes('recipes')) return 'recipes';
+    if (location.pathname.includes('stock-alerts')) return 'alerts';
+    return 'ingredients';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
 
   // Common state
   const [restaurants, setRestaurants] = useState([]);
