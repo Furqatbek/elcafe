@@ -270,15 +270,15 @@ export default function Inventory() {
 
   const getStockStatus = (ingredient) => {
     if (!ingredient.trackInventory) {
-      return { label: 'Not Tracked', color: 'bg-gray-100 text-gray-800' };
+      return { label: t('inventory.status.notTracked', 'Not Tracked'), color: 'bg-gray-100 text-gray-800' };
     }
     if (ingredient.currentStock <= ingredient.minimumStock) {
-      return { label: 'Low Stock', color: 'bg-red-100 text-red-800' };
+      return { label: t('inventory.status.lowStock', 'Low Stock'), color: 'bg-red-100 text-red-800' };
     }
     if (ingredient.currentStock <= ingredient.reorderLevel) {
-      return { label: 'Reorder Soon', color: 'bg-yellow-100 text-yellow-800' };
+      return { label: t('inventory.status.reorderSoon', 'Reorder Soon'), color: 'bg-yellow-100 text-yellow-800' };
     }
-    return { label: 'In Stock', color: 'bg-green-100 text-green-800' };
+    return { label: t('inventory.status.inStock', 'In Stock'), color: 'bg-green-100 text-green-800' };
   };
 
   const lowStockCount = ingredients.filter((ing) => ing.currentStock <= ing.minimumStock).length;
@@ -669,16 +669,16 @@ export default function Inventory() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {stockAction === 'add' ? 'Add Stock' : 'Adjust Stock'} - {selectedIngredient?.name}
+              {stockAction === 'add' ? t('inventory.addStock', 'Add Stock') : t('inventory.adjustStock', 'Adjust Stock')} - {selectedIngredient?.name}
             </DialogTitle>
             <DialogDescription>
-              Current stock: {selectedIngredient?.currentStock} {selectedIngredient?.unit}
+              {t('inventory.currentStockLabel', 'Current stock: {{currentStock}} {{unit}}', { currentStock: selectedIngredient?.currentStock, unit: selectedIngredient?.unit })}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {stockAction === 'add' ? (
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity to Add *</Label>
+                <Label htmlFor="quantity">{t('inventory.quantityToAdd', 'Quantity to Add')} *</Label>
                 <Input
                   id="quantity"
                   type="number"
@@ -690,7 +690,7 @@ export default function Inventory() {
               </div>
             ) : (
               <div className="space-y-2">
-                <Label htmlFor="newQuantity">New Quantity *</Label>
+                <Label htmlFor="newQuantity">{t('inventory.newQuantity', 'New Quantity')} *</Label>
                 <Input
                   id="newQuantity"
                   type="number"
@@ -702,7 +702,7 @@ export default function Inventory() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t('common.notes', 'Notes')}</Label>
               <Input
                 id="notes"
                 value={stockFormData.notes}
@@ -711,7 +711,7 @@ export default function Inventory() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="performedBy">Performed By</Label>
+              <Label htmlFor="performedBy">{t('inventory.performedBy', 'Performed By')}</Label>
               <Input
                 id="performedBy"
                 value={stockFormData.performedBy}
@@ -721,10 +721,10 @@ export default function Inventory() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStockModalOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleStockSubmit}>
-              {stockAction === 'add' ? 'Add Stock' : 'Update Stock'}
+              {stockAction === 'add' ? t('inventory.addStock', 'Add Stock') : t('inventory.updateStock', 'Update Stock')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -734,28 +734,28 @@ export default function Inventory() {
       <Dialog open={transactionModalOpen} onOpenChange={setTransactionModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Transaction History - {selectedIngredient?.name}</DialogTitle>
+            <DialogTitle>{t('inventory.transactionHistory', 'Transaction History')} - {selectedIngredient?.name}</DialogTitle>
             <DialogDescription>
-              All stock movements for this ingredient
+              {t('inventory.transactionHistoryDesc', 'All stock movements for this ingredient')}
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Change</TableHead>
-                  <TableHead>Balance After</TableHead>
-                  <TableHead>Performed By</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead>{t('inventory.transactionFields.date', 'Date')}</TableHead>
+                  <TableHead>{t('inventory.transactionFields.type', 'Type')}</TableHead>
+                  <TableHead>{t('inventory.transactionFields.change', 'Change')}</TableHead>
+                  <TableHead>{t('inventory.transactionFields.balanceAfter', 'Balance After')}</TableHead>
+                  <TableHead>{t('inventory.transactionFields.performedBy', 'Performed By')}</TableHead>
+                  <TableHead>{t('inventory.transactionFields.notes', 'Notes')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {transactions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
-                      No transactions found
+                      {t('inventory.noTransactions', 'No transactions found')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -789,7 +789,7 @@ export default function Inventory() {
           </div>
           <DialogFooter>
             <Button onClick={() => setTransactionModalOpen(false)}>
-              Close
+              {t('common.close')}
             </Button>
           </DialogFooter>
         </DialogContent>
