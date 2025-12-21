@@ -99,18 +99,18 @@ export default function Customers() {
 
   const exportToCSV = () => {
     const headers = [
-      'ID',
-      'First Name',
-      'Last Name',
-      'Email',
-      'Phone',
-      'Address',
-      'City',
-      'State',
-      'ZIP Code',
-      'Tags',
-      'Status',
-      'Created At',
+      t('pages.customers.id', 'ID'),
+      t('pages.customers.firstName', 'First Name'),
+      t('pages.customers.lastName', 'Last Name'),
+      t('pages.customers.email', 'Email'),
+      t('pages.customers.phone', 'Phone'),
+      t('pages.customers.address', 'Address'),
+      t('pages.customers.city', 'City'),
+      t('pages.customers.state', 'State'),
+      t('pages.customers.zipCode', 'ZIP Code'),
+      t('pages.customers.tags', 'Tags'),
+      t('pages.customers.status', 'Status'),
+      t('pages.customers.createdAt', 'Created At'),
     ];
 
     const csvData = filteredCustomers.map((customer) => [
