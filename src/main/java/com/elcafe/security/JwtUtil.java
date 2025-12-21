@@ -55,7 +55,8 @@ public class JwtUtil {
     }
 
     public Boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
+        // Tokens are now stateless with no expiration
+        return false;
     }
 
     public String generateAccessToken(UserDetails userDetails) {
