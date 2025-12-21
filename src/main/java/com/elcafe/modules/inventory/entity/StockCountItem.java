@@ -94,9 +94,10 @@ public class StockCountItem {
     /**
      * Record a count and calculate variance
      */
-    public void recordCount(BigDecimal counted, String countedBy) {
+    public void recordCount(BigDecimal counted, String countedBy, String notes) {
         this.countedQuantity = counted;
         this.countedBy = countedBy;
+        this.notes = notes;
         this.countedAt = LocalDateTime.now();
         this.status = Status.COUNTED;
         calculateVariance();
