@@ -310,7 +310,7 @@ export default function Products() {
       await loadVariants(selectedProductForVariants.id);
     } catch (error) {
       console.error('Failed to create variant:', error);
-      alert('Failed to create variant: ' + (error.response?.data?.message || error.message));
+      alert(t('pages.products.errors.createVariantFailed', 'Failed to create variant') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -341,7 +341,7 @@ export default function Products() {
       await loadVariants(selectedProductForVariants.id);
     } catch (error) {
       console.error('Failed to update variant:', error);
-      alert('Failed to update variant: ' + (error.response?.data?.message || error.message));
+      alert(t('pages.products.errors.updateVariantFailed', 'Failed to update variant') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -360,7 +360,7 @@ export default function Products() {
       await loadVariants(selectedProductForVariants.id);
     } catch (error) {
       console.error('Failed to delete variant:', error);
-      alert('Failed to delete variant: ' + (error.response?.data?.message || error.message));
+      alert(t('pages.products.errors.deleteVariantFailed', 'Failed to delete variant') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -373,20 +373,20 @@ export default function Products() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-muted-foreground mt-1">Browse all food items</p>
+          <h1 className="text-3xl font-bold">{t('pages.products.title', 'Products')}</h1>
+          <p className="text-muted-foreground mt-1">{t('pages.products.subtitle', 'Browse all food items')}</p>
         </div>
         <div className="flex gap-3">
           <Button onClick={() => setCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Product
+            {t('pages.products.newProduct', 'New Product')}
           </Button>
           <Select
             value={selectedRestaurant?.toString()}
             onValueChange={(value) => setSelectedRestaurant(parseInt(value))}
           >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select Restaurant" />
+              <SelectValue placeholder={t('pages.products.selectRestaurant', 'Select Restaurant')} />
             </SelectTrigger>
             <SelectContent>
               {restaurants.map((restaurant) => (
@@ -415,7 +415,7 @@ export default function Products() {
             <SelectValue placeholder={t("common.placeholders.allCategories")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="all">{t('pages.products.allCategories', 'All Categories')}</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.id} value={category.id.toString()}>
                 {category.name}
@@ -459,7 +459,7 @@ export default function Products() {
                   {product.isFeatured && (
                     <Badge className="bg-yellow-500">
                       <Star className="h-3 w-3 mr-1" />
-                      Featured
+                      {t('pages.products.featured', 'Featured')}
                     </Badge>
                   )}
                 </div>
@@ -468,7 +468,7 @@ export default function Products() {
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg line-clamp-1">{product.name}</CardTitle>
                   <Badge variant={product.available ? 'default' : 'secondary'}>
-                    {product.available ? 'In Stock' : 'Out of Stock'}
+                    {product.available ? t('pages.products.inStock', 'In Stock') : t('pages.products.outOfStock', 'Out of Stock')}
                   </Badge>
                 </div>
                 {product.description && (
@@ -496,7 +496,7 @@ export default function Products() {
                     onClick={() => handleEditClick(product)}
                   >
                     <Edit className="h-4 w-4 mr-1" />
-                    Edit
+                    {t('pages.products.edit', 'Edit')}
                   </Button>
                   <Button
                     size="sm"
@@ -505,7 +505,7 @@ export default function Products() {
                     onClick={() => handleViewVariants(product)}
                   >
                     <List className="h-4 w-4 mr-1" />
-                    Variants
+                    {t('pages.products.variants', 'Variants')}
                   </Button>
                   <Button
                     size="sm"
@@ -514,7 +514,7 @@ export default function Products() {
                     onClick={() => handleDeleteClick(product)}
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
+                    {t('pages.products.delete', 'Delete')}
                   </Button>
                 </div>
               </CardContent>
@@ -529,7 +529,7 @@ export default function Products() {
           <DialogHeader>
             <DialogTitle>{t('menu.createProduct')}</DialogTitle>
             <DialogDescription>
-              Fill in the details to create a new product
+              {t('pages.products.createDescription', 'Fill in the details to create a new product')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateProduct}>
@@ -546,7 +546,7 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
+                <Label htmlFor="category">{t('pages.products.category', 'Category')} *</Label>
                 <Select
                   value={formData.categoryId}
                   onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
@@ -577,7 +577,7 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="imageFile">Product Image</Label>
+                <Label htmlFor="imageFile">{t('pages.products.productImage', 'Product Image')}</Label>
                 <Input
                   id="imageFile"
                   type="file"
@@ -588,13 +588,13 @@ export default function Products() {
                   <div className="mt-2">
                     <img
                       src={imagePreview}
-                      alt="Preview"
+                      alt={t('pages.products.preview', 'Preview')}
                       className="w-32 h-32 object-cover rounded-md border"
                     />
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Or enter image URL instead:
+                  {t('pages.products.orEnterImageUrl', 'Or enter image URL instead:')}
                 </p>
                 <Input
                   id="imageUrl"
@@ -672,9 +672,9 @@ export default function Products() {
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
+            <DialogTitle>{t('pages.products.editProduct', 'Edit Product')}</DialogTitle>
             <DialogDescription>
-              Update the product details
+              {t('pages.products.updateDescription', 'Update the product details')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateProduct}>
@@ -691,7 +691,7 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-category">Category *</Label>
+                <Label htmlFor="edit-category">{t('pages.products.category', 'Category')} *</Label>
                 <Select
                   value={formData.categoryId}
                   onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
@@ -722,7 +722,7 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-imageFile">Product Image</Label>
+                <Label htmlFor="edit-imageFile">{t('pages.products.productImage', 'Product Image')}</Label>
                 <Input
                   id="edit-imageFile"
                   type="file"
@@ -733,13 +733,13 @@ export default function Products() {
                   <div className="mt-2">
                     <img
                       src={imagePreview}
-                      alt="Preview"
+                      alt={t('pages.products.preview', 'Preview')}
                       className="w-32 h-32 object-cover rounded-md border"
                     />
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground">
-                  Or enter image URL instead:
+                  {t('pages.products.orEnterImageUrl', 'Or enter image URL instead:')}
                 </p>
                 <Input
                   id="edit-imageUrl"
@@ -806,7 +806,7 @@ export default function Products() {
                 {t('common.cancel')}
               </Button>
               <Button type="submit">
-                Update
+                {t('pages.products.update', 'Update')}
               </Button>
             </DialogFooter>
           </form>
@@ -817,17 +817,17 @@ export default function Products() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Product</DialogTitle>
+            <DialogTitle>{t('pages.products.deleteProduct', 'Delete Product')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{selectedProduct?.name}"? This action cannot be undone.
+              {t('pages.products.deleteConfirmation', 'Are you sure you want to delete "{{name}}"? This action cannot be undone.', { name: selectedProduct?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setSelectedProduct(null); }}>
-              Cancel
+              {t('pages.products.cancel', 'Cancel')}
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
-              Delete
+              {t('pages.products.delete', 'Delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -837,22 +837,22 @@ export default function Products() {
       <Dialog open={variantsModalOpen} onOpenChange={setVariantsModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Product Variants - {selectedProductForVariants?.name}</DialogTitle>
+            <DialogTitle>{t('pages.products.productVariantsTitle', 'Product Variants - {{name}}', { name: selectedProductForVariants?.name })}</DialogTitle>
             <DialogDescription>
-              Manage variants for this product
+              {t('pages.products.manageVariants', 'Manage variants for this product')}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Variants ({variants.length})</h3>
+              <h3 className="text-lg font-semibold">{t('pages.products.variantsCount', 'Variants ({{count}})', { count: variants.length })}</h3>
               <Button onClick={() => setCreateVariantModalOpen(true)} size="sm">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Variant
+                {t('pages.products.addVariant', 'Add Variant')}
               </Button>
             </div>
             {variants.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
-                No variants found. Click "Add Variant" to create one.
+                {t('pages.products.noVariantsFound', 'No variants found. Click "Add Variant" to create one.')}
               </p>
             ) : (
               <div className="space-y-3">
@@ -864,7 +864,7 @@ export default function Products() {
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold">{variant.name}</h4>
                             <Badge variant={variant.inStock ? 'default' : 'secondary'}>
-                              {variant.inStock ? 'In Stock' : 'Out of Stock'}
+                              {variant.inStock ? t('pages.products.inStock', 'In Stock') : t('pages.products.outOfStock', 'Out of Stock')}
                             </Badge>
                           </div>
                           {variant.description && (
@@ -876,7 +876,7 @@ export default function Products() {
                               <span>{variant.price?.toFixed(2)}</span>
                             </div>
                             <span className="text-sm text-muted-foreground">
-                              Sort Order: {variant.sortOrder}
+                              {t('pages.products.sortOrder', 'Sort Order')}: {variant.sortOrder}
                             </span>
                           </div>
                         </div>
@@ -906,7 +906,7 @@ export default function Products() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setVariantsModalOpen(false)}>
-              Close
+              {t('pages.products.close', 'Close')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -916,15 +916,15 @@ export default function Products() {
       <Dialog open={createVariantModalOpen} onOpenChange={setCreateVariantModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Create Product Variant</DialogTitle>
+            <DialogTitle>{t('pages.products.createVariant', 'Create Product Variant')}</DialogTitle>
             <DialogDescription>
-              Add a new variant for {selectedProductForVariants?.name}
+              {t('pages.products.addVariantFor', 'Add a new variant for {{name}}', { name: selectedProductForVariants?.name })}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreateVariant}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="variant-name">Variant Name *</Label>
+                <Label htmlFor="variant-name">{t('pages.products.variantName', 'Variant Name')} *</Label>
                 <Input
                   id="variant-name"
                   value={variantFormData.name}
@@ -936,7 +936,7 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="variant-description">Description</Label>
+                <Label htmlFor="variant-description">{t('menu.description', 'Description')}</Label>
                 <Textarea
                   id="variant-description"
                   value={variantFormData.description}
@@ -949,7 +949,7 @@ export default function Products() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="variant-price">Price *</Label>
+                  <Label htmlFor="variant-price">{t('menu.price', 'Price')} *</Label>
                   <Input
                     id="variant-price"
                     type="number"
@@ -962,7 +962,7 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="variant-sortOrder">Sort Order</Label>
+                  <Label htmlFor="variant-sortOrder">{t('menu.sortOrder', 'Sort Order')}</Label>
                   <Input
                     id="variant-sortOrder"
                     type="number"
@@ -981,15 +981,15 @@ export default function Products() {
                   onChange={(e) => setVariantFormData({ ...variantFormData, inStock: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <Label htmlFor="variant-inStock">In Stock</Label>
+                <Label htmlFor="variant-inStock">{t('menu.inStock', 'In Stock')}</Label>
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setCreateVariantModalOpen(false); resetVariantForm(); }}>
-                Cancel
+                {t('pages.products.cancel', 'Cancel')}
               </Button>
               <Button type="submit">
-                Create Variant
+                {t('pages.products.createVariant', 'Create Variant')}
               </Button>
             </DialogFooter>
           </form>
@@ -1000,15 +1000,15 @@ export default function Products() {
       <Dialog open={editVariantModalOpen} onOpenChange={setEditVariantModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Product Variant</DialogTitle>
+            <DialogTitle>{t('pages.products.editVariant', 'Edit Product Variant')}</DialogTitle>
             <DialogDescription>
-              Update variant details for {selectedProductForVariants?.name}
+              {t('pages.products.updateVariantFor', 'Update variant details for {{name}}', { name: selectedProductForVariants?.name })}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateVariant}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-variant-name">Variant Name *</Label>
+                <Label htmlFor="edit-variant-name">{t('pages.products.variantName', 'Variant Name')} *</Label>
                 <Input
                   id="edit-variant-name"
                   value={variantFormData.name}
@@ -1019,7 +1019,7 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-variant-description">Description</Label>
+                <Label htmlFor="edit-variant-description">{t('menu.description', 'Description')}</Label>
                 <Textarea
                   id="edit-variant-description"
                   value={variantFormData.description}
@@ -1031,7 +1031,7 @@ export default function Products() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-variant-price">Price *</Label>
+                  <Label htmlFor="edit-variant-price">{t('menu.price', 'Price')} *</Label>
                   <Input
                     id="edit-variant-price"
                     type="number"
@@ -1044,7 +1044,7 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-variant-sortOrder">Sort Order</Label>
+                  <Label htmlFor="edit-variant-sortOrder">{t('menu.sortOrder', 'Sort Order')}</Label>
                   <Input
                     id="edit-variant-sortOrder"
                     type="number"
@@ -1063,15 +1063,15 @@ export default function Products() {
                   onChange={(e) => setVariantFormData({ ...variantFormData, inStock: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <Label htmlFor="edit-variant-inStock">In Stock</Label>
+                <Label htmlFor="edit-variant-inStock">{t('menu.inStock', 'In Stock')}</Label>
               </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setEditVariantModalOpen(false); resetVariantForm(); setSelectedVariant(null); }}>
-                Cancel
+                {t('pages.products.cancel', 'Cancel')}
               </Button>
               <Button type="submit">
-                Update Variant
+                {t('pages.products.updateVariant', 'Update Variant')}
               </Button>
             </DialogFooter>
           </form>
@@ -1082,17 +1082,17 @@ export default function Products() {
       <Dialog open={deleteVariantDialogOpen} onOpenChange={setDeleteVariantDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Variant</DialogTitle>
+            <DialogTitle>{t('pages.products.deleteVariant', 'Delete Variant')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the variant "{selectedVariant?.name}"? This action cannot be undone.
+              {t('pages.products.deleteVariantConfirmation', 'Are you sure you want to delete the variant "{{name}}"? This action cannot be undone.', { name: selectedVariant?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDeleteVariantDialogOpen(false); setSelectedVariant(null); }}>
-              Cancel
+              {t('pages.products.cancel', 'Cancel')}
             </Button>
             <Button variant="destructive" onClick={handleConfirmDeleteVariant}>
-              Delete
+              {t('pages.products.delete', 'Delete')}
             </Button>
           </DialogFooter>
         </DialogContent>
