@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     container_name: elcafe-postgres
     environment:
-      POSTGRES_DB: elcafe_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME:-elcafe_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
@@ -37,16 +37,17 @@ services:
       dockerfile: Dockerfile
     container_name: elcafe-app
     environment:
-      SPRING_PROFILES_ACTIVE: docker
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: elcafe_db
-      DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_NAME: ${DB_NAME:-elcafe_db}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
       SERVER_PORT: 8080
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
     ports:
       - "8080:8080"
     depends_on:
