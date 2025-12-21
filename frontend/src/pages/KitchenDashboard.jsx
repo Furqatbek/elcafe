@@ -44,6 +44,8 @@ import {
   Target,
   Award,
   Printer,
+  Edit,
+  FileText,
 } from 'lucide-react';
 
 export default function KitchenDashboard() {
@@ -73,6 +75,11 @@ export default function KitchenDashboard() {
   const [stationModalOpen, setStationModalOpen] = useState(false);
   const [selectedStation, setSelectedStation] = useState('');
   const [orderStations, setOrderStations] = useState({});  // {orderId: station}
+  const [modifyModalOpen, setModifyModalOpen] = useState(false);
+  const [kitchenNotes, setKitchenNotes] = useState('');
+  const [adjustedPrepTime, setAdjustedPrepTime] = useState('');
+  const [orderNotes, setOrderNotes] = useState({});  // {orderId: [notes]}
+  const [orderPrepTimes, setOrderPrepTimes] = useState({});  // {orderId: minutes}
 
   // Kitchen Station Types
   const STATIONS = {
@@ -449,6 +456,40 @@ export default function KitchenDashboard() {
     }
     setStationModalOpen(false);
     setSelectedStation('');
+  };
+
+  const handleModifyOrder = (order) => {
+    setSelectedOrder(order);
+    setKitchenNotes('');
+    setAdjustedPrepTime(orderPrepTimes[order.id]?.toString() || order.estimatedPreparationTimeMinutes?.toString() || '');
+    setModifyModalOpen(true);
+  };
+
+  const confirmModifyOrder = () => {
+    if (!selectedOrder) return;
+
+    // Save kitchen notes
+    if (kitchenNotes.trim()) {
+      const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const noteEntry = `[${timestamp}] ${kitchenNotes}`;
+
+      setOrderNotes(prev => ({
+        ...prev,
+        [selectedOrder.id]: [...(prev[selectedOrder.id] || []), noteEntry]
+      }));
+    }
+
+    // Save adjusted prep time
+    if (adjustedPrepTime && !isNaN(adjustedPrepTime)) {
+      setOrderPrepTimes(prev => ({
+        ...prev,
+        [selectedOrder.id]: parseInt(adjustedPrepTime)
+      }));
+    }
+
+    setModifyModalOpen(false);
+    setKitchenNotes('');
+    setAdjustedPrepTime('');
   };
 
   const handlePrintTicket = (order) => {
@@ -1058,6 +1099,21 @@ export default function KitchenDashboard() {
                     </div>
                   )}
 
+                  {/* Kitchen Notes */}
+                  {orderNotes[order.id] && orderNotes[order.id].length > 0 && (
+                    <div className="border-l-4 border-l-blue-400 bg-blue-50 rounded p-3">
+                      <div className="text-xs font-semibold text-blue-800 mb-2 flex items-center gap-1">
+                        <FileText className="h-3 w-3" />
+                        KITCHEN NOTES:
+                      </div>
+                      <div className="space-y-1">
+                        {orderNotes[order.id].map((note, idx) => (
+                          <div key={idx} className="text-xs text-blue-900">{note}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Live Timer */}
                   <div className="border-2 border-dashed rounded-lg p-3 bg-gradient-to-r from-gray-50 to-white">
                     <div className="flex items-center justify-between">
@@ -1109,6 +1165,14 @@ export default function KitchenDashboard() {
                     >
                       <ChefHat className="h-4 w-4 mr-2" />
                       {t('kitchen.actions.start')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleModifyOrder(order)}
+                      title="Modify Order"
+                    >
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
@@ -1227,6 +1291,21 @@ export default function KitchenDashboard() {
                     </div>
                   )}
 
+                  {/* Kitchen Notes */}
+                  {orderNotes[order.id] && orderNotes[order.id].length > 0 && (
+                    <div className="border-l-4 border-l-blue-400 bg-blue-50 rounded p-3">
+                      <div className="text-xs font-semibold text-blue-800 mb-2 flex items-center gap-1">
+                        <FileText className="h-3 w-3" />
+                        KITCHEN NOTES:
+                      </div>
+                      <div className="space-y-1">
+                        {orderNotes[order.id].map((note, idx) => (
+                          <div key={idx} className="text-xs text-blue-900">{note}</div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Live Cooking Timer */}
                   <div className="border-2 border-dashed border-blue-300 rounded-lg p-3 bg-gradient-to-r from-blue-50 to-white">
                     <div className="flex items-center justify-between">
@@ -1273,6 +1352,14 @@ export default function KitchenDashboard() {
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       {t('kitchen.actions.markReady')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleModifyOrder(order)}
+                      title="Modify Order"
+                    >
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="outline"
@@ -1536,6 +1623,85 @@ export default function KitchenDashboard() {
             </Button>
             <Button onClick={confirmAssignStation}>
               Assign Station
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Modification Modal */}
+      <Dialog open={modifyModalOpen} onOpenChange={setModifyModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Modify Order {selectedOrder?.order.orderNumber}
+            </DialogTitle>
+            <DialogDescription>
+              Add kitchen notes or adjust preparation time for this order
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Kitchen Notes Section */}
+            <div className="space-y-3">
+              <Label htmlFor="kitchenNotes" className="text-base font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Add Kitchen Note
+              </Label>
+              <Input
+                id="kitchenNotes"
+                value={kitchenNotes}
+                onChange={(e) => setKitchenNotes(e.target.value)}
+                placeholder="e.g., Customer requested extra sauce, substituted fries with salad..."
+                className="w-full"
+              />
+              <p className="text-sm text-muted-foreground">
+                Add notes about substitutions, customer requests, or preparation details
+              </p>
+
+              {/* Display existing notes */}
+              {orderNotes[selectedOrder?.id] && orderNotes[selectedOrder.id].length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="text-sm font-medium">Previous Notes:</div>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {orderNotes[selectedOrder.id].map((note, idx) => (
+                      <div key={idx} className="text-sm bg-gray-50 p-2 rounded border border-gray-200">
+                        {note}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Preparation Time Adjustment */}
+            <div className="space-y-3">
+              <Label htmlFor="prepTime" className="text-base font-semibold flex items-center gap-2">
+                <Timer className="h-4 w-4" />
+                Adjust Preparation Time
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="prepTime"
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={adjustedPrepTime}
+                  onChange={(e) => setAdjustedPrepTime(e.target.value)}
+                  className="w-32"
+                />
+                <span className="text-sm text-muted-foreground">minutes</span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Original estimate: {selectedOrder?.estimatedPreparationTimeMinutes || 0} minutes
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModifyModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmModifyOrder}>
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
