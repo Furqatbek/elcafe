@@ -20,6 +20,8 @@ import Couriers from './pages/Couriers';
 import CourierMap from './pages/CourierMap';
 import MenuCollections from './pages/MenuCollections';
 import KitchenDashboard from './pages/KitchenDashboard';
+import KitchenRecipes from './pages/KitchenRecipes';
+import KitchenInventory from './pages/KitchenInventory';
 import FinancialAnalytics from './pages/FinancialAnalytics';
 import OperationalAnalytics from './pages/OperationalAnalytics';
 import CustomerAnalytics from './pages/CustomerAnalytics';
@@ -71,6 +73,8 @@ function App() {
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
+          <Route path="kitchen/recipes" element={<KitchenRecipes />} />
+          <Route path="kitchen/inventory" element={<KitchenInventory />} />
           <Route path="finance/purchase-orders" element={<PurchaseOrders />} />
           <Route path="finance/expenses" element={<Expenses />} />
           <Route path="finance/reports" element={<FinancialReports />} />
