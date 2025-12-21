@@ -4,6 +4,7 @@ import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.enums.TransactionType;
+import com.elcafe.modules.inventory.enums.ValuationMethod;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
@@ -11,6 +12,7 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,8 @@ public class InventoryService {
     private final InventoryIngredientRepository ingredientRepository;
     private final InventoryProductIngredientRepository productIngredientRepository;
     private final InventoryTransactionRepository transactionRepository;
+    @Lazy
+    private final InventoryValuationService valuationService;
 
     /**
      * Check if all ingredients are available for an order
@@ -52,7 +56,8 @@ public class InventoryService {
     }
 
     /**
-     * Deduct ingredients for an order
+     * Deduct ingredients for an order using configured valuation method
+     * This integrates with the batch consumption tracking for accurate COGS
      */
     @Transactional
     public void deductIngredientsForOrder(Order order) {
@@ -75,15 +80,28 @@ public class InventoryService {
                 ));
             }
 
-            // Deduct stock
             BigDecimal balanceBefore = ingredient.getCurrentStock();
-            ingredient.deductStock(quantityRequired);
+
+            // Try to use valuation service for batch-based consumption
+            InventoryValuationService.ConsumptionResult consumptionResult = null;
+            try {
+                consumptionResult = valuationService.consumeWithValuation(
+                        ingredientId, quantityRequired, order.getId());
+                log.debug("Consumed {} of {} using {} method, total cost: {}",
+                        consumptionResult.quantityConsumed(), ingredient.getName(),
+                        consumptionResult.method(), consumptionResult.totalCost());
+            } catch (Exception e) {
+                log.warn("Failed to use valuation service for deduction, falling back to simple deduction: {}",
+                        e.getMessage());
+                // Fallback to simple deduction
+                ingredient.deductStock(quantityRequired);
+                ingredientRepository.save(ingredient);
+            }
+
             BigDecimal balanceAfter = ingredient.getCurrentStock();
 
-            ingredientRepository.save(ingredient);
-
-            // Record transaction
-            InventoryTransaction transaction = InventoryTransaction.builder()
+            // Record transaction with cost info if available
+            InventoryTransaction.InventoryTransactionBuilder transactionBuilder = InventoryTransaction.builder()
                     .ingredient(ingredient)
                     .type(TransactionType.ORDER_DEDUCTION)
                     .quantity(quantityRequired)
@@ -92,13 +110,21 @@ public class InventoryService {
                     .referenceType("ORDER")
                     .referenceId(order.getId())
                     .notes("Deducted for order: " + order.getOrderNumber())
-                    .performedBy("SYSTEM")
-                    .build();
+                    .performedBy("SYSTEM");
 
-            transactionRepository.save(transaction);
+            // Add cost info from valuation if available
+            if (consumptionResult != null) {
+                transactionBuilder
+                        .costPerUnit(consumptionResult.averageCostPerUnit())
+                        .totalCost(consumptionResult.totalCost())
+                        .valuationMethod(consumptionResult.method());
+            }
 
-            log.info("Deducted {} {} of {} for order {}",
-                    quantityRequired, ingredient.getUnit(), ingredient.getName(), order.getOrderNumber());
+            transactionRepository.save(transactionBuilder.build());
+
+            log.info("Deducted {} {} of {} for order {}{}",
+                    quantityRequired, ingredient.getUnit(), ingredient.getName(), order.getOrderNumber(),
+                    consumptionResult != null ? " (cost: " + consumptionResult.totalCost() + ")" : "");
         }
     }
 

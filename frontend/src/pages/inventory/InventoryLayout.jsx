@@ -18,6 +18,7 @@ import {
   Trash2,
   Truck,
   Bell,
+  Calculator,
 } from 'lucide-react';
 
 const navItems = [
@@ -28,6 +29,7 @@ const navItems = [
   { path: '/kitchen/waste', label: 'inventory.tabs.waste', icon: Trash2 },
   { path: '/kitchen/suppliers', label: 'inventory.tabs.suppliers', icon: Truck },
   { path: '/kitchen/stock-alerts', label: 'inventory.tabs.stockAlerts', icon: Bell },
+  { path: '/kitchen/valuation', label: 'inventory.tabs.valuation', icon: Calculator },
 ];
 
 export default function InventoryLayout({ children, title, subtitle }) {

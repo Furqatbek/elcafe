@@ -1318,7 +1318,8 @@
       "stockCounts": "Stock Counts",
       "waste": "Waste",
       "suppliers": "Suppliers",
-      "stockAlerts": "Stock Alerts"
+      "stockAlerts": "Stock Alerts",
+      "valuation": "Valuation"
     },
     "stockCounts": {
       "title": "Stock Counts",

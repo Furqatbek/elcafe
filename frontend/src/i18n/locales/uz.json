@@ -1244,7 +1244,8 @@
       "stockCounts": "Inventarizatsiya",
       "waste": "Isrofgarchilik",
       "suppliers": "Yetkazib beruvchilar",
-      "stockAlerts": "Zaxira ogohlantirishlari"
+      "stockAlerts": "Zaxira ogohlantirishlari",
+      "valuation": "Baholash"
     },
     "stockCounts": {
       "title": "Inventarizatsiya",
@@ -1527,6 +1528,71 @@
       "errors": {
         "saveFailed": "Partiyani saqlab bo'lmadi",
         "writeOffFailed": "Partiyani hisobdan chiqarib bo'lmadi"
+      }
+    },
+    "valuation": {
+      "title": "Inventar baholash",
+      "subtitle": "Turli baholash usullari yordamida inventar xarajatlarini hisoblash",
+      "settings": "Baholash sozlamalari",
+      "settingsDesc": "Inventar xarajatlarini qanday hisoblanishini sozlang",
+      "currentMethod": "Joriy usul",
+      "changeMethod": "Baholash usulini o'zgartirish",
+      "methodChanged": "Baholash usuli muvaffaqiyatli yangilandi",
+      "methods": {
+        "FIFO": "FIFO (Birinchi kelgan - birinchi ketdi)",
+        "LIFO": "LIFO (Oxirgi kelgan - birinchi ketdi)",
+        "WEIGHTED_AVERAGE": "O'rtacha tortilgan narx",
+        "FEFO": "FEFO (Birinchi tugaydigani - birinchi ketdi)"
+      },
+      "methodDescriptions": {
+        "FIFO": "Birinchi bo'lib eng eski inventar ishlatiladi. Inflyatsiya davrida odatda past COGS beradi.",
+        "LIFO": "Birinchi bo'lib eng yangi inventar ishlatiladi. Inflyatsiya davrida odatda yuqori COGS beradi.",
+        "WEIGHTED_AVERAGE": "Inventardagi barcha birliklarning o'rtacha narxi. Narx o'zgarishlarini tekislaydi.",
+        "FEFO": "Birinchi bo'lib muddat tugashga yaqin partiyalar ishlatiladi. Tez buziladigan mahsulotlar uchun eng yaxshi."
+      },
+      "inventoryValue": "Inventar qiymati",
+      "totalValue": "Jami inventar qiymati",
+      "calculateValue": "Qiymatni hisoblash",
+      "compareValues": "Usullarni solishtirish",
+      "comparison": {
+        "title": "Baholash solishtiruvi",
+        "description": "Turli usullar bo'yicha inventar qiymatini solishtirish",
+        "fifoValue": "FIFO qiymati",
+        "lifoValue": "LIFO qiymati",
+        "wacValue": "O'rtacha tortilgan qiymat",
+        "difference": "Farq"
+      },
+      "costHistory": {
+        "title": "Narx tarixi",
+        "description": "Ingredient narxlarining vaqt davomida o'zgarishini kuzatish",
+        "previousCost": "Oldingi narx",
+        "newCost": "Yangi narx",
+        "change": "O'zgarish",
+        "reason": "Sabab",
+        "effectiveFrom": "Kuchga kirish sanasi",
+        "recordCostChange": "Narx o'zgarishini qayd etish",
+        "noCostHistory": "Bu ingredient uchun narx tarixi topilmadi"
+      },
+      "costVariance": {
+        "title": "Narx og'ishi",
+        "description": "Joriy narxlarni tarixiy o'rtacha bilan solishtirish",
+        "currentCost": "Joriy narx",
+        "averageCost": "O'rtacha narx",
+        "variance": "Og'ish",
+        "variancePercent": "Og'ish %"
+      },
+      "consumption": {
+        "title": "Iste'mol tarixi",
+        "description": "Inventar qanday ishlatilganini kuzatish",
+        "summary": "Iste'mol xulosasi",
+        "byIngredient": "Ingredient bo'yicha iste'mol",
+        "totalQuantity": "Jami miqdor",
+        "totalCost": "Jami xarajat",
+        "averageCost": "O'rtacha xarajat",
+        "batchNumber": "Partiya №"
+      },
+      "errors": {
+        "saveFailed": "Baholash sozlamalarini saqlab bo'lmadi"
       }
     }
   },
