@@ -215,9 +215,7 @@ export default function Couriers() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
-      newErrors.email = t('couriers.validation.emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = t('couriers.validation.emailInvalid');
     }
 
@@ -603,7 +601,7 @@ export default function Couriers() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('couriers.email')} *
+                    {t('couriers.email')}
                   </label>
                   <input
                     type="email"
