@@ -64,6 +64,11 @@ export default function Inventory() {
 
   const [activeTab, setActiveTab] = useState(getInitialTab);
 
+  // Update active tab when route changes
+  useEffect(() => {
+    setActiveTab(getInitialTab());
+  }, [location.pathname]);
+
   // Common state
   const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
