@@ -610,12 +610,18 @@
   },
   "workingHours": {
     "title": "Часы работы",
+    "subtitle": "Настройка часов работы для каждого филиала ресторана",
     "selectRestaurant": "Выберите ресторан",
+    "weeklySchedule": "Недельное расписание",
     "dayOfWeek": "День недели",
     "openTime": "Время открытия",
     "closeTime": "Время закрытия",
     "isOpen": "Открыт",
+    "open": "Открыто",
     "closed": "Закрыт",
+    "from": "С",
+    "to": "До",
+    "copyToAll": "Применить ко всем",
     "days": {
       "MONDAY": "Понедельник",
       "TUESDAY": "Вторник",
@@ -923,7 +929,77 @@
     }
   },
   "linkedItems": {
-    "totalLinkedItems": "Всего связанных товаров"
+    "title": "Связанные товары",
+    "subtitle": "Связанные продукты и рекомендации",
+    "totalLinkedItems": "Всего связанных товаров",
+    "currentProduct": "Текущий продукт",
+    "filterByType": "Фильтр по типу",
+    "recommendations": "Рекомендации",
+    "upsells": "Допродажи",
+    "crossSells": "Кросс-продажи",
+    "bundles": "Комплекты",
+    "discount": "Скидка",
+    "sortOrder": "Порядок сортировки",
+    "priority": "Приоритет",
+    "noLinkedItems": "Связанные товары для этого продукта не найдены",
+    "productId": "ID продукта"
+  },
+  "tables": {
+    "title": "Столы",
+    "createNew": "Добавить стол",
+    "editTable": "Редактировать стол",
+    "tableNumber": "Номер стола",
+    "tableName": "Название стола",
+    "capacity": "Вместимость",
+    "section": "Зона",
+    "notes": "Заметки",
+    "active": "Активен",
+    "searchPlaceholder": "Поиск по номеру, названию или зоне...",
+    "selectRestaurantFirst": "Пожалуйста, выберите ресторан для просмотра столов",
+    "noTables": "Столы не найдены",
+    "confirmDelete": "Вы уверены, что хотите удалить этот стол?",
+    "confirmUnmerge": "Вы уверены, что хотите разъединить эти столы?",
+    "merged": "Объединённый стол",
+    "originalCapacity": "Исходная",
+    "mergeTables": "Объединить столы",
+    "unmerge": "Разъединить",
+    "increased": "Увеличено",
+    "status": {
+      "AVAILABLE": "Свободен",
+      "OCCUPIED": "Занят",
+      "RESERVED": "Забронирован",
+      "CLEANING": "Уборка",
+      "OUT_OF_SERVICE": "Не обслуживается"
+    },
+    "stats": {
+      "total": "Всего столов",
+      "available": "Свободно",
+      "occupied": "Занято",
+      "reserved": "Забронировано"
+    },
+    "messages": {
+      "fillRequiredFields": "Пожалуйста, заполните все обязательные поля",
+      "createSuccess": "Стол успешно создан",
+      "updateSuccess": "Стол успешно обновлён",
+      "saveError": "Не удалось сохранить стол",
+      "deleteSuccess": "Стол успешно удалён",
+      "deleteError": "Не удалось удалить стол",
+      "statusError": "Не удалось обновить статус стола",
+      "selectAtLeast2Tables": "Пожалуйста, выберите минимум 2 стола для объединения",
+      "mergeSuccess": "Столы успешно объединены",
+      "mergeError": "Не удалось объединить столы",
+      "unmergeSuccess": "Столы успешно разъединены",
+      "unmergeError": "Не удалось разъединить столы"
+    }
+  },
+  "days": {
+    "MONDAY": "Понедельник",
+    "TUESDAY": "Вторник",
+    "WEDNESDAY": "Среда",
+    "THURSDAY": "Четверг",
+    "FRIDAY": "Пятница",
+    "SATURDAY": "Суббота",
+    "SUNDAY": "Воскресенье"
   },
   "pos": {
     "title": "Точка продаж",

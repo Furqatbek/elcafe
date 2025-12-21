@@ -610,12 +610,18 @@
   },
   "workingHours": {
     "title": "Ish vaqti",
+    "subtitle": "Har bir restoran filiali uchun ish vaqtini sozlash",
     "selectRestaurant": "Restoranni tanlang",
+    "weeklySchedule": "Haftalik jadval",
     "dayOfWeek": "Hafta kuni",
     "openTime": "Ochilish vaqti",
     "closeTime": "Yopilish vaqti",
     "isOpen": "Ochiq",
+    "open": "Ochiq",
     "closed": "Yopiq",
+    "from": "Dan",
+    "to": "Gacha",
+    "copyToAll": "Hammasiga nusxalash",
     "days": {
       "MONDAY": "Dushanba",
       "TUESDAY": "Seshanba",
@@ -923,7 +929,77 @@
     }
   },
   "linkedItems": {
-    "totalLinkedItems": "Jami bog'langan mahsulotlar"
+    "title": "Bog'langan mahsulotlar",
+    "subtitle": "Bog'langan mahsulotlar va tavsiyalar",
+    "totalLinkedItems": "Jami bog'langan mahsulotlar",
+    "currentProduct": "Joriy mahsulot",
+    "filterByType": "Tur bo'yicha filtrlash",
+    "recommendations": "Tavsiyalar",
+    "upsells": "Qo'shimcha sotuvlar",
+    "crossSells": "Kross-sotuvlar",
+    "bundles": "To'plamlar",
+    "discount": "Chegirma",
+    "sortOrder": "Tartiblash",
+    "priority": "Ustuvorlik",
+    "noLinkedItems": "Ushbu mahsulot uchun bog'langan mahsulotlar topilmadi",
+    "productId": "Mahsulot ID"
+  },
+  "tables": {
+    "title": "Stollar",
+    "createNew": "Stol qo'shish",
+    "editTable": "Stolni tahrirlash",
+    "tableNumber": "Stol raqami",
+    "tableName": "Stol nomi",
+    "capacity": "Sig'im",
+    "section": "Bo'lim",
+    "notes": "Izohlar",
+    "active": "Faol",
+    "searchPlaceholder": "Raqam, nom yoki bo'lim bo'yicha qidirish...",
+    "selectRestaurantFirst": "Stollarni ko'rish uchun restoranni tanlang",
+    "noTables": "Stollar topilmadi",
+    "confirmDelete": "Ushbu stolni o'chirishga ishonchingiz komilmi?",
+    "confirmUnmerge": "Ushbu stollarni ajratishga ishonchingiz komilmi?",
+    "merged": "Birlashtirilgan stol",
+    "originalCapacity": "Asl",
+    "mergeTables": "Stollarni birlashtirish",
+    "unmerge": "Ajratish",
+    "increased": "Oshirilgan",
+    "status": {
+      "AVAILABLE": "Bo'sh",
+      "OCCUPIED": "Band",
+      "RESERVED": "Bron qilingan",
+      "CLEANING": "Tozalanmoqda",
+      "OUT_OF_SERVICE": "Xizmat ko'rsatilmaydi"
+    },
+    "stats": {
+      "total": "Jami stollar",
+      "available": "Bo'sh",
+      "occupied": "Band",
+      "reserved": "Bron qilingan"
+    },
+    "messages": {
+      "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
+      "createSuccess": "Stol muvaffaqiyatli yaratildi",
+      "updateSuccess": "Stol muvaffaqiyatli yangilandi",
+      "saveError": "Stolni saqlab bo'lmadi",
+      "deleteSuccess": "Stol muvaffaqiyatli o'chirildi",
+      "deleteError": "Stolni o'chirib bo'lmadi",
+      "statusError": "Stol holatini yangilab bo'lmadi",
+      "selectAtLeast2Tables": "Iltimos, birlashtirish uchun kamida 2 ta stol tanlang",
+      "mergeSuccess": "Stollar muvaffaqiyatli birlashtirildi",
+      "mergeError": "Stollarni birlashtirib bo'lmadi",
+      "unmergeSuccess": "Stollar muvaffaqiyatli ajratildi",
+      "unmergeError": "Stollarni ajratib bo'lmadi"
+    }
+  },
+  "days": {
+    "MONDAY": "Dushanba",
+    "TUESDAY": "Seshanba",
+    "WEDNESDAY": "Chorshanba",
+    "THURSDAY": "Payshanba",
+    "FRIDAY": "Juma",
+    "SATURDAY": "Shanba",
+    "SUNDAY": "Yakshanba"
   },
   "pos": {
     "title": "Savdo nuqtasi",

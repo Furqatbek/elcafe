@@ -898,12 +898,18 @@
   },
   "workingHours": {
     "title": "Working Hours",
+    "subtitle": "Configure operating hours for each restaurant branch",
     "selectRestaurant": "Select Restaurant",
+    "weeklySchedule": "Weekly Schedule",
     "dayOfWeek": "Day of Week",
     "openTime": "Open Time",
     "closeTime": "Close Time",
     "isOpen": "Is Open",
+    "open": "Open",
     "closed": "Closed",
+    "from": "From",
+    "to": "To",
+    "copyToAll": "Copy to all",
     "days": {
       "MONDAY": "Monday",
       "TUESDAY": "Tuesday",
@@ -1295,7 +1301,77 @@
     }
   },
   "linkedItems": {
-    "totalLinkedItems": "Total Linked Items"
+    "title": "Linked Items",
+    "subtitle": "Related products and recommendations",
+    "totalLinkedItems": "Total Linked Items",
+    "currentProduct": "Current Product",
+    "filterByType": "Filter by type",
+    "recommendations": "Recommendations",
+    "upsells": "Upsells",
+    "crossSells": "Cross-sells",
+    "bundles": "Bundles",
+    "discount": "Discount",
+    "sortOrder": "Sort Order",
+    "priority": "Priority",
+    "noLinkedItems": "No linked items found for this product",
+    "productId": "Product ID"
+  },
+  "tables": {
+    "title": "Tables",
+    "createNew": "Add Table",
+    "editTable": "Edit Table",
+    "tableNumber": "Table Number",
+    "tableName": "Table Name",
+    "capacity": "Capacity",
+    "section": "Section",
+    "notes": "Notes",
+    "active": "Active",
+    "searchPlaceholder": "Search by table number, name or section...",
+    "selectRestaurantFirst": "Please select a restaurant to view tables",
+    "noTables": "No tables found",
+    "confirmDelete": "Are you sure you want to delete this table?",
+    "confirmUnmerge": "Are you sure you want to unmerge these tables?",
+    "merged": "Merged Table",
+    "originalCapacity": "Original",
+    "mergeTables": "Merge Tables",
+    "unmerge": "Unmerge",
+    "increased": "Increased",
+    "status": {
+      "AVAILABLE": "Available",
+      "OCCUPIED": "Occupied",
+      "RESERVED": "Reserved",
+      "CLEANING": "Cleaning",
+      "OUT_OF_SERVICE": "Out of Service"
+    },
+    "stats": {
+      "total": "Total Tables",
+      "available": "Available",
+      "occupied": "Occupied",
+      "reserved": "Reserved"
+    },
+    "messages": {
+      "fillRequiredFields": "Please fill all required fields",
+      "createSuccess": "Table created successfully",
+      "updateSuccess": "Table updated successfully",
+      "saveError": "Failed to save table",
+      "deleteSuccess": "Table deleted successfully",
+      "deleteError": "Failed to delete table",
+      "statusError": "Failed to update table status",
+      "selectAtLeast2Tables": "Please select at least 2 tables to merge",
+      "mergeSuccess": "Tables merged successfully",
+      "mergeError": "Failed to merge tables",
+      "unmergeSuccess": "Tables unmerged successfully",
+      "unmergeError": "Failed to unmerge tables"
+    }
+  },
+  "days": {
+    "MONDAY": "Monday",
+    "TUESDAY": "Tuesday",
+    "WEDNESDAY": "Wednesday",
+    "THURSDAY": "Thursday",
+    "FRIDAY": "Friday",
+    "SATURDAY": "Saturday",
+    "SUNDAY": "Sunday"
   },
   "pos": {
     "title": "Point of Sale",
