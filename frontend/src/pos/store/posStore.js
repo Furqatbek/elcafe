@@ -91,7 +91,7 @@ const usePOSStore = create(
 
         const items = [...state.currentOrder.items, item];
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
-        const tax = subtotal * 0.08; // 8% tax
+        const tax = 0; // No tax
         const deliveryFee = state.currentOrder.deliveryFee;
         const total = subtotal + tax + deliveryFee;
 
@@ -120,7 +120,7 @@ const usePOSStore = create(
         });
 
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
-        const tax = subtotal * 0.08;
+        const tax = 0; // No tax
         const deliveryFee = state.currentOrder.deliveryFee;
         const total = subtotal + tax + deliveryFee;
 
@@ -138,7 +138,7 @@ const usePOSStore = create(
       removeItemFromCart: (itemId) => set((state) => {
         const items = state.currentOrder.items.filter(item => item.id !== itemId);
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
-        const tax = subtotal * 0.08;
+        const tax = 0; // No tax
         const deliveryFee = state.currentOrder.deliveryFee;
         const total = subtotal + tax + deliveryFee;
 

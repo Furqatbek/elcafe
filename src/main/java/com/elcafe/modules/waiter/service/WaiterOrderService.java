@@ -555,8 +555,8 @@ public class WaiterOrderService {
 
         order.setSubtotal(subtotal);
 
-        // Calculate tax (assuming 10% tax rate)
-        BigDecimal tax = subtotal.multiply(BigDecimal.valueOf(0.10));
+        // No tax
+        BigDecimal tax = BigDecimal.ZERO;
         order.setTax(tax);
 
         // Calculate total

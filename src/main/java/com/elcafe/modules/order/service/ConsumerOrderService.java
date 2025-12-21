@@ -92,7 +92,7 @@ public class ConsumerOrderService {
 
         // 5. Calculate costs
         BigDecimal deliveryFee = restaurant.getDeliveryFee() != null ? restaurant.getDeliveryFee() : BigDecimal.ZERO;
-        BigDecimal tax = subtotal.multiply(BigDecimal.valueOf(0.10)); // 10% tax
+        BigDecimal tax = BigDecimal.ZERO; // No tax
         BigDecimal discount = BigDecimal.ZERO;
         BigDecimal total = subtotal.add(deliveryFee).add(tax).subtract(discount);
 
