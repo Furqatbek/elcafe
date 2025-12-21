@@ -37,6 +37,9 @@ import {
   TrendingUp,
   Volume2,
   VolumeX,
+  Search,
+  X,
+  Filter,
 } from 'lucide-react';
 
 export default function KitchenDashboard() {
@@ -59,6 +62,9 @@ export default function KitchenDashboard() {
   const stompClientRef = useRef(null);
   const audioInitializedRef = useRef(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterOrderType, setFilterOrderType] = useState('ALL');
+  const [filterPriority, setFilterPriority] = useState('ALL');
 
   // Update current time every second for live timers
   useEffect(() => {
@@ -380,12 +386,42 @@ export default function KitchenDashboard() {
     return 'bg-green-100 text-green-800 border-green-300';
   };
 
+  const applyFilters = (orders) => {
+    return orders.filter(order => {
+      // Search filter (order number)
+      if (searchQuery && !order.order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
+      // Order type filter
+      if (filterOrderType !== 'ALL' && order.order.orderType !== filterOrderType) {
+        return false;
+      }
+
+      // Priority filter
+      if (filterPriority !== 'ALL' && order.priority !== filterPriority) {
+        return false;
+      }
+
+      return true;
+    });
+  };
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setFilterOrderType('ALL');
+    setFilterPriority('ALL');
+  };
+
+  const hasActiveFilters = searchQuery || filterOrderType !== 'ALL' || filterPriority !== 'ALL';
+
   if (loading && activeOrders.length === 0 && readyOrders.length === 0) {
     return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
   }
 
-  const pendingOrders = activeOrders.filter(o => o.status === 'PENDING');
-  const preparingOrders = activeOrders.filter(o => o.status === 'PREPARING');
+  const pendingOrders = applyFilters(activeOrders.filter(o => o.status === 'PENDING'));
+  const preparingOrders = applyFilters(activeOrders.filter(o => o.status === 'PREPARING'));
+  const filteredReadyOrders = applyFilters(readyOrders);
 
   return (
     <div className="space-y-6">
@@ -424,6 +460,96 @@ export default function KitchenDashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <Label htmlFor="search" className="mb-2 flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Search Order Number
+              </Label>
+              <Input
+                id="search"
+                type="text"
+                placeholder="Type order number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full"
+              />
+            </div>
+
+            <div className="min-w-[180px]">
+              <Label htmlFor="orderType" className="mb-2 flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Order Type
+              </Label>
+              <Select value={filterOrderType} onValueChange={setFilterOrderType}>
+                <SelectTrigger id="orderType">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Types</SelectItem>
+                  <SelectItem value="DINE_IN">Dine-in</SelectItem>
+                  <SelectItem value="DELIVERY">Delivery</SelectItem>
+                  <SelectItem value="TAKEAWAY">Takeaway</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="min-w-[180px]">
+              <Label htmlFor="priority" className="mb-2 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Priority
+              </Label>
+              <Select value={filterPriority} onValueChange={setFilterPriority}>
+                <SelectTrigger id="priority">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Priorities</SelectItem>
+                  <SelectItem value="URGENT">Urgent</SelectItem>
+                  <SelectItem value="HIGH">High</SelectItem>
+                  <SelectItem value="NORMAL">Normal</SelectItem>
+                  <SelectItem value="LOW">Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                onClick={clearFilters}
+                className="flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                Clear Filters
+              </Button>
+            )}
+          </div>
+
+          {hasActiveFilters && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {searchQuery && (
+                <Badge variant="secondary" className="px-3 py-1">
+                  Search: "{searchQuery}"
+                </Badge>
+              )}
+              {filterOrderType !== 'ALL' && (
+                <Badge variant="secondary" className="px-3 py-1">
+                  Type: {filterOrderType === 'DINE_IN' ? 'Dine-in' : filterOrderType}
+                </Badge>
+              )}
+              {filterPriority !== 'ALL' && (
+                <Badge variant="secondary" className="px-3 py-1">
+                  Priority: {filterPriority}
+                </Badge>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -753,14 +879,14 @@ export default function KitchenDashboard() {
       )}
 
       {/* Ready Orders */}
-      {readyOrders.length > 0 && (
+      {filteredReadyOrders.length > 0 && (
         <div>
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
             <CheckCircle className="h-6 w-6 text-green-600" />
-            {t('kitchen.sections.ready')} ({readyOrders.length})
+            {t('kitchen.sections.ready')} ({filteredReadyOrders.length})
           </h2>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {readyOrders.map((order) => (
+            {filteredReadyOrders.map((order) => (
               <Card key={order.id} className="border-l-4 border-l-green-500">
                 <CardHeader>
                   <div className="flex justify-between items-start">
