@@ -68,6 +68,20 @@ export default function KitchenDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterOrderType, setFilterOrderType] = useState('ALL');
   const [filterPriority, setFilterPriority] = useState('ALL');
+  const [filterStation, setFilterStation] = useState('ALL');
+  const [stationModalOpen, setStationModalOpen] = useState(false);
+  const [selectedStation, setSelectedStation] = useState('');
+  const [orderStations, setOrderStations] = useState({});  // {orderId: station}
+
+  // Kitchen Station Types
+  const STATIONS = {
+    GRILL: { name: 'Grill', icon: '🔥', color: 'bg-red-100 text-red-800' },
+    FRYER: { name: 'Fryer', icon: '🍟', color: 'bg-orange-100 text-orange-800' },
+    PREP: { name: 'Prep', icon: '🔪', color: 'bg-blue-100 text-blue-800' },
+    COLD: { name: 'Cold Station', icon: '❄️', color: 'bg-cyan-100 text-cyan-800' },
+    PASTRY: { name: 'Pastry', icon: '🍰', color: 'bg-pink-100 text-pink-800' },
+    ASSEMBLY: { name: 'Assembly', icon: '📦', color: 'bg-purple-100 text-purple-800' }
+  };
 
   // Update current time every second for live timers
   useEffect(() => {
@@ -406,17 +420,44 @@ export default function KitchenDashboard() {
         return false;
       }
 
+      // Station filter
+      if (filterStation !== 'ALL' && orderStations[order.id] !== filterStation) {
+        return false;
+      }
+
       return true;
     });
+  };
+
+  const assignStation = (orderId, station) => {
+    setOrderStations(prev => ({
+      ...prev,
+      [orderId]: station
+    }));
+  };
+
+  const handleAssignStation = (order) => {
+    setSelectedOrder(order);
+    setSelectedStation(orderStations[order.id] || '');
+    setStationModalOpen(true);
+  };
+
+  const confirmAssignStation = () => {
+    if (selectedStation && selectedOrder) {
+      assignStation(selectedOrder.id, selectedStation);
+    }
+    setStationModalOpen(false);
+    setSelectedStation('');
   };
 
   const clearFilters = () => {
     setSearchQuery('');
     setFilterOrderType('ALL');
     setFilterPriority('ALL');
+    setFilterStation('ALL');
   };
 
-  const hasActiveFilters = searchQuery || filterOrderType !== 'ALL' || filterPriority !== 'ALL';
+  const hasActiveFilters = searchQuery || filterOrderType !== 'ALL' || filterPriority !== 'ALL' || filterStation !== 'ALL';
 
   // Performance Metrics Calculations
   const calculateMetrics = () => {
@@ -564,6 +605,26 @@ export default function KitchenDashboard() {
               </Select>
             </div>
 
+            <div className="min-w-[180px]">
+              <Label htmlFor="station" className="mb-2 flex items-center gap-2">
+                <ChefHat className="h-4 w-4" />
+                Station
+              </Label>
+              <Select value={filterStation} onValueChange={setFilterStation}>
+                <SelectTrigger id="station">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Stations</SelectItem>
+                  {Object.keys(STATIONS).map(key => (
+                    <SelectItem key={key} value={key}>
+                      {STATIONS[key].icon} {STATIONS[key].name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {hasActiveFilters && (
               <Button
                 variant="outline"
@@ -591,6 +652,11 @@ export default function KitchenDashboard() {
               {filterPriority !== 'ALL' && (
                 <Badge variant="secondary" className="px-3 py-1">
                   Priority: {filterPriority}
+                </Badge>
+              )}
+              {filterStation !== 'ALL' && (
+                <Badge variant="secondary" className="px-3 py-1">
+                  Station: {STATIONS[filterStation]?.name}
                 </Badge>
               )}
             </div>
@@ -750,6 +816,11 @@ export default function KitchenDashboard() {
                              order.order.orderType === 'DELIVERY' ? 'Delivery' : 'Takeaway'}
                           </Badge>
                         )}
+                        {orderStations[order.id] && (
+                          <Badge className={`${STATIONS[orderStations[order.id]]?.color} text-xs font-semibold`}>
+                            {STATIONS[orderStations[order.id]]?.icon} {STATIONS[orderStations[order.id]]?.name}
+                          </Badge>
+                        )}
                       </div>
                       <CardDescription className="flex items-center gap-2 mt-1">
                         <Clock className="h-3 w-3" />
@@ -858,8 +929,17 @@ export default function KitchenDashboard() {
                       variant="outline"
                       size="icon"
                       onClick={() => handleChangePriority(order)}
+                      title="Change Priority"
                     >
                       <TrendingUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleAssignStation(order)}
+                      title="Assign Station"
+                    >
+                      <ChefHat className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>
@@ -895,6 +975,11 @@ export default function KitchenDashboard() {
                           <Badge variant="secondary" className="text-xs">
                             {order.order.orderType === 'DINE_IN' ? 'Dine-in' :
                              order.order.orderType === 'DELIVERY' ? 'Delivery' : 'Takeaway'}
+                          </Badge>
+                        )}
+                        {orderStations[order.id] && (
+                          <Badge className={`${STATIONS[orderStations[order.id]]?.color} text-xs font-semibold`}>
+                            {STATIONS[orderStations[order.id]]?.icon} {STATIONS[orderStations[order.id]]?.name}
                           </Badge>
                         )}
                       </div>
@@ -987,14 +1072,24 @@ export default function KitchenDashboard() {
                     </div>
                   </div>
 
-                  <Button
-                    className="w-full"
-                    variant="default"
-                    onClick={() => handleMarkReady(order.id)}
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    {t('kitchen.actions.markReady')}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1"
+                      variant="default"
+                      onClick={() => handleMarkReady(order.id)}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      {t('kitchen.actions.markReady')}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleAssignStation(order)}
+                      title="Assign Station"
+                    >
+                      <ChefHat className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -1028,6 +1123,11 @@ export default function KitchenDashboard() {
                           <Badge variant="secondary" className="text-xs">
                             {order.order.orderType === 'DINE_IN' ? 'Dine-in' :
                              order.order.orderType === 'DELIVERY' ? 'Delivery' : 'Takeaway'}
+                          </Badge>
+                        )}
+                        {orderStations[order.id] && (
+                          <Badge className={`${STATIONS[orderStations[order.id]]?.color} text-xs font-semibold`}>
+                            {STATIONS[orderStations[order.id]]?.icon} {STATIONS[orderStations[order.id]]?.name}
                           </Badge>
                         )}
                       </div>
@@ -1185,6 +1285,46 @@ export default function KitchenDashboard() {
             </Button>
             <Button onClick={confirmChangePriority}>
               {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Station Assignment Modal */}
+      <Dialog open={stationModalOpen} onOpenChange={setStationModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Kitchen Station</DialogTitle>
+            <DialogDescription>
+              Assign this order to a specific kitchen station for better workflow management
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="stationSelect">Kitchen Station</Label>
+              <Select value={selectedStation} onValueChange={setSelectedStation}>
+                <SelectTrigger id="stationSelect">
+                  <SelectValue placeholder="Select a station..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(STATIONS).map(key => (
+                    <SelectItem key={key} value={key}>
+                      <div className="flex items-center gap-2">
+                        <span>{STATIONS[key].icon}</span>
+                        <span>{STATIONS[key].name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setStationModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={confirmAssignStation}>
+              Assign Station
             </Button>
           </DialogFooter>
         </DialogContent>
