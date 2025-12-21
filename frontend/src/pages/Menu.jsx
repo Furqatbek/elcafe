@@ -97,7 +97,7 @@ export default function Menu() {
         <div>
           <h1 className="text-3xl font-bold">{t('nav.menu')}</h1>
           <p className="text-muted-foreground mt-1">
-            Complete menu with categories and products
+            {t('pages.menu.description', 'Complete menu with categories and products')}
           </p>
         </div>
         <div className="flex gap-3">
@@ -198,7 +198,7 @@ export default function Menu() {
                     </div>
                   </div>
                   <Badge variant="secondary">
-                    {category.products?.length || 0} items
+                    {category.products?.length || 0} {t('pages.menu.items', 'items')}
                   </Badge>
                 </div>
               </AccordionTrigger>
