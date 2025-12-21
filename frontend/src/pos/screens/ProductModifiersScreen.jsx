@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { ChevronLeft, Plus, Minus, ShoppingCart } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
@@ -9,6 +10,7 @@ import usePOSStore from '../store/posStore';
  * Size selection, modifiers, quantity, special instructions
  */
 const ProductModifiersScreen = () => {
+  const { t } = useTranslation();
   const { ui, addItemToCart, setCurrentScreen } = usePOSStore();
   const product = ui.selectedProduct;
 
@@ -39,7 +41,7 @@ const ProductModifiersScreen = () => {
 
   const handleAddToCart = () => {
     const finalModifiers = [
-      ...(selectedSize ? [{ name: `Size: ${selectedSize.name}`, price: 0 }] : []),
+      ...(selectedSize ? [{ name: t('pos.modifiers.sizeLabel', 'Size: {{size}}', { size: selectedSize.name }), price: 0 }] : []),
       ...selectedModifiers,
     ];
 
@@ -71,10 +73,10 @@ const ProductModifiersScreen = () => {
             onClick={() => setCurrentScreen('menu')}
             icon={<ChevronLeft className="w-6 h-6" />}
           >
-            Back to Menu
+            {t('pos.modifiers.backToMenu', 'Back to Menu')}
           </TouchButton>
 
-          <h1 className="text-2xl font-bold text-gray-900">Customize Your Order</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('pos.modifiers.title', 'Customize Your Order')}</h1>
 
           <div className="w-[140px]" /> {/* Spacer for centering */}
         </div>
@@ -118,7 +120,7 @@ const ProductModifiersScreen = () => {
           {product.variants && product.variants.length > 0 && (
             <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Select Size <span className="text-red-500">*</span>
+                {t('pos.modifiers.selectSize', 'Select Size')} <span className="text-red-500">*</span>
               </h3>
               <div className="grid grid-cols-3 gap-3">
                 {product.variants.map(variant => (
@@ -151,7 +153,7 @@ const ProductModifiersScreen = () => {
           {product.addOns && product.addOns.length > 0 && (
             <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
               <h3 className="text-xl font-bold text-gray-900 mb-4">
-                Add-ons & Extras
+                {t('pos.modifiers.addOns', 'Add-ons & Extras')}
               </h3>
               <div className="space-y-3">
                 {product.addOns.map(addon => {
@@ -210,12 +212,12 @@ const ProductModifiersScreen = () => {
           {/* Special Instructions */}
           <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Special Instructions
+              {t('pos.modifiers.specialInstructions', 'Special Instructions')}
             </h3>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="E.g., No onions, extra sauce..."
+              placeholder={t('pos.modifiers.instructionsPlaceholder', 'E.g., No onions, extra sauce...')}
               rows={3}
               className={cn(
                 'w-full px-4 py-3 rounded-lg',
@@ -234,7 +236,7 @@ const ProductModifiersScreen = () => {
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-6">
           {/* Quantity Controls */}
           <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold text-gray-700">Quantity:</span>
+            <span className="text-lg font-semibold text-gray-700">{t('pos.modifiers.quantity', 'Quantity:')}</span>
             <div className="flex items-center gap-2">
               <TouchButton
                 variant="secondary"
@@ -259,7 +261,7 @@ const ProductModifiersScreen = () => {
           {/* Add to Cart Button */}
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <p className="text-sm text-gray-600">Total</p>
+              <p className="text-sm text-gray-600">{t('pos.cart.total', 'Total')}</p>
               <p className="text-3xl font-bold text-gray-900">
                 ${totalPrice.toFixed(2)}
               </p>
@@ -270,7 +272,7 @@ const ProductModifiersScreen = () => {
               onClick={handleAddToCart}
               icon={<ShoppingCart className="w-6 h-6" />}
             >
-              Add to Cart
+              {t('pos.modifiers.addToCart', 'Add to Cart')}
             </TouchButton>
           </div>
         </div>
