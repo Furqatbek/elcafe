@@ -206,6 +206,36 @@ public class Order {
     }
 
     /**
+     * Get the primary payment (first payment) - backward compatibility
+     */
+    public Payment getPayment() {
+        if (payments == null || payments.isEmpty()) {
+            return null;
+        }
+        return payments.get(0);
+    }
+
+    /**
+     * Set a single payment - backward compatibility for single payment flow
+     */
+    public void setPayment(Payment payment) {
+        if (payment == null) {
+            return;
+        }
+        // Clear existing payments and add the new one
+        if (this.payments == null) {
+            this.payments = new ArrayList<>();
+        }
+        // For backward compatibility, if setting a single payment, replace the first one
+        if (!this.payments.isEmpty()) {
+            this.payments.set(0, payment);
+        } else {
+            this.payments.add(payment);
+        }
+        payment.setOrder(this);
+    }
+
+    /**
      * Get total amount paid across all completed payments
      */
     public BigDecimal getTotalPaid() {

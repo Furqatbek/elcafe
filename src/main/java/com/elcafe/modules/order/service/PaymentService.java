@@ -91,8 +91,8 @@ public class PaymentService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
 
-        // Check if payment already exists for this order
-        if (paymentRepository.findByOrderId(orderId).isPresent()) {
+        // Check if payment already exists for this order (for single-payment flows)
+        if (!paymentRepository.findByOrderId(orderId).isEmpty()) {
             throw new RuntimeException("Payment already exists for order: " + orderId);
         }
 
