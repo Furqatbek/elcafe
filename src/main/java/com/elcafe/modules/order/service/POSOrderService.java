@@ -52,6 +52,7 @@ public class POSOrderService {
     private final KitchenOrderService kitchenOrderService;
     private final KitchenOrderRepository kitchenOrderRepository;
     private final RestaurantTableRepository restaurantTableRepository;
+    private final DailyOrderSequenceService dailyOrderSequenceService;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -66,6 +67,7 @@ public class POSOrderService {
 
         // Create order
         Order order = new Order();
+        order.setOrderNumber(dailyOrderSequenceService.generateNextOrderNumber());
         order.setRestaurant(restaurant);
         order.setCustomer(customer);
         order.setStatus(OrderStatus.PENDING);
