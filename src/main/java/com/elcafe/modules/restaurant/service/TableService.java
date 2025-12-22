@@ -3,8 +3,10 @@ package com.elcafe.modules.restaurant.service;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.restaurant.dto.CreateTableRequest;
+import com.elcafe.modules.restaurant.dto.FloorPlanDTO;
 import com.elcafe.modules.restaurant.dto.MergeTablesRequest;
 import com.elcafe.modules.restaurant.dto.TableResponse;
+import com.elcafe.modules.restaurant.dto.UpdateTablePositionRequest;
 import com.elcafe.modules.restaurant.dto.UpdateTableRequest;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
@@ -301,5 +303,61 @@ public class TableService {
         return mergedTables.stream()
                 .map(tableMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public TableResponse updateTablePosition(Long id, UpdateTablePositionRequest request) {
+        log.info("Updating position for table {}: x={}, y={}", id, request.getPositionX(), request.getPositionY());
+
+        RestaurantTable table = tableRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Table", "id", id));
+
+        table.setPositionX(request.getPositionX());
+        table.setPositionY(request.getPositionY());
+
+        if (request.getWidth() != null) {
+            table.setWidth(request.getWidth());
+        }
+        if (request.getHeight() != null) {
+            table.setHeight(request.getHeight());
+        }
+
+        RestaurantTable updatedTable = tableRepository.save(table);
+        log.info("Updated position for table {}", id);
+
+        return tableMapper.toResponse(updatedTable);
+    }
+
+    @Transactional(readOnly = true)
+    public FloorPlanDTO getFloorPlan(Long restaurantId) {
+        log.info("Getting floor plan for restaurant: {}", restaurantId);
+
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
+
+        List<RestaurantTable> tables = tableRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        List<String> sections = tableRepository.findDistinctSectionsByRestaurantId(restaurantId);
+
+        List<FloorPlanDTO.FloorPlanTableDTO> tableDTOs = tables.stream()
+                .map(table -> FloorPlanDTO.FloorPlanTableDTO.builder()
+                        .id(table.getId())
+                        .tableNumber(table.getTableNumber())
+                        .tableName(table.getTableName())
+                        .status(table.getStatus())
+                        .capacity(table.getCapacity())
+                        .section(table.getSection())
+                        .positionX(table.getPositionX())
+                        .positionY(table.getPositionY())
+                        .width(table.getWidth())
+                        .height(table.getHeight())
+                        .build())
+                .collect(Collectors.toList());
+
+        return FloorPlanDTO.builder()
+                .restaurantId(restaurantId)
+                .restaurantName(restaurant.getName())
+                .tables(tableDTOs)
+                .sections(sections)
+                .build();
     }
 }

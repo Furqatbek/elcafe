@@ -15,6 +15,8 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
 
     List<RestaurantTable> findByRestaurantIdAndActive(Long restaurantId, Boolean active);
 
+    List<RestaurantTable> findByRestaurantIdAndActiveTrue(Long restaurantId);
+
     List<RestaurantTable> findByRestaurantIdAndStatus(Long restaurantId, RestaurantTable.TableStatus status);
 
     List<RestaurantTable> findByRestaurantIdAndSection(Long restaurantId, String section);

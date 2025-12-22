@@ -4,6 +4,7 @@ import usePOSStore from './store/posStore';
 
 // Screens
 import StartOrderScreen from './screens/StartOrderScreen';
+import TableSelectionScreen from './screens/TableSelectionScreen';
 import MenuSelectionScreen from './screens/MenuSelectionScreen';
 import ProductModifiersScreen from './screens/ProductModifiersScreen';
 import CartScreen from './screens/CartScreen';
@@ -39,6 +40,9 @@ const POSApp = () => {
     switch (ui.currentScreen) {
       case 'start':
         return <StartOrderScreen />;
+
+      case 'tables':
+        return <TableSelectionScreen />;
 
       case 'menu':
         return <MenuSelectionScreen />;

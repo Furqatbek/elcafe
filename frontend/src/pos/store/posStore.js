@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { posAPI } from '../../services/api';
+import { posAPI, tablesAPI } from '../../services/api';
 
 /**
  * POS Store - Centralized state management for POS operations
@@ -74,6 +74,16 @@ const usePOSStore = create(
       // Product Availability Cache (productId -> availability info)
       productAvailability: {},
 
+      // Selected Table (for dine-in orders)
+      selectedTable: null,
+
+      // Floor Plan Data
+      floorPlan: {
+        tables: [],
+        sections: [],
+        lastFetched: null,
+      },
+
       // Actions: Order Management
       startNewOrder: (type) => set((state) => ({
         currentOrder: {
@@ -87,7 +97,9 @@ const usePOSStore = create(
           total: 0,
           notes: '',
         },
-        ui: { ...state.ui, currentScreen: 'menu' },
+        selectedTable: null,
+        // For DINE_IN, go to table selection first; otherwise, go to menu
+        ui: { ...state.ui, currentScreen: type === 'DINE_IN' ? 'tables' : 'menu' },
       })),
 
       addItemToCart: (product, modifiers = [], quantity = 1) => set((state) => {
@@ -342,6 +354,67 @@ const usePOSStore = create(
 
       clearProductAvailability: () => set({ productAvailability: {} }),
 
+      // Actions: Table Selection
+      selectTable: (table) => set((state) => ({
+        selectedTable: table,
+        customer: {
+          ...state.customer,
+          tableNumber: table.tableNumber,
+        },
+        ui: { ...state.ui, currentScreen: 'menu' },
+      })),
+
+      clearSelectedTable: () => set({
+        selectedTable: null,
+      }),
+
+      fetchFloorPlan: async (restaurantId) => {
+        set((s) => ({ ui: { ...s.ui, isLoading: true, error: null } }));
+
+        try {
+          const response = await tablesAPI.getFloorPlan(restaurantId);
+          const data = response.data.data;
+
+          set({
+            floorPlan: {
+              tables: data.tables || [],
+              sections: data.sections || [],
+              lastFetched: new Date().toISOString(),
+            },
+            ui: { ...get().ui, isLoading: false },
+          });
+
+          return { success: true, tables: data.tables };
+        } catch (error) {
+          const errorMessage = error.response?.data?.message || error.message || 'Failed to load floor plan';
+          set((s) => ({
+            ui: { ...s.ui, isLoading: false, error: errorMessage },
+          }));
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      updateTableStatus: async (tableId, status) => {
+        try {
+          await tablesAPI.updateStatus(tableId, status);
+
+          // Update local state
+          set((state) => ({
+            floorPlan: {
+              ...state.floorPlan,
+              tables: state.floorPlan.tables.map((table) =>
+                table.id === tableId ? { ...table, status } : table
+              ),
+            },
+          }));
+
+          return { success: true };
+        } catch (error) {
+          console.error('Failed to update table status:', error);
+          return { success: false, error: error.message };
+        }
+      },
+
       // Actions: Kitchen Status
       fetchKitchenStatus: async (orderId) => {
         try {
@@ -513,6 +586,7 @@ const usePOSStore = create(
           changeDue: 0,
           status: 'PENDING',
         },
+        selectedTable: null,
         ui: {
           currentScreen: 'start',
           isLoading: false,

@@ -1962,6 +1962,26 @@
       "preparedBy": "Being prepared by {{chef}}",
       "estimatedTime": "Estimated time: {{minutes}} minutes"
     },
+    "tables": {
+      "selectTable": "Select a Table",
+      "selectTableDesc": "Choose a table for your dine-in order",
+      "selectTablePrompt": "Tap on an available table to select it",
+      "tableSelected": "Table {{number}} Selected",
+      "confirmTable": "Confirm Table",
+      "guests": "Guests",
+      "capacity": "Capacity",
+      "allSections": "All Sections",
+      "gridView": "Grid View",
+      "floorPlan": "Floor Plan",
+      "noTables": "No tables found",
+      "noTablesInSection": "No tables in this section",
+      "addTablesHint": "Add tables in the settings",
+      "available": "Available",
+      "occupied": "Occupied",
+      "reserved": "Reserved",
+      "cleaning": "Cleaning",
+      "outOfService": "Out of Service"
+    },
     "details": {
       "customerInfo": "Customer Information",
       "tableNumber": "Table Number",

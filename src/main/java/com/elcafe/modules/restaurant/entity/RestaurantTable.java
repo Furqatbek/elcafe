@@ -51,6 +51,21 @@ public class RestaurantTable {
     @Column(length = 100)
     private String section;
 
+    // Floor plan positioning
+    @Column(name = "position_x")
+    private Integer positionX;
+
+    @Column(name = "position_y")
+    private Integer positionY;
+
+    @Column(name = "table_width")
+    @Builder.Default
+    private Integer width = 100;
+
+    @Column(name = "table_height")
+    @Builder.Default
+    private Integer height = 100;
+
     @Column(nullable = false)
     @Builder.Default
     private Boolean active = true;
