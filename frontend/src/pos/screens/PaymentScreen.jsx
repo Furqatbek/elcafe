@@ -56,9 +56,11 @@ const PaymentScreen = () => {
   const handlePaymentMethodSelect = (method) => {
     setPaymentMethod(method);
 
-    // For card and mobile, go straight to processing
+    // For card and mobile, auto-approve since no payment integration yet
     if (method === 'CARD' || method === 'MOBILE') {
-      handleProcessPayment(method);
+      // Set tendered amount to exact total for card/mobile
+      setAmountTendered(currentOrder.total);
+      handleProcessPayment(method, currentOrder.total);
     }
   };
 
@@ -79,9 +81,12 @@ const PaymentScreen = () => {
     setPaymentStatus('PROCESSING');
 
     try {
+      // Get restaurant ID from localStorage
+      const restaurantId = parseInt(localStorage.getItem('selectedRestaurantId')) || 1;
+
       // Prepare order data for POS API
       const orderData = {
-        restaurantId: 1, // TODO: Make this configurable
+        restaurantId,
         orderType: currentOrder.type, // DELIVERY, TAKEAWAY, DINE_IN
         orderSource: 'WALK_IN',
         customerInfo: {

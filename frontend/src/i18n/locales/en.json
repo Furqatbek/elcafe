@@ -283,6 +283,12 @@
     "refresh": "Refresh",
     "active": "Active",
     "inactive": "Inactive",
+    "optional": "Optional",
+    "error": "Error",
+    "buttons": {
+      "back": "Back",
+      "cancel": "Cancel"
+    },
     "page": "Page",
     "of": "of",
     "selectRestaurant": "Select Restaurant",
@@ -1835,6 +1841,8 @@
       "outOfStock": "Out of Stock",
       "lowStock": "Low Stock",
       "unavailable": "Unavailable",
+      "loadingMenu": "Loading menu...",
+      "currentOrder": "Current Order",
       "viewMode": {
         "grid": "Grid View",
         "list": "List View"
@@ -1843,20 +1851,32 @@
     "cart": {
       "title": "Cart",
       "empty": "Your cart is empty",
+      "emptyCart": "Your cart is empty",
+      "emptyCartMessage": "Add some items from the menu to get started",
       "subtotal": "Subtotal",
       "tax": "Tax",
       "delivery": "Delivery",
+      "deliveryFee": "Delivery Fee",
       "total": "Total",
       "items": "Items",
       "totalItems": "Total Items",
       "orderSummary": "Order Summary",
       "orderType": "Order Type",
+      "orderTypeLabel": "{{type}} Order",
+      "orderNotes": "Order Notes",
+      "notesPlaceholder": "Add special instructions...",
+      "priceBreakdown": "Price Breakdown",
       "addMore": "Add More Items",
+      "addMoreItems": "Add More Items",
+      "browseMenu": "Browse Menu",
+      "viewCart": "View Cart",
+      "reviewOrder": "Review Order",
       "checkout": "Proceed to Checkout",
       "proceedToDetails": "Proceed to Details",
       "validating": "Checking availability...",
       "clear": "Clear Cart",
       "clearCart": "Clear Cart",
+      "confirmClear": "Are you sure you want to clear the entire cart?",
       "continueShopping": "Continue Shopping",
       "removeItem": "Remove item",
       "increaseQty": "Increase quantity",
@@ -1868,7 +1888,13 @@
     },
     "modifiers": {
       "title": "Customize Your Order",
+      "backToMenu": "Back to Menu",
       "selectOptions": "Select your options",
+      "selectSize": "Select Size",
+      "sizeLabel": "Size: {{size}}",
+      "addOns": "Add-ons & Extras",
+      "specialInstructions": "Special Instructions",
+      "instructionsPlaceholder": "E.g., No onions, extra sauce...",
       "quantity": "Quantity",
       "addToCart": "Add to Cart",
       "cancel": "Cancel",
@@ -1908,18 +1934,31 @@
     "payment": {
       "title": "Payment",
       "selectMethod": "Select Payment Method",
+      "chooseMethod": "Choose Payment Method",
+      "amountDue": "Amount Due",
+      "customer": "Customer",
+      "cash": "Cash",
+      "card": "Card",
+      "mobile": "Mobile Pay",
+      "cashDesc": "Accept cash payment",
+      "cardDesc": "Credit/Debit card",
+      "mobileDesc": "Apple Pay, Google Pay",
       "methods": {
         "cash": "Cash",
         "card": "Card",
         "mobile": "Mobile Payment"
       },
-      "cashPayment": {
-        "title": "Cash Payment",
-        "amountTendered": "Amount Tendered",
-        "amountPlaceholder": "Enter amount received",
-        "changeDue": "Change Due",
-        "quickAmounts": "Quick Amounts"
-      },
+      "cashPayment": "Cash Payment",
+      "amountTendered": "Amount Tendered",
+      "amountPlaceholder": "0.00",
+      "changeDue": "Change Due",
+      "quickAmounts": "Quick Amounts",
+      "completePayment": "Complete Payment",
+      "processing": "Processing Payment...",
+      "waitingCard": "Waiting for card...",
+      "waitingMobile": "Waiting for mobile payment...",
+      "finalizing": "Finalizing transaction...",
+      "insufficientAmount": "Amount must be at least ${{total}}",
       "summary": {
         "orderSummary": "Order Summary",
         "subtotal": "Subtotal",
@@ -1931,6 +1970,10 @@
         "back": "Back",
         "completeOrder": "Complete Order",
         "processing": "Processing..."
+      },
+      "errors": {
+        "deliveryAddressRequired": "Delivery address is required for delivery orders",
+        "paymentFailed": "Payment failed. Please try again."
       }
     },
     "confirmation": {
@@ -1983,9 +2026,38 @@
       "outOfService": "Out of Service"
     },
     "details": {
+      "title": "Order Details",
+      "backToCart": "Back to Cart",
       "customerInfo": "Customer Information",
+      "tableInfo": "Table Information",
       "tableNumber": "Table Number",
-      "deliveryAddress": "Delivery Address"
+      "tablePlaceholder": "e.g., 12, A5",
+      "numberOfGuests": "Number of Guests",
+      "customerName": "Customer Name",
+      "namePlaceholder": "Enter customer name",
+      "phoneNumber": "Phone Number",
+      "phonePlaceholder": "(555) 123-4567",
+      "emailOptional": "Email (Optional)",
+      "emailPlaceholder": "customer@example.com",
+      "deliveryAddress": "Delivery Address",
+      "streetAddress": "Street Address",
+      "addressPlaceholder": "123 Main Street",
+      "city": "City",
+      "cityPlaceholder": "New York",
+      "zipCode": "ZIP Code",
+      "zipPlaceholder": "10001",
+      "deliveryInstructions": "Delivery Instructions (Optional)",
+      "instructionsPlaceholder": "E.g., Ring doorbell, Leave at door...",
+      "proceedToPayment": "Proceed to Payment",
+      "errors": {
+        "nameRequired": "Name is required",
+        "phoneRequired": "Phone number is required",
+        "addressRequired": "Address is required",
+        "cityRequired": "City is required",
+        "zipRequired": "ZIP code is required",
+        "tableRequired": "Table number is required",
+        "guestCountMin": "Guest count must be at least 1"
+      }
     },
     "errors": {
       "loadMenuFailed": "Failed to load menu",

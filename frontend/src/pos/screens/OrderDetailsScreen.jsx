@@ -1,19 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { ChevronLeft, Phone, User, MapPin, Users, Hash } from 'lucide-react';
+import { ChevronLeft, Phone, User, MapPin, Hash } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
 
 /**
+ * InputField - Extracted component to prevent focus loss on re-render
+ */
+const InputField = React.memo(({ label, icon, value, onChange, type = 'text', required = false, placeholder, error }) => (
+  <div>
+    <label className="block text-sm font-semibold text-gray-700 mb-2">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    <div className="relative">
+      {icon && (
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+          {icon}
+        </div>
+      )}
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={cn(
+          'w-full min-h-[56px] px-4 py-3',
+          icon && 'pl-12',
+          'bg-white border-2 rounded-lg',
+          'text-base text-gray-900 placeholder-gray-500',
+          error
+            ? 'border-red-400 focus:border-red-500'
+            : 'border-gray-300 focus:border-blue-400',
+          'focus:outline-none transition-colors'
+        )}
+      />
+    </div>
+    {error && (
+      <p className="mt-2 text-sm text-red-600">{error}</p>
+    )}
+  </div>
+));
+
+InputField.displayName = 'InputField';
+
+/**
  * OrderDetailsScreen - Collect order-type specific information
- * Delivery: customer info, address
- * Takeaway: customer name, phone
- * Dine-in: table number, guest count
+ * Delivery: customer info, address (all required)
+ * Takeaway: customer name, phone (required)
+ * Dine-in: table number, guest count required; customer info optional
  */
 const OrderDetailsScreen = () => {
   const { t } = useTranslation();
-  const { currentOrder, customer, setCustomerInfo, setCurrentScreen } = usePOSStore();
+  const { currentOrder, customer, selectedTable, setCustomerInfo, setCurrentScreen } = usePOSStore();
 
   const [formData, setFormData] = useState({
     name: customer.name || '',
@@ -23,29 +62,27 @@ const OrderDetailsScreen = () => {
     city: customer.address?.city || '',
     zipCode: customer.address?.zipCode || '',
     deliveryInstructions: customer.deliveryInstructions || '',
-    tableNumber: customer.tableNumber || '',
-    guestCount: customer.guestCount || 1,
+    // Pre-fill table info from selectedTable if available
+    tableNumber: customer.tableNumber || selectedTable?.tableNumber || '',
+    guestCount: customer.guestCount || selectedTable?.guestCount || 2,
   });
 
   const [errors, setErrors] = useState({});
 
-  const handleChange = (field, value) => {
+  const handleChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error for this field
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
-    }
-  };
+    setErrors(prev => ({ ...prev, [field]: null }));
+  }, []);
 
   const validateForm = () => {
     const newErrors = {};
 
-    // Common validations
-    if (!formData.name.trim()) {
-      newErrors.name = t('pos.details.errors.nameRequired', 'Name is required');
-    }
-
+    // Validation by order type
     if (currentOrder.type === 'DELIVERY') {
+      // Delivery requires name, phone, and address
+      if (!formData.name.trim()) {
+        newErrors.name = t('pos.details.errors.nameRequired', 'Name is required');
+      }
       if (!formData.phone.trim()) {
         newErrors.phone = t('pos.details.errors.phoneRequired', 'Phone number is required');
       }
@@ -59,11 +96,16 @@ const OrderDetailsScreen = () => {
         newErrors.zipCode = t('pos.details.errors.zipRequired', 'ZIP code is required');
       }
     } else if (currentOrder.type === 'TAKEAWAY') {
+      // Takeaway requires name and phone
+      if (!formData.name.trim()) {
+        newErrors.name = t('pos.details.errors.nameRequired', 'Name is required');
+      }
       if (!formData.phone.trim()) {
         newErrors.phone = t('pos.details.errors.phoneRequired', 'Phone number is required');
       }
     } else if (currentOrder.type === 'DINE_IN') {
-      if (!formData.tableNumber.trim()) {
+      // Dine-in only requires table number and guest count (customer info is optional)
+      if (!formData.tableNumber || !String(formData.tableNumber).trim()) {
         newErrors.tableNumber = t('pos.details.errors.tableRequired', 'Table number is required');
       }
       if (!formData.guestCount || formData.guestCount < 1) {
@@ -82,9 +124,9 @@ const OrderDetailsScreen = () => {
 
     // Save customer info to store
     const customerData = {
-      name: formData.name,
-      phone: formData.phone,
-      email: formData.email,
+      name: formData.name || '',
+      phone: formData.phone || '',
+      email: formData.email || '',
     };
 
     if (currentOrder.type === 'DELIVERY') {
@@ -102,40 +144,6 @@ const OrderDetailsScreen = () => {
     setCustomerInfo(customerData);
     setCurrentScreen('payment');
   };
-
-  const InputField = ({ label, icon, field, type = 'text', required = false, placeholder }) => (
-    <div>
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <div className="relative">
-        {icon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-            {icon}
-          </div>
-        )}
-        <input
-          type={type}
-          value={formData[field]}
-          onChange={(e) => handleChange(field, e.target.value)}
-          placeholder={placeholder}
-          className={cn(
-            'w-full min-h-[56px] px-4 py-3',
-            icon && 'pl-12',
-            'bg-white border-2 rounded-lg',
-            'text-base text-gray-900 placeholder-gray-500',
-            errors[field]
-              ? 'border-red-400 focus:border-red-500'
-              : 'border-gray-300 focus:border-blue-400',
-            'focus:outline-none transition-colors'
-          )}
-        />
-      </div>
-      {errors[field] && (
-        <p className="mt-2 text-sm text-red-600">{errors[field]}</p>
-      )}
-    </div>
-  );
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -163,90 +171,7 @@ const OrderDetailsScreen = () => {
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl mx-auto space-y-6">
-          {/* Common Fields - Customer Info */}
-          <div className="bg-white rounded-xl p-6 border-2 border-gray-200 space-y-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">{t('pos.details.customerInfo', 'Customer Information')}</h2>
-
-            <InputField
-              label={t('pos.details.customerName', 'Customer Name')}
-              icon={<User className="w-5 h-5" />}
-              field="name"
-              required
-              placeholder={t('pos.details.namePlaceholder', 'Enter customer name')}
-            />
-
-            {(currentOrder.type === 'DELIVERY' || currentOrder.type === 'TAKEAWAY') && (
-              <>
-                <InputField
-                  label={t('pos.details.phoneNumber', 'Phone Number')}
-                  icon={<Phone className="w-5 h-5" />}
-                  field="phone"
-                  type="tel"
-                  required
-                  placeholder={t('pos.details.phonePlaceholder', '(555) 123-4567')}
-                />
-
-                <InputField
-                  label={t('pos.details.emailOptional', 'Email (Optional)')}
-                  field="email"
-                  type="email"
-                  placeholder={t('pos.details.emailPlaceholder', 'customer@example.com')}
-                />
-              </>
-            )}
-          </div>
-
-          {/* Delivery-Specific Fields */}
-          {currentOrder.type === 'DELIVERY' && (
-            <div className="bg-white rounded-xl p-6 border-2 border-gray-200 space-y-4">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">{t('pos.details.deliveryAddress', 'Delivery Address')}</h2>
-
-              <InputField
-                label={t('pos.details.streetAddress', 'Street Address')}
-                icon={<MapPin className="w-5 h-5" />}
-                field="address"
-                required
-                placeholder={t('pos.details.addressPlaceholder', '123 Main Street')}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <InputField
-                  label={t('pos.details.city', 'City')}
-                  field="city"
-                  required
-                  placeholder={t('pos.details.cityPlaceholder', 'New York')}
-                />
-
-                <InputField
-                  label={t('pos.details.zipCode', 'ZIP Code')}
-                  field="zipCode"
-                  required
-                  placeholder={t('pos.details.zipPlaceholder', '10001')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('pos.details.deliveryInstructions', 'Delivery Instructions (Optional)')}
-                </label>
-                <textarea
-                  value={formData.deliveryInstructions}
-                  onChange={(e) => handleChange('deliveryInstructions', e.target.value)}
-                  placeholder={t('pos.details.instructionsPlaceholder', 'E.g., Ring doorbell, Leave at door...')}
-                  rows={3}
-                  className={cn(
-                    'w-full px-4 py-3 rounded-lg',
-                    'bg-white border-2 border-gray-300',
-                    'text-base text-gray-900 placeholder-gray-500',
-                    'focus:border-blue-400 focus:outline-none',
-                    'resize-none'
-                  )}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Dine-In Specific Fields */}
+          {/* Dine-In: Table Info First */}
           {currentOrder.type === 'DINE_IN' && (
             <div className="bg-white rounded-xl p-6 border-2 border-gray-200 space-y-4">
               <h2 className="text-xl font-bold text-gray-900 mb-4">{t('pos.details.tableInfo', 'Table Information')}</h2>
@@ -254,9 +179,11 @@ const OrderDetailsScreen = () => {
               <InputField
                 label={t('pos.details.tableNumber', 'Table Number')}
                 icon={<Hash className="w-5 h-5" />}
-                field="tableNumber"
+                value={formData.tableNumber}
+                onChange={(v) => handleChange('tableNumber', v)}
                 required
                 placeholder={t('pos.details.tablePlaceholder', 'e.g., 12, A5')}
+                error={errors.tableNumber}
               />
 
               <div>
@@ -304,6 +231,107 @@ const OrderDetailsScreen = () => {
                 {errors.guestCount && (
                   <p className="mt-2 text-sm text-red-600">{errors.guestCount}</p>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Customer Info - Required for Delivery/Takeaway, Optional for Dine-In */}
+          <div className="bg-white rounded-xl p-6 border-2 border-gray-200 space-y-4">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              {t('pos.details.customerInfo', 'Customer Information')}
+              {currentOrder.type === 'DINE_IN' && (
+                <span className="ml-2 text-sm font-normal text-gray-500">
+                  ({t('common.optional', 'Optional')})
+                </span>
+              )}
+            </h2>
+
+            <InputField
+              label={t('pos.details.customerName', 'Customer Name')}
+              icon={<User className="w-5 h-5" />}
+              value={formData.name}
+              onChange={(v) => handleChange('name', v)}
+              required={currentOrder.type !== 'DINE_IN'}
+              placeholder={t('pos.details.namePlaceholder', 'Enter customer name')}
+              error={errors.name}
+            />
+
+            {(currentOrder.type === 'DELIVERY' || currentOrder.type === 'TAKEAWAY') && (
+              <>
+                <InputField
+                  label={t('pos.details.phoneNumber', 'Phone Number')}
+                  icon={<Phone className="w-5 h-5" />}
+                  value={formData.phone}
+                  onChange={(v) => handleChange('phone', v)}
+                  type="tel"
+                  required
+                  placeholder={t('pos.details.phonePlaceholder', '(555) 123-4567')}
+                  error={errors.phone}
+                />
+
+                <InputField
+                  label={t('pos.details.emailOptional', 'Email (Optional)')}
+                  value={formData.email}
+                  onChange={(v) => handleChange('email', v)}
+                  type="email"
+                  placeholder={t('pos.details.emailPlaceholder', 'customer@example.com')}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Delivery-Specific Fields */}
+          {currentOrder.type === 'DELIVERY' && (
+            <div className="bg-white rounded-xl p-6 border-2 border-gray-200 space-y-4">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">{t('pos.details.deliveryAddress', 'Delivery Address')}</h2>
+
+              <InputField
+                label={t('pos.details.streetAddress', 'Street Address')}
+                icon={<MapPin className="w-5 h-5" />}
+                value={formData.address}
+                onChange={(v) => handleChange('address', v)}
+                required
+                placeholder={t('pos.details.addressPlaceholder', '123 Main Street')}
+                error={errors.address}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <InputField
+                  label={t('pos.details.city', 'City')}
+                  value={formData.city}
+                  onChange={(v) => handleChange('city', v)}
+                  required
+                  placeholder={t('pos.details.cityPlaceholder', 'New York')}
+                  error={errors.city}
+                />
+
+                <InputField
+                  label={t('pos.details.zipCode', 'ZIP Code')}
+                  value={formData.zipCode}
+                  onChange={(v) => handleChange('zipCode', v)}
+                  required
+                  placeholder={t('pos.details.zipPlaceholder', '10001')}
+                  error={errors.zipCode}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('pos.details.deliveryInstructions', 'Delivery Instructions (Optional)')}
+                </label>
+                <textarea
+                  value={formData.deliveryInstructions}
+                  onChange={(e) => handleChange('deliveryInstructions', e.target.value)}
+                  placeholder={t('pos.details.instructionsPlaceholder', 'E.g., Ring doorbell, Leave at door...')}
+                  rows={3}
+                  className={cn(
+                    'w-full px-4 py-3 rounded-lg',
+                    'bg-white border-2 border-gray-300',
+                    'text-base text-gray-900 placeholder-gray-500',
+                    'focus:border-blue-400 focus:outline-none',
+                    'resize-none'
+                  )}
+                />
               </div>
             </div>
           )}
