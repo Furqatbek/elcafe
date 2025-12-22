@@ -45,6 +45,9 @@ public class DashboardResponse {
     // Comparison with previous period
     private PeriodComparison comparison;
 
+    // Inventory alerts
+    private InventoryAlerts inventoryAlerts;
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -78,6 +81,10 @@ public class DashboardResponse {
         private String productName;
         private Long quantitySold;
         private BigDecimal totalRevenue;
+        private BigDecimal costPrice;
+        private BigDecimal totalCost;
+        private BigDecimal profit;
+        private BigDecimal profitMargin; // percentage
     }
 
     @Data
@@ -100,5 +107,31 @@ public class DashboardResponse {
         private BigDecimal totalPayroll;
         private Integer employeeCount;
         private BigDecimal averageSalary;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class InventoryAlerts {
+        private Long lowStockCount;
+        private Long reorderCount;
+        private Long expiringCount;
+        private List<LowStockItem> lowStockItems;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LowStockItem {
+        private Long ingredientId;
+        private String ingredientName;
+        private BigDecimal currentStock;
+        private BigDecimal minimumStock;
+        private BigDecimal reorderLevel;
+        private String unit;
+        private String supplierName;
+        private String alertLevel; // CRITICAL, LOW, REORDER
     }
 }

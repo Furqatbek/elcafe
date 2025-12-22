@@ -5,6 +5,10 @@ import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.entity.PayrollEntry;
 import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.financial.repository.PayrollEntryRepository;
+import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
+import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -29,6 +33,8 @@ public class DashboardService {
     private final OrderRepository orderRepository;
     private final ExpenseRepository expenseRepository;
     private final PayrollEntryRepository payrollRepository;
+    private final InventoryIngredientRepository ingredientRepository;
+    private final ProductRepository productRepository;
 
     // Completed order statuses that count as income
     private static final List<OrderStatus> COMPLETED_STATUSES = List.of(
@@ -109,6 +115,7 @@ public class DashboardService {
                 .dailyStats(calculateDailyStats(completedOrders, expenses, startDate, endDate))
                 .topSellingItems(calculateTopSellingItems(completedOrders))
                 .comparison(calculatePeriodComparison(restaurantId, startDate, endDate, totalIncome, totalExpenses, allOrders.size()))
+                .inventoryAlerts(calculateInventoryAlerts(restaurantId))
                 .build();
     }
 
@@ -279,10 +286,37 @@ public class DashboardService {
         }
 
         // Sort by quantity sold and take top 10
-        return itemsMap.values().stream()
+        List<DashboardResponse.TopItem> topItems = itemsMap.values().stream()
                 .sorted((a, b) -> Long.compare(b.getQuantitySold(), a.getQuantitySold()))
                 .limit(10)
                 .collect(Collectors.toList());
+
+        // Enrich with cost and profit data
+        for (DashboardResponse.TopItem item : topItems) {
+            try {
+                Product product = productRepository.findById(item.getProductId()).orElse(null);
+                if (product != null && product.getCostPrice() != null) {
+                    BigDecimal costPrice = product.getCostPrice();
+                    BigDecimal totalCost = costPrice.multiply(BigDecimal.valueOf(item.getQuantitySold()));
+                    BigDecimal profit = item.getTotalRevenue().subtract(totalCost);
+                    BigDecimal profitMargin = BigDecimal.ZERO;
+
+                    if (item.getTotalRevenue().compareTo(BigDecimal.ZERO) > 0) {
+                        profitMargin = profit.divide(item.getTotalRevenue(), 4, RoundingMode.HALF_UP)
+                                .multiply(new BigDecimal("100"));
+                    }
+
+                    item.setCostPrice(costPrice);
+                    item.setTotalCost(totalCost);
+                    item.setProfit(profit);
+                    item.setProfitMargin(profitMargin);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to get cost data for product {}: {}", item.getProductId(), e.getMessage());
+            }
+        }
+
+        return topItems;
     }
 
     private DashboardResponse.PeriodComparison calculatePeriodComparison(
@@ -357,5 +391,53 @@ public class DashboardService {
         return current.subtract(previous)
                 .divide(previous.abs(), 4, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"));
+    }
+
+    private DashboardResponse.InventoryAlerts calculateInventoryAlerts(Long restaurantId) {
+        // Fetch all active ingredients
+        List<Ingredient> allIngredients = ingredientRepository.findByRestaurantIdAndActive(restaurantId, true);
+
+        // Filter low stock items (currentStock <= minimumStock)
+        List<Ingredient> lowStockIngredients = allIngredients.stream()
+                .filter(i -> i.getCurrentStock().compareTo(i.getMinimumStock()) <= 0)
+                .collect(Collectors.toList());
+
+        // Filter reorder items (currentStock <= reorderLevel but > minimumStock)
+        long reorderCount = allIngredients.stream()
+                .filter(i -> i.getCurrentStock().compareTo(i.getReorderLevel()) <= 0
+                        && i.getCurrentStock().compareTo(i.getMinimumStock()) > 0)
+                .count();
+
+        // Build low stock items list (top 5 most critical)
+        List<DashboardResponse.LowStockItem> lowStockItems = lowStockIngredients.stream()
+                .sorted((a, b) -> {
+                    // Sort by criticality (lower stock ratio = more critical)
+                    BigDecimal ratioA = a.getMinimumStock().compareTo(BigDecimal.ZERO) > 0
+                            ? a.getCurrentStock().divide(a.getMinimumStock(), 4, RoundingMode.HALF_UP)
+                            : BigDecimal.ZERO;
+                    BigDecimal ratioB = b.getMinimumStock().compareTo(BigDecimal.ZERO) > 0
+                            ? b.getCurrentStock().divide(b.getMinimumStock(), 4, RoundingMode.HALF_UP)
+                            : BigDecimal.ZERO;
+                    return ratioA.compareTo(ratioB);
+                })
+                .limit(5)
+                .map(i -> DashboardResponse.LowStockItem.builder()
+                        .ingredientId(i.getId())
+                        .ingredientName(i.getName())
+                        .currentStock(i.getCurrentStock())
+                        .minimumStock(i.getMinimumStock())
+                        .reorderLevel(i.getReorderLevel())
+                        .unit(i.getUnit())
+                        .supplierName(i.getSupplier() != null ? i.getSupplier().getName() : null)
+                        .alertLevel(i.getCurrentStock().compareTo(BigDecimal.ZERO) <= 0 ? "CRITICAL" : "LOW")
+                        .build())
+                .collect(Collectors.toList());
+
+        return DashboardResponse.InventoryAlerts.builder()
+                .lowStockCount((long) lowStockIngredients.size())
+                .reorderCount(reorderCount)
+                .expiringCount(0L) // TODO: Implement expiry tracking
+                .lowStockItems(lowStockItems)
+                .build();
     }
 }

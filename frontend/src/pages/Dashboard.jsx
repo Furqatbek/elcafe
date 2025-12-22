@@ -23,8 +23,12 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle,
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { format, subDays, startOfMonth, startOfWeek } from 'date-fns';
 
 export default function Dashboard() {
@@ -289,6 +293,94 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Inventory Alerts Section */}
+      {dashboardData?.inventoryAlerts && (dashboardData.inventoryAlerts.lowStockCount > 0 || dashboardData.inventoryAlerts.reorderCount > 0) && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+                <CardTitle className="text-orange-800">{t('dashboard.inventoryAlerts', 'Inventory Alerts')}</CardTitle>
+              </div>
+              <Link
+                to="/inventory/ingredients"
+                className="flex items-center gap-1 text-sm text-orange-600 hover:text-orange-800"
+              >
+                {t('dashboard.viewAll', 'View All')}
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3 mb-4">
+              <div className="flex items-center gap-3 p-3 bg-red-100 rounded-lg">
+                <AlertCircle className="h-8 w-8 text-red-600" />
+                <div>
+                  <p className="text-2xl font-bold text-red-700">{dashboardData.inventoryAlerts.lowStockCount}</p>
+                  <p className="text-sm text-red-600">{t('dashboard.lowStock', 'Low Stock')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-yellow-100 rounded-lg">
+                <TrendingDown className="h-8 w-8 text-yellow-600" />
+                <div>
+                  <p className="text-2xl font-bold text-yellow-700">{dashboardData.inventoryAlerts.reorderCount}</p>
+                  <p className="text-sm text-yellow-600">{t('dashboard.needsReorder', 'Needs Reorder')}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-orange-100 rounded-lg">
+                <Calendar className="h-8 w-8 text-orange-600" />
+                <div>
+                  <p className="text-2xl font-bold text-orange-700">{dashboardData.inventoryAlerts.expiringCount || 0}</p>
+                  <p className="text-sm text-orange-600">{t('dashboard.expiringSoon', 'Expiring Soon')}</p>
+                </div>
+              </div>
+            </div>
+
+            {dashboardData.inventoryAlerts.lowStockItems?.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold text-orange-800 mb-2">
+                  {t('dashboard.criticalItems', 'Critical Items')}
+                </h4>
+                <div className="space-y-2">
+                  {dashboardData.inventoryAlerts.lowStockItems.map((item) => (
+                    <div
+                      key={item.ingredientId}
+                      className={`flex items-center justify-between p-2 rounded-lg ${
+                        item.alertLevel === 'CRITICAL' ? 'bg-red-100' : 'bg-yellow-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${
+                          item.alertLevel === 'CRITICAL' ? 'bg-red-500' : 'bg-yellow-500'
+                        }`} />
+                        <span className="font-medium">{item.ingredientName}</span>
+                        {item.supplierName && (
+                          <span className="text-xs text-gray-500">({item.supplierName})</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className={`text-sm font-semibold ${
+                          item.alertLevel === 'CRITICAL' ? 'text-red-700' : 'text-yellow-700'
+                        }`}>
+                          {item.currentStock} / {item.minimumStock} {item.unit}
+                        </span>
+                        <Link
+                          to={`/purchase-orders`}
+                          state={{ prefillData: { ingredientId: item.ingredientId, ingredientName: item.ingredientName } }}
+                          className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        >
+                          {t('dashboard.createPO', 'Create PO')}
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2">
         {/* Income by Order Type */}
         <Card>
@@ -353,29 +445,63 @@ export default function Dashboard() {
       <Card>
         <CardHeader>
           <CardTitle>{t('dashboard.topSellingItems', 'Top Selling Items')}</CardTitle>
-          <CardDescription>{t('dashboard.topItemsDesc', 'Best performing products by quantity sold')}</CardDescription>
+          <CardDescription>{t('dashboard.topItemsDesc', 'Best performing products by quantity sold and profitability')}</CardDescription>
         </CardHeader>
         <CardContent>
           {dashboardData?.topSellingItems?.length > 0 ? (
-            <div className="space-y-4">
-              {dashboardData.topSellingItems.slice(0, 5).map((item, index) => (
-                <div key={item.productId} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <div className="flex items-center gap-4">
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
-                      index === 0 ? 'bg-yellow-500' :
-                      index === 1 ? 'bg-gray-400' :
-                      index === 2 ? 'bg-orange-400' : 'bg-blue-400'
-                    }`}>
-                      {index + 1}
-                    </span>
-                    <div>
-                      <p className="font-medium">{item.productName}</p>
-                      <p className="text-sm text-muted-foreground">{item.quantitySold} {t('dashboard.unitsSold', 'units sold')}</p>
-                    </div>
-                  </div>
-                  <span className="font-semibold text-green-600">{formatCurrency(item.totalRevenue)}</span>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 pr-4">#</th>
+                    <th className="text-left py-2">{t('dashboard.product', 'Product')}</th>
+                    <th className="text-right py-2">{t('dashboard.qtySold', 'Qty')}</th>
+                    <th className="text-right py-2">{t('dashboard.revenue', 'Revenue')}</th>
+                    <th className="text-right py-2">{t('dashboard.cost', 'Cost')}</th>
+                    <th className="text-right py-2">{t('dashboard.profit', 'Profit')}</th>
+                    <th className="text-right py-2">{t('dashboard.margin', 'Margin')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboardData.topSellingItems.slice(0, 5).map((item, index) => (
+                    <tr key={item.productId} className="border-b hover:bg-muted/50">
+                      <td className="py-2 pr-4">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                          index === 0 ? 'bg-yellow-500' :
+                          index === 1 ? 'bg-gray-400' :
+                          index === 2 ? 'bg-orange-400' : 'bg-blue-400'
+                        }`}>
+                          {index + 1}
+                        </span>
+                      </td>
+                      <td className="py-2">
+                        <p className="font-medium">{item.productName}</p>
+                      </td>
+                      <td className="text-right py-2">{item.quantitySold}</td>
+                      <td className="text-right py-2 text-green-600 font-medium">{formatCurrency(item.totalRevenue)}</td>
+                      <td className="text-right py-2 text-gray-600">
+                        {item.totalCost ? formatCurrency(item.totalCost) : '-'}
+                      </td>
+                      <td className={`text-right py-2 font-medium ${
+                        item.profit && Number(item.profit) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {item.profit ? formatCurrency(item.profit) : '-'}
+                      </td>
+                      <td className="text-right py-2">
+                        {item.profitMargin ? (
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            Number(item.profitMargin) >= 30 ? 'bg-green-100 text-green-700' :
+                            Number(item.profitMargin) >= 15 ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>
+                            {Number(item.profitMargin).toFixed(1)}%
+                          </span>
+                        ) : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">{t('common.noData', 'No data available')}</p>

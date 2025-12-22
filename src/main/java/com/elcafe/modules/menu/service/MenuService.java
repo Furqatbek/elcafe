@@ -209,6 +209,8 @@ public class MenuService {
                                 .imageUrl(product.getImageUrl())
                                 .price(product.getPrice())
                                 .priceWithMargin(product.getPriceWithMargin())
+                                .costPrice(product.getCostPrice())
+                                .marginPercentage(product.getMarginPercentage())
                                 .itemType(product.getItemType())
                                 .sortOrder(product.getSortOrder())
                                 .status(product.getStatus())

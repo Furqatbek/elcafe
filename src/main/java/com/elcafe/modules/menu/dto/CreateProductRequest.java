@@ -33,6 +33,9 @@ public class CreateProductRequest {
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     private BigDecimal price;
 
+    @DecimalMin(value = "0.0", message = "Cost price cannot be negative")
+    private BigDecimal costPrice;
+
     private ItemType itemType;
 
     @Builder.Default

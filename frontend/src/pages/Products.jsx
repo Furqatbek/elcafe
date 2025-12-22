@@ -29,7 +29,9 @@ import {
   Star,
   Edit,
   Trash2,
-  List
+  List,
+  DollarSign,
+  TrendingUp
 } from 'lucide-react';
 
 export default function Products() {
@@ -51,6 +53,7 @@ export default function Products() {
     description: '',
     imageUrl: '',
     price: '',
+    costPrice: '',
     categoryId: '',
     sortOrder: 0,
     inStock: true,
@@ -179,6 +182,7 @@ export default function Products() {
         ...formData,
         imageUrl,
         price: parseFloat(formData.price),
+        costPrice: formData.costPrice ? parseFloat(formData.costPrice) : null,
         categoryId: parseInt(formData.categoryId)
       });
       setCreateModalOpen(false);
@@ -196,6 +200,7 @@ export default function Products() {
       description: '',
       imageUrl: '',
       price: '',
+      costPrice: '',
       categoryId: '',
       sortOrder: 0,
       inStock: true,
@@ -212,6 +217,7 @@ export default function Products() {
       description: product.description || '',
       imageUrl: product.imageUrl || '',
       price: product.price?.toString() || '',
+      costPrice: product.costPrice?.toString() || '',
       categoryId: product.categoryId?.toString() || '',
       sortOrder: product.sortOrder || 0,
       inStock: product.available ?? true,
@@ -237,6 +243,7 @@ export default function Products() {
         ...formData,
         imageUrl,
         price: parseFloat(formData.price),
+        costPrice: formData.costPrice ? parseFloat(formData.costPrice) : null,
         categoryId: parseInt(formData.categoryId)
       });
       setEditModalOpen(false);
@@ -486,6 +493,25 @@ export default function Products() {
                     <span>{product.price?.toFixed(2)}</span>
                   </div>
                 </div>
+                {/* Cost and Margin Display */}
+                <div className="flex items-center justify-between text-sm border-t pt-2">
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <DollarSign className="h-3 w-3" />
+                    <span>{t('pages.products.cost', 'Cost')}: {product.costPrice ? product.costPrice.toFixed(2) : '-'}</span>
+                  </div>
+                  {product.costPrice && product.price && product.costPrice > 0 && (
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                        ((product.price - product.costPrice) / product.price * 100) >= 30 ? 'bg-green-100 text-green-700' :
+                        ((product.price - product.costPrice) / product.price * 100) >= 15 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {((product.price - product.costPrice) / product.price * 100).toFixed(1)}% {t('pages.products.margin', 'margin')}
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-2 pt-2 flex-wrap">
                   <Button
                     size="sm"
@@ -619,15 +645,47 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="sortOrder">{t('menu.sortOrder')}</Label>
+                  <Label htmlFor="costPrice">{t('pages.products.costPrice', 'Cost Price')}</Label>
                   <Input
-                    id="sortOrder"
+                    id="costPrice"
                     type="number"
-                    value={formData.sortOrder}
-                    onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                    min={0}
+                    step="0.01"
+                    value={formData.costPrice}
+                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    min="0"
+                    placeholder={t('pages.products.costPricePlaceholder', 'Optional')}
                   />
                 </div>
+              </div>
+
+              {formData.price && formData.costPrice && parseFloat(formData.costPrice) > 0 && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{t('pages.products.calculatedMargin', 'Calculated Margin')}:</span>
+                    <span className={`font-medium ${
+                      ((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100) >= 30 ? 'text-green-600' :
+                      ((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100) >= 15 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span>{t('pages.products.profit', 'Profit per unit')}:</span>
+                    <span className="font-medium">{(parseFloat(formData.price) - parseFloat(formData.costPrice)).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="sortOrder">{t('menu.sortOrder')}</Label>
+                <Input
+                  id="sortOrder"
+                  type="number"
+                  value={formData.sortOrder}
+                  onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                  min={0}
+                />
               </div>
 
               <div className="flex gap-4">
@@ -764,15 +822,47 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-sortOrder">{t('menu.sortOrder')}</Label>
+                  <Label htmlFor="edit-costPrice">{t('pages.products.costPrice', 'Cost Price')}</Label>
                   <Input
-                    id="edit-sortOrder"
+                    id="edit-costPrice"
                     type="number"
-                    value={formData.sortOrder}
-                    onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
-                    min={0}
+                    step="0.01"
+                    value={formData.costPrice}
+                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+                    min="0"
+                    placeholder={t('pages.products.costPricePlaceholder', 'Optional')}
                   />
                 </div>
+              </div>
+
+              {formData.price && formData.costPrice && parseFloat(formData.costPrice) > 0 && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{t('pages.products.calculatedMargin', 'Calculated Margin')}:</span>
+                    <span className={`font-medium ${
+                      ((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100) >= 30 ? 'text-green-600' :
+                      ((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100) >= 15 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {((parseFloat(formData.price) - parseFloat(formData.costPrice)) / parseFloat(formData.price) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span>{t('pages.products.profit', 'Profit per unit')}:</span>
+                    <span className="font-medium">{(parseFloat(formData.price) - parseFloat(formData.costPrice)).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-sortOrder">{t('menu.sortOrder')}</Label>
+                <Input
+                  id="edit-sortOrder"
+                  type="number"
+                  value={formData.sortOrder}
+                  onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
+                  min={0}
+                />
               </div>
 
               <div className="flex gap-4">
