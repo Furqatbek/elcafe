@@ -350,6 +350,12 @@ public class TableService {
                         .positionY(table.getPositionY())
                         .width(table.getWidth())
                         .height(table.getHeight())
+                        // Merge info
+                        .mergedTable(table.getMergedTable() != null ||
+                                tableRepository.findByMergedTable(table).size() > 0)
+                        .mergedWithTableId(table.getMergedTable() != null ?
+                                table.getMergedTable().getId() : null)
+                        .originalCapacity(table.getOriginalCapacity())
                         .build())
                 .collect(Collectors.toList());
 

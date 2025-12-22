@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Users, Clock, Utensils, AlertCircle, CheckCircle, Check } from 'lucide-react';
+import { Users, Clock, Utensils, AlertCircle, CheckCircle, Check, Link2 } from 'lucide-react';
 
 /**
  * TableCard - Interactive table component for floor plan display
@@ -28,6 +28,9 @@ const TableCard = ({
     currentOrderNumber,
     width = 100,
     height = 100,
+    mergedTable = false,
+    mergedWithTableId,
+    originalCapacity,
   } = table;
 
   const getStatusConfig = (tableStatus) => {
@@ -147,6 +150,17 @@ const TableCard = ({
       {isSelected && multiSelect && (
         <div className="absolute -top-2 -left-2 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg">
           <Check className="w-5 h-5" />
+        </div>
+      )}
+
+      {/* Merged Table Indicator */}
+      {mergedTable && (
+        <div
+          className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
+          title={t('pos.tables.merged', 'Merged Table')}
+        >
+          <Link2 className="w-3 h-3" />
+          <span className="hidden sm:inline">{t('pos.tables.merged', 'Merged')}</span>
         </div>
       )}
     </button>

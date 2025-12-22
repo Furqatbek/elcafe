@@ -36,5 +36,9 @@ public class FloorPlanDTO {
         private Integer height;
         private Long currentOrderId;
         private String currentOrderNumber;
+        // Merge info
+        private boolean mergedTable;
+        private Long mergedWithTableId;
+        private Integer originalCapacity;
     }
 }

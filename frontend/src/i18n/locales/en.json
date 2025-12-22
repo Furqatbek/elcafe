@@ -2031,7 +2031,27 @@
       "occupied": "Occupied",
       "reserved": "Reserved",
       "cleaning": "Cleaning",
-      "outOfService": "Out of Service"
+      "outOfService": "Out of Service",
+      "table": "Table",
+      "merged": "Merged",
+      "merge": {
+        "title": "Merge Tables",
+        "description": "Select the main table. Other tables will be merged into it.",
+        "selectMain": "Please select a main table",
+        "main": "Main",
+        "tablesCount": "Tables to merge",
+        "totalCapacity": "Combined capacity",
+        "warning": "Merged tables will share the same order and can be split later.",
+        "confirm": "Merge Tables",
+        "error": "Failed to merge tables",
+        "success": "Tables merged successfully"
+      },
+      "unmerge": {
+        "title": "Split Tables",
+        "confirm": "Split Tables",
+        "success": "Tables split successfully",
+        "error": "Failed to split tables"
+      }
     },
     "details": {
       "title": "Order Details",
