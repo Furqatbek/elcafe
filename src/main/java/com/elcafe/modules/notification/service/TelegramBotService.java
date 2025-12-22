@@ -131,12 +131,16 @@ public class TelegramBotService {
                 // Handle /start command - show chat ID for subscription
                 if (messageText.equals("/start")) {
                     String welcomeMessage = String.format(
-                        "👋 Добро пожаловать в ElCafe Stock Alert Bot!\n\n" +
+                        "👋 Добро пожаловать в ElCafe Bot!\n\n" +
                         "🆔 Ваш Chat ID: %d\n\n" +
-                        "Используйте этот ID для подписки на уведомления о низком уровне запасов в панели управления.\n\n" +
-                        "📦 Вы будете получать уведомления когда:\n" +
-                        "• Запасы ингредиентов заканчиваются\n" +
+                        "Используйте этот ID для подписки на уведомления в панели управления.\n\n" +
+                        "📦 <b>Уведомления о запасах:</b>\n" +
+                        "• Низкий уровень запасов\n" +
                         "• Требуется повторный заказ\n\n" +
+                        "📊 <b>Финансовые отчеты:</b>\n" +
+                        "• Ежедневная выручка\n" +
+                        "• Ежедневные расходы\n" +
+                        "• Ежедневная прибыль\n\n" +
                         "Команды:\n" +
                         "/start - Показать Chat ID\n" +
                         "/status - Проверить статус подписки",
@@ -154,6 +158,7 @@ public class TelegramBotService {
                 SendMessage message = new SendMessage();
                 message.setChatId(chatId.toString());
                 message.setText(text);
+                message.setParseMode("HTML");
                 execute(message);
             } catch (TelegramApiException e) {
                 // Log error silently

@@ -173,3 +173,9 @@ stock-alert:
   enabled: ${STOCK_ALERT_ENABLED:true}
   check-interval-minutes: ${STOCK_ALERT_CHECK_INTERVAL:30}
   alert-cooldown-hours: ${STOCK_ALERT_COOLDOWN:4}
+
+# Financial Alert Configuration (Daily Reports via Telegram)
+financial-alert:
+  enabled: ${FINANCIAL_ALERT_ENABLED:true}
+  check-interval-minutes: ${FINANCIAL_ALERT_CHECK_INTERVAL:15}
+  default-report-time: ${FINANCIAL_ALERT_DEFAULT_TIME:23:00}
