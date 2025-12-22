@@ -594,7 +594,7 @@ const usePOSStore = create(
               guestCount: state.customer.guestCount,
             } : null,
             orderNotes: state.currentOrder.notes || null,
-            paymentMethod: state.payment.method, // CASH, CARD, MOBILE
+            paymentMethod: state.payment.method || null, // Optional - CASH, CARD, MOBILE or null
             subtotal: state.currentOrder.subtotal,
             tax: state.currentOrder.tax,
             deliveryFee: state.currentOrder.deliveryFee,

@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { ChevronLeft, Phone, User, MapPin, Hash } from 'lucide-react';
+import { ChevronLeft, Phone, User, MapPin, Hash, Loader2 } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
+import { useSearchParams } from 'react-router-dom';
 
 /**
  * InputField - Extracted component to prevent focus loss on re-render
@@ -52,7 +53,10 @@ InputField.displayName = 'InputField';
  */
 const OrderDetailsScreen = () => {
   const { t } = useTranslation();
-  const { currentOrder, customer, selectedTable, setCustomerInfo, setCurrentScreen } = usePOSStore();
+  const [searchParams] = useSearchParams();
+  const restaurantId = searchParams.get('restaurantId') || '1';
+  const { currentOrder, customer, selectedTable, setCustomerInfo, setCurrentScreen, submitOrder, setError } = usePOSStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
     name: customer.name || '',
@@ -117,7 +121,7 @@ const OrderDetailsScreen = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleProceedToPayment = () => {
+  const handleCreateOrder = async () => {
     if (!validateForm()) {
       return;
     }
@@ -142,7 +146,21 @@ const OrderDetailsScreen = () => {
     }
 
     setCustomerInfo(customerData);
-    setCurrentScreen('payment');
+
+    // Submit order directly without payment
+    setIsSubmitting(true);
+    try {
+      const result = await submitOrder(restaurantId);
+      if (result.success) {
+        setCurrentScreen('confirmation');
+      } else {
+        setError(result.error || 'Failed to create order');
+      }
+    } catch (error) {
+      setError(error.message || 'Failed to create order');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -362,9 +380,17 @@ const OrderDetailsScreen = () => {
             variant="success"
             size="large"
             fullWidth
-            onClick={handleProceedToPayment}
+            onClick={handleCreateOrder}
+            disabled={isSubmitting}
           >
-            {t('pos.details.proceedToPayment', 'Proceed to Payment')}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                {t('pos.details.creatingOrder', 'Creating Order...')}
+              </>
+            ) : (
+              t('pos.details.createOrder', 'Create Order')
+            )}
           </TouchButton>
         </div>
       </div>
