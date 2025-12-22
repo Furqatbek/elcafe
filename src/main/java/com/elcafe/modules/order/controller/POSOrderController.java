@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.controller;
 
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
+import com.elcafe.modules.order.dto.pos.POSKitchenStatusDTO;
 import com.elcafe.modules.order.dto.pos.POSOrderResponse;
 import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.order.service.POSOrderService;
@@ -57,5 +58,20 @@ public class POSOrderController {
         POSProductAvailabilityDTO availability = posOrderService.getProductAvailability(productId, restaurantId);
 
         return ResponseEntity.ok(ApiResponse.success("Availability checked", availability));
+    }
+
+    @GetMapping("/{orderId}/kitchen-status")
+    @Operation(
+            summary = "Get kitchen status",
+            description = "Get the current kitchen preparation status for an order"
+    )
+    public ResponseEntity<ApiResponse<POSKitchenStatusDTO>> getKitchenStatus(
+            @PathVariable Long orderId) {
+
+        log.info("Getting kitchen status for order: {}", orderId);
+
+        POSKitchenStatusDTO status = posOrderService.getKitchenStatus(orderId);
+
+        return ResponseEntity.ok(ApiResponse.success("Kitchen status retrieved", status));
     }
 }

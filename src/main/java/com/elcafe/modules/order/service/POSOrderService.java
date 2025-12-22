@@ -6,7 +6,11 @@ import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.kitchen.entity.KitchenOrder;
+import com.elcafe.modules.kitchen.repository.KitchenOrderRepository;
+import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.order.dto.pos.POSKitchenStatusDTO;
 import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.notification.service.NotificationService;
@@ -41,6 +45,8 @@ public class POSOrderService {
     private final NotificationService notificationService;
     private final InventoryService inventoryService;
     private final InventoryProductIngredientRepository productIngredientRepository;
+    private final KitchenOrderService kitchenOrderService;
+    private final KitchenOrderRepository kitchenOrderRepository;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -113,6 +119,16 @@ public class POSOrderService {
         } catch (Exception e) {
             log.error("Failed to deduct inventory for order {}: {}", savedOrder.getOrderNumber(), e.getMessage());
             throw new IllegalStateException("Failed to deduct inventory: " + e.getMessage(), e);
+        }
+
+        // Create kitchen order for preparation
+        try {
+            KitchenOrder kitchenOrder = kitchenOrderService.createKitchenOrder(savedOrder);
+            log.info("Kitchen order created for order: {} (Kitchen ID: {})",
+                    savedOrder.getOrderNumber(), kitchenOrder.getId());
+        } catch (Exception e) {
+            log.error("Failed to create kitchen order for {}: {}", savedOrder.getOrderNumber(), e.getMessage());
+            // Don't throw - order can still proceed, kitchen can manually add it
         }
 
         // Force initialize lazy relationships
@@ -310,5 +326,37 @@ public class POSOrderService {
         // Would need to add tableNumber and guestCount fields to Order entity
 
         return response;
+    }
+
+    /**
+     * Get kitchen status for an order
+     */
+    @Transactional(readOnly = true)
+    public POSKitchenStatusDTO getKitchenStatus(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        KitchenOrder kitchenOrder = kitchenOrderRepository.findByOrderId(orderId)
+                .orElse(null);
+
+        POSKitchenStatusDTO.POSKitchenStatusDTOBuilder builder = POSKitchenStatusDTO.builder()
+                .orderId(orderId)
+                .orderNumber(order.getOrderNumber())
+                .orderStatus(order.getStatus().name());
+
+        if (kitchenOrder != null) {
+            builder.kitchenOrderId(kitchenOrder.getId())
+                    .kitchenStatus(kitchenOrder.getStatus().name())
+                    .priority(kitchenOrder.getPriority().name())
+                    .assignedChef(kitchenOrder.getAssignedChef())
+                    .preparationStartedAt(kitchenOrder.getPreparationStartedAt())
+                    .preparationCompletedAt(kitchenOrder.getPreparationCompletedAt())
+                    .estimatedMinutes(kitchenOrder.getEstimatedPreparationTimeMinutes())
+                    .actualMinutes(kitchenOrder.getActualPreparationTimeMinutes());
+        } else {
+            builder.kitchenStatus("NOT_SENT");
+        }
+
+        return builder.build();
     }
 }

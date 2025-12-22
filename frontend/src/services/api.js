@@ -303,6 +303,7 @@ export const posAPI = {
   getProducts: (restaurantId) => api.get(`/products/restaurant/${restaurantId}`),
   checkProductAvailability: (productId, restaurantId) =>
     api.get(`/pos/orders/products/${productId}/availability`, { params: { restaurantId } }),
+  getKitchenStatus: (orderId) => api.get(`/pos/orders/${orderId}/kitchen-status`),
 };
 
 export const waiterOrderAPI = {

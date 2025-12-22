@@ -22,6 +22,17 @@ const usePOSStore = create(
         notes: '',
       },
 
+      // Kitchen Status (for confirmation screen polling)
+      kitchenStatus: {
+        orderId: null,
+        kitchenOrderId: null,
+        status: null, // PENDING, PREPARING, READY, PICKED_UP
+        priority: null,
+        assignedChef: null,
+        estimatedMinutes: null,
+        lastUpdated: null,
+      },
+
       // Customer Information
       customer: {
         id: null,
@@ -331,6 +342,43 @@ const usePOSStore = create(
 
       clearProductAvailability: () => set({ productAvailability: {} }),
 
+      // Actions: Kitchen Status
+      fetchKitchenStatus: async (orderId) => {
+        try {
+          const response = await posAPI.getKitchenStatus(orderId);
+          const statusData = response.data.data;
+
+          set({
+            kitchenStatus: {
+              orderId: statusData.orderId,
+              kitchenOrderId: statusData.kitchenOrderId,
+              status: statusData.kitchenStatus,
+              priority: statusData.priority,
+              assignedChef: statusData.assignedChef,
+              estimatedMinutes: statusData.estimatedMinutes,
+              lastUpdated: new Date().toISOString(),
+            },
+          });
+
+          return statusData;
+        } catch (error) {
+          console.error('Failed to fetch kitchen status:', error);
+          return null;
+        }
+      },
+
+      clearKitchenStatus: () => set({
+        kitchenStatus: {
+          orderId: null,
+          kitchenOrderId: null,
+          status: null,
+          priority: null,
+          assignedChef: null,
+          estimatedMinutes: null,
+          lastUpdated: null,
+        },
+      }),
+
       // Actions: Submit Order to Backend
       submitOrder: async (restaurantId) => {
         const state = get();
@@ -379,14 +427,16 @@ const usePOSStore = create(
           };
 
           const response = await posAPI.createOrder(orderData);
-          const orderNumber = response.data.data.orderNumber;
+          const orderData2 = response.data.data;
+          const orderId = orderData2.id;
+          const orderNumber = orderData2.orderNumber;
 
           set((s) => ({
-            currentOrder: { ...s.currentOrder, orderNumber },
+            currentOrder: { ...s.currentOrder, id: orderId, orderNumber },
             ui: { ...s.ui, isLoading: false },
           }));
 
-          return { success: true, orderNumber };
+          return { success: true, orderId, orderNumber };
         } catch (error) {
           const errorMessage = error.response?.data?.message || error.message || 'Failed to submit order';
           set((s) => ({
