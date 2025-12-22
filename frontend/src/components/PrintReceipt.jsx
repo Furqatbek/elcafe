@@ -156,7 +156,12 @@ const generateReceiptHTML = (order) => {
     }
 
     .items-table th {
-      display: none;
+      border: 2px solid black;
+      padding: 8px 4px;
+      font-size: 14px;
+      font-weight: bold;
+      text-align: center;
+      background: #f0f0f0;
     }
 
     .items-table td {
@@ -173,6 +178,11 @@ const generateReceiptHTML = (order) => {
 
     .items-table td.name {
       font-weight: bold;
+    }
+
+    .items-table td.unit-price {
+      text-align: right;
+      font-size: 14px;
     }
 
     .items-table td.price {
@@ -363,6 +373,14 @@ const generateReceiptHTML = (order) => {
     <!-- Items Section -->
     <div class="items-section">
       <table class="items-table">
+        <thead>
+          <tr>
+            <th>Nomi</th>
+            <th>Narxi</th>
+            <th>Soni</th>
+            <th>Jami</th>
+          </tr>
+        </thead>
         <tbody>
           ${(order.items || []).map(item => `
           <tr>
@@ -370,6 +388,7 @@ const generateReceiptHTML = (order) => {
               ${item.productName}
               ${item.variantName ? ` (${item.variantName})` : ''}
             </td>
+            <td class="unit-price">${(item.unitPrice || item.price || 0).toFixed(2)}</td>
             <td class="qty">${item.quantity}</td>
             <td class="price">${(item.totalPrice || 0).toFixed(2)}</td>
           </tr>
