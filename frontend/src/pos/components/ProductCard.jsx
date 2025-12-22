@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { Plus } from 'lucide-react';
 
@@ -11,6 +12,7 @@ const ProductCard = ({
   onSelect,
   className = '',
 }) => {
+  const { t } = useTranslation();
   const { name, price, description, imageUrl, available = true, category, stockStatus, maxQuantityAvailable } = product;
 
   const handleSelect = () => {
@@ -67,14 +69,14 @@ const ProductCard = ({
         {/* Stock Status Badge */}
         {stockStatus === 'OUT_OF_STOCK' && (
           <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">Out of Stock</span>
+            <span className="text-white font-bold text-lg">{t('pos.menu.outOfStock', 'Out of Stock')}</span>
           </div>
         )}
 
         {stockStatus === 'LOW_STOCK' && available && (
           <div className="absolute top-2 left-2">
             <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
-              Low Stock ({maxQuantityAvailable})
+              {t('pos.menu.lowStock', 'Low Stock')} ({maxQuantityAvailable})
             </span>
           </div>
         )}
@@ -82,7 +84,7 @@ const ProductCard = ({
         {/* Legacy Unavailable Badge */}
         {!available && stockStatus !== 'OUT_OF_STOCK' && (
           <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">Unavailable</span>
+            <span className="text-white font-bold text-lg">{t('pos.menu.unavailable', 'Unavailable')}</span>
           </div>
         )}
 

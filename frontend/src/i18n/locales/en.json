@@ -2088,6 +2088,21 @@
       "back": "Back",
       "next": "Next",
       "finish": "Finish"
+    },
+    "enterFullscreen": "Enter Fullscreen",
+    "exitFullscreen": "Exit Fullscreen (ESC)",
+    "kitchenTicket": {
+      "title": "Kitchen Order",
+      "orderNumber": "Order #",
+      "pending": "Pending",
+      "type": "Type",
+      "customer": "Customer",
+      "table": "Table",
+      "guests": "Guests",
+      "items": "Items",
+      "note": "Note",
+      "orderNotes": "Order Notes",
+      "deliveryTo": "Delivery To"
     }
   },
   "pages": {

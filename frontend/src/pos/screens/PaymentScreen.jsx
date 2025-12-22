@@ -56,11 +56,12 @@ const PaymentScreen = () => {
   const handlePaymentMethodSelect = (method) => {
     setPaymentMethod(method);
 
-    // For card and mobile, auto-approve since no payment integration yet
+    // For card and mobile, auto-approve immediately since no payment integration yet
     if (method === 'CARD' || method === 'MOBILE') {
       // Set tendered amount to exact total for card/mobile
       setAmountTendered(currentOrder.total);
-      handleProcessPayment(method, currentOrder.total);
+      // Process payment immediately - skip processing state for faster UX
+      handleProcessPayment(method, currentOrder.total, true);
     }
   };
 
@@ -73,12 +74,15 @@ const PaymentScreen = () => {
     }
 
     setAmountTendered(amount);
-    handleProcessPayment('CASH', amount);
+    handleProcessPayment('CASH', amount, false);
   };
 
-  const handleProcessPayment = async (method, cashTendered = 0) => {
-    setProcessingPayment(true);
-    setPaymentStatus('PROCESSING');
+  const handleProcessPayment = async (method, cashTendered = 0, skipProcessingState = false) => {
+    // Only show processing state for cash payments
+    if (!skipProcessingState) {
+      setProcessingPayment(true);
+      setPaymentStatus('PROCESSING');
+    }
 
     try {
       // Get restaurant ID from localStorage

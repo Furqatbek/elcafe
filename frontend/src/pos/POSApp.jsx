@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import usePOSStore from './store/posStore';
 
 // Screens
@@ -15,10 +16,47 @@ import OrderConfirmationScreen from './screens/OrderConfirmationScreen';
 /**
  * POSApp - Main POS application with screen routing
  * Touch-optimized restaurant point-of-sale system
+ * Auto-enters fullscreen mode, ESC to exit
  */
 const POSApp = () => {
   const { t } = useTranslation();
   const { ui } = usePOSStore();
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Fullscreen toggle function
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.log('Fullscreen request failed:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  // Auto-enter fullscreen on mount
+  useEffect(() => {
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.log('Auto-fullscreen failed:', err);
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Listen for fullscreen changes (including ESC key exit)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // Prevent accidental page navigation
   useEffect(() => {
@@ -70,6 +108,15 @@ const POSApp = () => {
   return (
     <div className="pos-app h-screen overflow-hidden">
       {renderScreen()}
+
+      {/* Fullscreen Toggle Button */}
+      <button
+        onClick={toggleFullscreen}
+        className="fixed bottom-4 right-4 z-50 p-3 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg opacity-50 hover:opacity-100 transition-opacity"
+        title={isFullscreen ? t('pos.exitFullscreen', 'Exit Fullscreen (ESC)') : t('pos.enterFullscreen', 'Enter Fullscreen')}
+      >
+        {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+      </button>
 
       {/* Global Loading Overlay */}
       {ui.isLoading && (

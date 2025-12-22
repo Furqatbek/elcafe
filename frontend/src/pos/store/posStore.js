@@ -44,6 +44,7 @@ const usePOSStore = create(
         deliveryInstructions: '',
         // For dine-in
         tableNumber: null,
+        tableIds: null,
         guestCount: null,
       },
 
@@ -104,18 +105,46 @@ const usePOSStore = create(
 
       addItemToCart: (product, modifiers = [], quantity = 1) => set((state) => {
         const itemPrice = product.price + modifiers.reduce((sum, mod) => sum + mod.price, 0);
-        const item = {
-          id: `${product.id}-${Date.now()}`,
-          productId: product.id,
-          name: product.name,
-          basePrice: product.price,
-          modifiers,
-          quantity,
-          itemTotal: itemPrice * quantity,
-          notes: '',
-        };
 
-        const items = [...state.currentOrder.items, item];
+        // Create a unique key based on product ID and modifiers to identify duplicates
+        const modifierKey = modifiers.map(m => `${m.id || m.name}`).sort().join(',');
+
+        // Check if this exact product + modifier combination already exists
+        const existingItemIndex = state.currentOrder.items.findIndex(item => {
+          const existingModifierKey = item.modifiers.map(m => `${m.id || m.name}`).sort().join(',');
+          return item.productId === product.id && existingModifierKey === modifierKey;
+        });
+
+        let items;
+        if (existingItemIndex >= 0) {
+          // Increase quantity of existing item
+          items = state.currentOrder.items.map((item, index) => {
+            if (index === existingItemIndex) {
+              const newQuantity = item.quantity + quantity;
+              const basePrice = item.basePrice + item.modifiers.reduce((sum, mod) => sum + mod.price, 0);
+              return {
+                ...item,
+                quantity: newQuantity,
+                itemTotal: basePrice * newQuantity,
+              };
+            }
+            return item;
+          });
+        } else {
+          // Add new item
+          const item = {
+            id: `${product.id}-${Date.now()}`,
+            productId: product.id,
+            name: product.name,
+            basePrice: product.price,
+            modifiers,
+            quantity,
+            itemTotal: itemPrice * quantity,
+            notes: '',
+          };
+          items = [...state.currentOrder.items, item];
+        }
+
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
         const tax = 0; // No tax
         const deliveryFee = state.currentOrder.deliveryFee;
@@ -208,6 +237,7 @@ const usePOSStore = create(
           address: null,
           deliveryInstructions: '',
           tableNumber: null,
+          tableIds: null,
           guestCount: null,
         },
       }),
@@ -529,6 +559,7 @@ const usePOSStore = create(
             } : null,
             dineInInfo: state.currentOrder.type === 'DINE_IN' ? {
               tableNumber: state.customer.tableNumber,
+              tableIds: state.customer.tableIds || [],
               guestCount: state.customer.guestCount,
             } : null,
             orderNotes: state.currentOrder.notes || null,
@@ -585,6 +616,7 @@ const usePOSStore = create(
             address: null,
             deliveryInstructions: '',
             tableNumber: null,
+            tableIds: null,
             guestCount: null,
           },
           payment: {
@@ -620,6 +652,7 @@ const usePOSStore = create(
           address: null,
           deliveryInstructions: '',
           tableNumber: null,
+          tableIds: null,
           guestCount: null,
         },
         payment: {
