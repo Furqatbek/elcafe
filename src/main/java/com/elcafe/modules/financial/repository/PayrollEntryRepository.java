@@ -30,6 +30,9 @@ public interface PayrollEntryRepository extends JpaRepository<PayrollEntry, Long
     List<PayrollEntry> findByRestaurantIdAndPayPeriodStartBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
+    List<PayrollEntry> findByRestaurantIdAndPayPeriodEndBetween(
+            Long restaurantId, LocalDate startDate, LocalDate endDate);
+
     List<PayrollEntry> findByEmployeeIdAndPayPeriodStartBetween(
             Long employeeId, LocalDate startDate, LocalDate endDate);
 

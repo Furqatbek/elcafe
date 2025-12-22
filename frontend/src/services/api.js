@@ -387,6 +387,16 @@ export const financialAPI = {
     api.get('/financial/reports/cash-flow', { params: { restaurantId, startDate, endDate } }),
   getCogsReport: (restaurantId, startDate, endDate) =>
     api.get('/financial/reports/cogs', { params: { restaurantId, startDate, endDate } }),
+
+  // Dashboard
+  getDashboard: (restaurantId, startDate, endDate) =>
+    api.get('/dashboard', { params: { restaurantId, startDate, endDate } }),
+  getTodaySummary: (restaurantId) =>
+    api.get('/dashboard/today', { params: { restaurantId } }),
+  getWeekSummary: (restaurantId) =>
+    api.get('/dashboard/week', { params: { restaurantId } }),
+  getMonthSummary: (restaurantId) =>
+    api.get('/dashboard/month', { params: { restaurantId } }),
 };
 
 export const inventoryAPI = {
