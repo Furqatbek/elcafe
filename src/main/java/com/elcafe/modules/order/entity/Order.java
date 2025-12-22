@@ -60,6 +60,14 @@ public class Order {
     @JsonIgnore
     private RestaurantTable diningTable;
 
+    // For multi-table orders: comma-separated table IDs (e.g., "1,2,3")
+    @Column(name = "table_ids", length = 255)
+    private String tableIds;
+
+    // Guest count for dine-in orders
+    @Column(name = "guest_count")
+    private Integer guestCount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "waiter_id")
     @JsonIgnore

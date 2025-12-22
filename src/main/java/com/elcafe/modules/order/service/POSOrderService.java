@@ -22,7 +22,9 @@ import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,6 +49,7 @@ public class POSOrderService {
     private final InventoryProductIngredientRepository productIngredientRepository;
     private final KitchenOrderService kitchenOrderService;
     private final KitchenOrderRepository kitchenOrderRepository;
+    private final RestaurantTableRepository restaurantTableRepository;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -56,8 +59,8 @@ public class POSOrderService {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + request.getRestaurantId()));
 
-        // Find or create customer
-        Customer customer = findOrCreateCustomer(request.getCustomerInfo());
+        // Find or create customer (optional for dine-in)
+        Customer customer = findOrCreateCustomer(request.getCustomerInfo(), request.getOrderType());
 
         // Create order
         Order order = new Order();
@@ -92,8 +95,38 @@ public class POSOrderService {
             order.setDeliveryInfo(deliveryInfo);
         }
 
-        // Note: Current Order entity doesn't support table number or guest count for dine-in
-        // This would need to be added to the Order entity or handled separately
+        // Handle dine-in specific info (table selection)
+        if (request.getOrderType() == CreatePOSOrderRequest.OrderType.DINE_IN) {
+            if (request.getDineInInfo() != null) {
+                // Set guest count
+                order.setGuestCount(request.getDineInInfo().getGuestCount());
+
+                // Handle multi-table selection
+                List<Long> tableIds = request.getDineInInfo().getTableIds();
+                if (tableIds != null && !tableIds.isEmpty()) {
+                    // Store comma-separated table IDs
+                    order.setTableIds(tableIds.stream()
+                            .map(String::valueOf)
+                            .collect(Collectors.joining(",")));
+
+                    // Set first table as the primary dining table (for backwards compatibility)
+                    RestaurantTable firstTable = restaurantTableRepository.findById(tableIds.get(0))
+                            .orElse(null);
+                    if (firstTable != null) {
+                        order.setDiningTable(firstTable);
+                    }
+
+                    // Mark all selected tables as OCCUPIED
+                    for (Long tableId : tableIds) {
+                        restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                            table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+                            restaurantTableRepository.save(table);
+                            log.info("Table {} marked as OCCUPIED for order", table.getTableNumber());
+                        });
+                    }
+                }
+            }
+        }
 
         // Check ingredient availability before saving
         // We need to save first to get the order with items, then check availability
@@ -149,14 +182,33 @@ public class POSOrderService {
         return mapToResponse(savedOrder, request.getOrderType().name());
     }
 
-    private Customer findOrCreateCustomer(CreatePOSOrderRequest.CustomerInfo customerInfo) {
-        // Try to find existing customer by phone
+    private Customer findOrCreateCustomer(CreatePOSOrderRequest.CustomerInfo customerInfo,
+                                          CreatePOSOrderRequest.OrderType orderType) {
+        // For dine-in orders, customer info is optional (walk-in guests)
+        if (orderType == CreatePOSOrderRequest.OrderType.DINE_IN) {
+            // If no phone provided, create a walk-in customer without phone
+            if (customerInfo == null || customerInfo.getPhone() == null || customerInfo.getPhone().isBlank()) {
+                log.info("Creating walk-in customer for dine-in order");
+                Customer walkInCustomer = new Customer();
+                walkInCustomer.setFirstName("Walk-in");
+                walkInCustomer.setLastName("Guest");
+                if (customerInfo != null && customerInfo.getName() != null && !customerInfo.getName().isBlank()) {
+                    String[] nameParts = customerInfo.getName().trim().split("\\s+", 2);
+                    walkInCustomer.setFirstName(nameParts[0]);
+                    walkInCustomer.setLastName(nameParts.length > 1 ? nameParts[1] : "");
+                }
+                return customerRepository.save(walkInCustomer);
+            }
+        }
+
+        // For other orders or if phone is provided, find or create by phone
         return customerRepository.findByPhone(customerInfo.getPhone())
                 .orElseGet(() -> {
                     log.info("Creating new customer with phone: {}", customerInfo.getPhone());
 
                     // Split name into first and last name
-                    String[] nameParts = customerInfo.getName().trim().split("\\s+", 2);
+                    String name = customerInfo.getName() != null ? customerInfo.getName().trim() : "Customer";
+                    String[] nameParts = name.split("\\s+", 2);
                     String firstName = nameParts[0];
                     String lastName = nameParts.length > 1 ? nameParts[1] : "";
 
@@ -322,8 +374,35 @@ public class POSOrderService {
             response.setEstimatedDeliveryTime(deliveryInfo.getEstimatedDeliveryTime());
         }
 
-        // Note: Dine-in info not supported in current Order entity structure
-        // Would need to add tableNumber and guestCount fields to Order entity
+        // Add dine-in info if applicable
+        if ("DINE_IN".equals(orderType) && (order.getTableIds() != null || order.getDiningTable() != null)) {
+            String tableNumber = order.getDiningTable() != null
+                    ? order.getDiningTable().getTableNumber()
+                    : "";
+
+            List<Long> tableIdList = null;
+            if (order.getTableIds() != null && !order.getTableIds().isBlank()) {
+                tableIdList = java.util.Arrays.stream(order.getTableIds().split(","))
+                        .map(String::trim)
+                        .map(Long::parseLong)
+                        .collect(Collectors.toList());
+
+                // If we have multiple tables, get all their numbers
+                if (tableIdList.size() > 1) {
+                    List<RestaurantTable> tables = restaurantTableRepository.findAllById(tableIdList);
+                    tableNumber = tables.stream()
+                            .map(RestaurantTable::getTableNumber)
+                            .collect(Collectors.joining(", "));
+                }
+            }
+
+            POSOrderResponse.DineInInfoResponse dineInInfo = POSOrderResponse.DineInInfoResponse.builder()
+                    .tableNumber(tableNumber)
+                    .tableIds(tableIdList)
+                    .guestCount(order.getGuestCount())
+                    .build();
+            response.setDineInInfo(dineInInfo);
+        }
 
         return response;
     }

@@ -65,6 +65,7 @@ public class POSOrderResponse {
     @AllArgsConstructor
     public static class DineInInfoResponse {
         private String tableNumber;
+        private List<Long> tableIds;
         private Integer guestCount;
     }
 }

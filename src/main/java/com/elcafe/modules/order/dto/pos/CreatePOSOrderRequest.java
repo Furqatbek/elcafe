@@ -80,12 +80,11 @@ public class CreatePOSOrderRequest {
     @AllArgsConstructor
     public static class CustomerInfo {
 
-        @NotBlank(message = "Customer name is required")
+        // Name and phone are optional for dine-in orders
         @Size(max = 200, message = "Name must not exceed 200 characters")
         private String name;
 
-        @NotBlank(message = "Phone is required")
-        @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
+        @Size(max = 50, message = "Phone must not exceed 50 characters")
         private String phone;
 
         @Email(message = "Invalid email format")
@@ -164,6 +163,9 @@ public class CreatePOSOrderRequest {
         @NotBlank(message = "Table number is required")
         @Size(max = 50, message = "Table number must not exceed 50 characters")
         private String tableNumber;
+
+        // Array of table IDs for multi-table orders
+        private List<Long> tableIds;
 
         @NotNull(message = "Guest count is required")
         @Min(value = 1, message = "Guest count must be at least 1")
