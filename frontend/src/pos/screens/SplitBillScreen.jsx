@@ -242,7 +242,7 @@ const SplitBillScreen = () => {
 
                   <div className="flex items-center justify-between">
                     <span className="text-2xl font-bold text-gray-900">
-                      ${split.amount?.toFixed(2)}
+                      {split.amount?.toFixed(2)}
                     </span>
                     {!split.paid && (
                       <TouchButton
@@ -262,7 +262,7 @@ const SplitBillScreen = () => {
             <div className="mt-6 bg-white rounded-xl border-2 border-gray-200 p-4">
               <div className="flex justify-between text-gray-600">
                 <span>{t('pos.split.originalTotal', 'Original Total')}</span>
-                <span className="font-medium">${splitResult.originalTotal?.toFixed(2)}</span>
+                <span className="font-medium">{splitResult.originalTotal?.toFixed(2)}</span>
               </div>
             </div>
 
@@ -298,7 +298,7 @@ const SplitBillScreen = () => {
                 {t('pos.split.title', 'Split Bill')} #{order.orderNumber}
               </h1>
               <p className="text-sm text-gray-500">
-                {t('pos.cart.total', 'Total')}: ${order.total?.toFixed(2)}
+                {t('pos.cart.total', 'Total')}: {order.total?.toFixed(2)}
               </p>
             </div>
           </div>
@@ -443,7 +443,7 @@ const SplitBillScreen = () => {
                     </span>
                   </div>
                   <span className="text-2xl font-bold text-gray-900">
-                    ${evenSplitAmount.toFixed(2)}
+                    {evenSplitAmount.toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -500,7 +500,7 @@ const SplitBillScreen = () => {
                         {item.quantity}x {item.productName || item.name}
                       </h4>
                       <p className="text-gray-600">
-                        ${(item.subtotal || item.itemTotal || 0).toFixed(2)}
+                        {(item.subtotal || item.itemTotal || 0).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -552,7 +552,7 @@ const SplitBillScreen = () => {
                         {t('pos.split.person', 'Person')} {i + 1}
                       </span>
                       <span className="font-bold text-gray-900">
-                        ${split.total.toFixed(2)}
+                        {split.total.toFixed(2)}
                       </span>
                     </div>
                     <div className="text-xs text-gray-500">
@@ -630,7 +630,7 @@ const SplitBillScreen = () => {
                   'text-2xl font-bold',
                   Math.abs(remainingAmount) < 0.01 ? 'text-green-600' : 'text-yellow-600'
                 )}>
-                  ${Math.abs(remainingAmount).toFixed(2)}
+                  {Math.abs(remainingAmount).toFixed(2)}
                 </span>
               </div>
               {Math.abs(remainingAmount) >= 0.01 && (

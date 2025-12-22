@@ -95,7 +95,7 @@ const RefundDialog = ({
         disabled={!isValid || loading}
         loading={loading}
       >
-        {t('pos.refund.processRefund', 'Process Refund')} (${refundAmount.toFixed(2)})
+        {t('pos.refund.processRefund', 'Process Refund')} ({refundAmount.toFixed(2)})
       </TouchButton>
     </div>
   );
@@ -135,7 +135,7 @@ const RefundDialog = ({
                   <span className="font-medium text-gray-900">{t('pos.refund.fullRefund', 'Full Refund')}</span>
                   <p className="text-sm text-gray-600">{t('pos.refund.fullRefundDesc', 'Refund entire order amount')}</p>
                 </div>
-                <span className="font-bold text-gray-900">${orderTotal.toFixed(2)}</span>
+                <span className="font-bold text-gray-900">{orderTotal.toFixed(2)}</span>
               </button>
 
               <button
@@ -180,7 +180,7 @@ const RefundDialog = ({
               {parseFloat(partialAmount) > orderTotal && (
                 <div className="mt-2 flex items-center gap-2 text-red-600 text-sm">
                   <AlertCircle className="w-4 h-4" />
-                  {t('pos.refund.exceedsTotal', 'Cannot exceed order total of ${{total}}', { total: orderTotal.toFixed(2) })}
+                  {t('pos.refund.exceedsTotal', 'Cannot exceed order total of {{total}}', { total: orderTotal.toFixed(2) })}
                 </div>
               )}
             </div>
@@ -221,7 +221,7 @@ const RefundDialog = ({
                           </span>
                         </div>
                       </div>
-                      <span className="font-bold text-gray-900">${itemTotal.toFixed(2)}</span>
+                      <span className="font-bold text-gray-900">{itemTotal.toFixed(2)}</span>
                     </button>
                   );
                 })}
@@ -267,7 +267,7 @@ const RefundDialog = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-amber-800">{t('pos.refund.originalTotal', 'Original Total')}</span>
-                <span className="font-medium text-amber-900">${orderTotal.toFixed(2)}</span>
+                <span className="font-medium text-amber-900">{orderTotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-amber-800">{t('pos.refund.refundType', 'Refund Type')}</span>
@@ -285,7 +285,7 @@ const RefundDialog = ({
               )}
               <div className="flex justify-between pt-2 border-t border-amber-300">
                 <span className="text-amber-800 font-semibold">{t('pos.refund.refundAmount', 'Refund Amount')}</span>
-                <span className="font-bold text-amber-900 text-lg">${refundAmount.toFixed(2)}</span>
+                <span className="font-bold text-amber-900 text-lg">{refundAmount.toFixed(2)}</span>
               </div>
             </div>
           </div>

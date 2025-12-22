@@ -613,6 +613,15 @@ const usePOSStore = create(
             ui: { ...s.ui, isLoading: false },
           }));
 
+          // Refresh floor plan to show updated table status (for DINE_IN orders)
+          if (state.currentOrder.type === 'DINE_IN') {
+            try {
+              await get().fetchFloorPlan(restaurantId);
+            } catch (e) {
+              console.error('Failed to refresh floor plan:', e);
+            }
+          }
+
           return { success: true, orderId, orderNumber };
         } catch (error) {
           const errorMessage = error.response?.data?.message || error.message || 'Failed to submit order';

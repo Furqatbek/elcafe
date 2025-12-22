@@ -92,7 +92,7 @@ const CashPaymentDialog = ({
         {/* Amount Due */}
         <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-6 text-white text-center">
           <p className="text-lg opacity-90 mb-1">{t('pos.payment.amountDue', 'Amount Due')}</p>
-          <p className="text-5xl font-bold">${amountDue.toFixed(2)}</p>
+          <p className="text-5xl font-bold">{amountDue.toFixed(2)}</p>
         </div>
 
         {/* Quick Amount Buttons */}
@@ -108,7 +108,7 @@ const CashPaymentDialog = ({
                 size="medium"
                 onClick={() => setCashAmount(amount.toFixed(2))}
               >
-                ${amount.toFixed(2)}
+                {amount.toFixed(2)}
               </TouchButton>
             ))}
           </div>
@@ -133,7 +133,7 @@ const CashPaymentDialog = ({
                   {t('pos.payment.changeDue', 'Change Due')}
                 </p>
                 <p className="text-4xl font-bold text-green-900">
-                  ${changeDue.toFixed(2)}
+                  {changeDue.toFixed(2)}
                 </p>
               </div>
               <CheckCircle className="w-14 h-14 text-green-500" />
@@ -145,7 +145,7 @@ const CashPaymentDialog = ({
         {cashAmount && changeDue < 0 && (
           <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-center">
             <p className="text-red-700 font-medium">
-              {t('pos.payment.insufficientAmount', 'Insufficient amount. Need ${{remaining}} more.', {
+              {t('pos.payment.insufficientAmount', 'Insufficient amount. Need {{remaining}} more.', {
                 remaining: Math.abs(changeDue).toFixed(2),
               })}
             </p>

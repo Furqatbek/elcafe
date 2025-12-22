@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Heart, DollarSign } from 'lucide-react';
+import { Heart, Coins } from 'lucide-react';
 import NumericKeypad from './NumericKeypad';
 import TouchButton from './TouchButton';
 
@@ -77,7 +77,7 @@ const TipSelectionComponent = ({
         </div>
         {selectedTip > 0 && (
           <span className="text-lg font-bold text-green-600">
-            +${selectedTip.toFixed(2)}
+            +{selectedTip.toFixed(2)}
           </span>
         )}
       </div>
@@ -106,7 +106,7 @@ const TipSelectionComponent = ({
                 <span className="text-lg font-bold">{preset.label}</span>
                 {preset.percentage > 0 && (
                   <span className="text-sm text-gray-600">
-                    ${tipAmount.toFixed(2)}
+                    {tipAmount.toFixed(2)}
                   </span>
                 )}
               </button>
@@ -144,7 +144,7 @@ const TipSelectionComponent = ({
           size="medium"
           fullWidth
           onClick={handleCustomMode}
-          icon={<DollarSign className="w-5 h-5" />}
+          icon={<Coins className="w-5 h-5" />}
         >
           {t('pos.payment.customAmount', 'Custom Amount')}
         </TouchButton>
@@ -154,7 +154,6 @@ const TipSelectionComponent = ({
       {tipMode === 'custom' && !showKeypad && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl text-gray-600">$</span>
             <input
               type="number"
               step="0.01"
@@ -184,17 +183,17 @@ const TipSelectionComponent = ({
       <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
         <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
           <span>{t('pos.cart.subtotal', 'Subtotal')}</span>
-          <span>${subtotal.toFixed(2)}</span>
+          <span>{subtotal.toFixed(2)}</span>
         </div>
         <div className="flex justify-between items-center text-sm text-gray-600 mb-2">
           <span>{t('pos.payment.tip', 'Tip')}</span>
           <span className={selectedTip > 0 ? 'text-green-600 font-medium' : ''}>
-            ${selectedTip.toFixed(2)}
+            {selectedTip.toFixed(2)}
           </span>
         </div>
         <div className="flex justify-between items-center text-lg font-bold text-gray-900 pt-2 border-t border-gray-200">
           <span>{t('pos.cart.total', 'Total')}</span>
-          <span>${totalWithTip.toFixed(2)}</span>
+          <span>{totalWithTip.toFixed(2)}</span>
         </div>
       </div>
     </div>

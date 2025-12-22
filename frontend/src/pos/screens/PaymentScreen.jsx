@@ -38,6 +38,7 @@ const PaymentScreen = () => {
     setPaymentStatus,
     completeOrder,
     setCurrentScreen,
+    fetchFloorPlan,
   } = usePOSStore();
 
   // State
@@ -195,6 +196,15 @@ const PaymentScreen = () => {
 
         const response = await posAPI.createOrder(orderData);
 
+        // Refresh floor plan to show updated table status (for DINE_IN orders)
+        if (currentOrder.type === 'DINE_IN') {
+          try {
+            await fetchFloorPlan(restaurantId);
+          } catch (e) {
+            console.error('Failed to refresh floor plan:', e);
+          }
+        }
+
         setPaymentStatus('COMPLETED');
         usePOSStore.getState().currentOrder.orderNumber = response.data.data.orderNumber;
         completeOrder();
@@ -339,11 +349,11 @@ const PaymentScreen = () => {
                 }
               </p>
               <p className="text-6xl font-bold">
-                ${splitPaymentMode ? remainingBalance.toFixed(2) : grandTotal.toFixed(2)}
+                {splitPaymentMode ? remainingBalance.toFixed(2) : grandTotal.toFixed(2)}
               </p>
               {tipAmount > 0 && (
                 <p className="text-sm opacity-80 mt-2">
-                  {t('pos.payment.includesTip', 'Includes ${{tip}} tip', { tip: tipAmount.toFixed(2) })}
+                  {t('pos.payment.includesTip', 'Includes {{tip}} tip', { tip: tipAmount.toFixed(2) })}
                 </p>
               )}
             </div>
@@ -361,13 +371,13 @@ const PaymentScreen = () => {
                         <CheckCircle className="w-5 h-5 text-green-500" />
                         <span className="text-gray-700">{p.method}</span>
                       </div>
-                      <span className="font-semibold text-gray-900">${p.amount.toFixed(2)}</span>
+                      <span className="font-semibold text-gray-900">{p.amount.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
                 <div className="flex justify-between items-center mt-3 pt-3 border-t-2 border-gray-200">
                   <span className="font-semibold text-gray-700">{t('pos.payment.totalPaid', 'Total Paid')}</span>
-                  <span className="font-bold text-green-600">${totalPaid.toFixed(2)}</span>
+                  <span className="font-bold text-green-600">{totalPaid.toFixed(2)}</span>
                 </div>
               </div>
             )}
@@ -470,7 +480,7 @@ const PaymentScreen = () => {
                   {item.quantity}x {item.name}
                 </span>
                 <span className="font-semibold text-gray-900">
-                  ${item.itemTotal.toFixed(2)}
+                  {item.itemTotal.toFixed(2)}
                 </span>
               </div>
             ))}
@@ -480,27 +490,27 @@ const PaymentScreen = () => {
           <div className="border-t-2 border-gray-200 pt-4 space-y-2">
             <div className="flex justify-between text-gray-700">
               <span>{t('pos.cart.subtotal', 'Subtotal')}</span>
-              <span>${subtotal.toFixed(2)}</span>
+              <span>{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-700">
               <span>{t('pos.cart.tax', 'Tax')}</span>
-              <span>${tax.toFixed(2)}</span>
+              <span>{tax.toFixed(2)}</span>
             </div>
             {deliveryFee > 0 && (
               <div className="flex justify-between text-gray-700">
                 <span>{t('pos.cart.deliveryFee', 'Delivery')}</span>
-                <span>${deliveryFee.toFixed(2)}</span>
+                <span>{deliveryFee.toFixed(2)}</span>
               </div>
             )}
             {tipAmount > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>{t('pos.payment.tip', 'Tip')}</span>
-                <span>${tipAmount.toFixed(2)}</span>
+                <span>{tipAmount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t-2 border-gray-200">
               <span>{t('pos.cart.total', 'Total')}</span>
-              <span>${grandTotal.toFixed(2)}</span>
+              <span>{grandTotal.toFixed(2)}</span>
             </div>
           </div>
 

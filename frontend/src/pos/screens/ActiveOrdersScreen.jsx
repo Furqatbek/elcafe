@@ -260,7 +260,7 @@ const ActiveOrdersScreen = () => {
                   {/* Total */}
                   <div className="text-right">
                     <span className="text-2xl font-bold text-gray-900">
-                      ${order.total?.toFixed(2)}
+                      {order.total?.toFixed(2)}
                     </span>
                   </div>
                 </button>
@@ -320,7 +320,7 @@ const ActiveOrdersScreen = () => {
                       {item.quantity}x {item.productName || item.name}
                     </span>
                     <span className="font-medium">
-                      ${(item.subtotal || item.itemTotal || 0).toFixed(2)}
+                      {(item.subtotal || item.itemTotal || 0).toFixed(2)}
                     </span>
                   </div>
                 ))}
@@ -328,7 +328,7 @@ const ActiveOrdersScreen = () => {
               <div className="border-t border-gray-200 mt-2 pt-2">
                 <div className="flex justify-between font-bold text-lg">
                   <span>{t('pos.cart.total', 'Total')}</span>
-                  <span>${selectedOrder.total?.toFixed(2)}</span>
+                  <span>{selectedOrder.total?.toFixed(2)}</span>
                 </div>
               </div>
             </div>

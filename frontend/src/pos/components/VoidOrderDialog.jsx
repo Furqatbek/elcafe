@@ -114,7 +114,7 @@ const VoidOrderDialog = ({
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-200">
                 <span className="text-gray-600">{t('pos.cart.total', 'Total')}</span>
-                <span className="font-bold text-gray-900">${(order.total || 0).toFixed(2)}</span>
+                <span className="font-bold text-gray-900">{(order.total || 0).toFixed(2)}</span>
               </div>
             </div>
           </div>

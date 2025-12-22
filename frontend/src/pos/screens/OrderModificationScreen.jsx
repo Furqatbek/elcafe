@@ -366,7 +366,7 @@ const OrderModificationScreen = () => {
                       </p>
                     )}
                     <p className="text-lg font-bold text-gray-900 mt-1">
-                      ${((item.price || item.basePrice || 0) * item.quantity).toFixed(2)}
+                      {((item.price || item.basePrice || 0) * item.quantity).toFixed(2)}
                     </p>
                   </div>
 
@@ -421,12 +421,12 @@ const OrderModificationScreen = () => {
                 {t('pos.cart.total', 'Total')}
               </span>
               <span className="text-2xl font-bold text-gray-900">
-                ${calculateTotal().toFixed(2)}
+                {calculateTotal().toFixed(2)}
               </span>
             </div>
             {order.total !== calculateTotal() && (
               <p className="text-sm text-gray-500 mt-1">
-                {t('pos.modify.originalTotal', 'Original')}: ${order.total?.toFixed(2)}
+                {t('pos.modify.originalTotal', 'Original')}: {order.total?.toFixed(2)}
               </p>
             )}
           </div>
@@ -508,7 +508,7 @@ const OrderModificationScreen = () => {
                             {product.name}
                           </span>
                           <span className="font-bold text-gray-900">
-                            ${product.price?.toFixed(2)}
+                            {product.price?.toFixed(2)}
                           </span>
                         </div>
                       </button>

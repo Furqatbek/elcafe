@@ -73,12 +73,12 @@ public class POSOrderService {
         order.setStatus(OrderStatus.PENDING);
         order.setCustomerNotes(request.getOrderNotes());
 
-        // Set pricing
-        order.setSubtotal(request.getSubtotal());
-        order.setTax(request.getTax());
+        // Set pricing - default all fees to 0
+        order.setSubtotal(request.getSubtotal() != null ? request.getSubtotal() : BigDecimal.ZERO);
+        order.setTax(request.getTax() != null ? request.getTax() : BigDecimal.ZERO);
         order.setDeliveryFee(request.getDeliveryFee() != null ? request.getDeliveryFee() : BigDecimal.ZERO);
-        order.setDiscount(BigDecimal.ZERO);
-        order.setTotal(request.getTotal());
+        order.setDiscount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO);
+        order.setTotal(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO);
 
         // Add order items
         List<OrderItem> orderItems = request.getItems().stream()
@@ -196,6 +196,8 @@ public class POSOrderService {
                 Customer walkInCustomer = new Customer();
                 walkInCustomer.setFirstName("Walk-in");
                 walkInCustomer.setLastName("Guest");
+                // Set a placeholder phone for walk-in customers (required by DB constraint)
+                walkInCustomer.setPhone("WALK-IN-" + System.currentTimeMillis());
                 if (customerInfo != null && customerInfo.getName() != null && !customerInfo.getName().isBlank()) {
                     String[] nameParts = customerInfo.getName().trim().split("\\s+", 2);
                     walkInCustomer.setFirstName(nameParts[0]);

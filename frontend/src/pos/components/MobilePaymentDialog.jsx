@@ -132,10 +132,10 @@ const MobilePaymentDialog = ({
         {/* Amount Display */}
         <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-xl p-6 text-white text-center">
           <p className="text-lg opacity-90 mb-1">{t('pos.payment.totalAmount', 'Total Amount')}</p>
-          <p className="text-5xl font-bold">${totalAmount.toFixed(2)}</p>
+          <p className="text-5xl font-bold">{totalAmount.toFixed(2)}</p>
           {tipAmount > 0 && (
             <p className="text-sm opacity-80 mt-2">
-              {t('pos.payment.includesTip', 'Includes ${{tip}} tip', { tip: tipAmount.toFixed(2) })}
+              {t('pos.payment.includesTip', 'Includes {{tip}} tip', { tip: tipAmount.toFixed(2) })}
             </p>
           )}
         </div>
