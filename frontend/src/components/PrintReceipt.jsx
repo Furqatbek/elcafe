@@ -353,18 +353,18 @@ const generateReceiptHTML = (order) => {
     </div>
 
     <!-- Customer Info -->
-    ${order.deliveryInfo ? `
+    ${(order.deliveryInfo || order.deliveryAddress || order.customerName) ? `
     <div class="customer-info">
       <div class="customer-info-title">MIJOZ MA'LUMOTLARI</div>
       <div class="customer-info-line">
-        <strong>Ism:</strong> ${order.deliveryInfo.contactName || 'N/A'}
+        <strong>Ism:</strong> ${order.deliveryInfo?.contactName || order.customerName || order.customer?.firstName + ' ' + order.customer?.lastName || 'N/A'}
       </div>
       <div class="customer-info-line">
-        <strong>Telefon:</strong> ${order.deliveryInfo.contactPhone || 'N/A'}
+        <strong>Telefon:</strong> ${order.deliveryInfo?.contactPhone || order.customerPhone || order.customer?.phone || 'N/A'}
       </div>
-      ${order.deliveryInfo.address ? `
+      ${(order.deliveryInfo?.address || order.deliveryAddress?.street) ? `
       <div class="customer-info-line">
-        <strong>Manzil:</strong> ${order.deliveryInfo.address}, ${order.deliveryInfo.city || ''}
+        <strong>Manzil:</strong> ${order.deliveryInfo?.address || order.deliveryAddress?.street || ''}, ${order.deliveryInfo?.city || order.deliveryAddress?.city || ''}
       </div>
       ` : ''}
     </div>
@@ -390,7 +390,7 @@ const generateReceiptHTML = (order) => {
             </td>
             <td class="unit-price">${(item.unitPrice || item.price || 0).toFixed(2)}</td>
             <td class="qty">${item.quantity}</td>
-            <td class="price">${(item.totalPrice || 0).toFixed(2)}</td>
+            <td class="price">${(item.totalPrice || item.total || 0).toFixed(2)}</td>
           </tr>
           `).join('')}
         </tbody>
@@ -420,17 +420,17 @@ const generateReceiptHTML = (order) => {
     </div>
 
     <!-- Payment Info -->
-    ${order.payment ? `
+    ${(order.payment || order.paymentMethod || order.paymentInfo) ? `
     <div class="payment-info">
-      TO'LOV: ${order.payment.method || 'N/A'} - ${order.payment.status || 'N/A'}
+      TO'LOV: ${order.payment?.method || order.paymentMethod || order.paymentInfo?.paymentMethod || 'N/A'}
     </div>
     ` : ''}
 
     <!-- Notes -->
-    ${order.customerNotes ? `
+    ${(order.customerNotes || order.orderNotes) ? `
     <div class="notes-section">
       <div class="notes-title">MAXSUS ESLATMALAR:</div>
-      <div class="notes-content">${order.customerNotes}</div>
+      <div class="notes-content">${order.customerNotes || order.orderNotes}</div>
     </div>
     ` : ''}
 

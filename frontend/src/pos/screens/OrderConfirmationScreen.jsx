@@ -4,6 +4,8 @@ import { CheckCircle, Printer, Home, ChefHat, Clock, RefreshCw } from 'lucide-re
 import { cn } from '../../lib/utils';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
+import PrintReceipt from '../../components/PrintReceipt';
+import { posAPI } from '../../services/api';
 
 /**
  * OrderConfirmationScreen - Success confirmation after payment
@@ -13,6 +15,22 @@ const OrderConfirmationScreen = () => {
   const { t } = useTranslation();
   const { currentOrder, customer, kitchenStatus, fetchKitchenStatus, clearKitchenStatus, resetPOS } = usePOSStore();
   const [isPolling, setIsPolling] = useState(true);
+  const [fullOrderData, setFullOrderData] = useState(null);
+
+  // Fetch full order data for printing
+  useEffect(() => {
+    const fetchFullOrder = async () => {
+      if (currentOrder.id) {
+        try {
+          const response = await posAPI.getOrderById(currentOrder.id);
+          setFullOrderData(response.data.data);
+        } catch (error) {
+          console.error('Failed to fetch full order data:', error);
+        }
+      }
+    };
+    fetchFullOrder();
+  }, [currentOrder.id]);
 
   // Poll kitchen status every 10 seconds
   useEffect(() => {
@@ -79,8 +97,12 @@ const OrderConfirmationScreen = () => {
   };
 
   const handlePrintReceipt = () => {
-    // Open print dialog with receipt
-    window.print();
+    if (fullOrderData) {
+      PrintReceipt(fullOrderData);
+    } else {
+      // Fallback: print the page if order data not loaded
+      window.print();
+    }
   };
 
   const handlePrintKitchenTicket = () => {

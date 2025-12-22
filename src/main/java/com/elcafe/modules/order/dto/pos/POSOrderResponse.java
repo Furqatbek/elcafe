@@ -41,8 +41,11 @@ public class POSOrderResponse {
     public static class OrderItemResponse {
         private Long id;
         private String productName;
+        private String variantName;
         private Integer quantity;
-        private BigDecimal price;
+        private BigDecimal unitPrice;
+        private BigDecimal price; // alias for unitPrice (backward compatibility)
+        private BigDecimal totalPrice;
         private List<String> modifiers;
         private String notes;
     }

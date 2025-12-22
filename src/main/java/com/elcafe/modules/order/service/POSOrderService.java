@@ -351,8 +351,11 @@ public class POSOrderService {
                     POSOrderResponse.OrderItemResponse itemResponse = new POSOrderResponse.OrderItemResponse();
                     itemResponse.setId(item.getId());
                     itemResponse.setProductName(item.getProductName());
+                    itemResponse.setVariantName(item.getVariantName());
                     itemResponse.setQuantity(item.getQuantity());
-                    itemResponse.setPrice(item.getUnitPrice());
+                    itemResponse.setUnitPrice(item.getUnitPrice());
+                    itemResponse.setPrice(item.getUnitPrice()); // backward compatibility
+                    itemResponse.setTotalPrice(item.getTotalPrice());
                     itemResponse.setNotes(item.getSpecialInstructions());
 
                     // Parse modifiers from addOns field
