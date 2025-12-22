@@ -104,7 +104,7 @@ public class ExpenseService {
     }
 
     public List<Expense> getExpensesByCategory(Long restaurantId, Expense.ExpenseCategory category) {
-        return expenseRepository.findByRestaurantIdAndCategory(restaurantId, category);
+        return expenseRepository.findByRestaurant_IdAndCategory(restaurantId, category);
     }
 
     public List<Expense> getExpensesByDateRange(Long restaurantId, LocalDate startDate, LocalDate endDate) {
@@ -136,7 +136,7 @@ public class ExpenseService {
                     ? Account.AccountCategory.CASH
                     : Account.AccountCategory.BANK;
 
-            Account paymentAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account paymentAccount = accountRepository.findByRestaurant_IdAndCategory(
                     expense.getRestaurant().getId(), paymentCategory
             ).stream().findFirst().orElse(null);
 
@@ -170,7 +170,7 @@ public class ExpenseService {
             default -> Account.AccountCategory.OTHER_EXPENSE;
         };
 
-        return accountRepository.findByRestaurantIdAndCategory(restaurantId, accountCategory)
+        return accountRepository.findByRestaurant_IdAndCategory(restaurantId, accountCategory)
                 .stream().findFirst().orElse(null);
     }
 

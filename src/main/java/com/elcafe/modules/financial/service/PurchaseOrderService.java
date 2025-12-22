@@ -254,11 +254,11 @@ public class PurchaseOrderService {
     private void createPurchaseJournalEntry(PurchaseOrder po, String recordedBy) {
         try {
             // Debit: Inventory, Credit: Accounts Payable
-            Account inventoryAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account inventoryAccount = accountRepository.findByRestaurant_IdAndCategory(
                     po.getRestaurant().getId(), Account.AccountCategory.INVENTORY
             ).stream().findFirst().orElse(null);
 
-            Account apAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account apAccount = accountRepository.findByRestaurant_IdAndCategory(
                     po.getRestaurant().getId(), Account.AccountCategory.ACCOUNTS_PAYABLE
             ).stream().findFirst().orElse(null);
 
@@ -285,7 +285,7 @@ public class PurchaseOrderService {
                                           String recordedBy) {
         try {
             // Debit: Accounts Payable, Credit: Cash/Bank
-            Account apAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account apAccount = accountRepository.findByRestaurant_IdAndCategory(
                     po.getRestaurant().getId(), Account.AccountCategory.ACCOUNTS_PAYABLE
             ).stream().findFirst().orElse(null);
 
@@ -293,7 +293,7 @@ public class PurchaseOrderService {
                     ? Account.AccountCategory.CASH
                     : Account.AccountCategory.BANK;
 
-            Account paymentAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account paymentAccount = accountRepository.findByRestaurant_IdAndCategory(
                     po.getRestaurant().getId(), paymentCategory
             ).stream().findFirst().orElse(null);
 

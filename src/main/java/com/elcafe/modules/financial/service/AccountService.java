@@ -71,19 +71,19 @@ public class AccountService {
     }
 
     public List<Account> getAccountsByRestaurant(Long restaurantId) {
-        return accountRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        return accountRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
     }
 
     public List<Account> getAccountsByType(Long restaurantId, Account.AccountType type) {
-        return accountRepository.findByRestaurantIdAndType(restaurantId, type);
+        return accountRepository.findByRestaurant_IdAndType(restaurantId, type);
     }
 
     public List<Account> getAccountsByCategory(Long restaurantId, Account.AccountCategory category) {
-        return accountRepository.findByRestaurantIdAndCategory(restaurantId, category);
+        return accountRepository.findByRestaurant_IdAndCategory(restaurantId, category);
     }
 
     public Account getAccountByCode(Long restaurantId, String code) {
-        return accountRepository.findByRestaurantIdAndCode(restaurantId, code)
+        return accountRepository.findByRestaurant_IdAndCode(restaurantId, code)
                 .orElseThrow(() -> new RuntimeException("Account not found with code: " + code));
     }
 

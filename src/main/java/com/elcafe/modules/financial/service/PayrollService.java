@@ -135,7 +135,7 @@ public class PayrollService {
     private void createPayrollJournalEntry(PayrollEntry payroll, String processedBy) {
         try {
             // Debit: Labor Expense, Credit: Cash/Bank
-            Account laborAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account laborAccount = accountRepository.findByRestaurant_IdAndCategory(
                     payroll.getRestaurant().getId(), Account.AccountCategory.LABOR
             ).stream().findFirst().orElse(null);
 
@@ -143,7 +143,7 @@ public class PayrollService {
                     ? Account.AccountCategory.CASH
                     : Account.AccountCategory.BANK;
 
-            Account paymentAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account paymentAccount = accountRepository.findByRestaurant_IdAndCategory(
                     payroll.getRestaurant().getId(), paymentCategory
             ).stream().findFirst().orElse(null);
 

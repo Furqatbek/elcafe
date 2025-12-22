@@ -35,13 +35,13 @@ public class FinancialReportsService {
         log.info("Generating P&L report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 
         // Get all revenue accounts
-        List<Account> revenueAccounts = accountRepository.findByRestaurantIdAndType(
+        List<Account> revenueAccounts = accountRepository.findByRestaurant_IdAndType(
                 restaurantId, Account.AccountType.REVENUE);
 
         BigDecimal totalRevenue = calculateAccountsTotal(revenueAccounts, startDate, endDate);
 
         // Get all expense accounts
-        List<Account> expenseAccounts = accountRepository.findByRestaurantIdAndType(
+        List<Account> expenseAccounts = accountRepository.findByRestaurant_IdAndType(
                 restaurantId, Account.AccountType.EXPENSE);
 
         Map<String, BigDecimal> expensesByCategory = new HashMap<>();
@@ -73,7 +73,7 @@ public class FinancialReportsService {
         log.info("Generating balance sheet for restaurant: {} as of {}", restaurantId, asOfDate);
 
         // Assets
-        List<Account> assetAccounts = accountRepository.findByRestaurantIdAndType(
+        List<Account> assetAccounts = accountRepository.findByRestaurant_IdAndType(
                 restaurantId, Account.AccountType.ASSET);
         BigDecimal totalAssets = assetAccounts.stream()
                 .map(Account::getBalance)
@@ -86,7 +86,7 @@ public class FinancialReportsService {
                 ));
 
         // Liabilities
-        List<Account> liabilityAccounts = accountRepository.findByRestaurantIdAndType(
+        List<Account> liabilityAccounts = accountRepository.findByRestaurant_IdAndType(
                 restaurantId, Account.AccountType.LIABILITY);
         BigDecimal totalLiabilities = liabilityAccounts.stream()
                 .map(Account::getBalance)
@@ -99,7 +99,7 @@ public class FinancialReportsService {
                 ));
 
         // Equity
-        List<Account> equityAccounts = accountRepository.findByRestaurantIdAndType(
+        List<Account> equityAccounts = accountRepository.findByRestaurant_IdAndType(
                 restaurantId, Account.AccountType.EQUITY);
         BigDecimal totalEquity = equityAccounts.stream()
                 .map(Account::getBalance)
@@ -123,9 +123,9 @@ public class FinancialReportsService {
         log.info("Generating cash flow report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 
         // Get cash accounts
-        List<Account> cashAccounts = accountRepository.findByRestaurantIdAndCategory(
+        List<Account> cashAccounts = accountRepository.findByRestaurant_IdAndCategory(
                 restaurantId, Account.AccountCategory.CASH);
-        cashAccounts.addAll(accountRepository.findByRestaurantIdAndCategory(
+        cashAccounts.addAll(accountRepository.findByRestaurant_IdAndCategory(
                 restaurantId, Account.AccountCategory.BANK));
 
         BigDecimal cashInflows = BigDecimal.ZERO;
@@ -170,13 +170,13 @@ public class FinancialReportsService {
     public CogsReport generateCogsReport(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Generating COGS report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 
-        List<Account> cogsAccounts = accountRepository.findByRestaurantIdAndCategory(
+        List<Account> cogsAccounts = accountRepository.findByRestaurant_IdAndCategory(
                 restaurantId, Account.AccountCategory.COGS);
 
         BigDecimal totalCogs = calculateAccountsTotal(cogsAccounts, startDate, endDate);
 
         // Get revenue for calculating COGS percentage
-        List<Account> revenueAccounts = accountRepository.findByRestaurantIdAndType(
+        List<Account> revenueAccounts = accountRepository.findByRestaurant_IdAndType(
                 restaurantId, Account.AccountType.REVENUE);
         BigDecimal totalRevenue = calculateAccountsTotal(revenueAccounts, startDate, endDate);
 

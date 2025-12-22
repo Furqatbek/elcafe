@@ -11,19 +11,19 @@ import java.util.Optional;
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
 
-    List<Account> findByRestaurantId(Long restaurantId);
+    List<Account> findByRestaurant_Id(Long restaurantId);
 
-    List<Account> findByRestaurantIdAndActiveTrue(Long restaurantId);
+    List<Account> findByRestaurant_IdAndActiveTrue(Long restaurantId);
 
-    List<Account> findByRestaurantIdAndType(Long restaurantId, Account.AccountType type);
+    List<Account> findByRestaurant_IdAndType(Long restaurantId, Account.AccountType type);
 
-    List<Account> findByRestaurantIdAndCategory(Long restaurantId, Account.AccountCategory category);
+    List<Account> findByRestaurant_IdAndCategory(Long restaurantId, Account.AccountCategory category);
 
-    Optional<Account> findByRestaurantIdAndCode(Long restaurantId, String code);
+    Optional<Account> findByRestaurant_IdAndCode(Long restaurantId, String code);
 
-    Optional<Account> findByRestaurantIdAndName(Long restaurantId, String name);
+    Optional<Account> findByRestaurant_IdAndName(Long restaurantId, String name);
 
-    List<Account> findByRestaurantIdAndParentAccountId(Long restaurantId, Long parentAccountId);
+    List<Account> findByRestaurant_IdAndParentAccount_Id(Long restaurantId, Long parentAccountId);
 
     @Query("SELECT a FROM FinancialAccount a WHERE a.restaurant.id = :restaurantId AND a.systemAccount = true")
     List<Account> findSystemAccounts(Long restaurantId);

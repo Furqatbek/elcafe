@@ -36,11 +36,11 @@ public class RevenueService {
             Long restaurantId = order.getRestaurant().getId();
 
             // Find revenue and cash accounts
-            Account salesAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account salesAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.SALES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.CASH
             ).stream().findFirst().orElse(null);
 
@@ -80,11 +80,11 @@ public class RevenueService {
         try {
             Long restaurantId = order.getRestaurant().getId();
 
-            Account deliveryFeeAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account deliveryFeeAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.DELIVERY_FEES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.CASH
             ).stream().findFirst().orElse(null);
 
@@ -118,11 +118,11 @@ public class RevenueService {
             Long restaurantId = order.getRestaurant().getId();
 
             // Find COGS and Inventory accounts
-            Account cogsAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account cogsAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.COGS
             ).stream().findFirst().orElse(null);
 
-            Account inventoryAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account inventoryAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.INVENTORY
             ).stream().findFirst().orElse(null);
 
@@ -207,11 +207,11 @@ public class RevenueService {
             Long restaurantId = order.getRestaurant().getId();
 
             // Find revenue and cash accounts
-            Account salesAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account salesAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.SALES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.CASH
             ).stream().findFirst().orElse(null);
 
