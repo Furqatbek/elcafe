@@ -594,6 +594,28 @@ export const valuationAPI = {
     }),
 };
 
+export const financialAlertAPI = {
+  // Subscriptions
+  getSubscriptions: (restaurantId) =>
+    api.get('/notifications/financial-alerts/restaurant/' + restaurantId),
+  createSubscription: (data) =>
+    api.post('/notifications/financial-alerts', data),
+  updateSubscription: (id, data) =>
+    api.put('/notifications/financial-alerts/' + id, data),
+  toggleSubscription: (id) =>
+    api.post('/notifications/financial-alerts/' + id + '/toggle'),
+  deleteSubscription: (id) =>
+    api.delete('/notifications/financial-alerts/' + id),
+
+  // Reports
+  trigger: (restaurantId) =>
+    api.post('/notifications/financial-alerts/trigger/' + restaurantId),
+  getMetrics: (restaurantId, date = null) => {
+    const params = date ? { date } : {};
+    return api.get('/notifications/financial-alerts/metrics/' + restaurantId, { params });
+  },
+};
+
 export const pricingAPI = {
   // Pricing Analytics
   getAnalytics: (restaurantId, params = {}) =>
