@@ -13,7 +13,6 @@ import {
   Lightbulb, CheckCircle, XCircle, Clock
 } from 'lucide-react';
 import { pricingAPI, restaurantAPI } from '@/services/api';
-import { toast } from 'sonner';
 
 const PricingDashboard = () => {
   const [searchParams] = useSearchParams();
@@ -66,7 +65,6 @@ const PricingDashboard = () => {
       setProfitability(profitRes.data.data || []);
     } catch (error) {
       console.error('Error fetching pricing data:', error);
-      toast.error('Failed to load pricing data');
     } finally {
       setLoading(false);
     }
