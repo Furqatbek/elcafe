@@ -1,8 +1,13 @@
 package com.elcafe.modules.order.service;
 
 import com.elcafe.modules.order.dto.*;
+import com.elcafe.modules.order.dto.pos.PaymentRequestDTO;
+import com.elcafe.modules.order.dto.pos.PaymentResponseDTO;
+import com.elcafe.modules.order.dto.pos.RefundRequestDTO;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.entity.Payment;
+import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -14,8 +19,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -40,9 +48,12 @@ public class PaymentService {
 
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentByOrderId(Long orderId) {
-        Payment payment = paymentRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Payment not found for order: " + orderId));
-        return toResponse(payment);
+        List<Payment> payments = paymentRepository.findByOrderId(orderId);
+        if (payments.isEmpty()) {
+            throw new RuntimeException("Payment not found for order: " + orderId);
+        }
+        // Return the first/primary payment (for backward compatibility)
+        return toResponse(payments.get(0));
     }
 
     @Transactional(readOnly = true)
@@ -173,6 +184,325 @@ public class PaymentService {
                 .paidAt(payment.getPaidAt())
                 .createdAt(payment.getCreatedAt())
                 .updatedAt(payment.getUpdatedAt())
+                .build();
+    }
+
+    // ==================== POS Payment Methods ====================
+
+    /**
+     * Process a POS payment with tip support
+     */
+    @Transactional
+    public PaymentResponseDTO processPOSPayment(Long orderId, PaymentRequestDTO request) {
+        log.info("Processing POS payment for order {}: method={}, amount={}, tip={}",
+                orderId, request.getMethod(), request.getAmount(), request.getTipAmount());
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+
+        // Validate order can accept payment
+        validateOrderForPayment(order);
+
+        // Calculate total payment with tip
+        BigDecimal tipAmount = request.getTipAmount() != null ? request.getTipAmount() : BigDecimal.ZERO;
+        BigDecimal totalPayment = request.getAmount().add(tipAmount);
+
+        // For cash payments, calculate change
+        BigDecimal changeDue = BigDecimal.ZERO;
+        if (request.getMethod() == PaymentMethod.CASH && request.getAmountTendered() != null) {
+            if (request.getAmountTendered().compareTo(totalPayment) < 0) {
+                throw new IllegalArgumentException("Amount tendered is less than payment amount");
+            }
+            changeDue = request.getAmountTendered().subtract(totalPayment);
+        }
+
+        // Create payment record
+        Payment payment = Payment.builder()
+                .order(order)
+                .method(request.getMethod())
+                .status(PaymentStatus.COMPLETED)
+                .amount(request.getAmount())
+                .tipAmount(tipAmount)
+                .amountTendered(request.getAmountTendered())
+                .changeDue(changeDue)
+                .transactionId(request.getTransactionId() != null ?
+                        request.getTransactionId() : generateTransactionId(request.getMethod()))
+                .paymentGateway(request.getPaymentGateway())
+                .paymentDetails(request.getPaymentDetails())
+                .processedBy(request.getProcessedBy())
+                .paidAt(LocalDateTime.now())
+                .completedAt(LocalDateTime.now())
+                .build();
+
+        Payment savedPayment = paymentRepository.save(payment);
+        order.addPayment(savedPayment);
+
+        // Update order tip if this payment includes tip
+        if (tipAmount.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal currentTip = order.getTipAmount() != null ? order.getTipAmount() : BigDecimal.ZERO;
+            order.setTipAmount(currentTip.add(tipAmount));
+            order.setGrandTotal(order.getTotal().add(order.getTipAmount()));
+        }
+
+        // Check if order is fully paid
+        if (order.isFullyPaid()) {
+            order.setPaymentStatus(PaymentStatus.COMPLETED);
+            log.info("Order {} is now fully paid", orderId);
+        }
+
+        orderRepository.save(order);
+
+        return buildPOSPaymentResponse(savedPayment, order);
+    }
+
+    /**
+     * Get all payments for an order (POS)
+     */
+    @Transactional(readOnly = true)
+    public List<PaymentResponseDTO.PaymentSummary> getPOSOrderPayments(Long orderId) {
+        List<Payment> payments = paymentRepository.findByOrderId(orderId);
+
+        return payments.stream()
+                .map(this::mapToPaymentSummary)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get payment summary for an order (POS)
+     */
+    @Transactional(readOnly = true)
+    public PaymentResponseDTO getPOSPaymentSummary(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+
+        List<Payment> payments = paymentRepository.findByOrderId(orderId);
+        List<PaymentResponseDTO.PaymentSummary> paymentSummaries = payments.stream()
+                .map(this::mapToPaymentSummary)
+                .collect(Collectors.toList());
+
+        BigDecimal grandTotal = order.getGrandTotal() != null ? order.getGrandTotal() : order.getTotal();
+
+        return PaymentResponseDTO.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .orderTotal(order.getTotal())
+                .orderGrandTotal(grandTotal)
+                .totalPaid(order.getTotalPaid())
+                .remainingBalance(order.getRemainingBalance())
+                .orderFullyPaid(order.isFullyPaid())
+                .allPayments(paymentSummaries)
+                .build();
+    }
+
+    /**
+     * Process a refund (POS)
+     */
+    @Transactional
+    public PaymentResponseDTO processPOSRefund(Long orderId, RefundRequestDTO request) {
+        log.info("Processing {} refund for order {}: reason={}",
+                request.getType(), orderId, request.getReason());
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+
+        BigDecimal refundAmount;
+
+        switch (request.getType()) {
+            case FULL:
+                refundAmount = order.getTotalPaid();
+                break;
+            case PARTIAL:
+                if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new IllegalArgumentException("Refund amount must be specified for partial refunds");
+                }
+                if (request.getAmount().compareTo(order.getTotalPaid()) > 0) {
+                    throw new IllegalArgumentException("Refund amount cannot exceed total paid");
+                }
+                refundAmount = request.getAmount();
+                break;
+            case ITEMS:
+                if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
+                    throw new IllegalArgumentException("Item IDs must be specified for item refunds");
+                }
+                refundAmount = calculateItemsRefundAmount(order, request.getItemIds());
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid refund type");
+        }
+
+        // Apply refund to payments (starting with most recent)
+        List<Payment> completedPayments = paymentRepository.findByOrderIdAndStatus(orderId, PaymentStatus.COMPLETED);
+        BigDecimal remainingRefund = refundAmount;
+
+        for (Payment payment : completedPayments) {
+            if (remainingRefund.compareTo(BigDecimal.ZERO) <= 0) break;
+
+            BigDecimal availableToRefund = payment.getNetAmount();
+            BigDecimal toRefund = remainingRefund.min(availableToRefund);
+
+            BigDecimal currentRefunded = payment.getRefundedAmount() != null ?
+                    payment.getRefundedAmount() : BigDecimal.ZERO;
+            payment.setRefundedAmount(currentRefunded.add(toRefund));
+            payment.setRefundReason(request.getReason());
+            payment.setRefundedAt(LocalDateTime.now());
+
+            // Update payment status
+            if (payment.getRefundedAmount().compareTo(payment.getTotalWithTip()) >= 0) {
+                payment.setStatus(PaymentStatus.REFUNDED);
+            } else {
+                payment.setStatus(PaymentStatus.PARTIALLY_REFUNDED);
+            }
+
+            paymentRepository.save(payment);
+            remainingRefund = remainingRefund.subtract(toRefund);
+
+            log.info("Refunded {} from payment {}", toRefund, payment.getId());
+        }
+
+        // Update order payment status
+        updateOrderPaymentStatus(order);
+        orderRepository.save(order);
+
+        return getPOSPaymentSummary(orderId);
+    }
+
+    /**
+     * Void an order (cancel all payments)
+     */
+    @Transactional
+    public PaymentResponseDTO voidOrder(Long orderId, String reason, String processedBy) {
+        log.info("Voiding order {}: reason={}", orderId, reason);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+
+        // Void all payments
+        List<Payment> payments = paymentRepository.findByOrderId(orderId);
+        for (Payment payment : payments) {
+            payment.setStatus(PaymentStatus.VOIDED);
+            payment.setRefundedAmount(payment.getTotalWithTip());
+            payment.setRefundReason(reason);
+            payment.setRefundedAt(LocalDateTime.now());
+            paymentRepository.save(payment);
+        }
+
+        // Update order status
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setPaymentStatus(PaymentStatus.VOIDED);
+        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledBy(processedBy);
+        order.setCancellationReason(reason);
+        orderRepository.save(order);
+
+        return getPOSPaymentSummary(orderId);
+    }
+
+    /**
+     * Add tip to order
+     */
+    @Transactional
+    public PaymentResponseDTO addTip(Long orderId, BigDecimal tipAmount) {
+        log.info("Adding tip {} to order {}", tipAmount, orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+
+        if (tipAmount == null || tipAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Tip amount must be greater than 0");
+        }
+
+        // Update order tip
+        BigDecimal currentTip = order.getTipAmount() != null ? order.getTipAmount() : BigDecimal.ZERO;
+        order.setTipAmount(currentTip.add(tipAmount));
+        order.setGrandTotal(order.getTotal().add(order.getTipAmount()));
+        orderRepository.save(order);
+
+        return getPOSPaymentSummary(orderId);
+    }
+
+    // ==================== POS Helper Methods ====================
+
+    private void validateOrderForPayment(Order order) {
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("Cannot process payment for cancelled order");
+        }
+        if (order.isFullyPaid()) {
+            throw new IllegalStateException("Order is already fully paid");
+        }
+    }
+
+    private String generateTransactionId(PaymentMethod method) {
+        String prefix = switch (method) {
+            case CASH -> "CASH";
+            case CARD, CREDIT_CARD, DEBIT_CARD -> "CARD";
+            case MOBILE_PAYMENT -> "MOBILE";
+            default -> "PAY";
+        };
+        return prefix + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+
+    private BigDecimal calculateItemsRefundAmount(Order order, List<Long> itemIds) {
+        return order.getItems().stream()
+                .filter(item -> itemIds.contains(item.getId()))
+                .map(OrderItem::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void updateOrderPaymentStatus(Order order) {
+        List<Payment> payments = paymentRepository.findByOrderId(order.getId());
+
+        boolean allRefunded = payments.stream()
+                .allMatch(p -> p.getStatus() == PaymentStatus.REFUNDED || p.getStatus() == PaymentStatus.VOIDED);
+        boolean anyPartial = payments.stream()
+                .anyMatch(p -> p.getStatus() == PaymentStatus.PARTIALLY_REFUNDED);
+
+        if (allRefunded) {
+            order.setPaymentStatus(PaymentStatus.REFUNDED);
+        } else if (anyPartial) {
+            order.setPaymentStatus(PaymentStatus.PARTIALLY_REFUNDED);
+        }
+    }
+
+    private PaymentResponseDTO buildPOSPaymentResponse(Payment payment, Order order) {
+        List<Payment> allPayments = paymentRepository.findByOrderId(order.getId());
+        List<PaymentResponseDTO.PaymentSummary> paymentSummaries = allPayments.stream()
+                .map(this::mapToPaymentSummary)
+                .collect(Collectors.toList());
+
+        BigDecimal grandTotal = order.getGrandTotal() != null ? order.getGrandTotal() : order.getTotal();
+
+        return PaymentResponseDTO.builder()
+                .paymentId(payment.getId())
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .method(payment.getMethod())
+                .status(payment.getStatus())
+                .amount(payment.getAmount())
+                .tipAmount(payment.getTipAmount())
+                .totalWithTip(payment.getTotalWithTip())
+                .amountTendered(payment.getAmountTendered())
+                .changeDue(payment.getChangeDue())
+                .transactionId(payment.getTransactionId())
+                .processedBy(payment.getProcessedBy())
+                .paidAt(payment.getPaidAt())
+                .orderTotal(order.getTotal())
+                .orderGrandTotal(grandTotal)
+                .totalPaid(order.getTotalPaid())
+                .remainingBalance(order.getRemainingBalance())
+                .orderFullyPaid(order.isFullyPaid())
+                .allPayments(paymentSummaries)
+                .build();
+    }
+
+    private PaymentResponseDTO.PaymentSummary mapToPaymentSummary(Payment payment) {
+        return PaymentResponseDTO.PaymentSummary.builder()
+                .id(payment.getId())
+                .method(payment.getMethod())
+                .status(payment.getStatus())
+                .amount(payment.getAmount())
+                .tipAmount(payment.getTipAmount())
+                .refundedAmount(payment.getRefundedAmount())
+                .paidAt(payment.getPaidAt())
                 .build();
     }
 }

@@ -109,6 +109,13 @@ public class Order {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
+    @Column(name = "tip_amount", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal tipAmount = BigDecimal.ZERO;
+
+    @Column(name = "grand_total", precision = 10, scale = 2)
+    private BigDecimal grandTotal;
+
     @Column(length = 1000)
     private String customerNotes;
 
@@ -158,9 +165,10 @@ public class Order {
     @JsonIgnore
     private DeliveryInfo deliveryInfo;
 
-    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     @JsonIgnore
-    private Payment payment;
+    private List<Payment> payments = new ArrayList<>();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -192,11 +200,34 @@ public class Order {
         }
     }
 
-    public void setPayment(Payment payment) {
-        this.payment = payment;
-        if (payment != null) {
-            payment.setOrder(this);
-        }
+    public void addPayment(Payment payment) {
+        payments.add(payment);
+        payment.setOrder(this);
+    }
+
+    /**
+     * Get total amount paid across all completed payments
+     */
+    public BigDecimal getTotalPaid() {
+        return payments.stream()
+                .filter(p -> p.getStatus() == PaymentStatus.COMPLETED)
+                .map(Payment::getNetAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Get remaining balance to be paid
+     */
+    public BigDecimal getRemainingBalance() {
+        BigDecimal grandTotalAmount = grandTotal != null ? grandTotal : total;
+        return grandTotalAmount.subtract(getTotalPaid());
+    }
+
+    /**
+     * Check if order is fully paid
+     */
+    public boolean isFullyPaid() {
+        return getRemainingBalance().compareTo(BigDecimal.ZERO) <= 0;
     }
 
     /**
@@ -211,5 +242,10 @@ public class Order {
         if (discount == null) discount = BigDecimal.ZERO;
         if (total == null) total = BigDecimal.ZERO;
         if (bonusUsed == null) bonusUsed = BigDecimal.ZERO;
+        if (tipAmount == null) tipAmount = BigDecimal.ZERO;
+        // Grand total = total + tip
+        if (grandTotal == null) {
+            grandTotal = total.add(tipAmount != null ? tipAmount : BigDecimal.ZERO);
+        }
     }
 }

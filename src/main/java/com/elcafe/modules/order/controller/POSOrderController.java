@@ -2,10 +2,14 @@ package com.elcafe.modules.order.controller;
 
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.ModifyOrderItemRequest;
+import com.elcafe.modules.order.dto.pos.PaymentRequestDTO;
+import com.elcafe.modules.order.dto.pos.PaymentResponseDTO;
 import com.elcafe.modules.order.dto.pos.POSKitchenStatusDTO;
 import com.elcafe.modules.order.dto.pos.POSOrderResponse;
 import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
+import com.elcafe.modules.order.dto.pos.RefundRequestDTO;
 import com.elcafe.modules.order.dto.pos.SplitBillDTO;
+import com.elcafe.modules.order.service.PaymentService;
 import com.elcafe.modules.order.service.POSOrderService;
 
 import java.util.List;
@@ -27,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 public class POSOrderController {
 
     private final POSOrderService posOrderService;
+    private final PaymentService paymentService;
 
     @PostMapping
     @Operation(
@@ -177,5 +182,91 @@ public class POSOrderController {
         SplitBillDTO.SplitBillResponse response = posOrderService.splitBill(orderId, request);
 
         return ResponseEntity.ok(ApiResponse.success("Bill split successfully", response));
+    }
+
+    // ============== Payment Endpoints ==============
+
+    @PostMapping("/{orderId}/payments")
+    @Operation(
+            summary = "Process payment",
+            description = "Process a payment for an order (supports split payments)"
+    )
+    public ResponseEntity<ApiResponse<PaymentResponseDTO>> processPayment(
+            @PathVariable Long orderId,
+            @Valid @RequestBody PaymentRequestDTO request) {
+
+        log.info("Processing payment for order {}: method={}, amount={}",
+                orderId, request.getMethod(), request.getAmount());
+
+        PaymentResponseDTO response = paymentService.processPOSPayment(orderId, request);
+
+        return ResponseEntity.ok(ApiResponse.success("Payment processed successfully", response));
+    }
+
+    @GetMapping("/{orderId}/payments")
+    @Operation(
+            summary = "Get order payments",
+            description = "Get all payments and payment summary for an order"
+    )
+    public ResponseEntity<ApiResponse<PaymentResponseDTO>> getOrderPayments(
+            @PathVariable Long orderId) {
+
+        log.info("Getting payments for order: {}", orderId);
+
+        PaymentResponseDTO summary = paymentService.getPOSPaymentSummary(orderId);
+
+        return ResponseEntity.ok(ApiResponse.success("Payments retrieved", summary));
+    }
+
+    @PostMapping("/{orderId}/refund")
+    @Operation(
+            summary = "Process refund",
+            description = "Process a full, partial, or item-based refund for an order"
+    )
+    public ResponseEntity<ApiResponse<PaymentResponseDTO>> processRefund(
+            @PathVariable Long orderId,
+            @Valid @RequestBody RefundRequestDTO request) {
+
+        log.info("Processing refund for order {}: type={}", orderId, request.getType());
+
+        PaymentResponseDTO response = paymentService.processPOSRefund(orderId, request);
+
+        return ResponseEntity.ok(ApiResponse.success("Refund processed successfully", response));
+    }
+
+    @PostMapping("/{orderId}/void")
+    @Operation(
+            summary = "Void order",
+            description = "Void an order completely (cancels all payments)"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> voidOrder(
+            @PathVariable Long orderId,
+            @RequestParam String reason,
+            @RequestParam String voidedBy) {
+
+        log.info("Voiding order {}: reason={}", orderId, reason);
+
+        paymentService.voidOrder(orderId, reason, voidedBy);
+
+        // Return updated order
+        POSOrderResponse order = posOrderService.getOrderById(orderId);
+
+        return ResponseEntity.ok(ApiResponse.success("Order voided successfully", order));
+    }
+
+    @PostMapping("/{orderId}/tip")
+    @Operation(
+            summary = "Add tip",
+            description = "Add or update tip for an order"
+    )
+    public ResponseEntity<ApiResponse<PaymentResponseDTO>> addTip(
+            @PathVariable Long orderId,
+            @RequestParam java.math.BigDecimal tipAmount) {
+
+        log.info("Adding tip to order {}: amount={}", orderId, tipAmount);
+
+        PaymentResponseDTO summary = paymentService.addTip(orderId, tipAmount);
+
+        return ResponseEntity.ok(ApiResponse.success("Tip added successfully", summary));
     }
 }

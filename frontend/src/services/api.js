@@ -315,6 +315,14 @@ export const posAPI = {
     api.patch(`/pos/orders/${orderId}/items/${itemId}/quantity`, null, { params: { quantity } }),
   // Split Bill
   splitBill: (orderId, splitData) => api.post(`/pos/orders/${orderId}/split`, splitData),
+  // Payment Processing
+  processPayment: (orderId, paymentData) => api.post(`/pos/orders/${orderId}/payments`, paymentData),
+  getPayments: (orderId) => api.get(`/pos/orders/${orderId}/payments`),
+  processRefund: (orderId, refundData) => api.post(`/pos/orders/${orderId}/refund`, refundData),
+  voidOrder: (orderId, reason, voidedBy) =>
+    api.post(`/pos/orders/${orderId}/void`, null, { params: { reason, voidedBy } }),
+  addTip: (orderId, tipAmount) =>
+    api.post(`/pos/orders/${orderId}/tip`, null, { params: { tipAmount } }),
 };
 
 export const waiterOrderAPI = {

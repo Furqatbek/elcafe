@@ -28,7 +28,7 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     @JsonIgnore
     private Order order;
@@ -45,6 +45,20 @@ public class Payment {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
+    @Column(name = "tip_amount", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal tipAmount = BigDecimal.ZERO;
+
+    @Column(name = "refunded_amount", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal refundedAmount = BigDecimal.ZERO;
+
+    @Column(name = "amount_tendered", precision = 10, scale = 2)
+    private BigDecimal amountTendered;
+
+    @Column(name = "change_due", precision = 10, scale = 2)
+    private BigDecimal changeDue;
+
     @Column(length = 200)
     private String transactionId;
 
@@ -53,6 +67,12 @@ public class Payment {
 
     @Column(columnDefinition = "TEXT")
     private String paymentDetails;
+
+    @Column(name = "refund_reason", length = 500)
+    private String refundReason;
+
+    @Column(name = "processed_by", length = 100)
+    private String processedBy;
 
     private LocalDateTime paidAt;
 
@@ -67,4 +87,20 @@ public class Payment {
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * Get total payment including tip
+     */
+    public BigDecimal getTotalWithTip() {
+        BigDecimal tip = tipAmount != null ? tipAmount : BigDecimal.ZERO;
+        return amount.add(tip);
+    }
+
+    /**
+     * Get net amount after refunds
+     */
+    public BigDecimal getNetAmount() {
+        BigDecimal refunded = refundedAmount != null ? refundedAmount : BigDecimal.ZERO;
+        return getTotalWithTip().subtract(refunded);
+    }
 }
