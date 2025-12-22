@@ -15,9 +15,9 @@ import java.util.Optional;
 @Repository
 public interface PayrollEntryRepository extends JpaRepository<PayrollEntry, Long> {
 
-    List<PayrollEntry> findByRestaurantId(Long restaurantId);
+    List<PayrollEntry> findByRestaurant_Id(Long restaurantId);
 
-    Page<PayrollEntry> findByRestaurantId(Long restaurantId, Pageable pageable);
+    Page<PayrollEntry> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
     Optional<PayrollEntry> findByPayrollNumber(String payrollNumber);
 
@@ -25,12 +25,12 @@ public interface PayrollEntryRepository extends JpaRepository<PayrollEntry, Long
 
     Page<PayrollEntry> findByEmployeeId(Long employeeId, Pageable pageable);
 
-    List<PayrollEntry> findByRestaurantIdAndStatus(Long restaurantId, PayrollEntry.PaymentStatus status);
+    List<PayrollEntry> findByRestaurant_IdAndStatus(Long restaurantId, PayrollEntry.PaymentStatus status);
 
-    List<PayrollEntry> findByRestaurantIdAndPayPeriodStartBetween(
+    List<PayrollEntry> findByRestaurant_IdAndPayPeriodStartBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
-    List<PayrollEntry> findByRestaurantIdAndPayPeriodEndBetween(
+    List<PayrollEntry> findByRestaurant_IdAndPayPeriodEndBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
     List<PayrollEntry> findByEmployeeIdAndPayPeriodStartBetween(

@@ -12,11 +12,11 @@ import java.util.Optional;
 @Repository
 public interface AccountingPeriodRepository extends JpaRepository<AccountingPeriod, Long> {
 
-    List<AccountingPeriod> findByRestaurantId(Long restaurantId);
+    List<AccountingPeriod> findByRestaurant_Id(Long restaurantId);
 
-    List<AccountingPeriod> findByRestaurantIdAndStatus(Long restaurantId, AccountingPeriod.Status status);
+    List<AccountingPeriod> findByRestaurant_IdAndStatus(Long restaurantId, AccountingPeriod.Status status);
 
-    List<AccountingPeriod> findByRestaurantIdAndPeriodType(Long restaurantId, AccountingPeriod.PeriodType periodType);
+    List<AccountingPeriod> findByRestaurant_IdAndPeriodType(Long restaurantId, AccountingPeriod.PeriodType periodType);
 
     @Query("SELECT ap FROM FinancialAccountingPeriod ap WHERE ap.restaurant.id = :restaurantId " +
            "AND ap.status = 'OPEN' AND :date BETWEEN ap.startDate AND ap.endDate")

@@ -262,7 +262,7 @@ public class POSuggestionService {
                 PurchaseOrder.Status.PARTIALLY_RECEIVED
         );
 
-        List<PurchaseOrder> pendingPOs = purchaseOrderRepository.findByRestaurantIdAndStatusIn(
+        List<PurchaseOrder> pendingPOs = purchaseOrderRepository.findByRestaurant_IdAndStatusIn(
                 restaurantId, pendingStatuses);
 
         Set<Long> ingredientIds = new HashSet<>();

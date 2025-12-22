@@ -239,7 +239,7 @@ public class PurchaseOrderService {
     }
 
     public List<PurchaseOrder> getPurchaseOrdersByRestaurant(Long restaurantId) {
-        return purchaseOrderRepository.findByRestaurantId(restaurantId);
+        return purchaseOrderRepository.findByRestaurant_Id(restaurantId);
     }
 
     public PurchaseOrder getPurchaseOrderById(Long id) {
@@ -317,7 +317,7 @@ public class PurchaseOrderService {
 
     private String generatePoNumber(Long restaurantId) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        long count = purchaseOrderRepository.findByRestaurantId(restaurantId).stream()
+        long count = purchaseOrderRepository.findByRestaurant_Id(restaurantId).stream()
                 .filter(po -> po.getPoNumber().startsWith("PO-" + datePrefix))
                 .count();
         return String.format("PO-%s-%04d", datePrefix, count + 1);

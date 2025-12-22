@@ -78,7 +78,7 @@ public class DashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Fetch payroll
-        List<PayrollEntry> payrollEntries = payrollRepository.findByRestaurantIdAndPayPeriodEndBetween(
+        List<PayrollEntry> payrollEntries = payrollRepository.findByRestaurant_IdAndPayPeriodEndBetween(
                 restaurantId, startDate, endDate);
 
         BigDecimal totalPayroll = payrollEntries.stream()

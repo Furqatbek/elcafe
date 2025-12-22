@@ -14,21 +14,21 @@ import java.util.Optional;
 @Repository
 public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, Long> {
 
-    List<PurchaseOrder> findByRestaurantId(Long restaurantId);
+    List<PurchaseOrder> findByRestaurant_Id(Long restaurantId);
 
-    Page<PurchaseOrder> findByRestaurantId(Long restaurantId, Pageable pageable);
+    Page<PurchaseOrder> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
     Optional<PurchaseOrder> findByPoNumber(String poNumber);
 
-    List<PurchaseOrder> findByRestaurantIdAndStatus(Long restaurantId, PurchaseOrder.Status status);
+    List<PurchaseOrder> findByRestaurant_IdAndStatus(Long restaurantId, PurchaseOrder.Status status);
 
-    List<PurchaseOrder> findByRestaurantIdAndStatusIn(Long restaurantId, List<PurchaseOrder.Status> statuses);
+    List<PurchaseOrder> findByRestaurant_IdAndStatusIn(Long restaurantId, List<PurchaseOrder.Status> statuses);
 
-    List<PurchaseOrder> findByRestaurantIdAndPaymentStatus(Long restaurantId, PurchaseOrder.PaymentStatus paymentStatus);
+    List<PurchaseOrder> findByRestaurant_IdAndPaymentStatus(Long restaurantId, PurchaseOrder.PaymentStatus paymentStatus);
 
-    List<PurchaseOrder> findByRestaurantIdAndSupplierName(Long restaurantId, String supplierName);
+    List<PurchaseOrder> findByRestaurant_IdAndSupplierName(Long restaurantId, String supplierName);
 
-    List<PurchaseOrder> findByRestaurantIdAndOrderDateBetween(
+    List<PurchaseOrder> findByRestaurant_IdAndOrderDateBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
     @Query("SELECT po FROM FinancialPurchaseOrder po WHERE po.restaurant.id = :restaurantId " +

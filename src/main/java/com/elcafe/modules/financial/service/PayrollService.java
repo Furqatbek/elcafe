@@ -108,7 +108,7 @@ public class PayrollService {
     }
 
     public List<PayrollEntry> getPayrollEntriesByRestaurant(Long restaurantId) {
-        return payrollRepository.findByRestaurantId(restaurantId);
+        return payrollRepository.findByRestaurant_Id(restaurantId);
     }
 
     public List<PayrollEntry> getPayrollEntriesByEmployee(Long employeeId) {
@@ -116,7 +116,7 @@ public class PayrollService {
     }
 
     public List<PayrollEntry> getPayrollEntriesByDateRange(Long restaurantId, LocalDate startDate, LocalDate endDate) {
-        return payrollRepository.findByRestaurantIdAndPayPeriodStartBetween(restaurantId, startDate, endDate);
+        return payrollRepository.findByRestaurant_IdAndPayPeriodStartBetween(restaurantId, startDate, endDate);
     }
 
     public List<PayrollEntry> getPendingPayrolls(Long restaurantId) {
@@ -168,7 +168,7 @@ public class PayrollService {
 
     private String generatePayrollNumber(Long restaurantId) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        long count = payrollRepository.findByRestaurantId(restaurantId).stream()
+        long count = payrollRepository.findByRestaurant_Id(restaurantId).stream()
                 .filter(pr -> pr.getPayrollNumber().startsWith("PAY-" + datePrefix))
                 .count();
         return String.format("PAY-%s-%04d", datePrefix, count + 1);
