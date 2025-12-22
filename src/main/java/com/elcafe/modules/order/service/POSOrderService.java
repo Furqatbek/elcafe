@@ -804,7 +804,7 @@ public class POSOrderService {
         // Update order status to DELIVERED/COMPLETED if not already
         if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.CANCELLED) {
             order.setStatus(OrderStatus.DELIVERED);
-            order.setDeliveredAt(java.time.LocalDateTime.now());
+            order.setCompletedAt(java.time.LocalDateTime.now());
         }
 
         // Release the primary dining table

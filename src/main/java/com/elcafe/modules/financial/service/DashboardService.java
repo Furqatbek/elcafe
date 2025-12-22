@@ -395,7 +395,7 @@ public class DashboardService {
 
     private DashboardResponse.InventoryAlerts calculateInventoryAlerts(Long restaurantId) {
         // Fetch all active ingredients
-        List<Ingredient> allIngredients = ingredientRepository.findByRestaurantIdAndActive(restaurantId, true);
+        List<Ingredient> allIngredients = ingredientRepository.findByRestaurantIdAndActiveTrue(restaurantId);
 
         // Filter low stock items (currentStock <= minimumStock)
         List<Ingredient> lowStockIngredients = allIngredients.stream()
@@ -428,7 +428,7 @@ public class DashboardService {
                         .minimumStock(i.getMinimumStock())
                         .reorderLevel(i.getReorderLevel())
                         .unit(i.getUnit())
-                        .supplierName(i.getSupplier() != null ? i.getSupplier().getName() : null)
+                        .supplierName(i.getSupplierEntity() != null ? i.getSupplierEntity().getName() : i.getSupplier())
                         .alertLevel(i.getCurrentStock().compareTo(BigDecimal.ZERO) <= 0 ? "CRITICAL" : "LOW")
                         .build())
                 .collect(Collectors.toList());
