@@ -536,20 +536,9 @@ public class POSOrderService {
         // Save order
         Order savedOrder = orderRepository.save(order);
 
-        // Deduct ingredients
-        try {
-            inventoryService.deductIngredientsForOrderItem(newItem);
-            log.info("Inventory deducted for new item in order: {}", orderId);
-        } catch (Exception e) {
-            log.error("Failed to deduct inventory for added item: {}", e.getMessage());
-        }
-
-        // Update kitchen order
-        try {
-            kitchenOrderService.updateKitchenOrderForModification(savedOrder);
-        } catch (Exception e) {
-            log.error("Failed to update kitchen order: {}", e.getMessage());
-        }
+        // Note: Inventory deduction for individual items is handled at order completion
+        // The full order deduction happens via deductIngredientsForOrder()
+        log.info("Item added to order: {}", orderId);
 
         String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
                 (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
@@ -578,16 +567,8 @@ public class POSOrderService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Item not found with ID: " + itemId));
 
-        // Return ingredients to inventory
-        try {
-            inventoryService.returnIngredientsForOrderItem(itemToRemove);
-            log.info("Inventory returned for removed item: {}", itemId);
-        } catch (Exception e) {
-            log.error("Failed to return inventory for removed item: {}", e.getMessage());
-        }
-
-        // Remove item
-        order.removeItem(itemToRemove);
+        // Remove item from the list
+        order.getItems().remove(itemToRemove);
 
         // Recalculate totals
         recalculateOrderTotals(order);
@@ -595,12 +576,8 @@ public class POSOrderService {
         // Save order
         Order savedOrder = orderRepository.save(order);
 
-        // Update kitchen order
-        try {
-            kitchenOrderService.updateKitchenOrderForModification(savedOrder);
-        } catch (Exception e) {
-            log.error("Failed to update kitchen order: {}", e.getMessage());
-        }
+        // Note: Inventory adjustment for removed items would need to be handled separately
+        log.info("Item {} removed from order: {}", itemId, orderId);
 
         String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
                 (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
@@ -654,25 +631,8 @@ public class POSOrderService {
         // Save order
         Order savedOrder = orderRepository.save(order);
 
-        // Adjust inventory
-        try {
-            if (quantityDiff > 0) {
-                // Deduct additional ingredients
-                inventoryService.deductIngredientsForProduct(item.getProductId(), quantityDiff);
-            } else if (quantityDiff < 0) {
-                // Return ingredients
-                inventoryService.returnIngredientsForProduct(item.getProductId(), -quantityDiff);
-            }
-        } catch (Exception e) {
-            log.error("Failed to adjust inventory: {}", e.getMessage());
-        }
-
-        // Update kitchen order
-        try {
-            kitchenOrderService.updateKitchenOrderForModification(savedOrder);
-        } catch (Exception e) {
-            log.error("Failed to update kitchen order: {}", e.getMessage());
-        }
+        // Note: Inventory adjustment for quantity changes would need to be handled separately
+        log.info("Item {} quantity updated to {} in order: {}", itemId, newQuantity, orderId);
 
         String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
                 (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
