@@ -68,7 +68,7 @@ public class DashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Fetch expenses
-        List<Expense> expenses = expenseRepository.findByRestaurantIdAndExpenseDateBetween(
+        List<Expense> expenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
                 restaurantId, startDate, endDate);
 
         BigDecimal totalExpenses = expenses.stream()
@@ -345,7 +345,7 @@ public class DashboardService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Get previous period expenses
-        List<Expense> prevExpenses = expenseRepository.findByRestaurantIdAndExpenseDateBetween(
+        List<Expense> prevExpenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
                 restaurantId, prevStartDate, prevEndDate);
 
         BigDecimal prevExpenseTotal = prevExpenses.stream()
