@@ -50,13 +50,16 @@ export default function KitchenDashboard() {
 
   useEffect(() => {
     loadRestaurants();
-    const interval = setInterval(() => {
-      if (selectedRestaurant) {
-        loadOrders();
-      }
-    }, 10000); // Refresh every 10 seconds
+  }, []);
 
-    return () => clearInterval(interval);
+  useEffect(() => {
+    if (selectedRestaurant) {
+      loadOrders(); // Load orders immediately when restaurant is selected
+      const interval = setInterval(() => {
+        loadOrders();
+      }, 10000); // Refresh every 10 seconds
+      return () => clearInterval(interval);
+    }
   }, [selectedRestaurant]);
 
   const loadRestaurants = async () => {
