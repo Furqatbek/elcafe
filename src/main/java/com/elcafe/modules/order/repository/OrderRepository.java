@@ -104,4 +104,10 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
            "GROUP BY CAST(o.createdAt AS LocalDate) " +
            "ORDER BY CAST(o.createdAt AS LocalDate) DESC")
     List<Object[]> findDailyRevenueByWaiter(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
+
+    // POS: Find open dine-in orders for a restaurant
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.diningTable IS NOT NULL AND o.status IN :statuses ORDER BY o.createdAt DESC")
+    List<Order> findByRestaurantIdAndDiningTableIsNotNullAndStatusIn(
+            @Param("restaurantId") Long restaurantId,
+            @Param("statuses") List<OrderStatus> statuses);
 }

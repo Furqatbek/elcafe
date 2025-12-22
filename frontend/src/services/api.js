@@ -306,6 +306,15 @@ export const posAPI = {
   checkProductAvailability: (productId, restaurantId) =>
     api.get(`/pos/orders/products/${productId}/availability`, { params: { restaurantId } }),
   getKitchenStatus: (orderId) => api.get(`/pos/orders/${orderId}/kitchen-status`),
+  // Order Management
+  getOpenDineInOrders: (restaurantId) => api.get(`/pos/orders/open/${restaurantId}`),
+  getOrderById: (orderId) => api.get(`/pos/orders/${orderId}`),
+  addItemToOrder: (orderId, item) => api.post(`/pos/orders/${orderId}/items`, item),
+  removeItemFromOrder: (orderId, itemId) => api.delete(`/pos/orders/${orderId}/items/${itemId}`),
+  updateItemQuantity: (orderId, itemId, quantity) =>
+    api.patch(`/pos/orders/${orderId}/items/${itemId}/quantity`, null, { params: { quantity } }),
+  // Split Bill
+  splitBill: (orderId, splitData) => api.post(`/pos/orders/${orderId}/split`, splitData),
 };
 
 export const waiterOrderAPI = {

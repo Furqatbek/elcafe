@@ -85,6 +85,9 @@ const usePOSStore = create(
         lastFetched: null,
       },
 
+      // Active Order for modification/split (existing order from backend)
+      activeOrder: null,
+
       // Actions: Order Management
       startNewOrder: (type) => set((state) => ({
         currentOrder: {
@@ -523,6 +526,34 @@ const usePOSStore = create(
           lastUpdated: null,
         },
       }),
+
+      // Actions: Active Order Management (for modifications)
+      setActiveOrder: (order) => set({ activeOrder: order }),
+
+      clearActiveOrder: () => set({ activeOrder: null }),
+
+      // Fetch an existing order by ID
+      fetchOrderById: async (orderId) => {
+        set((s) => ({ ui: { ...s.ui, isLoading: true, error: null } }));
+
+        try {
+          const response = await posAPI.getOrderById(orderId);
+          const order = response.data.data;
+
+          set({
+            activeOrder: order,
+            ui: { ...get().ui, isLoading: false },
+          });
+
+          return { success: true, order };
+        } catch (error) {
+          const errorMessage = error.response?.data?.message || error.message || 'Failed to load order';
+          set((s) => ({
+            ui: { ...s.ui, isLoading: false, error: errorMessage },
+          }));
+          return { success: false, error: errorMessage };
+        }
+      },
 
       // Actions: Submit Order to Backend
       submitOrder: async (restaurantId) => {

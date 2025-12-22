@@ -12,6 +12,9 @@ import CartScreen from './screens/CartScreen';
 import OrderDetailsScreen from './screens/OrderDetailsScreen';
 import PaymentScreen from './screens/PaymentScreen';
 import OrderConfirmationScreen from './screens/OrderConfirmationScreen';
+import ActiveOrdersScreen from './screens/ActiveOrdersScreen';
+import OrderModificationScreen from './screens/OrderModificationScreen';
+import SplitBillScreen from './screens/SplitBillScreen';
 
 /**
  * POSApp - Main POS application with screen routing
@@ -99,6 +102,15 @@ const POSApp = () => {
 
       case 'confirmation':
         return <OrderConfirmationScreen />;
+
+      case 'active-orders':
+        return <ActiveOrdersScreen />;
+
+      case 'modify-order':
+        return <OrderModificationScreen />;
+
+      case 'split-bill':
+        return <SplitBillScreen />;
 
       default:
         return <StartOrderScreen />;

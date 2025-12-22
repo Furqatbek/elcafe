@@ -1,10 +1,14 @@
 package com.elcafe.modules.order.controller;
 
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
+import com.elcafe.modules.order.dto.pos.ModifyOrderItemRequest;
 import com.elcafe.modules.order.dto.pos.POSKitchenStatusDTO;
 import com.elcafe.modules.order.dto.pos.POSOrderResponse;
 import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
+import com.elcafe.modules.order.dto.pos.SplitBillDTO;
 import com.elcafe.modules.order.service.POSOrderService;
+
+import java.util.List;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -73,5 +77,105 @@ public class POSOrderController {
         POSKitchenStatusDTO status = posOrderService.getKitchenStatus(orderId);
 
         return ResponseEntity.ok(ApiResponse.success("Kitchen status retrieved", status));
+    }
+
+    // ============== Order Management Endpoints ==============
+
+    @GetMapping("/open/{restaurantId}")
+    @Operation(
+            summary = "Get open dine-in orders",
+            description = "Get all open dine-in orders for a restaurant (orders with tables assigned)"
+    )
+    public ResponseEntity<ApiResponse<List<POSOrderResponse>>> getOpenDineInOrders(
+            @PathVariable Long restaurantId) {
+
+        log.info("Getting open dine-in orders for restaurant: {}", restaurantId);
+
+        List<POSOrderResponse> orders = posOrderService.getOpenDineInOrders(restaurantId);
+
+        return ResponseEntity.ok(ApiResponse.success("Open orders retrieved", orders));
+    }
+
+    @GetMapping("/{orderId}")
+    @Operation(
+            summary = "Get order by ID",
+            description = "Get a specific order by its ID"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> getOrderById(
+            @PathVariable Long orderId) {
+
+        log.info("Getting order by ID: {}", orderId);
+
+        POSOrderResponse order = posOrderService.getOrderById(orderId);
+
+        return ResponseEntity.ok(ApiResponse.success("Order retrieved", order));
+    }
+
+    @PostMapping("/{orderId}/items")
+    @Operation(
+            summary = "Add item to order",
+            description = "Add a new item to an existing order"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> addItemToOrder(
+            @PathVariable Long orderId,
+            @Valid @RequestBody ModifyOrderItemRequest request) {
+
+        log.info("Adding item to order {}: productId={}, quantity={}",
+                orderId, request.getProductId(), request.getQuantity());
+
+        POSOrderResponse order = posOrderService.addItemToOrder(orderId, request);
+
+        return ResponseEntity.ok(ApiResponse.success("Item added to order", order));
+    }
+
+    @DeleteMapping("/{orderId}/items/{itemId}")
+    @Operation(
+            summary = "Remove item from order",
+            description = "Remove an item from an existing order"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> removeItemFromOrder(
+            @PathVariable Long orderId,
+            @PathVariable Long itemId) {
+
+        log.info("Removing item {} from order {}", itemId, orderId);
+
+        POSOrderResponse order = posOrderService.removeItemFromOrder(orderId, itemId);
+
+        return ResponseEntity.ok(ApiResponse.success("Item removed from order", order));
+    }
+
+    @PatchMapping("/{orderId}/items/{itemId}/quantity")
+    @Operation(
+            summary = "Update item quantity",
+            description = "Update the quantity of an item in an existing order"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> updateItemQuantity(
+            @PathVariable Long orderId,
+            @PathVariable Long itemId,
+            @RequestParam Integer quantity) {
+
+        log.info("Updating quantity for item {} in order {} to {}", itemId, orderId, quantity);
+
+        POSOrderResponse order = posOrderService.updateItemQuantity(orderId, itemId, quantity);
+
+        return ResponseEntity.ok(ApiResponse.success("Item quantity updated", order));
+    }
+
+    // ============== Split Bill Endpoints ==============
+
+    @PostMapping("/{orderId}/split")
+    @Operation(
+            summary = "Split bill",
+            description = "Split the bill for an order - by items, evenly, or by custom amounts"
+    )
+    public ResponseEntity<ApiResponse<SplitBillDTO.SplitBillResponse>> splitBill(
+            @PathVariable Long orderId,
+            @Valid @RequestBody SplitBillDTO request) {
+
+        log.info("Splitting bill for order {}: mode={}", orderId, request.getMode());
+
+        SplitBillDTO.SplitBillResponse response = posOrderService.splitBill(orderId, request);
+
+        return ResponseEntity.ok(ApiResponse.success("Bill split successfully", response));
     }
 }

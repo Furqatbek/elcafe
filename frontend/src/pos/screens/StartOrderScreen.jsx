@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Truck, ShoppingBag, UtensilsCrossed, Clock } from 'lucide-react';
+import { Truck, ShoppingBag, UtensilsCrossed, Clock, ClipboardList } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
 
@@ -122,17 +122,24 @@ const StartOrderScreen = () => {
           })}
         </div>
 
-        {/* Recent Orders Quick Access */}
+        {/* Active Orders Quick Access */}
         <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between">
             <h3 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Clock className="w-6 h-6 text-gray-500" />
-              {t('common.recentOrders', 'Recent Orders')}
+              <ClipboardList className="w-6 h-6 text-gray-500" />
+              {t('pos.orders.activeOrders', 'Active Orders')}
             </h3>
+            <TouchButton
+              variant="secondary"
+              size="medium"
+              onClick={() => usePOSStore.getState().setCurrentScreen('active-orders')}
+            >
+              {t('pos.orders.viewActive', 'View Active Orders')}
+            </TouchButton>
           </div>
-          <div className="text-center py-8 text-gray-500">
-            {t('common.noRecentOrders', 'No recent orders to display')}
-          </div>
+          <p className="text-gray-600 mt-2">
+            {t('pos.orders.activeDesc', 'Modify orders, split bills, or process payments for dine-in tables')}
+          </p>
         </div>
 
         {/* Active Order Notice */}

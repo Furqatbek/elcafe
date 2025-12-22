@@ -15,7 +15,9 @@ import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
+import com.elcafe.modules.order.dto.pos.ModifyOrderItemRequest;
 import com.elcafe.modules.order.dto.pos.POSOrderResponse;
+import com.elcafe.modules.order.dto.pos.SplitBillDTO;
 import com.elcafe.modules.order.entity.DeliveryInfo;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
@@ -437,5 +439,386 @@ public class POSOrderService {
         }
 
         return builder.build();
+    }
+
+    // ==================== ORDER MODIFICATION METHODS ====================
+
+    /**
+     * Get open dine-in orders for a restaurant (orders that can be modified)
+     */
+    @Transactional(readOnly = true)
+    public List<POSOrderResponse> getOpenDineInOrders(Long restaurantId) {
+        log.info("Getting open dine-in orders for restaurant: {}", restaurantId);
+
+        List<Order> orders = orderRepository.findByRestaurantIdAndDiningTableIsNotNullAndStatusIn(
+                restaurantId,
+                List.of(OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PREPARING)
+        );
+
+        return orders.stream()
+                .map(order -> mapToResponse(order, "DINE_IN"))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get order by ID for modification
+     */
+    @Transactional(readOnly = true)
+    public POSOrderResponse getOrderById(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        String orderType = order.getDiningTable() != null ? "DINE_IN" :
+                (order.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(order, orderType);
+    }
+
+    /**
+     * Add item to an existing order
+     */
+    @Transactional
+    public POSOrderResponse addItemToOrder(Long orderId, ModifyOrderItemRequest request) {
+        log.info("Adding item to order: {} product: {}", orderId, request.getProductId());
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Check order status allows modification
+        if (!canModifyOrder(order)) {
+            throw new IllegalStateException("Order cannot be modified in status: " + order.getStatus());
+        }
+
+        // Get product
+        Product product = productRepository.findById(request.getProductId())
+                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + request.getProductId()));
+
+        // Check inventory availability
+        List<String> missingIngredients = inventoryService.getMissingIngredients(
+                request.getProductId(), request.getQuantity());
+        if (!missingIngredients.isEmpty()) {
+            throw new IllegalStateException("Insufficient inventory: " + String.join("; ", missingIngredients));
+        }
+
+        // Create order item
+        OrderItem newItem = new OrderItem();
+        newItem.setOrder(order);
+        newItem.setProductId(product.getId());
+        newItem.setProductName(product.getName());
+        newItem.setQuantity(request.getQuantity());
+
+        BigDecimal price = request.getPrice() != null ? request.getPrice() : product.getPrice();
+        newItem.setUnitPrice(price);
+        newItem.setTotalPrice(price.multiply(BigDecimal.valueOf(request.getQuantity())));
+        newItem.setSpecialInstructions(request.getNotes());
+
+        // Add modifiers
+        if (request.getModifiers() != null && !request.getModifiers().isEmpty()) {
+            String modifiers = request.getModifiers().stream()
+                    .map(m -> m.getName() + (m.getPrice() != null && m.getPrice().compareTo(BigDecimal.ZERO) > 0 ?
+                            " (+$" + m.getPrice() + ")" : ""))
+                    .collect(Collectors.joining(", "));
+            newItem.setAddOns(modifiers);
+
+            // Add modifier prices to item total
+            BigDecimal modifierTotal = request.getModifiers().stream()
+                    .filter(m -> m.getPrice() != null)
+                    .map(ModifyOrderItemRequest.ModifierInfo::getPrice)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            newItem.setTotalPrice(newItem.getTotalPrice().add(modifierTotal.multiply(BigDecimal.valueOf(request.getQuantity()))));
+        }
+
+        order.addItem(newItem);
+
+        // Recalculate totals
+        recalculateOrderTotals(order);
+
+        // Save order
+        Order savedOrder = orderRepository.save(order);
+
+        // Deduct ingredients
+        try {
+            inventoryService.deductIngredientsForOrderItem(newItem);
+            log.info("Inventory deducted for new item in order: {}", orderId);
+        } catch (Exception e) {
+            log.error("Failed to deduct inventory for added item: {}", e.getMessage());
+        }
+
+        // Update kitchen order
+        try {
+            kitchenOrderService.updateKitchenOrderForModification(savedOrder);
+        } catch (Exception e) {
+            log.error("Failed to update kitchen order: {}", e.getMessage());
+        }
+
+        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
+                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
+
+    /**
+     * Remove item from an existing order
+     */
+    @Transactional
+    public POSOrderResponse removeItemFromOrder(Long orderId, Long itemId) {
+        log.info("Removing item {} from order: {}", itemId, orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Check order status allows modification
+        if (!canModifyOrder(order)) {
+            throw new IllegalStateException("Order cannot be modified in status: " + order.getStatus());
+        }
+
+        // Find the item
+        OrderItem itemToRemove = order.getItems().stream()
+                .filter(item -> item.getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Item not found with ID: " + itemId));
+
+        // Return ingredients to inventory
+        try {
+            inventoryService.returnIngredientsForOrderItem(itemToRemove);
+            log.info("Inventory returned for removed item: {}", itemId);
+        } catch (Exception e) {
+            log.error("Failed to return inventory for removed item: {}", e.getMessage());
+        }
+
+        // Remove item
+        order.removeItem(itemToRemove);
+
+        // Recalculate totals
+        recalculateOrderTotals(order);
+
+        // Save order
+        Order savedOrder = orderRepository.save(order);
+
+        // Update kitchen order
+        try {
+            kitchenOrderService.updateKitchenOrderForModification(savedOrder);
+        } catch (Exception e) {
+            log.error("Failed to update kitchen order: {}", e.getMessage());
+        }
+
+        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
+                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
+
+    /**
+     * Update item quantity in an existing order
+     */
+    @Transactional
+    public POSOrderResponse updateItemQuantity(Long orderId, Long itemId, Integer newQuantity) {
+        log.info("Updating item {} quantity to {} in order: {}", itemId, newQuantity, orderId);
+
+        if (newQuantity < 1) {
+            return removeItemFromOrder(orderId, itemId);
+        }
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Check order status allows modification
+        if (!canModifyOrder(order)) {
+            throw new IllegalStateException("Order cannot be modified in status: " + order.getStatus());
+        }
+
+        // Find the item
+        OrderItem item = order.getItems().stream()
+                .filter(i -> i.getId().equals(itemId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Item not found with ID: " + itemId));
+
+        int quantityDiff = newQuantity - item.getQuantity();
+
+        if (quantityDiff > 0) {
+            // Adding quantity - check inventory
+            List<String> missingIngredients = inventoryService.getMissingIngredients(
+                    item.getProductId(), quantityDiff);
+            if (!missingIngredients.isEmpty()) {
+                throw new IllegalStateException("Insufficient inventory: " + String.join("; ", missingIngredients));
+            }
+        }
+
+        // Update item
+        item.setQuantity(newQuantity);
+        item.setTotalPrice(item.getUnitPrice().multiply(BigDecimal.valueOf(newQuantity)));
+
+        // Recalculate totals
+        recalculateOrderTotals(order);
+
+        // Save order
+        Order savedOrder = orderRepository.save(order);
+
+        // Adjust inventory
+        try {
+            if (quantityDiff > 0) {
+                // Deduct additional ingredients
+                inventoryService.deductIngredientsForProduct(item.getProductId(), quantityDiff);
+            } else if (quantityDiff < 0) {
+                // Return ingredients
+                inventoryService.returnIngredientsForProduct(item.getProductId(), -quantityDiff);
+            }
+        } catch (Exception e) {
+            log.error("Failed to adjust inventory: {}", e.getMessage());
+        }
+
+        // Update kitchen order
+        try {
+            kitchenOrderService.updateKitchenOrderForModification(savedOrder);
+        } catch (Exception e) {
+            log.error("Failed to update kitchen order: {}", e.getMessage());
+        }
+
+        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
+                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
+
+    private boolean canModifyOrder(Order order) {
+        return order.getStatus() == OrderStatus.PENDING ||
+                order.getStatus() == OrderStatus.ACCEPTED ||
+                order.getStatus() == OrderStatus.PREPARING;
+    }
+
+    private void recalculateOrderTotals(Order order) {
+        BigDecimal subtotal = order.getItems().stream()
+                .map(OrderItem::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        order.setSubtotal(subtotal);
+        // Keep existing tax rate (0 for now)
+        order.setTax(BigDecimal.ZERO);
+        // Keep existing delivery fee
+        order.setTotal(subtotal.add(order.getTax()).add(order.getDeliveryFee()));
+    }
+
+    // ==================== SPLIT BILL METHODS ====================
+
+    /**
+     * Split an order's bill
+     */
+    @Transactional
+    public SplitBillDTO.SplitBillResponse splitBill(Long orderId, SplitBillDTO request) {
+        log.info("Splitting bill for order: {} mode: {}", orderId, request.getMode());
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        return switch (request.getMode()) {
+            case ITEMS -> splitByItems(order, request.getItemSplits());
+            case EVEN -> splitEvenly(order, request.getNumPeople());
+            case AMOUNT -> splitByAmount(order, request.getAmountSplits());
+        };
+    }
+
+    private SplitBillDTO.SplitBillResponse splitByItems(Order order, List<SplitBillDTO.ItemSplit> itemSplits) {
+        List<SplitBillDTO.BillSplit> splits = new java.util.ArrayList<>();
+
+        for (SplitBillDTO.ItemSplit itemSplit : itemSplits) {
+            List<SplitBillDTO.SplitItemInfo> splitItems = new java.util.ArrayList<>();
+            BigDecimal splitTotal = BigDecimal.ZERO;
+
+            for (Long itemId : itemSplit.getItemIds()) {
+                OrderItem item = order.getItems().stream()
+                        .filter(i -> i.getId().equals(itemId))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("Item not found: " + itemId));
+
+                splitItems.add(SplitBillDTO.SplitItemInfo.builder()
+                        .itemId(item.getId())
+                        .productName(item.getProductName())
+                        .quantity(item.getQuantity())
+                        .price(item.getTotalPrice())
+                        .build());
+
+                splitTotal = splitTotal.add(item.getTotalPrice());
+            }
+
+            splits.add(SplitBillDTO.BillSplit.builder()
+                    .personNumber(itemSplit.getPersonNumber())
+                    .amount(splitTotal)
+                    .items(splitItems)
+                    .paid(false)
+                    .build());
+        }
+
+        return SplitBillDTO.SplitBillResponse.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .mode(SplitBillDTO.SplitMode.ITEMS)
+                .originalTotal(order.getTotal())
+                .splits(splits)
+                .build();
+    }
+
+    private SplitBillDTO.SplitBillResponse splitEvenly(Order order, Integer numPeople) {
+        if (numPeople == null || numPeople < 2) {
+            throw new IllegalArgumentException("Number of people must be at least 2");
+        }
+
+        BigDecimal amountPerPerson = order.getTotal().divide(
+                BigDecimal.valueOf(numPeople), 2, java.math.RoundingMode.HALF_UP);
+
+        // Handle rounding - last person pays any remainder
+        BigDecimal remainder = order.getTotal().subtract(
+                amountPerPerson.multiply(BigDecimal.valueOf(numPeople)));
+
+        List<SplitBillDTO.BillSplit> splits = new java.util.ArrayList<>();
+        for (int i = 1; i <= numPeople; i++) {
+            BigDecimal amount = amountPerPerson;
+            if (i == numPeople && remainder.compareTo(BigDecimal.ZERO) != 0) {
+                amount = amount.add(remainder);
+            }
+
+            splits.add(SplitBillDTO.BillSplit.builder()
+                    .personNumber(i)
+                    .amount(amount)
+                    .items(java.util.Collections.emptyList())
+                    .paid(false)
+                    .build());
+        }
+
+        return SplitBillDTO.SplitBillResponse.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .mode(SplitBillDTO.SplitMode.EVEN)
+                .originalTotal(order.getTotal())
+                .splits(splits)
+                .build();
+    }
+
+    private SplitBillDTO.SplitBillResponse splitByAmount(Order order, List<SplitBillDTO.AmountSplit> amountSplits) {
+        // Validate total matches
+        BigDecimal totalSplitAmount = amountSplits.stream()
+                .map(SplitBillDTO.AmountSplit::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (totalSplitAmount.compareTo(order.getTotal()) != 0) {
+            throw new IllegalArgumentException("Split amounts (" + totalSplitAmount +
+                    ") do not match order total (" + order.getTotal() + ")");
+        }
+
+        List<SplitBillDTO.BillSplit> splits = amountSplits.stream()
+                .map(as -> SplitBillDTO.BillSplit.builder()
+                        .personNumber(as.getPersonNumber())
+                        .amount(as.getAmount())
+                        .items(java.util.Collections.emptyList())
+                        .paid(false)
+                        .build())
+                .collect(Collectors.toList());
+
+        return SplitBillDTO.SplitBillResponse.builder()
+                .orderId(order.getId())
+                .orderNumber(order.getOrderNumber())
+                .mode(SplitBillDTO.SplitMode.AMOUNT)
+                .originalTotal(order.getTotal())
+                .splits(splits)
+                .build();
     }
 }
