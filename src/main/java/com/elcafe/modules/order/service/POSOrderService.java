@@ -77,7 +77,7 @@ public class POSOrderService {
         order.setSubtotal(request.getSubtotal() != null ? request.getSubtotal() : BigDecimal.ZERO);
         order.setTax(request.getTax() != null ? request.getTax() : BigDecimal.ZERO);
         order.setDeliveryFee(request.getDeliveryFee() != null ? request.getDeliveryFee() : BigDecimal.ZERO);
-        order.setDiscount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO);
+        order.setDiscount(BigDecimal.ZERO); // Discount applied separately if needed
         order.setTotal(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO);
 
         // Add order items
