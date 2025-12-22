@@ -176,6 +176,7 @@ export default function Layout() {
         { label: t('nav.sub.purchaseOrders'), icon: FileText, path: '/finance/purchase-orders' },
         { label: t('nav.sub.expenses'), icon: Receipt, path: '/finance/expenses' },
         { label: t('nav.sub.financialReports'), icon: BarChart3, path: '/finance/reports' },
+        { label: t('nav.sub.pricing'), icon: Calculator, path: '/finance/pricing' },
       ],
     },
     {

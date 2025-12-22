@@ -594,6 +594,24 @@ export const valuationAPI = {
     }),
 };
 
+export const pricingAPI = {
+  // Pricing Analytics
+  getAnalytics: (restaurantId, params = {}) =>
+    api.get(`/pricing/analytics/${restaurantId}`, { params }),
+  getRecommendations: (restaurantId, targetMargin = null) => {
+    const params = targetMargin ? { targetMargin } : {};
+    return api.get(`/pricing/recommendations/${restaurantId}`, { params });
+  },
+  getProfitability: (restaurantId, params = {}) =>
+    api.get(`/pricing/profitability/${restaurantId}`, { params }),
+  getProductProfitability: (restaurantId, productId, params = {}) =>
+    api.get(`/pricing/profitability/${restaurantId}/product/${productId}`, { params }),
+  calculateCostPlus: (costPrice, targetMarginPercentage) =>
+    api.get('/pricing/calculate/cost-plus', { params: { costPrice, targetMarginPercentage } }),
+  applyPsychologicalPricing: (price) =>
+    api.get('/pricing/calculate/psychological', { params: { price } }),
+};
+
 export const printerAPI = {
   // Printer CRUD
   getPrinters: (restaurantId) => api.get('/settings/printers', { params: { restaurantId } }),
