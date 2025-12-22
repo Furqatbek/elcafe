@@ -45,4 +45,8 @@ public class PurchaseOrderResponse {
     private List<PurchaseOrderItemResponse> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Linked expense information
+    private Long expenseId;
+    private String expenseNumber;
 }

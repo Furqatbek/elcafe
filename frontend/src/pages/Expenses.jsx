@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Check, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Check, Calendar, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Expenses = () => {
   const { t } = useTranslation();
@@ -41,6 +42,7 @@ const Expenses = () => {
     { value: 'RENT', label: t('finance.expenses.categories.RENT') },
     { value: 'UTILITIES', label: t('finance.expenses.categories.UTILITIES') },
     { value: 'SUPPLIES', label: t('finance.expenses.categories.SUPPLIES') },
+    { value: 'INVENTORY', label: t('finance.expenses.categories.INVENTORY', 'Inventory') },
     { value: 'MARKETING', label: t('finance.expenses.categories.MARKETING') },
     { value: 'INSURANCE', label: t('finance.expenses.categories.INSURANCE') },
     { value: 'MAINTENANCE', label: t('finance.expenses.categories.MAINTENANCE') },
@@ -204,6 +206,7 @@ const Expenses = () => {
       RENT: 'bg-purple-100 text-purple-800',
       UTILITIES: 'bg-blue-100 text-blue-800',
       SUPPLIES: 'bg-green-100 text-green-800',
+      INVENTORY: 'bg-emerald-100 text-emerald-800',
       MARKETING: 'bg-pink-100 text-pink-800',
       INSURANCE: 'bg-indigo-100 text-indigo-800',
       MAINTENANCE: 'bg-orange-100 text-orange-800',
@@ -333,6 +336,7 @@ const Expenses = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.category')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.description')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.vendor')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.linkedPO', 'Linked PO')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.amount')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.status')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.actions')}</th>
@@ -341,11 +345,11 @@ const Expenses = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">{t('finance.expenses.loading')}</td>
+                <td colSpan="9" className="px-6 py-4 text-center text-gray-500">{t('finance.expenses.loading')}</td>
               </tr>
             ) : filteredExpenses.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">{t('finance.expenses.noExpenses')}</td>
+                <td colSpan="9" className="px-6 py-4 text-center text-gray-500">{t('finance.expenses.noExpenses')}</td>
               </tr>
             ) : (
               filteredExpenses.map((expense) => (
@@ -355,6 +359,19 @@ const Expenses = () => {
                   <td className="px-6 py-4 whitespace-nowrap">{getCategoryBadge(expense.category)}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{expense.description}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.vendor || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {expense.purchaseOrderId ? (
+                      <Link
+                        to={`/purchase-orders?id=${expense.purchaseOrderId}`}
+                        className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                      >
+                        <LinkIcon size={14} />
+                        <span>PO #{expense.purchaseOrderId}</span>
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.totalAmount?.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(expense.paymentStatus)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

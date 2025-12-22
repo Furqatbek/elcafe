@@ -1,8 +1,10 @@
 package com.elcafe.modules.financial.controller;
 
 import com.elcafe.modules.financial.dto.*;
+import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.entity.PurchaseOrder;
 import com.elcafe.modules.financial.entity.PurchaseOrderItem;
+import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.financial.service.PurchaseOrderService;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.Supplier;
@@ -33,6 +35,7 @@ public class PurchaseOrderController {
     private final RestaurantRepository restaurantRepository;
     private final InventoryIngredientRepository ingredientRepository;
     private final SupplierRepository supplierRepository;
+    private final ExpenseRepository expenseRepository;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -201,6 +204,9 @@ public class PurchaseOrderController {
                         .build())
                 .collect(Collectors.toList());
 
+        // Look up linked expense
+        Expense linkedExpense = expenseRepository.findByPurchaseOrderId(po.getId()).orElse(null);
+
         Supplier supplierEntity = po.getSupplier();
         return PurchaseOrderResponse.builder()
                 .id(po.getId())
@@ -231,6 +237,8 @@ public class PurchaseOrderController {
                 .items(itemResponses)
                 .createdAt(po.getCreatedAt())
                 .updatedAt(po.getUpdatedAt())
+                .expenseId(linkedExpense != null ? linkedExpense.getId() : null)
+                .expenseNumber(linkedExpense != null ? linkedExpense.getExpenseNumber() : null)
                 .build();
     }
 }

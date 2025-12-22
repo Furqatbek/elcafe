@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { financialAPI, inventoryAPI, restaurantAPI, supplierAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { Plus, Edit, Trash2, Check, X, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Check, X, Package, Link as LinkIcon } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const PurchaseOrders = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const location = useLocation();
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [ingredients, setIngredients] = useState([]);
@@ -14,6 +16,7 @@ const PurchaseOrders = () => {
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [prefillProcessed, setPrefillProcessed] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPO, setSelectedPO] = useState(null);
@@ -78,6 +81,56 @@ const PurchaseOrders = () => {
       loadSuppliers(selectedRestaurant);
     }
   }, [selectedRestaurant]);
+
+  // Handle prefill data from inventory navigation
+  useEffect(() => {
+    if (location.state?.prefillData && suppliers.length > 0 && ingredients.length > 0 && !prefillProcessed) {
+      const prefill = location.state.prefillData;
+
+      // Set restaurant if provided
+      if (prefill.restaurantId && !selectedRestaurant) {
+        setSelectedRestaurant(prefill.restaurantId);
+        setFormData(prev => ({ ...prev, restaurantId: prefill.restaurantId }));
+      }
+
+      // Find and set supplier
+      if (prefill.supplierId) {
+        const supplier = suppliers.find(s => s.id === parseInt(prefill.supplierId));
+        if (supplier) {
+          setFormData(prev => ({
+            ...prev,
+            supplierId: supplier.id.toString(),
+            supplierName: supplier.name,
+            supplierContact: supplier.contactPerson ?
+              `${supplier.contactPerson}${supplier.phone ? ' - ' + supplier.phone : ''}` :
+              supplier.phone || '',
+            supplierAddress: supplier.address || ''
+          }));
+        }
+      }
+
+      // Pre-fill the item form with ingredient data
+      if (prefill.ingredientId) {
+        setItemForm({
+          ingredientId: prefill.ingredientId.toString(),
+          itemName: prefill.ingredientName || '',
+          description: '',
+          sku: prefill.sku || '',
+          quantity: prefill.reorderQuantity || 1,
+          unit: prefill.unit || '',
+          unitPrice: prefill.unitPrice || 0,
+          notes: ''
+        });
+      }
+
+      // Open the modal
+      setShowModal(true);
+      setPrefillProcessed(true);
+
+      // Clear the state to prevent re-processing
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, suppliers, ingredients, prefillProcessed, selectedRestaurant]);
 
   const loadRestaurants = async () => {
     try {
@@ -477,17 +530,18 @@ const PurchaseOrders = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.totalAmount')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.status')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.payment')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.purchaseOrders.linkedExpense', 'Linked Expense')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.actions')}</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">{t('finance.common.loading')}</td>
+                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">{t('finance.common.loading')}</td>
               </tr>
             ) : filteredPOs.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">{t('finance.purchaseOrders.noPurchaseOrders')}</td>
+                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">{t('finance.purchaseOrders.noPurchaseOrders')}</td>
               </tr>
             ) : (
               filteredPOs.map((po) => (
@@ -498,6 +552,19 @@ const PurchaseOrders = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{po.totalAmount?.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(po.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getPaymentStatusBadge(po.paymentStatus)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {po.expenseId ? (
+                      <Link
+                        to={`/expenses?id=${po.expenseId}`}
+                        className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                      >
+                        <LinkIcon size={14} />
+                        <span>{po.expenseNumber}</span>
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex gap-2">
                       {po.status === 'DRAFT' && (

@@ -12,6 +12,7 @@ import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.repository.PaymentRepository;
+import com.elcafe.modules.financial.service.RevenueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final RevenueService revenueService;
 
     @Transactional(readOnly = true)
     public Page<PaymentResponse> getAllPayments(Pageable pageable) {
@@ -248,6 +250,15 @@ public class PaymentService {
         if (order.isFullyPaid()) {
             order.setPaymentStatus(PaymentStatus.COMPLETED);
             log.info("Order {} is now fully paid", orderId);
+
+            // Record revenue when order is fully paid
+            try {
+                revenueService.recordOrderRevenue(order);
+                log.info("Revenue recorded for order {}", orderId);
+            } catch (Exception e) {
+                log.error("Failed to record revenue for order {}: {}", orderId, e.getMessage());
+                // Don't fail the payment - revenue recording is non-critical
+            }
         }
 
         orderRepository.save(order);

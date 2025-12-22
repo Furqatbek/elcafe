@@ -44,10 +44,13 @@ import {
   Search,
   TrendingUp,
   History,
+  ShoppingCart,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function InventoryIngredients() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { selectedRestaurant, ingredients, setIngredients, loadIngredients, suppliers, loading } = useInventory();
 
   // Local state
@@ -260,6 +263,26 @@ export default function InventoryIngredients() {
     }
   };
 
+  const handleCreatePO = (ingredient) => {
+    // Navigate to Purchase Orders page with pre-filled data
+    const poData = {
+      restaurantId: selectedRestaurant,
+      supplierId: ingredient.supplierId,
+      ingredientId: ingredient.id,
+      ingredientName: ingredient.name,
+      sku: ingredient.sku,
+      unit: ingredient.unit,
+      unitPrice: ingredient.costPerUnit,
+      reorderQuantity: ingredient.reorderQuantity || Math.max(0, ingredient.reorderLevel - ingredient.currentStock),
+    };
+    // Navigate to purchase orders with state
+    navigate('/purchase-orders', { state: { prefillData: poData } });
+  };
+
+  const isLowStock = (ingredient) => {
+    return ingredient.currentStock <= ingredient.reorderLevel;
+  };
+
   return (
     <InventoryLayout>
       <div className="space-y-6">
@@ -408,6 +431,17 @@ export default function InventoryIngredients() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
+                            {isLowStock(ingredient) && ingredient.supplierId && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCreatePO(ingredient)}
+                                title={t("inventory.buttons.createPO", "Create Purchase Order")}
+                                className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                              >
+                                <ShoppingCart className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
