@@ -1,6 +1,6 @@
 -- Create price change logs table for pricing audit
 CREATE TABLE price_change_logs (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     restaurant_id BIGINT NOT NULL,
     product_id BIGINT NOT NULL,
     product_name VARCHAR(255) NOT NULL,
@@ -17,9 +17,9 @@ CREATE TABLE price_change_logs (
     changed_by VARCHAR(200),
     is_system_generated BOOLEAN DEFAULT FALSE,
     recommendation_accepted BOOLEAN,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    INDEX idx_price_change_restaurant (restaurant_id),
-    INDEX idx_price_change_product (product_id),
-    INDEX idx_price_change_created (created_at)
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_price_change_restaurant ON price_change_logs(restaurant_id);
+CREATE INDEX idx_price_change_product ON price_change_logs(product_id);
+CREATE INDEX idx_price_change_created ON price_change_logs(created_at);
