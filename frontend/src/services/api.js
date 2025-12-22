@@ -323,6 +323,7 @@ export const posAPI = {
     api.post(`/pos/orders/${orderId}/void`, null, { params: { reason, voidedBy } }),
   addTip: (orderId, tipAmount) =>
     api.post(`/pos/orders/${orderId}/tip`, null, { params: { tipAmount } }),
+  closeOrder: (orderId) => api.post(`/pos/orders/${orderId}/close`),
 };
 
 export const waiterOrderAPI = {

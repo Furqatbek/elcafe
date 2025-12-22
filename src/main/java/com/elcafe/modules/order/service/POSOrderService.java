@@ -788,4 +788,55 @@ public class POSOrderService {
                 .splits(splits)
                 .build();
     }
+
+    // ==================== CLOSE ORDER / TABLE METHODS ====================
+
+    /**
+     * Close an order and release the associated table(s)
+     */
+    @Transactional
+    public POSOrderResponse closeOrderAndReleaseTable(Long orderId) {
+        log.info("Closing order and releasing table for order: {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Update order status to DELIVERED/COMPLETED if not already
+        if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.CANCELLED) {
+            order.setStatus(OrderStatus.DELIVERED);
+            order.setDeliveredAt(java.time.LocalDateTime.now());
+        }
+
+        // Release the primary dining table
+        if (order.getDiningTable() != null) {
+            RestaurantTable table = order.getDiningTable();
+            table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+            restaurantTableRepository.save(table);
+            log.info("Table {} marked as AVAILABLE", table.getTableNumber());
+        }
+
+        // Release any additional tables (from tableIds field)
+        if (order.getTableIds() != null && !order.getTableIds().isEmpty()) {
+            List<Long> tableIdList = java.util.Arrays.stream(order.getTableIds().split(","))
+                    .map(String::trim)
+                    .map(Long::parseLong)
+                    .collect(Collectors.toList());
+
+            for (Long tableId : tableIdList) {
+                restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                    table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                    restaurantTableRepository.save(table);
+                    log.info("Table {} marked as AVAILABLE", table.getTableNumber());
+                });
+            }
+        }
+
+        Order savedOrder = orderRepository.save(order);
+
+        // Determine order type for response
+        String orderType = order.getDiningTable() != null ? "DINE_IN" :
+                (order.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
 }

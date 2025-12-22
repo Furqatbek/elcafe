@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { orderAPI, restaurantAPI, menuAPI, tablesAPI } from '../services/api';
+import { orderAPI, restaurantAPI, menuAPI, tablesAPI, posAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -30,7 +30,11 @@ import {
   Truck,
   ShoppingBag,
   Utensils,
-  Printer
+  Printer,
+  Edit,
+  CheckCircle,
+  Trash2,
+  Minus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
@@ -83,6 +87,14 @@ export default function Orders() {
 
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedQuantity, setSelectedQuantity] = useState(1);
+
+  // Edit order items state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [editItems, setEditItems] = useState([]);
+  const [availableProducts, setAvailableProducts] = useState([]);
+  const [newItemProductId, setNewItemProductId] = useState('');
+  const [newItemQuantity, setNewItemQuantity] = useState(1);
 
   useEffect(() => {
     loadOrders();
@@ -206,6 +218,130 @@ export default function Orders() {
       loadOrders();
     } catch (error) {
       console.error('Failed to update order status:', error);
+      alert(t('messages.error'));
+    }
+  };
+
+  // Close table and release it
+  const handleCloseTable = async (orderId) => {
+    if (!confirm(t('orders.confirmCloseTable', 'Close this order and release the table?'))) {
+      return;
+    }
+    try {
+      await posAPI.closeOrder(orderId);
+      loadOrders();
+      alert(t('orders.tableReleased', 'Order closed and table released'));
+    } catch (error) {
+      console.error('Failed to close table:', error);
+      alert(t('messages.error'));
+    }
+  };
+
+  // Open edit items modal
+  const handleEditItems = async (order) => {
+    setEditingOrder(order);
+    setEditItems(order.items?.map(item => ({
+      ...item,
+      isModified: false,
+      isDeleted: false
+    })) || []);
+
+    // Load products for the restaurant
+    if (order.restaurant?.id) {
+      try {
+        const response = await menuAPI.getProductsByRestaurant(order.restaurant.id);
+        setAvailableProducts(response.data.data || []);
+      } catch (error) {
+        console.error('Failed to load products:', error);
+      }
+    }
+
+    setNewItemProductId('');
+    setNewItemQuantity(1);
+    setEditModalOpen(true);
+  };
+
+  // Update item quantity in edit modal
+  const handleUpdateItemQuantity = (itemIndex, newQuantity) => {
+    if (newQuantity < 1) return;
+    setEditItems(prev => prev.map((item, idx) =>
+      idx === itemIndex
+        ? { ...item, quantity: newQuantity, isModified: true }
+        : item
+    ));
+  };
+
+  // Mark item for deletion in edit modal
+  const handleMarkItemDeleted = (itemIndex) => {
+    setEditItems(prev => prev.map((item, idx) =>
+      idx === itemIndex
+        ? { ...item, isDeleted: true }
+        : item
+    ));
+  };
+
+  // Restore deleted item in edit modal
+  const handleRestoreEditItem = (itemIndex) => {
+    setEditItems(prev => prev.map((item, idx) =>
+      idx === itemIndex
+        ? { ...item, isDeleted: false }
+        : item
+    ));
+  };
+
+  // Add new item
+  const handleAddNewItem = () => {
+    if (!newItemProductId) return;
+
+    const product = availableProducts.find(p => p.id === parseInt(newItemProductId));
+    if (!product) return;
+
+    setEditItems(prev => [...prev, {
+      id: null,
+      productId: product.id,
+      productName: product.name,
+      quantity: newItemQuantity,
+      unitPrice: product.basePrice || product.price,
+      totalPrice: (product.basePrice || product.price) * newItemQuantity,
+      isNew: true,
+      isModified: false,
+      isDeleted: false
+    }]);
+
+    setNewItemProductId('');
+    setNewItemQuantity(1);
+  };
+
+  // Save order item changes
+  const handleSaveItemChanges = async () => {
+    if (!editingOrder) return;
+
+    try {
+      // Process deletions
+      for (const item of editItems.filter(i => i.isDeleted && i.id)) {
+        await posAPI.removeItemFromOrder(editingOrder.id, item.id);
+      }
+
+      // Process quantity updates
+      for (const item of editItems.filter(i => i.isModified && !i.isDeleted && !i.isNew && i.id)) {
+        await posAPI.updateItemQuantity(editingOrder.id, item.id, item.quantity);
+      }
+
+      // Process new items
+      for (const item of editItems.filter(i => i.isNew && !i.isDeleted)) {
+        await posAPI.addItemToOrder(editingOrder.id, {
+          productId: item.productId,
+          quantity: item.quantity,
+          specialInstructions: ''
+        });
+      }
+
+      setEditModalOpen(false);
+      setEditingOrder(null);
+      loadOrders();
+      alert(t('orders.itemsUpdated', 'Order items updated successfully'));
+    } catch (error) {
+      console.error('Failed to update order items:', error);
       alert(t('messages.error'));
     }
   };
@@ -552,6 +688,32 @@ export default function Orders() {
                     {t('orders.printReceipt') || 'Print Receipt'}
                   </Button>
 
+                  {/* Edit Items Button - Only for open orders */}
+                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditItems(order)}
+                      className="gap-1"
+                    >
+                      <Edit className="h-4 w-4" />
+                      {t('orders.editItems', 'Edit Items')}
+                    </Button>
+                  )}
+
+                  {/* Close Table Button - Only for dine-in orders that are not yet closed */}
+                  {order.orderType === 'DINE_IN' && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleCloseTable(order.id)}
+                      className="gap-1 text-green-600 hover:text-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      {t('orders.closeTable', 'Close Table')}
+                    </Button>
+                  )}
+
                   {/* Status Update Buttons */}
                   {nextStatusMap[order.status] && (
                     <>
@@ -889,6 +1051,145 @@ export default function Orders() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Order Items Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('orders.editOrderItems', 'Edit Order Items')}</DialogTitle>
+            <DialogDescription>
+              {t('orders.editOrderItemsDesc', 'Modify items in order')} #{editingOrder?.orderNumber}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Current Items */}
+            <div className="space-y-2">
+              <Label>{t('orders.currentItems', 'Current Items')}</Label>
+              {editItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('orders.noItems', 'No items')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {editItems.map((item, index) => (
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        item.isDeleted ? 'bg-red-50 border-red-200 opacity-50' :
+                        item.isNew ? 'bg-green-50 border-green-200' :
+                        item.isModified ? 'bg-yellow-50 border-yellow-200' :
+                        'bg-gray-50 border-gray-200'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <p className={`font-medium ${item.isDeleted ? 'line-through' : ''}`}>
+                          {item.productName}
+                          {item.variantName && ` (${item.variantName})`}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {(item.unitPrice || item.price || 0).toFixed(2)} x {item.quantity} = {((item.unitPrice || item.price || 0) * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+
+                      {!item.isDeleted ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUpdateItemQuantity(index, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUpdateItemQuantity(index, item.quantity + 1)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMarkItemDeleted(index)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRestoreEditItem(index)}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          {t('orders.restore', 'Restore')}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Add New Item */}
+            <div className="border-t pt-4">
+              <Label>{t('orders.addNewItem', 'Add New Item')}</Label>
+              <div className="flex gap-2 mt-2">
+                <Select value={newItemProductId} onValueChange={setNewItemProductId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder={t('orders.selectProduct', 'Select product')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableProducts.map((product) => (
+                      <SelectItem key={product.id} value={product.id.toString()}>
+                        {product.name} - {(product.basePrice || product.price || 0).toFixed(2)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="number"
+                  min="1"
+                  value={newItemQuantity}
+                  onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                  className="w-20"
+                />
+                <Button type="button" onClick={handleAddNewItem} disabled={!newItemProductId}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg font-semibold">
+                <span>{t('orders.newTotal', 'New Total')}</span>
+                <span>
+                  {editItems
+                    .filter(i => !i.isDeleted)
+                    .reduce((sum, item) => sum + (item.unitPrice || item.price || 0) * item.quantity, 0)
+                    .toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button type="button" onClick={handleSaveItemChanges}>
+              {t('orders.saveChanges', 'Save Changes')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

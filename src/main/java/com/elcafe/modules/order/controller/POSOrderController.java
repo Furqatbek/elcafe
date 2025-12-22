@@ -269,4 +269,19 @@ public class POSOrderController {
 
         return ResponseEntity.ok(ApiResponse.success("Tip added successfully", summary));
     }
+
+    @PostMapping("/{orderId}/close")
+    @Operation(
+            summary = "Close order and release table",
+            description = "Close a dine-in order and mark the associated table(s) as available"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> closeOrder(
+            @PathVariable Long orderId) {
+
+        log.info("Closing order and releasing table: orderId={}", orderId);
+
+        POSOrderResponse response = posOrderService.closeOrderAndReleaseTable(orderId);
+
+        return ResponseEntity.ok(ApiResponse.success("Order closed and table released", response));
+    }
 }
