@@ -1,16 +1,18 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Users, Clock, Utensils, AlertCircle, CheckCircle } from 'lucide-react';
+import { Users, Clock, Utensils, AlertCircle, CheckCircle, Check } from 'lucide-react';
 
 /**
  * TableCard - Interactive table component for floor plan display
  * Shows table status, capacity, and current order info
+ * Supports multi-selection mode with visual checkmark
  */
 const TableCard = ({
   table,
   onSelect,
   isSelected = false,
+  multiSelect = false,
   className = '',
   style = {},
 }) => {
@@ -138,6 +140,13 @@ const TableCard = ({
       {currentOrderNumber && (
         <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
           #{currentOrderNumber}
+        </div>
+      )}
+
+      {/* Selection Checkmark (for multi-select mode) */}
+      {isSelected && multiSelect && (
+        <div className="absolute -top-2 -left-2 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg">
+          <Check className="w-5 h-5" />
         </div>
       )}
     </button>

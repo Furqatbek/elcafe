@@ -74,8 +74,8 @@ const usePOSStore = create(
       // Product Availability Cache (productId -> availability info)
       productAvailability: {},
 
-      // Selected Table (for dine-in orders)
-      selectedTable: null,
+      // Selected Tables (for dine-in orders - supports multiple tables)
+      selectedTables: [],
 
       // Floor Plan Data
       floorPlan: {
@@ -97,7 +97,7 @@ const usePOSStore = create(
           total: 0,
           notes: '',
         },
-        selectedTable: null,
+        selectedTables: [],
         // For DINE_IN, go to table selection first; otherwise, go to menu
         ui: { ...state.ui, currentScreen: type === 'DINE_IN' ? 'tables' : 'menu' },
       })),
@@ -354,9 +354,25 @@ const usePOSStore = create(
 
       clearProductAvailability: () => set({ productAvailability: {} }),
 
-      // Actions: Table Selection
+      // Actions: Table Selection (supports multiple tables)
+      toggleTableSelection: (table) => set((state) => {
+        const isSelected = state.selectedTables.some((t) => t.id === table.id);
+        if (isSelected) {
+          // Remove table from selection
+          return {
+            selectedTables: state.selectedTables.filter((t) => t.id !== table.id),
+          };
+        } else {
+          // Add table to selection
+          return {
+            selectedTables: [...state.selectedTables, table],
+          };
+        }
+      }),
+
+      // Legacy single table selection (for backwards compatibility)
       selectTable: (table) => set((state) => ({
-        selectedTable: table,
+        selectedTables: [table],
         customer: {
           ...state.customer,
           tableNumber: table.tableNumber,
@@ -364,8 +380,34 @@ const usePOSStore = create(
         ui: { ...state.ui, currentScreen: 'menu' },
       })),
 
+      // Confirm selected tables and proceed to menu
+      confirmTableSelection: (guestCount) => set((state) => {
+        const tables = state.selectedTables;
+        if (tables.length === 0) return state;
+
+        // Create combined table number (e.g., "1, 2, 3" or "1-2-3")
+        const tableNumbers = tables.map((t) => t.tableNumber).join(', ');
+        const totalCapacity = tables.reduce((sum, t) => sum + (t.capacity || 0), 0);
+
+        return {
+          customer: {
+            ...state.customer,
+            tableNumber: tableNumbers,
+            guestCount: guestCount || totalCapacity,
+            // Store individual table IDs for backend
+            tableIds: tables.map((t) => t.id),
+          },
+          ui: { ...state.ui, currentScreen: 'menu' },
+        };
+      }),
+
+      clearSelectedTables: () => set({
+        selectedTables: [],
+      }),
+
+      // Legacy clear function
       clearSelectedTable: () => set({
-        selectedTable: null,
+        selectedTables: [],
       }),
 
       fetchFloorPlan: async (restaurantId) => {
@@ -586,7 +628,7 @@ const usePOSStore = create(
           changeDue: 0,
           status: 'PENDING',
         },
-        selectedTable: null,
+        selectedTables: [],
         ui: {
           currentScreen: 'start',
           isLoading: false,

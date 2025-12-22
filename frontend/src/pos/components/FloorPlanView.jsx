@@ -7,17 +7,31 @@ import { Grid, LayoutGrid, Filter } from 'lucide-react';
 /**
  * FloorPlanView - Visual table layout component
  * Displays tables in either floor plan (positioned) or grid view
+ * Supports both single and multi-table selection
  */
 const FloorPlanView = ({
   tables,
   sections = [],
-  selectedTable,
+  selectedTable, // Legacy single selection (deprecated)
+  selectedTables = [], // Multi-selection (preferred)
   onSelectTable,
+  multiSelect = false,
   className = '',
 }) => {
   const { t } = useTranslation();
   const [viewMode, setViewMode] = useState('grid'); // 'floor' | 'grid'
   const [selectedSection, setSelectedSection] = useState(null);
+
+  // Normalize selection to array for consistent handling
+  const selectedTableIds = useMemo(() => {
+    if (selectedTables && selectedTables.length > 0) {
+      return new Set(selectedTables.map((t) => t.id));
+    }
+    if (selectedTable) {
+      return new Set([selectedTable.id]);
+    }
+    return new Set();
+  }, [selectedTable, selectedTables]);
 
   // Filter tables by section
   const filteredTables = useMemo(() => {
@@ -52,7 +66,7 @@ const FloorPlanView = ({
 
   // Get table statistics
   const tableStats = useMemo(() => {
-    const stats = { available: 0, occupied: 0, reserved: 0, total: 0 };
+    const stats = { available: 0, occupied: 0, reserved: 0, total: 0, selected: selectedTableIds.size };
     filteredTables.forEach((table) => {
       stats.total++;
       if (table.status === 'AVAILABLE') stats.available++;
@@ -60,7 +74,9 @@ const FloorPlanView = ({
       else if (table.status === 'RESERVED') stats.reserved++;
     });
     return stats;
-  }, [filteredTables]);
+  }, [filteredTables, selectedTableIds]);
+
+  const isTableSelected = (tableId) => selectedTableIds.has(tableId);
 
   return (
     <div className={cn('flex flex-col h-full', className)}>
@@ -101,6 +117,12 @@ const FloorPlanView = ({
             <span className="w-3 h-3 rounded-full bg-yellow-500" />
             <span>{t('pos.tables.reserved', 'Reserved')}: {tableStats.reserved}</span>
           </div>
+          {multiSelect && tableStats.selected > 0 && (
+            <div className="flex items-center gap-2 font-medium text-blue-600">
+              <span className="w-3 h-3 rounded-full bg-blue-500" />
+              <span>{t('pos.tables.selected', 'Selected')}: {tableStats.selected}</span>
+            </div>
+          )}
         </div>
 
         {/* View Toggle */}
@@ -140,7 +162,8 @@ const FloorPlanView = ({
                 <TableCard
                   table={{ ...table, width: '100%', height: '100%' }}
                   onSelect={onSelectTable}
-                  isSelected={selectedTable?.id === table.id}
+                  isSelected={isTableSelected(table.id)}
+                  multiSelect={multiSelect}
                   className="!absolute !relative w-full h-full"
                   style={{ position: 'relative', width: '100%', height: '100%' }}
                 />
@@ -175,7 +198,8 @@ const FloorPlanView = ({
                 key={table.id}
                 table={table}
                 onSelect={onSelectTable}
-                isSelected={selectedTable?.id === table.id}
+                isSelected={isTableSelected(table.id)}
+                multiSelect={multiSelect}
                 style={{
                   left: `${table.positionX || 0}px`,
                   top: `${table.positionY || 0}px`,

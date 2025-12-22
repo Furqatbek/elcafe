@@ -128,7 +128,8 @@ const PaymentScreen = () => {
         };
       } else if (currentOrder.type === 'DINE_IN') {
         orderData.dineInInfo = {
-          tableNumber: customer.tableNumber,
+          tableNumber: customer.tableNumber, // May contain "1, 2, 3" for multiple tables
+          tableIds: customer.tableIds || [], // Array of table IDs for multiple tables
           guestCount: customer.guestCount,
         };
       }
