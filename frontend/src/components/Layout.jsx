@@ -52,6 +52,8 @@ import {
   AlertTriangle,
   ClipboardCheck,
   Trash2,
+  Monitor,
+  Calculator,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -87,6 +89,13 @@ export default function Layout() {
         { label: t('nav.sub.customerAnalytics'), icon: Users, path: '/dashboard/customer-analytics' },
         { label: t('nav.sub.inventoryAnalytics'), icon: Package, path: '/dashboard/inventory-analytics' },
       ],
+    },
+    {
+      id: 'pos',
+      label: t('nav.pos'),
+      icon: Monitor,
+      path: '/pos',
+      subItems: [],
     },
     {
       id: 'orders',
@@ -126,7 +135,6 @@ export default function Layout() {
         { label: t('nav.sub.waiters'), icon: UserCheck, path: '/employees/waiters' },
         { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
         { label: t('nav.sub.courierMap'), icon: MapPin, path: '/courier-map' },
-        { label: t('nav.sub.performance'), icon: Award, path: '/employees/performance' },
       ],
     },
     {
@@ -136,20 +144,9 @@ export default function Layout() {
       path: '/products',
       subItems: [
         { label: t('nav.sub.products'), icon: Package, path: '/products' },
+        { label: t('nav.sub.menu'), icon: Utensils, path: '/menu' },
         { label: t('nav.sub.categories'), icon: List, path: '/catalog/categories' },
         { label: t('nav.sub.menuCollections'), icon: Package, path: '/menu-collections' },
-        { label: t('nav.sub.pricing'), icon: Tag, path: '/catalog/pricing' },
-      ],
-    },
-    {
-      id: 'marketing',
-      label: t('nav.marketing'),
-      icon: Megaphone,
-      path: '/marketing',
-      subItems: [
-        { label: t('nav.sub.campaigns'), icon: Target, path: '/marketing/campaigns' },
-        { label: t('nav.sub.emails'), icon: Mail, path: '/marketing/emails' },
-        { label: t('nav.sub.notifications'), icon: Bell, path: '/marketing/notifications' },
       ],
     },
     {
@@ -166,6 +163,7 @@ export default function Layout() {
         { label: t('nav.sub.waste'), icon: Trash2, path: '/kitchen/waste' },
         { label: t('nav.sub.suppliers'), icon: Truck, path: '/kitchen/suppliers' },
         { label: t('nav.sub.stockAlerts'), icon: AlertTriangle, path: '/kitchen/stock-alerts' },
+        { label: t('nav.sub.valuation'), icon: Calculator, path: '/kitchen/valuation' },
         { label: t('nav.sub.poSuggestions'), icon: ShoppingCart, path: '/kitchen/po-suggestions' },
       ],
     },
@@ -184,12 +182,9 @@ export default function Layout() {
       id: 'settings',
       label: t('nav.settings'),
       icon: Settings,
-      path: '/settings',
+      path: '/settings/printers',
       subItems: [
         { label: t('nav.sub.printers'), icon: Printer, path: '/settings/printers' },
-        { label: t('nav.sub.general'), icon: Wrench, path: '/settings/general' },
-        { label: t('nav.sub.security'), icon: Shield, path: '/settings/security' },
-        { label: t('nav.sub.billing'), icon: CreditCard, path: '/settings/billing' },
       ],
     },
   ];

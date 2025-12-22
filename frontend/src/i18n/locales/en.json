@@ -29,6 +29,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "pos": "Point of Sale",
     "orders": "Orders",
     "restaurant": "Restaurant",
     "restaurants": "Restaurants",
@@ -69,6 +70,7 @@
       "branches": "Branches",
       "workingHours": "Working Hours",
       "products": "Products",
+      "menu": "Menu",
       "categories": "Categories",
       "menuCollections": "Menu Collections",
       "pricing": "Pricing",
@@ -84,6 +86,7 @@
       "waste": "Waste",
       "suppliers": "Suppliers",
       "stockAlerts": "Stock Alerts",
+      "valuation": "Valuation",
       "poSuggestions": "PO Suggestions",
       "purchaseOrders": "Purchase Orders",
       "expenses": "Expenses",
@@ -1827,7 +1830,11 @@
       "searchPlaceholder": "Search menu...",
       "allCategories": "All Categories",
       "noProducts": "No products found",
+      "tryAdjusting": "Try adjusting your search or category filter",
       "addToCart": "Add to Cart",
+      "outOfStock": "Out of Stock",
+      "lowStock": "Low Stock",
+      "unavailable": "Unavailable",
       "viewMode": {
         "grid": "Grid View",
         "list": "List View"
@@ -1841,14 +1848,23 @@
       "delivery": "Delivery",
       "total": "Total",
       "items": "Items",
+      "totalItems": "Total Items",
+      "orderSummary": "Order Summary",
+      "orderType": "Order Type",
       "addMore": "Add More Items",
       "checkout": "Proceed to Checkout",
+      "proceedToDetails": "Proceed to Details",
+      "validating": "Checking availability...",
       "clear": "Clear Cart",
+      "clearCart": "Clear Cart",
+      "continueShopping": "Continue Shopping",
       "removeItem": "Remove item",
       "increaseQty": "Increase quantity",
       "decreaseQty": "Decrease quantity",
       "specialInstructions": "Add special instructions...",
-      "itemNotes": "Item Notes"
+      "itemNotes": "Item Notes",
+      "stockWarning": "Stock Warning",
+      "cannotProceed": "Please remove or adjust unavailable items before proceeding."
     },
     "modifiers": {
       "title": "Customize Your Order",
@@ -1919,11 +1935,37 @@
     },
     "confirmation": {
       "title": "Order Confirmed!",
-      "success": "Your order has been successfully placed",
+      "success": "Order Placed Successfully!",
+      "thankYou": "Thank you for your order",
       "orderNumber": "Order Number",
+      "processing": "Processing...",
+      "name": "Name",
+      "phone": "Phone",
+      "totalAmount": "Total Amount",
+      "paymentMethod": "Payment Method",
       "printReceipt": "Print Receipt",
+      "printKitchen": "Print Kitchen Ticket",
+      "startNew": "Start New Order",
       "newOrder": "Start New Order",
-      "viewOrders": "View Orders"
+      "viewOrders": "View Orders",
+      "sentToKitchen": "The order has been sent to the kitchen",
+      "readyForPickup": "Order is ready for pickup!"
+    },
+    "kitchen": {
+      "status": "Kitchen Status",
+      "pending": "Pending",
+      "preparing": "Preparing",
+      "ready": "Ready",
+      "pickedUp": "Picked Up",
+      "notSent": "Waiting",
+      "inQueue": "In kitchen queue",
+      "preparedBy": "Being prepared by {{chef}}",
+      "estimatedTime": "Estimated time: {{minutes}} minutes"
+    },
+    "details": {
+      "customerInfo": "Customer Information",
+      "tableNumber": "Table Number",
+      "deliveryAddress": "Delivery Address"
     },
     "errors": {
       "loadMenuFailed": "Failed to load menu",
