@@ -301,6 +301,8 @@ export const posAPI = {
   createOrder: (orderData) => api.post('/pos/orders', orderData),
   getCategories: (restaurantId) => api.get(`/menu/restaurants/${restaurantId}/categories`),
   getProducts: (restaurantId) => api.get(`/products/restaurant/${restaurantId}`),
+  checkProductAvailability: (productId, restaurantId) =>
+    api.get(`/pos/orders/products/${productId}/availability`, { params: { restaurantId } }),
 };
 
 export const waiterOrderAPI = {

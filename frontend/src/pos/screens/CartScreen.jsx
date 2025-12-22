@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { ChevronLeft, Plus, Trash2, CreditCard } from 'lucide-react';
+import { ChevronLeft, Plus, Trash2, CreditCard, AlertTriangle } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import CartItem from '../components/CartItem';
 import usePOSStore from '../store/posStore';
@@ -18,11 +18,77 @@ const CartScreen = () => {
     removeItemFromCart,
     clearCart,
     setCurrentScreen,
+    productAvailability,
+    checkProductAvailability,
   } = usePOSStore();
 
   const { items, subtotal, tax, deliveryFee, total, type, notes } = currentOrder;
+  const [availabilityWarnings, setAvailabilityWarnings] = useState([]);
+  const [isValidating, setIsValidating] = useState(false);
+
+  const restaurantId = 1; // TODO: Add restaurant selector
+
+  // Validate cart availability when items change
+  useEffect(() => {
+    const validateCart = async () => {
+      if (items.length === 0) {
+        setAvailabilityWarnings([]);
+        return;
+      }
+
+      setIsValidating(true);
+      const warnings = [];
+
+      for (const item of items) {
+        try {
+          const availability = await checkProductAvailability(item.productId, restaurantId);
+          if (availability) {
+            if (!availability.available) {
+              warnings.push({
+                itemId: item.id,
+                productName: item.name,
+                type: 'unavailable',
+                message: `${item.name} is out of stock`,
+              });
+            } else if (availability.maxQuantityAvailable < item.quantity) {
+              warnings.push({
+                itemId: item.id,
+                productName: item.name,
+                type: 'insufficient',
+                message: `Only ${availability.maxQuantityAvailable} available for ${item.name}`,
+                maxAvailable: availability.maxQuantityAvailable,
+              });
+            } else if (availability.stockStatus === 'LOW_STOCK') {
+              warnings.push({
+                itemId: item.id,
+                productName: item.name,
+                type: 'low_stock',
+                message: `${item.name} is running low (${availability.maxQuantityAvailable} left)`,
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check availability for item:', item.productId);
+        }
+      }
+
+      setAvailabilityWarnings(warnings);
+      setIsValidating(false);
+    };
+
+    validateCart();
+  }, [items]);
+
+  const hasBlockingWarnings = availabilityWarnings.some(
+    w => w.type === 'unavailable' || w.type === 'insufficient'
+  );
 
   const handleProceedToDetails = () => {
+    // Block proceeding if there are unavailable or insufficient items
+    if (hasBlockingWarnings) {
+      alert(t('pos.cart.cannotProceed', 'Please remove or adjust unavailable items before proceeding.'));
+      return;
+    }
     // Navigate to order details screen based on type
     setCurrentScreen('details');
   };
@@ -205,16 +271,52 @@ const CartScreen = () => {
               </div>
             </div>
 
+            {/* Availability Warnings */}
+            {availabilityWarnings.length > 0 && (
+              <div className="border-t-2 border-gray-200 p-4">
+                <div className={cn(
+                  'rounded-lg p-4',
+                  hasBlockingWarnings ? 'bg-red-50 border-2 border-red-200' : 'bg-orange-50 border-2 border-orange-200'
+                )}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className={cn(
+                      'w-5 h-5',
+                      hasBlockingWarnings ? 'text-red-600' : 'text-orange-600'
+                    )} />
+                    <span className={cn(
+                      'font-semibold',
+                      hasBlockingWarnings ? 'text-red-800' : 'text-orange-800'
+                    )}>
+                      {t('pos.cart.stockWarning', 'Stock Warning')}
+                    </span>
+                  </div>
+                  <ul className="space-y-1">
+                    {availabilityWarnings.map((warning, index) => (
+                      <li key={index} className={cn(
+                        'text-sm',
+                        warning.type === 'low_stock' ? 'text-orange-700' : 'text-red-700'
+                      )}>
+                        • {warning.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="border-t-2 border-gray-200 p-6 space-y-3">
               <TouchButton
-                variant="primary"
+                variant={hasBlockingWarnings ? 'secondary' : 'primary'}
                 size="large"
                 fullWidth
                 onClick={handleProceedToDetails}
+                disabled={hasBlockingWarnings || isValidating}
                 icon={<CreditCard className="w-6 h-6" />}
               >
-                {t('pos.cart.proceedToDetails', 'Proceed to Details')}
+                {isValidating
+                  ? t('pos.cart.validating', 'Checking availability...')
+                  : t('pos.cart.proceedToDetails', 'Proceed to Details')}
               </TouchButton>
 
               <TouchButton

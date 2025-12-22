@@ -21,20 +21,26 @@ const MenuSelectionScreen = () => {
     setCurrentScreen,
     ui,
     setSelectedCategory,
+    productAvailability,
+    checkAllProductsAvailability,
   } = usePOSStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [loading, setLoading] = useState(true);
 
+  const restaurantId = 1; // TODO: Add restaurant selector if multiple restaurants
+
   // Fetch menu data from backend
   useEffect(() => {
     const loadMenu = async () => {
       try {
         setLoading(true);
-        // Use restaurant ID 1 as default (first restaurant)
-        // TODO: Add restaurant selector if multiple restaurants
-        await fetchMenuData(1);
+        const result = await fetchMenuData(restaurantId);
+        // Load product availability after menu is fetched
+        if (result.success && result.products.length > 0) {
+          await checkAllProductsAvailability(result.products, restaurantId);
+        }
       } catch (error) {
         console.error('Failed to fetch menu:', error);
       } finally {
@@ -50,6 +56,10 @@ const MenuSelectionScreen = () => {
       loadMenu();
     } else {
       setLoading(false);
+      // Refresh availability even if menu is cached
+      if (menu.products.length > 0) {
+        checkAllProductsAvailability(menu.products, restaurantId);
+      }
     }
   }, []);
 
@@ -211,13 +221,21 @@ const MenuSelectionScreen = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredProducts.map(product => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onSelect={handleProductSelect}
-                />
-              ))}
+              {filteredProducts.map(product => {
+                const availability = productAvailability[product.id];
+                return (
+                  <ProductCard
+                    key={product.id}
+                    product={{
+                      ...product,
+                      available: availability?.available !== false,
+                      stockStatus: availability?.stockStatus || 'UNKNOWN',
+                      maxQuantityAvailable: availability?.maxQuantityAvailable,
+                    }}
+                    onSelect={handleProductSelect}
+                  />
+                );
+              })}
             </div>
           )}
         </div>

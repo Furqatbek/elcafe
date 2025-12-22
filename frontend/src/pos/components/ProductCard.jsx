@@ -11,7 +11,7 @@ const ProductCard = ({
   onSelect,
   className = '',
 }) => {
-  const { name, price, description, imageUrl, available = true, category } = product;
+  const { name, price, description, imageUrl, available = true, category, stockStatus, maxQuantityAvailable } = product;
 
   const handleSelect = () => {
     if (!available) return;
@@ -64,8 +64,23 @@ const ProductCard = ({
           </div>
         )}
 
-        {/* Availability Badge */}
-        {!available && (
+        {/* Stock Status Badge */}
+        {stockStatus === 'OUT_OF_STOCK' && (
+          <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">Out of Stock</span>
+          </div>
+        )}
+
+        {stockStatus === 'LOW_STOCK' && available && (
+          <div className="absolute top-2 left-2">
+            <span className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
+              Low Stock ({maxQuantityAvailable})
+            </span>
+          </div>
+        )}
+
+        {/* Legacy Unavailable Badge */}
+        {!available && stockStatus !== 'OUT_OF_STOCK' && (
           <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center">
             <span className="text-white font-bold text-lg">Unavailable</span>
           </div>

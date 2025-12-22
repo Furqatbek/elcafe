@@ -2,6 +2,7 @@ package com.elcafe.modules.order.controller;
 
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.POSOrderResponse;
+import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.order.service.POSOrderService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,5 +41,21 @@ public class POSOrderController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Order created successfully", response));
+    }
+
+    @GetMapping("/products/{productId}/availability")
+    @Operation(
+            summary = "Check product availability",
+            description = "Check if a product is available based on ingredient stock levels"
+    )
+    public ResponseEntity<ApiResponse<POSProductAvailabilityDTO>> checkProductAvailability(
+            @PathVariable Long productId,
+            @RequestParam Long restaurantId) {
+
+        log.info("Checking availability for product: {} at restaurant: {}", productId, restaurantId);
+
+        POSProductAvailabilityDTO availability = posOrderService.getProductAvailability(productId, restaurantId);
+
+        return ResponseEntity.ok(ApiResponse.success("Availability checked", availability));
     }
 }

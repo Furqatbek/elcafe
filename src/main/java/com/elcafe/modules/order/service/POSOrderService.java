@@ -2,7 +2,12 @@ package com.elcafe.modules.order.service;
 
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.entity.ProductIngredient;
+import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
+import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
@@ -34,6 +39,8 @@ public class POSOrderService {
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
     private final NotificationService notificationService;
+    private final InventoryService inventoryService;
+    private final InventoryProductIngredientRepository productIngredientRepository;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -82,8 +89,31 @@ public class POSOrderService {
         // Note: Current Order entity doesn't support table number or guest count for dine-in
         // This would need to be added to the Order entity or handled separately
 
-        // Save order
+        // Check ingredient availability before saving
+        // We need to save first to get the order with items, then check availability
         Order savedOrder = orderRepository.save(order);
+
+        // Check inventory availability
+        if (!inventoryService.checkIngredientAvailability(savedOrder)) {
+            // Get detailed missing ingredients info
+            List<String> allMissing = new java.util.ArrayList<>();
+            for (OrderItem item : savedOrder.getItems()) {
+                List<String> missing = inventoryService.getMissingIngredients(
+                        item.getProductId(), item.getQuantity());
+                allMissing.addAll(missing);
+            }
+            // Rollback the order by throwing exception (transaction will rollback)
+            throw new IllegalStateException("Insufficient inventory: " + String.join("; ", allMissing));
+        }
+
+        // Deduct ingredients from inventory
+        try {
+            inventoryService.deductIngredientsForOrder(savedOrder);
+            log.info("Inventory deducted successfully for order: {}", savedOrder.getOrderNumber());
+        } catch (Exception e) {
+            log.error("Failed to deduct inventory for order {}: {}", savedOrder.getOrderNumber(), e.getMessage());
+            throw new IllegalStateException("Failed to deduct inventory: " + e.getMessage(), e);
+        }
 
         // Force initialize lazy relationships
         savedOrder.getRestaurant().getName();
@@ -157,6 +187,72 @@ public class POSOrderService {
         deliveryInfo.setDeliveryInstructions(deliveryInfoReq.getDeliveryInstructions());
         deliveryInfo.setEstimatedDeliveryTime(LocalDateTime.now().plusMinutes(45));
         return deliveryInfo;
+    }
+
+    @Transactional(readOnly = true)
+    public POSProductAvailabilityDTO getProductAvailability(Long productId, Long restaurantId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + productId));
+
+        // Get all product ingredients
+        List<ProductIngredient> productIngredients =
+                productIngredientRepository.findByProductIdWithIngredients(productId);
+
+        // Calculate availability for each ingredient
+        List<POSProductAvailabilityDTO.IngredientAvailability> ingredientDetails = new java.util.ArrayList<>();
+        int minServings = Integer.MAX_VALUE;
+        boolean allSufficient = true;
+
+        for (ProductIngredient pi : productIngredients) {
+            if (pi.getOptional()) {
+                continue; // Skip optional ingredients for availability calculation
+            }
+
+            Ingredient ingredient = pi.getIngredient();
+            BigDecimal requiredPerUnit = pi.getQuantityRequired();
+            BigDecimal currentStock = ingredient.getCurrentStock();
+
+            // Calculate max servings from this ingredient
+            int maxFromIngredient = requiredPerUnit.compareTo(BigDecimal.ZERO) > 0
+                    ? currentStock.divide(requiredPerUnit, 0, java.math.RoundingMode.FLOOR).intValue()
+                    : Integer.MAX_VALUE;
+
+            boolean sufficient = maxFromIngredient > 0;
+            if (!sufficient) {
+                allSufficient = false;
+            }
+
+            minServings = Math.min(minServings, maxFromIngredient);
+
+            ingredientDetails.add(POSProductAvailabilityDTO.IngredientAvailability.builder()
+                    .ingredientId(ingredient.getId())
+                    .ingredientName(ingredient.getName())
+                    .unit(ingredient.getUnit())
+                    .currentStock(currentStock.doubleValue())
+                    .requiredPerUnit(requiredPerUnit.doubleValue())
+                    .maxServings(maxFromIngredient)
+                    .sufficient(sufficient)
+                    .build());
+        }
+
+        // Determine stock status
+        String stockStatus;
+        if (minServings == 0) {
+            stockStatus = "OUT_OF_STOCK";
+        } else if (minServings <= 5) {
+            stockStatus = "LOW_STOCK";
+        } else {
+            stockStatus = "AVAILABLE";
+        }
+
+        return POSProductAvailabilityDTO.builder()
+                .productId(productId)
+                .productName(product.getName())
+                .available(allSufficient && minServings > 0)
+                .maxQuantityAvailable(minServings == Integer.MAX_VALUE ? 999 : minServings)
+                .stockStatus(stockStatus)
+                .ingredientDetails(ingredientDetails)
+                .build();
     }
 
     private POSOrderResponse mapToResponse(Order order, String orderType) {

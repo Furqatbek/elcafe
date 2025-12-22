@@ -60,6 +60,9 @@ const usePOSStore = create(
         lastFetched: null,
       },
 
+      // Product Availability Cache (productId -> availability info)
+      productAvailability: {},
+
       // Actions: Order Management
       startNewOrder: (type) => set((state) => ({
         currentOrder: {
@@ -280,6 +283,53 @@ const usePOSStore = create(
           return { success: false, error: errorMessage };
         }
       },
+
+      // Actions: Product Availability
+      checkProductAvailability: async (productId, restaurantId) => {
+        try {
+          const response = await posAPI.checkProductAvailability(productId, restaurantId);
+          const availability = response.data.data;
+
+          set((state) => ({
+            productAvailability: {
+              ...state.productAvailability,
+              [productId]: availability,
+            },
+          }));
+
+          return availability;
+        } catch (error) {
+          console.error('Failed to check product availability:', error);
+          return null;
+        }
+      },
+
+      checkAllProductsAvailability: async (products, restaurantId) => {
+        try {
+          // Check availability for all products in parallel
+          const availabilityPromises = products.map((product) =>
+            posAPI.checkProductAvailability(product.id, restaurantId)
+              .then((res) => ({ productId: product.id, ...res.data.data }))
+              .catch(() => ({ productId: product.id, available: true, stockStatus: 'UNKNOWN' }))
+          );
+
+          const results = await Promise.all(availabilityPromises);
+
+          const availabilityMap = {};
+          results.forEach((result) => {
+            availabilityMap[result.productId] = result;
+          });
+
+          set({ productAvailability: availabilityMap });
+
+          return availabilityMap;
+        } catch (error) {
+          console.error('Failed to check products availability:', error);
+          return {};
+        }
+      },
+
+      clearProductAvailability: () => set({ productAvailability: {} }),
 
       // Actions: Submit Order to Backend
       submitOrder: async (restaurantId) => {
