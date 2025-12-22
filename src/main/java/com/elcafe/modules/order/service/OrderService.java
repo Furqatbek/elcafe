@@ -7,7 +7,10 @@ import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.settings.service.PrintService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +34,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final InventoryService inventoryService;
     private final DailyOrderSequenceService dailyOrderSequenceService;
+    private final RestaurantTableRepository restaurantTableRepository;
 
     @Autowired
     @Lazy
@@ -134,6 +138,12 @@ public class OrderService {
             }
         }
 
+        // Release tables when dine-in order is completed, delivered, or cancelled
+        if (order.getOrderType() == OrderType.DINE_IN &&
+                (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED)) {
+            releaseOrderTables(order);
+        }
+
         return order;
     }
 
@@ -207,5 +217,35 @@ public class OrderService {
             case DELIVERED -> next == OrderStatus.COMPLETED;
             case COMPLETED, CANCELLED -> false;
         };
+    }
+
+    /**
+     * Release all tables associated with a dine-in order by setting status to AVAILABLE
+     */
+    private void releaseOrderTables(Order order) {
+        try {
+            // Release tables from tableIds field (for multi-table orders)
+            if (order.getTableIds() != null && !order.getTableIds().isBlank()) {
+                String[] tableIdStrings = order.getTableIds().split(",");
+                for (String tableIdStr : tableIdStrings) {
+                    Long tableId = Long.parseLong(tableIdStr.trim());
+                    restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                        table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                        restaurantTableRepository.save(table);
+                        log.info("Table {} released (set to AVAILABLE) for order {}", table.getTableNumber(), order.getOrderNumber());
+                    });
+                }
+            }
+            // Also check the diningTable field for backwards compatibility
+            else if (order.getDiningTable() != null) {
+                RestaurantTable table = order.getDiningTable();
+                table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                restaurantTableRepository.save(table);
+                log.info("Table {} released (set to AVAILABLE) for order {}", table.getTableNumber(), order.getOrderNumber());
+            }
+        } catch (Exception e) {
+            log.error("Failed to release tables for order {}: {}", order.getOrderNumber(), e.getMessage());
+            // Don't fail the order status update if table release fails
+        }
     }
 }
