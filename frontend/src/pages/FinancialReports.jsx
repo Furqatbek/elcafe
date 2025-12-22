@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { financialAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar, AlertCircle, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const FinancialReports = () => {
@@ -10,6 +10,8 @@ const FinancialReports = () => {
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profitLoss');
+  const [accountsExist, setAccountsExist] = useState(true);
+  const [initializingAccounts, setInitializingAccounts] = useState(false);
 
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
@@ -24,12 +26,34 @@ const FinancialReports = () => {
   useEffect(() => {
     if (user?.restaurantId) {
       setSelectedRestaurant(user.restaurantId);
-      loadReports(user.restaurantId);
+      checkAccountsAndLoadReports(user.restaurantId);
     }
   }, [user, dateRange]);
 
-  const loadReports = async (restaurantId) => {
+  const checkAccountsAndLoadReports = async (restaurantId) => {
     setLoading(true);
+    try {
+      // First check if accounts exist
+      const accountsResponse = await financialAPI.getAccounts(restaurantId);
+      const accounts = accountsResponse.data?.data || [];
+
+      if (accounts.length === 0) {
+        setAccountsExist(false);
+        setLoading(false);
+        return;
+      }
+
+      setAccountsExist(true);
+      await loadReports(restaurantId);
+    } catch (error) {
+      console.error('Failed to check accounts:', error);
+      setAccountsExist(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadReports = async (restaurantId) => {
     try {
       const [plResponse, bsResponse, cfResponse, cogsResponse] = await Promise.all([
         financialAPI.getProfitLossReport(restaurantId, dateRange.startDate, dateRange.endDate),
@@ -44,8 +68,22 @@ const FinancialReports = () => {
       setCogsReport(cogsResponse.data.data);
     } catch (error) {
       console.error('Failed to load reports:', error);
+    }
+  };
+
+  const initializeChartOfAccounts = async () => {
+    if (!selectedRestaurant) return;
+
+    setInitializingAccounts(true);
+    try {
+      await financialAPI.initializeAccounts(selectedRestaurant);
+      setAccountsExist(true);
+      await loadReports(selectedRestaurant);
+    } catch (error) {
+      console.error('Failed to initialize accounts:', error);
+      alert(t('finance.reports.initializationFailed') || 'Failed to initialize Chart of Accounts');
     } finally {
-      setLoading(false);
+      setInitializingAccounts(false);
     }
   };
 
@@ -485,6 +523,35 @@ const FinancialReports = () => {
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <div className="text-gray-500">{t('finance.common.loadingReports')}</div>
+        </div>
+      ) : !accountsExist ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 max-w-lg text-center">
+            <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+            <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+              {t('finance.reports.noAccountsTitle') || 'Chart of Accounts Not Initialized'}
+            </h3>
+            <p className="text-yellow-700 mb-6">
+              {t('finance.reports.noAccountsDescription') ||
+                'Financial reports require a Chart of Accounts to be set up first. Initialize the default accounts to start tracking revenue, expenses, and generating financial reports.'}
+            </p>
+            <button
+              onClick={initializeChartOfAccounts}
+              disabled={initializingAccounts}
+              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {initializingAccounts ? (
+                <>
+                  <RefreshCw className="animate-spin -ml-1 mr-2 h-5 w-5" />
+                  {t('finance.reports.initializing') || 'Initializing...'}
+                </>
+              ) : (
+                <>
+                  {t('finance.reports.initializeAccounts') || 'Initialize Chart of Accounts'}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       ) : (
         <div>

@@ -389,6 +389,12 @@ export const financialAPI = {
   getCogsReport: (restaurantId, startDate, endDate) =>
     api.get('/financial/reports/cogs', { params: { restaurantId, startDate, endDate } }),
 
+  // Chart of Accounts
+  getAccounts: (restaurantId) =>
+    api.get('/financial/accounts', { params: { restaurantId } }),
+  initializeAccounts: (restaurantId) =>
+    api.post(`/financial/accounts/initialize/${restaurantId}`),
+
   // Dashboard
   getDashboard: (restaurantId, startDate, endDate) =>
     api.get('/dashboard', { params: { restaurantId, startDate, endDate } }),
