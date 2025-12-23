@@ -112,7 +112,7 @@ public class PayrollService {
     }
 
     public List<PayrollEntry> getPayrollEntriesByEmployee(Long employeeId) {
-        return payrollRepository.findByEmployeeId(employeeId);
+        return payrollRepository.findByEmployee_Id(employeeId);
     }
 
     public List<PayrollEntry> getPayrollEntriesByDateRange(Long restaurantId, LocalDate startDate, LocalDate endDate) {

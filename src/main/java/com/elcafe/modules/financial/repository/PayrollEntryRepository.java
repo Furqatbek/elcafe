@@ -21,9 +21,9 @@ public interface PayrollEntryRepository extends JpaRepository<PayrollEntry, Long
 
     Optional<PayrollEntry> findByPayrollNumber(String payrollNumber);
 
-    List<PayrollEntry> findByEmployeeId(Long employeeId);
+    List<PayrollEntry> findByEmployee_Id(Long employeeId);
 
-    Page<PayrollEntry> findByEmployeeId(Long employeeId, Pageable pageable);
+    Page<PayrollEntry> findByEmployee_Id(Long employeeId, Pageable pageable);
 
     List<PayrollEntry> findByRestaurant_IdAndStatus(Long restaurantId, PayrollEntry.PaymentStatus status);
 
@@ -33,7 +33,7 @@ public interface PayrollEntryRepository extends JpaRepository<PayrollEntry, Long
     List<PayrollEntry> findByRestaurant_IdAndPayPeriodEndBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
-    List<PayrollEntry> findByEmployeeIdAndPayPeriodStartBetween(
+    List<PayrollEntry> findByEmployee_IdAndPayPeriodStartBetween(
             Long employeeId, LocalDate startDate, LocalDate endDate);
 
     @Query("SELECT pe FROM FinancialPayrollEntry pe WHERE pe.restaurant.id = :restaurantId " +
