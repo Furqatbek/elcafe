@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   CreditCard,
   Banknote,
-  Smartphone,
   SplitSquareVertical,
   CheckCircle,
   AlertCircle,
@@ -13,10 +12,8 @@ import {
   XCircle,
 } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
-import TipSelectionComponent from '../components/TipSelectionComponent';
 import CashPaymentDialog from '../components/CashPaymentDialog';
 import CardPaymentDialog from '../components/CardPaymentDialog';
-import MobilePaymentDialog from '../components/MobilePaymentDialog';
 import VoidOrderDialog from '../components/VoidOrderDialog';
 import RefundDialog from '../components/RefundDialog';
 import usePOSStore from '../store/posStore';
@@ -42,8 +39,6 @@ const PaymentScreen = () => {
   } = usePOSStore();
 
   // State
-  const [tipAmount, setTipAmount] = useState(0);
-  const [showTipSelection, setShowTipSelection] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState(null);
 
@@ -54,7 +49,6 @@ const PaymentScreen = () => {
   // Dialog states
   const [showCashDialog, setShowCashDialog] = useState(false);
   const [showCardDialog, setShowCardDialog] = useState(false);
-  const [showMobileDialog, setShowMobileDialog] = useState(false);
   const [showVoidDialog, setShowVoidDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
 
@@ -62,8 +56,7 @@ const PaymentScreen = () => {
   const subtotal = currentOrder.subtotal || 0;
   const tax = currentOrder.tax || 0;
   const deliveryFee = currentOrder.deliveryFee || 0;
-  const totalBeforeTip = subtotal + tax + deliveryFee;
-  const grandTotal = totalBeforeTip + tipAmount;
+  const grandTotal = subtotal + tax + deliveryFee;
 
   // For split payments
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -83,14 +76,7 @@ const PaymentScreen = () => {
       label: t('pos.payment.card', 'Card'),
       icon: <CreditCard className="w-10 h-10" />,
       color: 'blue',
-      description: t('pos.payment.cardDesc', 'Credit/Debit card'),
-    },
-    {
-      id: 'MOBILE',
-      label: t('pos.payment.mobile', 'Mobile Pay'),
-      icon: <Smartphone className="w-10 h-10" />,
-      color: 'purple',
-      description: t('pos.payment.mobileDesc', 'Apple Pay, Google Pay'),
+      description: t('pos.payment.cardDesc', 'Card payment'),
     },
   ];
 
@@ -101,8 +87,6 @@ const PaymentScreen = () => {
       setShowCashDialog(true);
     } else if (method === 'CARD') {
       setShowCardDialog(true);
-    } else if (method === 'MOBILE') {
-      setShowMobileDialog(true);
     }
   };
 
@@ -183,7 +167,7 @@ const PaymentScreen = () => {
           tax: currentOrder.tax,
           deliveryFee: currentOrder.deliveryFee,
           total: grandTotal,
-          tipAmount: tipAmount,
+          tipAmount: 0,
           amountTendered: paymentData.amountTendered || grandTotal,
           changeDue: paymentData.changeDue || 0,
         };
@@ -224,7 +208,6 @@ const PaymentScreen = () => {
       // Close dialogs
       setShowCashDialog(false);
       setShowCardDialog(false);
-      setShowMobileDialog(false);
 
     } catch (error) {
       console.error('Payment failed:', error);
@@ -362,11 +345,6 @@ const PaymentScreen = () => {
               <p className="text-6xl font-bold">
                 {splitPaymentMode ? remainingBalance.toFixed(2) : grandTotal.toFixed(2)}
               </p>
-              {tipAmount > 0 && (
-                <p className="text-sm opacity-80 mt-2">
-                  {t('pos.payment.includesTip', 'Includes {{tip}} tip', { tip: tipAmount.toFixed(2) })}
-                </p>
-              )}
             </div>
 
             {/* Split Payment Progress */}
@@ -393,25 +371,13 @@ const PaymentScreen = () => {
               </div>
             )}
 
-            {/* Tip Selection */}
-            {showTipSelection && !splitPaymentMode && (
-              <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
-                <TipSelectionComponent
-                  subtotal={totalBeforeTip}
-                  selectedTip={tipAmount}
-                  onTipChange={setTipAmount}
-                  showKeypad={false}
-                />
-              </div>
-            )}
-
             {/* Payment Methods */}
             {!isFullyPaid && (
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">
                   {t('pos.payment.chooseMethod', 'Choose Payment Method')}
                 </h2>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   {paymentMethods.map(({ id, label, icon, color, description }) => {
                     const colors = colorClasses[color];
 
@@ -513,12 +479,6 @@ const PaymentScreen = () => {
                 <span>{deliveryFee.toFixed(2)}</span>
               </div>
             )}
-            {tipAmount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>{t('pos.payment.tip', 'Tip')}</span>
-                <span>{tipAmount.toFixed(2)}</span>
-              </div>
-            )}
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t-2 border-gray-200">
               <span>{t('pos.cart.total', 'Total')}</span>
               <span>{grandTotal.toFixed(2)}</span>
@@ -564,20 +524,9 @@ const PaymentScreen = () => {
       <CardPaymentDialog
         open={showCardDialog}
         onOpenChange={setShowCardDialog}
-        amountDue={splitPaymentMode ? remainingBalance : totalBeforeTip}
-        tipAmount={splitPaymentMode ? 0 : tipAmount}
+        amountDue={splitPaymentMode ? remainingBalance : grandTotal}
         onPaymentComplete={handlePaymentComplete}
         onCancel={() => setShowCardDialog(false)}
-        loading={processingPayment}
-      />
-
-      <MobilePaymentDialog
-        open={showMobileDialog}
-        onOpenChange={setShowMobileDialog}
-        amountDue={splitPaymentMode ? remainingBalance : totalBeforeTip}
-        tipAmount={splitPaymentMode ? 0 : tipAmount}
-        onPaymentComplete={handlePaymentComplete}
-        onCancel={() => setShowMobileDialog(false)}
         loading={processingPayment}
       />
 
