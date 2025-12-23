@@ -135,15 +135,26 @@ const PaymentScreen = () => {
           // Check if fully paid
           const newTotalPaid = totalPaid + paymentData.amount;
           if (newTotalPaid >= grandTotal - 0.01) {
-            // Order fully paid
+            // Order fully paid - close order and release table
+            await posAPI.closeOrder(currentOrder.id);
             setPaymentStatus('COMPLETED');
             completeOrder();
           }
         } else {
-          // Single payment - complete order
+          // Single payment - close order and release table
+          await posAPI.closeOrder(currentOrder.id);
           setPaymentStatus('COMPLETED');
           usePOSStore.getState().currentOrder.orderNumber = response.data.data?.orderNumber;
           completeOrder();
+        }
+
+        // Refresh floor plan to show updated table status (for DINE_IN orders)
+        if (currentOrder.type === 'DINE_IN') {
+          try {
+            await fetchFloorPlan(restaurantId);
+          } catch (e) {
+            console.error('Failed to refresh floor plan:', e);
+          }
         }
       } else {
         // Create new order with payment
