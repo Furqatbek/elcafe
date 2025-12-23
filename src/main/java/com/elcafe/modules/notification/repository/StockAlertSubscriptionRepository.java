@@ -12,11 +12,11 @@ import java.util.Optional;
 @Repository
 public interface StockAlertSubscriptionRepository extends JpaRepository<StockAlertSubscription, Long> {
 
-    List<StockAlertSubscription> findByRestaurantId(Long restaurantId);
+    List<StockAlertSubscription> findByRestaurant_Id(Long restaurantId);
 
-    List<StockAlertSubscription> findByRestaurantIdAndActiveTrue(Long restaurantId);
+    List<StockAlertSubscription> findByRestaurant_IdAndActiveTrue(Long restaurantId);
 
-    Optional<StockAlertSubscription> findByRestaurantIdAndTelegramChatId(Long restaurantId, Long telegramChatId);
+    Optional<StockAlertSubscription> findByRestaurant_IdAndTelegramChatId(Long restaurantId, Long telegramChatId);
 
     @Query("SELECT s FROM StockAlertSubscription s WHERE s.active = true AND s.alertOnLowStock = true")
     List<StockAlertSubscription> findActiveLowStockSubscriptions();

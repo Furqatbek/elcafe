@@ -219,7 +219,7 @@ public class DailyFinancialReportService {
         DailyMetrics metrics = calculateDailyMetrics(restaurantId, today);
 
         List<FinancialAlertSubscription> subscriptions =
-            subscriptionRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+            subscriptionRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
 
         if (subscriptions.isEmpty()) {
             log.info("No active financial alert subscriptions for restaurant: {}", restaurantId);

@@ -27,7 +27,7 @@ public class MenuCollectionService {
 
     @Transactional(readOnly = true)
     public Page<MenuCollectionDTO> getMenuCollections(Long restaurantId, Pageable pageable) {
-        return menuCollectionRepository.findByRestaurantId(restaurantId, pageable)
+        return menuCollectionRepository.findByRestaurant_Id(restaurantId, pageable)
                 .map(this::toDTO);
     }
 

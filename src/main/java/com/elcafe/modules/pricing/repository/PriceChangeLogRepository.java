@@ -14,9 +14,9 @@ public interface PriceChangeLogRepository extends JpaRepository<PriceChangeLog, 
 
     List<PriceChangeLog> findByProductIdOrderByCreatedAtDesc(Long productId);
 
-    List<PriceChangeLog> findByRestaurantIdOrderByCreatedAtDesc(Long restaurantId);
+    List<PriceChangeLog> findByRestaurant_IdOrderByCreatedAtDesc(Long restaurantId);
 
-    List<PriceChangeLog> findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+    List<PriceChangeLog> findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             Long restaurantId,
             LocalDateTime startDate,
             LocalDateTime endDate

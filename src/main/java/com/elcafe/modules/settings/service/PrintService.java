@@ -36,7 +36,7 @@ public class PrintService {
             log.info("Printing kitchen order: {}", order.getOrderNumber());
 
             Optional<PrinterSettings> printerSettings = printerSettingsRepository
-                    .findByRestaurantIdAndPrinterTypeAndEnabled(
+                    .findByRestaurant_IdAndPrinterTypeAndEnabled(
                             order.getRestaurant().getId(),
                             PrinterSettings.PrinterType.KITCHEN,
                             true

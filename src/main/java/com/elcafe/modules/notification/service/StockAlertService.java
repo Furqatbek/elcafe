@@ -150,7 +150,7 @@ public class StockAlertService {
 
         // Temporarily bypass cooldown for manual trigger
         List<StockAlertSubscription> subscriptions =
-            subscriptionRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+            subscriptionRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
 
         if (subscriptions.isEmpty()) {
             log.info("No active subscriptions for restaurant: {}", restaurant.getName());
@@ -194,7 +194,7 @@ public class StockAlertService {
     public Map<String, Object> getStockSummary(Long restaurantId) {
         List<Ingredient> lowStockItems = ingredientRepository.findLowStockIngredients(restaurantId);
         List<Ingredient> reorderItems = ingredientRepository.findIngredientsNeedingReorder(restaurantId);
-        List<StockAlertSubscription> subscriptions = subscriptionRepository.findByRestaurantId(restaurantId);
+        List<StockAlertSubscription> subscriptions = subscriptionRepository.findByRestaurant_Id(restaurantId);
 
         return Map.of(
             "lowStockCount", lowStockItems.size(),

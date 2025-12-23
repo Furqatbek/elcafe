@@ -43,7 +43,7 @@ public class MenuService {
             throw new ResourceNotFoundException("Restaurant is not active");
         }
 
-        List<Category> categories = categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
+        List<Category> categories = categoryRepository.findByRestaurant_IdAndActiveTrueOrderBySortOrder(restaurantId);
 
         return categories.stream()
                 .map(category -> {
@@ -114,13 +114,13 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<Category> getCategoriesByRestaurant(Long restaurantId) {
-        return categoryRepository.findByRestaurantIdOrderBySortOrder(restaurantId);
+        return categoryRepository.findByRestaurant_IdOrderBySortOrder(restaurantId);
     }
 
     @Transactional(readOnly = true)
     public List<Category> getActiveCategoriesByRestaurant(Long restaurantId) {
         log.info("Fetching active categories for restaurant: {}", restaurantId);
-        return categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
+        return categoryRepository.findByRestaurant_IdAndActiveTrueOrderBySortOrder(restaurantId);
     }
 
     @Transactional
@@ -198,7 +198,7 @@ public class MenuService {
     public List<ProductListDTO> getProductsByRestaurant(Long restaurantId) {
         log.info("Fetching products for restaurant: {}", restaurantId);
 
-        List<Category> categories = categoryRepository.findByRestaurantIdOrderBySortOrder(restaurantId);
+        List<Category> categories = categoryRepository.findByRestaurant_IdOrderBySortOrder(restaurantId);
 
         return categories.stream()
                 .flatMap(category -> category.getProducts().stream()
@@ -269,7 +269,7 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<AddOnGroup> getAddOnGroupsByRestaurant(Long restaurantId) {
-        return addOnGroupRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        return addOnGroupRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
     }
 
     @Transactional

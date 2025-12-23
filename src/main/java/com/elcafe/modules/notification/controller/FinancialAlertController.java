@@ -38,7 +38,7 @@ public class FinancialAlertController {
             @PathVariable Long restaurantId) {
 
         List<FinancialAlertSubscription> subscriptions =
-            subscriptionRepository.findByRestaurantId(restaurantId);
+            subscriptionRepository.findByRestaurant_Id(restaurantId);
 
         List<FinancialAlertSubscriptionResponse> responses = subscriptions.stream()
             .map(FinancialAlertSubscriptionResponse::fromEntity)
@@ -55,7 +55,7 @@ public class FinancialAlertController {
             @Valid @RequestBody FinancialAlertSubscriptionRequest request) {
 
         // Check if subscription already exists
-        if (subscriptionRepository.findByRestaurantIdAndTelegramChatId(
+        if (subscriptionRepository.findByRestaurant_IdAndTelegramChatId(
                 request.getRestaurantId(), request.getTelegramChatId()).isPresent()) {
             return ResponseEntity.badRequest().build();
         }

@@ -144,7 +144,7 @@ public class PricingStrategyService {
      * Get all products profitability for a restaurant
      */
     public List<ProductProfitabilityDTO> getAllProductsProfitability(Long restaurantId, LocalDate startDate, LocalDate endDate) {
-        List<Product> products = productRepository.findByRestaurantId(restaurantId);
+        List<Product> products = productRepository.findByRestaurant_Id(restaurantId);
 
         return products.stream()
                 .map(product -> getProductProfitability(product.getId(), startDate, endDate))
@@ -163,7 +163,7 @@ public class PricingStrategyService {
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = endDate.minusDays(30);
 
-        List<Product> products = productRepository.findByRestaurantId(restaurantId);
+        List<Product> products = productRepository.findByRestaurant_Id(restaurantId);
         List<Order> orders = getCompletedOrders(restaurantId, startDate, endDate);
 
         Map<Long, Long> salesByProduct = calculateSalesByProduct(orders);
@@ -258,7 +258,7 @@ public class PricingStrategyService {
             targetMargin = DEFAULT_TARGET_MARGIN;
         }
 
-        List<Product> products = productRepository.findByRestaurantId(restaurantId);
+        List<Product> products = productRepository.findByRestaurant_Id(restaurantId);
         List<Order> orders = getCompletedOrders(restaurantId, startDate, endDate);
 
         Map<Long, Long> salesByProduct = calculateSalesByProduct(orders);
@@ -456,7 +456,7 @@ public class PricingStrategyService {
     }
 
     private BigDecimal calculateAverageMarginPercentage(Long restaurantId) {
-        List<Product> products = productRepository.findByRestaurantId(restaurantId);
+        List<Product> products = productRepository.findByRestaurant_Id(restaurantId);
 
         List<BigDecimal> margins = products.stream()
                 .filter(p -> p.getCostPrice() != null && p.getCostPrice().compareTo(BigDecimal.ZERO) > 0)

@@ -13,11 +13,11 @@ import java.util.Optional;
 @Repository
 public interface FinancialAlertSubscriptionRepository extends JpaRepository<FinancialAlertSubscription, Long> {
 
-    List<FinancialAlertSubscription> findByRestaurantId(Long restaurantId);
+    List<FinancialAlertSubscription> findByRestaurant_Id(Long restaurantId);
 
-    List<FinancialAlertSubscription> findByRestaurantIdAndActiveTrue(Long restaurantId);
+    List<FinancialAlertSubscription> findByRestaurant_IdAndActiveTrue(Long restaurantId);
 
-    Optional<FinancialAlertSubscription> findByRestaurantIdAndTelegramChatId(Long restaurantId, Long telegramChatId);
+    Optional<FinancialAlertSubscription> findByRestaurant_IdAndTelegramChatId(Long restaurantId, Long telegramChatId);
 
     @Query("SELECT f FROM FinancialAlertSubscription f WHERE f.active = true " +
            "AND (f.lastReportDate IS NULL OR f.lastReportDate < :today)")

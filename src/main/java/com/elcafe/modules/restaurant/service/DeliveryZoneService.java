@@ -34,7 +34,7 @@ public class DeliveryZoneService {
         restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
 
-        List<DeliveryZone> deliveryZones = deliveryZoneRepository.findByRestaurantId(restaurantId);
+        List<DeliveryZone> deliveryZones = deliveryZoneRepository.findByRestaurant_Id(restaurantId);
         log.debug("Found {} delivery zones for restaurant ID: {}", deliveryZones.size(), restaurantId);
 
         return deliveryZones.stream()

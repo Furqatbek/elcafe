@@ -22,7 +22,7 @@ public interface LoyaltyPromotionRepository extends JpaRepository<LoyaltyPromoti
         @Param("now") LocalDateTime now
     );
 
-    List<LoyaltyPromotion> findByRestaurantIdAndActive(Long restaurantId, Boolean active);
+    List<LoyaltyPromotion> findByRestaurant_IdAndActive(Long restaurantId, Boolean active);
 
     @Query("SELECT lp FROM LoyaltyPromotion lp WHERE lp.restaurant IS NULL AND lp.active = true")
     List<LoyaltyPromotion> findGlobalActivePromotions();

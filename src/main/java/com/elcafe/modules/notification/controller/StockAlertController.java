@@ -42,7 +42,7 @@ public class StockAlertController {
 
         List<StockAlertSubscription> subscriptions;
         if (restaurantId != null) {
-            subscriptions = subscriptionRepository.findByRestaurantId(restaurantId);
+            subscriptions = subscriptionRepository.findByRestaurant_Id(restaurantId);
         } else {
             subscriptions = subscriptionRepository.findAll();
         }

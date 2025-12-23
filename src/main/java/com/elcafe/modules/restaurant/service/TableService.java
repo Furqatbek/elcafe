@@ -39,7 +39,7 @@ public class TableService {
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", request.getRestaurantId()));
 
         // Check if table number already exists for this restaurant
-        tableRepository.findByRestaurantIdAndTableNumber(request.getRestaurantId(), request.getTableNumber())
+        tableRepository.findByRestaurant_IdAndTableNumber(request.getRestaurantId(), request.getTableNumber())
                 .ifPresent(t -> {
                     throw new IllegalArgumentException("Table number " + request.getTableNumber() + " already exists");
                 });
@@ -62,7 +62,7 @@ public class TableService {
 
         // If updating table number, check uniqueness
         if (request.getTableNumber() != null && !request.getTableNumber().equals(table.getTableNumber())) {
-            tableRepository.findByRestaurantIdAndTableNumber(table.getRestaurant().getId(), request.getTableNumber())
+            tableRepository.findByRestaurant_IdAndTableNumber(table.getRestaurant().getId(), request.getTableNumber())
                     .ifPresent(t -> {
                         throw new IllegalArgumentException("Table number " + request.getTableNumber() + " already exists");
                     });
@@ -88,7 +88,7 @@ public class TableService {
     public List<TableResponse> getTablesByRestaurant(Long restaurantId) {
         log.info("Getting tables for restaurant: {}", restaurantId);
 
-        List<RestaurantTable> tables = tableRepository.findByRestaurantId(restaurantId);
+        List<RestaurantTable> tables = tableRepository.findByRestaurant_Id(restaurantId);
         return tables.stream()
                 .map(tableMapper::toResponse)
                 .collect(Collectors.toList());
@@ -98,7 +98,7 @@ public class TableService {
     public List<TableResponse> getAvailableTables(Long restaurantId) {
         log.info("Getting available tables for restaurant: {}", restaurantId);
 
-        List<RestaurantTable> tables = tableRepository.findByRestaurantIdAndStatus(
+        List<RestaurantTable> tables = tableRepository.findByRestaurant_IdAndStatus(
                 restaurantId, RestaurantTable.TableStatus.AVAILABLE);
         return tables.stream()
                 .map(tableMapper::toResponse)
@@ -109,7 +109,7 @@ public class TableService {
     public List<TableResponse> getTablesBySection(Long restaurantId, String section) {
         log.info("Getting tables for restaurant {} in section {}", restaurantId, section);
 
-        List<RestaurantTable> tables = tableRepository.findByRestaurantIdAndSection(restaurantId, section);
+        List<RestaurantTable> tables = tableRepository.findByRestaurant_IdAndSection(restaurantId, section);
         return tables.stream()
                 .map(tableMapper::toResponse)
                 .collect(Collectors.toList());
@@ -335,7 +335,7 @@ public class TableService {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
 
-        List<RestaurantTable> tables = tableRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        List<RestaurantTable> tables = tableRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
         List<String> sections = tableRepository.findDistinctSectionsByRestaurantId(restaurantId);
 
         List<FloorPlanDTO.FloorPlanTableDTO> tableDTOs = tables.stream()

@@ -10,15 +10,15 @@ import java.util.Optional;
 @Repository
 public interface PrinterSettingsRepository extends JpaRepository<PrinterSettings, Long> {
 
-    List<PrinterSettings> findByRestaurantId(Long restaurantId);
+    List<PrinterSettings> findByRestaurant_Id(Long restaurantId);
 
-    List<PrinterSettings> findByRestaurantIdAndPrinterType(Long restaurantId, PrinterSettings.PrinterType printerType);
+    List<PrinterSettings> findByRestaurant_IdAndPrinterType(Long restaurantId, PrinterSettings.PrinterType printerType);
 
-    Optional<PrinterSettings> findByRestaurantIdAndPrinterTypeAndEnabled(
+    Optional<PrinterSettings> findByRestaurant_IdAndPrinterTypeAndEnabled(
             Long restaurantId,
             PrinterSettings.PrinterType printerType,
             Boolean enabled
     );
 
-    List<PrinterSettings> findByRestaurantIdAndEnabled(Long restaurantId, Boolean enabled);
+    List<PrinterSettings> findByRestaurant_IdAndEnabled(Long restaurantId, Boolean enabled);
 }
