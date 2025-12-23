@@ -721,7 +721,7 @@ export default function Orders() {
                       </p>
                     )}
                     <p className="text-sm text-muted-foreground">
-                      {order.createdAt && format(new Date(order.createdAt), 'PPpp')}
+                      {order.createdAt && format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm')}
                     </p>
                   </div>
                   <Badge className={statusColors[order.status] || 'bg-gray-100'}>
