@@ -191,7 +191,9 @@ public class POSOrderService {
                 walkInCustomer.setFirstName("Walk-in");
                 walkInCustomer.setLastName("Guest");
                 // Set a placeholder phone for walk-in customers (required by DB constraint)
-                walkInCustomer.setPhone("WALK-IN-" + System.currentTimeMillis());
+                // Use shorter format to fit varchar(20): WI + last 10 digits of timestamp
+                long timestamp = System.currentTimeMillis();
+                walkInCustomer.setPhone("WI" + String.valueOf(timestamp).substring(5));
                 if (customerInfo != null && customerInfo.getName() != null && !customerInfo.getName().isBlank()) {
                     String[] nameParts = customerInfo.getName().trim().split("\\s+", 2);
                     walkInCustomer.setFirstName(nameParts[0]);
