@@ -2,6 +2,11 @@ package com.elcafe.modules.financial.controller;
 
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.service.AccountService;
+import com.elcafe.modules.financial.service.RevenueService;
+import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.financial.repository.JournalEntryRepository;
 import com.elcafe.utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +22,9 @@ import java.util.List;
 public class AccountController {
 
     private final AccountService accountService;
+    private final RevenueService revenueService;
+    private final OrderRepository orderRepository;
+    private final JournalEntryRepository journalEntryRepository;
 
     /**
      * Initialize Chart of Accounts for a restaurant
@@ -28,9 +36,13 @@ public class AccountController {
 
         try {
             accountService.initializeChartOfAccounts(restaurantId);
+
+            // Also backfill historical orders
+            int backfilledCount = backfillHistoricalOrders(restaurantId);
+
             return ResponseEntity.ok(ApiResponse.success(
                     "Chart of Accounts initialized successfully",
-                    "Accounts created for restaurant " + restaurantId
+                    "Accounts created for restaurant " + restaurantId + ". Backfilled " + backfilledCount + " historical orders."
             ));
         } catch (Exception e) {
             log.error("Failed to initialize Chart of Accounts for restaurant: {}", restaurantId, e);
@@ -38,6 +50,57 @@ public class AccountController {
                     "Failed to initialize accounts: " + e.getMessage()
             ));
         }
+    }
+
+    /**
+     * Backfill historical orders to create financial transactions
+     * This is useful for orders that were completed before the financial system was set up
+     */
+    @PostMapping("/backfill/{restaurantId}")
+    public ResponseEntity<ApiResponse<String>> backfillHistoricalOrdersEndpoint(@PathVariable Long restaurantId) {
+        log.info("Backfilling historical orders for restaurant: {}", restaurantId);
+
+        try {
+            int count = backfillHistoricalOrders(restaurantId);
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Historical orders backfilled successfully",
+                    "Processed " + count + " orders for restaurant " + restaurantId
+            ));
+        } catch (Exception e) {
+            log.error("Failed to backfill historical orders for restaurant: {}", restaurantId, e);
+            return ResponseEntity.badRequest().body(ApiResponse.error(
+                    "Failed to backfill orders: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Helper method to backfill historical orders
+     */
+    private int backfillHistoricalOrders(Long restaurantId) {
+        // Get all DELIVERED orders for this restaurant
+        List<Order> deliveredOrders = orderRepository.findByRestaurant_IdAndStatus(
+                restaurantId, OrderStatus.DELIVERED);
+
+        int processedCount = 0;
+        for (Order order : deliveredOrders) {
+            // Check if journal entry already exists for this order
+            boolean hasJournalEntry = journalEntryRepository.existsByReferenceTypeAndReferenceId(
+                    "ORDER", order.getId());
+
+            if (!hasJournalEntry && order.getTotal() != null && order.getTotal().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                try {
+                    revenueService.recordOrderRevenue(order);
+                    processedCount++;
+                    log.debug("Backfilled revenue for order: {}", order.getId());
+                } catch (Exception e) {
+                    log.warn("Failed to backfill order {}: {}", order.getId(), e.getMessage());
+                }
+            }
+        }
+
+        log.info("Backfilled {} historical orders for restaurant: {}", processedCount, restaurantId);
+        return processedCount;
     }
 
     /**
