@@ -26,7 +26,7 @@ SELECT
     NOW() as created_at,
     NOW() as updated_at
 FROM orders o
-WHERE o.status NOT IN ('CANCELLED')
+WHERE o.status IN ('READY', 'PICKED_UP', 'DELIVERED', 'COMPLETED')
   AND o.total > 0
   AND NOT EXISTS (
       SELECT 1 FROM payments p WHERE p.order_id = o.id
@@ -35,7 +35,7 @@ WHERE o.status NOT IN ('CANCELLED')
 -- Step 2: Update order payment_status for orders that now have payments
 UPDATE orders o
 SET payment_status = 'COMPLETED'
-WHERE o.status NOT IN ('CANCELLED')
+WHERE o.status IN ('READY', 'PICKED_UP', 'DELIVERED', 'COMPLETED')
   AND o.payment_status IS NULL
   AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id = o.id AND p.status = 'COMPLETED');
 
@@ -71,7 +71,7 @@ SELECT
     NOW() as created_at,
     NOW() as updated_at
 FROM orders o
-WHERE o.status NOT IN ('CANCELLED')
+WHERE o.status IN ('READY', 'PICKED_UP', 'DELIVERED', 'COMPLETED')
   AND o.total > 0
   AND EXISTS (
       SELECT 1 FROM financial_accounts fa

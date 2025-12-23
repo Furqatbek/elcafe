@@ -28,17 +28,12 @@ public class AccountController {
     private final OrderRepository orderRepository;
     private final JournalEntryRepository journalEntryRepository;
 
-    // Statuses that should be backfilled for revenue
+    // Only backfill statuses for orders that are truly completed and paid
+    // In-progress orders (PENDING, NEW, PLACED, ACCEPTING, PREPARING, etc.) should NOT be backfilled
+    // as they haven't been paid yet and will receive real payments later
     private static final List<OrderStatus> BACKFILL_STATUSES = Arrays.asList(
-            OrderStatus.PENDING,
-            OrderStatus.NEW,
-            OrderStatus.PLACED,
-            OrderStatus.ACCEPTED,
-            OrderStatus.PREPARING,
             OrderStatus.READY,
             OrderStatus.PICKED_UP,
-            OrderStatus.COURIER_ASSIGNED,
-            OrderStatus.ON_DELIVERY,
             OrderStatus.DELIVERED,
             OrderStatus.COMPLETED
     );
