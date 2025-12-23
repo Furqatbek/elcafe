@@ -35,6 +35,11 @@ public class RevenueService {
         try {
             Long restaurantId = order.getRestaurant().getId();
 
+            // Use order's completion date or creation date for accurate historical reporting
+            LocalDate orderDate = order.getCompletedAt() != null
+                    ? order.getCompletedAt().toLocalDate()
+                    : (order.getCreatedAt() != null ? order.getCreatedAt().toLocalDate() : LocalDate.now());
+
             // Find revenue and cash accounts
             Account salesAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.SALES
@@ -48,7 +53,7 @@ public class RevenueService {
                 // Debit: Cash, Credit: Sales Revenue
                 journalService.createJournalEntry(
                         restaurantId,
-                        LocalDate.now(),
+                        orderDate,
                         "Sales from Order #" + order.getId(),
                         "ORDER",
                         order.getId(),
@@ -61,11 +66,11 @@ public class RevenueService {
 
             // Record delivery fees if applicable
             if (order.getDeliveryFee() != null && order.getDeliveryFee().compareTo(BigDecimal.ZERO) > 0) {
-                recordDeliveryFee(order);
+                recordDeliveryFee(order, orderDate);
             }
 
             // Record COGS for the order
-            recordCogs(order);
+            recordCogs(order, orderDate);
 
         } catch (Exception e) {
             log.error("Failed to record order revenue for order: {}", order.getId(), e);
@@ -76,7 +81,7 @@ public class RevenueService {
     /**
      * Record delivery fees
      */
-    private void recordDeliveryFee(Order order) {
+    private void recordDeliveryFee(Order order, LocalDate orderDate) {
         try {
             Long restaurantId = order.getRestaurant().getId();
 
@@ -92,7 +97,7 @@ public class RevenueService {
                 // Debit: Cash, Credit: Delivery Fees Revenue
                 journalService.createJournalEntry(
                         restaurantId,
-                        LocalDate.now(),
+                        orderDate,
                         "Delivery Fee from Order #" + order.getId(),
                         "DELIVERY_FEE",
                         order.getId(),
@@ -111,7 +116,7 @@ public class RevenueService {
      * Record COGS (Cost of Goods Sold) for the order
      */
     @Transactional
-    public void recordCogs(Order order) {
+    public void recordCogs(Order order, LocalDate orderDate) {
         log.info("Recording COGS for order: {}", order.getId());
 
         try {
@@ -143,7 +148,7 @@ public class RevenueService {
                 // Debit: COGS, Credit: Inventory
                 journalService.createJournalEntry(
                         restaurantId,
-                        LocalDate.now(),
+                        orderDate,
                         "COGS for Order #" + order.getId(),
                         "ORDER_COGS",
                         order.getId(),
