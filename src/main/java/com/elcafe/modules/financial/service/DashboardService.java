@@ -395,7 +395,7 @@ public class DashboardService {
 
     private DashboardResponse.InventoryAlerts calculateInventoryAlerts(Long restaurantId) {
         // Fetch all active ingredients
-        List<Ingredient> allIngredients = ingredientRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        List<Ingredient> allIngredients = ingredientRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
 
         // Filter low stock items (currentStock <= minimumStock)
         List<Ingredient> lowStockIngredients = allIngredients.stream()

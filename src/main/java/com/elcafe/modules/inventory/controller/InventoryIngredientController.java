@@ -39,7 +39,7 @@ public class InventoryIngredientController {
             @RequestParam Long restaurantId) {
         log.info("Fetching ingredients for restaurant: {}", restaurantId);
 
-        List<Ingredient> ingredients = ingredientRepository.findByRestaurantId(restaurantId);
+        List<Ingredient> ingredients = ingredientRepository.findByRestaurant_Id(restaurantId);
         List<IngredientResponse> responses = ingredients.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());

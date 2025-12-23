@@ -15,9 +15,9 @@ import java.util.List;
 @Repository
 public interface StockVarianceHistoryRepository extends JpaRepository<StockVarianceHistory, Long> {
 
-    List<StockVarianceHistory> findByRestaurantId(Long restaurantId);
+    List<StockVarianceHistory> findByRestaurant_Id(Long restaurantId);
 
-    Page<StockVarianceHistory> findByRestaurantId(Long restaurantId, Pageable pageable);
+    Page<StockVarianceHistory> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
     List<StockVarianceHistory> findByIngredientId(Long ingredientId);
 
@@ -26,7 +26,7 @@ public interface StockVarianceHistoryRepository extends JpaRepository<StockVaria
     @Query("SELECT svh FROM StockVarianceHistory svh WHERE svh.restaurant.id = :restaurantId " +
            "AND svh.varianceDate BETWEEN :startDate AND :endDate " +
            "ORDER BY svh.varianceDate DESC")
-    List<StockVarianceHistory> findByRestaurantIdAndDateRange(
+    List<StockVarianceHistory> findByRestaurant_IdAndDateRange(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
     @Query("SELECT svh FROM StockVarianceHistory svh WHERE svh.ingredient.id = :ingredientId " +
@@ -38,7 +38,7 @@ public interface StockVarianceHistoryRepository extends JpaRepository<StockVaria
     @Query("SELECT svh FROM StockVarianceHistory svh WHERE svh.restaurant.id = :restaurantId " +
            "AND svh.varianceReason = :reason " +
            "ORDER BY svh.varianceDate DESC")
-    List<StockVarianceHistory> findByRestaurantIdAndVarianceReason(
+    List<StockVarianceHistory> findByRestaurant_IdAndVarianceReason(
             Long restaurantId, StockCountItem.VarianceReason reason);
 
     @Query("SELECT COALESCE(SUM(svh.varianceValue), 0) FROM StockVarianceHistory svh " +

@@ -11,11 +11,11 @@ import java.util.Optional;
 @Repository
 public interface SupplierRepository extends JpaRepository<Supplier, Long> {
 
-    List<Supplier> findByRestaurantIdOrderByNameAsc(Long restaurantId);
+    List<Supplier> findByRestaurant_IdOrderByNameAsc(Long restaurantId);
 
-    List<Supplier> findByRestaurantIdAndActiveTrueOrderByNameAsc(Long restaurantId);
+    List<Supplier> findByRestaurant_IdAndActiveTrueOrderByNameAsc(Long restaurantId);
 
-    Optional<Supplier> findByRestaurantIdAndCode(Long restaurantId, String code);
+    Optional<Supplier> findByRestaurant_IdAndCode(Long restaurantId, String code);
 
     boolean existsByRestaurantIdAndCode(Long restaurantId, String code);
 

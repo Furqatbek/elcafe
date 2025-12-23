@@ -60,7 +60,7 @@ public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, 
      */
     @Query("SELECT b FROM InventoryBatch b WHERE b.ingredient.restaurant.id = :restaurantId " +
            "ORDER BY b.ingredient.name, b.expiryDate ASC")
-    List<InventoryBatch> findByRestaurantId(@Param("restaurantId") Long restaurantId);
+    List<InventoryBatch> findByRestaurant_Id(@Param("restaurantId") Long restaurantId);
 
     /**
      * Count active batches for an ingredient

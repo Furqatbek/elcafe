@@ -44,7 +44,7 @@ public class POSuggestionService {
         log.info("Generating PO suggestions for restaurant: {}", restaurantId);
 
         // Get all ingredients that need reordering (with linked suppliers)
-        List<Ingredient> ingredientsNeedingReorder = ingredientRepository.findByRestaurantId(restaurantId)
+        List<Ingredient> ingredientsNeedingReorder = ingredientRepository.findByRestaurant_Id(restaurantId)
                 .stream()
                 .filter(ing -> ing.getActive() && ing.getTrackInventory())
                 .filter(Ingredient::needsReorder)
@@ -110,7 +110,7 @@ public class POSuggestionService {
             ingredients = ingredientRepository.findAllById(request.getIngredientIds());
         } else {
             // All ingredients from this supplier that need reorder
-            ingredients = ingredientRepository.findByRestaurantId(request.getRestaurantId())
+            ingredients = ingredientRepository.findByRestaurant_Id(request.getRestaurantId())
                     .stream()
                     .filter(ing -> ing.getActive() && ing.getTrackInventory())
                     .filter(Ingredient::needsReorder)

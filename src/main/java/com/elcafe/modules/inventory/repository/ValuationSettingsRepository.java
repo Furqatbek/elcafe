@@ -28,12 +28,12 @@ public interface ValuationSettingsRepository extends JpaRepository<ValuationSett
     /**
      * Find all settings for a restaurant (for history)
      */
-    List<ValuationSettings> findByRestaurantIdOrderByEffectiveFromDesc(Long restaurantId);
+    List<ValuationSettings> findByRestaurant_IdOrderByEffectiveFromDesc(Long restaurantId);
 
     /**
      * Find active settings for a restaurant
      */
-    Optional<ValuationSettings> findByRestaurantIdAndIsActiveTrue(Long restaurantId);
+    Optional<ValuationSettings> findByRestaurant_IdAndIsActiveTrue(Long restaurantId);
 
     /**
      * Check if a restaurant has any valuation settings

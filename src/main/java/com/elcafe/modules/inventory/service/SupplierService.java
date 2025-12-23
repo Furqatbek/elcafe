@@ -23,14 +23,14 @@ public class SupplierService {
     private final RestaurantRepository restaurantRepository;
 
     public List<SupplierResponse> getAllByRestaurant(Long restaurantId) {
-        return supplierRepository.findByRestaurantIdOrderByNameAsc(restaurantId)
+        return supplierRepository.findByRestaurant_IdOrderByNameAsc(restaurantId)
                 .stream()
                 .map(SupplierResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
     public List<SupplierResponse> getActiveByRestaurant(Long restaurantId) {
-        return supplierRepository.findByRestaurantIdAndActiveTrueOrderByNameAsc(restaurantId)
+        return supplierRepository.findByRestaurant_IdAndActiveTrueOrderByNameAsc(restaurantId)
                 .stream()
                 .map(SupplierResponse::fromEntity)
                 .collect(Collectors.toList());

@@ -126,7 +126,7 @@ public class WasteService {
      */
     @Transactional(readOnly = true)
     public List<WasteRecord> getWasteRecords(Long restaurantId) {
-        return wasteRecordRepository.findByRestaurantId(restaurantId);
+        return wasteRecordRepository.findByRestaurant_Id(restaurantId);
     }
 
     /**
@@ -136,13 +136,13 @@ public class WasteService {
     public List<WasteRecord> getWasteRecords(Long restaurantId, LocalDate startDate, LocalDate endDate,
                                               WasteRecord.WasteReason reason, Long ingredientId) {
         if (ingredientId != null) {
-            return wasteRecordRepository.findByRestaurantIdAndIngredientIdAndDateRange(
+            return wasteRecordRepository.findByRestaurant_IdAndIngredientIdAndDateRange(
                     restaurantId, ingredientId, startDate, endDate);
         } else if (reason != null) {
-            return wasteRecordRepository.findByRestaurantIdAndDateRangeAndReason(
+            return wasteRecordRepository.findByRestaurant_IdAndDateRangeAndReason(
                     restaurantId, startDate, endDate, reason);
         } else {
-            return wasteRecordRepository.findByRestaurantIdAndDateRange(restaurantId, startDate, endDate);
+            return wasteRecordRepository.findByRestaurant_IdAndDateRange(restaurantId, startDate, endDate);
         }
     }
 

@@ -14,9 +14,9 @@ import java.util.List;
 @Repository
 public interface WasteRecordRepository extends JpaRepository<WasteRecord, Long> {
 
-    List<WasteRecord> findByRestaurantId(Long restaurantId);
+    List<WasteRecord> findByRestaurant_Id(Long restaurantId);
 
-    Page<WasteRecord> findByRestaurantId(Long restaurantId, Pageable pageable);
+    Page<WasteRecord> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
     List<WasteRecord> findByIngredientId(Long ingredientId);
 
@@ -25,27 +25,27 @@ public interface WasteRecordRepository extends JpaRepository<WasteRecord, Long> 
     @Query("SELECT w FROM WasteRecord w WHERE w.restaurant.id = :restaurantId " +
            "AND w.wasteDate BETWEEN :startDate AND :endDate " +
            "ORDER BY w.wasteDate DESC")
-    List<WasteRecord> findByRestaurantIdAndDateRange(
+    List<WasteRecord> findByRestaurant_IdAndDateRange(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
     @Query("SELECT w FROM WasteRecord w WHERE w.restaurant.id = :restaurantId " +
            "AND w.wasteReason = :reason " +
            "ORDER BY w.wasteDate DESC")
-    List<WasteRecord> findByRestaurantIdAndReason(
+    List<WasteRecord> findByRestaurant_IdAndReason(
             Long restaurantId, WasteRecord.WasteReason reason);
 
     @Query("SELECT w FROM WasteRecord w WHERE w.restaurant.id = :restaurantId " +
            "AND w.wasteDate BETWEEN :startDate AND :endDate " +
            "AND w.wasteReason = :reason " +
            "ORDER BY w.wasteDate DESC")
-    List<WasteRecord> findByRestaurantIdAndDateRangeAndReason(
+    List<WasteRecord> findByRestaurant_IdAndDateRangeAndReason(
             Long restaurantId, LocalDate startDate, LocalDate endDate, WasteRecord.WasteReason reason);
 
     @Query("SELECT w FROM WasteRecord w WHERE w.restaurant.id = :restaurantId " +
            "AND w.ingredient.id = :ingredientId " +
            "AND w.wasteDate BETWEEN :startDate AND :endDate " +
            "ORDER BY w.wasteDate DESC")
-    List<WasteRecord> findByRestaurantIdAndIngredientIdAndDateRange(
+    List<WasteRecord> findByRestaurant_IdAndIngredientIdAndDateRange(
             Long restaurantId, Long ingredientId, LocalDate startDate, LocalDate endDate);
 
     // Aggregate queries for reporting

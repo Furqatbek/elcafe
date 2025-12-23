@@ -39,7 +39,7 @@ public class ValuationReportService {
     public ValuationComparisonReport generateComparisonReport(Long restaurantId) {
         log.info("Generating valuation comparison report for restaurant {}", restaurantId);
 
-        List<Ingredient> ingredients = ingredientRepository.findByRestaurantId(restaurantId);
+        List<Ingredient> ingredients = ingredientRepository.findByRestaurant_Id(restaurantId);
         ValuationMethod currentMethod = valuationService.getValuationMethod(restaurantId);
 
         // Calculate total values by method
@@ -123,7 +123,7 @@ public class ValuationReportService {
         log.info("Generating valuation report for restaurant {} using method {}", restaurantId, method);
 
         ValuationMethod useMethod = method != null ? method : valuationService.getValuationMethod(restaurantId);
-        List<Ingredient> ingredients = ingredientRepository.findByRestaurantId(restaurantId);
+        List<Ingredient> ingredients = ingredientRepository.findByRestaurant_Id(restaurantId);
 
         BigDecimal totalValue = BigDecimal.ZERO;
         int ingredientsWithStock = 0;

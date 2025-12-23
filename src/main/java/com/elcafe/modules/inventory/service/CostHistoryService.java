@@ -150,7 +150,7 @@ public class CostHistoryService {
     public List<IngredientCostHistory> getRestaurantCostChanges(Long restaurantId,
                                                                  LocalDateTime startDate,
                                                                  LocalDateTime endDate) {
-        return costHistoryRepository.findByRestaurantIdAndDateRange(restaurantId, startDate, endDate);
+        return costHistoryRepository.findByRestaurant_IdAndDateRange(restaurantId, startDate, endDate);
     }
 
     /**

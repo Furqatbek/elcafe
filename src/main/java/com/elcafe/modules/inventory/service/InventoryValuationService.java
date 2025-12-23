@@ -48,7 +48,7 @@ public class InventoryValuationService {
         log.info("Setting valuation method for restaurant {} to {}", restaurantId, method);
 
         // Deactivate any existing active settings
-        valuationSettingsRepository.findByRestaurantIdAndIsActiveTrue(restaurantId)
+        valuationSettingsRepository.findByRestaurant_IdAndIsActiveTrue(restaurantId)
                 .ifPresent(existing -> {
                     existing.deactivate(LocalDate.now().minusDays(1));
                     valuationSettingsRepository.save(existing);
@@ -190,7 +190,7 @@ public class InventoryValuationService {
     public InventoryValuation calculateInventoryValue(Long restaurantId, ValuationMethod method) {
         log.debug("Calculating inventory value for restaurant {} using {}", restaurantId, method);
 
-        List<Ingredient> ingredients = ingredientRepository.findByRestaurantId(restaurantId);
+        List<Ingredient> ingredients = ingredientRepository.findByRestaurant_Id(restaurantId);
         BigDecimal totalValue = BigDecimal.ZERO;
         List<IngredientValuation> ingredientValuations = new ArrayList<>();
 

@@ -64,7 +64,7 @@ public class StockCountService {
         List<Ingredient> ingredientsToCount;
         if (request.getCountType() == StockCount.CountType.FULL) {
             // Full count - all active ingredients
-            ingredientsToCount = ingredientRepository.findByRestaurantIdAndActiveTrue(request.getRestaurantId());
+            ingredientsToCount = ingredientRepository.findByRestaurant_IdAndActiveTrue(request.getRestaurantId());
         } else if (request.getIngredientIds() != null && !request.getIngredientIds().isEmpty()) {
             // Cycle or spot check - specific ingredients
             ingredientsToCount = ingredientRepository.findAllById(request.getIngredientIds());
@@ -255,7 +255,7 @@ public class StockCountService {
      */
     @Transactional(readOnly = true)
     public List<StockCount> getStockCountsByRestaurant(Long restaurantId) {
-        return stockCountRepository.findByRestaurantId(restaurantId);
+        return stockCountRepository.findByRestaurant_Id(restaurantId);
     }
 
     /**

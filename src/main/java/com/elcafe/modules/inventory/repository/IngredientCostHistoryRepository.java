@@ -65,7 +65,7 @@ public interface IngredientCostHistoryRepository extends JpaRepository<Ingredien
     @Query("SELECT ich FROM IngredientCostHistory ich WHERE ich.ingredient.restaurant.id = :restaurantId " +
            "AND ich.effectiveFrom >= :startDate AND ich.effectiveFrom <= :endDate " +
            "ORDER BY ich.effectiveFrom DESC")
-    List<IngredientCostHistory> findByRestaurantIdAndDateRange(
+    List<IngredientCostHistory> findByRestaurant_IdAndDateRange(
             @Param("restaurantId") Long restaurantId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);

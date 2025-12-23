@@ -14,20 +14,20 @@ import java.util.Optional;
 @Repository
 public interface StockCountRepository extends JpaRepository<StockCount, Long> {
 
-    List<StockCount> findByRestaurantId(Long restaurantId);
+    List<StockCount> findByRestaurant_Id(Long restaurantId);
 
-    Page<StockCount> findByRestaurantId(Long restaurantId, Pageable pageable);
+    Page<StockCount> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
     Optional<StockCount> findByCountNumber(String countNumber);
 
-    List<StockCount> findByRestaurantIdAndStatus(Long restaurantId, StockCount.Status status);
+    List<StockCount> findByRestaurant_IdAndStatus(Long restaurantId, StockCount.Status status);
 
-    List<StockCount> findByRestaurantIdAndCountType(Long restaurantId, StockCount.CountType countType);
+    List<StockCount> findByRestaurant_IdAndCountType(Long restaurantId, StockCount.CountType countType);
 
     @Query("SELECT sc FROM StockCount sc WHERE sc.restaurant.id = :restaurantId " +
            "AND sc.scheduledDate BETWEEN :startDate AND :endDate " +
            "ORDER BY sc.scheduledDate ASC")
-    List<StockCount> findByRestaurantIdAndScheduledDateBetween(
+    List<StockCount> findByRestaurant_IdAndScheduledDateBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
     @Query("SELECT sc FROM StockCount sc WHERE sc.restaurant.id = :restaurantId " +
