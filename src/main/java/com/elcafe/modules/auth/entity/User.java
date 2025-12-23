@@ -57,6 +57,9 @@ public class User implements UserDetails {
     @Builder.Default
     private Boolean emailVerified = false;
 
+    @Column(name = "restaurant_id")
+    private Long restaurantId;
+
     private String resetToken;
 
     private LocalDateTime resetTokenExpiry;
