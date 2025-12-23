@@ -32,7 +32,7 @@ public class CourierOrderService {
      */
     public List<Order> getAvailableOrders(Long restaurantId) {
         if (restaurantId != null) {
-            return orderRepository.findByRestaurantIdAndStatus(restaurantId, OrderStatus.READY);
+            return orderRepository.findByRestaurant_IdAndStatus(restaurantId, OrderStatus.READY);
         }
         return orderRepository.findByStatus(OrderStatus.READY);
     }

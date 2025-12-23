@@ -99,7 +99,7 @@ public class DailyFinancialReportService {
         LocalDateTime endOfDay = date.atTime(23, 59, 59);
 
         // Get completed orders for the day
-        List<Order> orders = orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             restaurantId, startOfDay, endOfDay);
 
         // Filter to only completed/delivered orders

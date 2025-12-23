@@ -36,28 +36,28 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     Optional<Order> findByOrderNumber(String orderNumber);
 
-    List<Order> findByRestaurantIdAndStatusOrderByCreatedAtDesc(Long restaurantId, OrderStatus status);
+    List<Order> findByRestaurant_IdAndStatusOrderByCreatedAtDesc(Long restaurantId, OrderStatus status);
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.status = :status ORDER BY o.createdAt DESC")
-    List<Order> findByRestaurantIdAndStatusWithItemsOrderByCreatedAtDesc(@Param("restaurantId") Long restaurantId, @Param("status") OrderStatus status);
+    List<Order> findByRestaurant_IdAndStatusWithItemsOrderByCreatedAtDesc(@Param("restaurantId") Long restaurantId, @Param("status") OrderStatus status);
 
-    List<Order> findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+    List<Order> findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             Long restaurantId,
             LocalDateTime startDate,
             LocalDateTime endDate
     );
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
-    List<Order> findByRestaurantIdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
+    List<Order> findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
             @Param("restaurantId") Long restaurantId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
 
-    List<Order> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
+    List<Order> findByCustomer_IdOrderByCreatedAtDesc(Long customerId);
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.customer.id = :customerId ORDER BY o.createdAt DESC")
-    List<Order> findByCustomerIdWithItemsOrderByCreatedAtDesc(@Param("customerId") Long customerId);
+    List<Order> findByCustomer_IdWithItemsOrderByCreatedAtDesc(@Param("customerId") Long customerId);
 
     List<Order> findByStatusOrderByCreatedAtAsc(OrderStatus status);
 
@@ -66,7 +66,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.waiter = :waiter AND o.status IN :statuses ORDER BY o.createdAt DESC")
     List<Order> findByWaiterAndStatusInWithItemsOrderByCreatedAtDesc(@Param("waiter") Waiter waiter, @Param("statuses") List<OrderStatus> statuses);
 
-    List<Order> findByRestaurantIdAndStatus(Long restaurantId, OrderStatus status);
+    List<Order> findByRestaurant_IdAndStatus(Long restaurantId, OrderStatus status);
 
     List<Order> findByStatus(OrderStatus status);
 

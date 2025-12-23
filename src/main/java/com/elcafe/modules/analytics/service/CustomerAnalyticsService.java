@@ -232,7 +232,7 @@ public class CustomerAnalyticsService {
 
     private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
         if (restaurantId != null) {
-            return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
                     .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
@@ -246,7 +246,7 @@ public class CustomerAnalyticsService {
     }
 
     private CustomerMetrics calculateCustomerMetrics(Customer customer, Long restaurantId) {
-        List<Order> customerOrders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId()).stream()
+        List<Order> customerOrders = orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customer.getId()).stream()
                 .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
                 .filter(order -> restaurantId == null || order.getRestaurant().getId().equals(restaurantId))
                 .collect(Collectors.toList());

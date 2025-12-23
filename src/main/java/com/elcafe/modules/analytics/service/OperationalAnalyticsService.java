@@ -259,7 +259,7 @@ public class OperationalAnalyticsService {
 
     private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
         if (restaurantId != null) {
-            return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
                     .filter(order -> order.getStatus() == OrderStatus.DELIVERED)

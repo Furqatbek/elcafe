@@ -166,7 +166,7 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<Order> getOrdersByRestaurant(Long restaurantId) {
-        return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId,
                 LocalDateTime.now().minusDays(7),
                 LocalDateTime.now()
@@ -175,7 +175,7 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<Order> getOrdersByCustomer(Long customerId) {
-        return orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        return orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customerId);
     }
 
     @Transactional(readOnly = true)

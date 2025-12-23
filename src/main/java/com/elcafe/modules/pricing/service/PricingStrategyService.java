@@ -422,7 +422,7 @@ public class PricingStrategyService {
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
-        return orderRepository.findByRestaurantIdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
+        return orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
                 restaurantId, startDateTime, endDateTime
         ).stream()
                 .filter(order -> order.getStatus() == OrderStatus.DELIVERED)

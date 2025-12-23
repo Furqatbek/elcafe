@@ -53,7 +53,7 @@ public class DashboardService {
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
         // Fetch all orders in date range
-        List<Order> allOrders = orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        List<Order> allOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId, startDateTime, endDateTime);
 
         // Filter completed orders for income calculation
@@ -332,7 +332,7 @@ public class DashboardService {
         LocalDateTime prevEndDateTime = prevEndDate.atTime(LocalTime.MAX);
 
         // Get previous period orders
-        List<Order> prevOrders = orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        List<Order> prevOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId, prevStartDateTime, prevEndDateTime);
 
         List<Order> prevCompletedOrders = prevOrders.stream()

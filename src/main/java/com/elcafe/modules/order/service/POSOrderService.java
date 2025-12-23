@@ -457,7 +457,7 @@ public class POSOrderService {
     public List<POSOrderResponse> getOpenDineInOrders(Long restaurantId) {
         log.info("Getting open dine-in orders for restaurant: {}", restaurantId);
 
-        List<Order> orders = orderRepository.findByRestaurantIdAndDiningTableIsNotNullAndStatusIn(
+        List<Order> orders = orderRepository.findByRestaurant_IdAndDiningTableIsNotNullAndStatusIn(
                 restaurantId,
                 List.of(OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PREPARING)
         );
