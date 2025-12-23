@@ -731,17 +731,21 @@ export default function Orders() {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-3">
-                  <div>
-                    <p className="text-sm font-medium">{t('orders.subtotal')}</p>
-                    <p className="text-lg font-bold">{order.subtotal?.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">{t('orders.deliveryFee')}</p>
-                    <p className="text-lg font-bold">{order.deliveryFee?.toFixed(2)}</p>
-                  </div>
+                  {order.diningTable && (
+                    <div>
+                      <p className="text-sm font-medium">{t('orders.table', 'Table')}</p>
+                      <p className="text-lg font-bold">{order.diningTable.tableNumber}</p>
+                    </div>
+                  )}
+                  {order.waiter && (
+                    <div>
+                      <p className="text-sm font-medium">{t('orders.waiter', 'Waiter')}</p>
+                      <p className="text-lg font-bold">{order.waiter.name}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm font-medium">{t('orders.total')}</p>
-                    <p className="text-2xl font-bold">{order.total?.toFixed(2)}</p>
+                    <p className="text-2xl font-bold">{order.total?.toFixed(0)}</p>
                   </div>
                 </div>
 
