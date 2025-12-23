@@ -158,15 +158,9 @@ public class POSOrderService {
             throw new IllegalStateException("Failed to deduct inventory: " + e.getMessage(), e);
         }
 
-        // Create kitchen order for preparation
-        try {
-            KitchenOrder kitchenOrder = kitchenOrderService.createKitchenOrder(savedOrder);
-            log.info("Kitchen order created for order: {} (Kitchen ID: {})",
-                    savedOrder.getOrderNumber(), kitchenOrder.getId());
-        } catch (Exception e) {
-            log.error("Failed to create kitchen order for {}: {}", savedOrder.getOrderNumber(), e.getMessage());
-            // Don't throw - order can still proceed, kitchen can manually add it
-        }
+        // Kitchen order creation is skipped - orders go directly to payment flow
+        // Kitchen can manually create orders if needed via the kitchen module
+        log.info("Order created without kitchen order - direct payment flow enabled");
 
         // Force initialize lazy relationships
         savedOrder.getRestaurant().getName();

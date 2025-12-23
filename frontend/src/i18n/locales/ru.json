@@ -203,7 +203,16 @@
       "state": "Область",
       "zipCode": "Индекс",
       "customerNotes": "Примечания клиента"
-    }
+    },
+    "closeTable": "Закрыть стол",
+    "processPayment": "Провести оплату",
+    "processPaymentDesc": "Завершите оплату заказа",
+    "selectPaymentMethod": "Способ оплаты",
+    "amountTendered": "Полученная сумма",
+    "changeDue": "Сдача",
+    "completePayment": "Завершить оплату",
+    "paymentSuccessTableReleased": "Оплата проведена и стол освобожден",
+    "paymentError": "Не удалось провести оплату"
   },
   "restaurants": {
     "title": "Рестораны",

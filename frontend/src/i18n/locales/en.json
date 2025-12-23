@@ -481,7 +481,16 @@
       "state": "State",
       "zipCode": "ZIP Code",
       "customerNotes": "Customer Notes"
-    }
+    },
+    "closeTable": "Close Table",
+    "processPayment": "Process Payment",
+    "processPaymentDesc": "Complete payment for order",
+    "selectPaymentMethod": "Payment Method",
+    "amountTendered": "Amount Tendered",
+    "changeDue": "Change Due",
+    "completePayment": "Complete Payment",
+    "paymentSuccessTableReleased": "Payment processed and table released successfully",
+    "paymentError": "Failed to process payment"
   },
   "restaurants": {
     "title": "Restaurants",

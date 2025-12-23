@@ -34,7 +34,10 @@ import {
   Edit,
   CheckCircle,
   Trash2,
-  Minus
+  Minus,
+  CreditCard,
+  Banknote,
+  Wallet
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
@@ -95,6 +98,13 @@ export default function Orders() {
   const [availableProducts, setAvailableProducts] = useState([]);
   const [newItemProductId, setNewItemProductId] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState(1);
+
+  // Payment modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentOrder, setPaymentOrder] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [amountTendered, setAmountTendered] = useState('');
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -222,19 +232,49 @@ export default function Orders() {
     }
   };
 
-  // Close table and release it
-  const handleCloseTable = async (orderId) => {
-    if (!confirm(t('orders.confirmCloseTable', 'Close this order and release the table?'))) {
-      return;
-    }
+  // Open payment modal for closing table
+  const handleCloseTable = (order) => {
+    setPaymentOrder(order);
+    setPaymentMethod('CASH');
+    setAmountTendered('');
+    setPaymentModalOpen(true);
+  };
+
+  // Process payment and close table
+  const handleProcessPaymentAndClose = async () => {
+    if (!paymentOrder) return;
+
+    setProcessingPayment(true);
     try {
-      await posAPI.closeOrder(orderId);
+      // Process payment
+      const paymentData = {
+        paymentMethod: paymentMethod,
+        amount: paymentOrder.total,
+        amountTendered: paymentMethod === 'CASH' ? parseFloat(amountTendered) || paymentOrder.total : paymentOrder.total
+      };
+
+      await posAPI.processPayment(paymentOrder.id, paymentData);
+
+      // Close order and release table
+      await posAPI.closeOrder(paymentOrder.id);
+
+      setPaymentModalOpen(false);
+      setPaymentOrder(null);
       loadOrders();
-      alert(t('orders.tableReleased', 'Order closed and table released'));
+      alert(t('orders.paymentSuccessTableReleased', 'Payment processed and table released successfully'));
     } catch (error) {
-      console.error('Failed to close table:', error);
-      alert(t('messages.error'));
+      console.error('Failed to process payment:', error);
+      alert(t('orders.paymentError', 'Failed to process payment: ') + (error.response?.data?.message || error.message));
+    } finally {
+      setProcessingPayment(false);
     }
+  };
+
+  // Calculate change for cash payment
+  const calculateChange = () => {
+    if (!paymentOrder || paymentMethod !== 'CASH') return 0;
+    const tendered = parseFloat(amountTendered) || 0;
+    return Math.max(0, tendered - paymentOrder.total);
   };
 
   // Open edit items modal
@@ -706,7 +746,7 @@ export default function Orders() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleCloseTable(order.id)}
+                      onClick={() => handleCloseTable(order)}
                       className="gap-1 text-green-600 hover:text-green-700"
                     >
                       <CheckCircle className="h-4 w-4" />
@@ -1188,6 +1228,149 @@ export default function Orders() {
             </Button>
             <Button type="button" onClick={handleSaveItemChanges}>
               {t('orders.saveChanges', 'Save Changes')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Modal */}
+      <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('orders.processPayment', 'Process Payment')}</DialogTitle>
+            <DialogDescription>
+              {t('orders.processPaymentDesc', 'Complete payment for order')} #{paymentOrder?.orderNumber}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Order Summary */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex justify-between mb-2">
+                <span className="text-sm text-muted-foreground">{t('orders.subtotal', 'Subtotal')}</span>
+                <span className="font-medium">{paymentOrder?.subtotal?.toFixed(2)}</span>
+              </div>
+              {paymentOrder?.tax > 0 && (
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-muted-foreground">{t('orders.tax', 'Tax')}</span>
+                  <span className="font-medium">{paymentOrder?.tax?.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-2 border-t">
+                <span className="font-semibold">{t('orders.total', 'Total')}</span>
+                <span className="text-xl font-bold">{paymentOrder?.total?.toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Payment Method Selection */}
+            <div className="space-y-2">
+              <Label>{t('orders.selectPaymentMethod', 'Payment Method')}</Label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('CASH')}
+                  className={`flex flex-col items-center justify-center p-4 border-2 rounded-lg transition-all ${
+                    paymentMethod === 'CASH'
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Banknote className="h-6 w-6 mb-2" />
+                  <span className="text-sm font-medium">{t('orders.paymentMethods.CASH', 'Cash')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('CARD')}
+                  className={`flex flex-col items-center justify-center p-4 border-2 rounded-lg transition-all ${
+                    paymentMethod === 'CARD'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <CreditCard className="h-6 w-6 mb-2" />
+                  <span className="text-sm font-medium">{t('orders.paymentMethods.CARD', 'Card')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('ONLINE')}
+                  className={`flex flex-col items-center justify-center p-4 border-2 rounded-lg transition-all ${
+                    paymentMethod === 'ONLINE'
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Wallet className="h-6 w-6 mb-2" />
+                  <span className="text-sm font-medium">{t('orders.paymentMethods.ONLINE', 'Online')}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Cash Payment - Amount Tendered */}
+            {paymentMethod === 'CASH' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="amountTendered">{t('orders.amountTendered', 'Amount Tendered')}</Label>
+                  <Input
+                    id="amountTendered"
+                    type="number"
+                    step="0.01"
+                    min={paymentOrder?.total || 0}
+                    value={amountTendered}
+                    onChange={(e) => setAmountTendered(e.target.value)}
+                    placeholder={paymentOrder?.total?.toFixed(2)}
+                    className="text-lg"
+                  />
+                </div>
+
+                {/* Quick Amount Buttons */}
+                <div className="grid grid-cols-4 gap-2">
+                  {[10000, 20000, 50000, 100000].map((amount) => (
+                    <Button
+                      key={amount}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAmountTendered(amount.toString())}
+                    >
+                      {amount.toLocaleString()}
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Change Calculation */}
+                {parseFloat(amountTendered) >= (paymentOrder?.total || 0) && (
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-green-800">{t('orders.changeDue', 'Change Due')}</span>
+                      <span className="text-2xl font-bold text-green-700">
+                        {calculateChange().toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setPaymentModalOpen(false);
+                setPaymentOrder(null);
+              }}
+              disabled={processingPayment}
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleProcessPaymentAndClose}
+              disabled={processingPayment || (paymentMethod === 'CASH' && parseFloat(amountTendered) < (paymentOrder?.total || 0))}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {processingPayment ? t('common.processing', 'Processing...') : t('orders.completePayment', 'Complete Payment')}
             </Button>
           </DialogFooter>
         </DialogContent>

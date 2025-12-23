@@ -203,7 +203,16 @@
       "state": "Viloyat",
       "zipCode": "Pochta indeksi",
       "customerNotes": "Mijoz eslatmalari"
-    }
+    },
+    "closeTable": "Stolni yopish",
+    "processPayment": "To'lovni amalga oshirish",
+    "processPaymentDesc": "Buyurtma uchun to'lovni yakunlang",
+    "selectPaymentMethod": "To'lov usuli",
+    "amountTendered": "Berilgan summa",
+    "changeDue": "Qaytim",
+    "completePayment": "To'lovni yakunlash",
+    "paymentSuccessTableReleased": "To'lov amalga oshirildi va stol bo'shatildi",
+    "paymentError": "To'lovni amalga oshirib bo'lmadi"
   },
   "restaurants": {
     "title": "Restoranlar",
