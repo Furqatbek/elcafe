@@ -504,7 +504,7 @@ export const stockAlertAPI = {
   deleteSubscription: (id) => api.delete(`/stock-alerts/subscriptions/${id}`),
 
   // Alerts
-  triggerAlert: (restaurantId) => api.post(`/stock-alerts/trigger/${restaurantId}`),
+  trigger: (restaurantId) => api.post(`/stock-alerts/trigger/${restaurantId}`),
   getSummary: (restaurantId) => api.get(`/stock-alerts/summary/${restaurantId}`),
 };
 
