@@ -21,12 +21,12 @@ SELECT
     o.total as amount,
     COALESCE(o.tip_amount, 0) as tip_amount,
     CONCAT('HIST-', o.id, '-', TO_CHAR(o.created_at, 'YYYYMMDD')) as transaction_id,
-    COALESCE(o.delivered_at, o.updated_at, o.created_at) as paid_at,
-    COALESCE(o.delivered_at, o.updated_at, o.created_at) as completed_at,
+    COALESCE(o.completed_at, o.updated_at, o.created_at) as paid_at,
+    COALESCE(o.completed_at, o.updated_at, o.created_at) as completed_at,
     NOW() as created_at,
     NOW() as updated_at
 FROM orders o
-WHERE o.status = 'DELIVERED'
+WHERE o.status NOT IN ('CANCELLED')
   AND o.total > 0
   AND NOT EXISTS (
       SELECT 1 FROM payments p WHERE p.order_id = o.id
@@ -35,7 +35,7 @@ WHERE o.status = 'DELIVERED'
 -- Step 2: Update order payment_status for orders that now have payments
 UPDATE orders o
 SET payment_status = 'COMPLETED'
-WHERE o.status = 'DELIVERED'
+WHERE o.status NOT IN ('CANCELLED')
   AND o.payment_status IS NULL
   AND EXISTS (SELECT 1 FROM payments p WHERE p.order_id = o.id AND p.status = 'COMPLETED');
 
@@ -59,7 +59,7 @@ INSERT INTO financial_journal_entries (
 SELECT
     o.restaurant_id,
     CONCAT('JE-HIST-', o.id) as entry_number,
-    DATE(COALESCE(o.delivered_at, o.created_at)) as entry_date,
+    DATE(COALESCE(o.completed_at, o.created_at)) as entry_date,
     CONCAT('Historical Sales from Order #', o.order_number) as description,
     'ORDER' as reference_type,
     o.id as reference_id,
@@ -71,7 +71,7 @@ SELECT
     NOW() as created_at,
     NOW() as updated_at
 FROM orders o
-WHERE o.status = 'DELIVERED'
+WHERE o.status NOT IN ('CANCELLED')
   AND o.total > 0
   AND EXISTS (
       SELECT 1 FROM financial_accounts fa
