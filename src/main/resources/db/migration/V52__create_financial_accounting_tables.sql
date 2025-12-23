@@ -19,9 +19,9 @@ CREATE TABLE IF NOT EXISTS financial_accounts (
     UNIQUE (restaurant_id, code)
 );
 
-CREATE INDEX idx_financial_accounts_restaurant ON financial_accounts(restaurant_id);
-CREATE INDEX idx_financial_accounts_type ON financial_accounts(type);
-CREATE INDEX idx_financial_accounts_category ON financial_accounts(category);
+CREATE INDEX IF NOT EXISTS idx_financial_accounts_restaurant ON financial_accounts(restaurant_id);
+CREATE INDEX IF NOT EXISTS idx_financial_accounts_type ON financial_accounts(type);
+CREATE INDEX IF NOT EXISTS idx_financial_accounts_category ON financial_accounts(category);
 
 -- Financial Journal Entries (Double-Entry Bookkeeping)
 CREATE TABLE IF NOT EXISTS financial_journal_entries (
@@ -43,10 +43,10 @@ CREATE TABLE IF NOT EXISTS financial_journal_entries (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_journal_entry_restaurant ON financial_journal_entries(restaurant_id);
-CREATE INDEX idx_journal_entry_date ON financial_journal_entries(entry_date);
-CREATE INDEX idx_journal_entry_reference ON financial_journal_entries(reference_type, reference_id);
-CREATE INDEX idx_journal_entry_status ON financial_journal_entries(status);
+CREATE INDEX IF NOT EXISTS idx_journal_entry_restaurant ON financial_journal_entries(restaurant_id);
+CREATE INDEX IF NOT EXISTS idx_journal_entry_date ON financial_journal_entries(entry_date);
+CREATE INDEX IF NOT EXISTS idx_journal_entry_reference ON financial_journal_entries(reference_type, reference_id);
+CREATE INDEX IF NOT EXISTS idx_journal_entry_status ON financial_journal_entries(status);
 
 -- Financial Transactions (Individual debit/credit lines)
 CREATE TABLE IF NOT EXISTS financial_transactions (
@@ -67,8 +67,8 @@ CREATE TABLE IF NOT EXISTS financial_transactions (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_financial_transaction_restaurant ON financial_transactions(restaurant_id);
-CREATE INDEX idx_financial_transaction_date ON financial_transactions(transaction_date);
-CREATE INDEX idx_financial_transaction_account ON financial_transactions(account_id);
-CREATE INDEX idx_financial_transaction_reference ON financial_transactions(reference_type, reference_id);
-CREATE INDEX idx_financial_transaction_journal ON financial_transactions(journal_entry_id);
+CREATE INDEX IF NOT EXISTS idx_financial_transaction_restaurant ON financial_transactions(restaurant_id);
+CREATE INDEX IF NOT EXISTS idx_financial_transaction_date ON financial_transactions(transaction_date);
+CREATE INDEX IF NOT EXISTS idx_financial_transaction_account ON financial_transactions(account_id);
+CREATE INDEX IF NOT EXISTS idx_financial_transaction_reference ON financial_transactions(reference_type, reference_id);
+CREATE INDEX IF NOT EXISTS idx_financial_transaction_journal ON financial_transactions(journal_entry_id);
