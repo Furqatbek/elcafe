@@ -326,13 +326,23 @@ public class POSOrderService {
     }
 
     private POSOrderResponse mapToResponse(Order order, String orderType) {
+        // Handle null customer
+        String customerName = null;
+        String customerPhone = null;
+        if (order.getCustomer() != null) {
+            String firstName = order.getCustomer().getFirstName() != null ? order.getCustomer().getFirstName() : "";
+            String lastName = order.getCustomer().getLastName() != null ? order.getCustomer().getLastName() : "";
+            customerName = (firstName + " " + lastName).trim();
+            customerPhone = order.getCustomer().getPhone();
+        }
+
         POSOrderResponse response = POSOrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
                 .orderType(orderType)
-                .customerName(order.getCustomer().getFirstName() + " " + order.getCustomer().getLastName())
-                .customerPhone(order.getCustomer().getPhone())
+                .customerName(customerName)
+                .customerPhone(customerPhone)
                 .subtotal(order.getSubtotal())
                 .tax(order.getTax())
                 .deliveryFee(order.getDeliveryFee())
