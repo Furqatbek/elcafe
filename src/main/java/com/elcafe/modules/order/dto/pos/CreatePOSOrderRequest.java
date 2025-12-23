@@ -45,8 +45,8 @@ public class CreatePOSOrderRequest {
     @Size(max = 1000, message = "Order notes must not exceed 1000 characters")
     private String orderNotes;
 
-    @NotNull(message = "Payment method is required")
-    private String paymentMethod; // CASH, CARD, MOBILE
+    // Payment method is optional - orders can be created without payment (pay later)
+    private String paymentMethod; // CASH, CARD, MOBILE (optional)
 
     @NotNull(message = "Subtotal is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Subtotal must be greater than 0")
