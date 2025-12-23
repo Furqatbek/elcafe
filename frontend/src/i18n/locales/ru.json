@@ -177,6 +177,11 @@
       "actualTime": "Фактическое время доставки"
     },
     "printReceipt": "Печать чека",
+    "editItems": "Редактировать",
+    "closeCheck": "Закрыть счёт",
+    "closeTable": "Закрыть стол",
+    "confirmCloseTable": "Закрыть этот заказ и освободить стол?",
+    "tableReleased": "Заказ закрыт и стол освобождён",
     "createNewOrder": "Создать новый заказ",
     "createOrderDescription": "Создайте новый заказ для клиента",
     "orderType": {

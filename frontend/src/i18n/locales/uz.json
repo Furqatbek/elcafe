@@ -177,6 +177,11 @@
       "actualTime": "Haqiqiy yetkazib berish vaqti"
     },
     "printReceipt": "Chek chop etish",
+    "editItems": "Tahrirlash",
+    "closeCheck": "Hisobni yopish",
+    "closeTable": "Stolni yopish",
+    "confirmCloseTable": "Bu buyurtmani yopish va stolni bo'shatishni xohlaysizmi?",
+    "tableReleased": "Buyurtma yopildi va stol bo'shatildi",
     "createNewOrder": "Yangi buyurtma yaratish",
     "createOrderDescription": "Mijoz uchun yangi buyurtma yarating",
     "orderType": {

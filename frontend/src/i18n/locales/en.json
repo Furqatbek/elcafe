@@ -455,6 +455,11 @@
       "actualTime": "Actual Delivery Time"
     },
     "printReceipt": "Print Receipt",
+    "editItems": "Edit Items",
+    "closeCheck": "Close Check",
+    "closeTable": "Close Table",
+    "confirmCloseTable": "Close this order and release the table?",
+    "tableReleased": "Order closed and table released",
     "createNewOrder": "Create New Order",
     "createOrderDescription": "Create a new order for a customer",
     "orderType": {

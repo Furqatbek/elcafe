@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import usePOSStore from '../pos/store/posStore';
 import { orderAPI, restaurantAPI, menuAPI, tablesAPI, posAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -55,6 +57,7 @@ const statusColors = {
 
 export default function Orders() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
@@ -275,6 +278,79 @@ export default function Orders() {
     if (!paymentOrder || paymentMethod !== 'CASH') return 0;
     const tendered = parseFloat(amountTendered) || 0;
     return Math.max(0, tendered - paymentOrder.total);
+  };
+
+  // Navigate to payment screen for an order (opens full POS payment)
+  const handleCloseCheck = (order) => {
+    // Map order items to POS format
+    const posItems = (order.items || []).map((item, index) => ({
+      id: item.id || `${item.productId}-${index}`,
+      productId: item.productId,
+      name: item.productName,
+      basePrice: item.unitPrice || item.price || 0,
+      modifiers: [],
+      quantity: item.quantity,
+      itemTotal: item.totalPrice || (item.unitPrice || item.price || 0) * item.quantity,
+      notes: item.specialInstructions || '',
+    }));
+
+    // Calculate totals
+    const subtotal = posItems.reduce((sum, item) => sum + item.itemTotal, 0);
+    const tax = order.tax || 0;
+    const deliveryFee = order.deliveryFee || 0;
+    const total = order.total || (subtotal + tax + deliveryFee);
+
+    // Set up POS store with order data
+    usePOSStore.setState({
+      currentOrder: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        type: order.orderType,
+        items: posItems,
+        subtotal,
+        tax,
+        deliveryFee,
+        total,
+        notes: order.customerNotes || '',
+      },
+      customer: {
+        id: order.customer?.id || null,
+        name: order.customerName || order.customer?.firstName || order.deliveryInfo?.contactName || '',
+        phone: order.customerPhone || order.customer?.phone || order.deliveryInfo?.contactPhone || '',
+        email: order.customer?.email || '',
+        address: order.deliveryInfo ? {
+          street: order.deliveryInfo.address,
+          city: order.deliveryInfo.city,
+          state: order.deliveryInfo.state || '',
+          zipCode: order.deliveryInfo.zipCode || '',
+        } : null,
+        deliveryInstructions: order.deliveryInfo?.deliveryInstructions || '',
+        tableNumber: order.diningTable?.tableNumber || null,
+        tableIds: order.tableIds ? order.tableIds.split(',').map(id => parseInt(id.trim())) : null,
+        guestCount: order.guestCount || null,
+      },
+      payment: {
+        method: null,
+        amountTendered: 0,
+        changeDue: 0,
+        status: 'PENDING',
+      },
+      ui: {
+        currentScreen: 'payment',
+        isLoading: false,
+        error: null,
+        selectedCategory: null,
+        selectedProduct: null,
+      },
+    });
+
+    // Store selected restaurant ID for the POS
+    if (order.restaurant?.id) {
+      localStorage.setItem('selectedRestaurantId', order.restaurant.id.toString());
+    }
+
+    // Navigate to POS payment screen
+    navigate('/pos');
   };
 
   // Open edit items modal
@@ -738,6 +814,19 @@ export default function Orders() {
                     >
                       <Edit className="h-4 w-4" />
                       {t('orders.editItems', 'Edit Items')}
+                    </Button>
+                  )}
+
+                  {/* Close Check / Pay Button - For open orders to go to payment */}
+                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleCloseCheck(order)}
+                      className="gap-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      {t('orders.closeCheck', 'Close Check')}
                     </Button>
                   )}
 
