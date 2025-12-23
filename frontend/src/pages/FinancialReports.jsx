@@ -12,11 +12,25 @@ const FinancialReports = () => {
   const [activeTab, setActiveTab] = useState('profitLoss');
   const [accountsExist, setAccountsExist] = useState(true);
   const [initializingAccounts, setInitializingAccounts] = useState(false);
+  const [periodType, setPeriodType] = useState('monthly'); // 'daily' or 'monthly'
 
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
-  });
+  // Helper to get date range based on period type
+  const getDateRange = (type) => {
+    const today = new Date();
+    if (type === 'daily') {
+      const dateStr = today.toISOString().split('T')[0];
+      return { startDate: dateStr, endDate: dateStr };
+    } else {
+      // Monthly - first day of current month to today
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      return {
+        startDate: firstDay.toISOString().split('T')[0],
+        endDate: today.toISOString().split('T')[0]
+      };
+    }
+  };
+
+  const [dateRange, setDateRange] = useState(getDateRange('monthly'));
 
   const [profitLossReport, setProfitLossReport] = useState(null);
   const [balanceSheet, setBalanceSheet] = useState(null);
@@ -85,6 +99,11 @@ const FinancialReports = () => {
     } finally {
       setInitializingAccounts(false);
     }
+  };
+
+  const handlePeriodChange = (type) => {
+    setPeriodType(type);
+    setDateRange(getDateRange(type));
   };
 
   const formatCurrency = (amount) => {
@@ -445,19 +464,50 @@ const FinancialReports = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('finance.reports.title')}</h1>
         <div className="flex items-center gap-4">
+          {/* Period Type Filter */}
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+            <button
+              onClick={() => handlePeriodChange('daily')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                periodType === 'daily'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {t('finance.reports.daily') || 'Daily'}
+            </button>
+            <button
+              onClick={() => handlePeriodChange('monthly')}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
+                periodType === 'monthly'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {t('finance.reports.monthly') || 'Monthly'}
+            </button>
+          </div>
+
+          {/* Date Range Selector */}
           <div className="flex items-center gap-2">
             <Calendar size={20} className="text-gray-500" />
             <input
               type="date"
               value={dateRange.startDate}
-              onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+              onChange={(e) => {
+                setPeriodType('custom');
+                setDateRange({ ...dateRange, startDate: e.target.value });
+              }}
               className="px-3 py-2 border border-gray-300 rounded-lg"
             />
             <span className="text-gray-500">{t('finance.common.to')}</span>
             <input
               type="date"
               value={dateRange.endDate}
-              onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+              onChange={(e) => {
+                setPeriodType('custom');
+                setDateRange({ ...dateRange, endDate: e.target.value });
+              }}
               className="px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
