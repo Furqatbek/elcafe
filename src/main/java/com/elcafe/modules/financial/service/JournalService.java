@@ -233,7 +233,7 @@ public class JournalService {
     }
 
     public List<Transaction> getTransactionsByAccount(Long accountId) {
-        return transactionRepository.findByAccountId(accountId);
+        return transactionRepository.findByAccount_Id(accountId);
     }
 
     public List<Transaction> getTransactionsByDateRange(Long restaurantId, LocalDate startDate, LocalDate endDate) {

@@ -132,7 +132,7 @@ public class FinancialReportsService {
         BigDecimal cashOutflows = BigDecimal.ZERO;
 
         for (Account cashAccount : cashAccounts) {
-            List<Transaction> transactions = transactionRepository.findByAccountIdAndTransactionDateBetween(
+            List<Transaction> transactions = transactionRepository.findByAccount_IdAndTransactionDateBetween(
                     cashAccount.getId(), startDate, endDate);
 
             for (Transaction tx : transactions) {
@@ -205,7 +205,7 @@ public class FinancialReportsService {
     }
 
     private BigDecimal calculateAccountTotal(Long accountId, LocalDate startDate, LocalDate endDate) {
-        List<Transaction> transactions = transactionRepository.findByAccountIdAndTransactionDateBetween(
+        List<Transaction> transactions = transactionRepository.findByAccount_IdAndTransactionDateBetween(
                 accountId, startDate, endDate);
 
         return transactions.stream()
