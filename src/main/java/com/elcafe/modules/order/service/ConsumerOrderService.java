@@ -50,8 +50,8 @@ public class ConsumerOrderService {
             throw new RuntimeException("Restaurant is not accepting orders");
         }
 
-        // 2. Find or create customer
-        Customer customer = findOrCreateCustomer(request.getCustomerInfo());
+        // 2. Find or create customer (optional)
+        Customer customer = request.getCustomerInfo() != null ? findOrCreateCustomer(request.getCustomerInfo()) : null;
 
         // 3. Build order
         Order order = Order.builder()
@@ -102,18 +102,20 @@ public class ConsumerOrderService {
         order.setDiscount(discount);
         order.setTotal(total);
 
-        // 6. Add delivery info
-        DeliveryInfo deliveryInfo = DeliveryInfo.builder()
-                .order(order)
-                .address(request.getDeliveryInfo().getAddress())
-                .city(request.getDeliveryInfo().getCity())
-                .state(request.getDeliveryInfo().getState())
-                .zipCode(request.getDeliveryInfo().getZipCode())
-                .latitude(request.getDeliveryInfo().getLatitude() != null ? request.getDeliveryInfo().getLatitude().doubleValue() : null)
-                .longitude(request.getDeliveryInfo().getLongitude() != null ? request.getDeliveryInfo().getLongitude().doubleValue() : null)
-                .deliveryInstructions(request.getDeliveryInfo().getDeliveryInstructions())
-                .build();
-        order.setDeliveryInfo(deliveryInfo);
+        // 6. Add delivery info (optional)
+        if (request.getDeliveryInfo() != null) {
+            DeliveryInfo deliveryInfo = DeliveryInfo.builder()
+                    .order(order)
+                    .address(request.getDeliveryInfo().getAddress())
+                    .city(request.getDeliveryInfo().getCity())
+                    .state(request.getDeliveryInfo().getState())
+                    .zipCode(request.getDeliveryInfo().getZipCode())
+                    .latitude(request.getDeliveryInfo().getLatitude() != null ? request.getDeliveryInfo().getLatitude().doubleValue() : null)
+                    .longitude(request.getDeliveryInfo().getLongitude() != null ? request.getDeliveryInfo().getLongitude().doubleValue() : null)
+                    .deliveryInstructions(request.getDeliveryInfo().getDeliveryInstructions())
+                    .build();
+            order.setDeliveryInfo(deliveryInfo);
+        }
 
         // 7. Add payment info
         Payment payment = Payment.builder()
@@ -191,17 +193,30 @@ public class ConsumerOrderService {
     }
 
     private Customer findOrCreateCustomer(CreateOrderRequest.CustomerInfo customerInfo) {
-        return customerRepository.findByPhone(customerInfo.getPhone())
-                .orElseGet(() -> {
-                    Customer newCustomer = Customer.builder()
-                            .firstName(customerInfo.getFirstName())
-                            .lastName(customerInfo.getLastName())
-                            .phone(customerInfo.getPhone())
-                            .email(customerInfo.getEmail())
-                            .active(true)
-                            .build();
-                    return customerRepository.save(newCustomer);
-                });
+        // If phone is provided, try to find existing customer
+        if (customerInfo.getPhone() != null && !customerInfo.getPhone().isBlank()) {
+            return customerRepository.findByPhone(customerInfo.getPhone())
+                    .orElseGet(() -> {
+                        Customer newCustomer = Customer.builder()
+                                .firstName(customerInfo.getFirstName())
+                                .lastName(customerInfo.getLastName())
+                                .phone(customerInfo.getPhone())
+                                .email(customerInfo.getEmail())
+                                .active(true)
+                                .build();
+                        return customerRepository.save(newCustomer);
+                    });
+        }
+
+        // No phone - create new customer without lookup
+        Customer newCustomer = Customer.builder()
+                .firstName(customerInfo.getFirstName())
+                .lastName(customerInfo.getLastName())
+                .phone(customerInfo.getPhone())
+                .email(customerInfo.getEmail())
+                .active(true)
+                .build();
+        return customerRepository.save(newCustomer);
     }
 
     private String generateOrderNumber() {
