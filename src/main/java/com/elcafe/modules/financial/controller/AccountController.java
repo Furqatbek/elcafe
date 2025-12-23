@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -25,6 +27,21 @@ public class AccountController {
     private final RevenueService revenueService;
     private final OrderRepository orderRepository;
     private final JournalEntryRepository journalEntryRepository;
+
+    // Statuses that should be backfilled for revenue
+    private static final List<OrderStatus> BACKFILL_STATUSES = Arrays.asList(
+            OrderStatus.PENDING,
+            OrderStatus.NEW,
+            OrderStatus.PLACED,
+            OrderStatus.ACCEPTED,
+            OrderStatus.PREPARING,
+            OrderStatus.READY,
+            OrderStatus.PICKED_UP,
+            OrderStatus.COURIER_ASSIGNED,
+            OrderStatus.ON_DELIVERY,
+            OrderStatus.DELIVERED,
+            OrderStatus.COMPLETED
+    );
 
     /**
      * Initialize Chart of Accounts for a restaurant
@@ -78,12 +95,21 @@ public class AccountController {
      * Helper method to backfill historical orders
      */
     private int backfillHistoricalOrders(Long restaurantId) {
-        // Get all DELIVERED orders for this restaurant
-        List<Order> deliveredOrders = orderRepository.findByRestaurant_IdAndStatus(
-                restaurantId, OrderStatus.DELIVERED);
+        // Collect orders from all relevant statuses
+        List<Order> allOrders = new ArrayList<>();
+        for (OrderStatus status : BACKFILL_STATUSES) {
+            try {
+                List<Order> orders = orderRepository.findByRestaurant_IdAndStatus(restaurantId, status);
+                allOrders.addAll(orders);
+            } catch (Exception e) {
+                log.warn("Failed to fetch orders with status {}: {}", status, e.getMessage());
+            }
+        }
+
+        log.info("Found {} orders to potentially backfill for restaurant: {}", allOrders.size(), restaurantId);
 
         int processedCount = 0;
-        for (Order order : deliveredOrders) {
+        for (Order order : allOrders) {
             // Check if journal entry already exists for this order
             boolean hasJournalEntry = journalEntryRepository.existsByReferenceTypeAndReferenceId(
                     "ORDER", order.getId());
@@ -92,7 +118,7 @@ public class AccountController {
                 try {
                     revenueService.recordOrderRevenue(order);
                     processedCount++;
-                    log.debug("Backfilled revenue for order: {}", order.getId());
+                    log.debug("Backfilled revenue for order: {} (status: {})", order.getId(), order.getStatus());
                 } catch (Exception e) {
                     log.warn("Failed to backfill order {}: {}", order.getId(), e.getMessage());
                 }
