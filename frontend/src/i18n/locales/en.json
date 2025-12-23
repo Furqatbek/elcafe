@@ -1168,7 +1168,11 @@
       "cashFlowCategory": "Cash Flow Category",
       "cashInflows": "Cash Inflows",
       "cashOutflows": "Cash Outflows",
-      "netCashFlow": "Net Cash Flow"
+      "netCashFlow": "Net Cash Flow",
+      "refresh": "Refresh",
+      "reinitializeAccounts": "Re-initialize Accounts",
+      "confirmReinitialize": "This will reset all accounts to default values. Existing account balances will be preserved. Continue?",
+      "reinitializeSuccess": "Chart of Accounts re-initialized successfully"
     }
   },
   "messages": {

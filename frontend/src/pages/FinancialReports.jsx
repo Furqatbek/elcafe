@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { financialAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar, AlertCircle, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar, AlertCircle, RefreshCw, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const FinancialReports = () => {
@@ -459,11 +459,61 @@ const FinancialReports = () => {
     );
   };
 
+  const handleRefresh = () => {
+    if (selectedRestaurant) {
+      checkAccountsAndLoadReports(selectedRestaurant);
+    }
+  };
+
+  const handleReinitialize = async () => {
+    if (!selectedRestaurant) return;
+
+    if (!confirm(t('finance.reports.confirmReinitialize') || 'This will reset all accounts to default values. Existing account balances will be preserved. Continue?')) {
+      return;
+    }
+
+    setInitializingAccounts(true);
+    try {
+      await financialAPI.initializeAccounts(selectedRestaurant);
+      await loadReports(selectedRestaurant);
+      alert(t('finance.reports.reinitializeSuccess') || 'Chart of Accounts re-initialized successfully');
+    } catch (error) {
+      console.error('Failed to re-initialize accounts:', error);
+      alert(t('finance.reports.initializationFailed') || 'Failed to initialize Chart of Accounts');
+    } finally {
+      setInitializingAccounts(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('finance.reports.title')}</h1>
         <div className="flex items-center gap-4">
+          {/* Refresh and Initialize Buttons */}
+          {accountsExist && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                title={t('finance.reports.refresh') || 'Refresh Reports'}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                {t('finance.reports.refresh') || 'Refresh'}
+              </button>
+              <button
+                onClick={handleReinitialize}
+                disabled={initializingAccounts}
+                className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                title={t('finance.reports.reinitializeAccounts') || 'Re-initialize Accounts'}
+              >
+                <Settings className={`h-4 w-4 mr-2 ${initializingAccounts ? 'animate-spin' : ''}`} />
+                {t('finance.reports.initializeAccounts') || 'Initialize Accounts'}
+              </button>
+            </div>
+          )}
+
           {/* Period Type Filter */}
           <div className="flex rounded-lg border border-gray-300 overflow-hidden">
             <button

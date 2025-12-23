@@ -868,7 +868,11 @@
       "cashFlowCategory": "Pul oqimi kategoriyasi",
       "cashInflows": "Pul kirimi",
       "cashOutflows": "Pul chiqimi",
-      "netCashFlow": "Sof pul oqimi"
+      "netCashFlow": "Sof pul oqimi",
+      "refresh": "Yangilash",
+      "reinitializeAccounts": "Hisoblarni qayta sozlash",
+      "confirmReinitialize": "Bu barcha hisoblarni standart qiymatlarga qaytaradi. Mavjud balanslar saqlanib qoladi. Davom etasizmi?",
+      "reinitializeSuccess": "Hisoblar rejasi muvaffaqiyatli qayta sozlandi"
     }
   },
   "messages": {
