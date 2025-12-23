@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/notifications/financial-alerts")
+@RequestMapping("/api/v1/notifications/financial-alerts")
 @RequiredArgsConstructor
 public class FinancialAlertController {
 
