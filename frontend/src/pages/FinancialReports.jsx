@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { financialAPI } from '../services/api';
+import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar, AlertCircle, RefreshCw, Settings } from 'lucide-react';
+import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar, AlertCircle, RefreshCw, Settings, Building2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const FinancialReports = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profitLoss');
@@ -37,12 +38,35 @@ const FinancialReports = () => {
   const [cashFlowReport, setCashFlowReport] = useState(null);
   const [cogsReport, setCogsReport] = useState(null);
 
+  // Fetch restaurants on mount
   useEffect(() => {
-    if (user?.restaurantId) {
-      setSelectedRestaurant(user.restaurantId);
-      checkAccountsAndLoadReports(user.restaurantId);
+    const fetchRestaurants = async () => {
+      try {
+        const response = await restaurantAPI.getAll();
+        const restaurantList = response.data.data?.content || response.data.data || [];
+        setRestaurants(restaurantList);
+
+        // Set initial restaurant: user's restaurant or first available
+        if (!selectedRestaurant) {
+          if (user?.restaurantId) {
+            setSelectedRestaurant(user.restaurantId);
+          } else if (restaurantList.length > 0) {
+            setSelectedRestaurant(restaurantList[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching restaurants:', error);
+      }
+    };
+    fetchRestaurants();
+  }, [user]);
+
+  // Load reports when restaurant or date range changes
+  useEffect(() => {
+    if (selectedRestaurant) {
+      checkAccountsAndLoadReports(selectedRestaurant);
     }
-  }, [user, dateRange]);
+  }, [selectedRestaurant, dateRange]);
 
   const checkAccountsAndLoadReports = async (restaurantId) => {
     setLoading(true);
@@ -490,8 +514,25 @@ const FinancialReports = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('finance.reports.title')}</h1>
         <div className="flex items-center gap-4">
+          {/* Restaurant Selector */}
+          <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-gray-500" />
+            <select
+              value={selectedRestaurant || ''}
+              onChange={(e) => setSelectedRestaurant(e.target.value ? parseInt(e.target.value) : null)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
+            >
+              <option value="">{t('finance.common.selectRestaurant') || 'Select Restaurant'}</option>
+              {restaurants.map((restaurant) => (
+                <option key={restaurant.id} value={restaurant.id}>
+                  {restaurant.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Refresh and Initialize Buttons */}
-          {accountsExist && (
+          {accountsExist && selectedRestaurant && (
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
