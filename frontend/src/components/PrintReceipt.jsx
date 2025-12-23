@@ -77,15 +77,6 @@ const generateReceiptHTML = (order) => {
       letter-spacing: 2px;
     }
 
-    .order-number {
-      text-align: center;
-      font-size: 14px;
-      font-weight: bold;
-      margin: 4px 0;
-      padding: 3px;
-      border: 1px solid black;
-    }
-
     .info-section {
       margin: 3px 0;
       padding: 2px 0;
@@ -181,15 +172,6 @@ const generateReceiptHTML = (order) => {
       font-weight: bold;
     }
 
-    .payment-info {
-      margin: 3px 0;
-      text-align: center;
-      font-size: 10px;
-      font-weight: bold;
-      padding: 2px;
-      border: 1px dashed black;
-    }
-
     .notes-section {
       margin: 3px 0;
       padding: 2px;
@@ -249,8 +231,6 @@ const generateReceiptHTML = (order) => {
     <div class="header">
       <div class="brand-name">LaCasa</div>
     </div>
-
-    <div class="order-number">#${order.orderNumber}</div>
 
     <div class="info-section">
       <div class="info-line">
@@ -319,12 +299,6 @@ const generateReceiptHTML = (order) => {
         <span>${Math.round(order.total || 0)}</span>
       </div>
     </div>
-
-    ${(order.payment || order.paymentMethod) ? `
-    <div class="payment-info">
-      ${order.payment?.method || order.paymentMethod || ''}
-    </div>
-    ` : ''}
 
     ${order.customerNotes ? `
     <div class="notes-section">
