@@ -19,14 +19,13 @@ import SplitBillScreen from './screens/SplitBillScreen';
 /**
  * POSApp - Main POS application with screen routing
  * Touch-optimized restaurant point-of-sale system
- * Auto-enters fullscreen mode, ESC to exit
  */
 const POSApp = () => {
   const { t } = useTranslation();
   const { ui } = usePOSStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Fullscreen toggle function
+  // Fullscreen toggle function (manual only, no auto-fullscreen)
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
@@ -35,20 +34,6 @@ const POSApp = () => {
     } else {
       document.exitFullscreen();
     }
-  }, []);
-
-  // Auto-enter fullscreen on mount
-  useEffect(() => {
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => {
-          console.log('Auto-fullscreen failed:', err);
-        });
-      }
-    }, 100);
-
-    return () => clearTimeout(timer);
   }, []);
 
   // Listen for fullscreen changes (including ESC key exit)

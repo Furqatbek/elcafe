@@ -843,25 +843,15 @@ export default function Orders() {
                     </Button>
                   )}
 
-                  {/* Status Update Buttons */}
-                  {nextStatusMap[order.status] && (
-                    <>
-                      <Button
-                        size="sm"
-                        onClick={() => updateOrderStatus(order.id, nextStatusMap[order.status])}
-                      >
-                        {t('orders.updateStatus')}: {t(`orders.statuses.${nextStatusMap[order.status]}`)}
-                      </Button>
-                      {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                        >
-                          {t('orders.cancelOrder')}
-                        </Button>
-                      )}
-                    </>
+                  {/* Cancel Order Button */}
+                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
+                    >
+                      {t('orders.cancelOrder')}
+                    </Button>
                   )}
                 </div>
               </CardContent>

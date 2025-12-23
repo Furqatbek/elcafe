@@ -255,8 +255,14 @@ public class Order {
 
     /**
      * Check if order is fully paid
+     * An order with total = 0 is NOT considered fully paid (no items to pay for)
      */
     public boolean isFullyPaid() {
+        BigDecimal grandTotalAmount = grandTotal != null ? grandTotal : total;
+        // Order must have a positive total to be considered "fully paid"
+        if (grandTotalAmount == null || grandTotalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        }
         return getRemainingBalance().compareTo(BigDecimal.ZERO) <= 0;
     }
 
