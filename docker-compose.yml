@@ -146,26 +146,6 @@ services:
       timeout: 10s
       retries: 3
 
-  # Website fronted
-  website-frontend:
-    build:
-      context: ./template-smith-forge  # Path to this frontend repository
-      dockerfile: Dockerfile
-      args:
-        # For production deployment with custom domain:
-        VITE_API_BASE_URL: https://lacasa.uz/api/v1
-        # For Docker internal communication, use service name:
-        # VITE_API_BASE_URL: http://backend:8080/api/v1
-        # For local development from host machine:
-        # VITE_API_BASE_URL: http://localhost:8080/api/v1
-        VITE_RESTAURANT_ID: "1"
-    container_name: elcafe-website-frontend
-    ports:
-      - "4000:90"
-    depends_on:
-      - backend
-    restart: unless-stopped
-
 networks:
   elcafe-network:
     driver: bridge
