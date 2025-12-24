@@ -58,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/consumer/auth/**",
+                                "/api/v1/customer/public/**",
                                 "/api/v1/waiters/auth",
                                 "/api/v1/menu/public/**",
                                 "/api/v1/courier/webhook/**",
