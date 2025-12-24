@@ -55,7 +55,7 @@ function InventoryWrapper({ children }) {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/admin">
       <SessionManager />
       <Routes>
         <Route path="/login" element={<Login />} />
