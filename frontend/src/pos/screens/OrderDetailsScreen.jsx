@@ -64,7 +64,6 @@ const OrderDetailsScreen = () => {
     email: customer.email || '',
     address: customer.address?.street || '',
     city: customer.address?.city || '',
-    zipCode: customer.address?.zipCode || '',
     deliveryInstructions: customer.deliveryInstructions || '',
     // Pre-fill table info from selectedTable if available
     tableNumber: customer.tableNumber || selectedTable?.tableNumber || '',
@@ -95,9 +94,6 @@ const OrderDetailsScreen = () => {
       }
       if (!formData.city.trim()) {
         newErrors.city = t('pos.details.errors.cityRequired', 'City is required');
-      }
-      if (!formData.zipCode.trim()) {
-        newErrors.zipCode = t('pos.details.errors.zipRequired', 'ZIP code is required');
       }
     } else if (currentOrder.type === 'TAKEAWAY') {
       // Takeaway requires name and phone
@@ -137,7 +133,6 @@ const OrderDetailsScreen = () => {
       customerData.address = {
         street: formData.address,
         city: formData.city,
-        zipCode: formData.zipCode,
       };
       customerData.deliveryInstructions = formData.deliveryInstructions;
     } else if (currentOrder.type === 'DINE_IN') {
@@ -313,25 +308,14 @@ const OrderDetailsScreen = () => {
                 error={errors.address}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <InputField
-                  label={t('pos.details.city', 'City')}
-                  value={formData.city}
-                  onChange={(v) => handleChange('city', v)}
-                  required
-                  placeholder={t('pos.details.cityPlaceholder', 'New York')}
-                  error={errors.city}
-                />
-
-                <InputField
-                  label={t('pos.details.zipCode', 'ZIP Code')}
-                  value={formData.zipCode}
-                  onChange={(v) => handleChange('zipCode', v)}
-                  required
-                  placeholder={t('pos.details.zipPlaceholder', '10001')}
-                  error={errors.zipCode}
-                />
-              </div>
+              <InputField
+                label={t('pos.details.city', 'City')}
+                value={formData.city}
+                onChange={(v) => handleChange('city', v)}
+                required
+                placeholder={t('pos.details.cityPlaceholder', 'Tashkent')}
+                error={errors.city}
+              />
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">

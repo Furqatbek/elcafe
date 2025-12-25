@@ -31,15 +31,31 @@ const CashPaymentDialog = ({
   const changeDue = parseFloat(cashAmount || '0') - amountDue;
   const isValidAmount = cashAmount && changeDue >= 0;
 
-  // Generate quick cash amounts
-  const quickAmounts = [
-    amountDue,
-    Math.ceil(amountDue / 5) * 5,
-    Math.ceil(amountDue / 10) * 10,
-    Math.ceil(amountDue / 20) * 20,
-    50,
-    100,
-  ].filter((v, i, a) => a.indexOf(v) === i && v >= amountDue).slice(0, 6);
+  // Generate quick cash amounts with round-up denominations
+  const generateQuickAmounts = (amount) => {
+    const amounts = new Set();
+
+    // Add exact amount first
+    amounts.add(Math.ceil(amount));
+
+    // Round up to common denominations
+    const denominations = [1000, 5000, 10000, 20000, 50000, 100000, 200000, 500000];
+
+    for (const denom of denominations) {
+      const rounded = Math.ceil(amount / denom) * denom;
+      if (rounded >= amount) {
+        amounts.add(rounded);
+      }
+    }
+
+    // Convert to array, filter valid amounts, sort, and take first 6
+    return Array.from(amounts)
+      .filter(v => v >= amount)
+      .sort((a, b) => a - b)
+      .slice(0, 6);
+  };
+
+  const quickAmounts = generateQuickAmounts(amountDue);
 
   const handleComplete = () => {
     if (!isValidAmount) return;
@@ -101,16 +117,19 @@ const CashPaymentDialog = ({
             {t('pos.payment.quickAmounts', 'Quick Amounts')}
           </p>
           <div className="grid grid-cols-3 gap-2">
-            {quickAmounts.map((amount, index) => (
-              <TouchButton
-                key={index}
-                variant={cashAmount === amount.toFixed(2) ? 'primary' : 'outline'}
-                size="medium"
-                onClick={() => setCashAmount(amount.toFixed(2))}
-              >
-                {amount.toFixed(2)}
-              </TouchButton>
-            ))}
+            {quickAmounts.map((amount, index) => {
+              const displayAmount = Number.isInteger(amount) ? amount.toString() : amount.toFixed(2);
+              return (
+                <TouchButton
+                  key={index}
+                  variant={cashAmount === displayAmount ? 'primary' : 'outline'}
+                  size="medium"
+                  onClick={() => setCashAmount(displayAmount)}
+                >
+                  {amount.toLocaleString()}
+                </TouchButton>
+              );
+            })}
           </div>
         </div>
 

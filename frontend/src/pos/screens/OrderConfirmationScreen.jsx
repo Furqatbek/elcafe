@@ -105,16 +105,6 @@ const OrderConfirmationScreen = () => {
     }
   };
 
-  const handlePrintKitchenTicket = () => {
-    // Open kitchen ticket in new window and print
-    const ticketWindow = window.open('/pos/kitchen-ticket', '_blank');
-    if (ticketWindow) {
-      ticketWindow.onload = () => {
-        ticketWindow.print();
-      };
-    }
-  };
-
   const handleStartNewOrder = () => {
     resetPOS();
   };
@@ -169,7 +159,7 @@ const OrderConfirmationScreen = () => {
                 <div className="col-span-2">
                   <p className="text-sm text-gray-600">{t('pos.details.deliveryAddress', 'Delivery Address')}</p>
                   <p className="font-semibold text-gray-900">
-                    {customer.address.street}, {customer.address.city} {customer.address.zipCode}
+                    {customer.address.street}, {customer.address.city}
                   </p>
                 </div>
               )}
@@ -200,28 +190,16 @@ const OrderConfirmationScreen = () => {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-4">
-          <TouchButton
-            variant="outline"
-            size="xl"
-            fullWidth
-            onClick={handlePrintKitchenTicket}
-            icon={<Printer className="w-6 h-6" />}
-          >
-            {t('pos.confirmation.printKitchen', 'Print Kitchen Ticket')}
-          </TouchButton>
-
-          <TouchButton
-            variant="outline"
-            size="xl"
-            fullWidth
-            onClick={handlePrintReceipt}
-            icon={<Printer className="w-6 h-6" />}
-          >
-            {t('pos.confirmation.printReceipt', 'Print Receipt')}
-          </TouchButton>
-        </div>
+        {/* Action Button - Print Receipt */}
+        <TouchButton
+          variant="outline"
+          size="xl"
+          fullWidth
+          onClick={handlePrintReceipt}
+          icon={<Printer className="w-6 h-6" />}
+        >
+          {t('pos.confirmation.printReceipt', 'Print Receipt')}
+        </TouchButton>
 
         <TouchButton
           variant="success"
