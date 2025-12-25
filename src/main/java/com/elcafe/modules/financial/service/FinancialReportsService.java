@@ -37,11 +37,16 @@ public class FinancialReportsService {
     private final OrderRepository orderRepository;
 
     // Completed order statuses that count as revenue (must match DashboardService)
-    private static final List<OrderStatus> COMPLETED_STATUSES = List.of(
-            OrderStatus.COMPLETED,
-            OrderStatus.DELIVERED,
+    // Include all orders that have been accepted/confirmed (exclude PENDING, NEW, PLACED, REJECTED, CANCELLED)
+    private static final List<OrderStatus> REVENUE_STATUSES = List.of(
+            OrderStatus.ACCEPTED,
+            OrderStatus.PREPARING,
             OrderStatus.READY,
-            OrderStatus.PICKED_UP
+            OrderStatus.PICKED_UP,
+            OrderStatus.COURIER_ASSIGNED,
+            OrderStatus.ON_DELIVERY,
+            OrderStatus.DELIVERED,
+            OrderStatus.COMPLETED
     );
 
     /**
@@ -60,7 +65,7 @@ public class FinancialReportsService {
                 restaurantId, startDateTime, endDateTime);
 
         List<Order> completedOrders = orders.stream()
-                .filter(o -> COMPLETED_STATUSES.contains(o.getStatus()))
+                .filter(o -> REVENUE_STATUSES.contains(o.getStatus()))
                 .collect(Collectors.toList());
 
         BigDecimal totalRevenue = completedOrders.stream()

@@ -36,12 +36,16 @@ public class DashboardService {
     private final InventoryIngredientRepository ingredientRepository;
     private final ProductRepository productRepository;
 
-    // Completed order statuses that count as income
+    // Order statuses that count as income (all confirmed orders, exclude PENDING, NEW, PLACED, REJECTED, CANCELLED)
     private static final List<OrderStatus> COMPLETED_STATUSES = List.of(
-            OrderStatus.COMPLETED,
-            OrderStatus.DELIVERED,
+            OrderStatus.ACCEPTED,
+            OrderStatus.PREPARING,
             OrderStatus.READY,
-            OrderStatus.PICKED_UP
+            OrderStatus.PICKED_UP,
+            OrderStatus.COURIER_ASSIGNED,
+            OrderStatus.ON_DELIVERY,
+            OrderStatus.DELIVERED,
+            OrderStatus.COMPLETED
     );
 
     /**
