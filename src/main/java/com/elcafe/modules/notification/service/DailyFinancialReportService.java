@@ -10,7 +10,9 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.restaurant.entity.BusinessHours;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.repository.BusinessHoursRepository;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +47,7 @@ public class DailyFinancialReportService {
     private final OrderRepository orderRepository;
     private final ExpenseRepository expenseRepository;
     private final RestaurantRepository restaurantRepository;
+    private final BusinessHoursRepository businessHoursRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
@@ -105,15 +108,55 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Calculate daily financial metrics for a restaurant
+     * Get shift time range for a restaurant on a specific date
+     * Uses business hours to determine shift start and end times
+     * If shift crosses midnight (e.g., opens 10:00, closes 02:00), end time is next day
+     */
+    private ShiftTimeRange getShiftTimeRange(Long restaurantId, LocalDate date) {
+        // Get business hours for the day of week
+        var businessHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
+            restaurantId, date.getDayOfWeek());
+
+        if (businessHours.isEmpty() || businessHours.get().getClosed()) {
+            // If no business hours or closed, use full calendar day as fallback
+            return new ShiftTimeRange(
+                date.atStartOfDay(),
+                date.atTime(23, 59, 59),
+                LocalTime.of(0, 0),
+                LocalTime.of(23, 59)
+            );
+        }
+
+        BusinessHours hours = businessHours.get();
+        LocalTime openTime = hours.getOpenTime();
+        LocalTime closeTime = hours.getCloseTime();
+
+        LocalDateTime shiftStart = date.atTime(openTime);
+        LocalDateTime shiftEnd;
+
+        // Check if shift crosses midnight (closeTime is before openTime)
+        if (closeTime.isBefore(openTime) || closeTime.equals(openTime)) {
+            // Shift ends next day
+            shiftEnd = date.plusDays(1).atTime(closeTime);
+        } else {
+            // Shift ends same day
+            shiftEnd = date.atTime(closeTime);
+        }
+
+        return new ShiftTimeRange(shiftStart, shiftEnd, openTime, closeTime);
+    }
+
+    /**
+     * Calculate daily financial metrics for a restaurant based on shift hours
+     * Uses business hours from BusinessHours entity instead of calendar dates
      */
     public DailyMetrics calculateDailyMetrics(Long restaurantId, LocalDate date) {
-        LocalDateTime startOfDay = date.atStartOfDay();
-        LocalDateTime endOfDay = date.atTime(23, 59, 59);
+        // Get shift time range based on business hours
+        ShiftTimeRange shift = getShiftTimeRange(restaurantId, date);
 
-        // Get completed orders for the day
+        // Get completed orders for the shift period
         List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-            restaurantId, startOfDay, endOfDay);
+            restaurantId, shift.start(), shift.end());
 
         // Filter to only completed/delivered/picked-up orders
         List<Order> completedOrders = orders.stream()
@@ -148,7 +191,7 @@ public class DailyFinancialReportService {
             }
         }
 
-        // Get expenses for the day
+        // Get expenses for the day (expenses are still by calendar date)
         BigDecimal expenses = expenseRepository.getTotalExpensesByDateRange(restaurantId, date, date);
         if (expenses == null) {
             expenses = BigDecimal.ZERO;
@@ -165,6 +208,8 @@ public class DailyFinancialReportService {
         return new DailyMetrics(
             restaurantName,
             date,
+            shift.openTime(),
+            shift.closeTime(),
             completedOrders.size(),
             revenue,
             cashRevenue,
@@ -203,9 +248,12 @@ public class DailyFinancialReportService {
     private String formatDailyReport(FinancialAlertSubscription subscription, DailyMetrics metrics) {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("📊 <b>Ежедневный финансовый отчет</b>\n\n");
+        sb.append("📊 <b>Финансовый отчет за смену</b>\n\n");
         sb.append(String.format("🏪 <b>%s</b>\n", metrics.restaurantName()));
-        sb.append(String.format("📅 %s\n\n", metrics.date().format(DATE_FORMATTER)));
+        sb.append(String.format("📅 %s\n", metrics.date().format(DATE_FORMATTER)));
+        sb.append(String.format("🕐 Смена: %s - %s\n\n",
+            metrics.shiftStart().format(TIME_FORMATTER),
+            metrics.shiftEnd().format(TIME_FORMATTER)));
 
         if (subscription.getAlertDailyRevenue()) {
             sb.append(String.format("💰 <b>Выручка:</b> %s\n", formatCurrency(metrics.revenue())));
@@ -282,6 +330,8 @@ public class DailyFinancialReportService {
         return Map.ofEntries(
             Map.entry("restaurantName", metrics.restaurantName()),
             Map.entry("date", metrics.date().toString()),
+            Map.entry("shiftStart", metrics.shiftStart().toString()),
+            Map.entry("shiftEnd", metrics.shiftEnd().toString()),
             Map.entry("orderCount", metrics.orderCount()),
             Map.entry("revenue", metrics.revenue()),
             Map.entry("cashRevenue", metrics.cashRevenue()),
@@ -292,16 +342,28 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Record class for daily metrics
+     * Record class for daily metrics with shift times
      */
     public record DailyMetrics(
         String restaurantName,
         LocalDate date,
+        LocalTime shiftStart,
+        LocalTime shiftEnd,
         int orderCount,
         BigDecimal revenue,
         BigDecimal cashRevenue,
         BigDecimal cardRevenue,
         BigDecimal expenses,
         BigDecimal profit
+    ) {}
+
+    /**
+     * Record class for shift time range
+     */
+    private record ShiftTimeRange(
+        LocalDateTime start,
+        LocalDateTime end,
+        LocalTime openTime,
+        LocalTime closeTime
     ) {}
 }
