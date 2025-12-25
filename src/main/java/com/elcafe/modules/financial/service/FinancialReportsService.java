@@ -205,12 +205,33 @@ public class FinancialReportsService {
     }
 
     private BigDecimal calculateAccountTotal(Long accountId, LocalDate startDate, LocalDate endDate) {
+        Account account = accountRepository.findById(accountId).orElse(null);
+        if (account == null) return BigDecimal.ZERO;
+
         List<Transaction> transactions = transactionRepository.findByAccount_IdAndTransactionDateBetween(
                 accountId, startDate, endDate);
 
-        return transactions.stream()
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (Transaction tx : transactions) {
+            if (account.getNormalBalance() == Account.NormalBalance.DEBIT) {
+                // For debit-normal accounts (Expenses, Assets): debits add, credits subtract
+                if (tx.getType() == Transaction.TransactionType.DEBIT) {
+                    total = total.add(tx.getAmount());
+                } else {
+                    total = total.subtract(tx.getAmount());
+                }
+            } else {
+                // For credit-normal accounts (Revenue, Liabilities, Equity): credits add, debits subtract
+                if (tx.getType() == Transaction.TransactionType.CREDIT) {
+                    total = total.add(tx.getAmount());
+                } else {
+                    total = total.subtract(tx.getAmount());
+                }
+            }
+        }
+
+        return total;
     }
 
     @Data

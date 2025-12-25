@@ -2,6 +2,7 @@ package com.elcafe.modules.financial.service;
 
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.repository.AccountRepository;
+import com.elcafe.modules.financial.repository.JournalEntryRepository;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
@@ -23,6 +24,7 @@ public class RevenueService {
 
     private final JournalService journalService;
     private final AccountRepository accountRepository;
+    private final JournalEntryRepository journalEntryRepository;
     private final InventoryProductIngredientRepository productIngredientRepository;
 
     /**
@@ -33,6 +35,12 @@ public class RevenueService {
         log.info("Recording revenue for order: {}", order.getId());
 
         try {
+            // Check if revenue has already been recorded for this order
+            if (journalEntryRepository.existsByReferenceTypeAndReferenceId("ORDER", order.getId())) {
+                log.info("Revenue already recorded for order: {}, skipping", order.getId());
+                return;
+            }
+
             Long restaurantId = order.getRestaurant().getId();
 
             // Use order's completion date or creation date for accurate historical reporting
