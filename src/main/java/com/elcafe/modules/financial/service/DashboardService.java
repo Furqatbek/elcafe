@@ -38,6 +38,7 @@ public class DashboardService {
 
     // Completed order statuses that count as income
     private static final List<OrderStatus> COMPLETED_STATUSES = List.of(
+            OrderStatus.COMPLETED,
             OrderStatus.DELIVERED,
             OrderStatus.READY,
             OrderStatus.PICKED_UP

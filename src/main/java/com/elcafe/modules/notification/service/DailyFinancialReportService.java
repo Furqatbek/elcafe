@@ -24,6 +24,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -44,6 +45,15 @@ public class DailyFinancialReportService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
+
+    // Order statuses that count as completed/revenue-generating
+    // Must match DashboardService.COMPLETED_STATUSES for consistency
+    private static final Set<OrderStatus> COMPLETED_ORDER_STATUSES = Set.of(
+            OrderStatus.COMPLETED,
+            OrderStatus.DELIVERED,
+            OrderStatus.READY,
+            OrderStatus.PICKED_UP
+    );
 
     /**
      * Scheduled task to check and send daily financial reports
@@ -102,11 +112,9 @@ public class DailyFinancialReportService {
         List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             restaurantId, startOfDay, endOfDay);
 
-        // Filter to only completed/delivered orders
+        // Filter to only completed/delivered/picked-up orders
         List<Order> completedOrders = orders.stream()
-            .filter(o -> o.getStatus() == OrderStatus.COMPLETED ||
-                        o.getStatus() == OrderStatus.DELIVERED ||
-                        o.getStatus() == OrderStatus.READY)
+            .filter(o -> COMPLETED_ORDER_STATUSES.contains(o.getStatus()))
             .collect(Collectors.toList());
 
         // Calculate total revenue
