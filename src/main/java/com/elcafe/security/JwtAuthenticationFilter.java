@@ -82,6 +82,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                         logger.debug("Waiter authentication set successfully");
                     }
+                } else if ("consumer".equals(tokenType)) {
+                    // Handle consumer/customer authentication
+                    Long customerId = claims.get("customerId", Long.class);
+                    logger.debug("Processing consumer token - customerId: " + customerId);
+
+                    if (customerId != null && jwtUtil.isTokenExpired(jwt) == false) {
+                        // Create UserDetails for consumer with CUSTOMER role
+                        UserDetails consumerDetails = User.builder()
+                                .username(username)
+                                .password("") // Password not needed for token auth
+                                .authorities(Collections.singletonList(
+                                        new SimpleGrantedAuthority("ROLE_CUSTOMER")
+                                ))
+                                .build();
+
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                consumerDetails,
+                                null,
+                                consumerDetails.getAuthorities()
+                        );
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                        logger.debug("Consumer authentication set successfully for customerId: " + customerId);
+                    }
                 } else {
                     // Handle regular user authentication
                     logger.debug("Processing regular user token");
