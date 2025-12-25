@@ -5,7 +5,10 @@ import com.elcafe.modules.notification.config.FinancialAlertConfig;
 import com.elcafe.modules.notification.entity.FinancialAlertSubscription;
 import com.elcafe.modules.notification.repository.FinancialAlertSubscriptionRepository;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.entity.Payment;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.PaymentMethod;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -123,6 +126,28 @@ public class DailyFinancialReportService {
             .filter(t -> t != null)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Calculate revenue by payment method
+        BigDecimal cashRevenue = BigDecimal.ZERO;
+        BigDecimal cardRevenue = BigDecimal.ZERO;
+
+        for (Order order : completedOrders) {
+            if (order.getPayments() != null) {
+                for (Payment payment : order.getPayments()) {
+                    // Only count completed/successful payments
+                    if (payment.getStatus() == PaymentStatus.COMPLETED && payment.getAmount() != null) {
+                        PaymentMethod method = payment.getMethod();
+                        if (method == PaymentMethod.CASH) {
+                            cashRevenue = cashRevenue.add(payment.getAmount());
+                        } else if (method == PaymentMethod.CARD ||
+                                   method == PaymentMethod.CREDIT_CARD ||
+                                   method == PaymentMethod.DEBIT_CARD) {
+                            cardRevenue = cardRevenue.add(payment.getAmount());
+                        }
+                    }
+                }
+            }
+        }
+
         // Get expenses for the day
         BigDecimal expenses = expenseRepository.getTotalExpensesByDateRange(restaurantId, date, date);
         if (expenses == null) {
@@ -142,6 +167,8 @@ public class DailyFinancialReportService {
             date,
             completedOrders.size(),
             revenue,
+            cashRevenue,
+            cardRevenue,
             expenses,
             profit
         );
@@ -183,6 +210,11 @@ public class DailyFinancialReportService {
         if (subscription.getAlertDailyRevenue()) {
             sb.append(String.format("💰 <b>Выручка:</b> %s\n", formatCurrency(metrics.revenue())));
             sb.append(String.format("📦 Заказов: %d\n\n", metrics.orderCount()));
+
+            // Payment method breakdown
+            sb.append("<b>По способу оплаты:</b>\n");
+            sb.append(String.format("   💵 Наличные: %s\n", formatCurrency(metrics.cashRevenue())));
+            sb.append(String.format("   💳 Карта: %s\n\n", formatCurrency(metrics.cardRevenue())));
         }
 
         if (subscription.getAlertDailyExpenses()) {
@@ -247,13 +279,15 @@ public class DailyFinancialReportService {
     public Map<String, Object> getDailyMetricsSummary(Long restaurantId, LocalDate date) {
         DailyMetrics metrics = calculateDailyMetrics(restaurantId, date);
 
-        return Map.of(
-            "restaurantName", metrics.restaurantName(),
-            "date", metrics.date().toString(),
-            "orderCount", metrics.orderCount(),
-            "revenue", metrics.revenue(),
-            "expenses", metrics.expenses(),
-            "profit", metrics.profit()
+        return Map.ofEntries(
+            Map.entry("restaurantName", metrics.restaurantName()),
+            Map.entry("date", metrics.date().toString()),
+            Map.entry("orderCount", metrics.orderCount()),
+            Map.entry("revenue", metrics.revenue()),
+            Map.entry("cashRevenue", metrics.cashRevenue()),
+            Map.entry("cardRevenue", metrics.cardRevenue()),
+            Map.entry("expenses", metrics.expenses()),
+            Map.entry("profit", metrics.profit())
         );
     }
 
@@ -265,6 +299,8 @@ public class DailyFinancialReportService {
         LocalDate date,
         int orderCount,
         BigDecimal revenue,
+        BigDecimal cashRevenue,
+        BigDecimal cardRevenue,
         BigDecimal expenses,
         BigDecimal profit
     ) {}
