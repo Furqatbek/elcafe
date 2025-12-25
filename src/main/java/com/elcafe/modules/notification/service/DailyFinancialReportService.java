@@ -153,21 +153,33 @@ public class DailyFinancialReportService {
     public DailyMetrics calculateDailyMetrics(Long restaurantId, LocalDate date) {
         // Get shift time range based on business hours
         ShiftTimeRange shift = getShiftTimeRange(restaurantId, date);
+        log.info("Calculating metrics for restaurant {} on {} - shift: {} to {}",
+            restaurantId, date, shift.start(), shift.end());
 
         // Get completed orders for the shift period
         List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             restaurantId, shift.start(), shift.end());
+        log.info("Found {} total orders in shift period", orders.size());
 
         // Filter to only completed/delivered/picked-up orders
         List<Order> completedOrders = orders.stream()
             .filter(o -> COMPLETED_ORDER_STATUSES.contains(o.getStatus()))
             .collect(Collectors.toList());
+        log.info("Found {} completed orders (statuses: {})", completedOrders.size(), COMPLETED_ORDER_STATUSES);
+
+        // Log order statuses for debugging
+        if (orders.size() > 0 && completedOrders.size() == 0) {
+            Map<OrderStatus, Long> statusCounts = orders.stream()
+                .collect(Collectors.groupingBy(Order::getStatus, Collectors.counting()));
+            log.warn("No completed orders found! Order statuses: {}", statusCounts);
+        }
 
         // Calculate total revenue
         BigDecimal revenue = completedOrders.stream()
             .map(Order::getTotal)
             .filter(t -> t != null)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+        log.info("Total revenue from completed orders: {}", revenue);
 
         // Calculate revenue by payment method
         BigDecimal cashRevenue = BigDecimal.ZERO;

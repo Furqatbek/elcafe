@@ -27,6 +27,7 @@ public class FinancialReportsService {
     private final TransactionRepository transactionRepository;
     private final ExpenseRepository expenseRepository;
     private final PayrollEntryRepository payrollRepository;
+    private final AccountService accountService;
 
     /**
      * Generate Profit & Loss Statement (Income Statement)
@@ -34,15 +35,30 @@ public class FinancialReportsService {
     public ProfitLossReport generateProfitLossReport(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Generating P&L report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 
+        // Check if accounts exist, if not initialize them
+        List<Account> allAccounts = accountRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
+        if (allAccounts.isEmpty()) {
+            log.warn("No financial accounts found for restaurant {}. Initializing chart of accounts...", restaurantId);
+            try {
+                accountService.initializeChartOfAccounts(restaurantId);
+                log.info("Chart of accounts initialized for restaurant {}", restaurantId);
+            } catch (Exception e) {
+                log.error("Failed to initialize chart of accounts for restaurant {}: {}", restaurantId, e.getMessage());
+            }
+        }
+
         // Get all revenue accounts
         List<Account> revenueAccounts = accountRepository.findByRestaurant_IdAndType(
                 restaurantId, Account.AccountType.REVENUE);
+        log.debug("Found {} revenue accounts for restaurant {}", revenueAccounts.size(), restaurantId);
 
         BigDecimal totalRevenue = calculateAccountsTotal(revenueAccounts, startDate, endDate);
+        log.debug("Total revenue calculated: {}", totalRevenue);
 
         // Get all expense accounts
         List<Account> expenseAccounts = accountRepository.findByRestaurant_IdAndType(
                 restaurantId, Account.AccountType.EXPENSE);
+        log.debug("Found {} expense accounts for restaurant {}", expenseAccounts.size(), restaurantId);
 
         Map<String, BigDecimal> expensesByCategory = new HashMap<>();
         BigDecimal totalExpenses = BigDecimal.ZERO;
@@ -206,10 +222,16 @@ public class FinancialReportsService {
 
     private BigDecimal calculateAccountTotal(Long accountId, LocalDate startDate, LocalDate endDate) {
         Account account = accountRepository.findById(accountId).orElse(null);
-        if (account == null) return BigDecimal.ZERO;
+        if (account == null) {
+            log.warn("Account not found: {}", accountId);
+            return BigDecimal.ZERO;
+        }
 
         List<Transaction> transactions = transactionRepository.findByAccount_IdAndTransactionDateBetween(
                 accountId, startDate, endDate);
+
+        log.debug("Account {} ({}): found {} transactions between {} and {}",
+            account.getName(), account.getCode(), transactions.size(), startDate, endDate);
 
         BigDecimal total = BigDecimal.ZERO;
 
