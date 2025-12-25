@@ -1,11 +1,15 @@
 package com.elcafe.modules.financial.service;
 
 import com.elcafe.modules.financial.entity.Account;
+import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.entity.Transaction;
 import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.financial.repository.PayrollEntryRepository;
 import com.elcafe.modules.financial.repository.TransactionRepository;
+import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +19,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -28,46 +34,63 @@ public class FinancialReportsService {
     private final ExpenseRepository expenseRepository;
     private final PayrollEntryRepository payrollRepository;
     private final AccountService accountService;
+    private final OrderRepository orderRepository;
+
+    // Completed order statuses that count as revenue (must match DashboardService)
+    private static final List<OrderStatus> COMPLETED_STATUSES = List.of(
+            OrderStatus.COMPLETED,
+            OrderStatus.DELIVERED,
+            OrderStatus.READY,
+            OrderStatus.PICKED_UP
+    );
 
     /**
      * Generate Profit & Loss Statement (Income Statement)
+     * Revenue is calculated directly from completed orders for accuracy,
+     * as the transaction-based approach requires proper double-entry bookkeeping setup.
      */
     public ProfitLossReport generateProfitLossReport(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Generating P&L report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 
-        // Check if accounts exist, if not initialize them
-        List<Account> allAccounts = accountRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
-        if (allAccounts.isEmpty()) {
-            log.warn("No financial accounts found for restaurant {}. Initializing chart of accounts...", restaurantId);
-            try {
-                accountService.initializeChartOfAccounts(restaurantId);
-                log.info("Chart of accounts initialized for restaurant {}", restaurantId);
-            } catch (Exception e) {
-                log.error("Failed to initialize chart of accounts for restaurant {}: {}", restaurantId, e.getMessage());
-            }
-        }
+        // Calculate revenue directly from completed orders (same as DashboardService)
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
-        // Get all revenue accounts
-        List<Account> revenueAccounts = accountRepository.findByRestaurant_IdAndType(
-                restaurantId, Account.AccountType.REVENUE);
-        log.debug("Found {} revenue accounts for restaurant {}", revenueAccounts.size(), restaurantId);
+        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+                restaurantId, startDateTime, endDateTime);
 
-        BigDecimal totalRevenue = calculateAccountsTotal(revenueAccounts, startDate, endDate);
-        log.debug("Total revenue calculated: {}", totalRevenue);
+        List<Order> completedOrders = orders.stream()
+                .filter(o -> COMPLETED_STATUSES.contains(o.getStatus()))
+                .collect(Collectors.toList());
 
-        // Get all expense accounts
-        List<Account> expenseAccounts = accountRepository.findByRestaurant_IdAndType(
-                restaurantId, Account.AccountType.EXPENSE);
-        log.debug("Found {} expense accounts for restaurant {}", expenseAccounts.size(), restaurantId);
+        BigDecimal totalRevenue = completedOrders.stream()
+                .map(Order::getTotal)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        Map<String, BigDecimal> expensesByCategory = new HashMap<>();
-        BigDecimal totalExpenses = BigDecimal.ZERO;
+        log.info("P&L: Found {} orders, {} completed, total revenue: {}",
+                orders.size(), completedOrders.size(), totalRevenue);
 
-        for (Account account : expenseAccounts) {
-            BigDecimal amount = calculateAccountTotal(account.getId(), startDate, endDate);
-            expensesByCategory.put(account.getCategory().toString(), amount);
-            totalExpenses = totalExpenses.add(amount);
-        }
+        // Calculate expenses from expense records (same as DashboardService)
+        List<Expense> expenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
+                restaurantId, startDate, endDate);
+
+        BigDecimal totalExpenses = expenses.stream()
+                .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
+                .map(Expense::getTotalAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Group expenses by category
+        Map<String, BigDecimal> expensesByCategory = expenses.stream()
+                .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
+                .filter(e -> e.getTotalAmount() != null)
+                .collect(Collectors.groupingBy(
+                        e -> e.getCategory() != null ? e.getCategory().name() : "OTHER",
+                        Collectors.reducing(BigDecimal.ZERO, Expense::getTotalAmount, BigDecimal::add)
+                ));
+
+        log.info("P&L: Total expenses: {}, categories: {}", totalExpenses, expensesByCategory.keySet());
 
         BigDecimal netIncome = totalRevenue.subtract(totalExpenses);
 
