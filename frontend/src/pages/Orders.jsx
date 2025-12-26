@@ -857,6 +857,16 @@ export default function Orders() {
                                 <div className="flex justify-between items-center pt-2 border-t">
                                   <span className="font-semibold">{order.total?.toFixed(0)}</span>
                                   <div className="flex gap-1 items-center">
+                                    {/* Print Receipt Button - Always visible */}
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => PrintReceipt(order)}
+                                      className="h-7 px-2"
+                                      title={t('orders.printReceipt', 'Print Receipt')}
+                                    >
+                                      <Printer className="h-3 w-3" />
+                                    </Button>
                                     {order.paymentStatus === 'COMPLETED' ? (
                                       <Badge className="bg-green-100 text-green-800 h-7">
                                         {t('orders.paid', 'Paid')}
@@ -868,6 +878,7 @@ export default function Orders() {
                                           size="sm"
                                           onClick={() => handleEditItems(order)}
                                           className="h-7 px-2"
+                                          title={t('orders.editItems', 'Edit Items')}
                                         >
                                           <Edit className="h-3 w-3" />
                                         </Button>
@@ -876,6 +887,7 @@ export default function Orders() {
                                           size="sm"
                                           onClick={() => handleCloseCheck(order)}
                                           className="h-7 px-2 bg-blue-600 hover:bg-blue-700"
+                                          title={t('orders.closeCheck', 'Close Check')}
                                         >
                                           <CreditCard className="h-3 w-3" />
                                         </Button>
