@@ -21,7 +21,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,35 +34,27 @@ public class DashboardService {
     private final PayrollEntryRepository payrollRepository;
     private final InventoryIngredientRepository ingredientRepository;
     private final ProductRepository productRepository;
-
-    // Order statuses that count as income (all confirmed orders, exclude PENDING, NEW, PLACED, REJECTED, CANCELLED)
-    private static final List<OrderStatus> COMPLETED_STATUSES = List.of(
-            OrderStatus.ACCEPTED,
-            OrderStatus.PREPARING,
-            OrderStatus.READY,
-            OrderStatus.PICKED_UP,
-            OrderStatus.COURIER_ASSIGNED,
-            OrderStatus.ON_DELIVERY,
-            OrderStatus.DELIVERED,
-            OrderStatus.COMPLETED
-    );
+    private final ShiftTimeService shiftTimeService;
 
     /**
-     * Get comprehensive dashboard data for a restaurant
+     * Get comprehensive dashboard data for a restaurant.
+     * Uses shift-based time ranges from business hours (handles shifts that cross midnight).
      */
     public DashboardResponse getDashboard(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Generating dashboard for restaurant {} from {} to {}", restaurantId, startDate, endDate);
 
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.info("Dashboard using shift time range: {} to {}", shift.start(), shift.end());
 
-        // Fetch all orders in date range
+        // Fetch all orders in shift time range
         List<Order> allOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                restaurantId, startDateTime, endDateTime);
+                restaurantId, shift.start(), shift.end());
 
-        // Filter completed orders for income calculation
+        // Filter completed orders for income calculation using shared status list
         List<Order> completedOrders = allOrders.stream()
-                .filter(o -> COMPLETED_STATUSES.contains(o.getStatus()))
+                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
                 .collect(Collectors.toList());
 
         // Calculate income
@@ -333,15 +324,16 @@ public class DashboardService {
         LocalDate prevEndDate = startDate.minusDays(1);
         LocalDate prevStartDate = prevEndDate.minusDays(daysBetween - 1);
 
-        LocalDateTime prevStartDateTime = prevStartDate.atStartOfDay();
-        LocalDateTime prevEndDateTime = prevEndDate.atTime(LocalTime.MAX);
+        // Get shift-based time range for previous period
+        ShiftTimeService.ShiftTimeRange prevShift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, prevStartDate, prevEndDate);
 
-        // Get previous period orders
+        // Get previous period orders using shift time range
         List<Order> prevOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                restaurantId, prevStartDateTime, prevEndDateTime);
+                restaurantId, prevShift.start(), prevShift.end());
 
         List<Order> prevCompletedOrders = prevOrders.stream()
-                .filter(o -> COMPLETED_STATUSES.contains(o.getStatus()))
+                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
                 .collect(Collectors.toList());
 
         BigDecimal prevIncome = prevCompletedOrders.stream()

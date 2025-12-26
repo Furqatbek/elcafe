@@ -8,10 +8,7 @@ import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.financial.repository.PayrollEntryRepository;
 import com.elcafe.modules.financial.repository.TransactionRepository;
 import com.elcafe.modules.order.entity.Order;
-import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
-import com.elcafe.modules.restaurant.entity.BusinessHours;
-import com.elcafe.modules.restaurant.repository.BusinessHoursRepository;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,8 +18,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -37,64 +32,7 @@ public class FinancialReportsService {
     private final PayrollEntryRepository payrollRepository;
     private final AccountService accountService;
     private final OrderRepository orderRepository;
-    private final BusinessHoursRepository businessHoursRepository;
-
-    // Completed order statuses that count as revenue (must match DashboardService)
-    // Include all orders that have been accepted/confirmed (exclude PENDING, NEW, PLACED, REJECTED, CANCELLED)
-    private static final List<OrderStatus> REVENUE_STATUSES = List.of(
-            OrderStatus.ACCEPTED,
-            OrderStatus.PREPARING,
-            OrderStatus.READY,
-            OrderStatus.PICKED_UP,
-            OrderStatus.COURIER_ASSIGNED,
-            OrderStatus.ON_DELIVERY,
-            OrderStatus.DELIVERED,
-            OrderStatus.COMPLETED
-    );
-
-    /**
-     * Record class for shift time range
-     */
-    private record ShiftTimeRange(
-        LocalDateTime start,
-        LocalDateTime end
-    ) {}
-
-    /**
-     * Get shift time range for a restaurant on a specific date
-     * Uses business hours to determine shift start and end times
-     * If shift crosses midnight (e.g., opens 10:00, closes 02:00), end time is next day
-     */
-    private ShiftTimeRange getShiftTimeRange(Long restaurantId, LocalDate date) {
-        var businessHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
-            restaurantId, date.getDayOfWeek());
-
-        if (businessHours.isEmpty() || businessHours.get().getClosed()) {
-            // If no business hours or closed, use full calendar day as fallback
-            return new ShiftTimeRange(
-                date.atStartOfDay(),
-                date.atTime(23, 59, 59)
-            );
-        }
-
-        BusinessHours hours = businessHours.get();
-        LocalTime openTime = hours.getOpenTime();
-        LocalTime closeTime = hours.getCloseTime();
-
-        LocalDateTime shiftStart = date.atTime(openTime);
-        LocalDateTime shiftEnd;
-
-        // Check if shift crosses midnight (closeTime is before openTime)
-        if (closeTime.isBefore(openTime) || closeTime.equals(openTime)) {
-            // Shift ends next day
-            shiftEnd = date.plusDays(1).atTime(closeTime);
-        } else {
-            // Shift ends same day
-            shiftEnd = date.atTime(closeTime);
-        }
-
-        return new ShiftTimeRange(shiftStart, shiftEnd);
-    }
+    private final ShiftTimeService shiftTimeService;
 
     /**
      * Generate Profit & Loss Statement (Income Statement)
@@ -105,32 +43,16 @@ public class FinancialReportsService {
     public ProfitLossReport generateProfitLossReport(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Generating P&L report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 
-        // Calculate shift-based time range
-        // For single day: use business hours (shift may cross midnight)
-        // For multiple days: combine all shifts
-        LocalDateTime startDateTime;
-        LocalDateTime endDateTime;
-
-        if (startDate.equals(endDate)) {
-            // Single day - use shift time range based on business hours
-            ShiftTimeRange shift = getShiftTimeRange(restaurantId, startDate);
-            startDateTime = shift.start();
-            endDateTime = shift.end();
-            log.info("P&L: Using shift time range: {} to {}", startDateTime, endDateTime);
-        } else {
-            // Multi-day - use shift start of first day to shift end of last day
-            ShiftTimeRange firstShift = getShiftTimeRange(restaurantId, startDate);
-            ShiftTimeRange lastShift = getShiftTimeRange(restaurantId, endDate);
-            startDateTime = firstShift.start();
-            endDateTime = lastShift.end();
-            log.info("P&L: Using multi-day range: {} to {}", startDateTime, endDateTime);
-        }
+        // Get shift-based time range using shared service
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.info("P&L: Using shift time range: {} to {}", shift.start(), shift.end());
 
         List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                restaurantId, startDateTime, endDateTime);
+                restaurantId, shift.start(), shift.end());
 
         List<Order> completedOrders = orders.stream()
-                .filter(o -> REVENUE_STATUSES.contains(o.getStatus()))
+                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
                 .collect(Collectors.toList());
 
         BigDecimal totalRevenue = completedOrders.stream()
@@ -275,19 +197,32 @@ public class FinancialReportsService {
 
     /**
      * Generate COGS (Cost of Goods Sold) Report
+     * Uses shift-based time ranges and order-based revenue calculation.
      */
     public CogsReport generateCogsReport(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Generating COGS report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.info("COGS: Using shift time range: {} to {}", shift.start(), shift.end());
+
+        // Get COGS from transaction accounts
         List<Account> cogsAccounts = accountRepository.findByRestaurant_IdAndCategory(
                 restaurantId, Account.AccountCategory.COGS);
-
         BigDecimal totalCogs = calculateAccountsTotal(cogsAccounts, startDate, endDate);
 
-        // Get revenue for calculating COGS percentage
-        List<Account> revenueAccounts = accountRepository.findByRestaurant_IdAndType(
-                restaurantId, Account.AccountType.REVENUE);
-        BigDecimal totalRevenue = calculateAccountsTotal(revenueAccounts, startDate, endDate);
+        // Get revenue from orders (consistent with P&L report)
+        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+                restaurantId, shift.start(), shift.end());
+
+        BigDecimal totalRevenue = orders.stream()
+                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
+                .map(Order::getTotal)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        log.info("COGS: Total COGS: {}, Total Revenue: {}", totalCogs, totalRevenue);
 
         BigDecimal cogsPercentage = BigDecimal.ZERO;
         if (totalRevenue.compareTo(BigDecimal.ZERO) > 0) {

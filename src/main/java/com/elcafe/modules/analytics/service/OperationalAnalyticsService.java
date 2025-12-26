@@ -1,6 +1,7 @@
 package com.elcafe.modules.analytics.service;
 
 import com.elcafe.modules.analytics.dto.*;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.kitchen.entity.KitchenOrder;
 import com.elcafe.modules.kitchen.enums.KitchenOrderStatus;
 import com.elcafe.modules.kitchen.repository.KitchenOrderRepository;
@@ -18,12 +19,12 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for operational analytics calculations
+ * Service for operational analytics calculations.
+ * Uses shift-based time ranges for consistent reporting across midnight-crossing shifts.
  */
 @Slf4j
 @Service
@@ -32,15 +33,19 @@ public class OperationalAnalyticsService {
 
     private final OrderRepository orderRepository;
     private final KitchenOrderRepository kitchenOrderRepository;
+    private final ShiftTimeService shiftTimeService;
 
     /**
-     * Calculate sales per hour
+     * Calculate sales per hour.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public List<SalesPerHourDTO> getSalesPerHour(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Sales per hour using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         BigDecimal totalRevenue = orders.stream()
                 .map(Order::getTotal)
@@ -257,17 +262,21 @@ public class OperationalAnalyticsService {
 
     // Helper methods
 
+    /**
+     * Get orders with revenue-generating statuses within the given time range.
+     * Uses shared REVENUE_STATUSES for consistency across all reports.
+     */
     private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
         if (restaurantId != null) {
             return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         } else {
             return orderRepository.findAll().stream()
                     .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         }
     }
@@ -366,19 +375,22 @@ public class OperationalAnalyticsService {
     }
 
     /**
-     * Get kitchen performance analytics
-     * Provides metrics on kitchen efficiency, preparation times, and chef performance
+     * Get kitchen performance analytics.
+     * Provides metrics on kitchen efficiency, preparation times, and chef performance.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public Map<String, Object> getKitchenAnalytics(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Kitchen analytics using shift range: {} to {}", shift.start(), shift.end());
 
         List<KitchenOrder> kitchenOrders;
         if (restaurantId != null) {
             kitchenOrders = kitchenOrderRepository.findByRestaurantAndCreatedAtBetween(
-                    restaurantId, startDateTime, endDateTime);
+                    restaurantId, shift.start(), shift.end());
         } else {
-            kitchenOrders = kitchenOrderRepository.findByCreatedAtBetween(startDateTime, endDateTime);
+            kitchenOrders = kitchenOrderRepository.findByCreatedAtBetween(shift.start(), shift.end());
         }
 
         // Calculate status distribution

@@ -1,13 +1,13 @@
 package com.elcafe.modules.analytics.service;
 
 import com.elcafe.modules.analytics.dto.*;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.inventory.service.BatchConsumptionService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.entity.Payment;
-import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +18,12 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for financial analytics calculations
+ * Service for financial analytics calculations.
+ * Uses shift-based time ranges for consistent reporting across midnight-crossing shifts.
  */
 @Slf4j
 @Service
@@ -33,15 +33,19 @@ public class FinancialAnalyticsService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final BatchConsumptionService batchConsumptionService;
+    private final ShiftTimeService shiftTimeService;
 
     /**
-     * Calculate daily revenue for a date range
+     * Calculate daily revenue for a date range.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public List<DailyRevenueDTO> getDailyRevenue(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Daily revenue using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         Map<LocalDate, List<Order>> ordersByDate = orders.stream()
                 .collect(Collectors.groupingBy(order -> order.getCreatedAt().toLocalDate()));
@@ -82,13 +86,16 @@ public class FinancialAnalyticsService {
     }
 
     /**
-     * Calculate sales per category
+     * Calculate sales per category.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public List<SalesPerCategoryDTO> getSalesPerCategory(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Sales per category using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         BigDecimal totalRevenue = orders.stream()
                 .map(Order::getTotal)
@@ -163,14 +170,17 @@ public class FinancialAnalyticsService {
     }
 
     /**
-     * Calculate COGS and food cost percentage
-     * Uses actual batch consumption data when available, falls back to product cost prices
+     * Calculate COGS and food cost percentage.
+     * Uses actual batch consumption data when available, falls back to product cost prices.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public COGSAnalyticsDTO getCOGSAnalytics(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("COGS analytics using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         BigDecimal totalRevenue = orders.stream()
                 .map(Order::getTotal)
@@ -275,13 +285,16 @@ public class FinancialAnalyticsService {
     }
 
     /**
-     * Calculate contribution margin per menu item
+     * Calculate contribution margin per menu item.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public List<ContributionMarginDTO> getContributionMargins(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Contribution margins using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         // Group order items by product
         Map<Long, List<OrderItem>> itemsByProduct = orders.stream()
@@ -348,17 +361,21 @@ public class FinancialAnalyticsService {
 
     // Helper methods
 
+    /**
+     * Get orders with revenue-generating statuses within the given time range.
+     * Uses shared REVENUE_STATUSES for consistency across all reports.
+     */
     private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
         if (restaurantId != null) {
             return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         } else {
             return orderRepository.findAll().stream()
                     .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         }
     }

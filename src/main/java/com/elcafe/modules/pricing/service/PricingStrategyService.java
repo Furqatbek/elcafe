@@ -1,11 +1,11 @@
 package com.elcafe.modules.pricing.service;
 
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductIngredient;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
-import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.pricing.dto.PricingAnalyticsDTO;
 import com.elcafe.modules.pricing.dto.PricingRecommendationDTO;
@@ -21,13 +21,12 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for pricing strategy calculations and recommendations
+ * Service for pricing strategy calculations and recommendations.
+ * Uses shift-based time ranges for consistent reporting across midnight-crossing shifts.
  */
 @Slf4j
 @Service
@@ -36,6 +35,7 @@ public class PricingStrategyService {
 
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final ShiftTimeService shiftTimeService;
 
     // Default target margins
     private static final BigDecimal DEFAULT_TARGET_MARGIN = new BigDecimal("30.00");
@@ -418,14 +418,20 @@ public class PricingStrategyService {
 
     // Helper methods
 
+    /**
+     * Get orders with revenue-generating statuses within the shift time range.
+     * Uses shared REVENUE_STATUSES for consistency across all reports.
+     */
     private List<Order> getCompletedOrders(Long restaurantId, LocalDate startDate, LocalDate endDate) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Pricing analytics using shift range: {} to {}", shift.start(), shift.end());
 
         return orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
-                restaurantId, startDateTime, endDateTime
+                restaurantId, shift.start(), shift.end()
         ).stream()
-                .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                 .collect(Collectors.toList());
     }
 

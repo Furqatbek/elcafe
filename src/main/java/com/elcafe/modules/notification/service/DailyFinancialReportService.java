@@ -1,6 +1,7 @@
 package com.elcafe.modules.notification.service;
 
 import com.elcafe.modules.financial.repository.ExpenseRepository;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.notification.config.FinancialAlertConfig;
 import com.elcafe.modules.notification.entity.FinancialAlertSubscription;
 import com.elcafe.modules.notification.repository.FinancialAlertSubscriptionRepository;
@@ -10,9 +11,7 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
-import com.elcafe.modules.restaurant.entity.BusinessHours;
 import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.elcafe.modules.restaurant.repository.BusinessHoursRepository;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +28,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -47,19 +45,10 @@ public class DailyFinancialReportService {
     private final OrderRepository orderRepository;
     private final ExpenseRepository expenseRepository;
     private final RestaurantRepository restaurantRepository;
-    private final BusinessHoursRepository businessHoursRepository;
+    private final ShiftTimeService shiftTimeService;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
-
-    // Order statuses that count as completed/revenue-generating
-    // Must match DashboardService.COMPLETED_STATUSES for consistency
-    private static final Set<OrderStatus> COMPLETED_ORDER_STATUSES = Set.of(
-            OrderStatus.COMPLETED,
-            OrderStatus.DELIVERED,
-            OrderStatus.READY,
-            OrderStatus.PICKED_UP
-    );
 
     /**
      * Scheduled task to check and send daily financial reports
@@ -108,51 +97,12 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Get shift time range for a restaurant on a specific date
-     * Uses business hours to determine shift start and end times
-     * If shift crosses midnight (e.g., opens 10:00, closes 02:00), end time is next day
-     */
-    private ShiftTimeRange getShiftTimeRange(Long restaurantId, LocalDate date) {
-        // Get business hours for the day of week
-        var businessHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
-            restaurantId, date.getDayOfWeek());
-
-        if (businessHours.isEmpty() || businessHours.get().getClosed()) {
-            // If no business hours or closed, use full calendar day as fallback
-            return new ShiftTimeRange(
-                date.atStartOfDay(),
-                date.atTime(23, 59, 59),
-                LocalTime.of(0, 0),
-                LocalTime.of(23, 59)
-            );
-        }
-
-        BusinessHours hours = businessHours.get();
-        LocalTime openTime = hours.getOpenTime();
-        LocalTime closeTime = hours.getCloseTime();
-
-        LocalDateTime shiftStart = date.atTime(openTime);
-        LocalDateTime shiftEnd;
-
-        // Check if shift crosses midnight (closeTime is before openTime)
-        if (closeTime.isBefore(openTime) || closeTime.equals(openTime)) {
-            // Shift ends next day
-            shiftEnd = date.plusDays(1).atTime(closeTime);
-        } else {
-            // Shift ends same day
-            shiftEnd = date.atTime(closeTime);
-        }
-
-        return new ShiftTimeRange(shiftStart, shiftEnd, openTime, closeTime);
-    }
-
-    /**
      * Calculate daily financial metrics for a restaurant based on shift hours
-     * Uses business hours from BusinessHours entity instead of calendar dates
+     * Uses ShiftTimeService for consistent shift time range calculation
      */
     public DailyMetrics calculateDailyMetrics(Long restaurantId, LocalDate date) {
-        // Get shift time range based on business hours
-        ShiftTimeRange shift = getShiftTimeRange(restaurantId, date);
+        // Get shift time range using shared service
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRange(restaurantId, date);
         log.info("Calculating metrics for restaurant {} on {} - shift: {} to {}",
             restaurantId, date, shift.start(), shift.end());
 
@@ -161,11 +111,11 @@ public class DailyFinancialReportService {
             restaurantId, shift.start(), shift.end());
         log.info("Found {} total orders in shift period", orders.size());
 
-        // Filter to only completed/delivered/picked-up orders
+        // Filter to revenue-generating orders using shared status list
         List<Order> completedOrders = orders.stream()
-            .filter(o -> COMPLETED_ORDER_STATUSES.contains(o.getStatus()))
+            .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
             .collect(Collectors.toList());
-        log.info("Found {} completed orders (statuses: {})", completedOrders.size(), COMPLETED_ORDER_STATUSES);
+        log.info("Found {} revenue orders (statuses: {})", completedOrders.size(), ShiftTimeService.REVENUE_STATUSES);
 
         // Log order statuses for debugging
         if (orders.size() > 0 && completedOrders.size() == 0) {
@@ -367,15 +317,5 @@ public class DailyFinancialReportService {
         BigDecimal cardRevenue,
         BigDecimal expenses,
         BigDecimal profit
-    ) {}
-
-    /**
-     * Record class for shift time range
-     */
-    private record ShiftTimeRange(
-        LocalDateTime start,
-        LocalDateTime end,
-        LocalTime openTime,
-        LocalTime closeTime
     ) {}
 }
