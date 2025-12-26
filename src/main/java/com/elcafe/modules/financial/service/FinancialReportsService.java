@@ -55,13 +55,34 @@ public class FinancialReportsService {
                 .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
                 .collect(Collectors.toList());
 
+        // Calculate revenue breakdown
+        BigDecimal salesRevenue = completedOrders.stream()
+                .map(Order::getSubtotal)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal serviceFeeRevenue = completedOrders.stream()
+                .map(Order::getServiceFee)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal deliveryFeeRevenue = completedOrders.stream()
+                .map(Order::getDeliveryFee)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal tipRevenue = completedOrders.stream()
+                .map(Order::getTipAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         BigDecimal totalRevenue = completedOrders.stream()
                 .map(Order::getTotal)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        log.info("P&L: Found {} orders, {} revenue-counted, total revenue: {}",
-                orders.size(), completedOrders.size(), totalRevenue);
+        log.info("P&L: Found {} orders, {} revenue-counted, sales: {}, serviceFee: {}, deliveryFee: {}, tips: {}, total: {}",
+                orders.size(), completedOrders.size(), salesRevenue, serviceFeeRevenue, deliveryFeeRevenue, tipRevenue, totalRevenue);
 
         // Calculate expenses from expense records (same as DashboardService)
         List<Expense> expenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
@@ -90,6 +111,10 @@ public class FinancialReportsService {
                 .restaurantId(restaurantId)
                 .startDate(startDate)
                 .endDate(endDate)
+                .salesRevenue(salesRevenue)
+                .serviceFeeRevenue(serviceFeeRevenue)
+                .deliveryFeeRevenue(deliveryFeeRevenue)
+                .tipRevenue(tipRevenue)
                 .totalRevenue(totalRevenue)
                 .totalExpenses(totalExpenses)
                 .expensesByCategory(expensesByCategory)
@@ -290,9 +315,16 @@ public class FinancialReportsService {
         private Long restaurantId;
         private LocalDate startDate;
         private LocalDate endDate;
+        // Revenue breakdown
+        private BigDecimal salesRevenue;
+        private BigDecimal serviceFeeRevenue;
+        private BigDecimal deliveryFeeRevenue;
+        private BigDecimal tipRevenue;
         private BigDecimal totalRevenue;
+        // Expenses
         private BigDecimal totalExpenses;
         private Map<String, BigDecimal> expensesByCategory;
+        // Net income
         private BigDecimal netIncome;
     }
 
