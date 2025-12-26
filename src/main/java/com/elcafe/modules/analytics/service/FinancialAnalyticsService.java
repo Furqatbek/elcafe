@@ -190,7 +190,7 @@ public class FinancialAnalyticsService {
         BigDecimal batchBasedCOGS = BigDecimal.ZERO;
         if (restaurantId != null) {
             try {
-                batchBasedCOGS = batchConsumptionService.calculateTotalCOGS(restaurantId, startDateTime, endDateTime);
+                batchBasedCOGS = batchConsumptionService.calculateTotalCOGS(restaurantId, shift.start(), shift.end());
             } catch (Exception e) {
                 log.debug("Could not calculate batch-based COGS: {}", e.getMessage());
             }

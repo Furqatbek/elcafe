@@ -139,24 +139,27 @@ public class OperationalAnalyticsService {
     }
 
     /**
-     * Calculate table turnover rate
+     * Calculate table turnover rate.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      * Note: This requires table/seat configuration data which should be provided
      */
     public TableTurnoverDTO getTableTurnover(
             LocalDate startDate, LocalDate endDate, Long restaurantId,
             Integer totalTables, Integer totalSeats, Integer operatingHoursPerDay) {
 
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Table turnover using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         // Count dine-in orders (orders without delivery info)
         long totalDineInOrders = orders.stream()
                 .filter(order -> order.getDeliveryInfo() == null)
                 .count();
 
-        long daysBetween = Duration.between(startDateTime, endDateTime).toDays() + 1;
+        long daysBetween = Duration.between(shift.start(), shift.end()).toDays() + 1;
 
         int tables = totalTables != null ? totalTables : 20; // default
         int seats = totalSeats != null ? totalSeats : tables * 4; // default 4 seats per table
@@ -189,13 +192,16 @@ public class OperationalAnalyticsService {
     }
 
     /**
-     * Calculate order timing analytics (preparation, wait time, delivery)
+     * Calculate order timing analytics (preparation, wait time, delivery).
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public OrderTimingAnalyticsDTO getOrderTimingAnalytics(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Order timing analytics using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         // Calculate preparation times (from NEW to PREPARING to READY/COMPLETED)
         List<Double> preparationTimes = orders.stream()

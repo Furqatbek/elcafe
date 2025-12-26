@@ -57,11 +57,22 @@ public class ShiftTimeService {
      * Uses business hours to determine shift start and end times.
      * If shift crosses midnight (e.g., opens 10:00, closes 02:00), end time is next day.
      *
-     * @param restaurantId The restaurant ID
+     * @param restaurantId The restaurant ID (can be null, will use full calendar day)
      * @param date The business date (shift starts on this date)
      * @return ShiftTimeRange with start and end LocalDateTime
      */
     public ShiftTimeRange getShiftTimeRange(Long restaurantId, LocalDate date) {
+        // Handle null restaurantId - use full calendar day as fallback
+        if (restaurantId == null) {
+            log.debug("No restaurantId provided for date {}, using full calendar day", date);
+            return new ShiftTimeRange(
+                date.atStartOfDay(),
+                date.atTime(23, 59, 59),
+                LocalTime.of(0, 0),
+                LocalTime.of(23, 59)
+            );
+        }
+
         var businessHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
             restaurantId, date.getDayOfWeek());
 
