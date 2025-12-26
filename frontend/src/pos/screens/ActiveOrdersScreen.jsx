@@ -64,6 +64,18 @@ const ActiveOrdersScreen = () => {
   };
 
   const handlePayOrder = (order) => {
+    // Map backend items to frontend structure
+    const mappedItems = (order.items || []).map(item => ({
+      id: item.id,
+      productId: item.productId,
+      name: item.productName || item.name,
+      quantity: item.quantity,
+      basePrice: item.unitPrice || item.price || 0,
+      itemTotal: item.totalPrice || item.itemTotal || 0,
+      modifiers: item.modifiers || [],
+      notes: item.notes || '',
+    }));
+
     // Store selected order and navigate to payment
     usePOSStore.setState({
       activeOrder: order,
@@ -71,11 +83,13 @@ const ActiveOrdersScreen = () => {
         id: order.id,
         orderNumber: order.orderNumber,
         type: 'DINE_IN',
-        items: order.items || [],
-        subtotal: order.subtotal,
+        items: mappedItems,
+        subtotal: order.subtotal || 0,
         tax: order.tax || 0,
         deliveryFee: 0,
-        total: order.total,
+        serviceFeePercent: order.serviceFeePercent || 0,
+        serviceFee: order.serviceFee || 0,
+        total: order.total || 0,
         notes: order.orderNotes || '',
       },
       customer: {
