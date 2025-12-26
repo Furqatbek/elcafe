@@ -395,23 +395,29 @@ public class POSOrderService {
 
         // Add dine-in info if applicable
         if ("DINE_IN".equals(orderType) && (order.getTableIds() != null || order.getDiningTable() != null)) {
-            String tableNumber = order.getDiningTable() != null
-                    ? order.getDiningTable().getTableNumber()
-                    : "";
-
+            String tableNumber = "";
             List<Long> tableIdList = null;
+
             if (order.getTableIds() != null && !order.getTableIds().isBlank()) {
                 tableIdList = java.util.Arrays.stream(order.getTableIds().split(","))
                         .map(String::trim)
                         .map(Long::parseLong)
                         .collect(Collectors.toList());
 
-                // If we have multiple tables, get all their numbers
-                if (tableIdList.size() > 1) {
+                // Get table numbers for all tables in the list
+                if (!tableIdList.isEmpty()) {
                     List<RestaurantTable> tables = restaurantTableRepository.findAllById(tableIdList);
                     tableNumber = tables.stream()
                             .map(RestaurantTable::getTableNumber)
                             .collect(Collectors.joining(", "));
+                }
+            }
+
+            // Fallback to diningTable if tableIds didn't provide table number
+            if (tableNumber.isEmpty() && order.getDiningTable() != null) {
+                tableNumber = order.getDiningTable().getTableNumber();
+                if (tableIdList == null) {
+                    tableIdList = List.of(order.getDiningTable().getId());
                 }
             }
 
