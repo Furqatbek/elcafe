@@ -469,8 +469,10 @@ public class POSOrderService {
 
         List<Order> orders = orderRepository.findByRestaurant_IdAndDiningTableIsNotNullAndStatusIn(
                 restaurantId,
-                List.of(OrderStatus.PENDING, OrderStatus.ACCEPTED, OrderStatus.PREPARING)
+                List.of(OrderStatus.PENDING, OrderStatus.NEW, OrderStatus.ACCEPTED, OrderStatus.PREPARING, OrderStatus.READY)
         );
+
+        log.info("Found {} open dine-in orders for restaurant {}", orders.size(), restaurantId);
 
         return orders.stream()
                 .map(order -> mapToResponse(order, "DINE_IN"))

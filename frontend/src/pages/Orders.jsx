@@ -209,11 +209,27 @@ export default function Orders() {
       const openOrders = ordersResponse?.data?.data || ordersResponse?.data || [];
 
       // Group orders by table ID
+      // Handle different response formats:
+      // - diningTable.id (from entity with full table object)
+      // - dineInInfo.tableIds[0] (from POS response)
+      // - tableIds as string "14" or "14,15" (from direct entity serialization)
       const ordersByTable = {};
       if (Array.isArray(openOrders)) {
         openOrders.forEach(order => {
-          const tableId = order.diningTable?.id || order.diningTableId;
-          if (tableId) {
+          let tableId = null;
+
+          // Try different sources for table ID
+          if (order.diningTable?.id) {
+            tableId = order.diningTable.id;
+          } else if (order.dineInInfo?.tableIds?.length > 0) {
+            tableId = order.dineInInfo.tableIds[0];
+          } else if (order.tableIds) {
+            // tableIds can be a string like "14" or "14,15"
+            const firstTableId = String(order.tableIds).split(',')[0].trim();
+            tableId = parseInt(firstTableId, 10);
+          }
+
+          if (tableId && !isNaN(tableId)) {
             if (!ordersByTable[tableId]) {
               ordersByTable[tableId] = [];
             }
