@@ -35,6 +35,11 @@ public class PaymentResponseDTO {
     private LocalDateTime paidAt;
 
     // Order payment summary
+    private BigDecimal orderSubtotal;
+    private BigDecimal orderTax;
+    private BigDecimal orderDeliveryFee;
+    private BigDecimal orderServiceFeePercent;
+    private BigDecimal orderServiceFee;
     private BigDecimal orderTotal;
     private BigDecimal orderGrandTotal;
     private BigDecimal totalPaid;
