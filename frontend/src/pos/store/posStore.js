@@ -153,7 +153,9 @@ const usePOSStore = create(
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
         const tax = 0; // No tax
         const deliveryFee = state.currentOrder.deliveryFee;
-        const total = subtotal + tax + deliveryFee;
+        const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
+        const serviceFee = subtotal * (serviceFeePercent / 100);
+        const total = subtotal + tax + deliveryFee + serviceFee;
 
         return {
           currentOrder: {
@@ -161,6 +163,7 @@ const usePOSStore = create(
             items,
             subtotal,
             tax,
+            serviceFee,
             total,
           },
         };
@@ -182,7 +185,9 @@ const usePOSStore = create(
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
         const tax = 0; // No tax
         const deliveryFee = state.currentOrder.deliveryFee;
-        const total = subtotal + tax + deliveryFee;
+        const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
+        const serviceFee = subtotal * (serviceFeePercent / 100);
+        const total = subtotal + tax + deliveryFee + serviceFee;
 
         return {
           currentOrder: {
@@ -190,6 +195,7 @@ const usePOSStore = create(
             items,
             subtotal,
             tax,
+            serviceFee,
             total,
           },
         };
@@ -200,7 +206,9 @@ const usePOSStore = create(
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
         const tax = 0; // No tax
         const deliveryFee = state.currentOrder.deliveryFee;
-        const total = subtotal + tax + deliveryFee;
+        const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
+        const serviceFee = subtotal * (serviceFeePercent / 100);
+        const total = subtotal + tax + deliveryFee + serviceFee;
 
         return {
           currentOrder: {
@@ -208,6 +216,7 @@ const usePOSStore = create(
             items,
             subtotal,
             tax,
+            serviceFee,
             total,
           },
         };
