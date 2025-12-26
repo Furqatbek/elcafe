@@ -219,15 +219,6 @@ export default function Orders() {
       // - dineInInfo.tableIds[0] (from POS response)
       // - tableIds as string "14" or "14,15" (from direct entity serialization)
       const ordersByTable = {};
-
-      // Create a map of tableNumber -> tableId from floor plan for fallback matching
-      const tableNumberToId = {};
-      if (floorPlanData?.tables) {
-        floorPlanData.tables.forEach(table => {
-          tableNumberToId[table.tableNumber] = table.id;
-        });
-      }
-
       if (Array.isArray(openOrders)) {
         openOrders.forEach(order => {
           let tableId = null;
@@ -243,12 +234,6 @@ export default function Orders() {
             tableId = parseInt(firstTableId, 10);
           }
 
-          // Fallback: try matching by table number from dineInInfo
-          if (!tableId && order.dineInInfo?.tableNumber) {
-            const tableNum = order.dineInInfo.tableNumber.split(',')[0].trim();
-            tableId = tableNumberToId[tableNum];
-          }
-
           if (tableId && !isNaN(tableId)) {
             if (!ordersByTable[tableId]) {
               ordersByTable[tableId] = [];
@@ -257,9 +242,6 @@ export default function Orders() {
           }
         });
       }
-
-      console.log('Table orders mapping:', ordersByTable);
-      console.log('Open orders:', openOrders);
       setTableOrders(ordersByTable);
     } catch (error) {
       console.error('Failed to load table view:', error);
@@ -270,19 +252,12 @@ export default function Orders() {
     }
   };
 
-  // Refresh table view when view mode changes to 'byTable' or restaurant changes
+  // Refresh table view when view mode changes to 'byTable'
   useEffect(() => {
     if (viewMode === 'byTable' && selectedRestaurant && selectedRestaurant !== 'all') {
       loadTableView(parseInt(selectedRestaurant));
     }
   }, [viewMode, selectedRestaurant]);
-
-  // Auto-load table view when restaurant is auto-selected on page load
-  useEffect(() => {
-    if (viewMode === 'byTable' && selectedRestaurant && selectedRestaurant !== 'all' && !floorPlan) {
-      loadTableView(parseInt(selectedRestaurant));
-    }
-  }, [selectedRestaurant]);
 
   const filterOrders = () => {
     let filtered = [...orders];
@@ -301,11 +276,7 @@ export default function Orders() {
 
     // Filter by restaurant
     if (selectedRestaurant !== 'all') {
-      const restaurantId = parseInt(selectedRestaurant);
-      filtered = filtered.filter(order =>
-        order.restaurant?.id === restaurantId ||
-        order.restaurantId === restaurantId
-      );
+      filtered = filtered.filter(order => order.restaurant?.id === parseInt(selectedRestaurant));
     }
 
     // Filter by date range
