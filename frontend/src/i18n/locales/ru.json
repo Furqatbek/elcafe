@@ -217,7 +217,30 @@
     "changeDue": "Сдача",
     "completePayment": "Завершить оплату",
     "paymentSuccessTableReleased": "Оплата проведена и стол освобожден",
-    "paymentError": "Не удалось провести оплату"
+    "paymentError": "Не удалось провести оплату",
+    "listView": "Список",
+    "tableView": "По столам",
+    "ordersByTable": "Заказы по столам",
+    "selectRestaurantForTableView": "Выберите ресторан",
+    "selectRestaurantDesc": "Пожалуйста, выберите ресторан из фильтра выше для просмотра заказов по столам",
+    "noActiveOrders": "Нет активных заказов",
+    "noOccupiedTables": "Нет занятых столов",
+    "noOccupiedTablesDesc": "На данный момент нет столов с активными заказами",
+    "tableTotal": "Итого по столу",
+    "table": "Стол",
+    "types": {
+      "delivery": "Доставка",
+      "takeaway": "С собой",
+      "dineIn": "В зале"
+    }
+  },
+  "tables": {
+    "status": {
+      "available": "Свободен",
+      "occupied": "Занят",
+      "reserved": "Зарезервирован",
+      "unavailable": "Недоступен"
+    }
   },
   "restaurants": {
     "title": "Рестораны",

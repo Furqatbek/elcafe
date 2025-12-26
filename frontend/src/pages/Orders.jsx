@@ -134,6 +134,11 @@ export default function Orders() {
       const response = await restaurantAPI.getAll({ page: 0, size: 100 });
       const restaurantList = response.data.data.content || [];
       setRestaurants(restaurantList);
+
+      // Auto-select first restaurant if none selected
+      if (restaurantList.length > 0 && selectedRestaurant === 'all') {
+        setSelectedRestaurant(restaurantList[0].id.toString());
+      }
     } catch (error) {
       console.error('Failed to load restaurants:', error);
     }

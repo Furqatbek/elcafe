@@ -217,7 +217,30 @@
     "changeDue": "Qaytim",
     "completePayment": "To'lovni yakunlash",
     "paymentSuccessTableReleased": "To'lov amalga oshirildi va stol bo'shatildi",
-    "paymentError": "To'lovni amalga oshirib bo'lmadi"
+    "paymentError": "To'lovni amalga oshirib bo'lmadi",
+    "listView": "Ro'yxat",
+    "tableView": "Stollar bo'yicha",
+    "ordersByTable": "Stollar bo'yicha buyurtmalar",
+    "selectRestaurantForTableView": "Restoranni tanlang",
+    "selectRestaurantDesc": "Stollar bo'yicha buyurtmalarni ko'rish uchun yuqoridagi filtrdan restoran tanlang",
+    "noActiveOrders": "Faol buyurtmalar yo'q",
+    "noOccupiedTables": "Band stollar yo'q",
+    "noOccupiedTablesDesc": "Hozirda faol buyurtmalari bo'lgan stollar yo'q",
+    "tableTotal": "Stol jami",
+    "table": "Stol",
+    "types": {
+      "delivery": "Yetkazib berish",
+      "takeaway": "Olib ketish",
+      "dineIn": "Zalda"
+    }
+  },
+  "tables": {
+    "status": {
+      "available": "Bo'sh",
+      "occupied": "Band",
+      "reserved": "Bron qilingan",
+      "unavailable": "Mavjud emas"
+    }
   },
   "restaurants": {
     "title": "Restoranlar",

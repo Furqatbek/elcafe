@@ -497,7 +497,30 @@
     "changeDue": "Change Due",
     "completePayment": "Complete Payment",
     "paymentSuccessTableReleased": "Payment processed and table released successfully",
-    "paymentError": "Failed to process payment"
+    "paymentError": "Failed to process payment",
+    "listView": "List",
+    "tableView": "By Table",
+    "ordersByTable": "Orders by Table",
+    "selectRestaurantForTableView": "Select a Restaurant",
+    "selectRestaurantDesc": "Please select a restaurant from the filter above to view orders by table",
+    "noActiveOrders": "No active orders",
+    "noOccupiedTables": "No Occupied Tables",
+    "noOccupiedTablesDesc": "There are no tables with active orders at the moment",
+    "tableTotal": "Table Total",
+    "table": "Table",
+    "types": {
+      "delivery": "Delivery",
+      "takeaway": "Takeaway",
+      "dineIn": "Dine In"
+    }
+  },
+  "tables": {
+    "status": {
+      "available": "Available",
+      "occupied": "Occupied",
+      "reserved": "Reserved",
+      "unavailable": "Unavailable"
+    }
   },
   "restaurants": {
     "title": "Restaurants",
