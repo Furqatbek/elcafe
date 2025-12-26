@@ -282,88 +282,16 @@ export default function Orders() {
 
   // Navigate to payment screen for an order (opens full POS payment)
   const handleCloseCheck = async (order) => {
-    try {
-      // Fetch full order details including items from POS API
-      const response = await posAPI.getOrderById(order.id);
-      const fullOrder = response.data.data;
+    // Store order ID and navigate - POSApp will fetch the full order
+    localStorage.setItem('pendingPaymentOrderId', order.id.toString());
 
-      // Map order items to POS format
-      const posItems = (fullOrder.items || []).map((item, index) => ({
-        id: item.id || `${item.productId}-${index}`,
-        productId: item.productId,
-        name: item.productName || item.name,
-        basePrice: item.unitPrice || item.price || 0,
-        modifiers: item.modifiers || [],
-        quantity: item.quantity,
-        itemTotal: item.totalPrice || (item.unitPrice || item.price || 0) * item.quantity,
-        notes: item.notes || item.specialInstructions || '',
-      }));
-
-      // Calculate totals
-      const subtotal = fullOrder.subtotal || posItems.reduce((sum, item) => sum + item.itemTotal, 0);
-      const tax = fullOrder.tax || 0;
-      const deliveryFee = fullOrder.deliveryFee || 0;
-      const serviceFeePercent = fullOrder.serviceFeePercent || 0;
-      const serviceFee = fullOrder.serviceFee || 0;
-      const total = fullOrder.total || (subtotal + tax + deliveryFee + serviceFee);
-
-      // Set up POS store with order data
-      usePOSStore.setState({
-        currentOrder: {
-          id: fullOrder.id,
-          orderNumber: fullOrder.orderNumber,
-          type: fullOrder.orderType || order.orderType,
-          items: posItems,
-          subtotal,
-          tax,
-          deliveryFee,
-          serviceFeePercent,
-          serviceFee,
-          total,
-          notes: fullOrder.orderNotes || order.customerNotes || '',
-        },
-        customer: {
-          id: order.customer?.id || null,
-          name: fullOrder.customerName || order.customerName || order.customer?.firstName || '',
-          phone: fullOrder.customerPhone || order.customerPhone || order.customer?.phone || '',
-          email: order.customer?.email || '',
-          address: order.deliveryInfo ? {
-            street: order.deliveryInfo.address,
-            city: order.deliveryInfo.city,
-            state: order.deliveryInfo.state || '',
-            zipCode: order.deliveryInfo.zipCode || '',
-          } : null,
-          deliveryInstructions: order.deliveryInfo?.deliveryInstructions || '',
-          tableNumber: order.diningTable?.tableNumber || null,
-          tableIds: order.tableIds ? order.tableIds.split(',').map(id => parseInt(id.trim())) : null,
-          guestCount: order.guestCount || null,
-        },
-        payment: {
-          method: null,
-          amountTendered: 0,
-          changeDue: 0,
-          status: 'PENDING',
-        },
-        ui: {
-          currentScreen: 'payment',
-          isLoading: false,
-          error: null,
-          selectedCategory: null,
-          selectedProduct: null,
-        },
-      });
-
-      // Store selected restaurant ID for the POS
-      if (order.restaurant?.id) {
-        localStorage.setItem('selectedRestaurantId', order.restaurant.id.toString());
-      }
-
-      // Navigate to POS payment screen
-      navigate('/pos');
-    } catch (error) {
-      console.error('Failed to load order details:', error);
-      alert(t('orders.messages.loadOrderError', 'Failed to load order details'));
+    // Store selected restaurant ID for the POS
+    if (order.restaurant?.id) {
+      localStorage.setItem('selectedRestaurantId', order.restaurant.id.toString());
     }
+
+    // Navigate to POS payment screen
+    navigate('/pos?screen=payment');
   };
 
   // Open edit items modal
