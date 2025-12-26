@@ -10,6 +10,7 @@ import com.elcafe.modules.inventory.repository.InventoryProductIngredientReposit
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
+import com.elcafe.modules.menu.service.ProductCostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,6 +32,7 @@ public class RecipeController {
     private final ProductRepository productRepository;
     private final InventoryIngredientRepository ingredientRepository;
     private final InventoryService inventoryService;
+    private final ProductCostService productCostService;
 
     @GetMapping("/product/{productId}")
     public ResponseEntity<ApiResponse<List<RecipeResponse>>> getProductRecipe(
@@ -79,6 +82,9 @@ public class RecipeController {
 
         ProductIngredient savedRecipe = productIngredientRepository.save(recipe);
 
+        // Recalculate product cost based on new ingredient
+        productCostService.recalculateProductCost(request.getProductId());
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Recipe created successfully", mapToResponse(savedRecipe)));
     }
@@ -99,6 +105,9 @@ public class RecipeController {
 
         ProductIngredient updatedRecipe = productIngredientRepository.save(recipe);
 
+        // Recalculate product cost based on updated ingredient quantity
+        productCostService.recalculateProductCost(recipe.getProduct().getId());
+
         return ResponseEntity.ok(ApiResponse.success("Recipe updated successfully", mapToResponse(updatedRecipe)));
     }
 
@@ -106,11 +115,14 @@ public class RecipeController {
     public ResponseEntity<ApiResponse<Void>> deleteRecipe(@PathVariable Long id) {
         log.info("Deleting recipe: {}", id);
 
-        if (!productIngredientRepository.existsById(id)) {
-            throw new RuntimeException("Recipe not found with id: " + id);
-        }
+        ProductIngredient recipe = productIngredientRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Recipe not found with id: " + id));
 
+        Long productId = recipe.getProduct().getId();
         productIngredientRepository.deleteById(id);
+
+        // Recalculate product cost after removing ingredient
+        productCostService.recalculateProductCost(productId);
 
         return ResponseEntity.ok(ApiResponse.success("Recipe deleted successfully", null));
     }
@@ -128,6 +140,37 @@ public class RecipeController {
                 : "Product is not available - insufficient ingredients";
 
         return ResponseEntity.ok(ApiResponse.success(message, available));
+    }
+
+    @PostMapping("/product/{productId}/recalculate-cost")
+    public ResponseEntity<ApiResponse<BigDecimal>> recalculateProductCost(
+            @PathVariable Long productId) {
+        log.info("Recalculating cost for product: {}", productId);
+
+        BigDecimal newCost = productCostService.recalculateProductCost(productId);
+
+        return ResponseEntity.ok(ApiResponse.success("Product cost recalculated successfully", newCost));
+    }
+
+    @PostMapping("/recalculate-all-costs")
+    public ResponseEntity<ApiResponse<Integer>> recalculateAllProductCosts() {
+        log.info("Recalculating cost for all products");
+
+        int updatedCount = productCostService.recalculateAllProductCosts();
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "Product costs recalculated successfully. Updated: " + updatedCount + " products",
+                updatedCount));
+    }
+
+    @GetMapping("/product/{productId}/cost-breakdown")
+    public ResponseEntity<ApiResponse<List<ProductCostService.IngredientCostBreakdown>>> getCostBreakdown(
+            @PathVariable Long productId) {
+        log.info("Getting cost breakdown for product: {}", productId);
+
+        List<ProductCostService.IngredientCostBreakdown> breakdown = productCostService.getCostBreakdown(productId);
+
+        return ResponseEntity.ok(ApiResponse.success("Cost breakdown retrieved successfully", breakdown));
     }
 
     private RecipeResponse mapToResponse(ProductIngredient recipe) {

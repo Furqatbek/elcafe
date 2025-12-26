@@ -11,6 +11,7 @@ import com.elcafe.modules.inventory.entity.Supplier;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.SupplierRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.menu.service.ProductCostService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import jakarta.validation.Valid;
@@ -33,6 +34,7 @@ public class InventoryIngredientController {
     private final RestaurantRepository restaurantRepository;
     private final SupplierRepository supplierRepository;
     private final InventoryService inventoryService;
+    private final ProductCostService productCostService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<IngredientResponse>>> getIngredients(
@@ -156,6 +158,9 @@ public class InventoryIngredientController {
         ingredient.setExpiryAlertDays(request.getExpiryAlertDays());
 
         Ingredient updatedIngredient = ingredientRepository.save(ingredient);
+
+        // Recalculate cost for all products using this ingredient
+        productCostService.recalculateProductsUsingIngredient(id);
 
         return ResponseEntity.ok(ApiResponse.success("Ingredient updated successfully", mapToResponse(updatedIngredient)));
     }
