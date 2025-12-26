@@ -147,14 +147,21 @@ public class MenuService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
 
+        // Update all fields
+        if (productData.getCategory() != null) {
+            product.setCategory(productData.getCategory());
+        }
         product.setName(productData.getName());
         product.setDescription(productData.getDescription());
         product.setImageUrl(productData.getImageUrl());
         product.setPrice(productData.getPrice());
+        product.setCostPrice(productData.getCostPrice());
+        product.setItemType(productData.getItemType());
         product.setSortOrder(productData.getSortOrder());
         product.setStatus(productData.getStatus());
         product.setInStock(productData.getInStock());
         product.setFeatured(productData.getFeatured());
+        product.setHasVariants(productData.getHasVariants());
 
         return productRepository.save(product);
     }
