@@ -527,6 +527,8 @@
       "reset": "Tiklash",
       "filter": "Filtr",
       "search": "Qidirish",
+      "apply": "Qo'llash",
+      "remove": "O'chirish",
       "addVariant": "Variant qo'shish",
       "createVariant": "Variant yaratish",
       "updateVariant": "Variantni yangilash",
@@ -1123,6 +1125,12 @@
     "payment": {
       "title": "To'lov",
       "selectMethod": "To'lov usulini tanlang",
+      "customer": "Mijoz",
+      "walkIn": "Tasodifiy mijoz",
+      "serviceFee": "Xizmat haqi",
+      "addServiceFee": "Xizmat haqini qo'shish",
+      "editServiceFee": "Xizmat haqini tahrirlash ({{percent}}%)",
+      "serviceFeePercent": "Xizmat haqi %",
       "methods": {
         "cash": "Naqd pul",
         "card": "Karta",

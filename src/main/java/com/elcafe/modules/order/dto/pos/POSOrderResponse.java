@@ -26,6 +26,8 @@ public class POSOrderResponse {
     private BigDecimal subtotal;
     private BigDecimal tax;
     private BigDecimal deliveryFee;
+    private BigDecimal serviceFeePercent;
+    private BigDecimal serviceFee;
     private BigDecimal total;
     private String paymentMethod;
     private String orderNotes;

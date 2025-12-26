@@ -18,6 +18,8 @@ const usePOSStore = create(
         subtotal: 0,
         tax: 0,
         deliveryFee: 0,
+        serviceFeePercent: 0,
+        serviceFee: 0,
         total: 0,
         notes: '',
       },
@@ -224,9 +226,26 @@ const usePOSStore = create(
           items: [],
           subtotal: 0,
           tax: 0,
+          serviceFeePercent: 0,
+          serviceFee: 0,
           total: state.currentOrder.deliveryFee,
         },
       })),
+
+      // Actions: Service Fee
+      setServiceFee: (serviceFeePercent) => set((state) => {
+        const subtotal = state.currentOrder.subtotal;
+        const serviceFee = subtotal * (serviceFeePercent / 100);
+        const total = subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee;
+        return {
+          currentOrder: {
+            ...state.currentOrder,
+            serviceFeePercent,
+            serviceFee,
+            total,
+          },
+        };
+      }),
 
       // Actions: Customer Management
       setCustomerInfo: (customer) => set({ customer: { ...get().customer, ...customer } }),
@@ -645,6 +664,8 @@ const usePOSStore = create(
             subtotal: 0,
             tax: 0,
             deliveryFee: 0,
+            serviceFeePercent: 0,
+            serviceFee: 0,
             total: 0,
             notes: '',
           },
@@ -681,6 +702,8 @@ const usePOSStore = create(
           subtotal: 0,
           tax: 0,
           deliveryFee: 0,
+          serviceFeePercent: 0,
+          serviceFee: 0,
           total: 0,
           notes: '',
         },

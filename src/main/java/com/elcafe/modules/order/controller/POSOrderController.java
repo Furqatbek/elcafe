@@ -270,6 +270,22 @@ public class POSOrderController {
         return ResponseEntity.ok(ApiResponse.success("Tip added successfully", summary));
     }
 
+    @PostMapping("/{orderId}/service-fee")
+    @Operation(
+            summary = "Apply service fee",
+            description = "Apply service fee to an order by specifying the percentage"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> applyServiceFee(
+            @PathVariable Long orderId,
+            @RequestParam java.math.BigDecimal serviceFeePercent) {
+
+        log.info("Applying service fee to order {}: percent={}", orderId, serviceFeePercent);
+
+        POSOrderResponse response = posOrderService.applyServiceFee(orderId, serviceFeePercent);
+
+        return ResponseEntity.ok(ApiResponse.success("Service fee applied successfully", response));
+    }
+
     @PostMapping("/{orderId}/close")
     @Operation(
             summary = "Close order and release table",

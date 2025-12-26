@@ -77,6 +77,8 @@ public class POSOrderService {
         order.setSubtotal(request.getSubtotal() != null ? request.getSubtotal() : BigDecimal.ZERO);
         order.setTax(request.getTax() != null ? request.getTax() : BigDecimal.ZERO);
         order.setDeliveryFee(request.getDeliveryFee() != null ? request.getDeliveryFee() : BigDecimal.ZERO);
+        order.setServiceFeePercent(request.getServiceFeePercent() != null ? request.getServiceFeePercent() : BigDecimal.ZERO);
+        order.setServiceFee(request.getServiceFee() != null ? request.getServiceFee() : BigDecimal.ZERO);
         order.setDiscount(BigDecimal.ZERO); // Discount applied separately if needed
         order.setTotal(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO);
 
@@ -346,6 +348,8 @@ public class POSOrderService {
                 .subtotal(order.getSubtotal())
                 .tax(order.getTax())
                 .deliveryFee(order.getDeliveryFee())
+                .serviceFeePercent(order.getServiceFeePercent())
+                .serviceFee(order.getServiceFee())
                 .total(order.getTotal())
                 .orderNotes(order.getCustomerNotes())
                 .createdAt(order.getCreatedAt())
@@ -667,8 +671,17 @@ public class POSOrderService {
         order.setSubtotal(subtotal);
         // Keep existing tax rate (0 for now)
         order.setTax(BigDecimal.ZERO);
+
+        // Recalculate service fee if percent is set
+        if (order.getServiceFeePercent() != null && order.getServiceFeePercent().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal serviceFee = subtotal.multiply(order.getServiceFeePercent())
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            order.setServiceFee(serviceFee);
+        }
+
         // Keep existing delivery fee
-        order.setTotal(subtotal.add(order.getTax()).add(order.getDeliveryFee()));
+        BigDecimal serviceFee = order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO;
+        order.setTotal(subtotal.add(order.getTax()).add(order.getDeliveryFee()).add(serviceFee));
     }
 
     // ==================== SPLIT BILL METHODS ====================
@@ -793,6 +806,59 @@ public class POSOrderService {
                 .originalTotal(order.getTotal())
                 .splits(splits)
                 .build();
+    }
+
+    // ==================== SERVICE FEE METHODS ====================
+
+    /**
+     * Apply service fee to an order
+     */
+    @Transactional
+    public POSOrderResponse applyServiceFee(Long orderId, BigDecimal serviceFeePercent) {
+        log.info("Applying service fee to order {}: percent={}", orderId, serviceFeePercent);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Validate service fee percent
+        if (serviceFeePercent == null || serviceFeePercent.compareTo(BigDecimal.ZERO) < 0) {
+            serviceFeePercent = BigDecimal.ZERO;
+        }
+        if (serviceFeePercent.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new IllegalArgumentException("Service fee percent cannot exceed 100%");
+        }
+
+        // Set service fee percent
+        order.setServiceFeePercent(serviceFeePercent);
+
+        // Calculate service fee amount from subtotal
+        BigDecimal serviceFee = BigDecimal.ZERO;
+        if (serviceFeePercent.compareTo(BigDecimal.ZERO) > 0) {
+            serviceFee = order.getSubtotal().multiply(serviceFeePercent)
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        }
+        order.setServiceFee(serviceFee);
+
+        // Recalculate total
+        BigDecimal total = order.getSubtotal()
+                .add(order.getTax())
+                .add(order.getDeliveryFee())
+                .add(serviceFee)
+                .subtract(order.getDiscount());
+        order.setTotal(total);
+
+        // Update grand total (total + tip)
+        BigDecimal tipAmount = order.getTipAmount() != null ? order.getTipAmount() : BigDecimal.ZERO;
+        order.setGrandTotal(total.add(tipAmount));
+
+        Order savedOrder = orderRepository.save(order);
+
+        log.info("Service fee applied to order {}: fee={}, newTotal={}", orderId, serviceFee, total);
+
+        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
+                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
     }
 
     // ==================== CLOSE ORDER / TABLE METHODS ====================

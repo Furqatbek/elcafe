@@ -10,6 +10,7 @@ import {
   AlertCircle,
   RotateCcw,
   XCircle,
+  Percent,
 } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import CashPaymentDialog from '../components/CashPaymentDialog';
@@ -36,6 +37,7 @@ const PaymentScreen = () => {
     completeOrder,
     setCurrentScreen,
     fetchFloorPlan,
+    setServiceFee,
   } = usePOSStore();
 
   // State
@@ -52,11 +54,18 @@ const PaymentScreen = () => {
   const [showVoidDialog, setShowVoidDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
 
+  // Service fee state
+  const [showServiceFeeInput, setShowServiceFeeInput] = useState(false);
+  const [serviceFeePercentInput, setServiceFeePercentInput] = useState(
+    currentOrder.serviceFeePercent || 0
+  );
+
   // Calculate totals
   const subtotal = currentOrder.subtotal || 0;
   const tax = currentOrder.tax || 0;
   const deliveryFee = currentOrder.deliveryFee || 0;
-  const grandTotal = subtotal + tax + deliveryFee;
+  const serviceFee = currentOrder.serviceFee || 0;
+  const grandTotal = subtotal + tax + deliveryFee + serviceFee;
 
   // For split payments
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -251,6 +260,20 @@ const PaymentScreen = () => {
   const toggleSplitPayment = () => {
     setSplitPaymentMode(!splitPaymentMode);
     setPayments([]);
+  };
+
+  const handleApplyServiceFee = () => {
+    const percent = parseFloat(serviceFeePercentInput) || 0;
+    if (percent >= 0 && percent <= 100) {
+      setServiceFee(percent);
+      setShowServiceFeeInput(false);
+    }
+  };
+
+  const handleRemoveServiceFee = () => {
+    setServiceFeePercentInput(0);
+    setServiceFee(0);
+    setShowServiceFeeInput(false);
   };
 
   const colorClasses = {
@@ -463,6 +486,69 @@ const PaymentScreen = () => {
             ))}
           </div>
 
+          {/* Service Fee Button */}
+          <div className="mb-4">
+            {!showServiceFeeInput ? (
+              <TouchButton
+                variant={serviceFee > 0 ? 'secondary' : 'outline'}
+                size="small"
+                fullWidth
+                onClick={() => setShowServiceFeeInput(true)}
+                icon={<Percent className="w-4 h-4" />}
+              >
+                {serviceFee > 0
+                  ? t('pos.payment.editServiceFee', 'Edit Service Fee ({{percent}}%)', { percent: currentOrder.serviceFeePercent })
+                  : t('pos.payment.addServiceFee', 'Add Service Fee')
+                }
+              </TouchButton>
+            ) : (
+              <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-3 space-y-2">
+                <label className="block text-sm font-semibold text-purple-800">
+                  {t('pos.payment.serviceFeePercent', 'Service Fee %')}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={serviceFeePercentInput}
+                    onChange={(e) => setServiceFeePercentInput(e.target.value)}
+                    className="flex-1 px-3 py-2 border-2 border-purple-300 rounded-lg text-center font-semibold focus:border-purple-500 focus:outline-none"
+                    placeholder="0"
+                  />
+                  <span className="flex items-center text-lg font-bold text-purple-700">%</span>
+                </div>
+                <div className="flex gap-2">
+                  <TouchButton
+                    variant="primary"
+                    size="small"
+                    fullWidth
+                    onClick={handleApplyServiceFee}
+                  >
+                    {t('common.buttons.apply', 'Apply')}
+                  </TouchButton>
+                  {serviceFee > 0 && (
+                    <TouchButton
+                      variant="danger"
+                      size="small"
+                      onClick={handleRemoveServiceFee}
+                    >
+                      {t('common.buttons.remove', 'Remove')}
+                    </TouchButton>
+                  )}
+                  <TouchButton
+                    variant="ghost"
+                    size="small"
+                    onClick={() => setShowServiceFeeInput(false)}
+                  >
+                    {t('common.buttons.cancel', 'Cancel')}
+                  </TouchButton>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Totals */}
           <div className="border-t-2 border-gray-200 pt-4 space-y-2">
             <div className="flex justify-between text-gray-700">
@@ -477,6 +563,12 @@ const PaymentScreen = () => {
               <div className="flex justify-between text-gray-700">
                 <span>{t('pos.cart.deliveryFee', 'Delivery')}</span>
                 <span>{deliveryFee.toFixed(2)}</span>
+              </div>
+            )}
+            {serviceFee > 0 && (
+              <div className="flex justify-between text-purple-700">
+                <span>{t('pos.payment.serviceFee', 'Service Fee')} ({currentOrder.serviceFeePercent}%)</span>
+                <span>{serviceFee.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t-2 border-gray-200">

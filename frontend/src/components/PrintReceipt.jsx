@@ -288,6 +288,12 @@ const generateReceiptHTML = (order) => {
         <span>${Math.round(order.deliveryFee)}</span>
       </div>
       ` : ''}
+      ${order.serviceFee && order.serviceFee > 0 ? `
+      <div class="total-line">
+        <span>Xizmat haqi (${order.serviceFeePercent || 0}%):</span>
+        <span>${Math.round(order.serviceFee)}</span>
+      </div>
+      ` : ''}
       ${order.discount && order.discount > 0 ? `
       <div class="total-line">
         <span>Chegirma:</span>

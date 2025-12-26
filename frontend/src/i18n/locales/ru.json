@@ -527,6 +527,8 @@
       "reset": "Сбросить",
       "filter": "Фильтр",
       "search": "Поиск",
+      "apply": "Применить",
+      "remove": "Удалить",
       "addVariant": "Добавить вариант",
       "createVariant": "Создать вариант",
       "updateVariant": "Обновить вариант",
@@ -1123,6 +1125,12 @@
     "payment": {
       "title": "Оплата",
       "selectMethod": "Выберите способ оплаты",
+      "customer": "Клиент",
+      "walkIn": "Случайный клиент",
+      "serviceFee": "Плата за обслуживание",
+      "addServiceFee": "Добавить плату за обслуживание",
+      "editServiceFee": "Редактировать плату ({{percent}}%)",
+      "serviceFeePercent": "Процент обслуживания",
       "methods": {
         "cash": "Наличные",
         "card": "Карта",
