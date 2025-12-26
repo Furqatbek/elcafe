@@ -262,18 +262,39 @@ const PaymentScreen = () => {
     setPayments([]);
   };
 
-  const handleApplyServiceFee = () => {
+  const handleApplyServiceFee = async () => {
     const percent = parseFloat(serviceFeePercentInput) || 0;
     if (percent >= 0 && percent <= 100) {
+      // Update local state
       setServiceFee(percent);
       setShowServiceFeeInput(false);
+
+      // If order exists in backend, save to database
+      const orderId = currentOrder.id;
+      if (orderId && !String(orderId).startsWith('temp-')) {
+        try {
+          await posAPI.applyServiceFee(orderId, percent);
+        } catch (error) {
+          console.error('Failed to save service fee to backend:', error);
+        }
+      }
     }
   };
 
-  const handleRemoveServiceFee = () => {
+  const handleRemoveServiceFee = async () => {
     setServiceFeePercentInput(0);
     setServiceFee(0);
     setShowServiceFeeInput(false);
+
+    // If order exists in backend, save to database
+    const orderId = currentOrder.id;
+    if (orderId && !String(orderId).startsWith('temp-')) {
+      try {
+        await posAPI.applyServiceFee(orderId, 0);
+      } catch (error) {
+        console.error('Failed to remove service fee from backend:', error);
+      }
+    }
   };
 
   const colorClasses = {
