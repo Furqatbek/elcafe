@@ -856,23 +856,31 @@ export default function Orders() {
 
                                 <div className="flex justify-between items-center pt-2 border-t">
                                   <span className="font-semibold">{order.total?.toFixed(0)}</span>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleEditItems(order)}
-                                      className="h-7 px-2"
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="default"
-                                      size="sm"
-                                      onClick={() => handleCloseCheck(order)}
-                                      className="h-7 px-2 bg-blue-600 hover:bg-blue-700"
-                                    >
-                                      <CreditCard className="h-3 w-3" />
-                                    </Button>
+                                  <div className="flex gap-1 items-center">
+                                    {order.paymentStatus === 'COMPLETED' ? (
+                                      <Badge className="bg-green-100 text-green-800 h-7">
+                                        {t('orders.paid', 'Paid')}
+                                      </Badge>
+                                    ) : (
+                                      <>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handleEditItems(order)}
+                                          className="h-7 px-2"
+                                        >
+                                          <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button
+                                          variant="default"
+                                          size="sm"
+                                          onClick={() => handleCloseCheck(order)}
+                                          className="h-7 px-2 bg-blue-600 hover:bg-blue-700"
+                                        >
+                                          <CreditCard className="h-3 w-3" />
+                                        </Button>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -1064,8 +1072,8 @@ export default function Orders() {
                     </Button>
                   )}
 
-                  {/* Close Check / Pay Button - For open orders to go to payment */}
-                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                  {/* Close Check / Pay Button - For unpaid open orders */}
+                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && order.paymentStatus !== 'COMPLETED' && (
                     <Button
                       variant="default"
                       size="sm"
@@ -1077,8 +1085,8 @@ export default function Orders() {
                     </Button>
                   )}
 
-                  {/* Close Table Button - Only for dine-in orders that are not yet closed */}
-                  {order.orderType === 'DINE_IN' && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                  {/* Close Table Button - Only for unpaid dine-in orders */}
+                  {order.orderType === 'DINE_IN' && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && order.paymentStatus !== 'COMPLETED' && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -1088,6 +1096,13 @@ export default function Orders() {
                       <CheckCircle className="h-4 w-4" />
                       {t('orders.closeTable', 'Close Table')}
                     </Button>
+                  )}
+
+                  {/* Show paid badge for fully paid orders */}
+                  {order.paymentStatus === 'COMPLETED' && (
+                    <Badge className="bg-green-100 text-green-800">
+                      {t('orders.paid', 'Paid')}
+                    </Badge>
                   )}
 
                   {/* Cancel Order Button */}
