@@ -68,6 +68,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     List<Order> findByRestaurant_IdAndStatus(Long restaurantId, OrderStatus status);
 
+    // Find active orders by table
+    List<Order> findByDiningTable_IdAndStatusIn(Long tableId, List<OrderStatus> statuses);
+
     List<Order> findByStatus(OrderStatus status);
 
     List<Order> findByDeliveryInfo_CourierId(Long courierId);

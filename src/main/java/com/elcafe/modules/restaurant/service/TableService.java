@@ -2,6 +2,9 @@ package com.elcafe.modules.restaurant.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.dto.CreateTableRequest;
 import com.elcafe.modules.restaurant.dto.FloorPlanDTO;
 import com.elcafe.modules.restaurant.dto.MergeTablesRequest;
@@ -30,6 +33,7 @@ public class TableService {
     private final RestaurantTableRepository tableRepository;
     private final RestaurantRepository restaurantRepository;
     private final TableMapper tableMapper;
+    private final OrderRepository orderRepository;
 
     @Transactional
     public TableResponse createTable(CreateTableRequest request) {
@@ -338,8 +342,24 @@ public class TableService {
         List<RestaurantTable> tables = tableRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
         List<String> sections = tableRepository.findDistinctSectionsByRestaurantId(restaurantId);
 
+        // Get active order statuses (orders that are still open)
+        List<OrderStatus> activeStatuses = List.of(
+                OrderStatus.NEW, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.ON_DELIVERY
+        );
+
         List<FloorPlanDTO.FloorPlanTableDTO> tableDTOs = tables.stream()
-                .map(table -> FloorPlanDTO.FloorPlanTableDTO.builder()
+                .map(table -> {
+                        // Find active order for this table
+                        Long currentOrderId = null;
+                        if (table.getStatus() == RestaurantTable.TableStatus.OCCUPIED) {
+                            List<Order> activeOrders = orderRepository.findByDiningTable_IdAndStatusIn(
+                                    table.getId(), activeStatuses);
+                            if (!activeOrders.isEmpty()) {
+                                currentOrderId = activeOrders.get(0).getId();
+                            }
+                        }
+
+                        return FloorPlanDTO.FloorPlanTableDTO.builder()
                         .id(table.getId())
                         .tableNumber(table.getTableNumber())
                         .tableName(table.getTableName())
@@ -350,13 +370,16 @@ public class TableService {
                         .positionY(table.getPositionY())
                         .width(table.getWidth())
                         .height(table.getHeight())
+                        // Current order info
+                        .currentOrderId(currentOrderId)
                         // Merge info
                         .mergedTable(table.getMergedTable() != null ||
                                 tableRepository.findByMergedTable(table).size() > 0)
                         .mergedWithTableId(table.getMergedTable() != null ?
                                 table.getMergedTable().getId() : null)
                         .originalCapacity(table.getOriginalCapacity())
-                        .build())
+                        .build();
+                })
                 .collect(Collectors.toList());
 
         return FloorPlanDTO.builder()

@@ -441,26 +441,88 @@ const usePOSStore = create(
         ui: { ...state.ui, currentScreen: 'menu' },
       })),
 
-      // Confirm selected tables and proceed to menu
-      confirmTableSelection: (guestCount) => set((state) => {
+      // Confirm selected tables and proceed to menu or modify-order if order exists
+      confirmTableSelection: async (guestCount) => {
+        const state = get();
         const tables = state.selectedTables;
-        if (tables.length === 0) return state;
+        if (tables.length === 0) return;
 
         // Create combined table number (e.g., "1, 2, 3" or "1-2-3")
         const tableNumbers = tables.map((t) => t.tableNumber).join(', ');
         const totalCapacity = tables.reduce((sum, t) => sum + (t.capacity || 0), 0);
+        const tableIds = tables.map((t) => t.id);
 
-        return {
-          customer: {
-            ...state.customer,
-            tableNumber: tableNumbers,
-            guestCount: guestCount || totalCapacity,
-            // Store individual table IDs for backend
-            tableIds: tables.map((t) => t.id),
-          },
-          ui: { ...state.ui, currentScreen: 'menu' },
-        };
-      }),
+        // Check if any selected table has an active order
+        const occupiedTable = tables.find(t => t.status === 'OCCUPIED' && t.currentOrderId);
+
+        if (occupiedTable && occupiedTable.currentOrderId) {
+          // Table has an active order - load it and go to modify screen
+          try {
+            set((s) => ({ ui: { ...s.ui, isLoading: true } }));
+            const response = await posAPI.getOrderById(occupiedTable.currentOrderId);
+            const existingOrder = response.data.data;
+
+            // Map order items to POS format
+            const posItems = (existingOrder.items || []).map((item, index) => ({
+              id: item.id || `${item.productId}-${index}`,
+              productId: item.productId,
+              name: item.productName || item.name,
+              basePrice: item.unitPrice || item.price || 0,
+              modifiers: item.modifiers || [],
+              quantity: item.quantity,
+              itemTotal: item.totalPrice || (item.unitPrice || item.price || 0) * item.quantity,
+              notes: item.notes || item.specialInstructions || '',
+            }));
+
+            set({
+              currentOrder: {
+                id: existingOrder.id,
+                orderNumber: existingOrder.orderNumber,
+                type: 'DINE_IN',
+                items: posItems,
+                subtotal: existingOrder.subtotal || 0,
+                tax: existingOrder.tax || 0,
+                deliveryFee: 0,
+                serviceFeePercent: existingOrder.serviceFeePercent || 0,
+                serviceFee: existingOrder.serviceFee || 0,
+                total: existingOrder.total || 0,
+                notes: existingOrder.orderNotes || '',
+              },
+              activeOrder: existingOrder,
+              customer: {
+                ...state.customer,
+                tableNumber: tableNumbers,
+                guestCount: guestCount || totalCapacity,
+                tableIds: tableIds,
+              },
+              ui: { ...state.ui, isLoading: false, currentScreen: 'modify-order' },
+            });
+          } catch (error) {
+            console.error('Failed to load existing order:', error);
+            // Fall back to creating new order if loading fails
+            set({
+              customer: {
+                ...state.customer,
+                tableNumber: tableNumbers,
+                guestCount: guestCount || totalCapacity,
+                tableIds: tableIds,
+              },
+              ui: { ...state.ui, isLoading: false, currentScreen: 'menu' },
+            });
+          }
+        } else {
+          // No active order - proceed to menu for new order
+          set({
+            customer: {
+              ...state.customer,
+              tableNumber: tableNumbers,
+              guestCount: guestCount || totalCapacity,
+              tableIds: tableIds,
+            },
+            ui: { ...state.ui, currentScreen: 'menu' },
+          });
+        }
+      },
 
       clearSelectedTables: () => set({
         selectedTables: [],
