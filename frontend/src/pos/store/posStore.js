@@ -745,11 +745,12 @@ const usePOSStore = create(
     }),
     {
       name: 'pos-storage', // localStorage key
-      partialPersist: (state) => ({
-        // Only persist certain parts
+      partialize: (state) => ({
+        // Persist these parts for cross-page navigation
         currentOrder: state.currentOrder,
         customer: state.customer,
         menu: state.menu,
+        ui: state.ui,
       }),
     }
   )
