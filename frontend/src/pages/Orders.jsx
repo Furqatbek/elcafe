@@ -203,11 +203,14 @@ export default function Orders() {
       // Get floor plan for the restaurant
       const floorPlanResponse = await tablesAPI.getFloorPlan(restaurantId);
       const floorPlanData = floorPlanResponse?.data?.data || floorPlanResponse?.data;
+      console.log('Floor plan data:', floorPlanData);
       setFloorPlan(floorPlanData);
 
       // Get open dine-in orders
       const ordersResponse = await posAPI.getOpenDineInOrders(restaurantId);
+      console.log('Orders response:', ordersResponse);
       const openOrders = ordersResponse?.data?.data || ordersResponse?.data || [];
+      console.log('Open orders:', openOrders);
 
       // Group orders by table ID
       // Handle different response formats:
@@ -217,27 +220,41 @@ export default function Orders() {
       const ordersByTable = {};
       if (Array.isArray(openOrders)) {
         openOrders.forEach(order => {
+          console.log('Processing order:', order.id, order.orderNumber);
+          console.log('  - diningTable:', order.diningTable);
+          console.log('  - dineInInfo:', order.dineInInfo);
+          console.log('  - tableIds:', order.tableIds);
+
           let tableId = null;
 
-          // Try different sources for table ID
-          if (order.diningTable?.id) {
-            tableId = order.diningTable.id;
-          } else if (order.dineInInfo?.tableIds?.length > 0) {
-            tableId = order.dineInInfo.tableIds[0];
+          // Try different sources for table ID - check dineInInfo first (POS response format)
+          if (order.dineInInfo?.tableIds?.length > 0) {
+            tableId = Number(order.dineInInfo.tableIds[0]);
+            console.log('  - Found tableId from dineInInfo.tableIds:', tableId);
+          } else if (order.diningTable?.id) {
+            tableId = Number(order.diningTable.id);
+            console.log('  - Found tableId from diningTable.id:', tableId);
           } else if (order.tableIds) {
             // tableIds can be a string like "14" or "14,15"
             const firstTableId = String(order.tableIds).split(',')[0].trim();
             tableId = parseInt(firstTableId, 10);
+            console.log('  - Found tableId from tableIds string:', tableId);
           }
 
           if (tableId && !isNaN(tableId)) {
-            if (!ordersByTable[tableId]) {
-              ordersByTable[tableId] = [];
+            // Use number as key for consistency
+            const key = tableId;
+            if (!ordersByTable[key]) {
+              ordersByTable[key] = [];
             }
-            ordersByTable[tableId].push(order);
+            ordersByTable[key].push(order);
+            console.log('  - Added order to table', key);
+          } else {
+            console.log('  - No valid tableId found for order');
           }
         });
       }
+      console.log('Orders by table:', ordersByTable);
       setTableOrders(ordersByTable);
     } catch (error) {
       console.error('Failed to load table view:', error);
@@ -759,8 +776,13 @@ export default function Orders() {
 
               {/* Tables Grid */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {floorPlan?.tables?.filter(table => table.status === 'OCCUPIED' || tableOrders[table.id]?.length > 0).map((table) => {
+                {floorPlan?.tables?.filter(table => {
+                  const hasOrders = tableOrders[table.id]?.length > 0;
+                  console.log(`Table ${table.id} (${table.tableNumber}): status=${table.status}, hasOrders=${hasOrders}, orders=`, tableOrders[table.id]);
+                  return table.status === 'OCCUPIED' || hasOrders;
+                }).map((table) => {
                   const ordersForTable = tableOrders[table.id] || [];
+                  console.log(`Rendering table ${table.id}: ${ordersForTable.length} orders`, ordersForTable);
                   const tableTotal = ordersForTable.reduce((sum, order) => sum + (order.total || 0), 0);
 
                   return (
