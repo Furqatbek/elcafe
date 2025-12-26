@@ -50,8 +50,9 @@ const generateReceiptHTML = (order) => {
 
     body {
       font-family: 'Courier New', monospace;
-      font-size: 11px;
-      line-height: 1.2;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.3;
       width: 58mm;
       margin: 0 auto;
       padding: 0;
@@ -66,54 +67,56 @@ const generateReceiptHTML = (order) => {
 
     .header {
       text-align: center;
-      margin-bottom: 3px;
-      padding-bottom: 3px;
+      margin-bottom: 4px;
+      padding-bottom: 4px;
       border-bottom: 1px dashed black;
     }
 
     .brand-name {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: bold;
       letter-spacing: 2px;
     }
 
     .info-section {
-      margin: 3px 0;
-      padding: 2px 0;
+      margin: 4px 0;
+      padding: 3px 0;
       border-bottom: 1px dashed black;
-      font-size: 10px;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     .info-line {
       display: flex;
       justify-content: space-between;
-      margin: 1px 0;
+      margin: 2px 0;
     }
 
     .customer-info {
-      margin: 3px 0;
-      padding: 2px 0;
+      margin: 4px 0;
+      padding: 3px 0;
       border-bottom: 1px dashed black;
-      font-size: 10px;
+      font-size: 12px;
+      font-weight: 500;
     }
 
     .customer-title {
       font-weight: bold;
-      font-size: 10px;
+      font-size: 12px;
       margin-bottom: 2px;
     }
 
     .items-table {
       width: 100%;
       border-collapse: collapse;
-      margin: 3px 0;
-      font-size: 10px;
+      margin: 4px 0;
+      font-size: 12px;
     }
 
     .items-table th {
       border-bottom: 1px solid black;
-      padding: 2px 1px;
-      font-size: 9px;
+      padding: 3px 1px;
+      font-size: 11px;
       font-weight: bold;
       text-align: left;
     }
@@ -125,14 +128,16 @@ const generateReceiptHTML = (order) => {
     }
 
     .items-table td {
-      padding: 2px 1px;
-      font-size: 10px;
+      padding: 3px 1px;
+      font-size: 12px;
+      font-weight: 500;
       vertical-align: top;
     }
 
     .items-table td.qty {
       text-align: right;
       width: 20px;
+      font-weight: 600;
     }
 
     .items-table td.unit-price {
@@ -147,67 +152,70 @@ const generateReceiptHTML = (order) => {
     }
 
     .item-variant {
-      font-size: 9px;
+      font-size: 10px;
       font-style: italic;
     }
 
     .totals {
-      margin: 3px 0;
-      padding-top: 3px;
+      margin: 4px 0;
+      padding-top: 4px;
       border-top: 1px dashed black;
     }
 
     .total-line {
       display: flex;
       justify-content: space-between;
-      margin: 1px 0;
-      font-size: 10px;
+      margin: 2px 0;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     .total-line.grand-total {
-      border-top: 1px solid black;
-      padding-top: 3px;
-      margin-top: 3px;
-      font-size: 14px;
+      border-top: 2px solid black;
+      padding-top: 4px;
+      margin-top: 4px;
+      font-size: 16px;
       font-weight: bold;
     }
 
     .notes-section {
-      margin: 3px 0;
-      padding: 2px;
+      margin: 4px 0;
+      padding: 3px;
       border: 1px dashed black;
-      font-size: 9px;
+      font-size: 11px;
     }
 
     .notes-title {
       font-weight: bold;
-      font-size: 9px;
+      font-size: 11px;
     }
 
     .footer {
-      margin-top: 4px;
-      padding-top: 3px;
+      margin-top: 5px;
+      padding-top: 4px;
       border-top: 1px dashed black;
       text-align: center;
-      font-size: 9px;
+      font-size: 11px;
+      font-weight: 500;
     }
 
     .contact-info {
-      margin: 2px 0;
-      line-height: 1.3;
+      margin: 3px 0;
+      line-height: 1.4;
+      font-weight: 600;
     }
 
     .thank-you {
-      font-size: 12px;
+      font-size: 14px;
       font-weight: bold;
-      margin: 3px 0;
+      margin: 4px 0;
     }
 
     .timestamp {
-      margin-top: 3px;
-      font-size: 9px;
+      margin-top: 4px;
+      font-size: 10px;
       border-top: 1px dashed black;
-      padding-top: 2px;
+      padding-top: 3px;
     }
 
     .print-button {
