@@ -98,7 +98,8 @@ public class ProductCostService {
      */
     @Transactional
     public int recalculateProductsUsingIngredient(Long ingredientId) {
-        List<ProductIngredient> usages = productIngredientRepository.findByIngredientId(ingredientId);
+        // Use query that eagerly fetches product to avoid LazyInitializationException
+        List<ProductIngredient> usages = productIngredientRepository.findByIngredientIdWithProduct(ingredientId);
 
         int updatedCount = 0;
         for (ProductIngredient usage : usages) {

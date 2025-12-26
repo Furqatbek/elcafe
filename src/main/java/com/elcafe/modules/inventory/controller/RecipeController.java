@@ -52,7 +52,7 @@ public class RecipeController {
             @PathVariable Long ingredientId) {
         log.info("Fetching usage for ingredient: {}", ingredientId);
 
-        List<ProductIngredient> recipes = productIngredientRepository.findByIngredientId(ingredientId);
+        List<ProductIngredient> recipes = productIngredientRepository.findByIngredientIdWithProductAndIngredient(ingredientId);
         List<RecipeResponse> responses = recipes.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -95,7 +95,8 @@ public class RecipeController {
             @Valid @RequestBody RecipeRequest request) {
         log.info("Updating recipe: {}", id);
 
-        ProductIngredient recipe = productIngredientRepository.findById(id)
+        // Use query that eagerly fetches product and ingredient to avoid LazyInitializationException
+        ProductIngredient recipe = productIngredientRepository.findByIdWithProductAndIngredient(id)
                 .orElseThrow(() -> new RuntimeException("Recipe not found with id: " + id));
 
         recipe.setQuantityRequired(request.getQuantityRequired());
@@ -115,7 +116,8 @@ public class RecipeController {
     public ResponseEntity<ApiResponse<Void>> deleteRecipe(@PathVariable Long id) {
         log.info("Deleting recipe: {}", id);
 
-        ProductIngredient recipe = productIngredientRepository.findById(id)
+        // Use query that eagerly fetches product to avoid LazyInitializationException
+        ProductIngredient recipe = productIngredientRepository.findByIdWithProductAndIngredient(id)
                 .orElseThrow(() -> new RuntimeException("Recipe not found with id: " + id));
 
         Long productId = recipe.getProduct().getId();
