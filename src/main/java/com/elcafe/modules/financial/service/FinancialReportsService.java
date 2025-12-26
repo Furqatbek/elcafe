@@ -10,6 +10,8 @@ import com.elcafe.modules.financial.repository.TransactionRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.restaurant.entity.BusinessHours;
+import com.elcafe.modules.restaurant.repository.BusinessHoursRepository;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -35,6 +37,7 @@ public class FinancialReportsService {
     private final PayrollEntryRepository payrollRepository;
     private final AccountService accountService;
     private final OrderRepository orderRepository;
+    private final BusinessHoursRepository businessHoursRepository;
 
     // Completed order statuses that count as revenue (must match DashboardService)
     // Include all orders that have been accepted/confirmed (exclude PENDING, NEW, PLACED, REJECTED, CANCELLED)
@@ -50,16 +53,78 @@ public class FinancialReportsService {
     );
 
     /**
+     * Record class for shift time range
+     */
+    private record ShiftTimeRange(
+        LocalDateTime start,
+        LocalDateTime end
+    ) {}
+
+    /**
+     * Get shift time range for a restaurant on a specific date
+     * Uses business hours to determine shift start and end times
+     * If shift crosses midnight (e.g., opens 10:00, closes 02:00), end time is next day
+     */
+    private ShiftTimeRange getShiftTimeRange(Long restaurantId, LocalDate date) {
+        var businessHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
+            restaurantId, date.getDayOfWeek());
+
+        if (businessHours.isEmpty() || businessHours.get().getClosed()) {
+            // If no business hours or closed, use full calendar day as fallback
+            return new ShiftTimeRange(
+                date.atStartOfDay(),
+                date.atTime(23, 59, 59)
+            );
+        }
+
+        BusinessHours hours = businessHours.get();
+        LocalTime openTime = hours.getOpenTime();
+        LocalTime closeTime = hours.getCloseTime();
+
+        LocalDateTime shiftStart = date.atTime(openTime);
+        LocalDateTime shiftEnd;
+
+        // Check if shift crosses midnight (closeTime is before openTime)
+        if (closeTime.isBefore(openTime) || closeTime.equals(openTime)) {
+            // Shift ends next day
+            shiftEnd = date.plusDays(1).atTime(closeTime);
+        } else {
+            // Shift ends same day
+            shiftEnd = date.atTime(closeTime);
+        }
+
+        return new ShiftTimeRange(shiftStart, shiftEnd);
+    }
+
+    /**
      * Generate Profit & Loss Statement (Income Statement)
      * Revenue is calculated directly from completed orders for accuracy,
      * as the transaction-based approach requires proper double-entry bookkeeping setup.
+     * Uses business hours to determine shift time ranges (handles shifts that cross midnight).
      */
     public ProfitLossReport generateProfitLossReport(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Generating P&L report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 
-        // Calculate revenue directly from completed orders (same as DashboardService)
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Calculate shift-based time range
+        // For single day: use business hours (shift may cross midnight)
+        // For multiple days: combine all shifts
+        LocalDateTime startDateTime;
+        LocalDateTime endDateTime;
+
+        if (startDate.equals(endDate)) {
+            // Single day - use shift time range based on business hours
+            ShiftTimeRange shift = getShiftTimeRange(restaurantId, startDate);
+            startDateTime = shift.start();
+            endDateTime = shift.end();
+            log.info("P&L: Using shift time range: {} to {}", startDateTime, endDateTime);
+        } else {
+            // Multi-day - use shift start of first day to shift end of last day
+            ShiftTimeRange firstShift = getShiftTimeRange(restaurantId, startDate);
+            ShiftTimeRange lastShift = getShiftTimeRange(restaurantId, endDate);
+            startDateTime = firstShift.start();
+            endDateTime = lastShift.end();
+            log.info("P&L: Using multi-day range: {} to {}", startDateTime, endDateTime);
+        }
 
         List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId, startDateTime, endDateTime);
@@ -73,7 +138,7 @@ public class FinancialReportsService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        log.info("P&L: Found {} orders, {} completed, total revenue: {}",
+        log.info("P&L: Found {} orders, {} revenue-counted, total revenue: {}",
                 orders.size(), completedOrders.size(), totalRevenue);
 
         // Calculate expenses from expense records (same as DashboardService)
