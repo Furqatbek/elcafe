@@ -134,11 +134,7 @@ export default function Orders() {
       const response = await restaurantAPI.getAll({ page: 0, size: 100 });
       const restaurantList = response.data.data.content || [];
       setRestaurants(restaurantList);
-
-      // Auto-select first restaurant if none selected
-      if (restaurantList.length > 0 && selectedRestaurant === 'all') {
-        setSelectedRestaurant(restaurantList[0].id.toString());
-      }
+      // Don't auto-select - let user choose, or auto-select when switching to table view
     } catch (error) {
       console.error('Failed to load restaurants:', error);
     }
@@ -254,10 +250,15 @@ export default function Orders() {
 
   // Refresh table view when view mode changes to 'byTable'
   useEffect(() => {
-    if (viewMode === 'byTable' && selectedRestaurant && selectedRestaurant !== 'all') {
-      loadTableView(parseInt(selectedRestaurant));
+    if (viewMode === 'byTable') {
+      if (selectedRestaurant && selectedRestaurant !== 'all') {
+        loadTableView(parseInt(selectedRestaurant));
+      } else if (restaurants.length > 0) {
+        // Auto-select first restaurant when switching to table view
+        setSelectedRestaurant(restaurants[0].id.toString());
+      }
     }
-  }, [viewMode, selectedRestaurant]);
+  }, [viewMode, selectedRestaurant, restaurants]);
 
   const filterOrders = () => {
     let filtered = [...orders];
