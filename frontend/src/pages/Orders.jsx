@@ -39,7 +39,12 @@ import {
   Minus,
   CreditCard,
   Banknote,
-  Wallet
+  Wallet,
+  LayoutGrid,
+  List,
+  Users,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
@@ -65,6 +70,12 @@ export default function Orders() {
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  // View mode: 'list' or 'byTable'
+  const [viewMode, setViewMode] = useState('list');
+  const [floorPlan, setFloorPlan] = useState(null);
+  const [tableOrders, setTableOrders] = useState({});
+  const [loadingTableView, setLoadingTableView] = useState(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -181,6 +192,51 @@ export default function Orders() {
       setLoading(false);
     }
   };
+
+  // Load table view data (floor plan + orders grouped by table)
+  const loadTableView = async (restaurantId) => {
+    if (!restaurantId) return;
+
+    setLoadingTableView(true);
+    try {
+      // Get floor plan for the restaurant
+      const floorPlanResponse = await tablesAPI.getFloorPlan(restaurantId);
+      const floorPlanData = floorPlanResponse?.data?.data || floorPlanResponse?.data;
+      setFloorPlan(floorPlanData);
+
+      // Get open dine-in orders
+      const ordersResponse = await posAPI.getOpenDineInOrders(restaurantId);
+      const openOrders = ordersResponse?.data?.data || ordersResponse?.data || [];
+
+      // Group orders by table ID
+      const ordersByTable = {};
+      if (Array.isArray(openOrders)) {
+        openOrders.forEach(order => {
+          const tableId = order.diningTable?.id || order.diningTableId;
+          if (tableId) {
+            if (!ordersByTable[tableId]) {
+              ordersByTable[tableId] = [];
+            }
+            ordersByTable[tableId].push(order);
+          }
+        });
+      }
+      setTableOrders(ordersByTable);
+    } catch (error) {
+      console.error('Failed to load table view:', error);
+      setFloorPlan(null);
+      setTableOrders({});
+    } finally {
+      setLoadingTableView(false);
+    }
+  };
+
+  // Refresh table view when view mode changes to 'byTable'
+  useEffect(() => {
+    if (viewMode === 'byTable' && selectedRestaurant && selectedRestaurant !== 'all') {
+      loadTableView(parseInt(selectedRestaurant));
+    }
+  }, [viewMode, selectedRestaurant]);
 
   const filterOrders = () => {
     let filtered = [...orders];
@@ -528,13 +584,40 @@ export default function Orders() {
         <div>
           <h1 className="text-3xl font-bold">{t('orders.title')}</h1>
           <p className="text-muted-foreground mt-1">
-            {t('orders.allOrders')}
+            {viewMode === 'list' ? t('orders.allOrders') : t('orders.ordersByTable', 'Orders by Table')}
           </p>
         </div>
-        <Button onClick={() => setCreateModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('pages.orders.createOrder', 'Create Order')}
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* View Mode Toggle */}
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-white shadow text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              <span className="text-sm font-medium">{t('orders.listView', 'List')}</span>
+            </button>
+            <button
+              onClick={() => setViewMode('byTable')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
+                viewMode === 'byTable'
+                  ? 'bg-white shadow text-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="text-sm font-medium">{t('orders.tableView', 'By Table')}</span>
+            </button>
+          </div>
+          <Button onClick={() => setCreateModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('pages.orders.createOrder', 'Create Order')}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -611,49 +694,223 @@ export default function Orders() {
         </CardContent>
       </Card>
 
-      {/* Orders List */}
-      <div className="space-y-4">
-        {filteredOrders.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">
-                {t('common.noData')}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredOrders.map((order) => (
-            <Card key={order.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <CardTitle className="text-lg">
-                        {t('orders.orderNumber')}: #{order.orderNumber}
-                      </CardTitle>
-                      {/* Order Type Icon and Badge */}
-                      {order.orderType === 'DELIVERY' && (
-                        <Badge variant="outline" className="gap-1">
-                          <Truck className="h-3 w-3" />
-                          {t('orders.types.delivery') || 'Delivery'}
-                        </Badge>
-                      )}
-                      {order.orderType === 'TAKEAWAY' && (
-                        <Badge variant="outline" className="gap-1">
-                          <ShoppingBag className="h-3 w-3" />
-                          {t('orders.types.takeaway') || 'Takeaway'}
-                        </Badge>
-                      )}
-                      {order.orderType === 'DINE_IN' && (
-                        <Badge variant="outline" className="gap-1">
-                          <Utensils className="h-3 w-3" />
-                          {t('orders.types.dineIn') || 'Dine In'}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {order.restaurant?.name || 'Restaurant'}
-                    </p>
+      {/* View Content */}
+      {viewMode === 'byTable' ? (
+        /* Table View */
+        <div className="space-y-4">
+          {selectedRestaurant === 'all' ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8">
+                  <LayoutGrid className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <p className="text-lg font-medium text-gray-900 mb-2">
+                    {t('orders.selectRestaurantForTableView', 'Select a Restaurant')}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {t('orders.selectRestaurantDesc', 'Please select a restaurant from the filter above to view orders by table')}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : loadingTableView ? (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+                  <span className="ml-3 text-lg">{t('common.loading')}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Refresh Button */}
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => loadTableView(parseInt(selectedRestaurant))}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  {t('common.refresh', 'Refresh')}
+                </Button>
+              </div>
+
+              {/* Tables Grid */}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {floorPlan?.tables?.filter(table => table.status === 'OCCUPIED' || tableOrders[table.id]?.length > 0).map((table) => {
+                  const ordersForTable = tableOrders[table.id] || [];
+                  const tableTotal = ordersForTable.reduce((sum, order) => sum + (order.total || 0), 0);
+
+                  return (
+                    <Card key={table.id} className={`${table.status === 'OCCUPIED' ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}`}>
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              table.status === 'OCCUPIED' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              <Utensils className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-lg">
+                                {t('orders.table', 'Table')} {table.tableNumber}
+                              </CardTitle>
+                              {table.section && (
+                                <p className="text-xs text-muted-foreground">{table.section}</p>
+                              )}
+                            </div>
+                          </div>
+                          <Badge className={table.status === 'OCCUPIED' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}>
+                            {t(`tables.status.${table.status?.toLowerCase()}`, table.status)}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {ordersForTable.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            {t('orders.noActiveOrders', 'No active orders')}
+                          </p>
+                        ) : (
+                          <div className="space-y-3">
+                            {ordersForTable.map((order) => (
+                              <div key={order.id} className="border rounded-lg p-3 bg-white">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div>
+                                    <p className="font-medium text-sm">#{order.orderNumber}</p>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                      <Clock className="h-3 w-3" />
+                                      {order.createdAt && format(new Date(order.createdAt), 'HH:mm')}
+                                      {order.waiter && (
+                                        <>
+                                          <span>•</span>
+                                          <Users className="h-3 w-3" />
+                                          {order.waiter.name}
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <Badge className={statusColors[order.status] || 'bg-gray-100'} variant="secondary">
+                                    {t(`orders.statuses.${order.status}`, order.status)}
+                                  </Badge>
+                                </div>
+
+                                {/* Order Items Preview */}
+                                {order.items && order.items.length > 0 && (
+                                  <div className="text-xs text-muted-foreground mb-2 max-h-16 overflow-y-auto">
+                                    {order.items.slice(0, 3).map((item, idx) => (
+                                      <div key={idx} className="flex justify-between">
+                                        <span>{item.quantity}x {item.productName}</span>
+                                        <span>{item.totalPrice?.toFixed(0)}</span>
+                                      </div>
+                                    ))}
+                                    {order.items.length > 3 && (
+                                      <p className="text-center text-gray-400">+{order.items.length - 3} more items</p>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="flex justify-between items-center pt-2 border-t">
+                                  <span className="font-semibold">{order.total?.toFixed(0)}</span>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEditItems(order)}
+                                      className="h-7 px-2"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="default"
+                                      size="sm"
+                                      onClick={() => handleCloseCheck(order)}
+                                      className="h-7 px-2 bg-blue-600 hover:bg-blue-700"
+                                    >
+                                      <CreditCard className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Table Total */}
+                            {ordersForTable.length > 1 && (
+                              <div className="flex justify-between items-center pt-2 border-t-2 border-dashed">
+                                <span className="font-semibold text-sm">{t('orders.tableTotal', 'Table Total')}</span>
+                                <span className="text-lg font-bold">{tableTotal.toFixed(0)}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+
+                {/* Empty State */}
+                {(!floorPlan?.tables || floorPlan.tables.filter(t => t.status === 'OCCUPIED' || tableOrders[t.id]?.length > 0).length === 0) && (
+                  <Card className="col-span-full">
+                    <CardContent className="pt-6">
+                      <div className="text-center py-8">
+                        <Utensils className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                        <p className="text-lg font-medium text-gray-900 mb-2">
+                          {t('orders.noOccupiedTables', 'No Occupied Tables')}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {t('orders.noOccupiedTablesDesc', 'There are no tables with active orders at the moment')}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        /* List View - Original Orders List */
+        <div className="space-y-4">
+          {filteredOrders.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">
+                  {t('common.noData')}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredOrders.map((order) => (
+              <Card key={order.id}>
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CardTitle className="text-lg">
+                          {t('orders.orderNumber')}: #{order.orderNumber}
+                        </CardTitle>
+                        {/* Order Type Icon and Badge */}
+                        {order.orderType === 'DELIVERY' && (
+                          <Badge variant="outline" className="gap-1">
+                            <Truck className="h-3 w-3" />
+                            {t('orders.types.delivery') || 'Delivery'}
+                          </Badge>
+                        )}
+                        {order.orderType === 'TAKEAWAY' && (
+                          <Badge variant="outline" className="gap-1">
+                            <ShoppingBag className="h-3 w-3" />
+                            {t('orders.types.takeaway') || 'Takeaway'}
+                          </Badge>
+                        )}
+                        {order.orderType === 'DINE_IN' && (
+                          <Badge variant="outline" className="gap-1">
+                            <Utensils className="h-3 w-3" />
+                            {t('orders.types.dineIn') || 'Dine In'}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {order.restaurant?.name || 'Restaurant'}
+                      </p>
                     {/* Table Info for Dine-In Orders */}
                     {order.orderType === 'DINE_IN' && order.diningTable && (
                       <p className="text-sm font-medium text-blue-600">
@@ -803,7 +1060,8 @@ export default function Orders() {
             </Card>
           ))
         )}
-      </div>
+        </div>
+      )}
 
       {/* Create Order Modal */}
       <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
