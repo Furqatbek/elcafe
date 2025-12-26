@@ -94,6 +94,12 @@ public class AccountService {
     public void initializeChartOfAccounts(Long restaurantId) {
         log.info("Initializing chart of accounts for restaurant: {}", restaurantId);
 
+        // Check if accounts already exist for this restaurant
+        if (accountRepository.existsByRestaurantId(restaurantId)) {
+            log.info("Chart of accounts already exists for restaurant: {}, skipping initialization", restaurantId);
+            return;
+        }
+
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + restaurantId));
 

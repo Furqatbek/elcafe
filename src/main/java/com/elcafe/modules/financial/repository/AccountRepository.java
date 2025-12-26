@@ -11,6 +11,8 @@ import java.util.Optional;
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
 
+    boolean existsByRestaurantId(Long restaurantId);
+
     List<Account> findByRestaurant_Id(Long restaurantId);
 
     List<Account> findByRestaurant_IdAndActiveTrue(Long restaurantId);
