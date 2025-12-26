@@ -774,12 +774,12 @@ export default function Orders() {
                 </Button>
               </div>
 
-              {/* Tables Grid */}
+              {/* Tables Grid - Only show tables with active orders */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {floorPlan?.tables?.filter(table => {
                   const hasOrders = tableOrders[table.id]?.length > 0;
                   console.log(`Table ${table.id} (${table.tableNumber}): status=${table.status}, hasOrders=${hasOrders}, orders=`, tableOrders[table.id]);
-                  return table.status === 'OCCUPIED' || hasOrders;
+                  return hasOrders; // Only show tables that have orders
                 }).map((table) => {
                   const ordersForTable = tableOrders[table.id] || [];
                   console.log(`Rendering table ${table.id}: ${ordersForTable.length} orders`, ordersForTable);
@@ -892,16 +892,16 @@ export default function Orders() {
                 })}
 
                 {/* Empty State */}
-                {(!floorPlan?.tables || floorPlan.tables.filter(t => t.status === 'OCCUPIED' || tableOrders[t.id]?.length > 0).length === 0) && (
+                {(!floorPlan?.tables || floorPlan.tables.filter(t => tableOrders[t.id]?.length > 0).length === 0) && (
                   <Card className="col-span-full">
                     <CardContent className="pt-6">
                       <div className="text-center py-8">
                         <Utensils className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                         <p className="text-lg font-medium text-gray-900 mb-2">
-                          {t('orders.noOccupiedTables', 'No Occupied Tables')}
+                          {t('orders.noActiveTableOrders', 'No Active Table Orders')}
                         </p>
                         <p className="text-muted-foreground">
-                          {t('orders.noOccupiedTablesDesc', 'There are no tables with active orders at the moment')}
+                          {t('orders.noActiveTableOrdersDesc', 'There are no tables with active orders at the moment')}
                         </p>
                       </div>
                     </CardContent>
