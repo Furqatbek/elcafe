@@ -15,7 +15,6 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +34,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@Lazy
 @RequiredArgsConstructor
 public class DailyFinancialReportService {
 
@@ -106,8 +104,8 @@ public class DailyFinancialReportService {
         log.info("Calculating metrics for restaurant {} on {} - shift: {} to {}",
             restaurantId, date, shift.start(), shift.end());
 
-        // Get completed orders for the shift period
-        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        // Get completed orders for the shift period (with payments eagerly fetched)
+        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithPaymentsOrderByCreatedAtDesc(
             restaurantId, shift.start(), shift.end());
         log.info("Found {} total orders in shift period", orders.size());
 

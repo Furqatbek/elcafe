@@ -113,4 +113,11 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Order> findByRestaurant_IdAndDiningTableIsNotNullAndStatusIn(
             @Param("restaurantId") Long restaurantId,
             @Param("statuses") List<OrderStatus> statuses);
+
+    // Financial reports: Find orders with payments for revenue calculation
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.payments WHERE o.restaurant.id = :restaurantId AND o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
+    List<Order> findByRestaurant_IdAndCreatedAtBetweenWithPaymentsOrderByCreatedAtDesc(
+            @Param("restaurantId") Long restaurantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 }
