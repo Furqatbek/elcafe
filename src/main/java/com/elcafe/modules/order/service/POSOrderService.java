@@ -70,7 +70,7 @@ public class POSOrderService {
         order.setOrderNumber(dailyOrderSequenceService.generateNextOrderNumber());
         order.setRestaurant(restaurant);
         order.setCustomer(customer);
-        order.setStatus(OrderStatus.PENDING);
+        order.setStatus(OrderStatus.NEW);
         order.setCustomerNotes(request.getOrderNotes());
 
         // Set pricing - default all fees to 0
