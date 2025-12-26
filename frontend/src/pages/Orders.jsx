@@ -774,12 +774,13 @@ export default function Orders() {
                 </Button>
               </div>
 
-              {/* Tables Grid - Only show tables with active orders */}
+              {/* Tables Grid - Only show occupied tables */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {floorPlan?.tables?.filter(table => {
                   const hasOrders = tableOrders[table.id]?.length > 0;
-                  console.log(`Table ${table.id} (${table.tableNumber}): status=${table.status}, hasOrders=${hasOrders}, orders=`, tableOrders[table.id]);
-                  return hasOrders; // Only show tables that have orders
+                  const isOccupied = table.status === 'OCCUPIED';
+                  console.log(`Table ${table.id} (${table.tableNumber}): status=${table.status}, isOccupied=${isOccupied}, hasOrders=${hasOrders}`);
+                  return isOccupied; // Only show occupied tables, hide available ones
                 }).map((table) => {
                   const ordersForTable = tableOrders[table.id] || [];
                   console.log(`Rendering table ${table.id}: ${ordersForTable.length} orders`, ordersForTable);
@@ -892,7 +893,7 @@ export default function Orders() {
                 })}
 
                 {/* Empty State */}
-                {(!floorPlan?.tables || floorPlan.tables.filter(t => tableOrders[t.id]?.length > 0).length === 0) && (
+                {(!floorPlan?.tables || floorPlan.tables.filter(t => t.status === 'OCCUPIED').length === 0) && (
                   <Card className="col-span-full">
                     <CardContent className="pt-6">
                       <div className="text-center py-8">
