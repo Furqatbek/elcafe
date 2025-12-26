@@ -95,7 +95,7 @@ public class AccountService {
         log.info("Initializing chart of accounts for restaurant: {}", restaurantId);
 
         // Check if accounts already exist for this restaurant
-        if (accountRepository.existsByRestaurantId(restaurantId)) {
+        if (accountRepository.existsByRestaurant_Id(restaurantId)) {
             log.info("Chart of accounts already exists for restaurant: {}, skipping initialization", restaurantId);
             return;
         }
