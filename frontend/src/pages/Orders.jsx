@@ -298,7 +298,9 @@ export default function Orders() {
     const subtotal = posItems.reduce((sum, item) => sum + item.itemTotal, 0);
     const tax = order.tax || 0;
     const deliveryFee = order.deliveryFee || 0;
-    const total = order.total || (subtotal + tax + deliveryFee);
+    const serviceFeePercent = order.serviceFeePercent || 0;
+    const serviceFee = order.serviceFee || 0;
+    const total = order.total || (subtotal + tax + deliveryFee + serviceFee);
 
     // Set up POS store with order data
     usePOSStore.setState({
@@ -310,6 +312,8 @@ export default function Orders() {
         subtotal,
         tax,
         deliveryFee,
+        serviceFeePercent,
+        serviceFee,
         total,
         notes: order.customerNotes || '',
       },
