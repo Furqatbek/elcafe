@@ -212,15 +212,17 @@ export default function Orders() {
       const openOrders = ordersResponse?.data?.data || ordersResponse?.data || [];
       console.log('Open orders:', openOrders);
 
-      // Group orders by table ID
+      // Group orders by table ID - only include orders with status NEW
       // Handle different response formats:
       // - diningTable.id (from entity with full table object)
       // - dineInInfo.tableIds[0] (from POS response)
       // - tableIds as string "14" or "14,15" (from direct entity serialization)
       const ordersByTable = {};
       if (Array.isArray(openOrders)) {
-        openOrders.forEach(order => {
-          console.log('Processing order:', order.id, order.orderNumber);
+        openOrders
+          .filter(order => order.status === 'NEW') // Only show NEW orders in table view
+          .forEach(order => {
+          console.log('Processing order:', order.id, order.orderNumber, 'status:', order.status);
           console.log('  - diningTable:', order.diningTable);
           console.log('  - dineInInfo:', order.dineInInfo);
           console.log('  - tableIds:', order.tableIds);
