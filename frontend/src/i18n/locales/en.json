@@ -2016,7 +2016,7 @@
       "waitingCard": "Waiting for card...",
       "waitingMobile": "Waiting for mobile payment...",
       "finalizing": "Finalizing transaction...",
-      "insufficientAmount": "Amount must be at least ${{total}}",
+      "insufficientAmount": "Insufficient amount. Need {{remaining}} more.",
       "summary": {
         "orderSummary": "Order Summary",
         "subtotal": "Subtotal",
