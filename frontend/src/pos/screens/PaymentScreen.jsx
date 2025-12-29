@@ -632,6 +632,7 @@ const PaymentScreen = () => {
         onPaymentComplete={handlePaymentComplete}
         onCancel={() => setShowCashDialog(false)}
         loading={processingPayment}
+        splitMode={splitPaymentMode}
       />
 
       <CardPaymentDialog
@@ -641,6 +642,7 @@ const PaymentScreen = () => {
         onPaymentComplete={handlePaymentComplete}
         onCancel={() => setShowCardDialog(false)}
         loading={processingPayment}
+        splitMode={splitPaymentMode}
       />
 
       <VoidOrderDialog
