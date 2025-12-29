@@ -89,15 +89,25 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Query("SELECT DISTINCT o.orderSource FROM Order o WHERE o.customer.id = :customerId")
     List<OrderSource> findDistinctOrderSourcesByCustomerId(@Param("customerId") Long customerId);
 
-    // Waiter metrics queries
+    // Waiter metrics queries (all-time - backward compatibility)
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED')")
     BigDecimal calculateTotalRevenueByWaiter(@Param("waiterId") Long waiterId);
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED')")
     Long countValidOrdersByWaiter(@Param("waiterId") Long waiterId);
 
+    // Waiter metrics queries (with date filter for period support)
+    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate")
+    BigDecimal calculateTotalRevenueByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
+
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate")
+    Long countValidOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
+
     @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') ORDER BY o.createdAt DESC")
     List<Order> findRecentOrdersByWaiter(@Param("waiterId") Long waiterId, Pageable pageable);
+
+    @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate ORDER BY o.createdAt DESC")
+    List<Order> findRecentOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate, Pageable pageable);
 
     @Query("SELECT CAST(o.createdAt AS LocalDate) as date, COALESCE(SUM(o.total), 0) as revenue, COUNT(o) as orderCount " +
            "FROM Order o " +

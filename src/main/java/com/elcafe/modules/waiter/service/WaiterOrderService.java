@@ -480,19 +480,25 @@ public class WaiterOrderService {
     }
 
     /**
-     * Get waiter performance metrics
+     * Get waiter performance metrics with period filter
+     * @param waiterId the waiter ID
+     * @param period the time period: "daily", "weekly", or "monthly"
      */
     @Transactional(readOnly = true)
-    public WaiterMetricsResponse getWaiterMetrics(Long waiterId) {
+    public WaiterMetricsResponse getWaiterMetrics(Long waiterId, String period) {
         // Verify waiter exists
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
-        // Calculate total revenue (excluding PENDING and CANCELLED)
-        BigDecimal totalRevenue = orderRepository.calculateTotalRevenueByWaiter(waiterId);
+        // Calculate start date based on period
+        LocalDateTime startDate = calculateStartDate(period);
+        int activityDays = getActivityDays(period);
 
-        // Count valid orders (excluding PENDING and CANCELLED)
-        Long totalOrders = orderRepository.countValidOrdersByWaiter(waiterId);
+        // Calculate total revenue for the period
+        BigDecimal totalRevenue = orderRepository.calculateTotalRevenueByWaiterSince(waiterId, startDate);
+
+        // Count valid orders for the period
+        Long totalOrders = orderRepository.countValidOrdersByWaiterSince(waiterId, startDate);
 
         // Calculate average ticket
         BigDecimal averageTicket = BigDecimal.ZERO;
@@ -500,11 +506,11 @@ public class WaiterOrderService {
             averageTicket = totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP);
         }
 
-        // Get weekly activity (last 7 days)
-        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-        List<Object[]> dailyData = orderRepository.findDailyRevenueByWaiter(waiterId, sevenDaysAgo);
+        // Get activity data for the period
+        LocalDateTime activityStartDate = LocalDateTime.now().minusDays(activityDays);
+        List<Object[]> dailyData = orderRepository.findDailyRevenueByWaiter(waiterId, activityStartDate);
 
-        List<DailyRevenueData> weeklyActivity = dailyData.stream()
+        List<DailyRevenueData> activity = dailyData.stream()
                 .map(row -> DailyRevenueData.builder()
                         .date((LocalDate) row[0])
                         .revenue((BigDecimal) row[1])
@@ -512,8 +518,8 @@ public class WaiterOrderService {
                         .build())
                 .collect(Collectors.toList());
 
-        // Get recent transactions (last 5 orders)
-        List<Order> recentOrders = orderRepository.findRecentOrdersByWaiter(waiterId, PageRequest.of(0, 5));
+        // Get recent transactions within the period (last 5 orders)
+        List<Order> recentOrders = orderRepository.findRecentOrdersByWaiterSince(waiterId, startDate, PageRequest.of(0, 5));
 
         List<RecentTransactionData> recentTransactions = recentOrders.stream()
                 .map(order -> RecentTransactionData.builder()
@@ -531,9 +537,32 @@ public class WaiterOrderService {
                 .totalRevenue(totalRevenue)
                 .totalOrders(totalOrders)
                 .averageTicket(averageTicket)
-                .weeklyActivity(weeklyActivity)
+                .weeklyActivity(activity)
                 .recentTransactions(recentTransactions)
                 .build();
+    }
+
+    /**
+     * Calculate the start date based on the period parameter
+     */
+    private LocalDateTime calculateStartDate(String period) {
+        LocalDateTime now = LocalDateTime.now();
+        return switch (period.toLowerCase()) {
+            case "daily" -> now.toLocalDate().atStartOfDay();
+            case "monthly" -> now.minusDays(30).toLocalDate().atStartOfDay();
+            default -> now.minusDays(7).toLocalDate().atStartOfDay(); // weekly (default)
+        };
+    }
+
+    /**
+     * Get the number of days for activity chart based on period
+     */
+    private int getActivityDays(String period) {
+        return switch (period.toLowerCase()) {
+            case "daily" -> 1;
+            case "monthly" -> 30;
+            default -> 7; // weekly (default)
+        };
     }
 
     /**
