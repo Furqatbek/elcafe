@@ -254,11 +254,21 @@ public class Order {
     }
 
     /**
+     * Get the effective grand total amount.
+     * Falls back to total if grandTotal is null or zero.
+     */
+    private BigDecimal getEffectiveGrandTotal() {
+        if (grandTotal != null && grandTotal.compareTo(BigDecimal.ZERO) > 0) {
+            return grandTotal;
+        }
+        return total != null ? total : BigDecimal.ZERO;
+    }
+
+    /**
      * Get remaining balance to be paid
      */
     public BigDecimal getRemainingBalance() {
-        BigDecimal grandTotalAmount = grandTotal != null ? grandTotal : total;
-        return grandTotalAmount.subtract(getTotalPaid());
+        return getEffectiveGrandTotal().subtract(getTotalPaid());
     }
 
     /**
@@ -266,9 +276,9 @@ public class Order {
      * An order with total = 0 is NOT considered fully paid (no items to pay for)
      */
     public boolean isFullyPaid() {
-        BigDecimal grandTotalAmount = grandTotal != null ? grandTotal : total;
+        BigDecimal effectiveTotal = getEffectiveGrandTotal();
         // Order must have a positive total to be considered "fully paid"
-        if (grandTotalAmount == null || grandTotalAmount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (effectiveTotal.compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         }
         return getRemainingBalance().compareTo(BigDecimal.ZERO) <= 0;
@@ -289,8 +299,8 @@ public class Order {
         if (total == null) total = BigDecimal.ZERO;
         if (bonusUsed == null) bonusUsed = BigDecimal.ZERO;
         if (tipAmount == null) tipAmount = BigDecimal.ZERO;
-        // Grand total = total + tip
-        if (grandTotal == null) {
+        // Grand total = total + tip (recalculate if null or zero)
+        if (grandTotal == null || grandTotal.compareTo(BigDecimal.ZERO) == 0) {
             grandTotal = total.add(tipAmount != null ? tipAmount : BigDecimal.ZERO);
         }
     }
