@@ -4,6 +4,7 @@ import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductVariant;
 import com.elcafe.modules.menu.repository.ProductRepository;
@@ -57,6 +58,7 @@ public class WaiterOrderService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final OrderEventService orderEventService;
+    private final InventoryService inventoryService;
 
     /**
      * Create a new order for a table (with optional items)
@@ -153,6 +155,7 @@ public class WaiterOrderService {
 
     /**
      * Add items to an order
+     * If order is already submitted to kitchen (PREPARING+), deducts ingredients for new items
      */
     @Transactional
     public Order addItems(Long orderId, List<AddOrderItemRequest> items, Long waiterId) {
@@ -166,6 +169,12 @@ public class WaiterOrderService {
         if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
             throw new BadRequestException("Cannot modify completed or cancelled order");
         }
+
+        // Check if order is already in kitchen (need to deduct ingredients for new items)
+        boolean needsInventoryDeduction = order.getStatus() != OrderStatus.NEW;
+
+        // Build list of new order items first (for inventory check)
+        List<OrderItem> newItems = new ArrayList<>();
 
         for (AddOrderItemRequest itemRequest : items) {
             Product product = productRepository.findById(itemRequest.getProductId())
@@ -197,7 +206,37 @@ public class WaiterOrderService {
                     .specialInstructions(itemRequest.getSpecialInstructions())
                     .build();
 
-            order.addItem(orderItem);
+            newItems.add(orderItem);
+        }
+
+        // If order is already in kitchen, check and deduct ingredients for new items
+        if (needsInventoryDeduction) {
+            // Check availability for new items
+            for (OrderItem item : newItems) {
+                if (!inventoryService.canMakeProduct(item.getProductId(), item.getQuantity())) {
+                    List<String> missing = inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity());
+                    throw new BadRequestException("Insufficient ingredients for " + item.getProductName() + ": " + String.join(", ", missing));
+                }
+            }
+
+            // Create a temporary order with just new items to deduct ingredients
+            Order tempOrder = Order.builder()
+                    .orderNumber(order.getOrderNumber() + "-ADD")
+                    .items(newItems)
+                    .build();
+
+            try {
+                inventoryService.deductIngredientsForOrder(tempOrder);
+                log.info("Deducted ingredients for {} new items added to order {}", newItems.size(), order.getOrderNumber());
+            } catch (Exception e) {
+                log.error("Failed to deduct ingredients for new items in order {}: {}", order.getOrderNumber(), e.getMessage());
+                throw new BadRequestException("Failed to process inventory: " + e.getMessage());
+            }
+        }
+
+        // Add items to order
+        for (OrderItem item : newItems) {
+            order.addItem(item);
         }
 
         // Recalculate totals
@@ -307,6 +346,7 @@ public class WaiterOrderService {
 
     /**
      * Submit order to kitchen
+     * Checks ingredient availability and deducts ingredients from inventory
      */
     @Transactional
     public Order submitToKitchen(Long orderId, Long waiterId) {
@@ -322,6 +362,30 @@ public class WaiterOrderService {
 
         if (order.getStatus() != OrderStatus.NEW) {
             throw new BadRequestException("Order has already been submitted");
+        }
+
+        // Check ingredient availability before submitting to kitchen
+        log.info("Checking ingredient availability for order {}", order.getOrderNumber());
+        if (!inventoryService.checkIngredientAvailability(order)) {
+            // Get detailed missing ingredients info
+            List<String> missingIngredients = new ArrayList<>();
+            for (var item : order.getItems()) {
+                missingIngredients.addAll(
+                    inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity())
+                );
+            }
+            String errorMsg = "Insufficient ingredients: " + String.join(", ", missingIngredients);
+            log.error("Cannot submit order {} to kitchen: {}", order.getOrderNumber(), errorMsg);
+            throw new BadRequestException(errorMsg);
+        }
+
+        // Deduct ingredients from inventory
+        try {
+            inventoryService.deductIngredientsForOrder(order);
+            log.info("Successfully deducted ingredients for order {}", order.getOrderNumber());
+        } catch (Exception e) {
+            log.error("Failed to deduct ingredients for order {}: {}", order.getOrderNumber(), e.getMessage());
+            throw new BadRequestException("Failed to process inventory: " + e.getMessage());
         }
 
         order.setStatus(OrderStatus.PREPARING);
