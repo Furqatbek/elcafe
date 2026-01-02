@@ -951,7 +951,7 @@ export default function Orders() {
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <CardTitle className="text-lg">
                           {t('orders.orderNumber')}: #{order.orderNumber}
                         </CardTitle>
@@ -974,17 +974,18 @@ export default function Orders() {
                             {t('orders.types.dineIn') || 'Dine In'}
                           </Badge>
                         )}
+                        {/* Table Badge - Show for any order with table info */}
+                        {(order.diningTable || order.tableIds) && (
+                          <Badge className="gap-1 bg-blue-100 text-blue-800 hover:bg-blue-100">
+                            <Utensils className="h-3 w-3" />
+                            {t('orders.table', 'Table')} {order.diningTable?.tableNumber || order.tableIds}
+                            {order.diningTable?.section && ` (${order.diningTable.section})`}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
                         {order.restaurant?.name || 'Restaurant'}
                       </p>
-                    {/* Table Info for Dine-In Orders */}
-                    {order.orderType === 'DINE_IN' && order.diningTable && (
-                      <p className="text-sm font-medium text-blue-600">
-                        {t('orders.table') || 'Table'}: {order.diningTable.tableNumber}
-                        {order.diningTable.section && ` - ${order.diningTable.section}`}
-                      </p>
-                    )}
                     <p className="text-sm text-muted-foreground">
                       {order.createdAt && format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm')}
                     </p>
@@ -995,17 +996,32 @@ export default function Orders() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-3">
-                  {order.diningTable && (
-                    <div>
-                      <p className="text-sm font-medium">{t('orders.table', 'Table')}</p>
-                      <p className="text-lg font-bold">{order.diningTable.tableNumber}</p>
+                <div className="grid gap-4 md:grid-cols-4">
+                  {/* Table Info - Always show if available */}
+                  {(order.diningTable || order.tableIds) && (
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <p className="text-sm font-medium text-blue-600">{t('orders.table', 'Table')}</p>
+                      <p className="text-xl font-bold text-blue-800">
+                        {order.diningTable?.tableNumber || order.tableIds}
+                      </p>
+                      {order.diningTable?.section && (
+                        <p className="text-xs text-blue-600">{order.diningTable.section}</p>
+                      )}
                     </div>
                   )}
                   {order.waiter && (
                     <div>
                       <p className="text-sm font-medium">{t('orders.waiter', 'Waiter')}</p>
                       <p className="text-lg font-bold">{order.waiter.name}</p>
+                    </div>
+                  )}
+                  {order.guestCount && (
+                    <div>
+                      <p className="text-sm font-medium">{t('orders.guests', 'Guests')}</p>
+                      <p className="text-lg font-bold flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        {order.guestCount}
+                      </p>
                     </div>
                   )}
                   <div>

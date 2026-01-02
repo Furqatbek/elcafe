@@ -34,7 +34,11 @@ import java.util.List;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @NamedEntityGraph(
     name = "Order.withItems",
-    attributeNodes = @NamedAttributeNode("items")
+    attributeNodes = {
+        @NamedAttributeNode("items"),
+        @NamedAttributeNode("diningTable"),
+        @NamedAttributeNode("waiter")
+    }
 )
 public class Order {
 
@@ -57,7 +61,7 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dining_table_id")
-    @JsonIgnore
+    @JsonIgnoreProperties({"orders", "restaurant", "waiterTables", "hibernateLazyInitializer", "handler"})
     private RestaurantTable diningTable;
 
     // For multi-table orders: comma-separated table IDs (e.g., "1,2,3")
@@ -70,7 +74,7 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "waiter_id")
-    @JsonIgnore
+    @JsonIgnoreProperties({"waiterTables", "permissions", "hibernateLazyInitializer", "handler"})
     private Waiter waiter;
 
     @Enumerated(EnumType.STRING)
