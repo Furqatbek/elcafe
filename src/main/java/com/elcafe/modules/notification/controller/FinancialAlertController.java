@@ -1,5 +1,6 @@
 package com.elcafe.modules.notification.controller;
 
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.notification.dto.FinancialAlertSubscriptionRequest;
 import com.elcafe.modules.notification.dto.FinancialAlertSubscriptionResponse;
 import com.elcafe.modules.notification.entity.FinancialAlertSubscription;
@@ -29,6 +30,7 @@ public class FinancialAlertController {
     private final FinancialAlertSubscriptionRepository subscriptionRepository;
     private final DailyFinancialReportService dailyFinancialReportService;
     private final RestaurantRepository restaurantRepository;
+    private final ShiftTimeService shiftTimeService;
 
     /**
      * Get all subscriptions for a restaurant
@@ -155,6 +157,7 @@ public class FinancialAlertController {
     /**
      * Get daily metrics summary for a restaurant.
      * Uses the same date range parameters as the P&L report API.
+     * If no date parameters provided, uses current shift's date range automatically.
      */
     @GetMapping("/metrics/{restaurantId}")
     public ResponseEntity<Map<String, Object>> getDailyMetrics(
@@ -176,9 +179,12 @@ public class FinancialAlertController {
             start = date;
             end = date;
         } else {
-            // Default to today
-            start = LocalDate.now();
-            end = LocalDate.now();
+            // Default to current shift's date range
+            // Get the shift time range for today - this handles shifts that cross midnight
+            ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRange(restaurantId, LocalDate.now());
+            start = shift.start().toLocalDate();
+            end = shift.end().toLocalDate();
+            log.info("Using current shift date range: {} to {} for restaurant {}", start, end, restaurantId);
         }
 
         Map<String, Object> metrics = dailyFinancialReportService.getDailyMetricsSummary(restaurantId, start, end);

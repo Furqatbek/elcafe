@@ -134,23 +134,43 @@ public class InventoryService {
     private Map<Long, BigDecimal> calculateRequiredIngredients(Order order) {
         Map<Long, BigDecimal> requiredIngredients = new HashMap<>();
 
+        log.info("Calculating required ingredients for order with {} items", order.getItems().size());
+
         for (OrderItem item : order.getItems()) {
+            log.info("Looking up recipe for product ID: {} ({})", item.getProductId(), item.getProductName());
+
             List<ProductIngredient> productIngredients =
                     productIngredientRepository.findByProductIdWithIngredients(item.getProductId());
 
+            if (productIngredients.isEmpty()) {
+                log.warn("No recipe found for product ID: {} ({}). Inventory will NOT be deducted for this item.",
+                        item.getProductId(), item.getProductName());
+                continue;
+            }
+
+            log.info("Found {} ingredients in recipe for product: {}", productIngredients.size(), item.getProductName());
+
             for (ProductIngredient pi : productIngredients) {
                 if (pi.getOptional()) {
-                    continue; // Skip optional ingredients
+                    log.debug("Skipping optional ingredient: {}", pi.getIngredient().getName());
+                    continue;
                 }
 
                 Long ingredientId = pi.getIngredient().getId();
                 BigDecimal quantityPerProduct = pi.getQuantityRequired();
                 BigDecimal totalQuantity = quantityPerProduct.multiply(BigDecimal.valueOf(item.getQuantity()));
 
+                log.info("Ingredient: {} - need {} {} x {} = {} {}",
+                        pi.getIngredient().getName(),
+                        quantityPerProduct, pi.getUnit(),
+                        item.getQuantity(),
+                        totalQuantity, pi.getUnit());
+
                 requiredIngredients.merge(ingredientId, totalQuantity, BigDecimal::add);
             }
         }
 
+        log.info("Total ingredients to deduct: {}", requiredIngredients.size());
         return requiredIngredients;
     }
 
