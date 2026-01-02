@@ -1,15 +1,23 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.modules.financial.entity.Expense;
+import com.elcafe.modules.financial.entity.PurchaseOrder;
+import com.elcafe.modules.financial.entity.PurchaseOrderItem;
+import com.elcafe.modules.financial.repository.ExpenseRepository;
+import com.elcafe.modules.financial.repository.PurchaseOrderRepository;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
+import com.elcafe.modules.inventory.entity.Supplier;
 import com.elcafe.modules.inventory.enums.TransactionType;
 import com.elcafe.modules.inventory.enums.ValuationMethod;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
+import com.elcafe.modules.inventory.repository.SupplierRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
+import com.elcafe.modules.restaurant.entity.Restaurant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -17,7 +25,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +41,9 @@ public class InventoryService {
     private final InventoryIngredientRepository ingredientRepository;
     private final InventoryProductIngredientRepository productIngredientRepository;
     private final InventoryTransactionRepository transactionRepository;
+    private final PurchaseOrderRepository purchaseOrderRepository;
+    private final ExpenseRepository expenseRepository;
+    private final SupplierRepository supplierRepository;
     @Lazy
     private final InventoryValuationService valuationService;
 
@@ -194,15 +207,24 @@ public class InventoryService {
      */
     @Transactional
     public void addStock(Long ingredientId, BigDecimal quantity, String notes, String performedBy) {
-        addStock(ingredientId, quantity, null, notes, performedBy);
+        addStock(ingredientId, quantity, null, null, notes, performedBy);
     }
 
     /**
-     * Add stock to an ingredient with cost tracking
+     * Add stock to an ingredient with cost tracking (backward compatibility)
      */
     @Transactional
     public void addStock(Long ingredientId, BigDecimal quantity, BigDecimal costPerUnit,
                          String notes, String performedBy) {
+        addStock(ingredientId, quantity, costPerUnit, null, notes, performedBy);
+    }
+
+    /**
+     * Add stock to an ingredient with cost tracking and auto-create PurchaseOrder + Expense
+     */
+    @Transactional
+    public void addStock(Long ingredientId, BigDecimal quantity, BigDecimal costPerUnit,
+                         Long supplierId, String notes, String performedBy) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
                 .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
 
@@ -212,6 +234,9 @@ public class InventoryService {
 
         // Use provided cost or ingredient's effective cost
         BigDecimal effectiveCost = costPerUnit != null ? costPerUnit : ingredient.getEffectiveCost();
+        if (effectiveCost == null) {
+            effectiveCost = BigDecimal.ZERO;
+        }
 
         // Update WAC if cost is provided
         if (costPerUnit != null && costPerUnit.compareTo(BigDecimal.ZERO) > 0) {
@@ -235,8 +260,127 @@ public class InventoryService {
 
         transactionRepository.save(transaction);
 
+        // Create PurchaseOrder and Expense for the stock addition
+        BigDecimal totalCost = effectiveCost.multiply(quantity);
+        if (totalCost.compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                createPurchaseOrderAndExpense(ingredient, quantity, effectiveCost, supplierId, notes, performedBy);
+            } catch (Exception e) {
+                log.warn("Failed to create PurchaseOrder/Expense for stock addition: {}", e.getMessage());
+            }
+        }
+
         log.info("Added {} {} of {} by {} (cost: {})",
                 quantity, ingredient.getUnit(), ingredient.getName(), performedBy, effectiveCost);
+    }
+
+    /**
+     * Create a PurchaseOrder and Expense record for stock addition
+     */
+    private void createPurchaseOrderAndExpense(Ingredient ingredient, BigDecimal quantity,
+                                                BigDecimal costPerUnit, Long supplierId,
+                                                String notes, String performedBy) {
+        Restaurant restaurant = ingredient.getRestaurant();
+        LocalDate today = LocalDate.now();
+        BigDecimal totalAmount = costPerUnit.multiply(quantity);
+
+        // Get supplier info
+        String supplierName = "Direct Purchase";
+        Supplier supplier = null;
+        if (supplierId != null) {
+            supplier = supplierRepository.findById(supplierId).orElse(null);
+            if (supplier != null) {
+                supplierName = supplier.getName();
+            }
+        } else if (ingredient.getSupplierEntity() != null) {
+            supplier = ingredient.getSupplierEntity();
+            supplierName = supplier.getName();
+        } else if (ingredient.getSupplier() != null && !ingredient.getSupplier().isEmpty()) {
+            supplierName = ingredient.getSupplier();
+        }
+
+        // Generate PO number
+        String poNumber = generatePoNumber(restaurant.getId());
+
+        // Create PurchaseOrder
+        PurchaseOrder purchaseOrder = PurchaseOrder.builder()
+                .restaurant(restaurant)
+                .poNumber(poNumber)
+                .supplier(supplier)
+                .supplierName(supplierName)
+                .orderDate(today)
+                .expectedDeliveryDate(today)
+                .actualDeliveryDate(today)
+                .status(PurchaseOrder.Status.RECEIVED)
+                .subtotal(totalAmount)
+                .taxAmount(BigDecimal.ZERO)
+                .shippingCost(BigDecimal.ZERO)
+                .totalAmount(totalAmount)
+                .paidAmount(BigDecimal.ZERO)
+                .paymentStatus(PurchaseOrder.PaymentStatus.UNPAID)
+                .notes(notes != null ? notes : "Auto-created from stock addition")
+                .createdBy(performedBy)
+                .receivedBy(performedBy)
+                .receivedAt(LocalDateTime.now())
+                .build();
+
+        // Create PurchaseOrderItem
+        PurchaseOrderItem poItem = PurchaseOrderItem.builder()
+                .purchaseOrder(purchaseOrder)
+                .ingredient(ingredient)
+                .itemName(ingredient.getName())
+                .quantity(quantity)
+                .unit(ingredient.getUnit())
+                .unitPrice(costPerUnit)
+                .totalPrice(totalAmount)
+                .receivedQuantity(quantity)
+                .build();
+
+        purchaseOrder.getItems().add(poItem);
+        PurchaseOrder savedPo = purchaseOrderRepository.save(purchaseOrder);
+
+        log.info("Created PurchaseOrder {} for stock addition of {}", poNumber, ingredient.getName());
+
+        // Create Expense
+        String expenseNumber = generateExpenseNumber(restaurant.getId());
+        Expense expense = Expense.builder()
+                .restaurant(restaurant)
+                .expenseNumber(expenseNumber)
+                .expenseDate(today)
+                .category(Expense.ExpenseCategory.INVENTORY)
+                .description("Stock Purchase: " + ingredient.getName() + " (" + quantity + " " + ingredient.getUnit() + ")")
+                .vendor(supplierName)
+                .amount(totalAmount)
+                .taxAmount(BigDecimal.ZERO)
+                .totalAmount(totalAmount)
+                .paymentMethod(Expense.PaymentMethod.CASH)
+                .paymentStatus(Expense.PaymentStatus.UNPAID)
+                .referenceNumber(poNumber)
+                .purchaseOrderId(savedPo.getId())
+                .notes(notes)
+                .createdBy(performedBy)
+                .recurring(false)
+                .build();
+
+        expenseRepository.save(expense);
+
+        log.info("Created Expense {} for stock addition of {}", expenseNumber, ingredient.getName());
+    }
+
+    private String generatePoNumber(Long restaurantId) {
+        String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
+        long count = purchaseOrderRepository.findByRestaurant_Id(restaurantId).stream()
+                .filter(po -> po.getPoNumber().startsWith("PO-" + datePrefix))
+                .count();
+        return String.format("PO-%s-%04d", datePrefix, count + 1);
+    }
+
+    private String generateExpenseNumber(Long restaurantId) {
+        String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
+        long count = expenseRepository.findByRestaurant_Id(restaurantId).stream()
+                .filter(exp -> exp.getExpenseNumber().startsWith("EXP-" + datePrefix))
+                .count();
+        return String.format("EXP-%s-%04d", datePrefix, count + 1);
     }
 
     /**

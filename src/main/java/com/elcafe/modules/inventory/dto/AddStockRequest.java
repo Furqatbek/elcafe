@@ -23,6 +23,8 @@ public class AddStockRequest {
 
     private String supplier;
 
+    private Long supplierId;
+
     private String notes;
 
     @NotNull(message = "Performed by is required")

@@ -187,6 +187,8 @@ public class InventoryIngredientController {
         inventoryService.addStock(
                 id,
                 request.getQuantity(),
+                request.getCostPerUnit(),
+                request.getSupplierId(),
                 request.getNotes(),
                 request.getPerformedBy()
         );
