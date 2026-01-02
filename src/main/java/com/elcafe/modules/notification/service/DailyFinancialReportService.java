@@ -1,14 +1,13 @@
 package com.elcafe.modules.notification.service;
 
+import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.notification.config.FinancialAlertConfig;
 import com.elcafe.modules.notification.entity.FinancialAlertSubscription;
 import com.elcafe.modules.notification.repository.FinancialAlertSubscriptionRepository;
 import com.elcafe.modules.order.entity.Order;
-import com.elcafe.modules.order.entity.Payment;
 import com.elcafe.modules.order.enums.OrderStatus;
-import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
@@ -27,6 +26,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -95,24 +95,26 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Calculate daily financial metrics for a restaurant based on shift hours
-     * Uses ShiftTimeService for consistent shift time range calculation
+     * Calculate daily financial metrics for a restaurant based on shift hours.
+     * Uses EXACTLY the same logic as FinancialReportsService.generateProfitLossReport()
+     * to ensure consistency between Telegram reports and financial reports.
      */
     public DailyMetrics calculateDailyMetrics(Long restaurantId, LocalDate date) {
-        // Get shift time range using shared service
+        // Get shift time range using shared service (same as P&L report)
         ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRange(restaurantId, date);
         log.info("Calculating metrics for restaurant {} on {} - shift: {} to {}",
             restaurantId, date, shift.start(), shift.end());
 
-        // Get completed orders for the shift period (with payments eagerly fetched)
-        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithPaymentsOrderByCreatedAtDesc(
+        // Get orders for the shift period (same query as P&L report)
+        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             restaurantId, shift.start(), shift.end());
         log.info("Found {} total orders in shift period", orders.size());
 
-        // Filter to revenue-generating orders:
+        // Filter to revenue-generating orders (EXACTLY same logic as P&L report):
         // 1. Orders with status in REVENUE_STATUSES (ACCEPTED, PREPARING, READY, etc.)
-        // 2. OR orders that are fully paid (regardless of status - handles POS orders that were paid but not "submitted")
-        // 3. Exclude CANCELLED orders
+        // 2. OR orders that are fully paid (regardless of status - handles POS orders)
+        // 3. OR orders with PaymentStatus.COMPLETED
+        // 4. Exclude CANCELLED orders
         List<Order> completedOrders = orders.stream()
             .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
             .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
@@ -129,43 +131,49 @@ public class DailyFinancialReportService {
             log.warn("No revenue orders found! Order statuses: {}, Paid orders: {}", statusCounts, paidCount);
         }
 
-        // Calculate total revenue
-        BigDecimal revenue = completedOrders.stream()
-            .map(Order::getTotal)
-            .filter(t -> t != null)
+        // Calculate revenue breakdown (EXACTLY same as P&L report)
+        BigDecimal salesRevenue = completedOrders.stream()
+            .map(Order::getSubtotal)
+            .filter(Objects::nonNull)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        log.info("Total revenue from completed orders: {}", revenue);
 
-        // Calculate revenue by payment method
-        BigDecimal cashRevenue = BigDecimal.ZERO;
-        BigDecimal cardRevenue = BigDecimal.ZERO;
+        BigDecimal serviceFeeRevenue = completedOrders.stream()
+            .map(Order::getServiceFee)
+            .filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        for (Order order : completedOrders) {
-            if (order.getPayments() != null) {
-                for (Payment payment : order.getPayments()) {
-                    // Only count completed/successful payments
-                    if (payment.getStatus() == PaymentStatus.COMPLETED && payment.getAmount() != null) {
-                        PaymentMethod method = payment.getMethod();
-                        if (method == PaymentMethod.CASH) {
-                            cashRevenue = cashRevenue.add(payment.getAmount());
-                        } else if (method == PaymentMethod.CARD ||
-                                   method == PaymentMethod.CREDIT_CARD ||
-                                   method == PaymentMethod.DEBIT_CARD) {
-                            cardRevenue = cardRevenue.add(payment.getAmount());
-                        }
-                    }
-                }
-            }
-        }
+        BigDecimal deliveryFeeRevenue = completedOrders.stream()
+            .map(Order::getDeliveryFee)
+            .filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Get expenses for the day (expenses are still by calendar date)
-        BigDecimal expenses = expenseRepository.getTotalExpensesByDateRange(restaurantId, date, date);
-        if (expenses == null) {
-            expenses = BigDecimal.ZERO;
-        }
+        BigDecimal tipRevenue = completedOrders.stream()
+            .map(Order::getTipAmount)
+            .filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Calculate profit (Revenue - Expenses)
-        BigDecimal profit = revenue.subtract(expenses);
+        BigDecimal totalRevenue = completedOrders.stream()
+            .map(Order::getTotal)
+            .filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        log.info("Revenue breakdown - sales: {}, serviceFee: {}, deliveryFee: {}, tips: {}, total: {}",
+            salesRevenue, serviceFeeRevenue, deliveryFeeRevenue, tipRevenue, totalRevenue);
+
+        // Get expenses (EXACTLY same as P&L report - from expense records with PAID filter)
+        List<Expense> expenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
+            restaurantId, date, date);
+
+        BigDecimal totalExpenses = expenses.stream()
+            .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
+            .map(Expense::getTotalAmount)
+            .filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        log.info("Total expenses (PAID only): {}", totalExpenses);
+
+        // Calculate net income (same as P&L report)
+        BigDecimal netIncome = totalRevenue.subtract(totalExpenses);
 
         // Get restaurant name
         String restaurantName = restaurantRepository.findById(restaurantId)
@@ -178,11 +186,13 @@ public class DailyFinancialReportService {
             shift.openTime(),
             shift.closeTime(),
             completedOrders.size(),
-            revenue,
-            cashRevenue,
-            cardRevenue,
-            expenses,
-            profit
+            salesRevenue,
+            serviceFeeRevenue,
+            deliveryFeeRevenue,
+            tipRevenue,
+            totalRevenue,
+            totalExpenses,
+            netIncome
         );
     }
 
@@ -210,7 +220,8 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Format the daily report message
+     * Format the daily report message.
+     * Uses the same revenue breakdown structure as the P&L financial report.
      */
     private String formatDailyReport(FinancialAlertSubscription subscription, DailyMetrics metrics) {
         StringBuilder sb = new StringBuilder();
@@ -223,27 +234,36 @@ public class DailyFinancialReportService {
             metrics.shiftEnd().format(TIME_FORMATTER)));
 
         if (subscription.getAlertDailyRevenue()) {
-            sb.append(String.format("💰 <b>Выручка:</b> %s\n", formatCurrency(metrics.revenue())));
+            sb.append(String.format("💰 <b>Общая выручка:</b> %s\n", formatCurrency(metrics.totalRevenue())));
             sb.append(String.format("📦 Заказов: %d\n\n", metrics.orderCount()));
 
-            // Payment method breakdown
-            sb.append("<b>По способу оплаты:</b>\n");
-            sb.append(String.format("   💵 Наличные: %s\n", formatCurrency(metrics.cashRevenue())));
-            sb.append(String.format("   💳 Карта: %s\n\n", formatCurrency(metrics.cardRevenue())));
+            // Revenue breakdown (same as P&L report)
+            sb.append("<b>Детализация выручки:</b>\n");
+            sb.append(String.format("   🍽 Продажи: %s\n", formatCurrency(metrics.salesRevenue())));
+            if (metrics.serviceFeeRevenue().compareTo(BigDecimal.ZERO) > 0) {
+                sb.append(String.format("   🔧 Сервисный сбор: %s\n", formatCurrency(metrics.serviceFeeRevenue())));
+            }
+            if (metrics.deliveryFeeRevenue().compareTo(BigDecimal.ZERO) > 0) {
+                sb.append(String.format("   🚗 Доставка: %s\n", formatCurrency(metrics.deliveryFeeRevenue())));
+            }
+            if (metrics.tipRevenue().compareTo(BigDecimal.ZERO) > 0) {
+                sb.append(String.format("   💵 Чаевые: %s\n", formatCurrency(metrics.tipRevenue())));
+            }
+            sb.append("\n");
         }
 
         if (subscription.getAlertDailyExpenses()) {
-            sb.append(String.format("💸 <b>Расходы:</b> %s\n\n", formatCurrency(metrics.expenses())));
+            sb.append(String.format("💸 <b>Расходы:</b> %s\n\n", formatCurrency(metrics.totalExpenses())));
         }
 
         if (subscription.getAlertDailyProfit()) {
-            String profitEmoji = metrics.profit().compareTo(BigDecimal.ZERO) >= 0 ? "📈" : "📉";
-            sb.append(String.format("%s <b>Прибыль:</b> %s\n\n", profitEmoji, formatCurrency(metrics.profit())));
+            String profitEmoji = metrics.netIncome().compareTo(BigDecimal.ZERO) >= 0 ? "📈" : "📉";
+            sb.append(String.format("%s <b>Чистая прибыль:</b> %s\n\n", profitEmoji, formatCurrency(metrics.netIncome())));
 
             // Calculate profit margin if revenue > 0
-            if (metrics.revenue().compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal margin = metrics.profit()
-                    .divide(metrics.revenue(), 4, RoundingMode.HALF_UP)
+            if (metrics.totalRevenue().compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal margin = metrics.netIncome()
+                    .divide(metrics.totalRevenue(), 4, RoundingMode.HALF_UP)
                     .multiply(new BigDecimal("100"));
                 sb.append(String.format("📊 Маржа: %.1f%%\n\n", margin));
             }
@@ -289,7 +309,8 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Get daily metrics summary for a restaurant (for API usage)
+     * Get daily metrics summary for a restaurant (for API usage).
+     * Returns same structure as P&L financial report for consistency.
      */
     public Map<String, Object> getDailyMetricsSummary(Long restaurantId, LocalDate date) {
         DailyMetrics metrics = calculateDailyMetrics(restaurantId, date);
@@ -300,16 +321,22 @@ public class DailyFinancialReportService {
             Map.entry("shiftStart", metrics.shiftStart().toString()),
             Map.entry("shiftEnd", metrics.shiftEnd().toString()),
             Map.entry("orderCount", metrics.orderCount()),
-            Map.entry("revenue", metrics.revenue()),
-            Map.entry("cashRevenue", metrics.cashRevenue()),
-            Map.entry("cardRevenue", metrics.cardRevenue()),
-            Map.entry("expenses", metrics.expenses()),
-            Map.entry("profit", metrics.profit())
+            // Revenue breakdown (same as P&L report)
+            Map.entry("salesRevenue", metrics.salesRevenue()),
+            Map.entry("serviceFeeRevenue", metrics.serviceFeeRevenue()),
+            Map.entry("deliveryFeeRevenue", metrics.deliveryFeeRevenue()),
+            Map.entry("tipRevenue", metrics.tipRevenue()),
+            Map.entry("totalRevenue", metrics.totalRevenue()),
+            // Expenses and net income (same as P&L report)
+            Map.entry("totalExpenses", metrics.totalExpenses()),
+            Map.entry("netIncome", metrics.netIncome())
         );
     }
 
     /**
-     * Record class for daily metrics with shift times
+     * Record class for daily metrics with shift times.
+     * Uses the same revenue breakdown structure as FinancialReportsService.ProfitLossReport
+     * to ensure consistency between Telegram reports and financial reports.
      */
     public record DailyMetrics(
         String restaurantName,
@@ -317,10 +344,14 @@ public class DailyFinancialReportService {
         LocalTime shiftStart,
         LocalTime shiftEnd,
         int orderCount,
-        BigDecimal revenue,
-        BigDecimal cashRevenue,
-        BigDecimal cardRevenue,
-        BigDecimal expenses,
-        BigDecimal profit
+        // Revenue breakdown (same as P&L report)
+        BigDecimal salesRevenue,
+        BigDecimal serviceFeeRevenue,
+        BigDecimal deliveryFeeRevenue,
+        BigDecimal tipRevenue,
+        BigDecimal totalRevenue,
+        // Expenses and net income (same as P&L report)
+        BigDecimal totalExpenses,
+        BigDecimal netIncome
     ) {}
 }
