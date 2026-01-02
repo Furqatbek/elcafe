@@ -869,7 +869,7 @@ export default function Orders() {
                                     >
                                       <Printer className="h-3 w-3" />
                                     </Button>
-                                    {order.paymentStatus === 'COMPLETED' ? (
+                                    {(order.paymentStatus === 'COMPLETED' || order.fullyPaid) ? (
                                       <Badge className="bg-green-100 text-green-800 h-7">
                                         {t('orders.paid', 'Paid')}
                                       </Badge>
@@ -1103,7 +1103,7 @@ export default function Orders() {
                   )}
 
                   {/* Close Check / Pay Button - For unpaid open orders */}
-                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && order.paymentStatus !== 'COMPLETED' && (
+                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && order.paymentStatus !== 'COMPLETED' && !order.fullyPaid && (
                     <Button
                       variant="default"
                       size="sm"
@@ -1116,7 +1116,7 @@ export default function Orders() {
                   )}
 
                   {/* Close Table Button - Only for unpaid dine-in orders */}
-                  {order.orderType === 'DINE_IN' && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && order.paymentStatus !== 'COMPLETED' && (
+                  {order.orderType === 'DINE_IN' && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && order.paymentStatus !== 'COMPLETED' && !order.fullyPaid && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -1129,7 +1129,7 @@ export default function Orders() {
                   )}
 
                   {/* Show paid badge for fully paid orders */}
-                  {order.paymentStatus === 'COMPLETED' && (
+                  {(order.paymentStatus === 'COMPLETED' || order.fullyPaid) && (
                     <Badge className="bg-green-100 text-green-800">
                       {t('orders.paid', 'Paid')}
                     </Badge>

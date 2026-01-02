@@ -10,6 +10,7 @@ import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.waiter.entity.Waiter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -278,7 +279,9 @@ public class Order {
     /**
      * Check if order is fully paid
      * An order with total = 0 is NOT considered fully paid (no items to pay for)
+     * Exposed as 'fullyPaid' in JSON for frontend use
      */
+    @JsonProperty("fullyPaid")
     public boolean isFullyPaid() {
         BigDecimal effectiveTotal = getEffectiveGrandTotal();
         // Order must have a positive total to be considered "fully paid"
