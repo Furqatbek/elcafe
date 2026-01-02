@@ -141,6 +141,36 @@ public class WaiterOrderService {
             // Recalculate totals if items were added
             recalculateOrderTotals(savedOrder);
             savedOrder = orderRepository.save(savedOrder);
+
+            // Check ingredient availability and deduct inventory for items
+            log.info("Checking ingredient availability for new order {}", savedOrder.getOrderNumber());
+            if (!inventoryService.checkIngredientAvailability(savedOrder)) {
+                List<String> missingIngredients = new ArrayList<>();
+                for (var item : savedOrder.getItems()) {
+                    missingIngredients.addAll(
+                        inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity())
+                    );
+                }
+                String errorMsg = "Insufficient ingredients: " + String.join(", ", missingIngredients);
+                log.error("Cannot create order with items: {}", errorMsg);
+                throw new BadRequestException(errorMsg);
+            }
+
+            // Deduct ingredients from inventory
+            try {
+                inventoryService.deductIngredientsForOrder(savedOrder);
+                log.info("Deducted ingredients for new order {} with {} items",
+                    savedOrder.getOrderNumber(), savedOrder.getItems().size());
+
+                // Auto-submit to kitchen since inventory is now deducted
+                savedOrder.setStatus(OrderStatus.PREPARING);
+                savedOrder = orderRepository.save(savedOrder);
+                log.info("Order {} auto-submitted to kitchen with items", savedOrder.getOrderNumber());
+            } catch (Exception e) {
+                log.error("Failed to deduct ingredients for order {}: {}",
+                    savedOrder.getOrderNumber(), e.getMessage());
+                throw new BadRequestException("Failed to process inventory: " + e.getMessage());
+            }
         }
 
         // Record event
@@ -170,8 +200,8 @@ public class WaiterOrderService {
             throw new BadRequestException("Cannot modify completed or cancelled order");
         }
 
-        // Check if order is already in kitchen (need to deduct ingredients for new items)
-        boolean needsInventoryDeduction = order.getStatus() != OrderStatus.NEW;
+        // Track if order is currently a draft (NEW status) - will auto-submit after adding items
+        boolean isNewOrder = order.getStatus() == OrderStatus.NEW;
 
         // Build list of new order items first (for inventory check)
         List<OrderItem> newItems = new ArrayList<>();
@@ -209,38 +239,41 @@ public class WaiterOrderService {
             newItems.add(orderItem);
         }
 
-        // If order is already in kitchen, check and deduct ingredients for new items
-        if (needsInventoryDeduction) {
-            // Check availability for new items
-            for (OrderItem item : newItems) {
-                if (!inventoryService.canMakeProduct(item.getProductId(), item.getQuantity())) {
-                    List<String> missing = inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity());
-                    throw new BadRequestException("Insufficient ingredients for " + item.getProductName() + ": " + String.join(", ", missing));
-                }
-            }
-
-            // Create a temporary order with just new items to deduct ingredients
-            Order tempOrder = Order.builder()
-                    .orderNumber(order.getOrderNumber() + "-ADD")
-                    .items(newItems)
-                    .build();
-
-            try {
-                inventoryService.deductIngredientsForOrder(tempOrder);
-                log.info("Deducted ingredients for {} new items added to order {}", newItems.size(), order.getOrderNumber());
-            } catch (Exception e) {
-                log.error("Failed to deduct ingredients for new items in order {}: {}", order.getOrderNumber(), e.getMessage());
-                throw new BadRequestException("Failed to process inventory: " + e.getMessage());
-            }
-        }
-
-        // Add items to order
+        // Add items to order first
         for (OrderItem item : newItems) {
             order.addItem(item);
         }
 
         // Recalculate totals
         recalculateOrderTotals(order);
+
+        // Check availability for new items
+        for (OrderItem item : newItems) {
+            if (!inventoryService.canMakeProduct(item.getProductId(), item.getQuantity())) {
+                List<String> missing = inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity());
+                throw new BadRequestException("Insufficient ingredients for " + item.getProductName() + ": " + String.join(", ", missing));
+            }
+        }
+
+        // Create a temporary order with just new items to deduct ingredients
+        Order tempOrder = Order.builder()
+                .orderNumber(order.getOrderNumber() + "-ADD")
+                .items(newItems)
+                .build();
+
+        try {
+            inventoryService.deductIngredientsForOrder(tempOrder);
+            log.info("Deducted ingredients for {} new items added to order {}", newItems.size(), order.getOrderNumber());
+        } catch (Exception e) {
+            log.error("Failed to deduct ingredients for new items in order {}: {}", order.getOrderNumber(), e.getMessage());
+            throw new BadRequestException("Failed to process inventory: " + e.getMessage());
+        }
+
+        // Auto-submit to kitchen if order was NEW
+        if (isNewOrder) {
+            order.setStatus(OrderStatus.PREPARING);
+            log.info("Order {} auto-submitted to kitchen after adding items", order.getOrderNumber());
+        }
 
         Order updatedOrder = orderRepository.save(order);
 

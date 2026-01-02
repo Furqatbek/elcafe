@@ -89,19 +89,29 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Calculate daily financial metrics for a restaurant.
+     * Calculate daily financial metrics for a restaurant (single day).
      * Directly uses FinancialReportsService.generateProfitLossReport() to ensure
      * 100% consistency with the P&L API endpoint.
      */
     public DailyMetrics calculateDailyMetrics(Long restaurantId, LocalDate date) {
-        log.info("Calculating daily metrics for restaurant {} on {} using P&L report service", restaurantId, date);
+        return calculateDailyMetrics(restaurantId, date, date);
+    }
 
-        // Use the same P&L report that the API uses
+    /**
+     * Calculate financial metrics for a restaurant with date range.
+     * Uses the exact same query as the P&L API:
+     * /api/v1/financial/reports/profit-loss?restaurantId=X&startDate=Y&endDate=Z
+     */
+    public DailyMetrics calculateDailyMetrics(Long restaurantId, LocalDate startDate, LocalDate endDate) {
+        log.info("Calculating metrics for restaurant {} from {} to {} using P&L report service",
+            restaurantId, startDate, endDate);
+
+        // Use the exact same P&L report that the API uses
         // This ensures Telegram report matches exactly what the financial dashboard shows
-        ProfitLossReport plReport = financialReportsService.generateProfitLossReport(restaurantId, date, date);
+        ProfitLossReport plReport = financialReportsService.generateProfitLossReport(restaurantId, startDate, endDate);
 
-        // Get shift times for display
-        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRange(restaurantId, date);
+        // Get shift times for display (use the period range)
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(restaurantId, startDate, endDate);
 
         // Get restaurant name
         String restaurantName = restaurantRepository.findById(restaurantId)
@@ -113,7 +123,7 @@ public class DailyFinancialReportService {
 
         return new DailyMetrics(
             restaurantName,
-            date,
+            startDate,
             shift.openTime(),
             shift.closeTime(),
             plReport.getOrderCount(),
@@ -244,10 +254,20 @@ public class DailyFinancialReportService {
      * Returns same structure as P&L financial report for consistency.
      */
     public Map<String, Object> getDailyMetricsSummary(Long restaurantId, LocalDate date) {
-        DailyMetrics metrics = calculateDailyMetrics(restaurantId, date);
+        return getDailyMetricsSummary(restaurantId, date, date);
+    }
+
+    /**
+     * Get metrics summary for a restaurant with date range (for API usage).
+     * Uses the exact same query as the P&L API for consistency.
+     */
+    public Map<String, Object> getDailyMetricsSummary(Long restaurantId, LocalDate startDate, LocalDate endDate) {
+        DailyMetrics metrics = calculateDailyMetrics(restaurantId, startDate, endDate);
 
         return Map.ofEntries(
             Map.entry("restaurantName", metrics.restaurantName()),
+            Map.entry("startDate", startDate.toString()),
+            Map.entry("endDate", endDate.toString()),
             Map.entry("date", metrics.date().toString()),
             Map.entry("shiftStart", metrics.shiftStart().toString()),
             Map.entry("shiftEnd", metrics.shiftEnd().toString()),

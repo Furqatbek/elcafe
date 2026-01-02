@@ -153,18 +153,35 @@ public class FinancialAlertController {
     }
 
     /**
-     * Get daily metrics summary for a restaurant
+     * Get daily metrics summary for a restaurant.
+     * Uses the same date range parameters as the P&L report API.
      */
     @GetMapping("/metrics/{restaurantId}")
     public ResponseEntity<Map<String, Object>> getDailyMetrics(
             @PathVariable Long restaurantId,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
-        if (date == null) {
-            date = LocalDate.now();
+        // Support both single date and date range (like P&L API)
+        LocalDate start;
+        LocalDate end;
+
+        if (startDate != null && endDate != null) {
+            // Use P&L style date range
+            start = startDate;
+            end = endDate;
+        } else if (date != null) {
+            // Single date parameter
+            start = date;
+            end = date;
+        } else {
+            // Default to today
+            start = LocalDate.now();
+            end = LocalDate.now();
         }
 
-        Map<String, Object> metrics = dailyFinancialReportService.getDailyMetricsSummary(restaurantId, date);
+        Map<String, Object> metrics = dailyFinancialReportService.getDailyMetricsSummary(restaurantId, start, end);
 
         return ResponseEntity.ok(metrics);
     }
