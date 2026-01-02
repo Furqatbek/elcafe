@@ -84,16 +84,31 @@ public class InventoryService {
 
             // Try to use valuation service for batch-based consumption
             InventoryValuationService.ConsumptionResult consumptionResult = null;
+            boolean usedBatchConsumption = false;
             try {
                 consumptionResult = valuationService.consumeWithValuation(
                         ingredientId, quantityRequired, order.getId());
-                log.debug("Consumed {} of {} using {} method, total cost: {}",
+                log.debug("Batch consumption result: consumed {} of {} using {} method, total cost: {}",
                         consumptionResult.quantityConsumed(), ingredient.getName(),
                         consumptionResult.method(), consumptionResult.totalCost());
+
+                // Check if batch consumption actually consumed the required quantity
+                if (consumptionResult.quantityConsumed().compareTo(quantityRequired) >= 0) {
+                    usedBatchConsumption = true;
+                    // Refresh ingredient to get updated stock after batch consumption
+                    ingredient = ingredientRepository.findById(ingredientId).orElse(ingredient);
+                } else {
+                    log.warn("Batch consumption only consumed {} of {} required for {}. Falling back to simple deduction.",
+                            consumptionResult.quantityConsumed(), quantityRequired, ingredient.getName());
+                }
             } catch (Exception e) {
-                log.warn("Failed to use valuation service for deduction, falling back to simple deduction: {}",
-                        e.getMessage());
-                // Fallback to simple deduction
+                log.warn("Failed to use valuation service for deduction: {}", e.getMessage());
+            }
+
+            // Fallback to simple deduction if batch consumption didn't work
+            if (!usedBatchConsumption) {
+                log.info("Using simple stock deduction for {} {} of {}",
+                        quantityRequired, ingredient.getUnit(), ingredient.getName());
                 ingredient.deductStock(quantityRequired);
                 ingredientRepository.save(ingredient);
             }
