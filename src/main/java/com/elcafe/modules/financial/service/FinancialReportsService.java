@@ -8,6 +8,8 @@ import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.financial.repository.PayrollEntryRepository;
 import com.elcafe.modules.financial.repository.TransactionRepository;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -51,8 +53,15 @@ public class FinancialReportsService {
         List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId, shift.start(), shift.end());
 
+        // Filter to revenue-generating orders:
+        // 1. Orders with status in REVENUE_STATUSES (ACCEPTED, PREPARING, READY, etc.)
+        // 2. OR orders that are fully paid (regardless of status - handles POS orders)
+        // 3. Exclude CANCELLED orders
         List<Order> completedOrders = orders.stream()
-                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
+                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
+                          || o.isFullyPaid()
+                          || o.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .collect(Collectors.toList());
 
         // Calculate revenue breakdown
@@ -242,7 +251,10 @@ public class FinancialReportsService {
                 restaurantId, shift.start(), shift.end());
 
         BigDecimal totalRevenue = orders.stream()
-                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
+                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
+                          || o.isFullyPaid()
+                          || o.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .map(Order::getTotal)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

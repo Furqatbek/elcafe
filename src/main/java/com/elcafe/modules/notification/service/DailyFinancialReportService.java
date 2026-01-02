@@ -109,17 +109,24 @@ public class DailyFinancialReportService {
             restaurantId, shift.start(), shift.end());
         log.info("Found {} total orders in shift period", orders.size());
 
-        // Filter to revenue-generating orders using shared status list
+        // Filter to revenue-generating orders:
+        // 1. Orders with status in REVENUE_STATUSES (ACCEPTED, PREPARING, READY, etc.)
+        // 2. OR orders that are fully paid (regardless of status - handles POS orders that were paid but not "submitted")
+        // 3. Exclude CANCELLED orders
         List<Order> completedOrders = orders.stream()
-            .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
+            .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+            .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
+                      || o.isFullyPaid()
+                      || o.getPaymentStatus() == PaymentStatus.COMPLETED)
             .collect(Collectors.toList());
-        log.info("Found {} revenue orders (statuses: {})", completedOrders.size(), ShiftTimeService.REVENUE_STATUSES);
+        log.info("Found {} revenue orders (by status {} or fully paid)", completedOrders.size(), ShiftTimeService.REVENUE_STATUSES);
 
         // Log order statuses for debugging
         if (orders.size() > 0 && completedOrders.size() == 0) {
             Map<OrderStatus, Long> statusCounts = orders.stream()
                 .collect(Collectors.groupingBy(Order::getStatus, Collectors.counting()));
-            log.warn("No completed orders found! Order statuses: {}", statusCounts);
+            long paidCount = orders.stream().filter(Order::isFullyPaid).count();
+            log.warn("No revenue orders found! Order statuses: {}, Paid orders: {}", statusCounts, paidCount);
         }
 
         // Calculate total revenue

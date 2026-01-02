@@ -12,6 +12,7 @@ import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,9 +53,13 @@ public class DashboardService {
         List<Order> allOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId, shift.start(), shift.end());
 
-        // Filter completed orders for income calculation using shared status list
+        // Filter completed orders for income calculation:
+        // Include orders with revenue status OR fully paid orders (handles POS orders)
         List<Order> completedOrders = allOrders.stream()
-                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
+                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
+                          || o.isFullyPaid()
+                          || o.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .collect(Collectors.toList());
 
         // Calculate income
@@ -333,7 +338,10 @@ public class DashboardService {
                 restaurantId, prevShift.start(), prevShift.end());
 
         List<Order> prevCompletedOrders = prevOrders.stream()
-                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus()))
+                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
+                          || o.isFullyPaid()
+                          || o.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .collect(Collectors.toList());
 
         BigDecimal prevIncome = prevCompletedOrders.stream()
