@@ -2,6 +2,7 @@ package com.elcafe.modules.inventory.entity;
 
 import com.elcafe.modules.inventory.enums.TransactionType;
 import com.elcafe.modules.inventory.enums.ValuationMethod;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "inventory_transactions")
 @EntityListeners(AuditingEntityListener.class)
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class InventoryTransaction {
 
     @Id
