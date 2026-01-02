@@ -120,6 +120,7 @@ public class FinancialReportsService {
                 .restaurantId(restaurantId)
                 .startDate(startDate)
                 .endDate(endDate)
+                .orderCount(completedOrders.size())
                 .salesRevenue(salesRevenue)
                 .serviceFeeRevenue(serviceFeeRevenue)
                 .deliveryFeeRevenue(deliveryFeeRevenue)
@@ -327,6 +328,8 @@ public class FinancialReportsService {
         private Long restaurantId;
         private LocalDate startDate;
         private LocalDate endDate;
+        // Order count
+        private int orderCount;
         // Revenue breakdown
         private BigDecimal salesRevenue;
         private BigDecimal serviceFeeRevenue;

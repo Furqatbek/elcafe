@@ -1,15 +1,11 @@
 package com.elcafe.modules.notification.service;
 
-import com.elcafe.modules.financial.entity.Expense;
-import com.elcafe.modules.financial.repository.ExpenseRepository;
+import com.elcafe.modules.financial.service.FinancialReportsService;
+import com.elcafe.modules.financial.service.FinancialReportsService.ProfitLossReport;
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.notification.config.FinancialAlertConfig;
 import com.elcafe.modules.notification.entity.FinancialAlertSubscription;
 import com.elcafe.modules.notification.repository.FinancialAlertSubscriptionRepository;
-import com.elcafe.modules.order.entity.Order;
-import com.elcafe.modules.order.enums.OrderStatus;
-import com.elcafe.modules.order.enums.PaymentStatus;
-import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +22,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -40,8 +35,7 @@ public class DailyFinancialReportService {
     private final FinancialAlertConfig alertConfig;
     private final TelegramBotService telegramBotService;
     private final FinancialAlertSubscriptionRepository subscriptionRepository;
-    private final OrderRepository orderRepository;
-    private final ExpenseRepository expenseRepository;
+    private final FinancialReportsService financialReportsService;
     private final RestaurantRepository restaurantRepository;
     private final ShiftTimeService shiftTimeService;
 
@@ -95,104 +89,41 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Calculate daily financial metrics for a restaurant based on shift hours.
-     * Uses EXACTLY the same logic as FinancialReportsService.generateProfitLossReport()
-     * to ensure consistency between Telegram reports and financial reports.
+     * Calculate daily financial metrics for a restaurant.
+     * Directly uses FinancialReportsService.generateProfitLossReport() to ensure
+     * 100% consistency with the P&L API endpoint.
      */
     public DailyMetrics calculateDailyMetrics(Long restaurantId, LocalDate date) {
-        // Get shift time range using shared service (same as P&L report)
+        log.info("Calculating daily metrics for restaurant {} on {} using P&L report service", restaurantId, date);
+
+        // Use the same P&L report that the API uses
+        // This ensures Telegram report matches exactly what the financial dashboard shows
+        ProfitLossReport plReport = financialReportsService.generateProfitLossReport(restaurantId, date, date);
+
+        // Get shift times for display
         ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRange(restaurantId, date);
-        log.info("Calculating metrics for restaurant {} on {} - shift: {} to {}",
-            restaurantId, date, shift.start(), shift.end());
-
-        // Get orders for the shift period (same query as P&L report)
-        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-            restaurantId, shift.start(), shift.end());
-        log.info("Found {} total orders in shift period", orders.size());
-
-        // Filter to revenue-generating orders (EXACTLY same logic as P&L report):
-        // 1. Orders with status in REVENUE_STATUSES (ACCEPTED, PREPARING, READY, etc.)
-        // 2. OR orders that are fully paid (regardless of status - handles POS orders)
-        // 3. OR orders with PaymentStatus.COMPLETED
-        // 4. Exclude CANCELLED orders
-        List<Order> completedOrders = orders.stream()
-            .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
-            .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
-                      || o.isFullyPaid()
-                      || o.getPaymentStatus() == PaymentStatus.COMPLETED)
-            .collect(Collectors.toList());
-        log.info("Found {} revenue orders (by status {} or fully paid)", completedOrders.size(), ShiftTimeService.REVENUE_STATUSES);
-
-        // Log order statuses for debugging
-        if (orders.size() > 0 && completedOrders.size() == 0) {
-            Map<OrderStatus, Long> statusCounts = orders.stream()
-                .collect(Collectors.groupingBy(Order::getStatus, Collectors.counting()));
-            long paidCount = orders.stream().filter(Order::isFullyPaid).count();
-            log.warn("No revenue orders found! Order statuses: {}, Paid orders: {}", statusCounts, paidCount);
-        }
-
-        // Calculate revenue breakdown (EXACTLY same as P&L report)
-        BigDecimal salesRevenue = completedOrders.stream()
-            .map(Order::getSubtotal)
-            .filter(Objects::nonNull)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal serviceFeeRevenue = completedOrders.stream()
-            .map(Order::getServiceFee)
-            .filter(Objects::nonNull)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal deliveryFeeRevenue = completedOrders.stream()
-            .map(Order::getDeliveryFee)
-            .filter(Objects::nonNull)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal tipRevenue = completedOrders.stream()
-            .map(Order::getTipAmount)
-            .filter(Objects::nonNull)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalRevenue = completedOrders.stream()
-            .map(Order::getTotal)
-            .filter(Objects::nonNull)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        log.info("Revenue breakdown - sales: {}, serviceFee: {}, deliveryFee: {}, tips: {}, total: {}",
-            salesRevenue, serviceFeeRevenue, deliveryFeeRevenue, tipRevenue, totalRevenue);
-
-        // Get expenses (EXACTLY same as P&L report - from expense records with PAID filter)
-        List<Expense> expenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
-            restaurantId, date, date);
-
-        BigDecimal totalExpenses = expenses.stream()
-            .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
-            .map(Expense::getTotalAmount)
-            .filter(Objects::nonNull)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        log.info("Total expenses (PAID only): {}", totalExpenses);
-
-        // Calculate net income (same as P&L report)
-        BigDecimal netIncome = totalRevenue.subtract(totalExpenses);
 
         // Get restaurant name
         String restaurantName = restaurantRepository.findById(restaurantId)
             .map(Restaurant::getName)
             .orElse("Restaurant");
 
+        log.info("P&L Report for Telegram - orders: {}, revenue: {}, expenses: {}, netIncome: {}",
+            plReport.getOrderCount(), plReport.getTotalRevenue(), plReport.getTotalExpenses(), plReport.getNetIncome());
+
         return new DailyMetrics(
             restaurantName,
             date,
             shift.openTime(),
             shift.closeTime(),
-            completedOrders.size(),
-            salesRevenue,
-            serviceFeeRevenue,
-            deliveryFeeRevenue,
-            tipRevenue,
-            totalRevenue,
-            totalExpenses,
-            netIncome
+            plReport.getOrderCount(),
+            plReport.getSalesRevenue() != null ? plReport.getSalesRevenue() : BigDecimal.ZERO,
+            plReport.getServiceFeeRevenue() != null ? plReport.getServiceFeeRevenue() : BigDecimal.ZERO,
+            plReport.getDeliveryFeeRevenue() != null ? plReport.getDeliveryFeeRevenue() : BigDecimal.ZERO,
+            plReport.getTipRevenue() != null ? plReport.getTipRevenue() : BigDecimal.ZERO,
+            plReport.getTotalRevenue() != null ? plReport.getTotalRevenue() : BigDecimal.ZERO,
+            plReport.getTotalExpenses() != null ? plReport.getTotalExpenses() : BigDecimal.ZERO,
+            plReport.getNetIncome() != null ? plReport.getNetIncome() : BigDecimal.ZERO
         );
     }
 
