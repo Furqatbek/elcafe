@@ -8,25 +8,25 @@ This guide explains how to deploy ElCafe with Docker Compose behind NGINX revers
 Internet (HTTPS)
     ↓
 NGINX (Host Server) - Handles SSL, Port 80/443/3000
-    ├─→ https://lacasa.uz/          → Frontend (Docker: localhost:9090)
-    ├─→ https://lacasa.uz/api       → Backend (Docker: localhost:8080)
-    └─→ https://lacasa.uz:3000      → Admin Panel (Docker: localhost:3000)
+    ├─→ https://mayamicafe.uz/          → Frontend (Docker: localhost:9090)
+    ├─→ https://mayamicafe.uz/api       → Backend (Docker: localhost:8080)
+    └─→ https://mayamicafe.uz:3000      → Admin Panel (Docker: localhost:3000)
 ```
 
 ### Services
 
 | Service | Docker Port | Host Port | URL |
 |---------|-------------|-----------|-----|
-| Frontend | 80 (internal) | 9090 | https://lacasa.uz |
-| Backend | 8080 (internal) | 8080 | https://lacasa.uz/api |
-| Admin Panel | 3000 (internal) | 3000 | https://lacasa.uz:3000 |
+| Frontend | 80 (internal) | 9090 | https://mayamicafe.uz |
+| Backend | 8080 (internal) | 8080 | https://mayamicafe.uz/api |
+| Admin Panel | 3000 (internal) | 3000 | https://mayamicafe.uz:3000 |
 | PostgreSQL | 5432 (internal) | 5432 | localhost only |
 
 ## Prerequisites
 
 - Ubuntu Server 20.04+ or similar Linux
 - Docker & Docker Compose installed
-- Domain pointed to your server (lacasa.uz)
+- Domain pointed to your server (mayamicafe.uz)
 - Ports 80, 443, 3000 open in firewall
 
 ## Step-by-Step Setup
@@ -81,17 +81,17 @@ nano .env.docker
 ```env
 DB_PASSWORD=your_secure_database_password
 JWT_SECRET=your_super_secret_jwt_key_here  # Generate: openssl rand -hex 32
-CORS_ORIGINS=https://lacasa.uz,https://www.lacasa.uz
+CORS_ORIGINS=https://mayamicafe.uz,https://www.mayamicafe.uz
 ```
 
 ### 5. Configure NGINX Reverse Proxy
 
 ```bash
 # Copy NGINX configuration
-sudo cp nginx-production.conf /etc/nginx/sites-available/lacasa.uz
+sudo cp nginx-production.conf /etc/nginx/sites-available/mayamicafe.uz
 
 # Enable the site
-sudo ln -s /etc/nginx/sites-available/lacasa.uz /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/mayamicafe.uz /etc/nginx/sites-enabled/
 
 # Remove default site
 sudo rm /etc/nginx/sites-enabled/default
@@ -110,11 +110,11 @@ sudo apt install certbot python3-certbot-nginx -y
 sudo mkdir -p /var/www/certbot
 
 # Get certificate
-sudo certbot certonly --webroot -w /var/www/certbot -d lacasa.uz -d www.lacasa.uz
+sudo certbot certonly --webroot -w /var/www/certbot -d mayamicafe.uz -d www.mayamicafe.uz
 
 # Certificate will be saved at:
-# /etc/letsencrypt/live/lacasa.uz/fullchain.pem
-# /etc/letsencrypt/live/lacasa.uz/privkey.pem
+# /etc/letsencrypt/live/mayamicafe.uz/fullchain.pem
+# /etc/letsencrypt/live/mayamicafe.uz/privkey.pem
 ```
 
 ### 7. Reload NGINX
@@ -170,8 +170,8 @@ curl http://localhost:9090  # Frontend
 curl http://localhost:8080/actuator/health  # Backend
 
 # Test through NGINX
-curl https://lacasa.uz
-curl https://lacasa.uz/api/v1/actuator/health
+curl https://mayamicafe.uz
+curl https://mayamicafe.uz/api/v1/actuator/health
 ```
 
 ## Post-Deployment
@@ -322,7 +322,7 @@ docker-compose logs backend
 curl http://localhost:8080/actuator/health
 
 # Check NGINX proxy
-curl https://lacasa.uz/api/v1/actuator/health
+curl https://mayamicafe.uz/api/v1/actuator/health
 ```
 
 ### SSL Issues
