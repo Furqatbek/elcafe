@@ -424,7 +424,7 @@ const generateReceiptHTML = (order) => {
     <div class="footer">
       <div class="contact-info">
         <div>Telefon: +99 (897) 421 8989</div>
-        <div>www.lacasa.uz</div>
+        <div>www.mayamicafe.uz</div>
       </div>
 
       <div class="thank-you">*** RAHMAT! ***</div>
