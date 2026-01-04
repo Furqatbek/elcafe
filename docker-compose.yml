@@ -138,8 +138,7 @@ services:
       - elcafe-network
     volumes:
       - ./nginx-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      # Uncomment for SSL:
-      # - ./nginx-proxy/ssl:/etc/nginx/ssl:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
