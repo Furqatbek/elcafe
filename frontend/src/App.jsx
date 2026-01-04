@@ -49,6 +49,19 @@ function PrivateRoute({ children }) {
   return isAuthenticated ? children : <Navigate to="/login" />;
 }
 
+// Role-based route guard - blocks certain routes for OPERATOR role
+function AdminRoute({ children }) {
+  const user = useAuthStore((state) => state.user);
+  const isOperator = user?.role === 'OPERATOR';
+
+  // If user is OPERATOR, redirect to orders page
+  if (isOperator) {
+    return <Navigate to="/orders" replace />;
+  }
+
+  return children;
+}
+
 function InventoryWrapper({ children }) {
   return <InventoryProvider>{children}</InventoryProvider>;
 }
@@ -67,12 +80,12 @@ function App() {
             </PrivateRoute>
           }
         >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="dashboard/financial-analytics" element={<FinancialAnalytics />} />
-          <Route path="dashboard/operational-analytics" element={<OperationalAnalytics />} />
-          <Route path="dashboard/customer-analytics" element={<CustomerAnalytics />} />
-          <Route path="dashboard/inventory-analytics" element={<InventoryAnalytics />} />
+          <Route index element={<Navigate to="/orders" replace />} />
+          <Route path="dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
+          <Route path="dashboard/financial-analytics" element={<AdminRoute><FinancialAnalytics /></AdminRoute>} />
+          <Route path="dashboard/operational-analytics" element={<AdminRoute><OperationalAnalytics /></AdminRoute>} />
+          <Route path="dashboard/customer-analytics" element={<AdminRoute><CustomerAnalytics /></AdminRoute>} />
+          <Route path="dashboard/inventory-analytics" element={<AdminRoute><InventoryAnalytics /></AdminRoute>} />
           <Route path="orders" element={<Orders />} />
           <Route path="restaurants" element={<Restaurants />} />
           <Route path="restaurants/tables" element={<Tables />} />
@@ -99,11 +112,11 @@ function App() {
           <Route path="kitchen/stock-alerts" element={<InventoryWrapper><InventoryAlerts /></InventoryWrapper>} />
           <Route path="kitchen/valuation" element={<InventoryWrapper><InventoryValuation /></InventoryWrapper>} />
           <Route path="kitchen/po-suggestions" element={<POSuggestions />} />
-          <Route path="finance/purchase-orders" element={<PurchaseOrders />} />
-          <Route path="finance/expenses" element={<Expenses />} />
-          <Route path="finance/reports" element={<FinancialReports />} />
-          <Route path="finance/pricing" element={<PricingDashboard />} />
-          <Route path="finance/alerts" element={<FinancialAlerts />} />
+          <Route path="finance/purchase-orders" element={<AdminRoute><PurchaseOrders /></AdminRoute>} />
+          <Route path="finance/expenses" element={<AdminRoute><Expenses /></AdminRoute>} />
+          <Route path="finance/reports" element={<AdminRoute><FinancialReports /></AdminRoute>} />
+          <Route path="finance/pricing" element={<AdminRoute><PricingDashboard /></AdminRoute>} />
+          <Route path="finance/alerts" element={<AdminRoute><FinancialAlerts /></AdminRoute>} />
           <Route path="settings/printers" element={<PrinterSettings />} />
           <Route path="pos" element={<POSApp />} />
         </Route>

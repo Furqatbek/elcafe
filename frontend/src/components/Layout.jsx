@@ -191,6 +191,13 @@ export default function Layout() {
     },
   ];
 
+  // Filter menu items based on user role
+  // OPERATOR role cannot access dashboard and finance
+  const isOperator = user?.role === 'OPERATOR';
+  const filteredMenuItems = isOperator
+    ? menuItems.filter((item) => !['dashboard', 'finance'].includes(item.id))
+    : menuItems;
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -214,7 +221,7 @@ export default function Layout() {
         {/* Navigation Menu */}
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-2">
-            {menuItems.map((item) => (
+            {filteredMenuItems.map((item) => (
               <li key={item.id}>
                 <div>
                   {item.subItems.length === 0 ? (
