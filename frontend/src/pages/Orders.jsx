@@ -43,7 +43,8 @@ import {
   XCircle,
   Coffee,
   Ban,
-  Percent
+  Percent,
+  Ticket
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
@@ -110,6 +111,10 @@ export default function Orders() {
   const [showServiceFeeInput, setShowServiceFeeInput] = useState(false);
   const [serviceFeePercent, setServiceFeePercent] = useState(0);
   const [serviceFeeAmount, setServiceFeeAmount] = useState(0);
+
+  // Entry fee state
+  const [showEntryFeeInput, setShowEntryFeeInput] = useState(false);
+  const [entryFeeAmount, setEntryFeeAmount] = useState(0);
 
   // Cancel order confirmation
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -303,6 +308,10 @@ export default function Orders() {
     setServiceFeePercent(existingServiceFeePercent);
     setServiceFeeAmount(existingServiceFee);
     setShowServiceFeeInput(false);
+    // Initialize entry fee from order or reset
+    const existingEntryFee = order.entryFee || 0;
+    setEntryFeeAmount(existingEntryFee);
+    setShowEntryFeeInput(false);
     setPaymentModalOpen(true);
   };
 
@@ -312,8 +321,8 @@ export default function Orders() {
 
     setProcessingPayment(true);
     try {
-      // Calculate final total with service fee
-      const finalTotal = calculateTotalWithServiceFee();
+      // Calculate final total with all fees
+      const finalTotal = calculateTotalWithFees();
 
       // Process payment
       const paymentData = {
@@ -332,6 +341,7 @@ export default function Orders() {
         ...paymentOrder,
         serviceFeePercent: serviceFeePercent,
         serviceFee: serviceFeeAmount,
+        entryFee: entryFeeAmount,
         total: finalTotal
       };
       PrintReceipt(receiptData);
@@ -396,20 +406,20 @@ export default function Orders() {
     }
   };
 
-  // Calculate total with service fee
-  const calculateTotalWithServiceFee = () => {
+  // Calculate total with service fee and entry fee
+  const calculateTotalWithFees = () => {
     if (!paymentOrder) return 0;
     const subtotal = paymentOrder.subtotal || 0;
     const tax = paymentOrder.tax || 0;
-    return subtotal + tax + serviceFeeAmount;
+    return subtotal + tax + serviceFeeAmount + entryFeeAmount;
   };
 
   // Calculate change for cash payment
   const calculateChange = () => {
     if (!paymentOrder || paymentMethod !== 'CASH') return 0;
     const tendered = parseFloat(amountTendered) || 0;
-    const totalWithFee = calculateTotalWithServiceFee();
-    return Math.max(0, tendered - totalWithFee);
+    const totalWithFees = calculateTotalWithFees();
+    return Math.max(0, tendered - totalWithFees);
   };
 
   // Apply service fee
@@ -459,6 +469,47 @@ export default function Orders() {
       });
     } catch (error) {
       console.error('Failed to remove service fee:', error);
+    }
+  };
+
+  // Apply entry fee
+  const handleApplyEntryFee = async (amount) => {
+    if (!paymentOrder) return;
+
+    const parsedAmount = parseFloat(amount) || 0;
+    setEntryFeeAmount(parsedAmount);
+    setShowEntryFeeInput(false);
+
+    // Save to backend
+    try {
+      await posAPI.applyEntryFee(paymentOrder.id, parsedAmount);
+      // Update the paymentOrder with new entry fee
+      setPaymentOrder({
+        ...paymentOrder,
+        entryFee: parsedAmount
+      });
+    } catch (error) {
+      console.error('Failed to apply entry fee:', error);
+    }
+  };
+
+  // Remove entry fee
+  const handleRemoveEntryFee = async () => {
+    if (!paymentOrder) return;
+
+    setEntryFeeAmount(0);
+    setShowEntryFeeInput(false);
+
+    // Save to backend
+    try {
+      await posAPI.applyEntryFee(paymentOrder.id, 0);
+      // Update the paymentOrder
+      setPaymentOrder({
+        ...paymentOrder,
+        entryFee: 0
+      });
+    } catch (error) {
+      console.error('Failed to remove entry fee:', error);
     }
   };
 
@@ -1020,9 +1071,15 @@ export default function Orders() {
                   <span>{serviceFeeAmount?.toLocaleString()}</span>
                 </div>
               )}
+              {entryFeeAmount > 0 && (
+                <div className="flex justify-between mb-2 text-amber-700">
+                  <span>{t('orders.entryFee', 'Entry Fee')}</span>
+                  <span>{entryFeeAmount?.toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between pt-2 border-t font-bold">
                 <span>{t('orders.total', 'Total')}</span>
-                <span className="text-xl">{calculateTotalWithServiceFee().toLocaleString()}</span>
+                <span className="text-xl">{calculateTotalWithFees().toLocaleString()}</span>
               </div>
             </div>
 
@@ -1106,6 +1163,84 @@ export default function Orders() {
               )}
             </div>
 
+            {/* Entry Fee Section */}
+            <div>
+              {!showEntryFeeInput ? (
+                <Button
+                  type="button"
+                  variant={entryFeeAmount > 0 ? 'secondary' : 'outline'}
+                  className="w-full"
+                  onClick={() => setShowEntryFeeInput(true)}
+                >
+                  <Ticket className="h-4 w-4 mr-2" />
+                  {entryFeeAmount > 0
+                    ? t('orders.editEntryFee', 'Edit Entry Fee ({{amount}})', { amount: entryFeeAmount.toLocaleString() })
+                    : t('orders.addEntryFee', 'Add Entry Fee')
+                  }
+                </Button>
+              ) : (
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 space-y-3">
+                  <Label className="text-amber-800 font-semibold">
+                    {t('orders.entryFeeAmount', 'Entry Fee Amount')}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={entryFeeAmount}
+                      onChange={(e) => setEntryFeeAmount(parseFloat(e.target.value) || 0)}
+                      className="flex-1 text-center font-semibold"
+                      placeholder="0"
+                    />
+                  </div>
+                  {/* Quick amount buttons */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {[5000, 10000, 15000, 20000].map((amount) => (
+                      <Button
+                        key={amount}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEntryFeeAmount(amount)}
+                        className={entryFeeAmount === amount ? 'border-amber-500 bg-amber-100' : ''}
+                      >
+                        {amount.toLocaleString()}
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleApplyEntryFee(entryFeeAmount)}
+                    >
+                      {t('common.apply', 'Apply')}
+                    </Button>
+                    {entryFeeAmount > 0 && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleRemoveEntryFee}
+                      >
+                        {t('common.remove', 'Remove')}
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowEntryFeeInput(false)}
+                    >
+                      {t('common.cancel', 'Cancel')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Payment Method Selection */}
             <div>
               <Label className="mb-2 block">{t('orders.paymentMethod', 'Payment Method')}</Label>
@@ -1157,10 +1292,10 @@ export default function Orders() {
                   <Input
                     type="number"
                     step="1000"
-                    min={calculateTotalWithServiceFee()}
+                    min={calculateTotalWithFees()}
                     value={amountTendered}
                     onChange={(e) => setAmountTendered(e.target.value)}
-                    placeholder={calculateTotalWithServiceFee().toString()}
+                    placeholder={calculateTotalWithFees().toString()}
                     className="text-lg mt-1"
                   />
                 </div>
@@ -1181,7 +1316,7 @@ export default function Orders() {
                 </div>
 
                 {/* Change Calculation */}
-                {parseFloat(amountTendered) >= calculateTotalWithServiceFee() && (
+                {parseFloat(amountTendered) >= calculateTotalWithFees() && (
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <div className="flex justify-between items-center">
                       <span className="font-medium text-green-800">{t('orders.change', 'Change')}</span>
@@ -1208,7 +1343,7 @@ export default function Orders() {
             </Button>
             <Button
               onClick={handleProcessPayment}
-              disabled={processingPayment || (paymentMethod === 'CASH' && parseFloat(amountTendered) < calculateTotalWithServiceFee())}
+              disabled={processingPayment || (paymentMethod === 'CASH' && parseFloat(amountTendered) < calculateTotalWithFees())}
               className="bg-green-600 hover:bg-green-700"
             >
               {processingPayment
