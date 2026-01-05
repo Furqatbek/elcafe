@@ -302,7 +302,7 @@ export default function Orders() {
     try {
       // Process payment
       const paymentData = {
-        paymentMethod: paymentMethod,
+        method: paymentMethod,
         amount: paymentOrder.total,
         amountTendered: paymentMethod === 'CASH' ? parseFloat(amountTendered) || paymentOrder.total : paymentOrder.total
       };
