@@ -92,20 +92,6 @@ const generateReceiptHTML = (order) => {
       margin: 2px 0;
     }
 
-    .customer-info {
-      margin: 4px 0;
-      padding: 3px 0;
-      border-bottom: 1px dashed black;
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    .customer-title {
-      font-weight: bold;
-      font-size: 12px;
-      margin-bottom: 2px;
-    }
-
     .items-table {
       width: 100%;
       border-collapse: collapse;
@@ -258,15 +244,6 @@ const generateReceiptHTML = (order) => {
       </div>
       ` : ''}
     </div>
-
-    ${(order.deliveryInfo || order.customerName) ? `
-    <div class="customer-info">
-      <div class="customer-title">MIJOZ:</div>
-      <div>${order.deliveryInfo?.contactName || order.customerName || order.customer?.firstName || ''}</div>
-      <div>${order.deliveryInfo?.contactPhone || order.customerPhone || order.customer?.phone || ''}</div>
-      ${order.deliveryInfo?.address ? `<div>${order.deliveryInfo.address}</div>` : ''}
-    </div>
-    ` : ''}
 
     <table class="items-table">
       <thead>
