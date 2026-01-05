@@ -132,8 +132,36 @@ const PaymentScreen = () => {
       // Get restaurant ID from localStorage
       const restaurantId = parseInt(localStorage.getItem('selectedRestaurantId')) || 1;
 
-      // If we have an existing order ID, process payment separately
+      // If we have an existing order ID, update items and process payment
       if (currentOrder.id && !String(currentOrder.id).startsWith('temp-')) {
+        // First, sync any item changes to the backend
+        // Get the current items from the backend to compare
+        try {
+          const orderResponse = await posAPI.getOrderById(currentOrder.id);
+          const backendItems = orderResponse.data.data?.items || [];
+          const backendItemIds = new Set(backendItems.map(item => item.id));
+
+          // Add new items that don't exist in the backend
+          for (const item of currentOrder.items) {
+            if (!backendItemIds.has(item.id) && !String(item.id).includes('-')) {
+              // This is a new item, add it to the order
+              await posAPI.addItemToOrder(currentOrder.id, {
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.basePrice,
+                modifiers: item.modifiers?.map(mod => ({
+                  name: mod.name,
+                  price: mod.price,
+                })) || [],
+                notes: item.notes || '',
+              });
+            }
+          }
+        } catch (syncError) {
+          console.error('Failed to sync items:', syncError);
+          // Continue with payment even if sync fails
+        }
+
         // Process payment via API
         const response = await posAPI.processPayment(currentOrder.id, {
           method: paymentData.method,

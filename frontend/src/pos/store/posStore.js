@@ -723,86 +723,98 @@ const usePOSStore = create(
       },
 
       // Actions: Complete Order & Reset
-      completeOrder: () => set((state) => ({
-        currentOrder: {
-          id: null,
-          orderNumber: null,
-          type: null,
-          items: [],
-          subtotal: 0,
-          tax: 0,
-          deliveryFee: 0,
-          serviceFeePercent: 0,
-          serviceFee: 0,
-          total: 0,
-          notes: '',
-        },
-        customer: {
-          id: null,
-          name: '',
-          phone: '',
-          email: '',
-          address: null,
-          deliveryInstructions: '',
-          tableNumber: null,
-          tableIds: null,
-          guestCount: null,
-        },
-        payment: {
-          method: null,
-          amountTendered: 0,
-          changeDue: 0,
-          status: 'PENDING',
-        },
-        selectedTables: [],
-        ui: {
-          ...state.ui,
-          currentScreen: 'start',
-          selectedCategory: null,
-          selectedProduct: null,
-        },
-      })),
+      completeOrder: () => {
+        // Clear persisted state to prevent stale data on refresh
+        localStorage.removeItem('pos-storage');
 
-      resetPOS: () => set({
-        currentOrder: {
-          id: null,
-          orderNumber: null,
-          type: null,
-          items: [],
-          subtotal: 0,
-          tax: 0,
-          deliveryFee: 0,
-          serviceFeePercent: 0,
-          serviceFee: 0,
-          total: 0,
-          notes: '',
-        },
-        customer: {
-          id: null,
-          name: '',
-          phone: '',
-          email: '',
-          address: null,
-          deliveryInstructions: '',
-          tableNumber: null,
-          tableIds: null,
-          guestCount: null,
-        },
-        payment: {
-          method: null,
-          amountTendered: 0,
-          changeDue: 0,
-          status: 'PENDING',
-        },
-        selectedTables: [],
-        ui: {
-          currentScreen: 'start',
-          isLoading: false,
-          error: null,
-          selectedCategory: null,
-          selectedProduct: null,
-        },
-      }),
+        return set((state) => ({
+          currentOrder: {
+            id: null,
+            orderNumber: null,
+            type: null,
+            items: [],
+            subtotal: 0,
+            tax: 0,
+            deliveryFee: 0,
+            serviceFeePercent: 0,
+            serviceFee: 0,
+            total: 0,
+            notes: '',
+          },
+          customer: {
+            id: null,
+            name: '',
+            phone: '',
+            email: '',
+            address: null,
+            deliveryInstructions: '',
+            tableNumber: null,
+            tableIds: null,
+            guestCount: null,
+          },
+          payment: {
+            method: null,
+            amountTendered: 0,
+            changeDue: 0,
+            status: 'PENDING',
+          },
+          selectedTables: [],
+          activeOrder: null,
+          ui: {
+            ...state.ui,
+            currentScreen: 'start',
+            selectedCategory: null,
+            selectedProduct: null,
+          },
+        }));
+      },
+
+      resetPOS: () => {
+        // Clear persisted state
+        localStorage.removeItem('pos-storage');
+
+        return set({
+          currentOrder: {
+            id: null,
+            orderNumber: null,
+            type: null,
+            items: [],
+            subtotal: 0,
+            tax: 0,
+            deliveryFee: 0,
+            serviceFeePercent: 0,
+            serviceFee: 0,
+            total: 0,
+            notes: '',
+          },
+          customer: {
+            id: null,
+            name: '',
+            phone: '',
+            email: '',
+            address: null,
+            deliveryInstructions: '',
+            tableNumber: null,
+            tableIds: null,
+            guestCount: null,
+          },
+          payment: {
+            method: null,
+            amountTendered: 0,
+            changeDue: 0,
+            status: 'PENDING',
+          },
+          selectedTables: [],
+          activeOrder: null,
+          ui: {
+            currentScreen: 'start',
+            isLoading: false,
+            error: null,
+            selectedCategory: null,
+            selectedProduct: null,
+          },
+        });
+      },
     }),
     {
       name: 'pos-storage', // localStorage key
