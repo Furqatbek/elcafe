@@ -131,12 +131,12 @@ const PricingDashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Price Engineering</h1>
-          <p className="text-muted-foreground">Analyze profitability and optimize pricing strategies</p>
+          <h1 className="text-3xl font-bold">{t('pricing.title', 'Price Engineering')}</h1>
+          <p className="text-muted-foreground">{t('pricing.subtitle', 'Analyze profitability and optimize pricing strategies')}</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <Label htmlFor="target-margin">Target Margin:</Label>
+            <Label htmlFor="target-margin">{t('pricing.targetMargin', 'Target Margin')}:</Label>
             <Input
               id="target-margin"
               type="number"
@@ -160,7 +160,7 @@ const PricingDashboard = () => {
           </Select>
           <Button onClick={fetchPricingData} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('common.refresh', 'Refresh')}
           </Button>
         </div>
       </div>
@@ -170,15 +170,15 @@ const PricingDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Margin</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('pricing.averageMargin', 'Average Margin')}</CardTitle>
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatPercentage(analytics.averageMarginPercentage)}</div>
               <p className="text-xs text-muted-foreground">
-                Target: {formatPercentage(analytics.targetMarginPercentage)}
+                {t('pricing.target', 'Target')}: {formatPercentage(analytics.targetMarginPercentage)}
                 {analytics.marginGap > 0 && (
-                  <span className="text-red-600 ml-1">({formatPercentage(analytics.marginGap)} gap)</span>
+                  <span className="text-red-600 ml-1">({formatPercentage(analytics.marginGap)} {t('pricing.gap', 'gap')})</span>
                 )}
               </p>
             </CardContent>
@@ -186,33 +186,33 @@ const PricingDashboard = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Profit (30d)</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('pricing.totalProfit30d', 'Total Profit (30d)')}</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{formatCurrency(analytics.totalProfit)}</div>
               <p className="text-xs text-muted-foreground">
-                Revenue: {formatCurrency(analytics.totalRevenue)}
+                {t('pricing.revenue', 'Revenue')}: {formatCurrency(analytics.totalRevenue)}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Products Analyzed</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('pricing.productsAnalyzed', 'Products Analyzed')}</CardTitle>
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{analytics.productsWithCostData} / {analytics.totalProducts}</div>
               <p className="text-xs text-muted-foreground">
-                {analytics.productsNeedingReview} need review
+                {analytics.productsNeedingReview} {t('pricing.needReview', 'need review')}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recommendations</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('pricing.recommendations', 'Recommendations')}</CardTitle>
               <Lightbulb className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -231,45 +231,45 @@ const PricingDashboard = () => {
       {analytics?.menuEngineering && (
         <Card>
           <CardHeader>
-            <CardTitle>Menu Engineering Matrix</CardTitle>
-            <CardDescription>Product classification based on profitability and popularity</CardDescription>
+            <CardTitle>{t('pricing.menuEngineeringMatrix', 'Menu Engineering Matrix')}</CardTitle>
+            <CardDescription>{t('pricing.menuEngineeringDesc', 'Product classification based on profitability and popularity')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
                 <div className="flex items-center gap-2 mb-2">
                   <Star className="h-5 w-5 text-yellow-600" />
-                  <span className="font-semibold text-yellow-800">Stars</span>
+                  <span className="font-semibold text-yellow-800">{t('pricing.stars', 'Stars')}</span>
                 </div>
                 <div className="text-3xl font-bold text-yellow-700">{analytics.menuEngineering.stars}</div>
-                <p className="text-xs text-yellow-600">High profit, High sales</p>
+                <p className="text-xs text-yellow-600">{t('pricing.highProfitHighSales', 'High profit, High sales')}</p>
               </div>
 
               <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className="h-5 w-5 text-blue-600" />
-                  <span className="font-semibold text-blue-800">Plow Horses</span>
+                  <span className="font-semibold text-blue-800">{t('pricing.plowHorses', 'Plow Horses')}</span>
                 </div>
                 <div className="text-3xl font-bold text-blue-700">{analytics.menuEngineering.plowHorses}</div>
-                <p className="text-xs text-blue-600">Low profit, High sales</p>
+                <p className="text-xs text-blue-600">{t('pricing.lowProfitHighSales', 'Low profit, High sales')}</p>
               </div>
 
               <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
                 <div className="flex items-center gap-2 mb-2">
                   <Lightbulb className="h-5 w-5 text-purple-600" />
-                  <span className="font-semibold text-purple-800">Puzzles</span>
+                  <span className="font-semibold text-purple-800">{t('pricing.puzzles', 'Puzzles')}</span>
                 </div>
                 <div className="text-3xl font-bold text-purple-700">{analytics.menuEngineering.puzzles}</div>
-                <p className="text-xs text-purple-600">High profit, Low sales</p>
+                <p className="text-xs text-purple-600">{t('pricing.highProfitLowSales', 'High profit, Low sales')}</p>
               </div>
 
               <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2 mb-2">
                   <AlertTriangle className="h-5 w-5 text-gray-600" />
-                  <span className="font-semibold text-gray-800">Dogs</span>
+                  <span className="font-semibold text-gray-800">{t('pricing.dogs', 'Dogs')}</span>
                 </div>
                 <div className="text-3xl font-bold text-gray-700">{analytics.menuEngineering.dogs}</div>
-                <p className="text-xs text-gray-600">Low profit, Low sales</p>
+                <p className="text-xs text-gray-600">{t('pricing.lowProfitLowSales', 'Low profit, Low sales')}</p>
               </div>
             </div>
           </CardContent>
@@ -279,35 +279,35 @@ const PricingDashboard = () => {
       {/* Tabs for detailed views */}
       <Tabs defaultValue="recommendations" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="recommendations">Pricing Recommendations</TabsTrigger>
-          <TabsTrigger value="profitability">Product Profitability</TabsTrigger>
-          <TabsTrigger value="categories">Category Analysis</TabsTrigger>
+          <TabsTrigger value="recommendations">{t('pricing.pricingRecommendations', 'Pricing Recommendations')}</TabsTrigger>
+          <TabsTrigger value="profitability">{t('pricing.productProfitability', 'Product Profitability')}</TabsTrigger>
+          <TabsTrigger value="categories">{t('pricing.categoryAnalysis', 'Category Analysis')}</TabsTrigger>
         </TabsList>
 
         {/* Recommendations Tab */}
         <TabsContent value="recommendations">
           <Card>
             <CardHeader>
-              <CardTitle>Pricing Recommendations</CardTitle>
-              <CardDescription>AI-powered pricing suggestions based on cost-plus analysis</CardDescription>
+              <CardTitle>{t('pricing.pricingRecommendations', 'Pricing Recommendations')}</CardTitle>
+              <CardDescription>{t('pricing.pricingRecommendationsDesc', 'AI-powered pricing suggestions based on cost-plus analysis')}</CardDescription>
             </CardHeader>
             <CardContent>
               {recommendations.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
-                  No recommendations available. Ensure products have cost data.
+                  {t('pricing.noRecommendations', 'No recommendations available. Ensure products have cost data.')}
                 </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b text-left">
-                        <th className="pb-3 font-medium">Product</th>
-                        <th className="pb-3 font-medium text-right">Current Price</th>
-                        <th className="pb-3 font-medium text-right">Current Margin</th>
-                        <th className="pb-3 font-medium text-right">Recommended</th>
-                        <th className="pb-3 font-medium text-right">Change</th>
-                        <th className="pb-3 font-medium text-center">Action</th>
-                        <th className="pb-3 font-medium">Rationale</th>
+                        <th className="pb-3 font-medium">{t('pricing.product', 'Product')}</th>
+                        <th className="pb-3 font-medium text-right">{t('pricing.currentPrice', 'Current Price')}</th>
+                        <th className="pb-3 font-medium text-right">{t('pricing.currentMargin', 'Current Margin')}</th>
+                        <th className="pb-3 font-medium text-right">{t('pricing.recommended', 'Recommended')}</th>
+                        <th className="pb-3 font-medium text-right">{t('pricing.change', 'Change')}</th>
+                        <th className="pb-3 font-medium text-center">{t('pricing.action', 'Action')}</th>
+                        <th className="pb-3 font-medium">{t('pricing.rationale', 'Rationale')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -359,27 +359,27 @@ const PricingDashboard = () => {
         <TabsContent value="profitability">
           <Card>
             <CardHeader>
-              <CardTitle>Product Profitability Analysis</CardTitle>
-              <CardDescription>Detailed profitability breakdown for each product</CardDescription>
+              <CardTitle>{t('pricing.profitabilityAnalysis', 'Product Profitability Analysis')}</CardTitle>
+              <CardDescription>{t('pricing.profitabilityDesc', 'Detailed profitability breakdown for each product')}</CardDescription>
             </CardHeader>
             <CardContent>
               {profitability.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
-                  No profitability data available.
+                  {t('pricing.noProfitabilityData', 'No profitability data available.')}
                 </p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b text-left">
-                        <th className="pb-3 font-medium">Product</th>
-                        <th className="pb-3 font-medium text-right">Price</th>
-                        <th className="pb-3 font-medium text-right">Cost</th>
-                        <th className="pb-3 font-medium text-right">Margin</th>
-                        <th className="pb-3 font-medium text-right">Units Sold</th>
-                        <th className="pb-3 font-medium text-right">Total Profit</th>
-                        <th className="pb-3 font-medium text-center">Class</th>
-                        <th className="pb-3 font-medium text-center">Status</th>
+                        <th className="pb-3 font-medium">{t('pricing.product', 'Product')}</th>
+                        <th className="pb-3 font-medium text-right">{t('pricing.price', 'Price')}</th>
+                        <th className="pb-3 font-medium text-right">{t('pricing.cost', 'Cost')}</th>
+                        <th className="pb-3 font-medium text-right">{t('pricing.margin', 'Margin')}</th>
+                        <th className="pb-3 font-medium text-right">{t('pricing.unitsSold', 'Units Sold')}</th>
+                        <th className="pb-3 font-medium text-right">{t('pricing.totalProfit', 'Total Profit')}</th>
+                        <th className="pb-3 font-medium text-center">{t('pricing.class', 'Class')}</th>
+                        <th className="pb-3 font-medium text-center">{t('pricing.status', 'Status')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -425,13 +425,13 @@ const PricingDashboard = () => {
         <TabsContent value="categories">
           <Card>
             <CardHeader>
-              <CardTitle>Category-Level Pricing Analysis</CardTitle>
-              <CardDescription>Profitability breakdown by product category</CardDescription>
+              <CardTitle>{t('pricing.categoryLevelAnalysis', 'Category-Level Pricing Analysis')}</CardTitle>
+              <CardDescription>{t('pricing.categoryLevelDesc', 'Profitability breakdown by product category')}</CardDescription>
             </CardHeader>
             <CardContent>
               {!analytics?.categoryPricing || analytics.categoryPricing.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
-                  No category data available.
+                  {t('pricing.noCategoryData', 'No category data available.')}
                 </p>
               ) : (
                 <div className="space-y-4">
@@ -440,29 +440,29 @@ const PricingDashboard = () => {
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <h4 className="font-semibold">{cat.categoryName}</h4>
-                          <p className="text-sm text-muted-foreground">{cat.productCount} products</p>
+                          <p className="text-sm text-muted-foreground">{cat.productCount} {t('pricing.products', 'products')}</p>
                         </div>
                         <Badge variant="outline">
-                          {formatPercentage(cat.revenueShare)} of revenue
+                          {formatPercentage(cat.revenueShare)} {t('pricing.ofRevenue', 'of revenue')}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-4 gap-4 text-sm">
                         <div>
-                          <p className="text-muted-foreground">Avg Price</p>
+                          <p className="text-muted-foreground">{t('pricing.avgPrice', 'Avg Price')}</p>
                           <p className="font-medium">{formatCurrency(cat.averagePrice)}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Avg Margin</p>
+                          <p className="text-muted-foreground">{t('pricing.avgMargin', 'Avg Margin')}</p>
                           <p className={`font-medium ${cat.averageMargin >= 30 ? 'text-green-600' : cat.averageMargin >= 15 ? 'text-yellow-600' : 'text-red-600'}`}>
                             {formatPercentage(cat.averageMargin)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Revenue</p>
+                          <p className="text-muted-foreground">{t('pricing.revenue', 'Revenue')}</p>
                           <p className="font-medium">{formatCurrency(cat.totalRevenue)}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Profit</p>
+                          <p className="text-muted-foreground">{t('pricing.profit', 'Profit')}</p>
                           <p className="font-medium text-green-600">{formatCurrency(cat.totalProfit)}</p>
                         </div>
                       </div>
