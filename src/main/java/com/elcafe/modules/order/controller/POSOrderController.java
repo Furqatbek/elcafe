@@ -286,6 +286,22 @@ public class POSOrderController {
         return ResponseEntity.ok(ApiResponse.success("Service fee applied successfully", response));
     }
 
+    @PostMapping("/{orderId}/entry-fee")
+    @Operation(
+            summary = "Apply entry fee",
+            description = "Apply entry fee to an order by specifying the amount"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> applyEntryFee(
+            @PathVariable Long orderId,
+            @RequestParam java.math.BigDecimal entryFee) {
+
+        log.info("Applying entry fee to order {}: amount={}", orderId, entryFee);
+
+        POSOrderResponse response = posOrderService.applyEntryFee(orderId, entryFee);
+
+        return ResponseEntity.ok(ApiResponse.success("Entry fee applied successfully", response));
+    }
+
     @PostMapping("/{orderId}/close")
     @Operation(
             summary = "Close order and release table",

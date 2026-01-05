@@ -350,6 +350,7 @@ public class POSOrderService {
                 .deliveryFee(order.getDeliveryFee())
                 .serviceFeePercent(order.getServiceFeePercent())
                 .serviceFee(order.getServiceFee())
+                .entryFee(order.getEntryFee())
                 .total(order.getTotal())
                 .orderNotes(order.getCustomerNotes())
                 .createdAt(order.getCreatedAt())
@@ -688,9 +689,10 @@ public class POSOrderService {
             order.setServiceFee(serviceFee);
         }
 
-        // Keep existing delivery fee
+        // Keep existing delivery fee and entry fee
         BigDecimal serviceFee = order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO;
-        order.setTotal(subtotal.add(order.getTax()).add(order.getDeliveryFee()).add(serviceFee));
+        BigDecimal entryFee = order.getEntryFee() != null ? order.getEntryFee() : BigDecimal.ZERO;
+        order.setTotal(subtotal.add(order.getTax()).add(order.getDeliveryFee()).add(serviceFee).add(entryFee));
     }
 
     // ==================== SPLIT BILL METHODS ====================
@@ -848,11 +850,13 @@ public class POSOrderService {
         }
         order.setServiceFee(serviceFee);
 
-        // Recalculate total
+        // Recalculate total (include entry fee if present)
+        BigDecimal entryFee = order.getEntryFee() != null ? order.getEntryFee() : BigDecimal.ZERO;
         BigDecimal total = order.getSubtotal()
                 .add(order.getTax())
                 .add(order.getDeliveryFee())
                 .add(serviceFee)
+                .add(entryFee)
                 .subtract(order.getDiscount());
         order.setTotal(total);
 
@@ -863,6 +867,50 @@ public class POSOrderService {
         Order savedOrder = orderRepository.save(order);
 
         log.info("Service fee applied to order {}: fee={}, newTotal={}", orderId, serviceFee, total);
+
+        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
+                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
+
+    // ==================== ENTRY FEE METHODS ====================
+
+    /**
+     * Apply entry fee to an order
+     */
+    @Transactional
+    public POSOrderResponse applyEntryFee(Long orderId, BigDecimal entryFeeAmount) {
+        log.info("Applying entry fee to order {}: amount={}", orderId, entryFeeAmount);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Validate entry fee amount
+        if (entryFeeAmount == null || entryFeeAmount.compareTo(BigDecimal.ZERO) < 0) {
+            entryFeeAmount = BigDecimal.ZERO;
+        }
+
+        // Set entry fee
+        order.setEntryFee(entryFeeAmount);
+
+        // Recalculate total
+        BigDecimal serviceFee = order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO;
+        BigDecimal total = order.getSubtotal()
+                .add(order.getTax())
+                .add(order.getDeliveryFee())
+                .add(serviceFee)
+                .add(entryFeeAmount)
+                .subtract(order.getDiscount());
+        order.setTotal(total);
+
+        // Update grand total (total + tip)
+        BigDecimal tipAmount = order.getTipAmount() != null ? order.getTipAmount() : BigDecimal.ZERO;
+        order.setGrandTotal(total.add(tipAmount));
+
+        Order savedOrder = orderRepository.save(order);
+
+        log.info("Entry fee applied to order {}: fee={}, newTotal={}", orderId, entryFeeAmount, total);
 
         String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
                 (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");

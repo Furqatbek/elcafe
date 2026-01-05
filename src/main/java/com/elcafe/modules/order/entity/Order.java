@@ -119,6 +119,10 @@ public class Order {
     @Builder.Default
     private BigDecimal serviceFee = BigDecimal.ZERO;
 
+    @Column(name = "entry_fee", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal entryFee = BigDecimal.ZERO;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
@@ -303,6 +307,7 @@ public class Order {
         if (discount == null) discount = BigDecimal.ZERO;
         if (serviceFeePercent == null) serviceFeePercent = BigDecimal.ZERO;
         if (serviceFee == null) serviceFee = BigDecimal.ZERO;
+        if (entryFee == null) entryFee = BigDecimal.ZERO;
         if (total == null) total = BigDecimal.ZERO;
         if (bonusUsed == null) bonusUsed = BigDecimal.ZERO;
         if (tipAmount == null) tipAmount = BigDecimal.ZERO;
