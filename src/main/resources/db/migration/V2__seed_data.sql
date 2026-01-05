@@ -8,7 +8,7 @@ VALUES ('operator@mayamicafe.uz', '$2b$10$ROuAr99Uk52NYdO5J/JyCe0C/8axTGDCvROewQ
 
 -- Insert sample restaurant
 INSERT INTO restaurants (name, description, address, city, state, zip_code, country, phone, email, active, accepting_orders, delivery_fee, estimated_delivery_time_minutes)
-VALUES ('Mayami Cafe', 'Best coffee and food in town', 'Hazorasp tumani, Jalilbek toyhona', 'Xorazm', 'UZB', '10001', 'UZB', '+998 97 421 89 89', 'info@mayamicafe.uz', TRUE, TRUE, 5.00, 30);
+VALUES ('Mayami Cafe', 'Best coffee and food in town', 'Hazorasp tumani, Jalilbek toyhona', 'Xorazm', 'UZB', '10001', 'UZB', '+998 88 153 8888', 'info@mayamicafe.uz', TRUE, TRUE, 5.00, 30);
 
 -- Insert business hours for the sample restaurant
 INSERT INTO business_hours (restaurant_id, day_of_week, open_time, close_time, closed)

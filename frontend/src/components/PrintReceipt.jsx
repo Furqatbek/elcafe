@@ -323,7 +323,7 @@ const generateReceiptHTML = (order) => {
 
     <div class="footer">
       <div class="contact-info">
-        <div>+998 97 421 8989</div>
+        <div>+998 88 153 8888</div>
         <div>www.mayamicafe.uz</div>
       </div>
       <div class="thank-you">*** RAHMAT! ***</div>
