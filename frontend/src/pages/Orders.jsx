@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import usePOSStore from '../pos/store/posStore';
 import { orderAPI, restaurantAPI, menuAPI, tablesAPI, posAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -23,14 +22,10 @@ import {
 } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
 import {
   Plus,
   Search,
-  Filter,
   X,
-  Truck,
-  ShoppingBag,
   Utensils,
   Printer,
   Edit,
@@ -40,22 +35,40 @@ import {
   CreditCard,
   Banknote,
   Wallet,
-  LayoutGrid,
-  List,
   Users,
   Clock,
-  RefreshCw
+  RefreshCw,
+  ChevronRight,
+  AlertCircle,
+  XCircle,
+  Coffee,
+  Ban
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
 
-const statusColors = {
+// Table status colors
+const tableStatusColors = {
+  AVAILABLE: 'bg-green-500 hover:bg-green-600',
+  OCCUPIED: 'bg-orange-500 hover:bg-orange-600',
+  RESERVED: 'bg-blue-500 hover:bg-blue-600',
+  CLEANING: 'bg-yellow-500 hover:bg-yellow-600',
+  OUT_OF_SERVICE: 'bg-gray-500 hover:bg-gray-600',
+};
+
+const tableStatusBgColors = {
+  AVAILABLE: 'bg-green-50 border-green-200',
+  OCCUPIED: 'bg-orange-50 border-orange-200',
+  RESERVED: 'bg-blue-50 border-blue-200',
+  CLEANING: 'bg-yellow-50 border-yellow-200',
+  OUT_OF_SERVICE: 'bg-gray-50 border-gray-200',
+};
+
+const orderStatusColors = {
   NEW: 'bg-blue-100 text-blue-800',
   ACCEPTED: 'bg-green-100 text-green-800',
   PREPARING: 'bg-yellow-100 text-yellow-800',
   READY: 'bg-purple-100 text-purple-800',
-  COURIER_ASSIGNED: 'bg-indigo-100 text-indigo-800',
-  ON_DELIVERY: 'bg-indigo-100 text-indigo-800',
   DELIVERED: 'bg-green-100 text-green-800',
   CANCELLED: 'bg-red-100 text-red-800',
 };
@@ -63,55 +76,27 @@ const statusColors = {
 export default function Orders() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [orders, setOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
+
+  // Core state
   const [restaurants, setRestaurants] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState('');
   const [tables, setTables] = useState([]);
+  const [tableOrders, setTableOrders] = useState({}); // Orders grouped by table ID
   const [loading, setLoading] = useState(true);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // View mode: 'list' or 'byTable'
-  const [viewMode, setViewMode] = useState('list');
-  const [floorPlan, setFloorPlan] = useState(null);
-  const [tableOrders, setTableOrders] = useState({});
-  const [loadingTableView, setLoadingTableView] = useState(false);
+  // Selected table state
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [selectedTableOrders, setSelectedTableOrders] = useState([]);
 
-  // Filters
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedRestaurant, setSelectedRestaurant] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-
-  // Create order form
-  const [formData, setFormData] = useState({
-    restaurantId: '',
-    orderType: 'DELIVERY', // DELIVERY, TAKEAWAY, DINE_IN
-    diningTableId: '',
-    customerFirstName: '',
-    customerLastName: '',
-    customerPhone: '',
-    customerEmail: '',
-    deliveryAddress: '',
-    deliveryCity: '',
-    deliveryState: '',
-    deliveryZipCode: '',
-    customerNotes: '',
-    paymentMethod: 'CARD',
-    items: []
-  });
-
-  const [selectedProduct, setSelectedProduct] = useState('');
-  const [selectedQuantity, setSelectedQuantity] = useState(1);
-
-  // Edit order items state
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState(null);
-  const [editItems, setEditItems] = useState([]);
+  // Add item modal
+  const [addItemModalOpen, setAddItemModalOpen] = useState(false);
   const [availableProducts, setAvailableProducts] = useState([]);
+  const [productCategories, setProductCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [newItemProductId, setNewItemProductId] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState(1);
+  const [addingItem, setAddingItem] = useState(false);
 
   // Payment modal state
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -120,228 +105,197 @@ export default function Orders() {
   const [amountTendered, setAmountTendered] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
 
+  // Cancel order confirmation
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  // Load restaurants on mount
   useEffect(() => {
-    loadOrders();
     loadRestaurants();
   }, []);
 
+  // Load tables when restaurant changes
   useEffect(() => {
-    filterOrders();
-  }, [orders, searchTerm, selectedStatus, selectedRestaurant, startDate, endDate]);
+    if (selectedRestaurantId) {
+      loadTablesAndOrders();
+    }
+  }, [selectedRestaurantId]);
+
+  // Update selected table orders when tableOrders changes
+  useEffect(() => {
+    if (selectedTable) {
+      const orders = tableOrders[selectedTable.id] || [];
+      setSelectedTableOrders(orders);
+    }
+  }, [tableOrders, selectedTable]);
 
   const loadRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll({ page: 0, size: 100 });
       const restaurantList = response.data.data.content || [];
       setRestaurants(restaurantList);
-      // Don't auto-select - let user choose, or auto-select when switching to table view
+
+      // Auto-select first restaurant
+      if (restaurantList.length > 0) {
+        setSelectedRestaurantId(restaurantList[0].id.toString());
+      }
     } catch (error) {
       console.error('Failed to load restaurants:', error);
-    }
-  };
-
-  const loadProducts = async (restaurantId) => {
-    try {
-      const response = await menuAPI.getProductsByRestaurant(restaurantId);
-      const productsData = response.data.data || [];
-      setProducts(productsData);
-    } catch (error) {
-      console.error('Failed to load products:', error);
-    }
-  };
-
-  const loadTables = async (restaurantId) => {
-    try {
-      console.log('Loading tables for restaurant ID:', restaurantId);
-      const response = await tablesAPI.getAvailable(restaurantId);
-      console.log('Tables API response:', response);
-      console.log('Tables data:', response?.data);
-      console.log('Tables data.data:', response?.data?.data);
-
-      const tablesData = response?.data?.data?.content || response?.data?.data || [];
-      console.log('Extracted tables data:', tablesData);
-      console.log('Is array?', Array.isArray(tablesData));
-
-      setTables(Array.isArray(tablesData) ? tablesData : []);
-    } catch (error) {
-      console.error('Failed to load tables:', error);
-      console.error('Error response:', error.response);
-      console.error('Error message:', error.message);
-      setTables([]);
-    }
-  };
-
-  const loadOrders = async () => {
-    try {
-      const response = await orderAPI.getAll({ page: 0, size: 100, sort: 'createdAt,desc' });
-      console.log('Orders response:', response);
-      console.log('Orders data:', response?.data);
-      console.log('Orders data.data:', response?.data?.data);
-
-      // Handle different response structures
-      const ordersData = response?.data?.data?.content ||
-                        response?.data?.data ||
-                        response?.data ||
-                        [];
-
-      console.log('Extracted orders:', ordersData);
-      setOrders(Array.isArray(ordersData) ? ordersData : []);
-    } catch (error) {
-      console.error('Failed to load orders:', error);
-      setOrders([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Load table view data (floor plan + orders grouped by table)
-  const loadTableView = async (restaurantId) => {
-    if (!restaurantId) return;
+  const loadTablesAndOrders = useCallback(async () => {
+    if (!selectedRestaurantId) return;
 
-    setLoadingTableView(true);
+    setRefreshing(true);
     try {
-      // Get floor plan for the restaurant
-      const floorPlanResponse = await tablesAPI.getFloorPlan(restaurantId);
-      const floorPlanData = floorPlanResponse?.data?.data || floorPlanResponse?.data;
-      console.log('Floor plan data:', floorPlanData);
-      setFloorPlan(floorPlanData);
+      // Load all tables for the restaurant
+      const tablesResponse = await tablesAPI.getAll(parseInt(selectedRestaurantId));
+      const tablesData = tablesResponse?.data?.data?.content || tablesResponse?.data?.data || [];
+      setTables(Array.isArray(tablesData) ? tablesData : []);
 
-      // Get open dine-in orders
-      const ordersResponse = await posAPI.getOpenDineInOrders(restaurantId);
-      console.log('Orders response:', ordersResponse);
+      // Load open dine-in orders
+      const ordersResponse = await posAPI.getOpenDineInOrders(parseInt(selectedRestaurantId));
       const openOrders = ordersResponse?.data?.data || ordersResponse?.data || [];
-      console.log('Open orders:', openOrders);
 
-      // Group orders by table ID - only include orders with status NEW
-      // Handle different response formats:
-      // - diningTable.id (from entity with full table object)
-      // - dineInInfo.tableIds[0] (from POS response)
-      // - tableIds as string "14" or "14,15" (from direct entity serialization)
+      // Group orders by table ID
       const ordersByTable = {};
       if (Array.isArray(openOrders)) {
-        openOrders
-          .filter(order => order.status === 'NEW') // Only show NEW orders in table view
-          .forEach(order => {
-          console.log('Processing order:', order.id, order.orderNumber, 'status:', order.status);
-          console.log('  - diningTable:', order.diningTable);
-          console.log('  - dineInInfo:', order.dineInInfo);
-          console.log('  - tableIds:', order.tableIds);
-
+        openOrders.forEach(order => {
           let tableId = null;
 
-          // Try different sources for table ID - check dineInInfo first (POS response format)
+          // Try different sources for table ID
           if (order.dineInInfo?.tableIds?.length > 0) {
             tableId = Number(order.dineInInfo.tableIds[0]);
-            console.log('  - Found tableId from dineInInfo.tableIds:', tableId);
           } else if (order.diningTable?.id) {
             tableId = Number(order.diningTable.id);
-            console.log('  - Found tableId from diningTable.id:', tableId);
           } else if (order.tableIds) {
-            // tableIds can be a string like "14" or "14,15"
             const firstTableId = String(order.tableIds).split(',')[0].trim();
             tableId = parseInt(firstTableId, 10);
-            console.log('  - Found tableId from tableIds string:', tableId);
           }
 
           if (tableId && !isNaN(tableId)) {
-            // Use number as key for consistency
-            const key = tableId;
-            if (!ordersByTable[key]) {
-              ordersByTable[key] = [];
+            if (!ordersByTable[tableId]) {
+              ordersByTable[tableId] = [];
             }
-            ordersByTable[key].push(order);
-            console.log('  - Added order to table', key);
-          } else {
-            console.log('  - No valid tableId found for order');
+            ordersByTable[tableId].push(order);
           }
         });
       }
-      console.log('Orders by table:', ordersByTable);
       setTableOrders(ordersByTable);
-    } catch (error) {
-      console.error('Failed to load table view:', error);
-      setFloorPlan(null);
-      setTableOrders({});
-    } finally {
-      setLoadingTableView(false);
-    }
-  };
 
-  // Refresh table view when view mode changes to 'byTable'
-  useEffect(() => {
-    if (viewMode === 'byTable') {
-      if (selectedRestaurant && selectedRestaurant !== 'all') {
-        loadTableView(parseInt(selectedRestaurant));
-      } else if (restaurants.length > 0) {
-        // Auto-select first restaurant when switching to table view
-        setSelectedRestaurant(restaurants[0].id.toString());
+      // Update selected table if it exists
+      if (selectedTable) {
+        const updatedTable = tablesData.find(t => t.id === selectedTable.id);
+        if (updatedTable) {
+          setSelectedTable(updatedTable);
+        }
       }
-    }
-  }, [viewMode, selectedRestaurant, restaurants]);
-
-  const filterOrders = () => {
-    let filtered = [...orders];
-
-    // Filter by search term (order number)
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filter by status
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(order => order.status === selectedStatus);
-    }
-
-    // Filter by restaurant
-    if (selectedRestaurant !== 'all') {
-      filtered = filtered.filter(order => order.restaurant?.id === parseInt(selectedRestaurant));
-    }
-
-    // Filter by date range
-    if (startDate) {
-      filtered = filtered.filter(order =>
-        new Date(order.createdAt) >= new Date(startDate)
-      );
-    }
-    if (endDate) {
-      filtered = filtered.filter(order =>
-        new Date(order.createdAt) <= new Date(endDate + 'T23:59:59')
-      );
-    }
-
-    setFilteredOrders(filtered);
-  };
-
-  const resetFilters = () => {
-    setSearchTerm('');
-    setSelectedStatus('all');
-    setSelectedRestaurant('all');
-    setStartDate('');
-    setEndDate('');
-  };
-
-  const updateOrderStatus = async (orderId, newStatus) => {
-    try {
-      await orderAPI.updateStatus(orderId, newStatus, `Status updated to ${newStatus}`);
-      loadOrders();
     } catch (error) {
-      console.error('Failed to update order status:', error);
-      alert(t('messages.error'));
+      console.error('Failed to load tables and orders:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedRestaurantId, selectedTable]);
+
+  // Load products for add item modal
+  const loadProducts = async () => {
+    if (!selectedRestaurantId) return;
+
+    try {
+      const response = await menuAPI.getProductsByRestaurant(parseInt(selectedRestaurantId));
+      const products = response.data.data || [];
+      setAvailableProducts(products);
+
+      // Extract unique categories
+      const categories = [...new Set(products.map(p => p.category?.name).filter(Boolean))];
+      setProductCategories(categories);
+    } catch (error) {
+      console.error('Failed to load products:', error);
     }
   };
 
-  // Open payment modal for closing table
-  const handleCloseTable = (order) => {
+  // Handle table click
+  const handleTableClick = (table) => {
+    setSelectedTable(table);
+    setSelectedTableOrders(tableOrders[table.id] || []);
+  };
+
+  // Close table panel
+  const closeTablePanel = () => {
+    setSelectedTable(null);
+    setSelectedTableOrders([]);
+  };
+
+  // Open add item modal
+  const handleOpenAddItem = async () => {
+    await loadProducts();
+    setNewItemProductId('');
+    setNewItemQuantity(1);
+    setSelectedCategory('all');
+    setAddItemModalOpen(true);
+  };
+
+  // Add item to order
+  const handleAddItemToOrder = async (orderId) => {
+    if (!newItemProductId || !orderId) return;
+
+    setAddingItem(true);
+    try {
+      await posAPI.addItemToOrder(orderId, {
+        productId: parseInt(newItemProductId),
+        quantity: newItemQuantity,
+        specialInstructions: ''
+      });
+
+      setAddItemModalOpen(false);
+      setNewItemProductId('');
+      setNewItemQuantity(1);
+
+      // Refresh data
+      await loadTablesAndOrders();
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      alert(t('orders.addItemError', 'Failed to add item: ') + (error.response?.data?.message || error.message));
+    } finally {
+      setAddingItem(false);
+    }
+  };
+
+  // Create new order for table (only if no unclosed orders exist)
+  const handleCreateOrderForTable = async () => {
+    if (!selectedTable) return;
+
+    // Check if table has unclosed orders
+    const existingOrders = tableOrders[selectedTable.id] || [];
+    const unclosedOrders = existingOrders.filter(o =>
+      o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && !o.fullyPaid
+    );
+
+    if (unclosedOrders.length > 0) {
+      alert(t('orders.tableHasUnclosedOrders', 'This table has unclosed orders. Please close them first before creating a new order.'));
+      return;
+    }
+
+    // Navigate to POS with table pre-selected
+    localStorage.setItem('selectedRestaurantId', selectedRestaurantId);
+    localStorage.setItem('preselectedTableId', selectedTable.id.toString());
+    navigate('/pos?screen=tables');
+  };
+
+  // Open payment modal
+  const handleOpenPayment = (order) => {
     setPaymentOrder(order);
     setPaymentMethod('CASH');
     setAmountTendered('');
     setPaymentModalOpen(true);
   };
 
-  // Process payment and close table
-  const handleProcessPaymentAndClose = async () => {
+  // Process payment and close order
+  const handleProcessPayment = async () => {
     if (!paymentOrder) return;
 
     setProcessingPayment(true);
@@ -360,13 +314,61 @@ export default function Orders() {
 
       setPaymentModalOpen(false);
       setPaymentOrder(null);
-      loadOrders();
-      alert(t('orders.paymentSuccessTableReleased', 'Payment processed and table released successfully'));
+
+      // Refresh data
+      await loadTablesAndOrders();
+
+      alert(t('orders.paymentSuccess', 'Payment processed successfully'));
     } catch (error) {
       console.error('Failed to process payment:', error);
       alert(t('orders.paymentError', 'Failed to process payment: ') + (error.response?.data?.message || error.message));
     } finally {
       setProcessingPayment(false);
+    }
+  };
+
+  // Cancel order with table status update
+  const handleCancelOrder = async () => {
+    if (!orderToCancel) return;
+
+    setCancelling(true);
+    try {
+      // Cancel the order
+      await orderAPI.updateStatus(orderToCancel.id, 'CANCELLED', 'Order cancelled by operator');
+
+      // If this was the only order for the table, release the table
+      const tableId = orderToCancel.diningTable?.id ||
+                      (orderToCancel.dineInInfo?.tableIds?.[0]) ||
+                      (orderToCancel.tableIds && parseInt(String(orderToCancel.tableIds).split(',')[0]));
+
+      if (tableId) {
+        const tableOrdersList = tableOrders[tableId] || [];
+        const remainingOrders = tableOrdersList.filter(o =>
+          o.id !== orderToCancel.id &&
+          o.status !== 'CANCELLED' &&
+          o.status !== 'DELIVERED'
+        );
+
+        // If no remaining active orders, release the table
+        if (remainingOrders.length === 0) {
+          try {
+            await tablesAPI.updateStatus(tableId, 'AVAILABLE');
+          } catch (e) {
+            console.error('Failed to update table status:', e);
+          }
+        }
+      }
+
+      setCancelModalOpen(false);
+      setOrderToCancel(null);
+
+      // Refresh data
+      await loadTablesAndOrders();
+    } catch (error) {
+      console.error('Failed to cancel order:', error);
+      alert(t('orders.cancelError', 'Failed to cancel order'));
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -377,1229 +379,530 @@ export default function Orders() {
     return Math.max(0, tendered - paymentOrder.total);
   };
 
-  // Navigate to payment screen for an order (opens full POS payment)
-  const handleCloseCheck = async (order) => {
-    // Store order ID and navigate - POSApp will fetch the full order
-    localStorage.setItem('pendingPaymentOrderId', order.id.toString());
-
-    // Store selected restaurant ID for the POS
-    if (order.restaurant?.id) {
-      localStorage.setItem('selectedRestaurantId', order.restaurant.id.toString());
-    }
-
-    // Navigate to POS payment screen
-    navigate('/pos?screen=payment');
-  };
-
-  // Open edit items modal
-  const handleEditItems = async (order) => {
-    setEditingOrder(order);
-    setEditItems(order.items?.map(item => ({
-      ...item,
-      isModified: false,
-      isDeleted: false
-    })) || []);
-
-    // Load products for the restaurant
-    if (order.restaurant?.id) {
-      try {
-        const response = await menuAPI.getProductsByRestaurant(order.restaurant.id);
-        setAvailableProducts(response.data.data || []);
-      } catch (error) {
-        console.error('Failed to load products:', error);
-      }
-    }
-
-    setNewItemProductId('');
-    setNewItemQuantity(1);
-    setEditModalOpen(true);
-  };
-
-  // Update item quantity in edit modal
-  const handleUpdateItemQuantity = (itemIndex, newQuantity) => {
-    if (newQuantity < 1) return;
-    setEditItems(prev => prev.map((item, idx) =>
-      idx === itemIndex
-        ? { ...item, quantity: newQuantity, isModified: true }
-        : item
-    ));
-  };
-
-  // Mark item for deletion in edit modal
-  const handleMarkItemDeleted = (itemIndex) => {
-    setEditItems(prev => prev.map((item, idx) =>
-      idx === itemIndex
-        ? { ...item, isDeleted: true }
-        : item
-    ));
-  };
-
-  // Restore deleted item in edit modal
-  const handleRestoreEditItem = (itemIndex) => {
-    setEditItems(prev => prev.map((item, idx) =>
-      idx === itemIndex
-        ? { ...item, isDeleted: false }
-        : item
-    ));
-  };
-
-  // Add new item
-  const handleAddNewItem = () => {
-    if (!newItemProductId) return;
-
-    const product = availableProducts.find(p => p.id === parseInt(newItemProductId));
-    if (!product) return;
-
-    setEditItems(prev => [...prev, {
-      id: null,
-      productId: product.id,
-      productName: product.name,
-      quantity: newItemQuantity,
-      unitPrice: product.basePrice || product.price,
-      totalPrice: (product.basePrice || product.price) * newItemQuantity,
-      isNew: true,
-      isModified: false,
-      isDeleted: false
-    }]);
-
-    setNewItemProductId('');
-    setNewItemQuantity(1);
-  };
-
-  // Save order item changes
-  const handleSaveItemChanges = async () => {
-    if (!editingOrder) return;
-
-    try {
-      // Process deletions
-      for (const item of editItems.filter(i => i.isDeleted && i.id)) {
-        await posAPI.removeItemFromOrder(editingOrder.id, item.id);
-      }
-
-      // Process quantity updates
-      for (const item of editItems.filter(i => i.isModified && !i.isDeleted && !i.isNew && i.id)) {
-        await posAPI.updateItemQuantity(editingOrder.id, item.id, item.quantity);
-      }
-
-      // Process new items
-      for (const item of editItems.filter(i => i.isNew && !i.isDeleted)) {
-        await posAPI.addItemToOrder(editingOrder.id, {
-          productId: item.productId,
-          quantity: item.quantity,
-          specialInstructions: ''
-        });
-      }
-
-      setEditModalOpen(false);
-      setEditingOrder(null);
-      loadOrders();
-      alert(t('orders.itemsUpdated', 'Order items updated successfully'));
-    } catch (error) {
-      console.error('Failed to update order items:', error);
-      alert(t('messages.error'));
-    }
-  };
-
-  const handleCreateOrder = async (e) => {
-    e.preventDefault();
-
-    if (formData.items.length === 0) {
-      alert(t('orders.messages.addAtLeastOneItem'));
-      return;
-    }
-
-    try {
-      const orderData = {
-        restaurantId: parseInt(formData.restaurantId),
-        orderSource: 'ADMIN_PANEL',
-        orderType: formData.orderType,
-        diningTableId: formData.orderType === 'DINE_IN' && formData.diningTableId
-          ? parseInt(formData.diningTableId)
-          : null,
-        customerInfo: {
-          firstName: formData.customerFirstName,
-          lastName: formData.customerLastName,
-          phone: formData.customerPhone,
-          email: formData.customerEmail
-        },
-        items: formData.items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          specialInstructions: item.specialInstructions || null
-        })),
-        deliveryInfo: formData.orderType === 'DELIVERY' ? {
-          address: formData.deliveryAddress,
-          city: formData.deliveryCity,
-          state: formData.deliveryState || null,
-          zipCode: formData.deliveryZipCode || null,
-          deliveryInstructions: null
-        } : null,
-        customerNotes: formData.customerNotes,
-        paymentMethod: formData.paymentMethod,
-        scheduledFor: null
-      };
-
-      await orderAPI.create(orderData);
-      setCreateModalOpen(false);
-      resetForm();
-      loadOrders();
-    } catch (error) {
-      console.error('Failed to create order:', error);
-      alert(t('orders.messages.createOrderError') + ': ' + (error.response?.data?.message || error.message));
-    }
-  };
-
-  const handleAddItem = () => {
-    if (!selectedProduct || selectedQuantity <= 0) return;
-
-    const product = products.find(p => p.id === parseInt(selectedProduct));
-    if (!product) return;
-
-    const newItem = {
-      productId: product.id,
-      productName: product.name,
-      quantity: parseInt(selectedQuantity),
-      unitPrice: product.price,
-      totalPrice: product.price * parseInt(selectedQuantity)
+  // Get table statistics
+  const getTableStats = () => {
+    const stats = {
+      total: tables.length,
+      available: tables.filter(t => t.status === 'AVAILABLE').length,
+      occupied: tables.filter(t => t.status === 'OCCUPIED').length,
+      reserved: tables.filter(t => t.status === 'RESERVED').length,
     };
-
-    setFormData({
-      ...formData,
-      items: [...formData.items, newItem]
-    });
-
-    setSelectedProduct('');
-    setSelectedQuantity(1);
+    return stats;
   };
 
-  const handleRemoveItem = (index) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter((_, i) => i !== index)
-    });
-  };
+  // Filter products by category
+  const filteredProducts = selectedCategory === 'all'
+    ? availableProducts
+    : availableProducts.filter(p => p.category?.name === selectedCategory);
 
-  const resetForm = () => {
-    setFormData({
-      restaurantId: '',
-      orderType: 'DELIVERY',
-      diningTableId: '',
-      customerFirstName: '',
-      customerLastName: '',
-      customerPhone: '',
-      customerEmail: '',
-      deliveryAddress: '',
-      deliveryCity: '',
-      deliveryState: '',
-      deliveryZipCode: '',
-      customerNotes: '',
-      paymentMethod: 'CARD',
-      items: []
-    });
-    setSelectedProduct('');
-    setSelectedQuantity(1);
-    setTables([]);
-  };
-
-  const calculateTotal = () => {
-    return formData.items.reduce((sum, item) => sum + item.totalPrice, 0);
-  };
-
-  const nextStatusMap = {
-    NEW: 'ACCEPTED',
-    ACCEPTED: 'PREPARING',
-    PREPARING: 'READY',
-    READY: 'COURIER_ASSIGNED',
-    COURIER_ASSIGNED: 'ON_DELIVERY',
-    ON_DELIVERY: 'DELIVERED',
-  };
+  const stats = getTableStats();
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-[calc(100vh-8rem)] flex flex-col">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-3xl font-bold">{t('orders.title')}</h1>
-          <p className="text-muted-foreground mt-1">
-            {viewMode === 'list' ? t('orders.allOrders') : t('orders.ordersByTable', 'Orders by Table')}
+          <h1 className="text-2xl font-bold">{t('orders.tableManagement', 'Table Management')}</h1>
+          <p className="text-sm text-muted-foreground">
+            {t('orders.selectTableToManage', 'Select a table to view and manage orders')}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* View Mode Toggle */}
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-                viewMode === 'list'
-                  ? 'bg-white shadow text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <List className="h-4 w-4" />
-              <span className="text-sm font-medium">{t('orders.listView', 'List')}</span>
-            </button>
-            <button
-              onClick={() => setViewMode('byTable')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${
-                viewMode === 'byTable'
-                  ? 'bg-white shadow text-blue-600'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              <span className="text-sm font-medium">{t('orders.tableView', 'By Table')}</span>
-            </button>
-          </div>
-          <Button onClick={() => setCreateModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('pages.orders.createOrder', 'Create Order')}
+          {/* Restaurant Selector */}
+          <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder={t('orders.selectRestaurant', 'Select Restaurant')} />
+            </SelectTrigger>
+            <SelectContent>
+              {restaurants.map((restaurant) => (
+                <SelectItem key={restaurant.id} value={restaurant.id.toString()}>
+                  {restaurant.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Refresh Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadTablesAndOrders}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {t('common.refresh', 'Refresh')}
           </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg">
-              <Filter className="h-5 w-5 inline mr-2" />
-              {t('pages.orders.filters', 'Filters')}
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={resetFilters}>
-              <X className="h-4 w-4 mr-1" />
-              {t('pages.orders.reset', 'Reset')}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("common.placeholders.searchOrderNumber")}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+      {/* Stats Bar */}
+      <div className="grid grid-cols-4 gap-3 mb-4">
+        <div className="bg-gray-50 rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold">{stats.total}</p>
+          <p className="text-xs text-muted-foreground">{t('orders.totalTables', 'Total Tables')}</p>
+        </div>
+        <div className="bg-green-50 rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold text-green-600">{stats.available}</p>
+          <p className="text-xs text-green-600">{t('orders.available', 'Available')}</p>
+        </div>
+        <div className="bg-orange-50 rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold text-orange-600">{stats.occupied}</p>
+          <p className="text-xs text-orange-600">{t('orders.occupied', 'Occupied')}</p>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-3 text-center">
+          <p className="text-2xl font-bold text-blue-600">{stats.reserved}</p>
+          <p className="text-xs text-blue-600">{t('orders.reserved', 'Reserved')}</p>
+        </div>
+      </div>
 
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("common.placeholders.allStatuses")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("orders.status.all")}</SelectItem>
-                <SelectItem value="NEW">{t("orders.status.new")}</SelectItem>
-                <SelectItem value="ACCEPTED">{t("orders.status.accepted")}</SelectItem>
-                <SelectItem value="PREPARING">{t("orders.status.preparing")}</SelectItem>
-                <SelectItem value="READY">{t("orders.status.ready")}</SelectItem>
-                <SelectItem value="COURIER_ASSIGNED">{t("orders.status.courierAssigned", "Courier Assigned")}</SelectItem>
-                <SelectItem value="ON_DELIVERY">{t("orders.status.onDelivery", "On Delivery")}</SelectItem>
-                <SelectItem value="DELIVERED">{t("orders.status.delivered")}</SelectItem>
-                <SelectItem value="CANCELLED">{t("orders.status.cancelled")}</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("common.placeholders.allRestaurants")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("pages.orders.allRestaurants", "All Restaurants")}</SelectItem>
-                {restaurants.map((restaurant) => (
-                  <SelectItem key={restaurant.id} value={restaurant.id.toString()}>
-                    {restaurant.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Input
-              type="date"
-              placeholder={t("common.placeholders.startDate")}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-
-            <Input
-              type="date"
-              placeholder={t("common.placeholders.endDate")}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* View Content */}
-      {viewMode === 'byTable' ? (
-        /* Table View */
-        <div className="space-y-4">
-          {selectedRestaurant === 'all' ? (
+      {/* Main Content - Tables Grid + Selected Table Panel */}
+      <div className="flex-1 flex gap-4 overflow-hidden">
+        {/* Tables Grid */}
+        <div className={`${selectedTable ? 'w-2/3' : 'w-full'} overflow-auto transition-all duration-300`}>
+          {tables.length === 0 ? (
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center py-8">
-                  <LayoutGrid className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <Utensils className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                   <p className="text-lg font-medium text-gray-900 mb-2">
-                    {t('orders.selectRestaurantForTableView', 'Select a Restaurant')}
+                    {t('orders.noTables', 'No Tables Found')}
                   </p>
                   <p className="text-muted-foreground">
-                    {t('orders.selectRestaurantDesc', 'Please select a restaurant from the filter above to view orders by table')}
+                    {t('orders.noTablesDesc', 'Add tables in the Restaurant settings')}
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : loadingTableView ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
-                  <span className="ml-3 text-lg">{t('common.loading')}</span>
                 </div>
               </CardContent>
             </Card>
           ) : (
-            <>
-              {/* Refresh Button */}
-              <div className="flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => loadTableView(parseInt(selectedRestaurant))}
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {tables.map((table) => {
+                const orders = tableOrders[table.id] || [];
+                const activeOrders = orders.filter(o => o.status !== 'CANCELLED' && o.status !== 'DELIVERED');
+                const hasOrders = activeOrders.length > 0;
+                const isSelected = selectedTable?.id === table.id;
+                const tableTotal = activeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+                return (
+                  <button
+                    key={table.id}
+                    onClick={() => handleTableClick(table)}
+                    className={`
+                      relative p-4 rounded-xl border-2 transition-all duration-200
+                      ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+                      ${tableStatusBgColors[table.status] || 'bg-gray-50 border-gray-200'}
+                      hover:shadow-lg hover:scale-105
+                    `}
+                  >
+                    {/* Table Icon */}
+                    <div className={`
+                      w-12 h-12 mx-auto rounded-lg flex items-center justify-center text-white mb-2
+                      ${tableStatusColors[table.status] || 'bg-gray-500'}
+                    `}>
+                      <span className="text-lg font-bold">{table.tableNumber}</span>
+                    </div>
+
+                    {/* Table Info */}
+                    <div className="text-center">
+                      <p className="font-medium text-sm truncate">
+                        {table.tableName || `Table ${table.tableNumber}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {table.capacity}
+                      </p>
+                    </div>
+
+                    {/* Orders Badge */}
+                    {hasOrders && (
+                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                        {activeOrders.length}
+                      </div>
+                    )}
+
+                    {/* Total Amount */}
+                    {hasOrders && tableTotal > 0 && (
+                      <div className="mt-2 bg-white/80 rounded px-2 py-1">
+                        <p className="text-sm font-bold text-gray-800">
+                          {tableTotal.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Status Indicator */}
+                    <div className="mt-2">
+                      <Badge
+                        variant="secondary"
+                        className={`text-xs ${
+                          table.status === 'AVAILABLE' ? 'bg-green-100 text-green-800' :
+                          table.status === 'OCCUPIED' ? 'bg-orange-100 text-orange-800' :
+                          table.status === 'RESERVED' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}
+                      >
+                        {t(`tables.status.${table.status?.toLowerCase()}`, table.status)}
+                      </Badge>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Selected Table Panel */}
+        {selectedTable && (
+          <div className="w-1/3 bg-white rounded-lg border shadow-lg overflow-hidden flex flex-col">
+            {/* Panel Header */}
+            <div className={`p-4 ${tableStatusBgColors[selectedTable.status]}`}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl font-bold">
+                    {t('orders.table', 'Table')} {selectedTable.tableNumber}
+                  </h2>
+                  {selectedTable.tableName && (
+                    <p className="text-sm text-muted-foreground">{selectedTable.tableName}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-2 text-sm">
+                    <span className="flex items-center gap-1">
+                      <Users className="h-4 w-4" />
+                      {t('orders.capacity', 'Capacity')}: {selectedTable.capacity}
+                    </span>
+                    {selectedTable.section && (
+                      <span>{selectedTable.section}</span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={closeTablePanel}
+                  className="p-1 hover:bg-black/10 rounded"
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  {t('common.refresh', 'Refresh')}
-                </Button>
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              {/* Tables Grid - Only show occupied tables */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {floorPlan?.tables?.filter(table => {
-                  const hasOrders = tableOrders[table.id]?.length > 0;
-                  const isOccupied = table.status === 'OCCUPIED';
-                  console.log(`Table ${table.id} (${table.tableNumber}): status=${table.status}, isOccupied=${isOccupied}, hasOrders=${hasOrders}`);
-                  return isOccupied; // Only show occupied tables, hide available ones
-                }).map((table) => {
-                  const ordersForTable = tableOrders[table.id] || [];
-                  console.log(`Rendering table ${table.id}: ${ordersForTable.length} orders`, ordersForTable);
-                  const tableTotal = ordersForTable.reduce((sum, order) => sum + (order.total || 0), 0);
+              {/* Table Status Badge */}
+              <Badge
+                className={`mt-2 ${
+                  selectedTable.status === 'AVAILABLE' ? 'bg-green-500' :
+                  selectedTable.status === 'OCCUPIED' ? 'bg-orange-500' :
+                  selectedTable.status === 'RESERVED' ? 'bg-blue-500' :
+                  'bg-gray-500'
+                } text-white`}
+              >
+                {t(`tables.status.${selectedTable.status?.toLowerCase()}`, selectedTable.status)}
+              </Badge>
+            </div>
 
-                  return (
-                    <Card key={table.id} className={`${table.status === 'OCCUPIED' ? 'border-orange-300 bg-orange-50' : 'border-gray-200'}`}>
-                      <CardHeader className="pb-2">
+            {/* Orders Section */}
+            <div className="flex-1 overflow-auto p-4">
+              {selectedTableOrders.length === 0 ? (
+                <div className="text-center py-8">
+                  <Coffee className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+                  <p className="text-muted-foreground mb-4">
+                    {t('orders.noOrdersForTable', 'No active orders for this table')}
+                  </p>
+                  {selectedTable.status === 'AVAILABLE' && (
+                    <Button onClick={handleCreateOrderForTable}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t('orders.createOrder', 'Create Order')}
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {selectedTableOrders.map((order) => (
+                    <Card key={order.id} className="overflow-hidden">
+                      <CardHeader className="py-3 bg-gray-50">
                         <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              table.status === 'OCCUPIED' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-600'
-                            }`}>
-                              <Utensils className="h-5 w-5" />
-                            </div>
-                            <div>
-                              <CardTitle className="text-lg">
-                                {t('orders.table', 'Table')} {table.tableNumber}
-                              </CardTitle>
-                              {table.section && (
-                                <p className="text-xs text-muted-foreground">{table.section}</p>
+                          <div>
+                            <p className="font-bold">#{order.orderNumber}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                              <Clock className="h-3 w-3" />
+                              {order.createdAt && format(new Date(order.createdAt), 'HH:mm')}
+                              {order.waiter && (
+                                <>
+                                  <span>•</span>
+                                  <Users className="h-3 w-3" />
+                                  {order.waiter.firstName || order.waiter.name}
+                                </>
                               )}
                             </div>
                           </div>
-                          <Badge className={table.status === 'OCCUPIED' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}>
-                            {t(`tables.status.${table.status?.toLowerCase()}`, table.status)}
+                          <Badge className={orderStatusColors[order.status]}>
+                            {t(`orders.statuses.${order.status}`, order.status)}
                           </Badge>
                         </div>
                       </CardHeader>
-                      <CardContent>
-                        {ordersForTable.length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            {t('orders.noActiveOrders', 'No active orders')}
-                          </p>
-                        ) : (
-                          <div className="space-y-3">
-                            {ordersForTable.map((order) => (
-                              <div key={order.id} className="border rounded-lg p-3 bg-white">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <p className="font-medium text-sm">#{order.orderNumber}</p>
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      <Clock className="h-3 w-3" />
-                                      {order.createdAt && format(new Date(order.createdAt), 'HH:mm')}
-                                      {order.waiter && (
-                                        <>
-                                          <span>•</span>
-                                          <Users className="h-3 w-3" />
-                                          {order.waiter.name}
-                                        </>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <Badge className={statusColors[order.status] || 'bg-gray-100'} variant="secondary">
-                                    {t(`orders.statuses.${order.status}`, order.status)}
-                                  </Badge>
-                                </div>
+                      <CardContent className="py-3">
+                        {/* Guest Count */}
+                        {order.guestCount && (
+                          <div className="flex items-center gap-2 text-sm mb-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span>{order.guestCount} {t('orders.guests', 'guests')}</span>
+                          </div>
+                        )}
 
-                                {/* Order Items Preview */}
-                                {order.items && order.items.length > 0 && (
-                                  <div className="text-xs text-muted-foreground mb-2 max-h-16 overflow-y-auto">
-                                    {order.items.slice(0, 3).map((item, idx) => (
-                                      <div key={idx} className="flex justify-between">
-                                        <span>{item.quantity}x {item.productName}</span>
-                                        <span>{item.totalPrice?.toFixed(0)}</span>
-                                      </div>
-                                    ))}
-                                    {order.items.length > 3 && (
-                                      <p className="text-center text-gray-400">+{order.items.length - 3} more items</p>
-                                    )}
-                                  </div>
-                                )}
-
-                                <div className="flex justify-between items-center pt-2 border-t">
-                                  <span className="font-semibold">{order.total?.toFixed(0)}</span>
-                                  <div className="flex gap-1 items-center">
-                                    {/* Print Receipt Button - Always visible */}
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => PrintReceipt(order)}
-                                      className="h-7 px-2"
-                                      title={t('orders.printReceipt', 'Print Receipt')}
-                                    >
-                                      <Printer className="h-3 w-3" />
-                                    </Button>
-                                    {(order.paymentStatus === 'COMPLETED' || order.fullyPaid) ? (
-                                      <Badge className="bg-green-100 text-green-800 h-7">
-                                        {t('orders.paid', 'Paid')}
-                                      </Badge>
-                                    ) : (
-                                      <>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleEditItems(order)}
-                                          className="h-7 px-2"
-                                          title={t('orders.editItems', 'Edit Items')}
-                                        >
-                                          <Edit className="h-3 w-3" />
-                                        </Button>
-                                        <Button
-                                          variant="default"
-                                          size="sm"
-                                          onClick={() => handleCloseCheck(order)}
-                                          className="h-7 px-2 bg-blue-600 hover:bg-blue-700"
-                                          title={t('orders.closeCheck', 'Close Check')}
-                                        >
-                                          <CreditCard className="h-3 w-3" />
-                                        </Button>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-
-                            {/* Table Total */}
-                            {ordersForTable.length > 1 && (
-                              <div className="flex justify-between items-center pt-2 border-t-2 border-dashed">
-                                <span className="font-semibold text-sm">{t('orders.tableTotal', 'Table Total')}</span>
-                                <span className="text-lg font-bold">{tableTotal.toFixed(0)}</span>
-                              </div>
+                        {/* Waiter Info */}
+                        {order.waiter && (
+                          <div className="bg-blue-50 rounded-lg p-2 mb-3">
+                            <p className="text-xs text-blue-600 font-medium">{t('orders.waiter', 'Waiter')}</p>
+                            <p className="font-medium">{order.waiter.firstName} {order.waiter.lastName}</p>
+                            {order.waiter.phone && (
+                              <p className="text-xs text-muted-foreground">{order.waiter.phone}</p>
                             )}
                           </div>
                         )}
+
+                        {/* Order Items - Full List */}
+                        {order.items && order.items.length > 0 && (
+                          <div className="space-y-1 mb-3">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">
+                              {t('orders.items', 'Items')} ({order.items.length})
+                            </p>
+                            <div className="max-h-40 overflow-y-auto space-y-1">
+                              {order.items.map((item, idx) => (
+                                <div key={idx} className="flex justify-between text-sm py-1 border-b border-gray-100 last:border-0">
+                                  <div className="flex-1">
+                                    <span className="font-medium">{item.quantity}x</span>{' '}
+                                    <span>{item.productName}</span>
+                                    {item.variantName && (
+                                      <span className="text-muted-foreground"> ({item.variantName})</span>
+                                    )}
+                                    {item.specialInstructions && (
+                                      <p className="text-xs text-orange-600 italic">{item.specialInstructions}</p>
+                                    )}
+                                  </div>
+                                  <span className="font-medium ml-2">
+                                    {(item.totalPrice || item.unitPrice * item.quantity)?.toLocaleString()}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Customer Notes */}
+                        {order.customerNotes && (
+                          <div className="bg-yellow-50 rounded-lg p-2 mb-3">
+                            <p className="text-xs text-yellow-700 font-medium">{t('orders.notes', 'Notes')}</p>
+                            <p className="text-sm">{order.customerNotes}</p>
+                          </div>
+                        )}
+
+                        {/* Order Totals */}
+                        <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+                          {order.subtotal && order.subtotal !== order.total && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{t('orders.subtotal', 'Subtotal')}</span>
+                              <span>{order.subtotal?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {order.tax > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{t('orders.tax', 'Tax')}</span>
+                              <span>{order.tax?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          {order.serviceFee > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{t('orders.serviceFee', 'Service Fee')}</span>
+                              <span>{order.serviceFee?.toLocaleString()}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between font-bold text-lg pt-1 border-t">
+                            <span>{t('orders.total', 'Total')}</span>
+                            <span>{order.total?.toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {/* Print Receipt */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => PrintReceipt(order)}
+                          >
+                            <Printer className="h-4 w-4 mr-1" />
+                            {t('orders.print', 'Print')}
+                          </Button>
+
+                          {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && !order.fullyPaid && (
+                            <>
+                              {/* Add Item */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleOpenAddItem}
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                {t('orders.addItem', 'Add Item')}
+                              </Button>
+
+                              {/* Pay Button */}
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => handleOpenPayment(order)}
+                              >
+                                <CreditCard className="h-4 w-4 mr-1" />
+                                {t('orders.pay', 'Pay')}
+                              </Button>
+
+                              {/* Cancel Order */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => {
+                                  setOrderToCancel(order);
+                                  setCancelModalOpen(true);
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 mr-1" />
+                                {t('orders.cancel', 'Cancel')}
+                              </Button>
+                            </>
+                          )}
+
+                          {(order.paymentStatus === 'COMPLETED' || order.fullyPaid) && (
+                            <Badge className="bg-green-100 text-green-800">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              {t('orders.paid', 'Paid')}
+                            </Badge>
+                          )}
+                        </div>
                       </CardContent>
                     </Card>
-                  );
-                })}
+                  ))}
 
-                {/* Empty State */}
-                {(!floorPlan?.tables || floorPlan.tables.filter(t => t.status === 'OCCUPIED').length === 0) && (
-                  <Card className="col-span-full">
-                    <CardContent className="pt-6">
-                      <div className="text-center py-8">
-                        <Utensils className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                        <p className="text-lg font-medium text-gray-900 mb-2">
-                          {t('orders.noActiveTableOrders', 'No Active Table Orders')}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {t('orders.noActiveTableOrdersDesc', 'There are no tables with active orders at the moment')}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        /* List View - Original Orders List */
-        <div className="space-y-4">
-          {filteredOrders.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">
-                  {t('common.noData')}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredOrders.map((order) => (
-              <Card key={order.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <CardTitle className="text-lg">
-                          {t('orders.orderNumber')}: #{order.orderNumber}
-                        </CardTitle>
-                        {/* Order Type Icon and Badge */}
-                        {order.orderType === 'DELIVERY' && (
-                          <Badge variant="outline" className="gap-1">
-                            <Truck className="h-3 w-3" />
-                            {t('orders.types.delivery') || 'Delivery'}
-                          </Badge>
-                        )}
-                        {order.orderType === 'TAKEAWAY' && (
-                          <Badge variant="outline" className="gap-1">
-                            <ShoppingBag className="h-3 w-3" />
-                            {t('orders.types.takeaway') || 'Takeaway'}
-                          </Badge>
-                        )}
-                        {order.orderType === 'DINE_IN' && (
-                          <Badge variant="outline" className="gap-1">
-                            <Utensils className="h-3 w-3" />
-                            {t('orders.types.dineIn') || 'Dine In'}
-                          </Badge>
-                        )}
-                        {/* Table Badge - Show for any order with table info */}
-                        {(order.diningTable || order.tableIds) && (
-                          <Badge className="gap-1 bg-blue-100 text-blue-800 hover:bg-blue-100">
-                            <Utensils className="h-3 w-3" />
-                            {t('orders.table', 'Table')} {order.diningTable?.tableNumber || order.tableIds}
-                            {order.diningTable?.section && ` (${order.diningTable.section})`}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {order.restaurant?.name || 'Restaurant'}
-                      </p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.createdAt && format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm')}
-                    </p>
-                  </div>
-                  <Badge className={statusColors[order.status] || 'bg-gray-100'}>
-                    {t(`orders.statuses.${order.status}`)}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-4 md:grid-cols-4">
-                  {/* Table Info - Always show if available */}
-                  {(order.diningTable || order.tableIds) && (
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <p className="text-sm font-medium text-blue-600">{t('orders.table', 'Table')}</p>
-                      <p className="text-xl font-bold text-blue-800">
-                        {order.diningTable?.tableNumber || order.tableIds}
-                      </p>
-                      {order.diningTable?.section && (
-                        <p className="text-xs text-blue-600">{order.diningTable.section}</p>
-                      )}
-                    </div>
-                  )}
-                  {order.waiter && (
-                    <div>
-                      <p className="text-sm font-medium">{t('orders.waiter', 'Waiter')}</p>
-                      <p className="text-lg font-bold">{order.waiter.name}</p>
-                    </div>
-                  )}
-                  {order.guestCount && (
-                    <div>
-                      <p className="text-sm font-medium">{t('orders.guests', 'Guests')}</p>
-                      <p className="text-lg font-bold flex items-center gap-1">
-                        <Users className="h-4 w-4" />
-                        {order.guestCount}
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">{t('orders.total')}</p>
-                    <p className="text-2xl font-bold">{order.total?.toFixed(0)}</p>
-                  </div>
-                </div>
-
-                {order.items && order.items.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-sm font-medium mb-2">{t('orders.items')}:</p>
-                    <div className="space-y-1">
-                      {order.items.map((item, idx) => (
-                        <div key={idx} className="text-sm text-muted-foreground flex justify-between">
-                          <span>{item.quantity}x {item.productName} {item.variantName ? `(${item.variantName})` : ''}</span>
-                          <span>{item.totalPrice?.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {order.deliveryInfo && (
-                  <div className="mt-4">
-                    <p className="text-sm font-medium">{t('orders.deliveryInfo.address')}:</p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.deliveryInfo.address}, {order.deliveryInfo.city}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {t('orders.deliveryInfo.contactName')}: {order.deliveryInfo.contactName}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {t('orders.deliveryInfo.contactPhone')}: {order.deliveryInfo.contactPhone}
-                    </p>
-                  </div>
-                )}
-
-                {order.customerNotes && (
-                  <div className="mt-4">
-                    <p className="text-sm font-medium">{t('orders.notes')}:</p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.customerNotes}
-                    </p>
-                  </div>
-                )}
-
-                {order.payment && (
-                  <div className="mt-4">
-                    <p className="text-sm font-medium">{t('orders.payment')}:</p>
-                    <p className="text-sm text-muted-foreground">
-                      {t(`orders.paymentMethods.${order.payment.method}`)} - {t(`orders.paymentStatus.${order.payment.status}`)}
-                    </p>
-                  </div>
-                )}
-
-                <div className="mt-4 flex gap-2 flex-wrap">
-                  {/* Print Button - Always visible */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => PrintReceipt(order)}
-                    className="gap-1"
-                  >
-                    <Printer className="h-4 w-4" />
-                    {t('orders.printReceipt') || 'Print Receipt'}
-                  </Button>
-
-                  {/* Edit Items Button - Only for open orders */}
-                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditItems(order)}
-                      className="gap-1"
-                    >
-                      <Edit className="h-4 w-4" />
-                      {t('orders.editItems', 'Edit Items')}
+                  {/* Add New Order Button (only if all orders are closed) */}
+                  {selectedTableOrders.every(o =>
+                    o.status === 'CANCELLED' || o.status === 'DELIVERED' || o.fullyPaid
+                  ) && selectedTable.status === 'AVAILABLE' && (
+                    <Button onClick={handleCreateOrderForTable} className="w-full">
+                      <Plus className="h-4 w-4 mr-2" />
+                      {t('orders.createNewOrder', 'Create New Order')}
                     </Button>
                   )}
-
-                  {/* Close Check / Pay Button - For unpaid open orders */}
-                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && order.paymentStatus !== 'COMPLETED' && !order.fullyPaid && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleCloseCheck(order)}
-                      className="gap-1 bg-blue-600 hover:bg-blue-700"
-                    >
-                      <CreditCard className="h-4 w-4" />
-                      {t('orders.closeCheck', 'Close Check')}
-                    </Button>
-                  )}
-
-                  {/* Close Table Button - Only for unpaid dine-in orders */}
-                  {order.orderType === 'DINE_IN' && order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && order.paymentStatus !== 'COMPLETED' && !order.fullyPaid && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleCloseTable(order)}
-                      className="gap-1 text-green-600 hover:text-green-700"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      {t('orders.closeTable', 'Close Table')}
-                    </Button>
-                  )}
-
-                  {/* Show paid badge for fully paid orders */}
-                  {(order.paymentStatus === 'COMPLETED' || order.fullyPaid) && (
-                    <Badge className="bg-green-100 text-green-800">
-                      {t('orders.paid', 'Paid')}
-                    </Badge>
-                  )}
-
-                  {/* Cancel Order Button */}
-                  {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateOrderStatus(order.id, 'CANCELLED')}
-                    >
-                      {t('orders.cancelOrder')}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-        </div>
-      )}
-
-      {/* Create Order Modal */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('pages.orders.createNewOrder', 'Create New Order')}</DialogTitle>
-            <DialogDescription>
-              {t('pages.orders.createOrderDescription', 'Create a new order for a customer')}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateOrder}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="restaurantId">{t('pages.orders.restaurant', 'Restaurant')} *</Label>
-                <Select
-                  value={formData.restaurantId}
-                  onValueChange={(value) => {
-                    setFormData({ ...formData, restaurantId: value, diningTableId: '' });
-                    loadProducts(parseInt(value));
-                    if (formData.orderType === 'DINE_IN') {
-                      loadTables(parseInt(value));
-                    }
-                  }}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("common.placeholders.selectRestaurant")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {restaurants.map((restaurant) => (
-                      <SelectItem key={restaurant.id} value={restaurant.id.toString()}>
-                        {restaurant.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Order Type Selection */}
-              <div className="space-y-2">
-                <Label>{t('pages.orders.orderType', 'Order Type')} *</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, orderType: 'DELIVERY', diningTableId: '' });
-                    }}
-                    className={`flex flex-col items-center justify-center p-4 border-2 rounded-lg transition-all ${
-                      formData.orderType === 'DELIVERY'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <Truck className="h-6 w-6 mb-2" />
-                    <span className="font-medium">{t('pages.orders.delivery', 'Delivery')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, orderType: 'TAKEAWAY', diningTableId: '' });
-                    }}
-                    className={`flex flex-col items-center justify-center p-4 border-2 rounded-lg transition-all ${
-                      formData.orderType === 'TAKEAWAY'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <ShoppingBag className="h-6 w-6 mb-2" />
-                    <span className="font-medium">{t('pages.orders.takeaway', 'Takeaway')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, orderType: 'DINE_IN', diningTableId: '' });
-                      if (formData.restaurantId) {
-                        loadTables(parseInt(formData.restaurantId));
-                      }
-                    }}
-                    className={`flex flex-col items-center justify-center p-4 border-2 rounded-lg transition-all ${
-                      formData.orderType === 'DINE_IN'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <Utensils className="h-6 w-6 mb-2" />
-                    <span className="font-medium">{t('pages.orders.dineIn', 'Dine-In')}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Table Selection for Dine-In Orders */}
-              {formData.orderType === 'DINE_IN' && (
-                <div className="space-y-2">
-                  <Label htmlFor="diningTableId">{t('pages.orders.selectTable', 'Select Table')} *</Label>
-                  <Select
-                    value={formData.diningTableId}
-                    onValueChange={(value) => setFormData({ ...formData, diningTableId: value })}
-                    required={formData.orderType === 'DINE_IN'}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("common.placeholders.selectTable")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tables.length === 0 ? (
-                        <SelectItem value="no-tables" disabled>
-                          {t('pages.orders.noAvailableTables', 'No available tables')}
-                        </SelectItem>
-                      ) : (
-                        tables.map((table) => (
-                          <SelectItem key={table.id} value={table.id.toString()}>
-                            {t('pages.orders.table', 'Table')} {table.tableNumber} {table.tableName ? `- ${table.tableName}` : ''}
-                            ({t('pages.orders.capacity', 'Capacity')}: {table.capacity})
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customerFirstName">{t('pages.orders.firstName', 'First Name')} *</Label>
-                  <Input
-                    id="customerFirstName"
-                    value={formData.customerFirstName}
-                    onChange={(e) => setFormData({ ...formData, customerFirstName: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="customerLastName">{t('pages.orders.lastName', 'Last Name')} *</Label>
-                  <Input
-                    id="customerLastName"
-                    value={formData.customerLastName}
-                    onChange={(e) => setFormData({ ...formData, customerLastName: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customerPhone">{t('pages.orders.customerPhone', 'Customer Phone')} *</Label>
-                  <Input
-                    id="customerPhone"
-                    type="tel"
-                    value={formData.customerPhone}
-                    onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="customerEmail">{t('pages.orders.customerEmail', 'Customer Email')}</Label>
-                  <Input
-                    id="customerEmail"
-                    type="email"
-                    value={formData.customerEmail}
-                    onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              {/* Delivery Address Fields - Only for Delivery Orders */}
-              {formData.orderType === 'DELIVERY' && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="deliveryAddress">{t('pages.orders.deliveryAddress', 'Delivery Address')} *</Label>
-                    <Input
-                      id="deliveryAddress"
-                      value={formData.deliveryAddress}
-                      onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="deliveryCity">{t('pages.orders.city', 'City')} *</Label>
-                      <Input
-                        id="deliveryCity"
-                        value={formData.deliveryCity}
-                        onChange={(e) => setFormData({ ...formData, deliveryCity: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="deliveryState">{t('pages.orders.state', 'State')}</Label>
-                      <Input
-                        id="deliveryState"
-                        value={formData.deliveryState}
-                        onChange={(e) => setFormData({ ...formData, deliveryState: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="deliveryZipCode">{t('pages.orders.zipCode', 'ZIP Code')}</Label>
-                    <Input
-                      id="deliveryZipCode"
-                      value={formData.deliveryZipCode}
-                      onChange={(e) => setFormData({ ...formData, deliveryZipCode: e.target.value })}
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="paymentMethod">{t('pages.orders.paymentMethod', 'Payment Method')} *</Label>
-                <Select
-                  value={formData.paymentMethod}
-                  onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('pages.orders.selectPaymentMethod', 'Select payment method')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CARD">{t("orders.paymentMethod.card")}</SelectItem>
-                    <SelectItem value="CASH">{t("orders.paymentMethod.cash")}</SelectItem>
-                    <SelectItem value="ONLINE">{t("orders.paymentMethod.online")}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="customerNotes">{t('pages.orders.customerNotes', 'Customer Notes')}</Label>
-                <Textarea
-                  id="customerNotes"
-                  value={formData.customerNotes}
-                  onChange={(e) => setFormData({ ...formData, customerNotes: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              {/* Add Items Section */}
-              <div className="border-t pt-4">
-                <Label className="text-base font-semibold">{t('pages.orders.orderItems', 'Order Items')}</Label>
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  <div className="col-span-2">
-                    <Select
-                      value={selectedProduct}
-                      onValueChange={setSelectedProduct}
-                      disabled={!formData.restaurantId}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("common.placeholders.selectProduct")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products.map((product) => (
-                          <SelectItem key={product.id} value={product.id.toString()}>
-                            {product.name} - {product.price?.toFixed(2)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      min="1"
-                      value={selectedQuantity}
-                      onChange={(e) => setSelectedQuantity(parseInt(e.target.value) || 1)}
-                      placeholder={t("common.placeholders.quantity")}
-                    />
-                    <Button type="button" onClick={handleAddItem} disabled={!selectedProduct}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Items List */}
-                {formData.items.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    {formData.items.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <span className="text-sm">
-                          {item.quantity}x {item.productName}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{item.totalPrice.toFixed(2)}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveItem(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                    <div className="flex justify-between items-center p-2 bg-blue-50 rounded font-semibold">
-                      <span>{t('pages.orders.total', 'Total')}</span>
-                      <span>{calculateTotal().toFixed(2)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => { setCreateModalOpen(false); resetForm(); }}>
-                {t('pages.orders.cancel', 'Cancel')}
-              </Button>
-              <Button type="submit" disabled={formData.items.length === 0}>
-                {t('pages.orders.createOrder', 'Create Order')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
 
-      {/* Edit Order Items Modal */}
-      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Table Total (if multiple orders) */}
+            {selectedTableOrders.filter(o => o.status !== 'CANCELLED' && !o.fullyPaid).length > 1 && (
+              <div className="p-4 border-t bg-gray-50">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">{t('orders.tableTotal', 'Table Total')}</span>
+                  <span className="text-xl font-bold">
+                    {selectedTableOrders
+                      .filter(o => o.status !== 'CANCELLED' && !o.fullyPaid)
+                      .reduce((sum, o) => sum + (o.total || 0), 0)
+                      .toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Add Item Modal */}
+      <Dialog open={addItemModalOpen} onOpenChange={setAddItemModalOpen}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{t('orders.editOrderItems', 'Edit Order Items')}</DialogTitle>
-            <DialogDescription>
-              {t('orders.editOrderItemsDesc', 'Modify items in order')} #{editingOrder?.orderNumber}
-            </DialogDescription>
+            <DialogTitle>{t('orders.addItemToOrder', 'Add Item to Order')}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Current Items */}
-            <div className="space-y-2">
-              <Label>{t('orders.currentItems', 'Current Items')}</Label>
-              {editItems.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t('orders.noItems', 'No items')}</p>
-              ) : (
-                <div className="space-y-2">
-                  {editItems.map((item, index) => (
-                    <div
-                      key={index}
-                      className={`flex items-center justify-between p-3 rounded-lg border ${
-                        item.isDeleted ? 'bg-red-50 border-red-200 opacity-50' :
-                        item.isNew ? 'bg-green-50 border-green-200' :
-                        item.isModified ? 'bg-yellow-50 border-yellow-200' :
-                        'bg-gray-50 border-gray-200'
-                      }`}
-                    >
-                      <div className="flex-1">
-                        <p className={`font-medium ${item.isDeleted ? 'line-through' : ''}`}>
-                          {item.productName}
-                          {item.variantName && ` (${item.variantName})`}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {(item.unitPrice || item.price || 0).toFixed(2)} x {item.quantity} = {((item.unitPrice || item.price || 0) * item.quantity).toFixed(2)}
-                        </p>
-                      </div>
-
-                      {!item.isDeleted ? (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleUpdateItemQuantity(index, item.quantity - 1)}
-                            disabled={item.quantity <= 1}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                          <span className="w-8 text-center font-medium">{item.quantity}</span>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleUpdateItemQuantity(index, item.quantity + 1)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleMarkItemDeleted(index)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRestoreEditItem(index)}
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          {t('orders.restore', 'Restore')}
-                        </Button>
-                      )}
-                    </div>
+            {/* Category Filter */}
+            <div>
+              <Label>{t('orders.category', 'Category')}</Label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('orders.allCategories', 'All Categories')}</SelectItem>
+                  {productCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
-                </div>
-              )}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Add New Item */}
-            <div className="border-t pt-4">
-              <Label>{t('orders.addNewItem', 'Add New Item')}</Label>
-              <div className="flex gap-2 mt-2">
-                <Select value={newItemProductId} onValueChange={setNewItemProductId}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder={t('orders.selectProduct', 'Select product')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableProducts.map((product) => (
-                      <SelectItem key={product.id} value={product.id.toString()}>
-                        {product.name} - {(product.basePrice || product.price || 0).toFixed(2)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Product Selection */}
+            <div>
+              <Label>{t('orders.product', 'Product')}</Label>
+              <Select value={newItemProductId} onValueChange={setNewItemProductId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('orders.selectProduct', 'Select product')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredProducts.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name} - {(product.basePrice || product.price)?.toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Quantity */}
+            <div>
+              <Label>{t('orders.quantity', 'Quantity')}</Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
                 <Input
                   type="number"
                   min="1"
                   value={newItemQuantity}
                   onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                  className="w-20"
+                  className="w-20 text-center"
                 />
-                <Button type="button" onClick={handleAddNewItem} disabled={!newItemProductId}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setNewItemQuantity(newItemQuantity + 1)}
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div className="border-t pt-4">
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg font-semibold">
-                <span>{t('orders.newTotal', 'New Total')}</span>
-                <span>
-                  {editItems
-                    .filter(i => !i.isDeleted)
-                    .reduce((sum, item) => sum + (item.unitPrice || item.price || 0) * item.quantity, 0)
-                    .toFixed(2)}
-                </span>
               </div>
             </div>
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setEditModalOpen(false)}>
+            <Button variant="outline" onClick={() => setAddItemModalOpen(false)}>
               {t('common.cancel', 'Cancel')}
             </Button>
-            <Button type="button" onClick={handleSaveItemChanges}>
-              {t('orders.saveChanges', 'Save Changes')}
+            <Button
+              onClick={() => {
+                const activeOrder = selectedTableOrders.find(o =>
+                  o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && !o.fullyPaid
+                );
+                if (activeOrder) {
+                  handleAddItemToOrder(activeOrder.id);
+                }
+              }}
+              disabled={!newItemProductId || addingItem}
+            >
+              {addingItem ? t('common.adding', 'Adding...') : t('orders.addItem', 'Add Item')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1611,32 +914,32 @@ export default function Orders() {
           <DialogHeader>
             <DialogTitle>{t('orders.processPayment', 'Process Payment')}</DialogTitle>
             <DialogDescription>
-              {t('orders.processPaymentDesc', 'Complete payment for order')} #{paymentOrder?.orderNumber}
+              {t('orders.order', 'Order')} #{paymentOrder?.orderNumber}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
+          <div className="space-y-6">
             {/* Order Summary */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <div className="flex justify-between mb-2">
-                <span className="text-sm text-muted-foreground">{t('orders.subtotal', 'Subtotal')}</span>
-                <span className="font-medium">{paymentOrder?.subtotal?.toFixed(2)}</span>
+                <span className="text-muted-foreground">{t('orders.subtotal', 'Subtotal')}</span>
+                <span>{paymentOrder?.subtotal?.toLocaleString()}</span>
               </div>
               {paymentOrder?.tax > 0 && (
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">{t('orders.tax', 'Tax')}</span>
-                  <span className="font-medium">{paymentOrder?.tax?.toFixed(2)}</span>
+                  <span className="text-muted-foreground">{t('orders.tax', 'Tax')}</span>
+                  <span>{paymentOrder?.tax?.toLocaleString()}</span>
                 </div>
               )}
-              <div className="flex justify-between pt-2 border-t">
-                <span className="font-semibold">{t('orders.total', 'Total')}</span>
-                <span className="text-xl font-bold">{paymentOrder?.total?.toFixed(2)}</span>
+              <div className="flex justify-between pt-2 border-t font-bold">
+                <span>{t('orders.total', 'Total')}</span>
+                <span className="text-xl">{paymentOrder?.total?.toLocaleString()}</span>
               </div>
             </div>
 
             {/* Payment Method Selection */}
-            <div className="space-y-2">
-              <Label>{t('orders.selectPaymentMethod', 'Payment Method')}</Label>
+            <div>
+              <Label className="mb-2 block">{t('orders.paymentMethod', 'Payment Method')}</Label>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
@@ -1648,7 +951,7 @@ export default function Orders() {
                   }`}
                 >
                   <Banknote className="h-6 w-6 mb-2" />
-                  <span className="text-sm font-medium">{t('orders.paymentMethods.CASH', 'Cash')}</span>
+                  <span className="text-sm font-medium">{t('orders.cash', 'Cash')}</span>
                 </button>
                 <button
                   type="button"
@@ -1660,7 +963,7 @@ export default function Orders() {
                   }`}
                 >
                   <CreditCard className="h-6 w-6 mb-2" />
-                  <span className="text-sm font-medium">{t('orders.paymentMethods.CARD', 'Card')}</span>
+                  <span className="text-sm font-medium">{t('orders.card', 'Card')}</span>
                 </button>
                 <button
                   type="button"
@@ -1672,7 +975,7 @@ export default function Orders() {
                   }`}
                 >
                   <Wallet className="h-6 w-6 mb-2" />
-                  <span className="text-sm font-medium">{t('orders.paymentMethods.ONLINE', 'Online')}</span>
+                  <span className="text-sm font-medium">{t('orders.online', 'Online')}</span>
                 </button>
               </div>
             </div>
@@ -1680,17 +983,16 @@ export default function Orders() {
             {/* Cash Payment - Amount Tendered */}
             {paymentMethod === 'CASH' && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amountTendered">{t('orders.amountTendered', 'Amount Tendered')}</Label>
+                <div>
+                  <Label>{t('orders.amountTendered', 'Amount Tendered')}</Label>
                   <Input
-                    id="amountTendered"
                     type="number"
-                    step="0.01"
+                    step="1000"
                     min={paymentOrder?.total || 0}
                     value={amountTendered}
                     onChange={(e) => setAmountTendered(e.target.value)}
-                    placeholder={paymentOrder?.total?.toFixed(2)}
-                    className="text-lg"
+                    placeholder={paymentOrder?.total?.toString()}
+                    className="text-lg mt-1"
                   />
                 </div>
 
@@ -1713,9 +1015,9 @@ export default function Orders() {
                 {parseFloat(amountTendered) >= (paymentOrder?.total || 0) && (
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <div className="flex justify-between items-center">
-                      <span className="font-medium text-green-800">{t('orders.changeDue', 'Change Due')}</span>
+                      <span className="font-medium text-green-800">{t('orders.change', 'Change')}</span>
                       <span className="text-2xl font-bold text-green-700">
-                        {calculateChange().toFixed(2)}
+                        {calculateChange().toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -1726,7 +1028,6 @@ export default function Orders() {
 
           <DialogFooter>
             <Button
-              type="button"
               variant="outline"
               onClick={() => {
                 setPaymentModalOpen(false);
@@ -1737,12 +1038,51 @@ export default function Orders() {
               {t('common.cancel', 'Cancel')}
             </Button>
             <Button
-              type="button"
-              onClick={handleProcessPaymentAndClose}
+              onClick={handleProcessPayment}
               disabled={processingPayment || (paymentMethod === 'CASH' && parseFloat(amountTendered) < (paymentOrder?.total || 0))}
               className="bg-green-600 hover:bg-green-700"
             >
-              {processingPayment ? t('common.processing', 'Processing...') : t('orders.completePayment', 'Complete Payment')}
+              {processingPayment
+                ? t('common.processing', 'Processing...')
+                : t('orders.completePayment', 'Complete Payment')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Order Confirmation Modal */}
+      <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              {t('orders.cancelOrderConfirm', 'Cancel Order?')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('orders.cancelOrderDesc', 'Are you sure you want to cancel order')} #{orderToCancel?.orderNumber}?
+              {t('orders.cancelOrderNote', ' This action cannot be undone.')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelModalOpen(false);
+                setOrderToCancel(null);
+              }}
+              disabled={cancelling}
+            >
+              {t('common.no', 'No')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelOrder}
+              disabled={cancelling}
+            >
+              {cancelling
+                ? t('common.cancelling', 'Cancelling...')
+                : t('orders.yesCancel', 'Yes, Cancel')}
             </Button>
           </DialogFooter>
         </DialogContent>
