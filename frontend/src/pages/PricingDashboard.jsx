@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import {
 import { pricingAPI, restaurantAPI } from '@/services/api';
 
 const PricingDashboard = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(searchParams.get('restaurantId') || '');
@@ -148,7 +150,7 @@ const PricingDashboard = () => {
           </div>
           <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select restaurant" />
+              <SelectValue placeholder={t('common.selectRestaurant', 'Select restaurant')} />
             </SelectTrigger>
             <SelectContent>
               {restaurants.map((r) => (

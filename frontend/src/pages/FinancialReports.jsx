@@ -119,7 +119,7 @@ const FinancialReports = () => {
       await loadReports(selectedRestaurant);
     } catch (error) {
       console.error('Failed to initialize accounts:', error);
-      alert(t('finance.reports.initializationFailed') || 'Failed to initialize Chart of Accounts');
+      alert(t('finance.reports.initializationFailed', 'Failed to initialize Chart of Accounts'));
     } finally {
       setInitializingAccounts(false);
     }
@@ -492,7 +492,7 @@ const FinancialReports = () => {
   const handleReinitialize = async () => {
     if (!selectedRestaurant) return;
 
-    if (!confirm(t('finance.reports.confirmReinitialize') || 'This will reset all accounts to default values. Existing account balances will be preserved. Continue?')) {
+    if (!confirm(t('finance.reports.confirmReinitialize', 'This will reset all accounts to default values. Existing account balances will be preserved. Continue?'))) {
       return;
     }
 
@@ -500,10 +500,10 @@ const FinancialReports = () => {
     try {
       await financialAPI.initializeAccounts(selectedRestaurant);
       await loadReports(selectedRestaurant);
-      alert(t('finance.reports.reinitializeSuccess') || 'Chart of Accounts re-initialized successfully');
+      alert(t('finance.reports.reinitializeSuccess', 'Chart of Accounts re-initialized successfully'));
     } catch (error) {
       console.error('Failed to re-initialize accounts:', error);
-      alert(t('finance.reports.initializationFailed') || 'Failed to initialize Chart of Accounts');
+      alert(t('finance.reports.initializationFailed', 'Failed to initialize Chart of Accounts'));
     } finally {
       setInitializingAccounts(false);
     }
@@ -522,7 +522,7 @@ const FinancialReports = () => {
               onChange={(e) => setSelectedRestaurant(e.target.value ? parseInt(e.target.value) : null)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
             >
-              <option value="">{t('finance.common.selectRestaurant') || 'Select Restaurant'}</option>
+              <option value="">{t('finance.common.selectRestaurant', 'Select Restaurant')}</option>
               {restaurants.map((restaurant) => (
                 <option key={restaurant.id} value={restaurant.id}>
                   {restaurant.name}
@@ -538,19 +538,19 @@ const FinancialReports = () => {
                 onClick={handleRefresh}
                 disabled={loading}
                 className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                title={t('finance.reports.refresh') || 'Refresh Reports'}
+                title={t('finance.reports.refresh', 'Refresh Reports')}
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                {t('finance.reports.refresh') || 'Refresh'}
+                {t('finance.reports.refresh', 'Refresh')}
               </button>
               <button
                 onClick={handleReinitialize}
                 disabled={initializingAccounts}
                 className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                title={t('finance.reports.reinitializeAccounts') || 'Re-initialize Accounts'}
+                title={t('finance.reports.reinitializeAccounts', 'Re-initialize Accounts')}
               >
                 <Settings className={`h-4 w-4 mr-2 ${initializingAccounts ? 'animate-spin' : ''}`} />
-                {t('finance.reports.initializeAccounts') || 'Initialize Accounts'}
+                {t('finance.reports.initializeAccounts', 'Initialize Accounts')}
               </button>
             </div>
           )}
@@ -565,7 +565,7 @@ const FinancialReports = () => {
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              {t('finance.reports.daily') || 'Daily'}
+              {t('finance.reports.daily', 'Daily')}
             </button>
             <button
               onClick={() => handlePeriodChange('monthly')}
@@ -575,7 +575,7 @@ const FinancialReports = () => {
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              {t('finance.reports.monthly') || 'Monthly'}
+              {t('finance.reports.monthly', 'Monthly')}
             </button>
           </div>
 
@@ -670,11 +670,11 @@ const FinancialReports = () => {
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 max-w-lg text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
             <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-              {t('finance.reports.noAccountsTitle') || 'Chart of Accounts Not Initialized'}
+              {t('finance.reports.noAccountsTitle', 'Chart of Accounts Not Initialized')}
             </h3>
             <p className="text-yellow-700 mb-6">
-              {t('finance.reports.noAccountsDescription') ||
-                'Financial reports require a Chart of Accounts to be set up first. Initialize the default accounts to start tracking revenue, expenses, and generating financial reports.'}
+              {t('finance.reports.noAccountsDescription',
+                'Financial reports require a Chart of Accounts to be set up first. Initialize the default accounts to start tracking revenue, expenses, and generating financial reports.')}
             </p>
             <button
               onClick={initializeChartOfAccounts}
@@ -684,11 +684,11 @@ const FinancialReports = () => {
               {initializingAccounts ? (
                 <>
                   <RefreshCw className="animate-spin -ml-1 mr-2 h-5 w-5" />
-                  {t('finance.reports.initializing') || 'Initializing...'}
+                  {t('finance.reports.initializing', 'Initializing...')}
                 </>
               ) : (
                 <>
-                  {t('finance.reports.initializeAccounts') || 'Initialize Chart of Accounts'}
+                  {t('finance.reports.initializeAccounts', 'Initialize Chart of Accounts')}
                 </>
               )}
             </button>

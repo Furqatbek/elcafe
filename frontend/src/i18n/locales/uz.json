@@ -721,7 +721,8 @@
     },
     "messages": {
       "saveSuccess": "Ish vaqti muvaffaqiyatli saqlandi",
-      "saveError": "Ish vaqtini saqlab bo'lmadi"
+      "saveError": "Ish vaqtini saqlab bo'lmadi",
+      "selectRestaurant": "Iltimos, restoranni tanlang"
     }
   },
   "finance": {

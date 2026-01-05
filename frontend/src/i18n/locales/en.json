@@ -1022,7 +1022,8 @@
     },
     "messages": {
       "saveSuccess": "Working hours saved successfully",
-      "saveError": "Failed to save working hours"
+      "saveError": "Failed to save working hours",
+      "selectRestaurant": "Please select a restaurant"
     }
   },
   "finance": {
