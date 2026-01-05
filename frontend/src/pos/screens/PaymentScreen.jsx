@@ -19,6 +19,7 @@ import VoidOrderDialog from '../components/VoidOrderDialog';
 import RefundDialog from '../components/RefundDialog';
 import usePOSStore from '../store/posStore';
 import { posAPI } from '../../services/api';
+import PrintReceipt from '../../components/PrintReceipt';
 
 /**
  * PaymentScreen - Payment processing and tender collection
@@ -99,6 +100,30 @@ const PaymentScreen = () => {
     }
   };
 
+  // Helper function to prepare and print receipt
+  const printOrderReceipt = (orderNumber) => {
+    const receiptData = {
+      orderNumber: orderNumber || currentOrder.orderNumber,
+      items: currentOrder.items.map(item => ({
+        productName: item.name,
+        unitPrice: item.basePrice + (item.modifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0),
+        quantity: item.quantity,
+        totalPrice: item.itemTotal,
+        variantName: item.modifiers?.map(m => m.name).join(', ') || null,
+      })),
+      subtotal: subtotal,
+      tax: tax,
+      deliveryFee: deliveryFee,
+      serviceFee: serviceFee,
+      serviceFeePercent: currentOrder.serviceFeePercent,
+      total: grandTotal,
+      diningTable: customer.tableNumber ? { tableNumber: customer.tableNumber } : null,
+      customerNotes: currentOrder.notes || null,
+    };
+
+    PrintReceipt(receiptData);
+  };
+
   const handlePaymentComplete = async (paymentData) => {
     setProcessingPayment(true);
     setPaymentError(null);
@@ -131,13 +156,16 @@ const PaymentScreen = () => {
             // Order fully paid - close order and release table
             await posAPI.closeOrder(currentOrder.id);
             setPaymentStatus('COMPLETED');
+            printOrderReceipt(response.data.data?.orderNumber || currentOrder.orderNumber);
             completeOrder();
           }
         } else {
           // Single payment - close order and release table
           await posAPI.closeOrder(currentOrder.id);
           setPaymentStatus('COMPLETED');
-          usePOSStore.getState().currentOrder.orderNumber = response.data.data?.orderNumber;
+          const orderNum = response.data.data?.orderNumber;
+          usePOSStore.getState().currentOrder.orderNumber = orderNum;
+          printOrderReceipt(orderNum);
           completeOrder();
         }
 
@@ -210,7 +238,9 @@ const PaymentScreen = () => {
         }
 
         setPaymentStatus('COMPLETED');
-        usePOSStore.getState().currentOrder.orderNumber = response.data.data.orderNumber;
+        const orderNum = response.data.data.orderNumber;
+        usePOSStore.getState().currentOrder.orderNumber = orderNum;
+        printOrderReceipt(orderNum);
         completeOrder();
       }
 
