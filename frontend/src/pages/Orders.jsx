@@ -327,6 +327,15 @@ export default function Orders() {
       // Close order and release table
       await posAPI.closeOrder(paymentOrder.id);
 
+      // Print receipt with updated totals
+      const receiptData = {
+        ...paymentOrder,
+        serviceFeePercent: serviceFeePercent,
+        serviceFee: serviceFeeAmount,
+        total: finalTotal
+      };
+      PrintReceipt(receiptData);
+
       setPaymentModalOpen(false);
       setPaymentOrder(null);
 
