@@ -307,6 +307,7 @@
     "adding": "Adding...",
     "processing": "Processing...",
     "cancelling": "Cancelling...",
+    "back": "Back",
     "selectLanguage": "Select Language",
     "language": "Language",
     "min": "Min",
@@ -1938,7 +1939,8 @@
       "viewMode": {
         "grid": "Grid View",
         "list": "List View"
-      }
+      },
+      "categories": "Categories"
     },
     "cart": {
       "title": "Cart",
@@ -1976,7 +1978,11 @@
       "specialInstructions": "Add special instructions...",
       "itemNotes": "Item Notes",
       "stockWarning": "Stock Warning",
-      "cannotProceed": "Please remove or adjust unavailable items before proceeding."
+      "cannotProceed": "Please remove or adjust unavailable items before proceeding.",
+      "details": "Details",
+      "proceed": "Proceed",
+      "review": "Review",
+      "orderDetails": "Order Details"
     },
     "modifiers": {
       "title": "Customize Your Order",
@@ -2071,7 +2077,16 @@
       "errors": {
         "deliveryAddressRequired": "Delivery address is required for delivery orders",
         "paymentFailed": "Payment failed. Please try again."
-      }
+      },
+      "split": "Split",
+      "splitPaymentMode": "Split Payment Mode",
+      "remainingBalance": "Remaining Balance",
+      "paymentsReceived": "Payments Received",
+      "totalPaid": "Total Paid",
+      "orderPaid": "Order Fully Paid",
+      "completeOrder": "Complete Order",
+      "refund": "Refund",
+      "voidOrder": "Void Order"
     },
     "confirmation": {
       "title": "Order Confirmed!",
@@ -2166,7 +2181,26 @@
       "payNow": "Pay Now",
       "splitBill": "Split Bill",
       "orderSummary": "Order Summary",
-      "backToOrders": "Back to Orders"
+      "backToOrders": "Back to Orders",
+      "orderNumber": "Order #",
+      "type": "Type",
+      "items": "Items"
+    },
+    "void": {
+      "title": "Void Order",
+      "confirmVoid": "Void Order",
+      "warningTitle": "This action cannot be undone",
+      "warningDesc": "Voiding this order will cancel all payments and mark the order as void. The order cannot be recovered.",
+      "orderDetails": "Order Details",
+      "selectReason": "Select Reason for Void",
+      "specifyReason": "Please specify the reason",
+      "enterReason": "Enter reason for voiding this order...",
+      "customerRequest": "Customer Request",
+      "orderError": "Order Error",
+      "itemUnavailable": "Item Unavailable",
+      "duplicateOrder": "Duplicate Order",
+      "paymentIssue": "Payment Issue",
+      "other": "Other"
     },
     "modify": {
       "title": "Modify Order",
