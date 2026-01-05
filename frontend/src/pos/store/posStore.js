@@ -723,46 +723,45 @@ const usePOSStore = create(
       },
 
       // Actions: Complete Order & Reset
-      completeOrder: () => set((state) => {
-        // Keep order number for confirmation screen
-        const orderNumber = state.currentOrder.orderNumber;
-        return {
-          currentOrder: {
-            id: null,
-            orderNumber,
-            type: null,
-            items: [],
-            subtotal: 0,
-            tax: 0,
-            deliveryFee: 0,
-            serviceFeePercent: 0,
-            serviceFee: 0,
-            total: 0,
-            notes: '',
-          },
-          customer: {
-            id: null,
-            name: '',
-            phone: '',
-            email: '',
-            address: null,
-            deliveryInstructions: '',
-            tableNumber: null,
-            tableIds: null,
-            guestCount: null,
-          },
-          payment: {
-            method: null,
-            amountTendered: 0,
-            changeDue: 0,
-            status: 'PENDING',
-          },
-          ui: {
-            ...state.ui,
-            currentScreen: 'confirmation',
-          },
-        };
-      }),
+      completeOrder: () => set((state) => ({
+        currentOrder: {
+          id: null,
+          orderNumber: null,
+          type: null,
+          items: [],
+          subtotal: 0,
+          tax: 0,
+          deliveryFee: 0,
+          serviceFeePercent: 0,
+          serviceFee: 0,
+          total: 0,
+          notes: '',
+        },
+        customer: {
+          id: null,
+          name: '',
+          phone: '',
+          email: '',
+          address: null,
+          deliveryInstructions: '',
+          tableNumber: null,
+          tableIds: null,
+          guestCount: null,
+        },
+        payment: {
+          method: null,
+          amountTendered: 0,
+          changeDue: 0,
+          status: 'PENDING',
+        },
+        selectedTables: [],
+        ui: {
+          ...state.ui,
+          currentScreen: 'start',
+          selectedCategory: null,
+          selectedProduct: null,
+        },
+      })),
 
       resetPOS: () => set({
         currentOrder: {
