@@ -109,7 +109,7 @@ const POSApp = () => {
         .catch(error => {
           console.error('Failed to load order for payment:', error);
           usePOSStore.setState({
-            ui: { ...usePOSStore.getState().ui, error: 'Failed to load order' }
+            ui: { ...usePOSStore.getState().ui, error: t('pos.errors.loadOrderFailed', 'Failed to load order') }
           });
         })
         .finally(() => {

@@ -2287,7 +2287,9 @@
       "noRestaurantFound": "No restaurant found in the system",
       "fillRequiredFields": "Please fill in all required fields",
       "invalidPhone": "Please enter a valid phone number",
-      "invalidEmail": "Please enter a valid email address"
+      "invalidEmail": "Please enter a valid email address",
+      "loadOrderFailed": "Failed to load order",
+      "createOrderFailed": "Failed to create order"
     },
     "buttons": {
       "cancel": "Cancel",

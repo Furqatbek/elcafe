@@ -147,12 +147,12 @@ const OrderDetailsScreen = () => {
     try {
       const result = await submitOrder(restaurantId);
       if (result.success) {
-        setCurrentScreen('confirmation');
+        setCurrentScreen('start');
       } else {
-        setError(result.error || 'Failed to create order');
+        setError(result.error || t('pos.errors.createOrderFailed', 'Failed to create order'));
       }
     } catch (error) {
-      setError(error.message || 'Failed to create order');
+      setError(error.message || t('pos.errors.createOrderFailed', 'Failed to create order'));
     } finally {
       setIsSubmitting(false);
     }

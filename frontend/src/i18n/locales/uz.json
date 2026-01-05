@@ -1289,7 +1289,9 @@
       "noRestaurantFound": "Tizimda restoran topilmadi",
       "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
       "invalidPhone": "Iltimos, to'g'ri telefon raqamini kiriting",
-      "invalidEmail": "Iltimos, to'g'ri email manzilini kiriting"
+      "invalidEmail": "Iltimos, to'g'ri email manzilini kiriting",
+      "loadOrderFailed": "Buyurtmani yuklashda xatolik",
+      "createOrderFailed": "Buyurtma yaratishda xatolik"
     },
     "buttons": {
       "cancel": "Bekor qilish",
