@@ -666,7 +666,8 @@ public class POSOrderService {
     }
 
     private boolean canModifyOrder(Order order) {
-        return order.getStatus() == OrderStatus.PENDING ||
+        return order.getStatus() == OrderStatus.NEW ||
+                order.getStatus() == OrderStatus.PENDING ||
                 order.getStatus() == OrderStatus.ACCEPTED ||
                 order.getStatus() == OrderStatus.PREPARING;
     }
