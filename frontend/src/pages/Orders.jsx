@@ -42,7 +42,8 @@ import {
   AlertCircle,
   XCircle,
   Coffee,
-  Ban
+  Ban,
+  Percent
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
@@ -104,6 +105,11 @@ export default function Orders() {
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [amountTendered, setAmountTendered] = useState('');
   const [processingPayment, setProcessingPayment] = useState(false);
+
+  // Service fee state
+  const [showServiceFeeInput, setShowServiceFeeInput] = useState(false);
+  const [serviceFeePercent, setServiceFeePercent] = useState(0);
+  const [serviceFeeAmount, setServiceFeeAmount] = useState(0);
 
   // Cancel order confirmation
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -291,6 +297,12 @@ export default function Orders() {
     setPaymentOrder(order);
     setPaymentMethod('CASH');
     setAmountTendered('');
+    // Initialize service fee from order or reset
+    const existingServiceFeePercent = order.serviceFeePercent || 0;
+    const existingServiceFee = order.serviceFee || 0;
+    setServiceFeePercent(existingServiceFeePercent);
+    setServiceFeeAmount(existingServiceFee);
+    setShowServiceFeeInput(false);
     setPaymentModalOpen(true);
   };
 
@@ -300,11 +312,14 @@ export default function Orders() {
 
     setProcessingPayment(true);
     try {
+      // Calculate final total with service fee
+      const finalTotal = calculateTotalWithServiceFee();
+
       // Process payment
       const paymentData = {
         method: paymentMethod,
-        amount: paymentOrder.total,
-        amountTendered: paymentMethod === 'CASH' ? parseFloat(amountTendered) || paymentOrder.total : paymentOrder.total
+        amount: finalTotal,
+        amountTendered: paymentMethod === 'CASH' ? parseFloat(amountTendered) || finalTotal : finalTotal
       };
 
       await posAPI.processPayment(paymentOrder.id, paymentData);
@@ -372,11 +387,70 @@ export default function Orders() {
     }
   };
 
+  // Calculate total with service fee
+  const calculateTotalWithServiceFee = () => {
+    if (!paymentOrder) return 0;
+    const subtotal = paymentOrder.subtotal || 0;
+    const tax = paymentOrder.tax || 0;
+    return subtotal + tax + serviceFeeAmount;
+  };
+
   // Calculate change for cash payment
   const calculateChange = () => {
     if (!paymentOrder || paymentMethod !== 'CASH') return 0;
     const tendered = parseFloat(amountTendered) || 0;
-    return Math.max(0, tendered - paymentOrder.total);
+    const totalWithFee = calculateTotalWithServiceFee();
+    return Math.max(0, tendered - totalWithFee);
+  };
+
+  // Apply service fee
+  const handleApplyServiceFee = async (percent) => {
+    if (!paymentOrder) return;
+
+    const subtotal = paymentOrder.subtotal || 0;
+    const calculatedFee = subtotal * (percent / 100);
+    setServiceFeePercent(percent);
+    setServiceFeeAmount(calculatedFee);
+    setShowServiceFeeInput(false);
+
+    // Save to backend
+    try {
+      await posAPI.applyServiceFee(paymentOrder.id, percent);
+      // Update the paymentOrder with new service fee
+      setPaymentOrder({
+        ...paymentOrder,
+        serviceFeePercent: percent,
+        serviceFee: calculatedFee,
+        total: subtotal + (paymentOrder.tax || 0) + calculatedFee
+      });
+    } catch (error) {
+      console.error('Failed to apply service fee:', error);
+    }
+  };
+
+  // Remove service fee
+  const handleRemoveServiceFee = async () => {
+    if (!paymentOrder) return;
+
+    setServiceFeePercent(0);
+    setServiceFeeAmount(0);
+    setShowServiceFeeInput(false);
+
+    // Save to backend
+    try {
+      await posAPI.applyServiceFee(paymentOrder.id, 0);
+      // Update the paymentOrder
+      const subtotal = paymentOrder.subtotal || 0;
+      const tax = paymentOrder.tax || 0;
+      setPaymentOrder({
+        ...paymentOrder,
+        serviceFeePercent: 0,
+        serviceFee: 0,
+        total: subtotal + tax
+      });
+    } catch (error) {
+      console.error('Failed to remove service fee:', error);
+    }
   };
 
   // Get table statistics
@@ -931,10 +1005,96 @@ export default function Orders() {
                   <span>{paymentOrder?.tax?.toLocaleString()}</span>
                 </div>
               )}
+              {serviceFeeAmount > 0 && (
+                <div className="flex justify-between mb-2 text-purple-700">
+                  <span>{t('orders.serviceFee', 'Service Fee')} ({serviceFeePercent}%)</span>
+                  <span>{serviceFeeAmount?.toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between pt-2 border-t font-bold">
                 <span>{t('orders.total', 'Total')}</span>
-                <span className="text-xl">{paymentOrder?.total?.toLocaleString()}</span>
+                <span className="text-xl">{calculateTotalWithServiceFee().toLocaleString()}</span>
               </div>
+            </div>
+
+            {/* Service Fee Section */}
+            <div>
+              {!showServiceFeeInput ? (
+                <Button
+                  type="button"
+                  variant={serviceFeeAmount > 0 ? 'secondary' : 'outline'}
+                  className="w-full"
+                  onClick={() => setShowServiceFeeInput(true)}
+                >
+                  <Percent className="h-4 w-4 mr-2" />
+                  {serviceFeeAmount > 0
+                    ? t('orders.editServiceFee', 'Edit Service Fee ({{percent}}%)', { percent: serviceFeePercent })
+                    : t('orders.addServiceFee', 'Add Service Fee')
+                  }
+                </Button>
+              ) : (
+                <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 space-y-3">
+                  <Label className="text-purple-800 font-semibold">
+                    {t('orders.serviceFeePercent', 'Service Fee %')}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      value={serviceFeePercent}
+                      onChange={(e) => setServiceFeePercent(parseFloat(e.target.value) || 0)}
+                      className="flex-1 text-center font-semibold"
+                      placeholder="0"
+                    />
+                    <span className="flex items-center text-lg font-bold text-purple-700">%</span>
+                  </div>
+                  {/* Quick percentage buttons */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {[5, 10, 12, 15].map((percent) => (
+                      <Button
+                        key={percent}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setServiceFeePercent(percent)}
+                        className={serviceFeePercent === percent ? 'border-purple-500 bg-purple-100' : ''}
+                      >
+                        {percent}%
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleApplyServiceFee(serviceFeePercent)}
+                    >
+                      {t('common.apply', 'Apply')}
+                    </Button>
+                    {serviceFeeAmount > 0 && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleRemoveServiceFee}
+                      >
+                        {t('common.remove', 'Remove')}
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowServiceFeeInput(false)}
+                    >
+                      {t('common.cancel', 'Cancel')}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Payment Method Selection */}
@@ -988,10 +1148,10 @@ export default function Orders() {
                   <Input
                     type="number"
                     step="1000"
-                    min={paymentOrder?.total || 0}
+                    min={calculateTotalWithServiceFee()}
                     value={amountTendered}
                     onChange={(e) => setAmountTendered(e.target.value)}
-                    placeholder={paymentOrder?.total?.toString()}
+                    placeholder={calculateTotalWithServiceFee().toString()}
                     className="text-lg mt-1"
                   />
                 </div>
@@ -1012,7 +1172,7 @@ export default function Orders() {
                 </div>
 
                 {/* Change Calculation */}
-                {parseFloat(amountTendered) >= (paymentOrder?.total || 0) && (
+                {parseFloat(amountTendered) >= calculateTotalWithServiceFee() && (
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <div className="flex justify-between items-center">
                       <span className="font-medium text-green-800">{t('orders.change', 'Change')}</span>
@@ -1039,7 +1199,7 @@ export default function Orders() {
             </Button>
             <Button
               onClick={handleProcessPayment}
-              disabled={processingPayment || (paymentMethod === 'CASH' && parseFloat(amountTendered) < (paymentOrder?.total || 0))}
+              disabled={processingPayment || (paymentMethod === 'CASH' && parseFloat(amountTendered) < calculateTotalWithServiceFee())}
               className="bg-green-600 hover:bg-green-700"
             >
               {processingPayment
