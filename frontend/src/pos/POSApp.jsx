@@ -13,7 +13,6 @@ import ProductModifiersScreen from './screens/ProductModifiersScreen';
 import CartScreen from './screens/CartScreen';
 import OrderDetailsScreen from './screens/OrderDetailsScreen';
 import PaymentScreen from './screens/PaymentScreen';
-import OrderConfirmationScreen from './screens/OrderConfirmationScreen';
 import ActiveOrdersScreen from './screens/ActiveOrdersScreen';
 import OrderModificationScreen from './screens/OrderModificationScreen';
 import SplitBillScreen from './screens/SplitBillScreen';
@@ -190,9 +189,6 @@ const POSApp = () => {
 
       case 'payment':
         return <PaymentScreen />;
-
-      case 'confirmation':
-        return <OrderConfirmationScreen />;
 
       case 'active-orders':
         return <ActiveOrdersScreen />;
