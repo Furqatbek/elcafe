@@ -541,6 +541,8 @@
     "adding": "Qo'shilmoqda...",
     "processing": "Jarayonda...",
     "cancelling": "Bekor qilinmoqda...",
+    "apply": "Qo'llash",
+    "remove": "O'chirish",
     "selectLanguage": "Tilni tanlang",
     "language": "Til",
     "min": "Min",

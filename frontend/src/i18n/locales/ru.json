@@ -541,6 +541,8 @@
     "adding": "Добавление...",
     "processing": "Обработка...",
     "cancelling": "Отмена...",
+    "apply": "Применить",
+    "remove": "Удалить",
     "back": "Назад",
     "selectLanguage": "Выберите язык",
     "language": "Язык",

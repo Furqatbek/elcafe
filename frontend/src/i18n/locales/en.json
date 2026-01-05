@@ -307,6 +307,8 @@
     "adding": "Adding...",
     "processing": "Processing...",
     "cancelling": "Cancelling...",
+    "apply": "Apply",
+    "remove": "Remove",
     "back": "Back",
     "selectLanguage": "Select Language",
     "language": "Language",
