@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 
@@ -12,6 +13,7 @@ const CartItem = ({
   onRemove,
   className = '',
 }) => {
+  const { t } = useTranslation();
   const { id, name, basePrice, modifiers, quantity, itemTotal, notes } = item;
 
   const handleQuantityChange = (newQuantity) => {
@@ -50,7 +52,7 @@ const CartItem = ({
             {name}
           </h4>
           <p className="text-sm text-gray-600 mt-0.5">
-            {basePrice.toFixed(2)} each
+            {basePrice.toFixed(2)} {t('pos.cart.each', 'each')}
           </p>
         </div>
 
@@ -58,7 +60,7 @@ const CartItem = ({
         <button
           onClick={handleRemove}
           className="flex-shrink-0 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-95"
-          aria-label="Remove item"
+          aria-label={t('pos.cart.removeItem', 'Remove item')}
         >
           <Trash2 className="w-5 h-5" />
         </button>
@@ -87,7 +89,7 @@ const CartItem = ({
       {/* Notes */}
       {notes && (
         <div className="text-sm text-gray-600 italic bg-gray-50 rounded p-2">
-          Note: {notes}
+          {t('pos.cart.note', 'Note')}: {notes}
         </div>
       )}
 
@@ -99,7 +101,7 @@ const CartItem = ({
             onClick={() => handleQuantityChange(quantity - 1)}
             disabled={quantity <= 1}
             className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 disabled:opacity-50 disabled:hover:bg-gray-200 rounded-lg transition-colors active:scale-95"
-            aria-label="Decrease quantity"
+            aria-label={t('pos.cart.decreaseQty', 'Decrease quantity')}
           >
             <Minus className="w-5 h-5 text-gray-900" />
           </button>
@@ -112,7 +114,7 @@ const CartItem = ({
             onClick={() => handleQuantityChange(quantity + 1)}
             disabled={quantity >= 99}
             className="flex items-center justify-center w-10 h-10 bg-gray-200 hover:bg-gray-300 active:bg-gray-400 disabled:opacity-50 disabled:hover:bg-gray-200 rounded-lg transition-colors active:scale-95"
-            aria-label="Increase quantity"
+            aria-label={t('pos.cart.increaseQty', 'Increase quantity')}
           >
             <Plus className="w-5 h-5 text-gray-900" />
           </button>

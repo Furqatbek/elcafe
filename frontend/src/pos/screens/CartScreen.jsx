@@ -48,14 +48,14 @@ const CartScreen = () => {
                 itemId: item.id,
                 productName: item.name,
                 type: 'unavailable',
-                message: `${item.name} is out of stock`,
+                message: t('pos.cart.itemOutOfStock', '{{name}} is out of stock', { name: item.name }),
               });
             } else if (availability.maxQuantityAvailable < item.quantity) {
               warnings.push({
                 itemId: item.id,
                 productName: item.name,
                 type: 'insufficient',
-                message: `Only ${availability.maxQuantityAvailable} available for ${item.name}`,
+                message: t('pos.cart.itemInsufficientStock', 'Only {{count}} available for {{name}}', { count: availability.maxQuantityAvailable, name: item.name }),
                 maxAvailable: availability.maxQuantityAvailable,
               });
             } else if (availability.stockStatus === 'LOW_STOCK') {
@@ -63,7 +63,7 @@ const CartScreen = () => {
                 itemId: item.id,
                 productName: item.name,
                 type: 'low_stock',
-                message: `${item.name} is running low (${availability.maxQuantityAvailable} left)`,
+                message: t('pos.cart.itemLowStock', '{{name}} is running low ({{count}} left)', { name: item.name, count: availability.maxQuantityAvailable }),
               });
             }
           }
