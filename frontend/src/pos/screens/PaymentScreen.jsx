@@ -192,7 +192,6 @@ const PaymentScreen = () => {
           await posAPI.closeOrder(currentOrder.id);
           setPaymentStatus('COMPLETED');
           const orderNum = response.data.data?.orderNumber;
-          usePOSStore.getState().currentOrder.orderNumber = orderNum;
           printOrderReceipt(orderNum);
           completeOrder();
         }
@@ -267,7 +266,6 @@ const PaymentScreen = () => {
 
         setPaymentStatus('COMPLETED');
         const orderNum = response.data.data.orderNumber;
-        usePOSStore.getState().currentOrder.orderNumber = orderNum;
         printOrderReceipt(orderNum);
         completeOrder();
       }

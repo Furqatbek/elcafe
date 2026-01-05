@@ -724,10 +724,13 @@ const usePOSStore = create(
 
       // Actions: Complete Order & Reset
       completeOrder: () => {
-        // Clear persisted state to prevent stale data on refresh
+        const state = get();
+
+        // Explicitly clear the persisted storage first
         localStorage.removeItem('pos-storage');
 
-        return set((state) => ({
+        // Then set the cleared state
+        set({
           currentOrder: {
             id: null,
             orderNumber: null,
@@ -758,22 +761,39 @@ const usePOSStore = create(
             changeDue: 0,
             status: 'PENDING',
           },
+          kitchenStatus: {
+            orderId: null,
+            kitchenOrderId: null,
+            status: null,
+            priority: null,
+            assignedChef: null,
+            estimatedMinutes: null,
+            lastUpdated: null,
+          },
           selectedTables: [],
           activeOrder: null,
+          // Preserve menu data
+          menu: state.menu,
+          floorPlan: state.floorPlan,
+          productAvailability: state.productAvailability,
           ui: {
-            ...state.ui,
             currentScreen: 'start',
+            isLoading: false,
+            error: null,
             selectedCategory: null,
             selectedProduct: null,
           },
-        }));
+        });
       },
 
       resetPOS: () => {
-        // Clear persisted state
+        const state = get();
+
+        // Explicitly clear the persisted storage first
         localStorage.removeItem('pos-storage');
 
-        return set({
+        // Then set the cleared state
+        set({
           currentOrder: {
             id: null,
             orderNumber: null,
@@ -804,8 +824,21 @@ const usePOSStore = create(
             changeDue: 0,
             status: 'PENDING',
           },
+          kitchenStatus: {
+            orderId: null,
+            kitchenOrderId: null,
+            status: null,
+            priority: null,
+            assignedChef: null,
+            estimatedMinutes: null,
+            lastUpdated: null,
+          },
           selectedTables: [],
           activeOrder: null,
+          // Preserve menu data
+          menu: state.menu,
+          floorPlan: state.floorPlan,
+          productAvailability: state.productAvailability,
           ui: {
             currentScreen: 'start',
             isLoading: false,
@@ -825,6 +858,20 @@ const usePOSStore = create(
         menu: state.menu,
         ui: state.ui,
       }),
+      // Merge persisted state with initial state
+      merge: (persistedState, currentState) => {
+        // If persisted state has a cleared order (empty items), use it
+        if (persistedState?.currentOrder?.items?.length === 0) {
+          return {
+            ...currentState,
+            ...persistedState,
+          };
+        }
+        return {
+          ...currentState,
+          ...persistedState,
+        };
+      },
     }
   )
 );
