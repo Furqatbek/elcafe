@@ -321,24 +321,27 @@ const PaymentScreen = () => {
     },
   };
 
+  const [showMobileSummary, setShowMobileSummary] = useState(false);
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b-2 border-gray-200 px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b-2 border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+        <div className="flex items-center justify-between gap-2">
           <TouchButton
             variant="ghost"
             size="medium"
             onClick={() => setCurrentScreen('details')}
-            icon={<ChevronLeft className="w-6 h-6" />}
+            icon={<ChevronLeft className="w-5 sm:w-6 h-5 sm:h-6" />}
             disabled={processingPayment}
+            className="!px-2 sm:!px-4"
           >
-            {t('common.buttons.back', 'Back')}
+            <span className="hidden sm:inline">{t('common.buttons.back', 'Back')}</span>
           </TouchButton>
 
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">{t('pos.payment.title', 'Payment')}</h1>
-            <p className="text-sm text-gray-600">
+          <div className="text-center flex-1">
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{t('pos.payment.title', 'Payment')}</h1>
+            <p className="text-xs sm:text-sm text-gray-600">
               {splitPaymentMode
                 ? t('pos.payment.splitPaymentMode', 'Split Payment Mode')
                 : t('pos.payment.selectMethod', 'Select payment method')
@@ -351,9 +354,10 @@ const PaymentScreen = () => {
               variant={splitPaymentMode ? 'primary' : 'outline'}
               size="small"
               onClick={toggleSplitPayment}
-              icon={<SplitSquareVertical className="w-5 h-5" />}
+              icon={<SplitSquareVertical className="w-4 sm:w-5 h-4 sm:h-5" />}
+              className="!px-2 sm:!px-3"
             >
-              {t('pos.payment.split', 'Split')}
+              <span className="hidden sm:inline">{t('pos.payment.split', 'Split')}</span>
             </TouchButton>
           </div>
         </div>
@@ -374,41 +378,41 @@ const PaymentScreen = () => {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
         {/* Payment Method Selection */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 pb-32 lg:pb-6">
+          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
             {/* Total Amount Due */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 text-white">
-              <p className="text-xl mb-2 opacity-90">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl sm:rounded-2xl p-4 sm:p-8 text-white">
+              <p className="text-sm sm:text-xl mb-1 sm:mb-2 opacity-90">
                 {splitPaymentMode
                   ? t('pos.payment.remainingBalance', 'Remaining Balance')
                   : t('pos.payment.amountDue', 'Amount Due')
                 }
               </p>
-              <p className="text-6xl font-bold">
+              <p className="text-3xl sm:text-6xl font-bold">
                 {splitPaymentMode ? remainingBalance.toFixed(2) : grandTotal.toFixed(2)}
               </p>
             </div>
 
             {/* Split Payment Progress */}
             {splitPaymentMode && payments.length > 0 && (
-              <div className="bg-white rounded-xl p-4 border-2 border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-3">
+              <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 border-2 border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">
                   {t('pos.payment.paymentsReceived', 'Payments Received')}
                 </h3>
                 <div className="space-y-2">
                   {payments.map((p, idx) => (
-                    <div key={p.id || idx} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <div key={p.id || idx} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 text-sm">
                       <div className="flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        <CheckCircle className="w-4 sm:w-5 h-4 sm:h-5 text-green-500" />
                         <span className="text-gray-700">{p.method}</span>
                       </div>
                       <span className="font-semibold text-gray-900">{p.amount.toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-between items-center mt-3 pt-3 border-t-2 border-gray-200">
+                <div className="flex justify-between items-center mt-2 sm:mt-3 pt-2 sm:pt-3 border-t-2 border-gray-200 text-sm sm:text-base">
                   <span className="font-semibold text-gray-700">{t('pos.payment.totalPaid', 'Total Paid')}</span>
                   <span className="font-bold text-green-600">{totalPaid.toFixed(2)}</span>
                 </div>
@@ -418,10 +422,10 @@ const PaymentScreen = () => {
             {/* Payment Methods */}
             {!isFullyPaid && (
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
                   {t('pos.payment.chooseMethod', 'Choose Payment Method')}
                 </h2>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-2 sm:gap-4">
                   {paymentMethods.map(({ id, label, icon, color, description }) => {
                     const colors = colorClasses[color];
 
@@ -432,24 +436,24 @@ const PaymentScreen = () => {
                         disabled={processingPayment}
                         className={cn(
                           'flex flex-col items-center justify-center',
-                          'min-h-[200px] p-6',
-                          'bg-white rounded-xl',
-                          'border-4 transition-all duration-200',
+                          'min-h-[120px] sm:min-h-[200px] p-3 sm:p-6',
+                          'bg-white rounded-lg sm:rounded-xl',
+                          'border-2 sm:border-4 transition-all duration-200',
                           colors.border,
                           colors.hover,
                           'active:scale-98',
                           'disabled:opacity-50 disabled:cursor-not-allowed',
-                          'focus:outline-none focus:ring-8',
+                          'focus:outline-none focus:ring-4 sm:focus:ring-8',
                           colors.ring
                         )}
                       >
-                        <div className={cn('mb-4', colors.text)}>
-                          {icon}
+                        <div className={cn('mb-2 sm:mb-4', colors.text)}>
+                          {React.cloneElement(icon, { className: 'w-8 h-8 sm:w-10 sm:h-10' })}
                         </div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                        <h3 className="text-lg sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">
                           {label}
                         </h3>
-                        <p className="text-sm text-gray-600 text-center">
+                        <p className="text-xs sm:text-sm text-gray-600 text-center hidden sm:block">
                           {description}
                         </p>
                       </button>
@@ -461,11 +465,11 @@ const PaymentScreen = () => {
 
             {/* Fully Paid - Complete Order */}
             {isFullyPaid && splitPaymentMode && (
-              <div className="text-center py-8">
-                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle className="w-16 h-16 text-green-600" />
+              <div className="text-center py-4 sm:py-8">
+                <div className="w-16 sm:w-24 h-16 sm:h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <CheckCircle className="w-10 sm:w-16 h-10 sm:h-16 text-green-600" />
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                <h2 className="text-xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
                   {t('pos.payment.orderPaid', 'Order Fully Paid')}
                 </h2>
                 <TouchButton
@@ -480,8 +484,75 @@ const PaymentScreen = () => {
           </div>
         </div>
 
-        {/* Order Summary Sidebar */}
-        <div className="w-[360px] bg-white border-l-2 border-gray-200 p-6 flex flex-col">
+        {/* Mobile Bottom Summary Bar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 p-3 z-40">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-600">{t('pos.cart.total', 'Total')}</p>
+              <p className="text-xl font-bold text-gray-900">{grandTotal.toFixed(2)}</p>
+            </div>
+            <TouchButton
+              variant="outline"
+              size="small"
+              onClick={() => setShowMobileSummary(true)}
+            >
+              {t('pos.cart.details', 'Details')}
+            </TouchButton>
+          </div>
+        </div>
+
+        {/* Mobile Summary Drawer */}
+        {showMobileSummary && (
+          <>
+            <div
+              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={() => setShowMobileSummary(false)}
+            />
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-2xl max-h-[70vh] overflow-y-auto">
+              <div className="p-4 border-b sticky top-0 bg-white flex justify-between items-center">
+                <h3 className="font-semibold text-lg">{t('pos.cart.orderSummary', 'Order Summary')}</h3>
+                <button onClick={() => setShowMobileSummary(false)} className="p-2">
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                {/* Items Summary */}
+                <div className="space-y-2">
+                  {currentOrder.items.map(item => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <span className="text-gray-700">{item.quantity}x {item.name}</span>
+                      <span className="font-semibold">{item.itemTotal.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Totals */}
+                <div className="border-t pt-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{t('pos.cart.subtotal', 'Subtotal')}</span>
+                    <span>{subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>{t('pos.cart.tax', 'Tax')}</span>
+                    <span>{tax.toFixed(2)}</span>
+                  </div>
+                  {serviceFee > 0 && (
+                    <div className="flex justify-between text-sm text-purple-700">
+                      <span>{t('pos.payment.serviceFee', 'Service Fee')}</span>
+                      <span>{serviceFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                    <span>{t('pos.cart.total', 'Total')}</span>
+                    <span>{grandTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Order Summary Sidebar - Desktop */}
+        <div className="hidden lg:flex w-[280px] xl:w-[360px] bg-white border-l-2 border-gray-200 p-4 xl:p-6 flex-col">
           <h3 className="text-lg font-bold text-gray-900 mb-4">{t('pos.cart.orderSummary', 'Order Summary')}</h3>
 
           {/* Customer Info */}
