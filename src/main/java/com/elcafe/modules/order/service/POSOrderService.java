@@ -168,7 +168,9 @@ public class POSOrderService {
 
         // Force initialize lazy relationships
         savedOrder.getRestaurant().getName();
-        savedOrder.getCustomer().getPhone();
+        if (savedOrder.getCustomer() != null) {
+            savedOrder.getCustomer().getPhone();
+        }
         savedOrder.getItems().size();
         savedOrder.getStatusHistory().size();
 
@@ -188,22 +190,10 @@ public class POSOrderService {
                                           CreatePOSOrderRequest.OrderType orderType) {
         // For dine-in orders, customer info is optional (walk-in guests)
         if (orderType == CreatePOSOrderRequest.OrderType.DINE_IN) {
-            // If no phone provided, create a walk-in customer without phone
+            // If no phone provided, allow order without customer (walk-in guest)
             if (customerInfo == null || customerInfo.getPhone() == null || customerInfo.getPhone().isBlank()) {
-                log.info("Creating walk-in customer for dine-in order");
-                Customer walkInCustomer = new Customer();
-                walkInCustomer.setFirstName("Walk-in");
-                walkInCustomer.setLastName("Guest");
-                // Set a placeholder phone for walk-in customers (required by DB constraint)
-                // Use shorter format to fit varchar(20): WI + last 10 digits of timestamp
-                long timestamp = System.currentTimeMillis();
-                walkInCustomer.setPhone("WI" + String.valueOf(timestamp).substring(5));
-                if (customerInfo != null && customerInfo.getName() != null && !customerInfo.getName().isBlank()) {
-                    String[] nameParts = customerInfo.getName().trim().split("\\s+", 2);
-                    walkInCustomer.setFirstName(nameParts[0]);
-                    walkInCustomer.setLastName(nameParts.length > 1 ? nameParts[1] : "");
-                }
-                return customerRepository.save(walkInCustomer);
+                log.info("Dine-in order without customer info - walk-in guest");
+                return null;
             }
         }
 
