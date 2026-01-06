@@ -60,18 +60,20 @@ public class NotificationService {
             1 // High priority
         );
 
-        // Notify customer
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.ORDER_CONFIRMED,
-            "Order Confirmed",
-            String.format("Your order #%s has been placed successfully. Total: $%.2f",
-                order.getOrderNumber(), order.getTotal()),
-            order.getId(),
-            order.getOrderNumber(),
-            2
-        );
+        // Notify customer (only if customer exists - not for POS/walk-in orders)
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.ORDER_CONFIRMED,
+                "Order Confirmed",
+                String.format("Your order #%s has been placed successfully. Total: $%.2f",
+                    order.getOrderNumber(), order.getTotal()),
+                order.getId(),
+                order.getOrderNumber(),
+                2
+            );
+        }
 
         // Broadcast to admin panel
         createNotification(
@@ -94,17 +96,19 @@ public class NotificationService {
     public void notifyOrderAccepted(Order order) {
         log.info("✅ Order Accepted: {}", order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.ORDER_ACCEPTED,
-            "Order Accepted",
-            String.format("Your order #%s has been accepted by %s",
-                order.getOrderNumber(), order.getRestaurant().getName()),
-            order.getId(),
-            order.getOrderNumber(),
-            2
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.ORDER_ACCEPTED,
+                "Order Accepted",
+                String.format("Your order #%s has been accepted by %s",
+                    order.getOrderNumber(), order.getRestaurant().getName()),
+                order.getId(),
+                order.getOrderNumber(),
+                2
+            );
+        }
 
         createNotification(
             UserRole.KITCHEN,
@@ -126,17 +130,19 @@ public class NotificationService {
     public void notifyOrderPreparing(Order order) {
         log.info("👨‍🍳 Order Preparing: {}", order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.ORDER_PREPARING,
-            "Order Being Prepared",
-            String.format("Your order #%s is being prepared by the kitchen",
-                order.getOrderNumber()),
-            order.getId(),
-            order.getOrderNumber(),
-            3
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.ORDER_PREPARING,
+                "Order Being Prepared",
+                String.format("Your order #%s is being prepared by the kitchen",
+                    order.getOrderNumber()),
+                order.getId(),
+                order.getOrderNumber(),
+                3
+            );
+        }
 
         createNotification(
             UserRole.COURIER,
@@ -158,17 +164,19 @@ public class NotificationService {
     public void notifyOrderReady(Order order) {
         log.info("✅ Order Ready: {}", order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.ORDER_READY,
-            "Order Ready",
-            String.format("Your order #%s is ready for %s",
-                order.getOrderNumber(), order.getOrderType().name().toLowerCase()),
-            order.getId(),
-            order.getOrderNumber(),
-            1
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.ORDER_READY,
+                "Order Ready",
+                String.format("Your order #%s is ready for %s",
+                    order.getOrderNumber(), order.getOrderType().name().toLowerCase()),
+                order.getId(),
+                order.getOrderNumber(),
+                1
+            );
+        }
 
         createNotification(
             UserRole.COURIER,
@@ -202,17 +210,19 @@ public class NotificationService {
     public void notifyOrderRejected(Order order) {
         log.info("❌ Order Rejected: {}", order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.ORDER_REJECTED,
-            "Order Rejected",
-            String.format("Unfortunately, your order #%s has been rejected. You will receive a refund.",
-                order.getOrderNumber()),
-            order.getId(),
-            order.getOrderNumber(),
-            1
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.ORDER_REJECTED,
+                "Order Rejected",
+                String.format("Unfortunately, your order #%s has been rejected. You will receive a refund.",
+                    order.getOrderNumber()),
+                order.getId(),
+                order.getOrderNumber(),
+                1
+            );
+        }
 
         createNotification(
             UserRole.ADMIN,
@@ -234,17 +244,19 @@ public class NotificationService {
     public void notifyOrderCompleted(Order order) {
         log.info("✅ Order Completed: {}", order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.ORDER_COMPLETED,
-            "Order Completed",
-            String.format("Your order #%s has been completed. Thank you!",
-                order.getOrderNumber()),
-            order.getId(),
-            order.getOrderNumber(),
-            3
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.ORDER_COMPLETED,
+                "Order Completed",
+                String.format("Your order #%s has been completed. Thank you!",
+                    order.getOrderNumber()),
+                order.getId(),
+                order.getOrderNumber(),
+                3
+            );
+        }
 
         createNotification(
             UserRole.RESTAURANT,
@@ -278,17 +290,19 @@ public class NotificationService {
     public void notifyCourierAssigned(Order order, Long courierId, String courierName) {
         log.info("🚗 Courier Assigned: {} to order {}", courierName, order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.COURIER_ASSIGNED,
-            "Courier Assigned",
-            String.format("Courier %s has been assigned to your order #%s",
-                courierName, order.getOrderNumber()),
-            order.getId(),
-            order.getOrderNumber(),
-            2
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.COURIER_ASSIGNED,
+                "Courier Assigned",
+                String.format("Courier %s has been assigned to your order #%s",
+                    courierName, order.getOrderNumber()),
+                order.getId(),
+                order.getOrderNumber(),
+                2
+            );
+        }
 
         createNotification(
             UserRole.COURIER,
@@ -310,17 +324,19 @@ public class NotificationService {
     public void notifyOrderPickedUp(Order order) {
         log.info("📦 Order Picked Up: {}", order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.ORDER_PICKED_UP,
-            "Order Picked Up",
-            String.format("Your order #%s has been picked up and is on the way!",
-                order.getOrderNumber()),
-            order.getId(),
-            order.getOrderNumber(),
-            2
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.ORDER_PICKED_UP,
+                "Order Picked Up",
+                String.format("Your order #%s has been picked up and is on the way!",
+                    order.getOrderNumber()),
+                order.getId(),
+                order.getOrderNumber(),
+                2
+            );
+        }
 
         createNotification(
             UserRole.RESTAURANT,
@@ -342,17 +358,19 @@ public class NotificationService {
     public void notifyOrderOnDelivery(Order order) {
         log.info("🚚 Order Out for Delivery: {}", order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.ORDER_ON_THE_WAY,
-            "Order On The Way",
-            String.format("Your order #%s is on the way to you!",
-                order.getOrderNumber()),
-            order.getId(),
-            order.getOrderNumber(),
-            2
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.ORDER_ON_THE_WAY,
+                "Order On The Way",
+                String.format("Your order #%s is on the way to you!",
+                    order.getOrderNumber()),
+                order.getId(),
+                order.getOrderNumber(),
+                2
+            );
+        }
 
         createNotification(
             UserRole.ADMIN,
@@ -374,17 +392,19 @@ public class NotificationService {
     public void notifyOrderDelivered(Order order) {
         log.info("✅ Order Delivered: {}", order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.ORDER_DELIVERED,
-            "Order Delivered",
-            String.format("Your order #%s has been delivered. Enjoy your meal!",
-                order.getOrderNumber()),
-            order.getId(),
-            order.getOrderNumber(),
-            2
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.ORDER_DELIVERED,
+                "Order Delivered",
+                String.format("Your order #%s has been delivered. Enjoy your meal!",
+                    order.getOrderNumber()),
+                order.getId(),
+                order.getOrderNumber(),
+                2
+            );
+        }
 
         createNotification(
             UserRole.RESTAURANT,
@@ -476,17 +496,19 @@ public class NotificationService {
     public void notifyCourierAccepted(Order order, String courierName) {
         log.info("✅ Courier {} accepted order {}", courierName, order.getOrderNumber());
 
-        createNotification(
-            UserRole.CUSTOMER,
-            order.getCustomer().getId(),
-            NotificationType.COURIER_ACCEPTED_ORDER,
-            "Courier Accepted",
-            String.format("Courier %s has accepted your order #%s",
-                courierName, order.getOrderNumber()),
-            order.getId(),
-            order.getOrderNumber(),
-            2
-        );
+        if (order.getCustomer() != null) {
+            createNotification(
+                UserRole.CUSTOMER,
+                order.getCustomer().getId(),
+                NotificationType.COURIER_ACCEPTED_ORDER,
+                "Courier Accepted",
+                String.format("Courier %s has accepted your order #%s",
+                    courierName, order.getOrderNumber()),
+                order.getId(),
+                order.getOrderNumber(),
+                2
+            );
+        }
 
         createNotification(
             UserRole.RESTAURANT,
