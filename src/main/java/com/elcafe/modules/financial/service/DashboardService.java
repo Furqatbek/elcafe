@@ -68,9 +68,15 @@ public class DashboardService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Fetch expenses
+        // For expenses/payroll, extend the date range if shift crosses midnight
+        // This ensures expenses created during overnight shift are included
+        LocalDate shiftEndDate = shift.end().toLocalDate();
+        LocalDate expenseEndDate = shiftEndDate.isAfter(endDate) ? shiftEndDate : endDate;
+        log.debug("Expense/payroll date range: {} to {} (shift end: {})", startDate, expenseEndDate, shift.end());
+
+        // Fetch expenses (using shift-extended date range)
         List<Expense> expenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
-                restaurantId, startDate, endDate);
+                restaurantId, startDate, expenseEndDate);
 
         BigDecimal totalExpenses = expenses.stream()
                 .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
@@ -78,9 +84,9 @@ public class DashboardService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Fetch payroll
+        // Fetch payroll (using shift-extended date range)
         List<PayrollEntry> payrollEntries = payrollRepository.findByRestaurant_IdAndPayPeriodEndBetween(
-                restaurantId, startDate, endDate);
+                restaurantId, startDate, expenseEndDate);
 
         BigDecimal totalPayroll = payrollEntries.stream()
                 .filter(p -> p.getStatus() == PayrollEntry.PaymentStatus.PAID)
@@ -363,9 +369,11 @@ public class DashboardService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Get previous period expenses
+        // Get previous period expenses (with shift-extended date range)
+        LocalDate prevShiftEndDate = prevShift.end().toLocalDate();
+        LocalDate prevExpenseEndDate = prevShiftEndDate.isAfter(prevEndDate) ? prevShiftEndDate : prevEndDate;
         List<Expense> prevExpenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
-                restaurantId, prevStartDate, prevEndDate);
+                restaurantId, prevStartDate, prevExpenseEndDate);
 
         BigDecimal prevExpenseTotal = prevExpenses.stream()
                 .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)

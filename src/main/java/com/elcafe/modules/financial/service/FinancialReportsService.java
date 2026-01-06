@@ -93,9 +93,14 @@ public class FinancialReportsService {
         log.info("P&L: Found {} orders, {} revenue-counted, sales: {}, serviceFee: {}, deliveryFee: {}, tips: {}, total: {}",
                 orders.size(), completedOrders.size(), salesRevenue, serviceFeeRevenue, deliveryFeeRevenue, tipRevenue, totalRevenue);
 
-        // Calculate expenses from expense records (same as DashboardService)
+        // Calculate expenses from expense records (with shift-extended date range)
+        // For overnight shifts, extend end date to include expenses from early morning hours
+        LocalDate shiftEndDate = shift.end().toLocalDate();
+        LocalDate expenseEndDate = shiftEndDate.isAfter(endDate) ? shiftEndDate : endDate;
+        log.debug("P&L: Expense date range: {} to {} (shift end: {})", startDate, expenseEndDate, shift.end());
+
         List<Expense> expenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
-                restaurantId, startDate, endDate);
+                restaurantId, startDate, expenseEndDate);
 
         BigDecimal totalExpenses = expenses.stream()
                 .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
@@ -259,10 +264,14 @@ public class FinancialReportsService {
                 restaurantId, startDate, endDate);
         log.info("COGS: Using shift time range: {} to {}", shift.start(), shift.end());
 
-        // Get COGS from transaction accounts
+        // Calculate shift-extended date for transaction queries
+        LocalDate shiftEndDate = shift.end().toLocalDate();
+        LocalDate txEndDate = shiftEndDate.isAfter(endDate) ? shiftEndDate : endDate;
+
+        // Get COGS from transaction accounts (with shift-extended date range)
         List<Account> cogsAccounts = accountRepository.findByRestaurant_IdAndCategory(
                 restaurantId, Account.AccountCategory.COGS);
-        BigDecimal totalCogs = calculateAccountsTotal(cogsAccounts, startDate, endDate);
+        BigDecimal totalCogs = calculateAccountsTotal(cogsAccounts, startDate, txEndDate);
 
         // Get revenue from orders (consistent with P&L report)
         List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
