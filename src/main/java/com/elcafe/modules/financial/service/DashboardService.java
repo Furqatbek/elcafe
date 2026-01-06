@@ -133,11 +133,14 @@ public class DashboardService {
     }
 
     /**
-     * Get quick summary for the current day
+     * Get quick summary for the current business day.
+     * Uses ShiftTimeService to determine the correct business day based on current time.
+     * For example, at 04:00 AM with a 21:00-03:00 shift, returns yesterday's business day.
      */
     public DashboardResponse getTodaySummary(Long restaurantId) {
-        LocalDate today = LocalDate.now();
-        return getDashboard(restaurantId, today, today);
+        LocalDate businessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
+        log.info("Getting today's summary for restaurant {}, current business day: {}", restaurantId, businessDay);
+        return getDashboard(restaurantId, businessDay, businessDay);
     }
 
     /**

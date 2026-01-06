@@ -408,6 +408,8 @@ export const financialAPI = {
     api.get('/dashboard/week', { params: { restaurantId } }),
   getMonthSummary: (restaurantId) =>
     api.get('/dashboard/month', { params: { restaurantId } }),
+  getCurrentBusinessDay: (restaurantId) =>
+    api.get('/dashboard/current-business-day', { params: { restaurantId } }),
 };
 
 export const inventoryAPI = {

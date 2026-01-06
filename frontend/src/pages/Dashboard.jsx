@@ -144,17 +144,35 @@ export default function Dashboard() {
 
     setLoading(true);
     try {
-      const dateRange = getDateRangeForPeriod(period);
-      if (!dateRange) {
-        setLoading(false);
-        return;
+      let response;
+
+      // Use smart endpoints for today/week/month that handle business day logic
+      // These endpoints use getCurrentBusinessDay() to handle overnight shifts correctly
+      // e.g., at 4 AM with 21:00-03:00 shift, "today" returns yesterday's business day
+      switch (period) {
+        case 'today':
+          response = await financialAPI.getTodaySummary(selectedRestaurant);
+          break;
+        case 'week':
+          response = await financialAPI.getWeekSummary(selectedRestaurant);
+          break;
+        case 'month':
+          response = await financialAPI.getMonthSummary(selectedRestaurant);
+          break;
+        default:
+          // For yesterday, lastWeek, lastMonth, custom - use date range endpoint
+          const dateRange = getDateRangeForPeriod(period);
+          if (!dateRange) {
+            setLoading(false);
+            return;
+          }
+          response = await financialAPI.getDashboard(
+            selectedRestaurant,
+            dateRange.startDate,
+            dateRange.endDate
+          );
       }
 
-      const response = await financialAPI.getDashboard(
-        selectedRestaurant,
-        dateRange.startDate,
-        dateRange.endDate
-      );
       setDashboardData(response.data.data);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);

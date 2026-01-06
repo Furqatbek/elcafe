@@ -2,6 +2,7 @@ package com.elcafe.modules.financial.controller;
 
 import com.elcafe.modules.financial.dto.DashboardResponse;
 import com.elcafe.modules.financial.service.DashboardService;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -21,6 +23,7 @@ import java.time.LocalDate;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final ShiftTimeService shiftTimeService;
 
     @GetMapping
     @Operation(
@@ -82,5 +85,33 @@ public class DashboardController {
         DashboardResponse dashboard = dashboardService.getMonthSummary(restaurantId);
 
         return ResponseEntity.ok(ApiResponse.success("Monthly summary retrieved successfully", dashboard));
+    }
+
+    @GetMapping("/current-business-day")
+    @Operation(
+            summary = "Get current business day",
+            description = "Get the current business day based on restaurant's business hours. " +
+                    "For shifts that cross midnight (e.g., 21:00-03:00), if current time is before " +
+                    "opening time, returns yesterday's date as the current business day."
+    )
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentBusinessDay(
+            @RequestParam Long restaurantId) {
+
+        LocalDate businessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
+        LocalDate calendarDay = LocalDate.now();
+        ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, businessDay);
+
+        Map<String, Object> response = Map.of(
+                "currentBusinessDay", businessDay,
+                "calendarDay", calendarDay,
+                "shiftStart", shiftRange.start(),
+                "shiftEnd", shiftRange.end(),
+                "openTime", shiftRange.openTime(),
+                "closeTime", shiftRange.closeTime()
+        );
+
+        log.info("Current business day for restaurant {}: {} (calendar: {})", restaurantId, businessDay, calendarDay);
+
+        return ResponseEntity.ok(ApiResponse.success("Current business day retrieved", response));
     }
 }

@@ -147,6 +147,51 @@ public class ShiftTimeService {
     }
 
     /**
+     * Get the current business day for a restaurant based on business hours.
+     *
+     * For shifts that cross midnight (e.g., 21:00-03:00):
+     * - If current time is BEFORE opening time (e.g., 04:00 AM), we're still in yesterday's business day
+     * - If current time is AFTER opening time (e.g., 22:00), we're in today's business day
+     *
+     * Example: For 21:00-03:00 shift at 04:00 AM on Jan 7:
+     * - Returns Jan 6 (because Jan 6's shift runs from 21:00 Jan 6 to 21:00 Jan 7)
+     *
+     * @param restaurantId The restaurant ID
+     * @return The current business day date
+     */
+    public LocalDate getCurrentBusinessDay(Long restaurantId) {
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+
+        if (restaurantId == null) {
+            return today;
+        }
+
+        var businessHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
+            restaurantId, today.getDayOfWeek());
+
+        if (businessHours.isEmpty() || businessHours.get().getClosed()) {
+            // No business hours, use calendar day
+            return today;
+        }
+
+        LocalTime openTime = businessHours.get().getOpenTime();
+        LocalTime closeTime = businessHours.get().getCloseTime();
+
+        // Check if shift crosses midnight
+        boolean crossesMidnight = closeTime.isBefore(openTime) || closeTime.equals(openTime);
+
+        if (crossesMidnight && now.isBefore(openTime)) {
+            // We're in the early morning hours before today's shift starts
+            // This means we're still in yesterday's business day
+            log.debug("Current time {} is before opening {}, using yesterday as business day", now, openTime);
+            return today.minusDays(1);
+        }
+
+        return today;
+    }
+
+    /**
      * Check if an order status counts as revenue/income.
      *
      * @param status The order status to check
