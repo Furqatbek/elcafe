@@ -19,6 +19,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -79,8 +82,23 @@ public class OrderController {
     }
 
     @GetMapping
-    @Operation(summary = "List orders", description = "Get all orders with pagination")
-    public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(Pageable pageable) {
+    @Operation(summary = "List orders", description = "Get all orders with pagination and filters")
+    public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(
+            @RequestParam(required = false) Long restaurantId,
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
+            @RequestParam(required = false) String search,
+            Pageable pageable
+    ) {
+        // If any filter is provided, use filtered query
+        if (restaurantId != null || status != null || fromDate != null || toDate != null || search != null) {
+            Page<Order> orders = orderService.getOrdersWithFilters(
+                    restaurantId, status, fromDate, toDate, search, pageable
+            );
+            return ResponseEntity.ok(ApiResponse.success(orders));
+        }
+        // Otherwise, use simple query
         Page<Order> orders = orderService.getAllOrders(pageable);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }

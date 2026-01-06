@@ -22,6 +22,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.elcafe.modules.order.specification.OrderSpecification;
+import org.springframework.data.jpa.domain.Specification;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -182,6 +185,33 @@ public class OrderService {
     @Transactional(readOnly = true)
     public Page<Order> getAllOrders(Pageable pageable) {
         return orderRepository.findAll(pageable);
+    }
+
+    /**
+     * Get orders with filters for order history page.
+     * Supports filtering by restaurant, status, date range, and search term.
+     */
+    @Transactional(readOnly = true)
+    public Page<Order> getOrdersWithFilters(
+            Long restaurantId,
+            OrderStatus status,
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            String search,
+            Pageable pageable
+    ) {
+        log.info("Fetching orders with filters: restaurantId={}, status={}, fromDate={}, toDate={}, search={}",
+                restaurantId, status, fromDate, toDate, search);
+
+        Specification<Order> spec = OrderSpecification.withFilters(
+                restaurantId,
+                status,
+                fromDate,
+                toDate,
+                search
+        );
+
+        return orderRepository.findAll(spec, pageable);
     }
 
     @Transactional(readOnly = true)
