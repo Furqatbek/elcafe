@@ -5,6 +5,7 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.service.OrderService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.security.CurrentUser;
 import com.elcafe.security.UserPrincipal;
 import com.elcafe.utils.ApiResponse;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -33,6 +35,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final RestaurantRepository restaurantRepository;
+    private final ShiftTimeService shiftTimeService;
 
     @PostMapping
     @Operation(summary = "Create order", description = "Create a new order")
@@ -82,19 +85,30 @@ public class OrderController {
     }
 
     @GetMapping
-    @Operation(summary = "List orders", description = "Get all orders with pagination and filters")
+    @Operation(summary = "List orders", description = "Get all orders with pagination and filters. Use shiftDate for shift-aware filtering based on business hours.")
     public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(
             @RequestParam(required = false) Long restaurantId,
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
             @RequestParam(required = false) String search,
             Pageable pageable
     ) {
+        LocalDateTime effectiveFromDate = fromDate;
+        LocalDateTime effectiveToDate = toDate;
+
+        // If shiftDate is provided (and no explicit fromDate/toDate), use shift-aware time range
+        if (shiftDate != null && fromDate == null && toDate == null) {
+            ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, shiftDate);
+            effectiveFromDate = shiftRange.start();
+            effectiveToDate = shiftRange.end();
+        }
+
         // If any filter is provided, use filtered query
-        if (restaurantId != null || status != null || fromDate != null || toDate != null || search != null) {
+        if (restaurantId != null || status != null || effectiveFromDate != null || effectiveToDate != null || search != null) {
             Page<Order> orders = orderService.getOrdersWithFilters(
-                    restaurantId, status, fromDate, toDate, search, pageable
+                    restaurantId, status, effectiveFromDate, effectiveToDate, search, pageable
             );
             return ResponseEntity.ok(ApiResponse.success(orders));
         }

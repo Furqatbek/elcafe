@@ -83,6 +83,8 @@ export default function OrdersHistory() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [shiftDate, setShiftDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Default to today's shift
+  const [useShiftFilter, setUseShiftFilter] = useState(true); // Use shift-aware filtering by default
   const [searchQuery, setSearchQuery] = useState('');
 
   // Pagination state
@@ -124,12 +126,19 @@ export default function OrdersHistory() {
       if (selectedStatus !== 'all') {
         params.status = selectedStatus;
       }
-      if (dateFrom) {
-        params.fromDate = startOfDay(new Date(dateFrom)).toISOString();
+
+      // Use shift-aware filtering or explicit date range
+      if (useShiftFilter && shiftDate) {
+        params.shiftDate = shiftDate;
+      } else {
+        if (dateFrom) {
+          params.fromDate = startOfDay(new Date(dateFrom)).toISOString();
+        }
+        if (dateTo) {
+          params.toDate = endOfDay(new Date(dateTo)).toISOString();
+        }
       }
-      if (dateTo) {
-        params.toDate = endOfDay(new Date(dateTo)).toISOString();
-      }
+
       if (searchQuery) {
         params.search = searchQuery;
       }
@@ -159,7 +168,7 @@ export default function OrdersHistory() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, selectedRestaurant, selectedStatus, dateFrom, dateTo, searchQuery]);
+  }, [currentPage, pageSize, selectedRestaurant, selectedStatus, dateFrom, dateTo, shiftDate, useShiftFilter, searchQuery]);
 
   useEffect(() => {
     loadOrders();
@@ -185,23 +194,37 @@ export default function OrdersHistory() {
     const today = new Date();
     switch (filter) {
       case 'today':
-        setDateFrom(format(today, 'yyyy-MM-dd'));
-        setDateTo(format(today, 'yyyy-MM-dd'));
+        // Use shift-aware filtering for today
+        setUseShiftFilter(true);
+        setShiftDate(format(today, 'yyyy-MM-dd'));
+        setDateFrom('');
+        setDateTo('');
         break;
       case 'yesterday':
+        // Use shift-aware filtering for yesterday
         const yesterday = subDays(today, 1);
-        setDateFrom(format(yesterday, 'yyyy-MM-dd'));
-        setDateTo(format(yesterday, 'yyyy-MM-dd'));
+        setUseShiftFilter(true);
+        setShiftDate(format(yesterday, 'yyyy-MM-dd'));
+        setDateFrom('');
+        setDateTo('');
         break;
       case 'week':
+        // Use date range for week (not shift-aware)
+        setUseShiftFilter(false);
+        setShiftDate('');
         setDateFrom(format(subDays(today, 7), 'yyyy-MM-dd'));
         setDateTo(format(today, 'yyyy-MM-dd'));
         break;
       case 'month':
+        // Use date range for month (not shift-aware)
+        setUseShiftFilter(false);
+        setShiftDate('');
         setDateFrom(format(startOfMonth(today), 'yyyy-MM-dd'));
         setDateTo(format(endOfMonth(today), 'yyyy-MM-dd'));
         break;
       case 'all':
+        setUseShiftFilter(false);
+        setShiftDate('');
         setDateFrom('');
         setDateTo('');
         break;
@@ -215,6 +238,8 @@ export default function OrdersHistory() {
     setSelectedStatus('all');
     setDateFrom('');
     setDateTo('');
+    setShiftDate(format(new Date(), 'yyyy-MM-dd'));
+    setUseShiftFilter(true);
     setSearchQuery('');
     setCurrentPage(1);
   };
