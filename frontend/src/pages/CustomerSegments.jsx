@@ -193,21 +193,21 @@ export default function CustomerSegments() {
   const exportToCSV = () => {
     const headers = [
       'ID',
-      'First Name',
-      'Last Name',
-      'Email',
-      'Phone',
-      'City',
-      'Average Check',
-      'Total Amount',
-      'Days Since Last Order',
-      'Total Orders',
-      'Order Sources',
-      'Registration Date',
-      'Registration Source',
-      'RFM Segment',
-      'Status',
-      'Tags',
+      t('customers.firstName'),
+      t('customers.lastName'),
+      t('customers.email'),
+      t('customers.phone'),
+      t('customers.city'),
+      t('customers.averageCheck'),
+      t('customers.totalAmount'),
+      t('customers.recency'),
+      t('customers.frequency'),
+      t('customers.orderSources'),
+      t('customers.registrationDate'),
+      t('customers.registrationSource'),
+      t('customers.segment'),
+      t('customers.status'),
+      t('customers.tags'),
     ];
 
     const csvData = filteredCustomers.map((customer) => [
@@ -219,7 +219,7 @@ export default function CustomerSegments() {
       customer.city || '',
       customer.averageCheck || 0,
       customer.monetary || 0,
-      customer.recency !== null ? customer.recency : 'N/A',
+      customer.recency !== null ? customer.recency : t('common.na'),
       customer.frequency || 0,
       customer.orderSources?.join(', ') || '',
       customer.registrationDate
@@ -227,7 +227,7 @@ export default function CustomerSegments() {
         : '',
       customer.registrationSource || '',
       customer.rfmSegment || '',
-      customer.active ? 'Active' : 'Inactive',
+      customer.active ? t('customers.active') : t('restaurants.inactive'),
       customer.tags || '',
     ]);
 
@@ -501,7 +501,7 @@ export default function CustomerSegments() {
                       name="tags"
                       value={formData.tags}
                       onChange={handleInputChange}
-                      placeholder="VIP, Regular, etc."
+                      placeholder={t('customers.tagsPlaceholder')}
                       className="pl-10"
                     />
                   </div>
