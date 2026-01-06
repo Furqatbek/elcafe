@@ -1630,6 +1630,7 @@
       "quantity": "Quantity",
       "unit": "Unit",
       "selectIngredient": "Select an ingredient",
+      "changeIngredientNote": "You can change the linked ingredient",
       "confirmDelete": "Are you sure you want to delete this recipe?",
       "errors": {
         "saveFailed": "Failed to save recipe",

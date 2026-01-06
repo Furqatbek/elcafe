@@ -99,6 +99,25 @@ public class RecipeController {
         ProductIngredient recipe = productIngredientRepository.findByIdWithProductAndIngredient(id)
                 .orElseThrow(() -> new RuntimeException("Recipe not found with id: " + id));
 
+        // Check if ingredient is being changed
+        if (request.getIngredientId() != null &&
+            !request.getIngredientId().equals(recipe.getIngredient().getId())) {
+
+            // Verify new ingredient exists
+            Ingredient newIngredient = ingredientRepository.findById(request.getIngredientId())
+                    .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + request.getIngredientId()));
+
+            // Check that the new product-ingredient combination doesn't already exist
+            var existingRecipe = productIngredientRepository.findByProductIdAndIngredientId(
+                    recipe.getProduct().getId(), request.getIngredientId());
+            if (existingRecipe.isPresent()) {
+                throw new RuntimeException("This ingredient is already linked to this product");
+            }
+
+            recipe.setIngredient(newIngredient);
+            log.info("Changed ingredient from {} to {}", recipe.getIngredient().getId(), request.getIngredientId());
+        }
+
         recipe.setQuantityRequired(request.getQuantityRequired());
         recipe.setUnit(request.getUnit());
         recipe.setNotes(request.getNotes());

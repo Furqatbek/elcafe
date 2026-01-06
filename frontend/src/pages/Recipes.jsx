@@ -427,7 +427,6 @@ export default function Recipes() {
                     unit: ingredient?.unit || '',
                   });
                 }}
-                disabled={!!editingRecipe}
               >
                 <SelectTrigger id="ingredient">
                   <SelectValue placeholder={t('recipes.placeholders.selectIngredient')} />
@@ -440,6 +439,11 @@ export default function Recipes() {
                   ))}
                 </SelectContent>
               </Select>
+              {editingRecipe && (
+                <p className="text-xs text-muted-foreground">
+                  {t('recipes.changeIngredientNote', 'You can change the linked ingredient')}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
