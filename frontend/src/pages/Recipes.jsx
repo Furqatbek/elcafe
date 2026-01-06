@@ -60,6 +60,8 @@ export default function Recipes() {
     notes: '',
     optional: false,
   });
+  const [ingredientSearch, setIngredientSearch] = useState('');
+  const [ingredientUnitFilter, setIngredientUnitFilter] = useState('all');
 
   useEffect(() => {
     loadRestaurants();
@@ -136,8 +138,20 @@ export default function Recipes() {
       notes: '',
       optional: false,
     });
+    setIngredientSearch('');
+    setIngredientUnitFilter('all');
     setModalOpen(true);
   };
+
+  // Get unique units from available ingredients for filter
+  const availableUnits = [...new Set(availableIngredients.map((ing) => ing.unit).filter(Boolean))].sort();
+
+  // Filter ingredients based on search and unit filter
+  const filteredIngredients = availableIngredients.filter((ingredient) => {
+    const matchesSearch = ingredient.name.toLowerCase().includes(ingredientSearch.toLowerCase());
+    const matchesUnit = ingredientUnitFilter === 'all' || ingredient.unit === ingredientUnitFilter;
+    return matchesSearch && matchesUnit;
+  });
 
   const handleEditRecipe = (recipe) => {
     setEditingRecipe(recipe);
@@ -417,6 +431,37 @@ export default function Recipes() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="ingredient">{t('recipes.fields.ingredient')} *</Label>
+
+              {/* Search and Filter Controls */}
+              <div className="flex gap-2 mb-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t('recipes.searchIngredients')}
+                    value={ingredientSearch}
+                    onChange={(e) => setIngredientSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select
+                  value={ingredientUnitFilter}
+                  onValueChange={setIngredientUnitFilter}
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder={t('recipes.filterByUnit')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('common.all')}</SelectItem>
+                    {availableUnits.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {unit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Ingredient Select */}
               <Select
                 value={formData.ingredientId.toString()}
                 onValueChange={(value) => {
@@ -431,14 +476,26 @@ export default function Recipes() {
                 <SelectTrigger id="ingredient">
                   <SelectValue placeholder={t('recipes.placeholders.selectIngredient')} />
                 </SelectTrigger>
-                <SelectContent>
-                  {availableIngredients.map((ingredient) => (
-                    <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
-                      {ingredient.name} ({ingredient.unit})
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-[200px]">
+                  {filteredIngredients.length === 0 ? (
+                    <div className="py-2 px-3 text-sm text-muted-foreground text-center">
+                      {t('recipes.noIngredientsFound')}
+                    </div>
+                  ) : (
+                    filteredIngredients.map((ingredient) => (
+                      <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
+                        {ingredient.name} ({ingredient.unit})
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+
+              {filteredIngredients.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t('recipes.ingredientsFound', { count: filteredIngredients.length })}
+                </p>
+              )}
               {editingRecipe && (
                 <p className="text-xs text-muted-foreground">
                   {t('recipes.changeIngredientNote', 'You can change the linked ingredient')}

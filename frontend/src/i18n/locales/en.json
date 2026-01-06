@@ -1691,6 +1691,10 @@
       "selectIngredient": "Select an ingredient",
       "changeIngredientNote": "You can change the linked ingredient",
       "confirmDelete": "Are you sure you want to delete this recipe?",
+      "searchIngredients": "Search ingredients...",
+      "filterByUnit": "Filter by unit",
+      "noIngredientsFound": "No ingredients found",
+      "ingredientsFound": "{{count}} ingredients found",
       "errors": {
         "saveFailed": "Failed to save recipe",
         "deleteFailed": "Failed to delete recipe"

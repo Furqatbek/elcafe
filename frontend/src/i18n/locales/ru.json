@@ -1854,6 +1854,10 @@
       "selectIngredient": "Выберите ингредиент",
       "changeIngredientNote": "Вы можете изменить привязанный ингредиент",
       "confirmDelete": "Вы уверены, что хотите удалить этот рецепт?",
+      "searchIngredients": "Поиск ингредиентов...",
+      "filterByUnit": "Фильтр по единице",
+      "noIngredientsFound": "Ингредиенты не найдены",
+      "ingredientsFound": "Найдено {{count}} ингредиентов",
       "errors": {
         "saveFailed": "Не удалось сохранить рецепт",
         "deleteFailed": "Не удалось удалить рецепт"
