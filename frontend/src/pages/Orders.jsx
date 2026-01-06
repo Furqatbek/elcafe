@@ -44,7 +44,8 @@ import {
   Coffee,
   Ban,
   Percent,
-  Ticket
+  Ticket,
+  Check
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
@@ -125,6 +126,9 @@ export default function Orders() {
   const [editOrderModalOpen, setEditOrderModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [updatingItem, setUpdatingItem] = useState(null);
+
+  // Success notification state
+  const [successMessage, setSuccessMessage] = useState('');
 
   // Split payment state
   const [splitPaymentMode, setSplitPaymentMode] = useState(false);
@@ -624,10 +628,17 @@ export default function Orders() {
     }
   };
 
+  // Show success notification helper
+  const showSuccessNotification = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
+
   // Add item from edit modal
   const handleAddItemFromEditModal = async () => {
     if (!newItemProductId || !editingOrder) return;
 
+    const selectedProduct = availableProducts.find(p => p.id.toString() === newItemProductId);
     setAddingItem(true);
     try {
       await posAPI.addItemToOrder(editingOrder.id, {
@@ -638,6 +649,9 @@ export default function Orders() {
 
       setNewItemProductId('');
       setNewItemQuantity(1);
+
+      // Show success notification
+      showSuccessNotification(t('orders.itemAddedSuccess', '{{name}} added successfully!', { name: selectedProduct?.name || 'Item' }));
 
       // Refresh data
       await loadTablesAndOrders();
@@ -1110,18 +1124,18 @@ export default function Orders() {
 
       {/* Add Item Modal */}
       <Dialog open={addItemModalOpen} onOpenChange={setAddItemModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>{t('orders.addItemToOrder', 'Add Item to Order')}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Category Filter */}
+            {/* Category Dropdown */}
             <div>
-              <Label>{t('orders.category', 'Category')}</Label>
+              <Label className="mb-2 block">{t('orders.category', 'Category')}</Label>
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('orders.selectCategory', 'Select category')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t('orders.allCategories', 'All Categories')}</SelectItem>
@@ -1132,14 +1146,14 @@ export default function Orders() {
               </Select>
             </div>
 
-            {/* Product Selection */}
+            {/* Product Dropdown */}
             <div>
-              <Label>{t('orders.product', 'Product')}</Label>
+              <Label className="mb-2 block">{t('orders.product', 'Product')}</Label>
               <Select value={newItemProductId} onValueChange={setNewItemProductId}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder={t('orders.selectProduct', 'Select product')} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60">
                   {filteredProducts.map((product) => (
                     <SelectItem key={product.id} value={product.id.toString()}>
                       {product.name} - {(product.basePrice || product.price)?.toLocaleString()}
@@ -1151,37 +1165,39 @@ export default function Orders() {
 
             {/* Quantity */}
             <div>
-              <Label>{t('orders.quantity', 'Quantity')}</Label>
-              <div className="flex items-center gap-2">
+              <Label className="mb-2 block">{t('orders.quantity', 'Quantity')}</Label>
+              <div className="flex items-center gap-3">
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="lg"
                   onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
+                  className="h-12 w-12"
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-5 w-5" />
                 </Button>
                 <Input
                   type="number"
                   min="1"
                   value={newItemQuantity}
                   onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                  className="w-20 text-center"
+                  className="w-20 h-12 text-center text-xl font-bold"
                 />
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
+                  size="lg"
                   onClick={() => setNewItemQuantity(newItemQuantity + 1)}
+                  className="h-12 w-12"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-5 w-5" />
                 </Button>
               </div>
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddItemModalOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setAddItemModalOpen(false)} className="w-full sm:w-auto">
               {t('common.cancel', 'Cancel')}
             </Button>
             <Button
@@ -1194,8 +1210,20 @@ export default function Orders() {
                 }
               }}
               disabled={!newItemProductId || addingItem}
+              className="w-full sm:w-auto h-12"
+              size="lg"
             >
-              {addingItem ? t('common.adding', 'Adding...') : t('orders.addItem', 'Add Item')}
+              {addingItem ? (
+                <>
+                  <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                  {t('common.adding', 'Adding...')}
+                </>
+              ) : (
+                <>
+                  <Plus className="h-5 w-5 mr-2" />
+                  {t('orders.addItem', 'Add Item')}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1593,8 +1621,8 @@ export default function Orders() {
 
       {/* Edit Order Modal */}
       <Dialog open={editOrderModalOpen} onOpenChange={setEditOrderModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-[95vw] max-w-3xl h-[90vh] max-h-[700px] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Edit className="h-5 w-5" />
               {t('orders.editOrder', 'Edit Order')} #{editingOrder?.orderNumber}
@@ -1604,23 +1632,129 @@ export default function Orders() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
-            {/* Current Order Items */}
-            <div>
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <Utensils className="h-4 w-4" />
+          {/* Success Notification */}
+          {successMessage && (
+            <div className="mx-6 mt-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+              <Check className="h-5 w-5 text-green-600" />
+              <span className="text-green-800 font-medium">{successMessage}</span>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+            {/* Left Side - Add New Item Section */}
+            <div className="md:w-1/2 p-6 border-b md:border-b-0 md:border-r bg-gray-50 shrink-0">
+              <h4 className="font-medium mb-4 flex items-center gap-2 text-lg">
+                <Plus className="h-5 w-5" />
+                {t('orders.addNewItem', 'Add New Item')}
+              </h4>
+
+              {/* Category Dropdown */}
+              <div className="mb-4">
+                <Label className="mb-2 block">{t('orders.category', 'Category')}</Label>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t('orders.selectCategory', 'Select category')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('orders.allCategories', 'All Categories')}</SelectItem>
+                    {[...new Set(availableProducts.map(p => p.categoryName).filter(Boolean))].map((category) => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Product Dropdown */}
+              <div className="mb-4">
+                <Label className="mb-2 block">{t('orders.product', 'Product')}</Label>
+                <Select value={newItemProductId} onValueChange={setNewItemProductId}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t('orders.selectProduct', 'Select a product')} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {(selectedCategory === 'all'
+                      ? availableProducts
+                      : availableProducts.filter(p => p.categoryName === selectedCategory)
+                    ).map((product) => (
+                      <SelectItem key={product.id} value={product.id.toString()}>
+                        <span className="flex justify-between items-center w-full gap-4">
+                          <span>{product.name}</span>
+                          <span className="text-muted-foreground">{(product.basePrice || product.price)?.toLocaleString()}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Quantity */}
+              <div className="mb-4">
+                <Label className="mb-2 block">{t('orders.quantity', 'Quantity')}</Label>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
+                    className="h-12 w-12"
+                  >
+                    <Minus className="h-5 w-5" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newItemQuantity}
+                    onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                    className="w-20 h-12 text-center text-xl font-bold"
+                  />
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setNewItemQuantity(newItemQuantity + 1)}
+                    className="h-12 w-12"
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Add Button */}
+              <Button
+                onClick={handleAddItemFromEditModal}
+                disabled={!newItemProductId || addingItem}
+                className="w-full h-12 text-lg"
+                size="lg"
+              >
+                {addingItem ? (
+                  <>
+                    <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
+                    {t('common.adding', 'Adding...')}
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-5 w-5 mr-2" />
+                    {t('orders.addItem', 'Add Item')}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Right Side - Current Order Items */}
+            <div className="md:w-1/2 p-6 flex flex-col min-h-0">
+              <h4 className="font-medium mb-4 flex items-center gap-2 text-lg shrink-0">
+                <Utensils className="h-5 w-5" />
                 {t('orders.currentItems', 'Current Items')} ({editingOrder?.items?.length || 0})
               </h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+
+              <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
                 {editingOrder?.items?.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                   >
-                    <div className="flex-1">
-                      <p className="font-medium">{item.productName}</p>
+                    <div className="flex-1 min-w-0 mr-2">
+                      <p className="font-medium truncate">{item.productName}</p>
                       {item.variantName && (
-                        <p className="text-sm text-muted-foreground">{item.variantName}</p>
+                        <p className="text-sm text-muted-foreground truncate">{item.variantName}</p>
                       )}
                       <p className="text-sm text-green-600 font-medium">
                         {(item.totalPrice || item.unitPrice * item.quantity)?.toLocaleString()}
@@ -1628,12 +1762,13 @@ export default function Orders() {
                     </div>
 
                     {/* Quantity Controls */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleUpdateItemQuantity(editingOrder.id, item.id, item.quantity - 1)}
                         disabled={item.quantity <= 1 || updatingItem === item.id}
+                        className="h-8 w-8 p-0"
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
@@ -1645,13 +1780,14 @@ export default function Orders() {
                         size="sm"
                         onClick={() => handleUpdateItemQuantity(editingOrder.id, item.id, item.quantity + 1)}
                         disabled={updatingItem === item.id}
+                        className="h-8 w-8 p-0"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
                         onClick={() => handleRemoveItem(editingOrder.id, item.id)}
                         disabled={updatingItem === item.id}
                       >
@@ -1662,111 +1798,30 @@ export default function Orders() {
                 ))}
 
                 {(!editingOrder?.items || editingOrder.items.length === 0) && (
-                  <p className="text-center text-muted-foreground py-4">
-                    {t('orders.noItems', 'No items in this order')}
-                  </p>
+                  <div className="text-center text-muted-foreground py-8">
+                    <Utensils className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p>{t('orders.noItems', 'No items in this order')}</p>
+                  </div>
                 )}
               </div>
 
               {/* Order Total */}
               {editingOrder?.items?.length > 0 && (
-                <div className="flex justify-between items-center mt-3 pt-3 border-t">
-                  <span className="font-medium">{t('orders.subtotal', 'Subtotal')}</span>
-                  <span className="text-lg font-bold">{editingOrder?.subtotal?.toLocaleString()}</span>
+                <div className="flex justify-between items-center mt-4 pt-4 border-t shrink-0">
+                  <span className="font-medium text-lg">{t('orders.subtotal', 'Subtotal')}</span>
+                  <span className="text-2xl font-bold">{editingOrder?.subtotal?.toLocaleString()}</span>
                 </div>
               )}
             </div>
-
-            {/* Add New Item Section */}
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                {t('orders.addNewItem', 'Add New Item')}
-              </h4>
-
-              {/* Category Filter */}
-              <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
-                <Button
-                  variant={selectedCategory === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedCategory('all')}
-                >
-                  {t('orders.allCategories', 'All')}
-                </Button>
-                {[...new Set(availableProducts.map(p => p.categoryName).filter(Boolean))].map((category) => (
-                  <Button
-                    key={category}
-                    variant={selectedCategory === category ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedCategory(category)}
-                  >
-                    {category}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Product Selection */}
-              <div className="grid grid-cols-1 gap-3">
-                <Select value={newItemProductId} onValueChange={setNewItemProductId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={t('orders.selectProduct', 'Select a product')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(selectedCategory === 'all'
-                      ? availableProducts
-                      : availableProducts.filter(p => p.categoryName === selectedCategory)
-                    ).map((product) => (
-                      <SelectItem key={product.id} value={product.id.toString()}>
-                        {product.name} - {product.price?.toLocaleString()}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Quantity and Add Button */}
-                <div className="flex gap-2 items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">{t('orders.quantity', 'Qty')}:</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={newItemQuantity}
-                      onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
-                      className="w-16 text-center"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setNewItemQuantity(newItemQuantity + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <Button
-                    onClick={handleAddItemFromEditModal}
-                    disabled={!newItemProductId || addingItem}
-                    className="flex-1"
-                  >
-                    {addingItem ? t('common.adding', 'Adding...') : t('orders.addItem', 'Add Item')}
-                  </Button>
-                </div>
-              </div>
-            </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t shrink-0">
             <Button
               variant="outline"
               onClick={() => {
                 setEditOrderModalOpen(false);
                 setEditingOrder(null);
+                setSuccessMessage('');
               }}
             >
               {t('common.close', 'Close')}
