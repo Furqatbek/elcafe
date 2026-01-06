@@ -1,5 +1,28 @@
 import { format } from 'date-fns';
 
+/**
+ * Get table number from order data
+ * Handles different data structures:
+ * - order.diningTable.tableNumber (from Order entity)
+ * - order.dineInInfo.tableNumber (from POSOrderResponse)
+ * - order.tableIds (comma-separated table IDs for multi-table orders)
+ */
+const getTableNumber = (order) => {
+  // Try diningTable (Order entity structure)
+  if (order.diningTable?.tableNumber) {
+    return order.diningTable.tableNumber;
+  }
+  // Try dineInInfo (POSOrderResponse structure)
+  if (order.dineInInfo?.tableNumber) {
+    return order.dineInInfo.tableNumber;
+  }
+  // Fallback: try tableIds field
+  if (order.tableIds) {
+    return order.tableIds;
+  }
+  return null;
+};
+
 const PrintReceipt = (order, onPrint) => {
   const printWindow = window.open('', '_blank');
   const receiptHTML = generateReceiptHTML(order);
@@ -231,10 +254,10 @@ const generateReceiptHTML = (order) => {
         <span>Sana:</span>
         <span>${currentDate}</span>
       </div>
-      ${order.diningTable ? `
+      ${getTableNumber(order) ? `
       <div class="info-line">
         <span>Stol:</span>
-        <span>${order.diningTable.tableNumber}</span>
+        <span>${getTableNumber(order)}</span>
       </div>
       ` : ''}
       ${order.waiter?.name ? `
@@ -281,7 +304,7 @@ const generateReceiptHTML = (order) => {
       ` : ''}
       ${Number(order.entryFee) > 0 ? `
       <div class="total-line">
-        <span>Kirish haqi:</span>
+        <span>DJ xizmati:</span>
         <span>${Math.round(order.entryFee)}</span>
       </div>
       ` : ''}
