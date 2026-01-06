@@ -66,7 +66,8 @@ const PaymentScreen = () => {
   const tax = currentOrder.tax || 0;
   const deliveryFee = currentOrder.deliveryFee || 0;
   const serviceFee = currentOrder.serviceFee || 0;
-  const grandTotal = subtotal + tax + deliveryFee + serviceFee;
+  const entryFee = currentOrder.entryFee || 0;
+  const grandTotal = subtotal + tax + deliveryFee + serviceFee + entryFee;
 
   // For split payments
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -116,6 +117,7 @@ const PaymentScreen = () => {
       deliveryFee: deliveryFee,
       serviceFee: serviceFee,
       serviceFeePercent: currentOrder.serviceFeePercent,
+      entryFee: entryFee,
       total: grandTotal,
       diningTable: customer.tableNumber ? { tableNumber: customer.tableNumber } : null,
       customerNotes: currentOrder.notes || null,
