@@ -184,9 +184,19 @@ public class FinancialReportsService {
 
     /**
      * Generate Cash Flow Statement
+     * Uses shift-based time ranges to account for transactions during overnight shifts.
      */
     public CashFlowReport generateCashFlowReport(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Generating cash flow report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
+
+        // Get shift-based time range to determine if we need to extend the date range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.info("Cash Flow: Using shift time range: {} to {}", shift.start(), shift.end());
+
+        // Adjust endDate if shift crosses midnight (transactions on next day belong to previous shift)
+        LocalDate adjustedEndDate = shift.end().toLocalDate();
+        log.info("Cash Flow: Adjusted date range: {} to {}", startDate, adjustedEndDate);
 
         // Get cash accounts
         List<Account> cashAccounts = accountRepository.findByRestaurant_IdAndCategory(
@@ -199,7 +209,7 @@ public class FinancialReportsService {
 
         for (Account cashAccount : cashAccounts) {
             List<Transaction> transactions = transactionRepository.findByAccount_IdAndTransactionDateBetween(
-                    cashAccount.getId(), startDate, endDate);
+                    cashAccount.getId(), startDate, adjustedEndDate);
 
             for (Transaction tx : transactions) {
                 if (cashAccount.getNormalBalance() == Account.NormalBalance.DEBIT) {
