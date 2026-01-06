@@ -22,6 +22,7 @@ import com.elcafe.modules.order.entity.DeliveryInfo;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
@@ -71,6 +72,7 @@ public class POSOrderService {
         order.setRestaurant(restaurant);
         order.setCustomer(customer);
         order.setStatus(OrderStatus.NEW);
+        order.setOrderType(OrderType.valueOf(request.getOrderType().name()));
         order.setCustomerNotes(request.getOrderNotes());
 
         // Set pricing - default all fees to 0

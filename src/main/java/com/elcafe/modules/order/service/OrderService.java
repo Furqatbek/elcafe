@@ -139,7 +139,11 @@ public class OrderService {
         }
 
         // Release tables when dine-in order is completed, delivered, or cancelled
-        if (order.getOrderType() == OrderType.DINE_IN &&
+        // Also check for tableIds/diningTable as fallback for orders without orderType set
+        boolean isDineInOrder = order.getOrderType() == OrderType.DINE_IN ||
+                (order.getTableIds() != null && !order.getTableIds().isBlank()) ||
+                order.getDiningTable() != null;
+        if (isDineInOrder &&
                 (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED)) {
             releaseOrderTables(order);
         }
