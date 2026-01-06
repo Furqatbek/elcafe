@@ -807,7 +807,7 @@ export default function CustomerSegments() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex flex-wrap gap-1">
                         {customer.orderSources && customer.orderSources.length > 0 ? (
-                          customer.orderSources.map((source, idx) => (
+                          customer.orderSources.filter(source => source != null).map((source, idx) => (
                             <span
                               key={idx}
                               className="px-2 py-1 text-xs font-medium rounded bg-indigo-100 text-indigo-800"
