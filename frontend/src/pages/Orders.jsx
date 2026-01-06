@@ -370,23 +370,34 @@ export default function Orders() {
       // Cancel the order
       await orderAPI.updateStatus(orderToCancel.id, 'CANCELLED', 'Order cancelled by operator');
 
-      // If this was the only order for the table, release the table
-      const tableId = orderToCancel.diningTable?.id ||
-                      (orderToCancel.dineInInfo?.tableIds?.[0]) ||
-                      (orderToCancel.tableIds && parseInt(String(orderToCancel.tableIds).split(',')[0]));
+      // Get table ID from multiple sources
+      let tableId = null;
+      if (orderToCancel.dineInInfo?.tableIds?.length > 0) {
+        tableId = Number(orderToCancel.dineInInfo.tableIds[0]);
+      } else if (orderToCancel.diningTable?.id) {
+        tableId = Number(orderToCancel.diningTable.id);
+      } else if (orderToCancel.tableIds) {
+        const firstTableId = String(orderToCancel.tableIds).split(',')[0].trim();
+        tableId = parseInt(firstTableId, 10);
+      } else if (selectedTable?.id) {
+        // Fallback to currently selected table
+        tableId = selectedTable.id;
+      }
 
-      if (tableId) {
+      if (tableId && !isNaN(tableId)) {
         const tableOrdersList = tableOrders[tableId] || [];
         const remainingOrders = tableOrdersList.filter(o =>
           o.id !== orderToCancel.id &&
           o.status !== 'CANCELLED' &&
-          o.status !== 'DELIVERED'
+          o.status !== 'DELIVERED' &&
+          !o.fullyPaid
         );
 
         // If no remaining active orders, release the table
         if (remainingOrders.length === 0) {
           try {
             await tablesAPI.updateStatus(tableId, 'AVAILABLE');
+            console.log('Table status updated to AVAILABLE for table:', tableId);
           } catch (e) {
             console.error('Failed to update table status:', e);
           }
