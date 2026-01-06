@@ -171,14 +171,44 @@ public class OperationalAnalyticsService {
         if (totalTables == null && restaurantId != null) {
             List<RestaurantTable> activeTables = restaurantTableRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
             tables = activeTables.size();
+            if (tables == 0) {
+                log.warn("No active tables found for restaurant {}, table turnover will be 0", restaurantId);
+            }
             seats = totalSeats != null ? totalSeats : activeTables.stream()
-                    .mapToInt(t -> t.getCapacity() != null ? t.getCapacity() : 4)
+                    .mapToInt(t -> {
+                        if (t.getCapacity() == null) {
+                            log.warn("Table {} has no capacity set, using 4 as fallback", t.getTableNumber());
+                            return 4;
+                        }
+                        return t.getCapacity();
+                    })
                     .sum();
         } else {
-            tables = totalTables != null ? totalTables : 1; // default to 1 to avoid division by zero
-            seats = totalSeats != null ? totalSeats : tables * 4; // default 4 seats per table
+            tables = totalTables != null ? totalTables : 0;
+            seats = totalSeats != null ? totalSeats : 0;
+            if (tables == 0 && restaurantId == null) {
+                log.warn("No restaurantId provided and no table count specified, cannot calculate table turnover accurately");
+            }
         }
-        int operatingHours = operatingHoursPerDay != null ? operatingHoursPerDay : 12; // default 12 hours
+
+        // Calculate operating hours from business hours if not provided
+        int operatingHours;
+        if (operatingHoursPerDay != null) {
+            operatingHours = operatingHoursPerDay;
+        } else if (shift.openTime() != null && shift.closeTime() != null) {
+            // Calculate hours from business hours
+            long hours;
+            if (shift.closeTime().isBefore(shift.openTime())) {
+                // Crosses midnight: e.g., 11:00 to 02:00 = 15 hours
+                hours = 24 - shift.openTime().getHour() + shift.closeTime().getHour();
+            } else {
+                hours = Duration.between(shift.openTime(), shift.closeTime()).toHours();
+            }
+            operatingHours = (int) Math.max(hours, 1);
+        } else {
+            operatingHours = 12; // fallback default
+            log.warn("Could not determine operating hours for restaurant {}, using default 12", restaurantId);
+        }
 
         double averageTurnoverRate = tables > 0 && daysBetween > 0
                 ? (double) totalDineInOrders / tables / daysBetween
