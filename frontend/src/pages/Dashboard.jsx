@@ -29,7 +29,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format, subDays, startOfMonth, startOfWeek } from 'date-fns';
+import { format, subDays, startOfMonth, startOfWeek, subWeeks, subMonths, endOfMonth, endOfWeek } from 'date-fns';
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -42,7 +42,9 @@ export default function Dashboard() {
   const [dashboardData, setDashboardData] = useState(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [restaurants, setRestaurants] = useState([]);
-  const [period, setPeriod] = useState('month'); // today, week, month, custom
+  const [period, setPeriod] = useState('month');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function Dashboard() {
     if (selectedRestaurant) {
       loadDashboardData();
     }
-  }, [selectedRestaurant, period]);
+  }, [selectedRestaurant, period, customStartDate, customEndDate]);
 
   const loadInitialData = async () => {
     try {
@@ -82,24 +84,77 @@ export default function Dashboard() {
     }
   };
 
+  const getDateRangeForPeriod = (periodValue) => {
+    const today = new Date();
+    let startDate, endDate;
+
+    switch (periodValue) {
+      case 'today':
+        startDate = today;
+        endDate = today;
+        break;
+      case 'yesterday':
+        startDate = subDays(today, 1);
+        endDate = subDays(today, 1);
+        break;
+      case 'week':
+        startDate = startOfWeek(today, { weekStartsOn: 1 });
+        endDate = today;
+        break;
+      case 'lastWeek':
+        const lastWeekStart = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+        startDate = lastWeekStart;
+        endDate = endOfWeek(lastWeekStart, { weekStartsOn: 1 });
+        break;
+      case 'month':
+        startDate = startOfMonth(today);
+        endDate = today;
+        break;
+      case 'lastMonth':
+        const lastMonthStart = startOfMonth(subMonths(today, 1));
+        startDate = lastMonthStart;
+        endDate = endOfMonth(lastMonthStart);
+        break;
+      case 'custom':
+        if (customStartDate && customEndDate) {
+          startDate = new Date(customStartDate);
+          endDate = new Date(customEndDate);
+        } else {
+          return null;
+        }
+        break;
+      default:
+        startDate = startOfMonth(today);
+        endDate = today;
+    }
+
+    return {
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: format(endDate, 'yyyy-MM-dd'),
+    };
+  };
+
   const loadDashboardData = async () => {
     if (!selectedRestaurant) return;
 
+    // For custom period, validate dates
+    if (period === 'custom' && (!customStartDate || !customEndDate)) {
+      return;
+    }
+
     setLoading(true);
     try {
-      let response;
-      switch (period) {
-        case 'today':
-          response = await financialAPI.getTodaySummary(selectedRestaurant);
-          break;
-        case 'week':
-          response = await financialAPI.getWeekSummary(selectedRestaurant);
-          break;
-        case 'month':
-        default:
-          response = await financialAPI.getMonthSummary(selectedRestaurant);
-          break;
+      const dateRange = getDateRangeForPeriod(period);
+      if (!dateRange) {
+        setLoading(false);
+        return;
       }
+
+      const response = await financialAPI.getDashboard(
+        selectedRestaurant,
+        dateRange.startDate,
+        dateRange.endDate
+      );
       setDashboardData(response.data.data);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -159,10 +214,31 @@ export default function Dashboard() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="today">{t('dashboard.today', 'Today')}</SelectItem>
+              <SelectItem value="yesterday">{t('dashboard.yesterday', 'Yesterday')}</SelectItem>
               <SelectItem value="week">{t('dashboard.thisWeek', 'This Week')}</SelectItem>
+              <SelectItem value="lastWeek">{t('dashboard.lastWeek', 'Last Week')}</SelectItem>
               <SelectItem value="month">{t('dashboard.thisMonth', 'This Month')}</SelectItem>
+              <SelectItem value="lastMonth">{t('dashboard.lastMonth', 'Last Month')}</SelectItem>
+              <SelectItem value="custom">{t('dashboard.custom', 'Custom Range')}</SelectItem>
             </SelectContent>
           </Select>
+          {period === 'custom' && (
+            <div className="flex gap-2 items-center">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm"
+              />
+              <span className="text-muted-foreground">-</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+          )}
           <Button variant="outline" size="icon" onClick={loadDashboardData}>
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
