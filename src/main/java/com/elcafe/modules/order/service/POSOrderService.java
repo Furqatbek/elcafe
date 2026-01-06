@@ -81,6 +81,7 @@ public class POSOrderService {
         order.setDeliveryFee(request.getDeliveryFee() != null ? request.getDeliveryFee() : BigDecimal.ZERO);
         order.setServiceFeePercent(request.getServiceFeePercent() != null ? request.getServiceFeePercent() : BigDecimal.ZERO);
         order.setServiceFee(request.getServiceFee() != null ? request.getServiceFee() : BigDecimal.ZERO);
+        order.setEntryFee(request.getEntryFee() != null ? request.getEntryFee() : BigDecimal.ZERO);
         order.setDiscount(BigDecimal.ZERO); // Discount applied separately if needed
         order.setTotal(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO);
 

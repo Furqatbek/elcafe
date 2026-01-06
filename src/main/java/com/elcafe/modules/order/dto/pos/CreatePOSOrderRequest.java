@@ -69,6 +69,10 @@ public class CreatePOSOrderRequest {
     @Builder.Default
     private BigDecimal serviceFee = BigDecimal.ZERO;
 
+    @DecimalMin(value = "0.0", message = "Entry fee must be 0 or greater")
+    @Builder.Default
+    private BigDecimal entryFee = BigDecimal.ZERO;
+
     @NotNull(message = "Total is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Total must be greater than 0")
     private BigDecimal total;
