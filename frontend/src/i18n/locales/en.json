@@ -110,7 +110,9 @@
       "avgDeliveryTime": "Avg Delivery Time"
     },
     "recentOrders": "Recent Orders",
-    "recentActivity": "Recent Activity"
+    "recentActivity": "Recent Activity",
+    "soldItems": "Sold Items",
+    "soldItemsDesc": "Products sold during the selected period"
   },
   "analytics": {
     "financial": {

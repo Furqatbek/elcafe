@@ -441,17 +441,17 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Top Selling Items */}
+      {/* Sold Items */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('dashboard.topSellingItems', 'Top Selling Items')}</CardTitle>
-          <CardDescription>{t('dashboard.topItemsDesc', 'Best performing products by quantity sold and profitability')}</CardDescription>
+          <CardTitle>{t('dashboard.soldItems', 'Sold Items')}</CardTitle>
+          <CardDescription>{t('dashboard.soldItemsDesc', 'Products sold during the selected period')}</CardDescription>
         </CardHeader>
         <CardContent>
-          {dashboardData?.topSellingItems?.length > 0 ? (
-            <div className="overflow-x-auto">
+          {dashboardData?.soldItems?.length > 0 ? (
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead>
+                <thead className="sticky top-0 bg-white">
                   <tr className="border-b">
                     <th className="text-left py-2 pr-4">#</th>
                     <th className="text-left py-2">{t('dashboard.product', 'Product')}</th>
@@ -463,7 +463,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboardData.topSellingItems.slice(0, 5).map((item, index) => (
+                  {dashboardData.soldItems.map((item, index) => (
                     <tr key={item.productId} className="border-b hover:bg-muted/50">
                       <td className="py-2 pr-4">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${

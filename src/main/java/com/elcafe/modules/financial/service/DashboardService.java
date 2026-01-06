@@ -114,7 +114,7 @@ public class DashboardService {
                 .incomeByPaymentMethod(calculateIncomeByPaymentMethod(completedOrders))
                 .expensesByCategory(calculateExpensesByCategory(expenses, totalPayroll))
                 .dailyStats(calculateDailyStats(completedOrders, expenses, startDate, endDate))
-                .topSellingItems(calculateTopSellingItems(completedOrders))
+                .soldItems(calculateSoldItems(completedOrders))
                 .comparison(calculatePeriodComparison(restaurantId, startDate, endDate, totalIncome, totalExpenses, allOrders.size()))
                 .inventoryAlerts(calculateInventoryAlerts(restaurantId))
                 .build();
@@ -262,17 +262,17 @@ public class DashboardService {
         return dailyStats;
     }
 
-    private List<DashboardResponse.TopItem> calculateTopSellingItems(List<Order> orders) {
+    private List<DashboardResponse.SoldItem> calculateSoldItems(List<Order> orders) {
         // Aggregate items across all orders
-        Map<Long, DashboardResponse.TopItem> itemsMap = new HashMap<>();
+        Map<Long, DashboardResponse.SoldItem> itemsMap = new HashMap<>();
 
         for (Order order : orders) {
             for (OrderItem item : order.getItems()) {
                 Long productId = item.getProductId();
-                DashboardResponse.TopItem existing = itemsMap.get(productId);
+                DashboardResponse.SoldItem existing = itemsMap.get(productId);
 
                 if (existing == null) {
-                    itemsMap.put(productId, DashboardResponse.TopItem.builder()
+                    itemsMap.put(productId, DashboardResponse.SoldItem.builder()
                             .productId(productId)
                             .productName(item.getProductName())
                             .quantitySold((long) item.getQuantity())
@@ -286,14 +286,13 @@ public class DashboardService {
             }
         }
 
-        // Sort by quantity sold and take top 10
-        List<DashboardResponse.TopItem> topItems = itemsMap.values().stream()
+        // Sort by quantity sold (no limit - show all items for the period)
+        List<DashboardResponse.SoldItem> soldItems = itemsMap.values().stream()
                 .sorted((a, b) -> Long.compare(b.getQuantitySold(), a.getQuantitySold()))
-                .limit(10)
                 .collect(Collectors.toList());
 
         // Enrich with cost and profit data
-        for (DashboardResponse.TopItem item : topItems) {
+        for (DashboardResponse.SoldItem item : soldItems) {
             try {
                 Product product = productRepository.findById(item.getProductId()).orElse(null);
                 if (product != null && product.getCostPrice() != null) {
@@ -317,7 +316,7 @@ public class DashboardService {
             }
         }
 
-        return topItems;
+        return soldItems;
     }
 
     private DashboardResponse.PeriodComparison calculatePeriodComparison(

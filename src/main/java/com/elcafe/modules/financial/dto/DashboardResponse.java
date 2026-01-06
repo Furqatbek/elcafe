@@ -39,8 +39,8 @@ public class DashboardResponse {
     // Daily breakdown for charts
     private List<DailyStats> dailyStats;
 
-    // Top items
-    private List<TopItem> topSellingItems;
+    // Sold items for the period
+    private List<SoldItem> soldItems;
 
     // Comparison with previous period
     private PeriodComparison comparison;
@@ -76,7 +76,7 @@ public class DashboardResponse {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class TopItem {
+    public static class SoldItem {
         private Long productId;
         private String productName;
         private Long quantitySold;

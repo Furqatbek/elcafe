@@ -107,7 +107,9 @@
       "avgDeliveryTime": "O'rtacha yetkazib berish vaqti"
     },
     "recentOrders": "So'nggi buyurtmalar",
-    "recentActivity": "So'nggi faoliyat"
+    "recentActivity": "So'nggi faoliyat",
+    "soldItems": "Sotilgan mahsulotlar",
+    "soldItemsDesc": "Tanlangan davr uchun sotilgan mahsulotlar"
   },
   "orders": {
     "title": "Buyurtmalar",

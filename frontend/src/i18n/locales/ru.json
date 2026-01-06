@@ -107,7 +107,9 @@
       "avgDeliveryTime": "Среднее время доставки"
     },
     "recentOrders": "Последние заказы",
-    "recentActivity": "Последняя активность"
+    "recentActivity": "Последняя активность",
+    "soldItems": "Проданные товары",
+    "soldItemsDesc": "Товары, проданные за выбранный период"
   },
   "orders": {
     "title": "Заказы",
