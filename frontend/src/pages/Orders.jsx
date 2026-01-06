@@ -221,8 +221,8 @@ export default function Orders() {
       const products = response.data.data || [];
       setAvailableProducts(products);
 
-      // Extract unique categories
-      const categories = [...new Set(products.map(p => p.category?.name).filter(Boolean))];
+      // Extract unique categories (using categoryName field from API)
+      const categories = [...new Set(products.map(p => p.categoryName).filter(Boolean))];
       setProductCategories(categories);
     } catch (error) {
       console.error('Failed to load products:', error);
@@ -535,10 +535,10 @@ export default function Orders() {
     return stats;
   };
 
-  // Filter products by category
+  // Filter products by category (using categoryName field from API)
   const filteredProducts = selectedCategory === 'all'
     ? availableProducts
-    : availableProducts.filter(p => p.category?.name === selectedCategory);
+    : availableProducts.filter(p => p.categoryName === selectedCategory);
 
   const stats = getTableStats();
 
