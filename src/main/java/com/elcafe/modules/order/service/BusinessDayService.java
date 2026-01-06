@@ -72,26 +72,34 @@ public class BusinessDayService {
     }
 
     /**
-     * Adjust filter dates to business day boundaries.
-     * If restaurantId is null, uses default working hours.
+     * Adjust filter dates to capture all orders for a calendar date plus its business day.
+     *
+     * For example, with business hours 18:00-04:00, filtering for "January 6th" will include:
+     * - Orders from 00:00-04:00 on Jan 6 (early morning, part of Jan 5's business day but created on Jan 6)
+     * - Orders from 04:00-18:00 on Jan 6 (gap time between business days)
+     * - Orders from 18:00-23:59 on Jan 6 (start of Jan 6's business day)
+     * - Orders from 00:00-04:00 on Jan 7 (continuation of Jan 6's business day)
+     *
+     * This ensures ALL orders created on the calendar date are included, plus orders that
+     * belong to that date's business day which may extend into the next calendar day.
      */
     public DateRange adjustToBusinessDayBoundaries(Long restaurantId, LocalDateTime fromDate, LocalDateTime toDate) {
         LocalDateTime adjustedFrom = fromDate;
         LocalDateTime adjustedTo = toDate;
 
         if (fromDate != null) {
-            DateRange fromDayRange = getBusinessDayRange(restaurantId, fromDate.toLocalDate());
-            // Use the business day start time, not 00:00
-            adjustedFrom = fromDayRange.from();
+            // Start from the beginning of the calendar day (00:00)
+            // This captures all orders created on this date, including early morning hours
+            adjustedFrom = fromDate.toLocalDate().atStartOfDay();
         }
 
         if (toDate != null) {
+            // End at the business day end, which may be on the next calendar day
             DateRange toDayRange = getBusinessDayRange(restaurantId, toDate.toLocalDate());
-            // Use the business day end time, not 23:59
             adjustedTo = toDayRange.to();
         }
 
-        log.info("Adjusted date range to business day: {} to {} -> {} to {}",
+        log.info("Adjusted date range to include full calendar day + business day end: {} to {} -> {} to {}",
                 fromDate, toDate, adjustedFrom, adjustedTo);
 
         return new DateRange(adjustedFrom, adjustedTo);
