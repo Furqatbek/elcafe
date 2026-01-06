@@ -10,6 +10,8 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class OperationalAnalyticsService {
     private final OrderRepository orderRepository;
     private final KitchenOrderRepository kitchenOrderRepository;
     private final ShiftTimeService shiftTimeService;
+    private final RestaurantTableRepository restaurantTableRepository;
 
     /**
      * Calculate sales per hour.
@@ -142,7 +145,7 @@ public class OperationalAnalyticsService {
     /**
      * Calculate table turnover rate.
      * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
-     * Note: This requires table/seat configuration data which should be provided
+     * Fetches actual table count from database when not provided.
      */
     public TableTurnoverDTO getTableTurnover(
             LocalDate startDate, LocalDate endDate, Long restaurantId,
@@ -162,8 +165,19 @@ public class OperationalAnalyticsService {
 
         long daysBetween = Duration.between(shift.start(), shift.end()).toDays() + 1;
 
-        int tables = totalTables != null ? totalTables : 20; // default
-        int seats = totalSeats != null ? totalSeats : tables * 4; // default 4 seats per table
+        // Fetch actual tables from database if not provided
+        int tables;
+        int seats;
+        if (totalTables == null && restaurantId != null) {
+            List<RestaurantTable> activeTables = restaurantTableRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
+            tables = activeTables.size();
+            seats = totalSeats != null ? totalSeats : activeTables.stream()
+                    .mapToInt(t -> t.getCapacity() != null ? t.getCapacity() : 4)
+                    .sum();
+        } else {
+            tables = totalTables != null ? totalTables : 1; // default to 1 to avoid division by zero
+            seats = totalSeats != null ? totalSeats : tables * 4; // default 4 seats per table
+        }
         int operatingHours = operatingHoursPerDay != null ? operatingHoursPerDay : 12; // default 12 hours
 
         double averageTurnoverRate = tables > 0 && daysBetween > 0
