@@ -39,7 +39,7 @@ export default function KitchenDashboard() {
   const { t } = useTranslation();
   const [activeOrders, setActiveOrders] = useState([]);
   const [readyOrders, setReadyOrders] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startModalOpen, setStartModalOpen] = useState(false);

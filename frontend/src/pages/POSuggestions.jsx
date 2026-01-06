@@ -9,7 +9,7 @@ const POSuggestions = () => {
   const { user } = useAuthStore();
   const [suggestions, setSuggestions] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(null);
 

@@ -8,7 +8,7 @@ const DAYS_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'S
 const WorkingHours = () => {
   const { t } = useTranslation();
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [workingHours, setWorkingHours] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

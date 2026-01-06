@@ -20,7 +20,7 @@ const FinancialAlerts = () => {
   const { user } = useAuthStore();
 
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [subscriptions, setSubscriptions] = useState([]);
   const [dailyMetrics, setDailyMetrics] = useState(null);
   const [loading, setLoading] = useState(false);

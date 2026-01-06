@@ -79,7 +79,7 @@ export default function OrdersHistory() {
   });
 
   // Filter state
-  const [selectedRestaurant, setSelectedRestaurant] = useState('all');
+  const [selectedRestaurant, setSelectedRestaurant] = useState('1');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');

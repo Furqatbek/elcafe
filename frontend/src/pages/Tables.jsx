@@ -9,7 +9,7 @@ const Tables = () => {
   const { user } = useAuthStore();
   const [tables, setTables] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingTable, setEditingTable] = useState(null);

@@ -13,7 +13,7 @@ const PurchaseOrders = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [ingredients, setIngredients] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [prefillProcessed, setPrefillProcessed] = useState(false);

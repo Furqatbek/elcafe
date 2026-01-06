@@ -40,7 +40,7 @@ export default function Dashboard() {
     loading: true,
   });
   const [dashboardData, setDashboardData] = useState(null);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [restaurants, setRestaurants] = useState([]);
   const [period, setPeriod] = useState('month');
   const [customStartDate, setCustomStartDate] = useState('');

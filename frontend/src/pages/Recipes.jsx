@@ -48,7 +48,7 @@ export default function Recipes() {
   const [productIngredients, setProductIngredients] = useState([]);
   const [availableIngredients, setAvailableIngredients] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);

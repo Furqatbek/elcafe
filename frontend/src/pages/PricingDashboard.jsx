@@ -19,7 +19,7 @@ const PricingDashboard = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(searchParams.get('restaurantId') || '');
+  const [selectedRestaurant, setSelectedRestaurant] = useState(searchParams.get('restaurantId') || '1');
   const [loading, setLoading] = useState(false);
   const [targetMargin, setTargetMargin] = useState(30);
 

@@ -8,7 +8,7 @@ const FinancialReports = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profitLoss');
   const [accountsExist, setAccountsExist] = useState(true);

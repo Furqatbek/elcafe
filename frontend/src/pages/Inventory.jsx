@@ -88,7 +88,7 @@ export default function Inventory() {
 
   // Common state
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(true);
 
   // Ingredients state
