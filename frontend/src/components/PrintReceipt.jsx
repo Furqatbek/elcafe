@@ -267,25 +267,25 @@ const generateReceiptHTML = (order) => {
     </table>
 
     <div class="totals">
-      ${order.deliveryFee && order.deliveryFee > 0 ? `
+      ${Number(order.deliveryFee) > 0 ? `
       <div class="total-line">
         <span>Yetkazish:</span>
         <span>${Math.round(order.deliveryFee)}</span>
       </div>
       ` : ''}
-      ${order.serviceFee && order.serviceFee > 0 ? `
+      ${Number(order.serviceFee) > 0 ? `
       <div class="total-line">
         <span>Xizmat haqi (${order.serviceFeePercent || 0}%):</span>
         <span>${Math.round(order.serviceFee)}</span>
       </div>
       ` : ''}
-      ${order.entryFee && order.entryFee > 0 ? `
+      ${Number(order.entryFee) > 0 ? `
       <div class="total-line">
         <span>Kirish haqi:</span>
         <span>${Math.round(order.entryFee)}</span>
       </div>
       ` : ''}
-      ${order.discount && order.discount > 0 ? `
+      ${Number(order.discount) > 0 ? `
       <div class="total-line">
         <span>Chegirma:</span>
         <span>-${Math.round(order.discount)}</span>
