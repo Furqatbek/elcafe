@@ -134,9 +134,16 @@ public class FinancialReportsService {
 
     /**
      * Generate Balance Sheet
+     * Uses shift-based time context for consistency with other reports.
+     * Note: Balance sheet shows current account balances, not historical point-in-time values.
      */
     public BalanceSheetReport generateBalanceSheet(Long restaurantId, LocalDate asOfDate) {
         log.info("Generating balance sheet for restaurant: {} as of {}", restaurantId, asOfDate);
+
+        // Get shift-based time context for logging consistency
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, asOfDate, asOfDate);
+        log.info("Balance Sheet: Using shift time context: {} to {}", shift.start(), shift.end());
 
         // Assets
         List<Account> assetAccounts = accountRepository.findByRestaurant_IdAndType(
