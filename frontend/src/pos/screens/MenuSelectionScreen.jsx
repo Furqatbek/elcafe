@@ -282,6 +282,10 @@ const MenuSelectionScreen = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-4">
               {filteredProducts.map(product => {
                 const availability = productAvailability[product.id];
+                // Calculate how many of this product are in the cart
+                const cartQuantity = currentOrder.items
+                  .filter(item => item.productId === product.id)
+                  .reduce((sum, item) => sum + item.quantity, 0);
                 return (
                   <ProductCard
                     key={product.id}
@@ -291,6 +295,7 @@ const MenuSelectionScreen = () => {
                       stockStatus: availability?.stockStatus || 'UNKNOWN',
                       maxQuantityAvailable: availability?.maxQuantityAvailable,
                     }}
+                    cartQuantity={cartQuantity}
                     onSelect={handleProductSelect}
                   />
                 );

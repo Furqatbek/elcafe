@@ -10,6 +10,7 @@ import { Plus } from 'lucide-react';
 const ProductCard = ({
   product,
   onSelect,
+  cartQuantity = 0,
   className = '',
 }) => {
   const { t } = useTranslation();
@@ -88,8 +89,17 @@ const ProductCard = ({
           </div>
         )}
 
-        {/* Add Icon - Shows on hover */}
-        {available && (
+        {/* Cart Quantity Badge */}
+        {cartQuantity > 0 && (
+          <div className="absolute top-1 sm:top-2 right-1 sm:right-2 z-10">
+            <div className="bg-blue-600 text-white rounded-full min-w-[24px] sm:min-w-[32px] h-6 sm:h-8 flex items-center justify-center font-bold text-sm sm:text-lg shadow-lg">
+              {cartQuantity}
+            </div>
+          </div>
+        )}
+
+        {/* Add Icon - Shows on hover when no items in cart */}
+        {available && cartQuantity === 0 && (
           <div className="absolute top-1 sm:top-2 right-1 sm:right-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="bg-blue-600 text-white rounded-full p-1 sm:p-2">
               <Plus className="w-4 sm:w-5 h-4 sm:h-5" />
