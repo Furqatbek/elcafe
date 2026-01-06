@@ -102,7 +102,9 @@ export default function Layout() {
       label: t('nav.orders'),
       icon: ShoppingCart,
       path: '/orders',
-      subItems: [],
+      subItems: [
+        { label: t('nav.sub.ordersHistory'), icon: History, path: '/orders/history' },
+      ],
     },
     {
       id: 'restaurant',
