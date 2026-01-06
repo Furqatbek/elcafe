@@ -602,7 +602,9 @@
     "paymentSuccess": "Payment processed successfully",
     "cancelError": "Failed to cancel order",
     "addItemError": "Failed to add item: ",
-    "capacity": "Capacity"
+    "capacity": "Capacity",
+    "mandatoryServiceFee": "Service Fee (20%)",
+    "serviceFeeAutoApplied": "Automatically applied"
   },
   "tables": {
     "status": {

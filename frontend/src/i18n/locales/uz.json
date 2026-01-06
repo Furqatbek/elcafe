@@ -465,7 +465,9 @@
     "paymentSuccess": "To'lov muvaffaqiyatli amalga oshirildi",
     "cancelError": "Buyurtmani bekor qilib bo'lmadi",
     "addItemError": "Mahsulot qo'shib bo'lmadi: ",
-    "capacity": "Sig'imi"
+    "capacity": "Sig'imi",
+    "mandatoryServiceFee": "Xizmat haqi (20%)",
+    "serviceFeeAutoApplied": "Avtomatik qo'llaniladi"
   },
   "tables": {
     "status": {

@@ -298,16 +298,26 @@ export default function Orders() {
   };
 
   // Open payment modal
-  const handleOpenPayment = (order) => {
+  const handleOpenPayment = async (order) => {
     setPaymentOrder(order);
     setPaymentMethod('CASH');
     setAmountTendered('');
-    // Initialize service fee from order or reset
-    const existingServiceFeePercent = order.serviceFeePercent || 0;
-    const existingServiceFee = order.serviceFee || 0;
-    setServiceFeePercent(existingServiceFeePercent);
-    setServiceFeeAmount(existingServiceFee);
+
+    // Always apply 20% service fee - this is mandatory and cannot be changed
+    const MANDATORY_SERVICE_FEE_PERCENT = 20;
+    const subtotal = order.subtotal || 0;
+    const calculatedServiceFee = subtotal * (MANDATORY_SERVICE_FEE_PERCENT / 100);
+    setServiceFeePercent(MANDATORY_SERVICE_FEE_PERCENT);
+    setServiceFeeAmount(calculatedServiceFee);
     setShowServiceFeeInput(false);
+
+    // Apply service fee to backend
+    try {
+      await posAPI.applyServiceFee(order.id, MANDATORY_SERVICE_FEE_PERCENT);
+    } catch (error) {
+      console.error('Failed to apply mandatory service fee:', error);
+    }
+
     // Initialize entry fee from order or reset
     const existingEntryFee = order.entryFee || 0;
     setEntryFeeAmount(existingEntryFee);
@@ -431,56 +441,6 @@ export default function Orders() {
     const tendered = parseFloat(amountTendered) || 0;
     const totalWithFees = calculateTotalWithFees();
     return Math.max(0, tendered - totalWithFees);
-  };
-
-  // Apply service fee
-  const handleApplyServiceFee = async (percent) => {
-    if (!paymentOrder) return;
-
-    const subtotal = paymentOrder.subtotal || 0;
-    const calculatedFee = subtotal * (percent / 100);
-    setServiceFeePercent(percent);
-    setServiceFeeAmount(calculatedFee);
-    setShowServiceFeeInput(false);
-
-    // Save to backend
-    try {
-      await posAPI.applyServiceFee(paymentOrder.id, percent);
-      // Update the paymentOrder with new service fee
-      setPaymentOrder({
-        ...paymentOrder,
-        serviceFeePercent: percent,
-        serviceFee: calculatedFee,
-        total: subtotal + (paymentOrder.tax || 0) + calculatedFee
-      });
-    } catch (error) {
-      console.error('Failed to apply service fee:', error);
-    }
-  };
-
-  // Remove service fee
-  const handleRemoveServiceFee = async () => {
-    if (!paymentOrder) return;
-
-    setServiceFeePercent(0);
-    setServiceFeeAmount(0);
-    setShowServiceFeeInput(false);
-
-    // Save to backend
-    try {
-      await posAPI.applyServiceFee(paymentOrder.id, 0);
-      // Update the paymentOrder
-      const subtotal = paymentOrder.subtotal || 0;
-      const tax = paymentOrder.tax || 0;
-      setPaymentOrder({
-        ...paymentOrder,
-        serviceFeePercent: 0,
-        serviceFee: 0,
-        total: subtotal + tax
-      });
-    } catch (error) {
-      console.error('Failed to remove service fee:', error);
-    }
   };
 
   // Apply entry fee
@@ -1094,84 +1054,18 @@ export default function Orders() {
               </div>
             </div>
 
-            {/* Service Fee Section */}
-            <div>
-              {!showServiceFeeInput ? (
-                <Button
-                  type="button"
-                  variant={serviceFeeAmount > 0 ? 'secondary' : 'outline'}
-                  className="w-full"
-                  onClick={() => setShowServiceFeeInput(true)}
-                >
-                  <Percent className="h-4 w-4 mr-2" />
-                  {serviceFeeAmount > 0
-                    ? t('orders.editServiceFee', 'Edit Service Fee ({{percent}}%)', { percent: serviceFeePercent })
-                    : t('orders.addServiceFee', 'Add Service Fee')
-                  }
-                </Button>
-              ) : (
-                <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 space-y-3">
-                  <Label className="text-purple-800 font-semibold">
-                    {t('orders.serviceFeePercent', 'Service Fee %')}
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.5"
-                      value={serviceFeePercent}
-                      onChange={(e) => setServiceFeePercent(parseFloat(e.target.value) || 0)}
-                      className="flex-1 text-center font-semibold"
-                      placeholder="0"
-                    />
-                    <span className="flex items-center text-lg font-bold text-purple-700">%</span>
-                  </div>
-                  {/* Quick percentage buttons */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {[5, 10, 12, 15].map((percent) => (
-                      <Button
-                        key={percent}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setServiceFeePercent(percent)}
-                        className={serviceFeePercent === percent ? 'border-purple-500 bg-purple-100' : ''}
-                      >
-                        {percent}%
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleApplyServiceFee(serviceFeePercent)}
-                    >
-                      {t('common.apply', 'Apply')}
-                    </Button>
-                    {serviceFeeAmount > 0 && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleRemoveServiceFee}
-                      >
-                        {t('common.remove', 'Remove')}
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowServiceFeeInput(false)}
-                    >
-                      {t('common.cancel', 'Cancel')}
-                    </Button>
-                  </div>
-                </div>
-              )}
+            {/* Service Fee Notice - 20% is mandatory and cannot be changed */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center gap-3">
+              <Percent className="h-5 w-5 text-purple-600" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-purple-800">
+                  {t('orders.mandatoryServiceFee', 'Service Fee (20%)')}
+                </p>
+                <p className="text-xs text-purple-600">
+                  {t('orders.serviceFeeAutoApplied', 'Automatically applied')}
+                </p>
+              </div>
+              <span className="font-bold text-purple-700">{serviceFeeAmount?.toLocaleString()}</span>
             </div>
 
             {/* Entry Fee Section */}

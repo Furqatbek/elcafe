@@ -465,7 +465,9 @@
     "paymentSuccess": "Оплата успешно проведена",
     "cancelError": "Не удалось отменить заказ",
     "addItemError": "Не удалось добавить позицию: ",
-    "capacity": "Вместимость"
+    "capacity": "Вместимость",
+    "mandatoryServiceFee": "Сервисный сбор (20%)",
+    "serviceFeeAutoApplied": "Применяется автоматически"
   },
   "tables": {
     "status": {
