@@ -39,6 +39,7 @@ public class OrderService {
     private final InventoryService inventoryService;
     private final DailyOrderSequenceService dailyOrderSequenceService;
     private final RestaurantTableRepository restaurantTableRepository;
+    private final BusinessDayService businessDayService;
 
     @Autowired
     @Lazy
@@ -190,6 +191,7 @@ public class OrderService {
     /**
      * Get orders with filters for order history page.
      * Supports filtering by restaurant, status, date range, and search term.
+     * Date ranges are adjusted to business day boundaries based on restaurant working hours.
      */
     @Transactional(readOnly = true)
     public Page<Order> getOrdersWithFilters(
@@ -203,11 +205,26 @@ public class OrderService {
         log.info("Fetching orders with filters: restaurantId={}, status={}, fromDate={}, toDate={}, search={}",
                 restaurantId, status, fromDate, toDate, search);
 
+        // Adjust date range to business day boundaries
+        LocalDateTime adjustedFromDate = fromDate;
+        LocalDateTime adjustedToDate = toDate;
+
+        if (fromDate != null || toDate != null) {
+            BusinessDayService.DateRange adjustedRange = businessDayService.adjustToBusinessDayBoundaries(
+                    restaurantId, fromDate, toDate
+            );
+            adjustedFromDate = adjustedRange.from();
+            adjustedToDate = adjustedRange.to();
+
+            log.info("Adjusted to business day boundaries: {} to {} -> {} to {}",
+                    fromDate, toDate, adjustedFromDate, adjustedToDate);
+        }
+
         Specification<Order> spec = OrderSpecification.withFilters(
                 restaurantId,
                 status,
-                fromDate,
-                toDate,
+                adjustedFromDate,
+                adjustedToDate,
                 search
         );
 
@@ -216,10 +233,16 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<Order> getOrdersByRestaurant(Long restaurantId) {
+        // Get business day boundaries for 7 days ago to now
+        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+        BusinessDayService.DateRange adjustedRange = businessDayService.adjustToBusinessDayBoundaries(
+                restaurantId, sevenDaysAgo, LocalDateTime.now()
+        );
+
         return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId,
-                LocalDateTime.now().minusDays(7),
-                LocalDateTime.now()
+                adjustedRange.from(),
+                adjustedRange.to()
         );
     }
 
