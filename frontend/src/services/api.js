@@ -393,4 +393,37 @@ export const printerAPI = {
   testPrinter: (id) => api.post(`/settings/printers/${id}/test`),
 };
 
+export const promotionAPI = {
+  // Promotions CRUD
+  getPromotions: (restaurantId, params = {}) =>
+    api.get(`/restaurants/${restaurantId}/promotions`, { params }),
+  getActivePromotions: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/promotions/active`),
+  getPromotion: (id) => api.get(`/promotions/${id}`),
+  createPromotion: (restaurantId, data) =>
+    api.post(`/restaurants/${restaurantId}/promotions`, data),
+  updatePromotion: (id, data) => api.put(`/promotions/${id}`, data),
+  deletePromotion: (id) => api.delete(`/promotions/${id}`),
+  togglePromotion: (id) => api.post(`/promotions/${id}/toggle`),
+
+  // Coupons CRUD
+  getCoupons: (restaurantId, params = {}) =>
+    api.get(`/restaurants/${restaurantId}/coupons`, { params }),
+  getCouponsByPromotion: (promotionId, params = {}) =>
+    api.get(`/promotions/${promotionId}/coupons`, { params }),
+  getCoupon: (id) => api.get(`/coupons/${id}`),
+  getCouponByCode: (code) => api.get(`/coupons/by-code/${code}`),
+  createCoupon: (data) => api.post('/coupons', data),
+  generateCoupons: (data) => api.post('/coupons/generate-batch', data),
+  updateCoupon: (id, data) => api.put(`/coupons/${id}`, data),
+  deleteCoupon: (id) => api.delete(`/coupons/${id}`),
+  toggleCoupon: (id) => api.post(`/coupons/${id}/toggle`),
+
+  // Validation
+  validateCoupon: (data) => api.post('/coupons/validate', data),
+
+  // Customer coupons
+  getCustomerCoupons: (customerId) => api.get(`/customers/${customerId}/coupons`),
+};
+
 export default api;

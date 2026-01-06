@@ -59,6 +59,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.customer.id = :customerId ORDER BY o.createdAt DESC")
     List<Order> findByCustomerIdWithItemsOrderByCreatedAtDesc(@Param("customerId") Long customerId);
 
+    long countByCustomer_Id(Long customerId);
+
     List<Order> findByStatusOrderByCreatedAtAsc(OrderStatus status);
 
     List<Order> findByWaiterAndStatusInOrderByCreatedAtDesc(Waiter waiter, List<OrderStatus> statuses);

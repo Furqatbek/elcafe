@@ -45,8 +45,19 @@ public class CreatePOSOrderRequest {
     @Size(max = 1000, message = "Order notes must not exceed 1000 characters")
     private String orderNotes;
 
-    @NotNull(message = "Payment method is required")
-    private String paymentMethod; // CASH, CARD, MOBILE
+    // Coupon/Discount support
+    @Size(max = 50, message = "Coupon code must not exceed 50 characters")
+    private String couponCode;
+
+    // Manual discount (for staff-applied discounts)
+    @DecimalMin(value = "0.0", message = "Discount must be 0 or greater")
+    private BigDecimal discount;
+
+    @Size(max = 500, message = "Discount reason must not exceed 500 characters")
+    private String discountReason;
+
+    // Payment method is optional - orders can be created without payment (pay later)
+    private String paymentMethod; // CASH, CARD, MOBILE (optional)
 
     @NotNull(message = "Subtotal is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Subtotal must be greater than 0")
@@ -59,6 +70,15 @@ public class CreatePOSOrderRequest {
     @DecimalMin(value = "0.0", message = "Delivery fee must be 0 or greater")
     @Builder.Default
     private BigDecimal deliveryFee = BigDecimal.ZERO;
+
+    @DecimalMin(value = "0.0", message = "Service fee percent must be 0 or greater")
+    @DecimalMax(value = "100.0", message = "Service fee percent must not exceed 100")
+    @Builder.Default
+    private BigDecimal serviceFeePercent = BigDecimal.ZERO;
+
+    @DecimalMin(value = "0.0", message = "Service fee must be 0 or greater")
+    @Builder.Default
+    private BigDecimal serviceFee = BigDecimal.ZERO;
 
     @NotNull(message = "Total is required")
     @DecimalMin(value = "0.0", inclusive = false, message = "Total must be greater than 0")
@@ -80,12 +100,11 @@ public class CreatePOSOrderRequest {
     @AllArgsConstructor
     public static class CustomerInfo {
 
-        @NotBlank(message = "Customer name is required")
+        // Name and phone are optional for dine-in orders
         @Size(max = 200, message = "Name must not exceed 200 characters")
         private String name;
 
-        @NotBlank(message = "Phone is required")
-        @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Invalid phone number format")
+        @Size(max = 50, message = "Phone must not exceed 50 characters")
         private String phone;
 
         @Email(message = "Invalid email format")
@@ -164,6 +183,9 @@ public class CreatePOSOrderRequest {
         @NotBlank(message = "Table number is required")
         @Size(max = 50, message = "Table number must not exceed 50 characters")
         private String tableNumber;
+
+        // Array of table IDs for multi-table orders
+        private List<Long> tableIds;
 
         @NotNull(message = "Guest count is required")
         @Min(value = 1, message = "Guest count must be at least 1")

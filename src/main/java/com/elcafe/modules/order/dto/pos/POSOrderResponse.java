@@ -26,6 +26,14 @@ public class POSOrderResponse {
     private BigDecimal subtotal;
     private BigDecimal tax;
     private BigDecimal deliveryFee;
+    private BigDecimal serviceFeePercent;
+    private BigDecimal serviceFee;
+    private BigDecimal entryFee;
+    private BigDecimal discount;
+    private String couponCode;
+    private Long promotionId;
+    private String discountType;
+    private String discountReason;
     private BigDecimal total;
     private String paymentMethod;
     private String orderNotes;
@@ -41,8 +49,11 @@ public class POSOrderResponse {
     public static class OrderItemResponse {
         private Long id;
         private String productName;
+        private String variantName;
         private Integer quantity;
-        private BigDecimal price;
+        private BigDecimal unitPrice;
+        private BigDecimal price; // alias for unitPrice (backward compatibility)
+        private BigDecimal totalPrice;
         private List<String> modifiers;
         private String notes;
     }
@@ -65,6 +76,7 @@ public class POSOrderResponse {
     @AllArgsConstructor
     public static class DineInInfoResponse {
         private String tableNumber;
+        private List<Long> tableIds;
         private Integer guestCount;
     }
 }
