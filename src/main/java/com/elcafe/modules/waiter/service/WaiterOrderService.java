@@ -93,6 +93,7 @@ public class WaiterOrderService {
                 .waiter(waiter)
                 .status(OrderStatus.NEW)
                 .orderSource(OrderSource.WAITER)
+                .guestCount(request.getGuestCount())
                 .subtotal(BigDecimal.ZERO)
                 .deliveryFee(BigDecimal.ZERO)
                 .tax(BigDecimal.ZERO)
