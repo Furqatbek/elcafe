@@ -121,6 +121,11 @@ export default function Orders() {
   const [orderToCancel, setOrderToCancel] = useState(null);
   const [cancelling, setCancelling] = useState(false);
 
+  // Edit order modal state
+  const [editOrderModalOpen, setEditOrderModalOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [updatingItem, setUpdatingItem] = useState(null);
+
   // Load restaurants on mount
   useEffect(() => {
     loadRestaurants();
@@ -436,6 +441,104 @@ export default function Orders() {
       alert(t('orders.cancelError', 'Failed to cancel order'));
     } finally {
       setCancelling(false);
+    }
+  };
+
+  // Open edit order modal
+  const handleOpenEditOrder = async (order) => {
+    await loadProducts();
+    setEditingOrder(order);
+    setNewItemProductId('');
+    setNewItemQuantity(1);
+    setSelectedCategory('all');
+    setEditOrderModalOpen(true);
+  };
+
+  // Update item quantity
+  const handleUpdateItemQuantity = async (orderId, itemId, newQuantity) => {
+    if (newQuantity < 1) return;
+
+    setUpdatingItem(itemId);
+    try {
+      await posAPI.updateItemQuantity(orderId, itemId, newQuantity);
+      await loadTablesAndOrders();
+
+      // Update the editing order with fresh data
+      if (editingOrder && editingOrder.id === orderId) {
+        const updatedOrders = tableOrders[selectedTable?.id] || [];
+        const updatedOrder = updatedOrders.find(o => o.id === orderId);
+        if (updatedOrder) {
+          setEditingOrder(updatedOrder);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update item quantity:', error);
+      alert(t('orders.updateItemError', 'Failed to update item quantity'));
+    } finally {
+      setUpdatingItem(null);
+    }
+  };
+
+  // Remove item from order
+  const handleRemoveItem = async (orderId, itemId) => {
+    if (!confirm(t('orders.confirmRemoveItem', 'Are you sure you want to remove this item?'))) {
+      return;
+    }
+
+    setUpdatingItem(itemId);
+    try {
+      await posAPI.removeItemFromOrder(orderId, itemId);
+      await loadTablesAndOrders();
+
+      // Update the editing order with fresh data
+      if (editingOrder && editingOrder.id === orderId) {
+        const updatedOrders = tableOrders[selectedTable?.id] || [];
+        const updatedOrder = updatedOrders.find(o => o.id === orderId);
+        if (updatedOrder) {
+          setEditingOrder(updatedOrder);
+        } else {
+          // Order might be empty now, close the modal
+          setEditOrderModalOpen(false);
+          setEditingOrder(null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+      alert(t('orders.removeItemError', 'Failed to remove item'));
+    } finally {
+      setUpdatingItem(null);
+    }
+  };
+
+  // Add item from edit modal
+  const handleAddItemFromEditModal = async () => {
+    if (!newItemProductId || !editingOrder) return;
+
+    setAddingItem(true);
+    try {
+      await posAPI.addItemToOrder(editingOrder.id, {
+        productId: parseInt(newItemProductId),
+        quantity: newItemQuantity,
+        specialInstructions: ''
+      });
+
+      setNewItemProductId('');
+      setNewItemQuantity(1);
+
+      // Refresh data
+      await loadTablesAndOrders();
+
+      // Update the editing order with fresh data
+      const updatedOrders = tableOrders[selectedTable?.id] || [];
+      const updatedOrder = updatedOrders.find(o => o.id === editingOrder.id);
+      if (updatedOrder) {
+        setEditingOrder(updatedOrder);
+      }
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      alert(t('orders.addItemError', 'Failed to add item: ') + (error.response?.data?.message || error.message));
+    } finally {
+      setAddingItem(false);
     }
   };
 
@@ -813,14 +916,14 @@ export default function Orders() {
 
                           {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && !order.fullyPaid && (
                             <>
-                              {/* Add Item */}
+                              {/* Edit Order */}
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={handleOpenAddItem}
+                                onClick={() => handleOpenEditOrder(order)}
                               >
-                                <Plus className="h-4 w-4 mr-1" />
-                                {t('orders.addItem', 'Add Item')}
+                                <Edit className="h-4 w-4 mr-1" />
+                                {t('orders.editOrder', 'Edit Order')}
                               </Button>
 
                               {/* Pay Button */}
@@ -1203,6 +1306,190 @@ export default function Orders() {
               {cancelling
                 ? t('common.cancelling', 'Cancelling...')
                 : t('orders.yesCancel', 'Yes, Cancel')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Order Modal */}
+      <Dialog open={editOrderModalOpen} onOpenChange={setEditOrderModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              {t('orders.editOrder', 'Edit Order')} #{editingOrder?.orderNumber}
+            </DialogTitle>
+            <DialogDescription>
+              {t('orders.editOrderDesc', 'Add, remove, or modify items in this order')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Current Order Items */}
+            <div>
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Utensils className="h-4 w-4" />
+                {t('orders.currentItems', 'Current Items')} ({editingOrder?.items?.length || 0})
+              </h4>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {editingOrder?.items?.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium">{item.productName}</p>
+                      {item.variantName && (
+                        <p className="text-sm text-muted-foreground">{item.variantName}</p>
+                      )}
+                      <p className="text-sm text-green-600 font-medium">
+                        {(item.totalPrice || item.unitPrice * item.quantity)?.toLocaleString()}
+                      </p>
+                    </div>
+
+                    {/* Quantity Controls */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUpdateItemQuantity(editingOrder.id, item.id, item.quantity - 1)}
+                        disabled={item.quantity <= 1 || updatingItem === item.id}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-8 text-center font-medium">
+                        {updatingItem === item.id ? '...' : item.quantity}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUpdateItemQuantity(editingOrder.id, item.id, item.quantity + 1)}
+                        disabled={updatingItem === item.id}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
+                        onClick={() => handleRemoveItem(editingOrder.id, item.id)}
+                        disabled={updatingItem === item.id}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                {(!editingOrder?.items || editingOrder.items.length === 0) && (
+                  <p className="text-center text-muted-foreground py-4">
+                    {t('orders.noItems', 'No items in this order')}
+                  </p>
+                )}
+              </div>
+
+              {/* Order Total */}
+              {editingOrder?.items?.length > 0 && (
+                <div className="flex justify-between items-center mt-3 pt-3 border-t">
+                  <span className="font-medium">{t('orders.subtotal', 'Subtotal')}</span>
+                  <span className="text-lg font-bold">{editingOrder?.subtotal?.toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Add New Item Section */}
+            <div className="border-t pt-4">
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                {t('orders.addNewItem', 'Add New Item')}
+              </h4>
+
+              {/* Category Filter */}
+              <div className="flex gap-2 mb-3 overflow-x-auto pb-2">
+                <Button
+                  variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCategory('all')}
+                >
+                  {t('orders.allCategories', 'All')}
+                </Button>
+                {[...new Set(availableProducts.map(p => p.categoryName).filter(Boolean))].map((category) => (
+                  <Button
+                    key={category}
+                    variant={selectedCategory === category ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedCategory(category)}
+                  >
+                    {category}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Product Selection */}
+              <div className="grid grid-cols-1 gap-3">
+                <Select value={newItemProductId} onValueChange={setNewItemProductId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('orders.selectProduct', 'Select a product')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(selectedCategory === 'all'
+                      ? availableProducts
+                      : availableProducts.filter(p => p.categoryName === selectedCategory)
+                    ).map((product) => (
+                      <SelectItem key={product.id} value={product.id.toString()}>
+                        {product.name} - {product.price?.toLocaleString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Quantity and Add Button */}
+                <div className="flex gap-2 items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">{t('orders.quantity', 'Qty')}:</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewItemQuantity(Math.max(1, newItemQuantity - 1))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={newItemQuantity}
+                      onChange={(e) => setNewItemQuantity(parseInt(e.target.value) || 1)}
+                      className="w-16 text-center"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNewItemQuantity(newItemQuantity + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button
+                    onClick={handleAddItemFromEditModal}
+                    disabled={!newItemProductId || addingItem}
+                    className="flex-1"
+                  >
+                    {addingItem ? t('common.adding', 'Adding...') : t('orders.addItem', 'Add Item')}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditOrderModalOpen(false);
+                setEditingOrder(null);
+              }}
+            >
+              {t('common.close', 'Close')}
             </Button>
           </DialogFooter>
         </DialogContent>

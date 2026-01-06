@@ -469,7 +469,16 @@
     "mandatoryServiceFee": "Xizmat haqi (20%)",
     "serviceFeeAutoApplied": "Avtomatik qo'llaniladi",
     "djServices": "DJ xizmatlari",
-    "djServicesPerGuest": "10 000 × {{count}} mehmon"
+    "djServicesPerGuest": "10 000 × {{count}} mehmon",
+    "editOrder": "Buyurtmani tahrirlash",
+    "editOrderDesc": "Ushbu buyurtmaga mahsulot qo'shing, o'chiring yoki o'zgartiring",
+    "currentItems": "Joriy mahsulotlar",
+    "noItems": "Bu buyurtmada mahsulotlar yo'q",
+    "addNewItem": "Yangi mahsulot qo'shish",
+    "allCategories": "Hammasi",
+    "confirmRemoveItem": "Ushbu mahsulotni o'chirishga ishonchingiz komilmi?",
+    "updateItemError": "Miqdorni o'zgartirib bo'lmadi",
+    "removeItemError": "Mahsulotni o'chirib bo'lmadi"
   },
   "tables": {
     "status": {

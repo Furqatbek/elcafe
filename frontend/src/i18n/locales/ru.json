@@ -469,7 +469,16 @@
     "mandatoryServiceFee": "Сервисный сбор (20%)",
     "serviceFeeAutoApplied": "Применяется автоматически",
     "djServices": "Услуги диджея",
-    "djServicesPerGuest": "10 000 × {{count}} гостей"
+    "djServicesPerGuest": "10 000 × {{count}} гостей",
+    "editOrder": "Редактировать заказ",
+    "editOrderDesc": "Добавляйте, удаляйте или изменяйте позиции в этом заказе",
+    "currentItems": "Текущие позиции",
+    "noItems": "В этом заказе нет позиций",
+    "addNewItem": "Добавить новую позицию",
+    "allCategories": "Все",
+    "confirmRemoveItem": "Вы уверены, что хотите удалить эту позицию?",
+    "updateItemError": "Не удалось изменить количество",
+    "removeItemError": "Не удалось удалить позицию"
   },
   "tables": {
     "status": {

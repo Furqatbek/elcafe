@@ -606,7 +606,16 @@
     "mandatoryServiceFee": "Service Fee (20%)",
     "serviceFeeAutoApplied": "Automatically applied",
     "djServices": "DJ Services",
-    "djServicesPerGuest": "10,000 × {{count}} guests"
+    "djServicesPerGuest": "10,000 × {{count}} guests",
+    "editOrder": "Edit Order",
+    "editOrderDesc": "Add, remove, or modify items in this order",
+    "currentItems": "Current Items",
+    "noItems": "No items in this order",
+    "addNewItem": "Add New Item",
+    "allCategories": "All",
+    "confirmRemoveItem": "Are you sure you want to remove this item?",
+    "updateItemError": "Failed to update item quantity",
+    "removeItemError": "Failed to remove item"
   },
   "tables": {
     "status": {
