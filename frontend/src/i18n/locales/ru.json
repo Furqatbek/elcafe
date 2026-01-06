@@ -774,6 +774,7 @@
     "sort": "Сортировка",
     "export": "Экспорт",
     "all": "Все",
+    "allCategories": "Все категории",
     "actions": "Действия",
     "edit": "Редактировать",
     "delete": "Удалить",
@@ -1858,6 +1859,8 @@
       "filterByUnit": "Фильтр по единице",
       "noIngredientsFound": "Ингредиенты не найдены",
       "ingredientsFound": "Найдено {{count}} ингредиентов",
+      "filterByCategory": "Фильтр по категории",
+      "productsFound": "Найдено {{count}} продуктов",
       "errors": {
         "saveFailed": "Не удалось сохранить рецепт",
         "deleteFailed": "Не удалось удалить рецепт"

@@ -62,6 +62,7 @@ export default function Recipes() {
   });
   const [ingredientSearch, setIngredientSearch] = useState('');
   const [ingredientUnitFilter, setIngredientUnitFilter] = useState('all');
+  const [productCategoryFilter, setProductCategoryFilter] = useState('all');
 
   useEffect(() => {
     loadRestaurants();
@@ -202,9 +203,16 @@ export default function Recipes() {
     }
   };
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get unique categories from products for filter
+  const productCategories = [...new Set(products.map((p) => p.category?.name || p.categoryName).filter(Boolean))].sort();
+
+  // Filter products based on search and category filter
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const categoryName = product.category?.name || product.categoryName;
+    const matchesCategory = productCategoryFilter === 'all' || categoryName === productCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const currentProduct = products.find((p) => p.id === selectedProduct);
   const totalIngredients = productIngredients.length;
@@ -257,16 +265,39 @@ export default function Recipes() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('recipes.searchProducts')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t('recipes.searchProducts')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              <Select
+                value={productCategoryFilter}
+                onValueChange={setProductCategoryFilter}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={t('recipes.filterByCategory')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('common.allCategories')}</SelectItem>
+                  {productCategories.map((category) => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {filteredProducts.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t('recipes.productsFound', { count: filteredProducts.length })}
+                </p>
+              )}
+              <div className="space-y-2 max-h-[500px] overflow-y-auto">
                 {filteredProducts.map((product) => (
                   <button
                     key={product.id}

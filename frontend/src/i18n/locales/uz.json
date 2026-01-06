@@ -774,6 +774,7 @@
     "sort": "Saralash",
     "export": "Eksport",
     "all": "Hammasi",
+    "allCategories": "Barcha kategoriyalar",
     "actions": "Harakatlar",
     "edit": "Tahrirlash",
     "delete": "O'chirish",
@@ -1903,6 +1904,8 @@
       "filterByUnit": "Birlik bo'yicha filtr",
       "noIngredientsFound": "Ingredientlar topilmadi",
       "ingredientsFound": "{{count}} ta ingredient topildi",
+      "filterByCategory": "Kategoriya bo'yicha filtr",
+      "productsFound": "{{count}} ta mahsulot topildi",
       "errors": {
         "saveFailed": "Retseptni saqlab bo'lmadi",
         "deleteFailed": "Retseptni o'chirib bo'lmadi"

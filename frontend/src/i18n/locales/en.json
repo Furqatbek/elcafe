@@ -309,6 +309,7 @@
     "sort": "Sort",
     "export": "Export",
     "all": "All",
+    "allCategories": "All Categories",
     "actions": "Actions",
     "edit": "Edit",
     "delete": "Delete",
@@ -1695,6 +1696,8 @@
       "filterByUnit": "Filter by unit",
       "noIngredientsFound": "No ingredients found",
       "ingredientsFound": "{{count}} ingredients found",
+      "filterByCategory": "Filter by category",
+      "productsFound": "{{count}} products found",
       "errors": {
         "saveFailed": "Failed to save recipe",
         "deleteFailed": "Failed to delete recipe"
