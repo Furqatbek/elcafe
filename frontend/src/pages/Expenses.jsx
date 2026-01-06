@@ -24,7 +24,7 @@ const Expenses = () => {
   });
 
   const [formData, setFormData] = useState({
-    restaurantId: '',
+    restaurantId: 1,
     expenseDate: new Date().toISOString().split('T')[0],
     category: 'SUPPLIES',
     description: '',
@@ -241,7 +241,10 @@ const Expenses = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('finance.expenses.title')}</h1>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setFormData(prev => ({ ...prev, restaurantId: selectedRestaurant || 1 }));
+            setShowModal(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus size={20} />
