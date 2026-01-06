@@ -439,6 +439,20 @@ export const inventoryAPI = {
     api.get(`/inventory/recipes/product/${productId}/check-availability`, { params: { quantity } }),
 };
 
+// Recipes API (separate export for convenience)
+export const recipesAPI = {
+  getProductRecipe: (productId) => api.get(`/inventory/recipes/product/${productId}`),
+  getIngredientUsage: (ingredientId) => api.get(`/inventory/recipes/ingredient/${ingredientId}`),
+  createRecipe: (data) => api.post('/inventory/recipes', data),
+  updateRecipe: (id, data) => api.put(`/inventory/recipes/${id}`, data),
+  deleteRecipe: (id) => api.delete(`/inventory/recipes/${id}`),
+  checkAvailability: (productId, quantity = 1) =>
+    api.get(`/inventory/recipes/product/${productId}/check-availability`, { params: { quantity } }),
+  recalculateCost: (productId) => api.post(`/inventory/recipes/product/${productId}/recalculate-cost`),
+  recalculateAllCosts: () => api.post('/inventory/recipes/recalculate-all-costs'),
+  getCostBreakdown: (productId) => api.get(`/inventory/recipes/product/${productId}/cost-breakdown`),
+};
+
 export const inventoryBatchAPI = {
   // Batch CRUD
   createBatch: (data) => api.post('/inventory/batches', data),
