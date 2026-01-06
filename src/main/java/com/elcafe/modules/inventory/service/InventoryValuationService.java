@@ -383,6 +383,54 @@ public class InventoryValuationService {
         return new ConsumptionResult(totalQuantityConsumed, totalCost, avgCost, method, consumptions);
     }
 
+    /**
+     * Restore inventory for a cancelled order
+     * Reverses the consumption by adding quantities back to batches and ingredients
+     */
+    @Transactional
+    public void restoreInventoryForOrder(Long orderId) {
+        log.info("Restoring inventory for cancelled order: {}", orderId);
+
+        List<BatchConsumption> consumptions = batchConsumptionRepository.findByOrderId(orderId);
+
+        if (consumptions.isEmpty()) {
+            log.debug("No consumption records found for order {}, nothing to restore", orderId);
+            return;
+        }
+
+        for (BatchConsumption consumption : consumptions) {
+            try {
+                // Restore quantity to batch
+                InventoryBatch batch = consumption.getBatch();
+                if (batch != null) {
+                    BigDecimal currentQty = batch.getQuantity();
+                    batch.setQuantity(currentQty.add(consumption.getQuantity()));
+
+                    // Reactivate batch if it was depleted
+                    if (batch.getStatus() == InventoryBatch.Status.DEPLETED) {
+                        batch.setStatus(InventoryBatch.Status.ACTIVE);
+                    }
+                    batchRepository.save(batch);
+                    log.debug("Restored {} to batch {}", consumption.getQuantity(), batch.getBatchNumber());
+                }
+
+                // Restore quantity to ingredient
+                Ingredient ingredient = consumption.getIngredient();
+                if (ingredient != null) {
+                    ingredient.addStock(consumption.getQuantity());
+                    ingredientRepository.save(ingredient);
+                    log.debug("Restored {} to ingredient {}", consumption.getQuantity(), ingredient.getName());
+                }
+            } catch (Exception e) {
+                log.error("Failed to restore consumption record {}: {}", consumption.getId(), e.getMessage());
+            }
+        }
+
+        // Delete consumption records
+        batchConsumptionRepository.deleteByOrderId(orderId);
+        log.info("Restored inventory and deleted {} consumption records for order {}", consumptions.size(), orderId);
+    }
+
     // Result classes
     public record ConsumptionResult(
             BigDecimal quantityConsumed,

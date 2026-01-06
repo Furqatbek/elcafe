@@ -4,6 +4,7 @@ import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.financial.service.RevenueService;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.inventory.service.InventoryValuationService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -43,6 +44,10 @@ public class OrderService {
     @Autowired
     @Lazy
     private PrintService printService;
+
+    @Autowired
+    @Lazy
+    private InventoryValuationService inventoryValuationService;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -146,6 +151,17 @@ public class OrderService {
         if (isDineInOrder &&
                 (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED)) {
             releaseOrderTables(order);
+        }
+
+        // Restore inventory when order is cancelled (only if it was previously accepted/deducted)
+        if (newStatus == OrderStatus.CANCELLED && inventoryValuationService != null) {
+            try {
+                inventoryValuationService.restoreInventoryForOrder(order.getId());
+                log.info("Inventory restored for cancelled order: {}", order.getOrderNumber());
+            } catch (Exception e) {
+                log.error("Failed to restore inventory for cancelled order {}: {}", order.getOrderNumber(), e.getMessage());
+                // Don't fail the order cancellation if inventory restoration fails
+            }
         }
 
         return order;
