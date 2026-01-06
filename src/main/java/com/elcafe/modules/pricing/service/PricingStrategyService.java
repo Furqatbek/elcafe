@@ -6,6 +6,7 @@ import com.elcafe.modules.menu.entity.ProductIngredient;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
+import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.pricing.dto.PricingAnalyticsDTO;
 import com.elcafe.modules.pricing.dto.PricingRecommendationDTO;
@@ -432,6 +433,7 @@ public class PricingStrategyService {
         return orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
                 restaurantId, shift.start(), shift.end()
         ).stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                 .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                 .collect(Collectors.toList());
     }

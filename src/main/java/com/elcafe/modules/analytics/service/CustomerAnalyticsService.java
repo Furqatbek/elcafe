@@ -7,6 +7,7 @@ import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -243,11 +244,13 @@ public class CustomerAnalyticsService {
             return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
+                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         } else {
             return orderRepository.findAll().stream()
                     .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
+                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         }
@@ -255,6 +258,7 @@ public class CustomerAnalyticsService {
 
     private CustomerMetrics calculateCustomerMetrics(Customer customer, Long restaurantId) {
         List<Order> customerOrders = orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customer.getId()).stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                 .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                 .filter(order -> restaurantId == null || order.getRestaurant().getId().equals(restaurantId))
                 .collect(Collectors.toList());
