@@ -126,6 +126,12 @@ export default function Orders() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [updatingItem, setUpdatingItem] = useState(null);
 
+  // Split payment state
+  const [splitPaymentMode, setSplitPaymentMode] = useState(false);
+  const [splitCount, setSplitCount] = useState(2);
+  const [splitPayments, setSplitPayments] = useState([]);
+  const [currentSplitIndex, setCurrentSplitIndex] = useState(0);
+
   // Load restaurants on mount
   useEffect(() => {
     loadRestaurants();
@@ -339,7 +345,115 @@ export default function Orders() {
       }
     }
 
+    // Reset split payment state
+    setSplitPaymentMode(false);
+    setSplitCount(2);
+    setSplitPayments([]);
+    setCurrentSplitIndex(0);
+
     setPaymentModalOpen(true);
+  };
+
+  // Initialize split payments when split mode is enabled or count changes
+  const initializeSplitPayments = (total, count) => {
+    const amountPerPerson = Math.floor(total / count);
+    const remainder = total - (amountPerPerson * count);
+
+    const splits = Array.from({ length: count }, (_, index) => ({
+      personNumber: index + 1,
+      amount: index === 0 ? amountPerPerson + remainder : amountPerPerson,
+      paid: false,
+      paymentMethod: 'CASH',
+      amountTendered: ''
+    }));
+
+    setSplitPayments(splits);
+    setCurrentSplitIndex(0);
+  };
+
+  // Toggle split payment mode
+  const handleToggleSplitPayment = () => {
+    if (!splitPaymentMode) {
+      const total = calculateTotalWithFees();
+      initializeSplitPayments(total, splitCount);
+    }
+    setSplitPaymentMode(!splitPaymentMode);
+  };
+
+  // Update split count
+  const handleSplitCountChange = (newCount) => {
+    if (newCount < 2) newCount = 2;
+    if (newCount > 10) newCount = 10;
+    setSplitCount(newCount);
+    const total = calculateTotalWithFees();
+    initializeSplitPayments(total, newCount);
+  };
+
+  // Update individual split amount
+  const handleSplitAmountChange = (index, newAmount) => {
+    const updated = [...splitPayments];
+    updated[index].amount = parseFloat(newAmount) || 0;
+    setSplitPayments(updated);
+  };
+
+  // Update split payment method
+  const handleSplitPaymentMethodChange = (index, method) => {
+    const updated = [...splitPayments];
+    updated[index].paymentMethod = method;
+    setSplitPayments(updated);
+  };
+
+  // Update split amount tendered
+  const handleSplitAmountTenderedChange = (index, amount) => {
+    const updated = [...splitPayments];
+    updated[index].amountTendered = amount;
+    setSplitPayments(updated);
+  };
+
+  // Process single split payment
+  const handleProcessSplitPayment = async (index) => {
+    if (!paymentOrder) return;
+
+    const split = splitPayments[index];
+    if (split.paid) return;
+
+    setProcessingPayment(true);
+    try {
+      await posAPI.processPayment(paymentOrder.id, {
+        method: split.paymentMethod,
+        amount: split.amount,
+        amountTendered: split.paymentMethod === 'CASH' ? parseFloat(split.amountTendered) || split.amount : null,
+        isSplitPayment: true,
+        splitPersonNumber: split.personNumber
+      });
+
+      // Mark this split as paid
+      const updated = [...splitPayments];
+      updated[index].paid = true;
+      setSplitPayments(updated);
+
+      // Check if all splits are paid
+      const allPaid = updated.every(s => s.paid);
+      if (allPaid) {
+        // Close the order
+        await posAPI.closeOrder(paymentOrder.id);
+        setPaymentModalOpen(false);
+        setPaymentOrder(null);
+        await loadTablesAndOrders();
+        alert(t('orders.paymentSuccess', 'Payment completed successfully!'));
+      } else {
+        // Move to next unpaid split
+        const nextUnpaid = updated.findIndex(s => !s.paid);
+        if (nextUnpaid >= 0) {
+          setCurrentSplitIndex(nextUnpaid);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to process split payment:', error);
+      alert(t('orders.paymentError', 'Payment failed. Please try again.'));
+    } finally {
+      setProcessingPayment(false);
+    }
   };
 
   // Process payment and close order
@@ -1160,6 +1274,168 @@ export default function Orders() {
               </div>
             )}
 
+            {/* Split Payment Toggle */}
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <span className="font-medium">{t('orders.splitPayment', 'Split Payment')}</span>
+                </div>
+                <Button
+                  variant={splitPaymentMode ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={handleToggleSplitPayment}
+                >
+                  {splitPaymentMode ? t('orders.splitEnabled', 'Enabled') : t('orders.splitDisabled', 'Disabled')}
+                </Button>
+              </div>
+
+              {/* Split Payment Controls */}
+              {splitPaymentMode && (
+                <div className="mt-4 space-y-4">
+                  {/* Split Count */}
+                  <div className="flex items-center gap-3">
+                    <Label className="whitespace-nowrap">{t('orders.splitBetween', 'Split between')}:</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSplitCountChange(splitCount - 1)}
+                        disabled={splitCount <= 2}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="w-8 text-center font-bold text-lg">{splitCount}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSplitCountChange(splitCount + 1)}
+                        disabled={splitCount >= 10}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <span className="text-muted-foreground">{t('orders.people', 'people')}</span>
+                  </div>
+
+                  {/* Split Details */}
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {splitPayments.map((split, index) => (
+                      <div
+                        key={index}
+                        className={`p-3 rounded-lg border-2 ${
+                          split.paid
+                            ? 'bg-green-50 border-green-300'
+                            : currentSplitIndex === index
+                            ? 'bg-blue-50 border-blue-300'
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium">
+                            {t('orders.person', 'Person')} {split.personNumber}
+                          </span>
+                          {split.paid ? (
+                            <Badge className="bg-green-100 text-green-800">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              {t('orders.paid', 'Paid')}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">{t('orders.pending', 'Pending')}</Badge>
+                          )}
+                        </div>
+
+                        {!split.paid && (
+                          <>
+                            {/* Amount */}
+                            <div className="flex items-center gap-2 mb-2">
+                              <Label className="text-sm whitespace-nowrap">{t('orders.amount', 'Amount')}:</Label>
+                              <Input
+                                type="number"
+                                value={split.amount}
+                                onChange={(e) => handleSplitAmountChange(index, e.target.value)}
+                                className="w-32 text-right font-medium"
+                              />
+                            </div>
+
+                            {/* Payment Method for this split */}
+                            <div className="flex gap-2 mb-2">
+                              {['CASH', 'CARD', 'ONLINE'].map((method) => (
+                                <Button
+                                  key={method}
+                                  variant={split.paymentMethod === method ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => handleSplitPaymentMethodChange(index, method)}
+                                  className="flex-1"
+                                >
+                                  {method === 'CASH' && <Banknote className="h-3 w-3 mr-1" />}
+                                  {method === 'CARD' && <CreditCard className="h-3 w-3 mr-1" />}
+                                  {method === 'ONLINE' && <Wallet className="h-3 w-3 mr-1" />}
+                                  {t(`orders.${method.toLowerCase()}`, method)}
+                                </Button>
+                              ))}
+                            </div>
+
+                            {/* Amount tendered for cash */}
+                            {split.paymentMethod === 'CASH' && (
+                              <div className="flex items-center gap-2 mb-2">
+                                <Label className="text-sm whitespace-nowrap">{t('orders.tendered', 'Tendered')}:</Label>
+                                <Input
+                                  type="number"
+                                  value={split.amountTendered}
+                                  onChange={(e) => handleSplitAmountTenderedChange(index, e.target.value)}
+                                  placeholder={split.amount.toString()}
+                                  className="w-32 text-right"
+                                />
+                                {parseFloat(split.amountTendered) > split.amount && (
+                                  <span className="text-green-600 font-medium text-sm">
+                                    {t('orders.change', 'Change')}: {(parseFloat(split.amountTendered) - split.amount).toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Pay button */}
+                            <Button
+                              onClick={() => handleProcessSplitPayment(index)}
+                              disabled={processingPayment}
+                              className="w-full bg-green-600 hover:bg-green-700"
+                              size="sm"
+                            >
+                              {processingPayment && currentSplitIndex === index
+                                ? t('common.processing', 'Processing...')
+                                : t('orders.payAmount', 'Pay {{amount}}', { amount: split.amount.toLocaleString() })}
+                            </Button>
+                          </>
+                        )}
+
+                        {split.paid && (
+                          <p className="text-sm text-green-700">
+                            {t('orders.paidWith', 'Paid with {{method}}', {
+                              method: t(`orders.${split.paymentMethod.toLowerCase()}`, split.paymentMethod)
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Progress indicator */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {t('orders.splitProgress', 'Progress')}: {splitPayments.filter(s => s.paid).length}/{splitPayments.length}
+                    </span>
+                    <span className="font-medium">
+                      {t('orders.remaining', 'Remaining')}: {splitPayments.filter(s => !s.paid).reduce((sum, s) => sum + s.amount, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Regular Payment Method Selection (only when not in split mode) */}
+            {!splitPaymentMode && (
+              <>
             {/* Payment Method Selection */}
             <div>
               <Label className="mb-2 block">{t('orders.paymentMethod', 'Payment Method')}</Label>
@@ -1247,6 +1523,8 @@ export default function Orders() {
                 )}
               </div>
             )}
+              </>
+            )}
           </div>
 
           <DialogFooter>
@@ -1260,15 +1538,17 @@ export default function Orders() {
             >
               {t('common.cancel', 'Cancel')}
             </Button>
-            <Button
-              onClick={handleProcessPayment}
-              disabled={processingPayment || (paymentMethod === 'CASH' && parseFloat(amountTendered) < calculateTotalWithFees())}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {processingPayment
-                ? t('common.processing', 'Processing...')
-                : t('orders.completePayment', 'Complete Payment')}
-            </Button>
+            {!splitPaymentMode && (
+              <Button
+                onClick={handleProcessPayment}
+                disabled={processingPayment || (paymentMethod === 'CASH' && parseFloat(amountTendered) < calculateTotalWithFees())}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {processingPayment
+                  ? t('common.processing', 'Processing...')
+                  : t('orders.completePayment', 'Complete Payment')}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -478,7 +478,20 @@
     "allCategories": "Все",
     "confirmRemoveItem": "Вы уверены, что хотите удалить эту позицию?",
     "updateItemError": "Не удалось изменить количество",
-    "removeItemError": "Не удалось удалить позицию"
+    "removeItemError": "Не удалось удалить позицию",
+    "splitPayment": "Разделить счёт",
+    "splitEnabled": "Включено",
+    "splitDisabled": "Выключено",
+    "splitBetween": "Разделить между",
+    "people": "человек",
+    "person": "Гость",
+    "pending": "Ожидает",
+    "amount": "Сумма",
+    "tendered": "Внесено",
+    "payAmount": "Оплатить {{amount}}",
+    "paidWith": "Оплачено: {{method}}",
+    "splitProgress": "Прогресс",
+    "remaining": "Остаток"
   },
   "tables": {
     "status": {

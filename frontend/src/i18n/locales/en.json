@@ -615,7 +615,20 @@
     "allCategories": "All",
     "confirmRemoveItem": "Are you sure you want to remove this item?",
     "updateItemError": "Failed to update item quantity",
-    "removeItemError": "Failed to remove item"
+    "removeItemError": "Failed to remove item",
+    "splitPayment": "Split Payment",
+    "splitEnabled": "Enabled",
+    "splitDisabled": "Disabled",
+    "splitBetween": "Split between",
+    "people": "people",
+    "person": "Person",
+    "pending": "Pending",
+    "amount": "Amount",
+    "tendered": "Tendered",
+    "payAmount": "Pay {{amount}}",
+    "paidWith": "Paid with {{method}}",
+    "splitProgress": "Progress",
+    "remaining": "Remaining"
   },
   "tables": {
     "status": {

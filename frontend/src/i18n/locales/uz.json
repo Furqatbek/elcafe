@@ -478,7 +478,20 @@
     "allCategories": "Hammasi",
     "confirmRemoveItem": "Ushbu mahsulotni o'chirishga ishonchingiz komilmi?",
     "updateItemError": "Miqdorni o'zgartirib bo'lmadi",
-    "removeItemError": "Mahsulotni o'chirib bo'lmadi"
+    "removeItemError": "Mahsulotni o'chirib bo'lmadi",
+    "splitPayment": "Hisobni bo'lish",
+    "splitEnabled": "Yoqilgan",
+    "splitDisabled": "O'chirilgan",
+    "splitBetween": "Bo'lish",
+    "people": "kishi",
+    "person": "Mehmon",
+    "pending": "Kutilmoqda",
+    "amount": "Summa",
+    "tendered": "Berilgan",
+    "payAmount": "{{amount}} to'lash",
+    "paidWith": "{{method}} orqali to'langan",
+    "splitProgress": "Jarayon",
+    "remaining": "Qoldiq"
   },
   "tables": {
     "status": {
