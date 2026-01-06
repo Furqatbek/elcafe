@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +27,9 @@ public class DashboardResponse {
     // Period info
     private LocalDate startDate;
     private LocalDate endDate;
+
+    // Shift-aware time range info (shows actual query times based on business hours)
+    private ShiftTimeInfo shiftTimeInfo;
 
     // Order stats
     private OrderStats orderStats;
@@ -133,5 +138,17 @@ public class DashboardResponse {
         private String unit;
         private String supplierName;
         private String alertLevel; // CRITICAL, LOW, REORDER
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ShiftTimeInfo {
+        private LocalDateTime shiftStart;    // Actual start time for query
+        private LocalDateTime shiftEnd;      // Actual end time for query
+        private LocalTime businessOpenTime;  // Restaurant opening time
+        private LocalTime businessCloseTime; // Restaurant closing time
+        private String description;          // Human-readable description
     }
 }

@@ -101,10 +101,22 @@ public class DashboardService {
                     .multiply(new BigDecimal("100"));
         }
 
+        // Build shift time info for transparency
+        String shiftDesc = String.format("Business day %s: %s to %s",
+                startDate, shift.start(), shift.end());
+        DashboardResponse.ShiftTimeInfo shiftTimeInfo = DashboardResponse.ShiftTimeInfo.builder()
+                .shiftStart(shift.start())
+                .shiftEnd(shift.end())
+                .businessOpenTime(shift.openTime())
+                .businessCloseTime(shift.closeTime())
+                .description(shiftDesc)
+                .build();
+
         // Build response
         return DashboardResponse.builder()
                 .startDate(startDate)
                 .endDate(endDate)
+                .shiftTimeInfo(shiftTimeInfo)
                 .totalIncome(totalIncome)
                 .totalExpenses(totalExpenses)
                 .netProfit(netProfit)
