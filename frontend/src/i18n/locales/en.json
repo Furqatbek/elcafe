@@ -604,7 +604,9 @@
     "addItemError": "Failed to add item: ",
     "capacity": "Capacity",
     "mandatoryServiceFee": "Service Fee (20%)",
-    "serviceFeeAutoApplied": "Automatically applied"
+    "serviceFeeAutoApplied": "Automatically applied",
+    "djServices": "DJ Services",
+    "djServicesPerGuest": "10,000 × {{count}} guests"
   },
   "tables": {
     "status": {

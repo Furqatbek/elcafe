@@ -467,7 +467,9 @@
     "addItemError": "Mahsulot qo'shib bo'lmadi: ",
     "capacity": "Sig'imi",
     "mandatoryServiceFee": "Xizmat haqi (20%)",
-    "serviceFeeAutoApplied": "Avtomatik qo'llaniladi"
+    "serviceFeeAutoApplied": "Avtomatik qo'llaniladi",
+    "djServices": "DJ xizmatlari",
+    "djServicesPerGuest": "10 000 × {{count}} mehmon"
   },
   "tables": {
     "status": {

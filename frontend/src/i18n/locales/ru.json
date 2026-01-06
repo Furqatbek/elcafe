@@ -467,7 +467,9 @@
     "addItemError": "Не удалось добавить позицию: ",
     "capacity": "Вместимость",
     "mandatoryServiceFee": "Сервисный сбор (20%)",
-    "serviceFeeAutoApplied": "Применяется автоматически"
+    "serviceFeeAutoApplied": "Применяется автоматически",
+    "djServices": "Услуги диджея",
+    "djServicesPerGuest": "10 000 × {{count}} гостей"
   },
   "tables": {
     "status": {

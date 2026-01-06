@@ -318,10 +318,22 @@ export default function Orders() {
       console.error('Failed to apply mandatory service fee:', error);
     }
 
-    // Initialize entry fee from order or reset
-    const existingEntryFee = order.entryFee || 0;
-    setEntryFeeAmount(existingEntryFee);
+    // Always apply entry fee based on guest count - 10,000 per guest (DJ Services)
+    const ENTRY_FEE_PER_GUEST = 10000;
+    const guestCount = order.dineInInfo?.guestCount || order.guestCount || 0;
+    const calculatedEntryFee = guestCount * ENTRY_FEE_PER_GUEST;
+    setEntryFeeAmount(calculatedEntryFee);
     setShowEntryFeeInput(false);
+
+    // Apply entry fee to backend if there are guests
+    if (calculatedEntryFee > 0) {
+      try {
+        await posAPI.applyEntryFee(order.id, calculatedEntryFee);
+      } catch (error) {
+        console.error('Failed to apply mandatory entry fee:', error);
+      }
+    }
+
     setPaymentModalOpen(true);
   };
 
@@ -441,47 +453,6 @@ export default function Orders() {
     const tendered = parseFloat(amountTendered) || 0;
     const totalWithFees = calculateTotalWithFees();
     return Math.max(0, tendered - totalWithFees);
-  };
-
-  // Apply entry fee
-  const handleApplyEntryFee = async (amount) => {
-    if (!paymentOrder) return;
-
-    const parsedAmount = parseFloat(amount) || 0;
-    setEntryFeeAmount(parsedAmount);
-    setShowEntryFeeInput(false);
-
-    // Save to backend
-    try {
-      await posAPI.applyEntryFee(paymentOrder.id, parsedAmount);
-      // Update the paymentOrder with new entry fee
-      setPaymentOrder({
-        ...paymentOrder,
-        entryFee: parsedAmount
-      });
-    } catch (error) {
-      console.error('Failed to apply entry fee:', error);
-    }
-  };
-
-  // Remove entry fee
-  const handleRemoveEntryFee = async () => {
-    if (!paymentOrder) return;
-
-    setEntryFeeAmount(0);
-    setShowEntryFeeInput(false);
-
-    // Save to backend
-    try {
-      await posAPI.applyEntryFee(paymentOrder.id, 0);
-      // Update the paymentOrder
-      setPaymentOrder({
-        ...paymentOrder,
-        entryFee: 0
-      });
-    } catch (error) {
-      console.error('Failed to remove entry fee:', error);
-    }
   };
 
   // Get table statistics
@@ -1068,83 +1039,23 @@ export default function Orders() {
               <span className="font-bold text-purple-700">{serviceFeeAmount?.toLocaleString()}</span>
             </div>
 
-            {/* Entry Fee Section */}
-            <div>
-              {!showEntryFeeInput ? (
-                <Button
-                  type="button"
-                  variant={entryFeeAmount > 0 ? 'secondary' : 'outline'}
-                  className="w-full"
-                  onClick={() => setShowEntryFeeInput(true)}
-                >
-                  <Ticket className="h-4 w-4 mr-2" />
-                  {entryFeeAmount > 0
-                    ? t('orders.editEntryFee', 'Edit Entry Fee ({{amount}})', { amount: entryFeeAmount.toLocaleString() })
-                    : t('orders.addEntryFee', 'Add Entry Fee')
-                  }
-                </Button>
-              ) : (
-                <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 space-y-3">
-                  <Label className="text-amber-800 font-semibold">
-                    {t('orders.entryFeeAmount', 'Entry Fee Amount')}
-                  </Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      min="0"
-                      step="1000"
-                      value={entryFeeAmount}
-                      onChange={(e) => setEntryFeeAmount(parseFloat(e.target.value) || 0)}
-                      className="flex-1 text-center font-semibold"
-                      placeholder="0"
-                    />
-                  </div>
-                  {/* Quick amount buttons */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {[5000, 10000, 15000, 20000].map((amount) => (
-                      <Button
-                        key={amount}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEntryFeeAmount(amount)}
-                        className={entryFeeAmount === amount ? 'border-amber-500 bg-amber-100' : ''}
-                      >
-                        {amount.toLocaleString()}
-                      </Button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleApplyEntryFee(entryFeeAmount)}
-                    >
-                      {t('common.apply', 'Apply')}
-                    </Button>
-                    {entryFeeAmount > 0 && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleRemoveEntryFee}
-                      >
-                        {t('common.remove', 'Remove')}
-                      </Button>
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowEntryFeeInput(false)}
-                    >
-                      {t('common.cancel', 'Cancel')}
-                    </Button>
-                  </div>
+            {/* DJ Services Fee Notice - 10,000 per guest, mandatory */}
+            {entryFeeAmount > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+                <Ticket className="h-5 w-5 text-amber-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-800">
+                    {t('orders.djServices', 'Услуги диджея')}
+                  </p>
+                  <p className="text-xs text-amber-600">
+                    {t('orders.djServicesPerGuest', '10,000 × {{count}} guests', {
+                      count: paymentOrder?.dineInInfo?.guestCount || paymentOrder?.guestCount || 0
+                    })}
+                  </p>
                 </div>
-              )}
-            </div>
+                <span className="font-bold text-amber-700">{entryFeeAmount?.toLocaleString()}</span>
+              </div>
+            )}
 
             {/* Payment Method Selection */}
             <div>
