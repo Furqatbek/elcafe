@@ -13,6 +13,7 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.waiter.dto.AddOrderItemRequest;
 import com.elcafe.modules.waiter.dto.CreateOrderRequest;
@@ -92,6 +93,7 @@ public class WaiterOrderService {
                 .diningTable(table)
                 .waiter(waiter)
                 .status(OrderStatus.NEW)
+                .orderType(OrderType.DINE_IN)
                 .orderSource(OrderSource.WAITER)
                 .guestCount(request.getGuestCount())
                 .subtotal(BigDecimal.ZERO)
