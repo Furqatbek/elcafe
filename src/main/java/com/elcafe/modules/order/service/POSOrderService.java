@@ -867,6 +867,56 @@ public class POSOrderService {
         return mapToResponse(savedOrder, orderType);
     }
 
+    /**
+     * Apply service fee to an order by fixed amount
+     */
+    @Transactional
+    public POSOrderResponse applyServiceFeeAmount(Long orderId, BigDecimal serviceFeeAmount) {
+        log.info("Applying service fee amount to order {}: amount={}", orderId, serviceFeeAmount);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Validate service fee amount
+        if (serviceFeeAmount == null || serviceFeeAmount.compareTo(BigDecimal.ZERO) < 0) {
+            serviceFeeAmount = BigDecimal.ZERO;
+        }
+
+        // Calculate percentage for display purposes
+        BigDecimal serviceFeePercent = BigDecimal.ZERO;
+        if (serviceFeeAmount.compareTo(BigDecimal.ZERO) > 0 && order.getSubtotal().compareTo(BigDecimal.ZERO) > 0) {
+            serviceFeePercent = serviceFeeAmount.multiply(BigDecimal.valueOf(100))
+                    .divide(order.getSubtotal(), 2, java.math.RoundingMode.HALF_UP);
+        }
+
+        // Set service fee amount and calculated percent
+        order.setServiceFee(serviceFeeAmount);
+        order.setServiceFeePercent(serviceFeePercent);
+
+        // Recalculate total (include entry fee if present)
+        BigDecimal entryFee = order.getEntryFee() != null ? order.getEntryFee() : BigDecimal.ZERO;
+        BigDecimal total = order.getSubtotal()
+                .add(order.getTax())
+                .add(order.getDeliveryFee())
+                .add(serviceFeeAmount)
+                .add(entryFee)
+                .subtract(order.getDiscount());
+        order.setTotal(total);
+
+        // Update grand total (total + tip)
+        BigDecimal tipAmount = order.getTipAmount() != null ? order.getTipAmount() : BigDecimal.ZERO;
+        order.setGrandTotal(total.add(tipAmount));
+
+        Order savedOrder = orderRepository.save(order);
+
+        log.info("Service fee amount applied to order {}: fee={}, newTotal={}", orderId, serviceFeeAmount, total);
+
+        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
+                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
+
     // ==================== ENTRY FEE METHODS ====================
 
     /**
