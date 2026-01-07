@@ -524,6 +524,8 @@
     "of": "из",
     "orderNumber": "Заказ №",
     "date": "Дата",
+    "table": "Стол",
+    "waiter": "Официант",
     "customer": "Клиент",
     "type": "Тип",
     "payment": "Оплата",

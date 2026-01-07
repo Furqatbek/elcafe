@@ -662,6 +662,8 @@
     "of": "of",
     "orderNumber": "Order #",
     "date": "Date",
+    "table": "Table",
+    "waiter": "Waiter",
     "customer": "Customer",
     "type": "Type",
     "payment": "Payment",
