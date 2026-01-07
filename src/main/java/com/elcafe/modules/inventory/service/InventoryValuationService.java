@@ -110,7 +110,7 @@ public class InventoryValuationService {
 
         List<BatchConsumption> consumptions = new ArrayList<>();
         BigDecimal remaining = quantity;
-        BigDecimal totalQuantityConsumed = BigDecimal.ZERO;
+        BigDecimal totalQuantityConsumedFromBatches = BigDecimal.ZERO;
 
         for (InventoryBatch batch : batches) {
             if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
@@ -133,19 +133,29 @@ public class InventoryValuationService {
                         .build();
 
                 consumptions.add(batchConsumptionRepository.save(consumption));
-                totalQuantityConsumed = totalQuantityConsumed.add(consumed);
+                totalQuantityConsumedFromBatches = totalQuantityConsumedFromBatches.add(consumed);
                 remaining = remaining.subtract(consumed);
             }
         }
 
-        // Update ingredient stock
-        ingredient.deductStock(totalQuantityConsumed);
+        // Always deduct the full requested quantity from ingredient stock
+        // regardless of whether batches exist (ingredient stock is the source of truth)
+        ingredient.deductStock(quantity);
         ingredientRepository.save(ingredient);
 
-        BigDecimal totalCost = wac.multiply(totalQuantityConsumed);
+        // If no batches were available but ingredient has stock, log a warning
+        if (batches.isEmpty()) {
+            log.warn("No active batches found for ingredient {} (ID: {}), deducted {} directly from ingredient stock",
+                    ingredient.getName(), ingredientId, quantity);
+        } else if (remaining.compareTo(BigDecimal.ZERO) > 0) {
+            log.warn("Could not fully consume from batches for ingredient {} (ID: {}). Requested: {}, from batches: {}, remaining: {}",
+                    ingredient.getName(), ingredientId, quantity, totalQuantityConsumedFromBatches, remaining);
+        }
+
+        BigDecimal totalCost = wac.multiply(quantity);
 
         return new ConsumptionResult(
-                totalQuantityConsumed,
+                quantity, // Always return the requested quantity as consumed
                 totalCost,
                 wac,
                 ValuationMethod.WEIGHTED_AVERAGE,
@@ -335,7 +345,7 @@ public class InventoryValuationService {
         List<BatchConsumption> consumptions = new ArrayList<>();
         BigDecimal remaining = quantity;
         BigDecimal totalCost = BigDecimal.ZERO;
-        BigDecimal totalQuantityConsumed = BigDecimal.ZERO;
+        BigDecimal totalQuantityConsumedFromBatches = BigDecimal.ZERO;
 
         for (InventoryBatch batch : batches) {
             if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
@@ -362,25 +372,40 @@ public class InventoryValuationService {
 
                 consumptions.add(batchConsumptionRepository.save(consumption));
                 totalCost = totalCost.add(consumedCost);
-                totalQuantityConsumed = totalQuantityConsumed.add(consumed);
+                totalQuantityConsumedFromBatches = totalQuantityConsumedFromBatches.add(consumed);
                 remaining = remaining.subtract(consumed);
             }
         }
 
-        // Update ingredient stock
-        ingredient.deductStock(totalQuantityConsumed);
+        // Always deduct the full requested quantity from ingredient stock
+        // regardless of whether batches exist (ingredient stock is the source of truth)
+        ingredient.deductStock(quantity);
         ingredientRepository.save(ingredient);
 
-        // Calculate average cost per unit
-        BigDecimal avgCost = totalQuantityConsumed.compareTo(BigDecimal.ZERO) > 0
-                ? totalCost.divide(totalQuantityConsumed, 4, RoundingMode.HALF_UP)
-                : BigDecimal.ZERO;
-
-        if (remaining.compareTo(BigDecimal.ZERO) > 0) {
-            log.warn("Could not fully consume requested quantity. Remaining: {}", remaining);
+        // Calculate average cost per unit (use effective cost if no batches consumed)
+        BigDecimal avgCost;
+        if (totalQuantityConsumedFromBatches.compareTo(BigDecimal.ZERO) > 0) {
+            avgCost = totalCost.divide(totalQuantityConsumedFromBatches, 4, RoundingMode.HALF_UP);
+            // Adjust total cost to cover full quantity if not all was from batches
+            if (remaining.compareTo(BigDecimal.ZERO) > 0) {
+                totalCost = totalCost.add(avgCost.multiply(remaining));
+            }
+        } else {
+            // No batches available, use ingredient's effective cost
+            avgCost = ingredient.getEffectiveCost();
+            totalCost = avgCost.multiply(quantity);
         }
 
-        return new ConsumptionResult(totalQuantityConsumed, totalCost, avgCost, method, consumptions);
+        // Log warnings for incomplete batch consumption
+        if (batches.isEmpty()) {
+            log.warn("No active batches found for ingredient {} (ID: {}), deducted {} directly from ingredient stock",
+                    ingredient.getName(), ingredientId, quantity);
+        } else if (remaining.compareTo(BigDecimal.ZERO) > 0) {
+            log.warn("Could not fully consume from batches for ingredient {} (ID: {}). Requested: {}, from batches: {}, remaining: {}",
+                    ingredient.getName(), ingredientId, quantity, totalQuantityConsumedFromBatches, remaining);
+        }
+
+        return new ConsumptionResult(quantity, totalCost, avgCost, method, consumptions);
     }
 
     /**
