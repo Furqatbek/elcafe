@@ -112,6 +112,9 @@ export default function Orders() {
   const [showServiceFeeInput, setShowServiceFeeInput] = useState(false);
   const [serviceFeePercent, setServiceFeePercent] = useState(0);
   const [serviceFeeAmount, setServiceFeeAmount] = useState(0);
+  const [serviceFeeMode, setServiceFeeMode] = useState('percent'); // 'percent' or 'amount'
+  const [serviceFeePercentInput, setServiceFeePercentInput] = useState('');
+  const [serviceFeeAmountInput, setServiceFeeAmountInput] = useState('');
 
   // Entry fee state
   const [showEntryFeeInput, setShowEntryFeeInput] = useState(false);
@@ -318,20 +321,36 @@ export default function Orders() {
     setPaymentMethod('CASH');
     setAmountTendered('');
 
-    // Always apply 20% service fee - this is mandatory and cannot be changed
-    const MANDATORY_SERVICE_FEE_PERCENT = 20;
+    // Check if order already has service fee, otherwise use default 20%
+    const existingServiceFeePercent = order.serviceFeePercent || 0;
+    const existingServiceFee = order.serviceFee || 0;
     const subtotal = order.subtotal || 0;
-    const calculatedServiceFee = subtotal * (MANDATORY_SERVICE_FEE_PERCENT / 100);
-    setServiceFeePercent(MANDATORY_SERVICE_FEE_PERCENT);
-    setServiceFeeAmount(calculatedServiceFee);
-    setShowServiceFeeInput(false);
 
-    // Apply service fee to backend
-    try {
-      await posAPI.applyServiceFee(order.id, MANDATORY_SERVICE_FEE_PERCENT);
-    } catch (error) {
-      console.error('Failed to apply mandatory service fee:', error);
+    if (existingServiceFee > 0 || existingServiceFeePercent > 0) {
+      // Use existing service fee
+      setServiceFeePercent(existingServiceFeePercent);
+      setServiceFeeAmount(existingServiceFee);
+      setServiceFeePercentInput(existingServiceFeePercent.toString());
+      setServiceFeeAmountInput(existingServiceFee.toString());
+    } else {
+      // Apply default 20% service fee
+      const DEFAULT_SERVICE_FEE_PERCENT = 20;
+      const calculatedServiceFee = subtotal * (DEFAULT_SERVICE_FEE_PERCENT / 100);
+      setServiceFeePercent(DEFAULT_SERVICE_FEE_PERCENT);
+      setServiceFeeAmount(calculatedServiceFee);
+      setServiceFeePercentInput(DEFAULT_SERVICE_FEE_PERCENT.toString());
+      setServiceFeeAmountInput(calculatedServiceFee.toString());
+
+      // Apply service fee to backend
+      try {
+        await posAPI.applyServiceFee(order.id, DEFAULT_SERVICE_FEE_PERCENT);
+      } catch (error) {
+        console.error('Failed to apply default service fee:', error);
+      }
     }
+
+    setShowServiceFeeInput(false);
+    setServiceFeeMode('percent');
 
     // Always apply entry fee based on guest count - 10,000 per guest (DJ Services)
     const ENTRY_FEE_PER_GUEST = 10000;
@@ -412,6 +431,83 @@ export default function Orders() {
     const updated = [...splitPayments];
     updated[index].amountTendered = amount;
     setSplitPayments(updated);
+  };
+
+  // Apply service fee (supports both percent and fixed amount)
+  const handleApplyServiceFee = async () => {
+    if (!paymentOrder) return;
+
+    const subtotal = paymentOrder.subtotal || 0;
+
+    if (serviceFeeMode === 'percent') {
+      const percent = parseFloat(serviceFeePercentInput) || 0;
+      if (percent >= 0 && percent <= 100) {
+        const calculatedAmount = subtotal * (percent / 100);
+        setServiceFeePercent(percent);
+        setServiceFeeAmount(calculatedAmount);
+        setServiceFeeAmountInput(calculatedAmount.toString());
+        setShowServiceFeeInput(false);
+
+        // Save to backend
+        try {
+          await posAPI.applyServiceFee(paymentOrder.id, percent);
+        } catch (error) {
+          console.error('Failed to apply service fee:', error);
+        }
+      }
+    } else {
+      // Fixed amount mode
+      const amount = parseFloat(serviceFeeAmountInput) || 0;
+      if (amount >= 0) {
+        const calculatedPercent = subtotal > 0 ? (amount / subtotal) * 100 : 0;
+        setServiceFeeAmount(amount);
+        setServiceFeePercent(parseFloat(calculatedPercent.toFixed(2)));
+        setServiceFeePercentInput(calculatedPercent.toFixed(2));
+        setShowServiceFeeInput(false);
+
+        // Save to backend
+        try {
+          await posAPI.applyServiceFeeAmount(paymentOrder.id, amount);
+        } catch (error) {
+          console.error('Failed to apply service fee amount:', error);
+          // Fallback to percent-based API
+          try {
+            await posAPI.applyServiceFee(paymentOrder.id, calculatedPercent);
+          } catch (e) {
+            console.error('Fallback also failed:', e);
+          }
+        }
+      }
+    }
+
+    // Reinitialize split payments if in split mode
+    if (splitPaymentMode) {
+      const newTotal = calculateTotalWithFees();
+      initializeSplitPayments(newTotal, splitCount);
+    }
+  };
+
+  // Remove service fee
+  const handleRemoveServiceFee = async () => {
+    if (!paymentOrder) return;
+
+    setServiceFeePercent(0);
+    setServiceFeeAmount(0);
+    setServiceFeePercentInput('0');
+    setServiceFeeAmountInput('0');
+    setShowServiceFeeInput(false);
+
+    try {
+      await posAPI.applyServiceFee(paymentOrder.id, 0);
+    } catch (error) {
+      console.error('Failed to remove service fee:', error);
+    }
+
+    // Reinitialize split payments if in split mode
+    if (splitPaymentMode) {
+      const newTotal = calculateTotalWithFees();
+      initializeSplitPayments(newTotal, splitCount);
+    }
   };
 
   // Process single split payment
@@ -1270,19 +1366,124 @@ export default function Orders() {
               </div>
             </div>
 
-            {/* Service Fee Notice - 20% is mandatory and cannot be changed */}
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center gap-3">
-              <Percent className="h-5 w-5 text-purple-600" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-purple-800">
-                  {t('orders.mandatoryServiceFee', 'Service Fee (20%)')}
-                </p>
-                <p className="text-xs text-purple-600">
-                  {t('orders.serviceFeeAutoApplied', 'Automatically applied')}
-                </p>
+            {/* Adjustable Service Fee */}
+            {!showServiceFeeInput ? (
+              <div
+                className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:bg-purple-100 transition-colors"
+                onClick={() => setShowServiceFeeInput(true)}
+              >
+                <Percent className="h-5 w-5 text-purple-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-purple-800">
+                    {t('orders.serviceFee', 'Service Fee')} ({serviceFeePercent}%)
+                  </p>
+                  <p className="text-xs text-purple-600">
+                    {t('orders.clickToEdit', 'Click to edit')}
+                  </p>
+                </div>
+                <span className="font-bold text-purple-700">{serviceFeeAmount?.toLocaleString()}</span>
               </div>
-              <span className="font-bold text-purple-700">{serviceFeeAmount?.toLocaleString()}</span>
-            </div>
+            ) : (
+              <div className="bg-purple-50 border-2 border-purple-300 rounded-lg p-4 space-y-3">
+                {/* Mode Toggle */}
+                <div className="flex gap-1 bg-purple-100 rounded-lg p-1">
+                  <button
+                    type="button"
+                    onClick={() => setServiceFeeMode('percent')}
+                    className={`flex-1 py-1.5 px-2 rounded-md text-sm font-medium transition-colors ${
+                      serviceFeeMode === 'percent'
+                        ? 'bg-white text-purple-700 shadow-sm'
+                        : 'text-purple-600 hover:text-purple-800'
+                    }`}
+                  >
+                    {t('orders.percent', 'Percent')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setServiceFeeMode('amount')}
+                    className={`flex-1 py-1.5 px-2 rounded-md text-sm font-medium transition-colors ${
+                      serviceFeeMode === 'amount'
+                        ? 'bg-white text-purple-700 shadow-sm'
+                        : 'text-purple-600 hover:text-purple-800'
+                    }`}
+                  >
+                    {t('orders.fixedAmount', 'Fixed Amount')}
+                  </button>
+                </div>
+
+                {/* Input Field */}
+                {serviceFeeMode === 'percent' ? (
+                  <div>
+                    <Label className="text-sm font-semibold text-purple-800 mb-1">
+                      {t('orders.serviceFeePercent', 'Service Fee %')}
+                    </Label>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={serviceFeePercentInput}
+                        onChange={(e) => setServiceFeePercentInput(e.target.value)}
+                        className="flex-1 text-center font-semibold"
+                        placeholder="0"
+                      />
+                      <span className="text-lg font-bold text-purple-700">%</span>
+                    </div>
+                    {parseFloat(serviceFeePercentInput) > 0 && (
+                      <p className="text-xs text-purple-600 mt-1">
+                        = {((parseFloat(serviceFeePercentInput) || 0) / 100 * (paymentOrder?.subtotal || 0)).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <Label className="text-sm font-semibold text-purple-800 mb-1">
+                      {t('orders.serviceFeeAmount', 'Service Fee Amount')}
+                    </Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={serviceFeeAmountInput}
+                      onChange={(e) => setServiceFeeAmountInput(e.target.value)}
+                      className="w-full text-center font-semibold"
+                      placeholder="0"
+                    />
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleApplyServiceFee}
+                    className="flex-1"
+                  >
+                    {t('common.apply', 'Apply')}
+                  </Button>
+                  {serviceFeeAmount > 0 && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleRemoveServiceFee}
+                    >
+                      {t('common.remove', 'Remove')}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowServiceFeeInput(false)}
+                  >
+                    {t('common.cancel', 'Cancel')}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* DJ Services Fee Notice - 10,000 per guest, mandatory */}
             {entryFeeAmount > 0 && (
