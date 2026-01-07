@@ -501,7 +501,8 @@ export default function OrdersHistory() {
                   <TableRow>
                     <TableHead>{t('ordersHistory.orderNumber', 'Order #')}</TableHead>
                     <TableHead>{t('ordersHistory.date', 'Date')}</TableHead>
-                    <TableHead>{t('ordersHistory.customer', 'Customer')}</TableHead>
+                    <TableHead>{t('ordersHistory.table', 'Table')}</TableHead>
+                    <TableHead>{t('ordersHistory.waiter', 'Waiter')}</TableHead>
                     <TableHead>{t('ordersHistory.type', 'Type')}</TableHead>
                     <TableHead>{t('ordersHistory.status', 'Status')}</TableHead>
                     <TableHead>{t('ordersHistory.payment', 'Payment')}</TableHead>
@@ -519,7 +520,10 @@ export default function OrdersHistory() {
                         {order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm') : '-'}
                       </TableCell>
                       <TableCell>
-                        {order.customer?.name || order.customerName || t('common.na', 'N/A')}
+                        {order.diningTable?.tableNumber || order.tableIds || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {order.waiter?.username || order.waiter?.name || '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
@@ -620,6 +624,19 @@ export default function OrdersHistory() {
                 <div>
                   <Label className="text-muted-foreground">{t('ordersHistory.type', 'Type')}</Label>
                   <p className="mt-1 font-medium">{selectedOrder.orderType || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">{t('ordersHistory.table', 'Table')}</Label>
+                  <p className="mt-1 font-medium">
+                    {selectedOrder.diningTable?.tableNumber || selectedOrder.tableIds || 'N/A'}
+                    {selectedOrder.guestCount && ` (${selectedOrder.guestCount} guests)`}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">{t('ordersHistory.waiter', 'Waiter')}</Label>
+                  <p className="mt-1 font-medium">
+                    {selectedOrder.waiter?.username || selectedOrder.waiter?.name || 'N/A'}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">{t('ordersHistory.customer', 'Customer')}</Label>
