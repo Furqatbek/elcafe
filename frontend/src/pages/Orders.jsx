@@ -562,6 +562,7 @@ export default function Orders() {
         ...paymentOrder,
         serviceFeePercent: serviceFeePercent,
         serviceFee: serviceFeeAmount,
+        entryFee: 0, // Explicitly set to 0 to override any backend value
         total: finalTotal
       };
       PrintReceipt(receiptData);
@@ -1111,7 +1112,7 @@ export default function Orders() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => PrintReceipt(order)}
+                            onClick={() => PrintReceipt({ ...order, entryFee: 0 })}
                           >
                             <Printer className="h-4 w-4 mr-1" />
                             {t('orders.print', 'Print')}

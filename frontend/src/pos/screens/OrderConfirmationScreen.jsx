@@ -98,7 +98,7 @@ const OrderConfirmationScreen = () => {
 
   const handlePrintReceipt = () => {
     if (fullOrderData) {
-      PrintReceipt(fullOrderData);
+      PrintReceipt({ ...fullOrderData, entryFee: 0 });
     } else {
       // Fallback: print the page if order data not loaded
       window.print();
