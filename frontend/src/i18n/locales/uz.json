@@ -348,6 +348,11 @@
       "DELIVERED": "Yetkazildi",
       "CANCELLED": "Bekor qilindi"
     },
+    "orderTypes": {
+      "DINE_IN": "Zalda",
+      "DELIVERY": "Yetkazib berish",
+      "TAKEAWAY": "Olib ketish"
+    },
     "paymentMethods": {
       "CASH": "Naqd",
       "CARD": "Karta",

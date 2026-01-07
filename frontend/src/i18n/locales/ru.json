@@ -348,6 +348,11 @@
       "DELIVERED": "Доставлен",
       "CANCELLED": "Отменен"
     },
+    "orderTypes": {
+      "DINE_IN": "В зале",
+      "DELIVERY": "Доставка",
+      "TAKEAWAY": "С собой"
+    },
     "paymentMethods": {
       "CASH": "Наличные",
       "CARD": "Карта",

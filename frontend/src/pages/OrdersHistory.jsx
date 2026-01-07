@@ -527,7 +527,7 @@ export default function OrdersHistory() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {order.orderType || t('common.na', 'N/A')}
+                          {order.orderType ? t(`orders.orderTypes.${order.orderType}`, order.orderType) : t('common.na', 'N/A')}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -623,7 +623,9 @@ export default function OrdersHistory() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">{t('ordersHistory.type', 'Type')}</Label>
-                  <p className="mt-1 font-medium">{selectedOrder.orderType || 'N/A'}</p>
+                  <p className="mt-1 font-medium">
+                    {selectedOrder.orderType ? t(`orders.orderTypes.${selectedOrder.orderType}`, selectedOrder.orderType) : t('common.na', 'N/A')}
+                  </p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">{t('ordersHistory.table', 'Table')}</Label>

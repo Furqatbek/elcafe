@@ -486,6 +486,11 @@
       "DELIVERED": "Delivered",
       "CANCELLED": "Cancelled"
     },
+    "orderTypes": {
+      "DINE_IN": "Dine-In",
+      "DELIVERY": "Delivery",
+      "TAKEAWAY": "Takeaway"
+    },
     "paymentMethods": {
       "CASH": "Cash",
       "CARD": "Card",
