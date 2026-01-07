@@ -44,7 +44,6 @@ import {
   Coffee,
   Ban,
   Percent,
-  Ticket,
   Check
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -116,9 +115,6 @@ export default function Orders() {
   const [serviceFeePercentInput, setServiceFeePercentInput] = useState('');
   const [serviceFeeAmountInput, setServiceFeeAmountInput] = useState('');
 
-  // Entry fee state
-  const [showEntryFeeInput, setShowEntryFeeInput] = useState(false);
-  const [entryFeeAmount, setEntryFeeAmount] = useState(0);
 
   // Cancel order confirmation
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
@@ -352,22 +348,6 @@ export default function Orders() {
     setShowServiceFeeInput(false);
     setServiceFeeMode('percent');
 
-    // Always apply entry fee based on guest count - 10,000 per guest (DJ Services)
-    const ENTRY_FEE_PER_GUEST = 10000;
-    const guestCount = order.dineInInfo?.guestCount || order.guestCount || 0;
-    const calculatedEntryFee = guestCount * ENTRY_FEE_PER_GUEST;
-    setEntryFeeAmount(calculatedEntryFee);
-    setShowEntryFeeInput(false);
-
-    // Apply entry fee to backend if there are guests
-    if (calculatedEntryFee > 0) {
-      try {
-        await posAPI.applyEntryFee(order.id, calculatedEntryFee);
-      } catch (error) {
-        console.error('Failed to apply mandatory entry fee:', error);
-      }
-    }
-
     // Reset split payment state
     setSplitPaymentMode(false);
     setSplitCount(2);
@@ -582,7 +562,6 @@ export default function Orders() {
         ...paymentOrder,
         serviceFeePercent: serviceFeePercent,
         serviceFee: serviceFeeAmount,
-        entryFee: entryFeeAmount,
         total: finalTotal
       };
       PrintReceipt(receiptData);
@@ -766,12 +745,12 @@ export default function Orders() {
     }
   };
 
-  // Calculate total with service fee and entry fee
+  // Calculate total with service fee
   const calculateTotalWithFees = () => {
     if (!paymentOrder) return 0;
     const subtotal = paymentOrder.subtotal || 0;
     const tax = paymentOrder.tax || 0;
-    return subtotal + tax + serviceFeeAmount + entryFeeAmount;
+    return subtotal + tax + serviceFeeAmount;
   };
 
   // Calculate change for cash payment
@@ -1354,12 +1333,6 @@ export default function Orders() {
                   <span>{serviceFeeAmount?.toLocaleString()}</span>
                 </div>
               )}
-              {entryFeeAmount > 0 && (
-                <div className="flex justify-between mb-2 text-amber-700">
-                  <span>{t('orders.entryFee', 'Entry Fee')}</span>
-                  <span>{entryFeeAmount?.toLocaleString()}</span>
-                </div>
-              )}
               <div className="flex justify-between pt-2 border-t font-bold">
                 <span>{t('orders.total', 'Total')}</span>
                 <span className="text-xl">{calculateTotalWithFees().toLocaleString()}</span>
@@ -1482,24 +1455,6 @@ export default function Orders() {
                     {t('common.cancel', 'Cancel')}
                   </Button>
                 </div>
-              </div>
-            )}
-
-            {/* DJ Services Fee Notice - 10,000 per guest, mandatory */}
-            {entryFeeAmount > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
-                <Ticket className="h-5 w-5 text-amber-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-800">
-                    {t('orders.djServices', 'Услуги диджея')}
-                  </p>
-                  <p className="text-xs text-amber-600">
-                    {t('orders.djServicesPerGuest', '10,000 × {{count}} guests', {
-                      count: paymentOrder?.dineInInfo?.guestCount || paymentOrder?.guestCount || 0
-                    })}
-                  </p>
-                </div>
-                <span className="font-bold text-amber-700">{entryFeeAmount?.toLocaleString()}</span>
               </div>
             )}
 

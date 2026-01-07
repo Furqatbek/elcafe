@@ -20,7 +20,6 @@ const usePOSStore = create(
         deliveryFee: 0,
         serviceFeePercent: 0,
         serviceFee: 0,
-        entryFee: 0,
         total: 0,
         notes: '',
       },
@@ -156,8 +155,7 @@ const usePOSStore = create(
         const deliveryFee = state.currentOrder.deliveryFee;
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const entryFee = state.currentOrder.entryFee || 0;
-        const total = subtotal + tax + deliveryFee + serviceFee + entryFee;
+        const total = subtotal + tax + deliveryFee + serviceFee;
 
         return {
           currentOrder: {
@@ -166,7 +164,6 @@ const usePOSStore = create(
             subtotal,
             tax,
             serviceFee,
-            entryFee,
             total,
           },
         };
@@ -190,8 +187,7 @@ const usePOSStore = create(
         const deliveryFee = state.currentOrder.deliveryFee;
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const entryFee = state.currentOrder.entryFee || 0;
-        const total = subtotal + tax + deliveryFee + serviceFee + entryFee;
+        const total = subtotal + tax + deliveryFee + serviceFee;
 
         return {
           currentOrder: {
@@ -200,7 +196,6 @@ const usePOSStore = create(
             subtotal,
             tax,
             serviceFee,
-            entryFee,
             total,
           },
         };
@@ -213,8 +208,7 @@ const usePOSStore = create(
         const deliveryFee = state.currentOrder.deliveryFee;
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const entryFee = state.currentOrder.entryFee || 0;
-        const total = subtotal + tax + deliveryFee + serviceFee + entryFee;
+        const total = subtotal + tax + deliveryFee + serviceFee;
 
         return {
           currentOrder: {
@@ -223,7 +217,6 @@ const usePOSStore = create(
             subtotal,
             tax,
             serviceFee,
-            entryFee,
             total,
           },
         };
@@ -244,7 +237,6 @@ const usePOSStore = create(
           tax: 0,
           serviceFeePercent: 0,
           serviceFee: 0,
-          entryFee: 0,
           total: state.currentOrder.deliveryFee,
         },
       })),
@@ -253,27 +245,12 @@ const usePOSStore = create(
       setServiceFee: (serviceFeePercent) => set((state) => {
         const subtotal = state.currentOrder.subtotal;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const entryFee = state.currentOrder.entryFee || 0;
-        const total = subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee;
+        const total = subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee;
         return {
           currentOrder: {
             ...state.currentOrder,
             serviceFeePercent,
             serviceFee,
-            total,
-          },
-        };
-      }),
-
-      // Actions: Entry Fee
-      setEntryFee: (entryFee) => set((state) => {
-        const subtotal = state.currentOrder.subtotal;
-        const serviceFee = state.currentOrder.serviceFee || 0;
-        const total = subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee;
-        return {
-          currentOrder: {
-            ...state.currentOrder,
-            entryFee,
             total,
           },
         };
@@ -508,7 +485,6 @@ const usePOSStore = create(
                 deliveryFee: 0,
                 serviceFeePercent: existingOrder.serviceFeePercent || 0,
                 serviceFee: existingOrder.serviceFee || 0,
-                entryFee: existingOrder.entryFee || 0,
                 total: existingOrder.total || 0,
                 notes: existingOrder.orderNotes || '',
               },
@@ -714,7 +690,6 @@ const usePOSStore = create(
             deliveryFee: state.currentOrder.deliveryFee,
             serviceFeePercent: state.currentOrder.serviceFeePercent || 0,
             serviceFee: state.currentOrder.serviceFee || 0,
-            entryFee: state.currentOrder.entryFee || 0,
             total: state.currentOrder.total,
             amountTendered: state.payment.amountTendered || null,
             changeDue: state.payment.changeDue || null,
@@ -768,7 +743,6 @@ const usePOSStore = create(
             deliveryFee: 0,
             serviceFeePercent: 0,
             serviceFee: 0,
-            entryFee: 0,
             total: 0,
             notes: '',
           },
@@ -832,7 +806,6 @@ const usePOSStore = create(
             deliveryFee: 0,
             serviceFeePercent: 0,
             serviceFee: 0,
-            entryFee: 0,
             total: 0,
             notes: '',
           },
