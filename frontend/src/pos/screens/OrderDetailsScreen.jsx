@@ -142,12 +142,13 @@ const OrderDetailsScreen = () => {
 
     setCustomerInfo(customerData);
 
-    // Submit order directly without payment
+    // Submit order first, then proceed to payment
     setIsSubmitting(true);
     try {
       const result = await submitOrder(restaurantId);
       if (result.success) {
-        setCurrentScreen('start');
+        // Navigate to payment screen to complete the order
+        setCurrentScreen('payment');
       } else {
         setError(result.error || t('pos.errors.createOrderFailed', 'Failed to create order'));
       }
@@ -373,7 +374,7 @@ const OrderDetailsScreen = () => {
                 {t('pos.details.creatingOrder', 'Creating Order...')}
               </>
             ) : (
-              t('pos.details.createOrder', 'Create Order')
+              t('pos.details.proceedToPayment', 'Proceed to Payment')
             )}
           </TouchButton>
         </div>
