@@ -92,7 +92,7 @@ export default function InventoryStockCounts() {
 
   const handleStartStockCount = async (id) => {
     try {
-      await stockCountAPI.start(id);
+      await stockCountAPI.start(id, 'Admin');
       loadStockCounts();
     } catch (error) {
       console.error('Failed to start stock count:', error);
