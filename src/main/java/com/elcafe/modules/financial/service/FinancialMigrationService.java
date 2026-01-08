@@ -7,7 +7,6 @@ import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.financial.repository.JournalEntryRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
-import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -47,7 +46,6 @@ public class FinancialMigrationService {
             OrderStatus.READY,
             OrderStatus.PICKED_UP,
             OrderStatus.DELIVERED,
-            OrderStatus.SERVED,
             OrderStatus.COMPLETED
     );
 
@@ -115,7 +113,16 @@ public class FinancialMigrationService {
     private OrderSyncResult syncHistoricalOrders(Long restaurantId) {
         log.info("Syncing historical orders for restaurant: {}", restaurantId);
 
-        List<Order> allOrders = orderRepository.findByRestaurant_Id(restaurantId);
+        // Collect orders from all revenue-generating statuses
+        List<Order> allOrders = new java.util.ArrayList<>();
+        for (OrderStatus status : REVENUE_STATUSES) {
+            try {
+                List<Order> orders = orderRepository.findByRestaurant_IdAndStatus(restaurantId, status);
+                allOrders.addAll(orders);
+            } catch (Exception e) {
+                log.warn("Failed to fetch orders with status {}: {}", status, e.getMessage());
+            }
+        }
 
         int processed = 0;
         int skipped = 0;
@@ -123,21 +130,6 @@ public class FinancialMigrationService {
 
         for (Order order : allOrders) {
             try {
-                // Skip cancelled orders
-                if (order.getStatus() == OrderStatus.CANCELLED) {
-                    skipped++;
-                    continue;
-                }
-
-                // Skip orders that aren't in a revenue-generating status and aren't paid
-                boolean isRevenueStatus = REVENUE_STATUSES.contains(order.getStatus());
-                boolean isPaid = order.isFullyPaid() || order.getPaymentStatus() == PaymentStatus.COMPLETED;
-
-                if (!isRevenueStatus && !isPaid) {
-                    skipped++;
-                    continue;
-                }
-
                 // Check if journal entry already exists for this order
                 if (journalEntryRepository.existsByReferenceTypeAndReferenceId("ORDER", order.getId())) {
                     skipped++;
