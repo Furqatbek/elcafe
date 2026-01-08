@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { ChevronLeft, Phone, User, MapPin, Hash, Loader2 } from 'lucide-react';
+import { ChevronLeft, Phone, User, MapPin, Hash, Loader2, CheckCircle } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
 import { useSearchParams } from 'react-router-dom';
+import { customerAPI } from '../../services/api';
 
 /**
  * InputField - Extracted component to prevent focus loss on re-render
@@ -57,6 +58,9 @@ const OrderDetailsScreen = () => {
   const restaurantId = searchParams.get('restaurantId') || '1';
   const { currentOrder, customer, selectedTable, setCustomerInfo, setCurrentScreen, submitOrder, setError } = usePOSStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+  const [foundCustomer, setFoundCustomer] = useState(null);
+  const searchTimeoutRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: customer.name || '',
@@ -72,9 +76,61 @@ const OrderDetailsScreen = () => {
 
   const [errors, setErrors] = useState({});
 
+  // Search for existing customer by phone number (for DELIVERY and TAKEAWAY)
+  const searchCustomerByPhone = useCallback(async (phone) => {
+    if (!phone || phone.length < 5) {
+      setFoundCustomer(null);
+      return;
+    }
+
+    setIsSearchingCustomer(true);
+    try {
+      const response = await customerAPI.getByPhone(phone);
+      const customerData = response.data?.data;
+      if (customerData) {
+        setFoundCustomer(customerData);
+        // Auto-fill customer data
+        setFormData(prev => ({
+          ...prev,
+          name: customerData.firstName ? `${customerData.firstName} ${customerData.lastName || ''}`.trim() : prev.name,
+          email: customerData.email || prev.email,
+          address: customerData.defaultAddress || prev.address,
+          city: customerData.city || prev.city,
+        }));
+      } else {
+        setFoundCustomer(null);
+      }
+    } catch (error) {
+      console.error('Failed to search customer:', error);
+      setFoundCustomer(null);
+    } finally {
+      setIsSearchingCustomer(false);
+    }
+  }, []);
+
   const handleChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setErrors(prev => ({ ...prev, [field]: null }));
+
+    // Debounced search for customer when phone changes (only for DELIVERY/TAKEAWAY)
+    if (field === 'phone') {
+      setFoundCustomer(null);
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      searchTimeoutRef.current = setTimeout(() => {
+        searchCustomerByPhone(value);
+      }, 500);
+    }
+  }, [searchCustomerByPhone]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, []);
 
   const validateForm = () => {
@@ -279,16 +335,33 @@ const OrderDetailsScreen = () => {
 
             {(currentOrder.type === 'DELIVERY' || currentOrder.type === 'TAKEAWAY') && (
               <>
-                <InputField
-                  label={t('pos.details.phoneNumber', 'Phone Number')}
-                  icon={<Phone className="w-5 h-5" />}
-                  value={formData.phone}
-                  onChange={(v) => handleChange('phone', v)}
-                  type="tel"
-                  required
-                  placeholder={t('pos.details.phonePlaceholder', '(555) 123-4567')}
-                  error={errors.phone}
-                />
+                <div className="space-y-2">
+                  <InputField
+                    label={t('pos.details.phoneNumber', 'Phone Number')}
+                    icon={<Phone className="w-5 h-5" />}
+                    value={formData.phone}
+                    onChange={(v) => handleChange('phone', v)}
+                    type="tel"
+                    required
+                    placeholder={t('pos.details.phonePlaceholder', '(555) 123-4567')}
+                    error={errors.phone}
+                  />
+                  {/* Customer search status indicator */}
+                  {isSearchingCustomer && (
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {t('pos.details.searchingCustomer', 'Searching customer...')}
+                    </div>
+                  )}
+                  {foundCustomer && !isSearchingCustomer && (
+                    <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded-lg">
+                      <CheckCircle className="w-4 h-4" />
+                      {t('pos.details.customerFound', 'Customer found: {{name}}', {
+                        name: `${foundCustomer.firstName || ''} ${foundCustomer.lastName || ''}`.trim() || foundCustomer.phone
+                      })}
+                    </div>
+                  )}
+                </div>
 
                 <InputField
                   label={t('pos.details.emailOptional', 'Email (Optional)')}

@@ -57,6 +57,11 @@ public class CustomerService {
         return customerRepository.findAll(pageable);
     }
 
+    @Transactional(readOnly = true)
+    public Customer getCustomerByPhone(String phone) {
+        return customerRepository.findByPhone(phone).orElse(null);
+    }
+
     @Transactional
     public void deleteCustomer(Long id) {
         log.info("Deleting customer: {}", id);
