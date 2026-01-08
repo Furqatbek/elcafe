@@ -70,6 +70,15 @@ public class RevenueService {
                         order.getTotal(),
                         "SYSTEM"
                 );
+            } else {
+                log.error("Cannot record revenue for order {}: salesAccount={}, cashAccount={}. " +
+                        "Please initialize chart of accounts for restaurant {}",
+                        order.getId(), salesAccount != null, cashAccount != null, restaurantId);
+            }
+
+            // Record service fees if applicable
+            if (order.getServiceFee() != null && order.getServiceFee().compareTo(BigDecimal.ZERO) > 0) {
+                recordServiceFee(order, orderDate);
             }
 
             // Record delivery fees if applicable
@@ -83,6 +92,43 @@ public class RevenueService {
         } catch (Exception e) {
             log.error("Failed to record order revenue for order: {}", order.getId(), e);
             // Don't throw - we don't want to fail the order completion
+        }
+    }
+
+    /**
+     * Record service fees
+     */
+    private void recordServiceFee(Order order, LocalDate orderDate) {
+        try {
+            Long restaurantId = order.getRestaurant().getId();
+
+            Account serviceFeeAccount = accountRepository.findByRestaurant_IdAndCategory(
+                    restaurantId, Account.AccountCategory.SERVICE_FEES
+            ).stream().findFirst().orElse(null);
+
+            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
+                    restaurantId, Account.AccountCategory.CASH
+            ).stream().findFirst().orElse(null);
+
+            if (serviceFeeAccount != null && cashAccount != null) {
+                // Debit: Cash, Credit: Service Fees Revenue
+                journalService.createJournalEntry(
+                        restaurantId,
+                        orderDate,
+                        "Service Fee from Order #" + order.getId(),
+                        "SERVICE_FEE",
+                        order.getId(),
+                        cashAccount.getId(),
+                        serviceFeeAccount.getId(),
+                        order.getServiceFee(),
+                        "SYSTEM"
+                );
+            } else {
+                log.warn("Cannot record service fee for order {}: serviceFeeAccount={}, cashAccount={}",
+                        order.getId(), serviceFeeAccount != null, cashAccount != null);
+            }
+        } catch (Exception e) {
+            log.error("Failed to record service fee for order {}: {}", order.getId(), e.getMessage(), e);
         }
     }
 
@@ -114,9 +160,12 @@ public class RevenueService {
                         order.getDeliveryFee(),
                         "SYSTEM"
                 );
+            } else {
+                log.warn("Cannot record delivery fee for order {}: deliveryFeeAccount={}, cashAccount={}",
+                        order.getId(), deliveryFeeAccount != null, cashAccount != null);
             }
         } catch (Exception e) {
-            log.warn("Failed to record delivery fee for order: {}", order.getId(), e);
+            log.error("Failed to record delivery fee for order {}: {}", order.getId(), e.getMessage(), e);
         }
     }
 
@@ -140,7 +189,9 @@ public class RevenueService {
             ).stream().findFirst().orElse(null);
 
             if (cogsAccount == null || inventoryAccount == null) {
-                log.warn("COGS or Inventory account not found for restaurant: {}", restaurantId);
+                log.error("Cannot record COGS for order {}: cogsAccount={}, inventoryAccount={}. " +
+                        "Please initialize chart of accounts for restaurant {}",
+                        order.getId(), cogsAccount != null, inventoryAccount != null, restaurantId);
                 return;
             }
 

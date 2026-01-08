@@ -152,9 +152,15 @@ public class ExpenseService {
                         expense.getTotalAmount(),
                         recordedBy
                 );
+                log.info("Journal entry created for expense {}: amount={}", expense.getExpenseNumber(), expense.getTotalAmount());
+            } else {
+                log.error("Cannot create journal entry for expense {}: expenseAccount={}, paymentAccount={}. " +
+                        "Category: {}, PaymentMethod: {}. Please check chart of accounts for restaurant {}",
+                        expense.getExpenseNumber(), expenseAccount != null, paymentAccount != null,
+                        expense.getCategory(), expense.getPaymentMethod(), expense.getRestaurant().getId());
             }
         } catch (Exception e) {
-            log.warn("Failed to create expense journal entry: {}", e.getMessage());
+            log.error("Failed to create expense journal entry for {}: {}", expense.getExpenseNumber(), e.getMessage(), e);
         }
     }
 

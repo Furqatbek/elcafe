@@ -115,6 +115,7 @@ public class Account {
         // Revenue
         SALES,
         DELIVERY_FEES,
+        SERVICE_FEES,
         OTHER_REVENUE,
 
         // Expenses

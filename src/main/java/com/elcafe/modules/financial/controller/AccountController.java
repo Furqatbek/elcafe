@@ -2,6 +2,7 @@ package com.elcafe.modules.financial.controller;
 
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.service.AccountService;
+import com.elcafe.modules.financial.service.FinancialMigrationService;
 import com.elcafe.modules.financial.service.RevenueService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -25,6 +26,7 @@ public class AccountController {
 
     private final AccountService accountService;
     private final RevenueService revenueService;
+    private final FinancialMigrationService migrationService;
     private final OrderRepository orderRepository;
     private final JournalEntryRepository journalEntryRepository;
 
@@ -122,6 +124,79 @@ public class AccountController {
 
         log.info("Backfilled {} historical orders for restaurant: {}", processedCount, restaurantId);
         return processedCount;
+    }
+
+    /**
+     * Full financial data sync for a restaurant.
+     * This includes:
+     * - Adding missing accounts
+     * - Syncing historical orders to journal entries
+     * - Syncing historical expenses to journal entries
+     */
+    @PostMapping("/sync/{restaurantId}")
+    public ResponseEntity<ApiResponse<FinancialMigrationService.MigrationResult>> syncFinancialData(
+            @PathVariable Long restaurantId) {
+        log.info("Starting full financial data sync for restaurant: {}", restaurantId);
+
+        try {
+            FinancialMigrationService.MigrationResult result = migrationService.syncRestaurantFinancialData(restaurantId);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Financial data synchronized successfully",
+                    result
+            ));
+        } catch (Exception e) {
+            log.error("Failed to sync financial data for restaurant: {}", restaurantId, e);
+            return ResponseEntity.badRequest().body(ApiResponse.error(
+                    "Failed to sync financial data: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Full financial data sync for all restaurants.
+     * WARNING: This can be a heavy operation for large deployments.
+     */
+    @PostMapping("/sync-all")
+    public ResponseEntity<ApiResponse<List<FinancialMigrationService.MigrationResult>>> syncAllFinancialData() {
+        log.info("Starting full financial data sync for ALL restaurants");
+
+        try {
+            List<FinancialMigrationService.MigrationResult> results = migrationService.syncAllRestaurants();
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Financial data synchronized for all restaurants",
+                    results
+            ));
+        } catch (Exception e) {
+            log.error("Failed to sync financial data for all restaurants", e);
+            return ResponseEntity.badRequest().body(ApiResponse.error(
+                    "Failed to sync financial data: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Add missing accounts to an existing restaurant's chart of accounts.
+     * This adds new account types that were introduced after the restaurant was created.
+     */
+    @PostMapping("/add-missing/{restaurantId}")
+    public ResponseEntity<ApiResponse<String>> addMissingAccounts(@PathVariable Long restaurantId) {
+        log.info("Adding missing accounts for restaurant: {}", restaurantId);
+
+        try {
+            accountService.addMissingAccounts(restaurantId);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Missing accounts added successfully",
+                    "Restaurant " + restaurantId + " chart of accounts updated"
+            ));
+        } catch (Exception e) {
+            log.error("Failed to add missing accounts for restaurant: {}", restaurantId, e);
+            return ResponseEntity.badRequest().body(ApiResponse.error(
+                    "Failed to add missing accounts: " + e.getMessage()
+            ));
+        }
     }
 
     /**
