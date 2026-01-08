@@ -190,6 +190,7 @@ export const customerAPI = {
   getAll: (params) => api.get('/customers', { params }),
   getById: (id) => api.get(`/customers/${id}`),
   getByPhone: (phone) => api.get('/customers/search/phone', { params: { phone } }),
+  suggestByPhone: (phone) => api.get('/customers/suggest/phone', { params: { phone } }),
   create: (data) => api.post('/customers', data),
   update: (id, data) => api.put(`/customers/${id}`, data),
   delete: (id) => api.delete(`/customers/${id}`),

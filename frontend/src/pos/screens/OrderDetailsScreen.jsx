@@ -60,6 +60,8 @@ const OrderDetailsScreen = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
   const [foundCustomer, setFoundCustomer] = useState(null);
+  const [customerSuggestions, setCustomerSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const searchTimeoutRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -76,36 +78,61 @@ const OrderDetailsScreen = () => {
 
   const [errors, setErrors] = useState({});
 
-  // Search for existing customer by phone number (for DELIVERY and TAKEAWAY)
+  // Search for existing customers by phone number (for DELIVERY and TAKEAWAY)
   const searchCustomerByPhone = useCallback(async (phone) => {
-    if (!phone || phone.length < 5) {
+    if (!phone || phone.length < 3) {
       setFoundCustomer(null);
+      setCustomerSuggestions([]);
+      setShowSuggestions(false);
       return;
     }
 
     setIsSearchingCustomer(true);
     try {
-      const response = await customerAPI.getByPhone(phone);
-      const customerData = response.data?.data;
-      if (customerData) {
-        setFoundCustomer(customerData);
-        // Auto-fill customer data
+      // Search for similar customers
+      const response = await customerAPI.suggestByPhone(phone);
+      const customers = response.data?.data || [];
+      setCustomerSuggestions(customers);
+      setShowSuggestions(customers.length > 0);
+
+      // Check for exact match
+      const exactMatch = customers.find(c => c.phone === phone);
+      if (exactMatch) {
+        setFoundCustomer(exactMatch);
+        // Auto-fill customer data for exact match
         setFormData(prev => ({
           ...prev,
-          name: customerData.firstName ? `${customerData.firstName} ${customerData.lastName || ''}`.trim() : prev.name,
-          email: customerData.email || prev.email,
-          address: customerData.defaultAddress || prev.address,
-          city: customerData.city || prev.city,
+          name: exactMatch.firstName ? `${exactMatch.firstName} ${exactMatch.lastName || ''}`.trim() : prev.name,
+          email: exactMatch.email || prev.email,
+          address: exactMatch.defaultAddress || prev.address,
+          city: exactMatch.city || prev.city,
         }));
+        setShowSuggestions(false);
       } else {
         setFoundCustomer(null);
       }
     } catch (error) {
       console.error('Failed to search customer:', error);
       setFoundCustomer(null);
+      setCustomerSuggestions([]);
     } finally {
       setIsSearchingCustomer(false);
     }
+  }, []);
+
+  // Select a customer from suggestions
+  const handleSelectCustomer = useCallback((selectedCustomer) => {
+    setFoundCustomer(selectedCustomer);
+    setFormData(prev => ({
+      ...prev,
+      phone: selectedCustomer.phone || prev.phone,
+      name: selectedCustomer.firstName ? `${selectedCustomer.firstName} ${selectedCustomer.lastName || ''}`.trim() : prev.name,
+      email: selectedCustomer.email || prev.email,
+      address: selectedCustomer.defaultAddress || prev.address,
+      city: selectedCustomer.city || prev.city,
+    }));
+    setShowSuggestions(false);
+    setCustomerSuggestions([]);
   }, []);
 
   const handleChange = useCallback((field, value) => {
@@ -335,7 +362,7 @@ const OrderDetailsScreen = () => {
 
             {(currentOrder.type === 'DELIVERY' || currentOrder.type === 'TAKEAWAY') && (
               <>
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <InputField
                     label={t('pos.details.phoneNumber', 'Phone Number')}
                     icon={<Phone className="w-5 h-5" />}
@@ -353,7 +380,36 @@ const OrderDetailsScreen = () => {
                       {t('pos.details.searchingCustomer', 'Searching customer...')}
                     </div>
                   )}
-                  {foundCustomer && !isSearchingCustomer && (
+                  {/* Customer suggestions dropdown */}
+                  {showSuggestions && customerSuggestions.length > 0 && !isSearchingCustomer && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border-2 border-blue-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      <div className="p-2 text-xs text-gray-500 border-b">
+                        {t('pos.details.selectCustomer', 'Select existing customer:')}
+                      </div>
+                      {customerSuggestions.map((cust) => (
+                        <button
+                          key={cust.id}
+                          type="button"
+                          className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                          onClick={() => handleSelectCustomer(cust)}
+                        >
+                          <div className="font-medium text-gray-900">
+                            {cust.firstName} {cust.lastName}
+                          </div>
+                          <div className="text-sm text-gray-600 flex items-center gap-2">
+                            <Phone className="w-3 h-3" />
+                            {cust.phone}
+                          </div>
+                          {cust.defaultAddress && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {cust.defaultAddress}, {cust.city}
+                            </div>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {foundCustomer && !isSearchingCustomer && !showSuggestions && (
                     <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded-lg">
                       <CheckCircle className="w-4 h-4" />
                       {t('pos.details.customerFound', 'Customer found: {{name}}', {

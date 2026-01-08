@@ -68,13 +68,20 @@ public class CustomerController {
     }
 
     @GetMapping("/search/phone")
-    @Operation(summary = "Search customer by phone", description = "Find customer by phone number")
+    @Operation(summary = "Search customer by phone", description = "Find customer by exact phone number")
     public ResponseEntity<ApiResponse<Customer>> getCustomerByPhone(@RequestParam String phone) {
         Customer customer = customerService.getCustomerByPhone(phone);
         if (customer == null) {
             return ResponseEntity.ok(ApiResponse.success("Customer not found", null));
         }
         return ResponseEntity.ok(ApiResponse.success(customer));
+    }
+
+    @GetMapping("/suggest/phone")
+    @Operation(summary = "Suggest customers by phone", description = "Find customers with similar phone numbers")
+    public ResponseEntity<ApiResponse<List<Customer>>> suggestCustomersByPhone(@RequestParam String phone) {
+        List<Customer> customers = customerService.searchCustomersByPhone(phone);
+        return ResponseEntity.ok(ApiResponse.success(customers));
     }
 
     @DeleteMapping("/{id}")
