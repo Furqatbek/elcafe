@@ -104,11 +104,12 @@ const OrderDetailsScreen = () => {
         newErrors.phone = t('pos.details.errors.phoneRequired', 'Phone number is required');
       }
     } else if (currentOrder.type === 'DINE_IN') {
-      // Dine-in only requires table number and guest count (customer info is optional)
+      // Dine-in only requires table number (customer info and guest count are optional)
       if (!formData.tableNumber || !String(formData.tableNumber).trim()) {
         newErrors.tableNumber = t('pos.details.errors.tableRequired', 'Table number is required');
       }
-      if (!formData.guestCount || formData.guestCount < 1) {
+      // Guest count is optional, but if provided must be at least 1
+      if (formData.guestCount && formData.guestCount < 1) {
         newErrors.guestCount = t('pos.details.errors.guestCountMin', 'Guest count must be at least 1');
       }
     }
@@ -137,18 +138,24 @@ const OrderDetailsScreen = () => {
       customerData.deliveryInstructions = formData.deliveryInstructions;
     } else if (currentOrder.type === 'DINE_IN') {
       customerData.tableNumber = formData.tableNumber;
-      customerData.guestCount = parseInt(formData.guestCount);
+      customerData.guestCount = formData.guestCount ? parseInt(formData.guestCount) : null;
     }
 
     setCustomerInfo(customerData);
 
-    // Submit order first, then proceed to payment
+    // Submit order first, then proceed based on order type
     setIsSubmitting(true);
     try {
       const result = await submitOrder(restaurantId);
       if (result.success) {
-        // Navigate to payment screen to complete the order
-        setCurrentScreen('payment');
+        // For DINE_IN orders, skip payment and go to confirmation
+        // Payment happens later when customer is ready to leave
+        if (currentOrder.type === 'DINE_IN') {
+          setCurrentScreen('confirmation');
+        } else {
+          // For TAKEAWAY and DELIVERY, go to payment screen
+          setCurrentScreen('payment');
+        }
       } else {
         setError(result.error || t('pos.errors.createOrderFailed', 'Failed to create order'));
       }
@@ -374,7 +381,9 @@ const OrderDetailsScreen = () => {
                 {t('pos.details.creatingOrder', 'Creating Order...')}
               </>
             ) : (
-              t('pos.details.proceedToPayment', 'Proceed to Payment')
+              currentOrder.type === 'DINE_IN'
+                ? t('pos.details.createOrder', 'Create Order')
+                : t('pos.details.proceedToPayment', 'Proceed to Payment')
             )}
           </TouchButton>
         </div>
