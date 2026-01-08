@@ -180,7 +180,6 @@ public class CreatePOSOrderRequest {
         // Array of table IDs for multi-table orders
         private List<Long> tableIds;
 
-        @NotNull(message = "Guest count is required")
         @Min(value = 1, message = "Guest count must be at least 1")
         @Max(value = 100, message = "Guest count must not exceed 100")
         private Integer guestCount;

@@ -28,7 +28,6 @@ public class CreateOrderRequest {
     @Size(max = 1000, message = "Customer notes must not exceed 1000 characters")
     private String customerNotes;
 
-    @NotNull(message = "Guest count is required")
     @Min(value = 1, message = "Guest count must be at least 1")
     @Max(value = 100, message = "Guest count must not exceed 100")
     private Integer guestCount;
