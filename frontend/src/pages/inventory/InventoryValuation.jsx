@@ -46,10 +46,10 @@ import {
 } from 'lucide-react';
 
 const VALUATION_METHODS = [
-  { value: 'FIFO', label: 'FIFO (First-In-First-Out)' },
-  { value: 'LIFO', label: 'LIFO (Last-In-First-Out)' },
-  { value: 'WEIGHTED_AVERAGE', label: 'Weighted Average Cost' },
-  { value: 'FEFO', label: 'FEFO (First-Expired-First-Out)' },
+  { value: 'FIFO', labelKey: 'inventory.valuation.methods.FIFO' },
+  { value: 'LIFO', labelKey: 'inventory.valuation.methods.LIFO' },
+  { value: 'WEIGHTED_AVERAGE', labelKey: 'inventory.valuation.methods.WEIGHTED_AVERAGE' },
+  { value: 'FEFO', labelKey: 'inventory.valuation.methods.FEFO' },
 ];
 
 export default function InventoryValuation() {
@@ -240,7 +240,7 @@ export default function InventoryValuation() {
                     {t('inventory.valuation.currentMethod')}:
                   </Badge>
                   <Badge className="bg-blue-100 text-blue-800">
-                    {VALUATION_METHODS.find(m => m.value === currentMethod)?.label || currentMethod}
+                    {t(VALUATION_METHODS.find(m => m.value === currentMethod)?.labelKey) || currentMethod}
                   </Badge>
                 </div>
 
@@ -254,7 +254,7 @@ export default function InventoryValuation() {
                       <SelectContent>
                         {VALUATION_METHODS.map((method) => (
                           <SelectItem key={method.value} value={method.value}>
-                            {method.label}
+                            {t(method.labelKey)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -457,15 +457,15 @@ export default function InventoryValuation() {
                   {/* Summary */}
                   <div className="grid gap-4 md:grid-cols-4">
                     <div className="p-4 border rounded-lg">
-                      <div className="text-sm text-muted-foreground mb-1">FIFO</div>
+                      <div className="text-sm text-muted-foreground mb-1">{t('inventory.valuation.comparison.fifoValue')}</div>
                       <div className="text-xl font-bold">{formatNumber(comparisonReport.fifoValue)}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
-                      <div className="text-sm text-muted-foreground mb-1">LIFO</div>
+                      <div className="text-sm text-muted-foreground mb-1">{t('inventory.valuation.comparison.lifoValue')}</div>
                       <div className="text-xl font-bold">{formatNumber(comparisonReport.lifoValue)}</div>
                     </div>
                     <div className="p-4 border rounded-lg">
-                      <div className="text-sm text-muted-foreground mb-1">WAC</div>
+                      <div className="text-sm text-muted-foreground mb-1">{t('inventory.valuation.comparison.wacValue')}</div>
                       <div className="text-xl font-bold">{formatNumber(comparisonReport.weightedAverageValue)}</div>
                     </div>
                     <div className="p-4 border rounded-lg bg-blue-50">
@@ -513,9 +513,9 @@ export default function InventoryValuation() {
                           <TableRow>
                             <TableHead>{t('inventory.fields.name')}</TableHead>
                             <TableHead>{t('inventory.fields.category')}</TableHead>
-                            <TableHead className="text-right">FIFO</TableHead>
-                            <TableHead className="text-right">LIFO</TableHead>
-                            <TableHead className="text-right">WAC</TableHead>
+                            <TableHead className="text-right">{t('inventory.valuation.comparison.fifoValue')}</TableHead>
+                            <TableHead className="text-right">{t('inventory.valuation.comparison.lifoValue')}</TableHead>
+                            <TableHead className="text-right">{t('inventory.valuation.comparison.wacValue')}</TableHead>
                             <TableHead className="text-right">{t('inventory.valuation.reports.comparison.maxVariance')}</TableHead>
                             <TableHead className="text-right">{t('inventory.valuation.reports.comparison.variancePercent')}</TableHead>
                           </TableRow>
@@ -600,10 +600,10 @@ export default function InventoryValuation() {
                           <div key={cat.category} className="p-4 border rounded-lg">
                             <div className="flex justify-between items-start mb-2">
                               <div className="font-medium">{cat.category}</div>
-                              <Badge variant="secondary">{cat.ingredientCount} items</Badge>
+                              <Badge variant="secondary">{cat.ingredientCount} {t('common.items')}</Badge>
                             </div>
                             <div className="text-xl font-bold">{formatNumber(cat.totalValue)}</div>
-                            <div className="text-sm text-muted-foreground">{cat.percentageOfTotal?.toFixed(1)}% of total</div>
+                            <div className="text-sm text-muted-foreground">{cat.percentageOfTotal?.toFixed(1)}% {t('inventory.valuation.reports.inventory.ofTotal')}</div>
                           </div>
                         ))}
                       </div>
