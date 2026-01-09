@@ -332,4 +332,20 @@ public class POSOrderController {
 
         return ResponseEntity.ok(ApiResponse.success("Order closed and table released", response));
     }
+
+    @PatchMapping("/{orderId}/change-table")
+    @Operation(
+            summary = "Change order table",
+            description = "Move an order to a different table"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> changeTable(
+            @PathVariable Long orderId,
+            @RequestParam Long newTableId) {
+
+        log.info("Changing table for order {}: newTableId={}", orderId, newTableId);
+
+        POSOrderResponse response = posOrderService.changeTable(orderId, newTableId);
+
+        return ResponseEntity.ok(ApiResponse.success("Order moved to new table successfully", response));
+    }
 }

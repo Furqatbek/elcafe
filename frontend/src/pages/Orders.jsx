@@ -44,7 +44,8 @@ import {
   Coffee,
   Ban,
   Percent,
-  Check
+  Check,
+  ArrowRightLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
@@ -128,6 +129,12 @@ export default function Orders() {
 
   // Success notification state
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Change table modal state
+  const [changeTableModalOpen, setChangeTableModalOpen] = useState(false);
+  const [orderToChangeTable, setOrderToChangeTable] = useState(null);
+  const [selectedNewTableId, setSelectedNewTableId] = useState('');
+  const [changingTable, setChangingTable] = useState(false);
 
   // Split payment state
   const [splitPaymentMode, setSplitPaymentMode] = useState(false);
@@ -710,6 +717,44 @@ export default function Orders() {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
+  // Open change table modal
+  const handleOpenChangeTable = (order) => {
+    setOrderToChangeTable(order);
+    setSelectedNewTableId('');
+    setChangeTableModalOpen(true);
+  };
+
+  // Handle change table
+  const handleChangeTable = async () => {
+    if (!orderToChangeTable || !selectedNewTableId) return;
+
+    setChangingTable(true);
+    try {
+      await posAPI.changeTable(orderToChangeTable.id, parseInt(selectedNewTableId));
+      setChangeTableModalOpen(false);
+      setOrderToChangeTable(null);
+      setSelectedNewTableId('');
+
+      // Refresh data
+      await loadTablesAndOrders();
+      showSuccessNotification(t('orders.tableChanged', 'Order moved to new table successfully'));
+    } catch (error) {
+      console.error('Failed to change table:', error);
+      alert(t('orders.changeTableError', 'Failed to change table: ') + (error.response?.data?.message || error.message));
+    } finally {
+      setChangingTable(false);
+    }
+  };
+
+  // Get available tables for change table modal
+  const getAvailableTables = () => {
+    if (!orderToChangeTable) return [];
+    const currentTableId = orderToChangeTable.dineInInfo?.tableIds?.[0] || orderToChangeTable.diningTable?.id;
+    return tables.filter(t =>
+      t.status === 'AVAILABLE' || t.id === currentTableId
+    );
+  };
+
   // Add item from edit modal
   const handleAddItemFromEditModal = async () => {
     if (!newItemProductId || !editingOrder) return;
@@ -1128,6 +1173,16 @@ export default function Orders() {
                               >
                                 <Edit className="h-4 w-4 mr-1" />
                                 {t('orders.editOrder', 'Edit Order')}
+                              </Button>
+
+                              {/* Change Table */}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenChangeTable(order)}
+                              >
+                                <ArrowRightLeft className="h-4 w-4 mr-1" />
+                                {t('orders.changeTable', 'Change Table')}
                               </Button>
 
                               {/* Pay Button */}
@@ -1982,6 +2037,99 @@ export default function Orders() {
               }}
             >
               {t('common.close', 'Close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Table Modal */}
+      <Dialog open={changeTableModalOpen} onOpenChange={setChangeTableModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5" />
+              {t('orders.changeTable', 'Change Table')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('orders.changeTableDesc', 'Move this order to a different table')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <Label className="mb-3 block">{t('orders.selectNewTable', 'Select New Table')}</Label>
+            <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+              {getAvailableTables().map((table) => {
+                const currentTableId = orderToChangeTable?.dineInInfo?.tableIds?.[0] || orderToChangeTable?.diningTable?.id;
+                const isCurrentTable = table.id === currentTableId;
+                const isSelected = selectedNewTableId === table.id.toString();
+
+                return (
+                  <button
+                    key={table.id}
+                    onClick={() => setSelectedNewTableId(table.id.toString())}
+                    disabled={isCurrentTable}
+                    className={`
+                      p-3 rounded-lg border-2 transition-all text-center
+                      ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}
+                      ${isCurrentTable ? 'opacity-50 cursor-not-allowed bg-orange-50' : 'hover:border-blue-300 cursor-pointer'}
+                    `}
+                  >
+                    <div className={`
+                      w-10 h-10 mx-auto rounded-lg flex items-center justify-center text-white mb-1
+                      ${isCurrentTable ? 'bg-orange-500' : isSelected ? 'bg-blue-500' : 'bg-green-500'}
+                    `}>
+                      <span className="font-bold">{table.tableNumber}</span>
+                    </div>
+                    <p className="text-xs truncate">{table.tableName || `Table ${table.tableNumber}`}</p>
+                    <p className="text-xs text-muted-foreground">
+                      <Users className="h-3 w-3 inline mr-1" />
+                      {table.capacity}
+                    </p>
+                    {isCurrentTable && (
+                      <Badge variant="secondary" className="text-xs mt-1">
+                        {t('orders.current', 'Current')}
+                      </Badge>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {getAvailableTables().length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>{t('orders.noAvailableTables', 'No available tables')}</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setChangeTableModalOpen(false);
+                setOrderToChangeTable(null);
+                setSelectedNewTableId('');
+              }}
+              disabled={changingTable}
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button
+              onClick={handleChangeTable}
+              disabled={changingTable || !selectedNewTableId}
+            >
+              {changingTable ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  {t('common.moving', 'Moving...')}
+                </>
+              ) : (
+                <>
+                  <ArrowRightLeft className="h-4 w-4 mr-2" />
+                  {t('orders.moveToTable', 'Move to Table')}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

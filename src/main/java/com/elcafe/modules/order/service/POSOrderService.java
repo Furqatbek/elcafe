@@ -1011,4 +1011,69 @@ public class POSOrderService {
 
         return mapToResponse(savedOrder, orderType);
     }
+
+    @Transactional
+    public POSOrderResponse changeTable(Long orderId, Long newTableId) {
+        log.info("Changing table for order {}: newTableId={}", orderId, newTableId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Validate order is a dine-in order and not closed
+        if (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("Cannot change table for a closed or cancelled order");
+        }
+
+        // Find the new table
+        RestaurantTable newTable = restaurantTableRepository.findById(newTableId)
+                .orElseThrow(() -> new IllegalArgumentException("Table not found with ID: " + newTableId));
+
+        // Check if new table is available or the same as current
+        Long currentTableId = order.getDiningTable() != null ? order.getDiningTable().getId() : null;
+        if (newTableId.equals(currentTableId)) {
+            // Same table, no change needed
+            return mapToResponse(order, "DINE_IN");
+        }
+
+        if (newTable.getStatus() == RestaurantTable.TableStatus.OCCUPIED) {
+            throw new IllegalArgumentException("Table " + newTable.getTableNumber() + " is already occupied");
+        }
+
+        // Release the current table(s)
+        if (order.getDiningTable() != null) {
+            RestaurantTable oldTable = order.getDiningTable();
+            oldTable.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+            restaurantTableRepository.save(oldTable);
+            log.info("Released old table {}", oldTable.getTableNumber());
+        }
+
+        // Release any additional tables from tableIds
+        if (order.getTableIds() != null && !order.getTableIds().isEmpty()) {
+            List<Long> tableIdList = java.util.Arrays.stream(order.getTableIds().split(","))
+                    .map(String::trim)
+                    .map(Long::parseLong)
+                    .collect(Collectors.toList());
+
+            for (Long tableId : tableIdList) {
+                if (!tableId.equals(newTableId)) {
+                    restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                        table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                        restaurantTableRepository.save(table);
+                        log.info("Released additional table {}", table.getTableNumber());
+                    });
+                }
+            }
+        }
+
+        // Assign new table
+        newTable.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+        restaurantTableRepository.save(newTable);
+        order.setDiningTable(newTable);
+        order.setTableIds(String.valueOf(newTableId));
+        log.info("Assigned new table {} to order {}", newTable.getTableNumber(), orderId);
+
+        Order savedOrder = orderRepository.save(order);
+
+        return mapToResponse(savedOrder, "DINE_IN");
+    }
 }
