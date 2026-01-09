@@ -61,6 +61,7 @@ public class CustomerAnalyticsService {
 
         // Get returning customers (customers who made orders during the period)
         Set<Long> returningCustomerIds = getCompletedOrders(shift.start(), shift.end(), restaurantId).stream()
+                .filter(order -> order.getCustomer() != null)
                 .map(order -> order.getCustomer().getId())
                 .filter(customerId -> customersAtStart.stream().anyMatch(c -> c.getId().equals(customerId)))
                 .collect(Collectors.toSet());
@@ -80,6 +81,7 @@ public class CustomerAnalyticsService {
 
         // Count one-time vs repeat customers
         Map<Long, Long> orderCountByCustomer = getCompletedOrders(shift.start(), shift.end(), restaurantId).stream()
+                .filter(order -> order.getCustomer() != null)
                 .collect(Collectors.groupingBy(
                         order -> order.getCustomer().getId(),
                         Collectors.counting()
