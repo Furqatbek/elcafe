@@ -330,8 +330,6 @@ export const posAPI = {
     api.post(`/pos/orders/${orderId}/service-fee`, null, { params: { serviceFeePercent } }),
   applyServiceFeeAmount: (orderId, serviceFeeAmount) =>
     api.post(`/pos/orders/${orderId}/service-fee-amount`, null, { params: { serviceFeeAmount } }),
-  updateGuestCount: (orderId, guestCount) =>
-    api.patch(`/pos/orders/${orderId}/guest-count`, null, { params: { guestCount } }),
 };
 
 export const waiterOrderAPI = {

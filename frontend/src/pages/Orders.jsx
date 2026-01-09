@@ -129,12 +129,6 @@ export default function Orders() {
   // Success notification state
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Guest count edit state
-  const [guestCountModalOpen, setGuestCountModalOpen] = useState(false);
-  const [guestCountOrder, setGuestCountOrder] = useState(null);
-  const [newGuestCount, setNewGuestCount] = useState(1);
-  const [updatingGuestCount, setUpdatingGuestCount] = useState(false);
-
   // Split payment state
   const [splitPaymentMode, setSplitPaymentMode] = useState(false);
   const [splitCount, setSplitCount] = useState(2);
@@ -716,34 +710,6 @@ export default function Orders() {
     setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  // Open guest count edit modal
-  const handleOpenGuestCountEdit = (order) => {
-    setGuestCountOrder(order);
-    setNewGuestCount(order.guestCount || order.dineInInfo?.guestCount || 1);
-    setGuestCountModalOpen(true);
-  };
-
-  // Update guest count
-  const handleUpdateGuestCount = async () => {
-    if (!guestCountOrder || !newGuestCount || newGuestCount < 1) return;
-
-    setUpdatingGuestCount(true);
-    try {
-      await posAPI.updateGuestCount(guestCountOrder.id, newGuestCount);
-      setGuestCountModalOpen(false);
-      setGuestCountOrder(null);
-
-      // Refresh data
-      await loadTablesAndOrders();
-      showSuccessNotification(t('orders.guestCountUpdated', 'Guest count updated successfully'));
-    } catch (error) {
-      console.error('Failed to update guest count:', error);
-      alert(t('orders.guestCountError', 'Failed to update guest count: ') + (error.response?.data?.message || error.message));
-    } finally {
-      setUpdatingGuestCount(false);
-    }
-  };
-
   // Add item from edit modal
   const handleAddItemFromEditModal = async () => {
     if (!newItemProductId || !editingOrder) return;
@@ -1060,23 +1026,12 @@ export default function Orders() {
                       </CardHeader>
                       <CardContent className="py-3">
                         {/* Guest Count */}
-                        <div className="flex items-center gap-2 text-sm mb-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {order.guestCount || order.dineInInfo?.guestCount || '-'} {t('orders.guests', 'guests')}
-                          </span>
-                          {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && !order.fullyPaid && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleOpenGuestCountEdit(order)}
-                              title={t('orders.editGuestCount', 'Edit guest count')}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
+                        {order.guestCount && (
+                          <div className="flex items-center gap-2 text-sm mb-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span>{order.guestCount} {t('orders.guests', 'guests')}</span>
+                          </div>
+                        )}
 
                         {/* Waiter Info */}
                         {order.waiter && (
@@ -2027,79 +1982,6 @@ export default function Orders() {
               }}
             >
               {t('common.close', 'Close')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Guest Count Edit Modal */}
-      <Dialog open={guestCountModalOpen} onOpenChange={setGuestCountModalOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              {t('orders.editGuestCount', 'Edit Guest Count')}
-            </DialogTitle>
-            <DialogDescription>
-              {t('orders.editGuestCountDesc', 'Update the number of guests for this order')}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-4">
-            <Label className="mb-3 block">{t('orders.numberOfGuests', 'Number of Guests')}</Label>
-            <div className="flex items-center gap-4 justify-center">
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={() => setNewGuestCount(Math.max(1, newGuestCount - 1))}
-                className="h-14 w-14"
-              >
-                <Minus className="h-6 w-6" />
-              </Button>
-              <Input
-                type="number"
-                min="1"
-                max="100"
-                value={newGuestCount}
-                onChange={(e) => setNewGuestCount(parseInt(e.target.value) || 1)}
-                className="w-24 h-14 text-center text-2xl font-bold"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={() => setNewGuestCount(Math.min(100, newGuestCount + 1))}
-                className="h-14 w-14"
-              >
-                <Plus className="h-6 w-6" />
-              </Button>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setGuestCountModalOpen(false);
-                setGuestCountOrder(null);
-              }}
-              disabled={updatingGuestCount}
-            >
-              {t('common.cancel', 'Cancel')}
-            </Button>
-            <Button
-              onClick={handleUpdateGuestCount}
-              disabled={updatingGuestCount || newGuestCount < 1}
-            >
-              {updatingGuestCount ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  {t('common.updating', 'Updating...')}
-                </>
-              ) : (
-                t('common.save', 'Save')
-              )}
             </Button>
           </DialogFooter>
         </DialogContent>
