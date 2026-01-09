@@ -42,10 +42,7 @@ import {
   TrendingDown,
   CheckCircle,
   Search,
-  TrendingUp,
   History,
-  ShoppingCart,
-  Settings2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -432,33 +429,6 @@ export default function InventoryIngredients() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            {isLowStock(ingredient) && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleCreatePO(ingredient)}
-                                title={t("inventory.buttons.createPO", "Create Purchase Order")}
-                                className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
-                              >
-                                <ShoppingCart className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleStockAction(ingredient, 'add')}
-                              title={t("common.buttons.addStock")}
-                            >
-                              <TrendingUp className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleStockAction(ingredient, 'adjust')}
-                              title={t("common.buttons.adjustStock")}
-                            >
-                              <Settings2 className="h-4 w-4 text-purple-600" />
-                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
