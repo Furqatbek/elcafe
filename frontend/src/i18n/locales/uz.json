@@ -886,6 +886,11 @@
       "search": "Qidirish",
       "apply": "Qo'llash",
       "remove": "O'chirish",
+      "change": "O'zgartirish",
+      "confirm": "Tasdiqlash",
+      "refresh": "Yangilash",
+      "tryAgain": "Qayta urinish",
+      "back": "Orqaga",
       "addVariant": "Variant qo'shish",
       "createVariant": "Variant yaratish",
       "updateVariant": "Variantni yangilash",
@@ -894,6 +899,8 @@
       "addStock": "Zaxira qo'shish",
       "viewHistory": "Tarixni ko'rish"
     },
+    "activeOrderInProgress": "Tugatilmagan buyurtma mavjud",
+    "incompleteOrderMessage": "Sizda {{count}} ta mahsulotli tugatilmagan {{type}} buyurtmasi mavjud",
     "labels": {
       "total": "Jami",
       "sortOrder": "Tartiblash",

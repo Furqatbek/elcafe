@@ -887,6 +887,11 @@
       "search": "Поиск",
       "apply": "Применить",
       "remove": "Удалить",
+      "change": "Изменить",
+      "confirm": "Подтвердить",
+      "refresh": "Обновить",
+      "tryAgain": "Повторить",
+      "back": "Назад",
       "addVariant": "Добавить вариант",
       "createVariant": "Создать вариант",
       "updateVariant": "Обновить вариант",
@@ -895,6 +900,8 @@
       "addStock": "Добавить запас",
       "viewHistory": "Просмотр истории"
     },
+    "activeOrderInProgress": "Есть незавершённый заказ",
+    "incompleteOrderMessage": "У вас есть незавершённый заказ {{type}} с {{count}} товаром(ами)",
     "labels": {
       "total": "Итого",
       "sortOrder": "Порядок сортировки",

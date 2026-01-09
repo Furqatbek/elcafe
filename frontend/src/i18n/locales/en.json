@@ -333,8 +333,16 @@
     "error": "Error",
     "buttons": {
       "back": "Back",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "apply": "Apply",
+      "remove": "Remove",
+      "change": "Change",
+      "confirm": "Confirm",
+      "refresh": "Refresh",
+      "tryAgain": "Try Again"
     },
+    "activeOrderInProgress": "Active Order in Progress",
+    "incompleteOrderMessage": "You have an incomplete {{type}} order with {{count}} item(s)",
     "page": "Page",
     "of": "of",
     "selectRestaurant": "Select Restaurant",
