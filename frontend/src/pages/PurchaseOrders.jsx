@@ -297,7 +297,7 @@ const PurchaseOrders = () => {
 
   const handleSave = async () => {
     try {
-      if (!formData.supplierId || formData.items.length === 0) {
+      if (!formData.supplierName || formData.items.length === 0) {
         alert(t('finance.purchaseOrders.messages.fillSupplierAndItems'));
         return;
       }
@@ -305,7 +305,7 @@ const PurchaseOrders = () => {
       setLoading(true);
       const submitData = {
         ...formData,
-        supplierId: parseInt(formData.supplierId)
+        supplierId: formData.supplierId ? parseInt(formData.supplierId) : null
       };
       await financialAPI.createPurchaseOrder(submitData);
       alert(t('finance.purchaseOrders.messages.createSuccess'));
@@ -611,13 +611,13 @@ const PurchaseOrders = () => {
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplier')} *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplier')}</label>
                 <select
                   value={formData.supplierId}
                   onChange={(e) => handleSupplierChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">{t('finance.purchaseOrders.selectSupplier')}</option>
+                  <option value="">{t('finance.purchaseOrders.manualEntry', 'Manual Entry')}</option>
                   {suppliers.map(supplier => (
                     <option key={supplier.id} value={supplier.id}>
                       {supplier.name} {supplier.code ? `(${supplier.code})` : ''}
@@ -626,13 +626,24 @@ const PurchaseOrders = () => {
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplierName', 'Supplier Name')} *</label>
+                <input
+                  type="text"
+                  value={formData.supplierName}
+                  onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${formData.supplierId ? 'bg-gray-50' : ''}`}
+                  placeholder={t('finance.purchaseOrders.enterSupplierName', 'Enter supplier name')}
+                  readOnly={!!formData.supplierId}
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplierContact')}</label>
                 <input
                   type="text"
                   value={formData.supplierContact}
                   onChange={(e) => setFormData({ ...formData, supplierContact: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                  placeholder={t('finance.purchaseOrders.autoPopulated')}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${formData.supplierId ? 'bg-gray-50' : ''}`}
+                  placeholder={formData.supplierId ? t('finance.purchaseOrders.autoPopulated') : t('finance.purchaseOrders.enterSupplierContact', 'Enter contact info')}
                 />
               </div>
               <div>
@@ -679,9 +690,8 @@ const PurchaseOrders = () => {
                       value={itemForm.ingredientId}
                       onChange={(e) => handleIngredientChange(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      disabled={!formData.supplierId}
                     >
-                      <option value="">{formData.supplierId ? t('finance.common.none') : t('finance.purchaseOrders.selectSupplierFirst')}</option>
+                      <option value="">{t('finance.common.none')} ({t('finance.purchaseOrders.optional', 'Optional')})</option>
                       {(Array.isArray(filteredIngredients) ? filteredIngredients : []).map(ing => (
                         <option key={ing.id} value={ing.id}>
                           {ing.name} {ing.sku ? `(${ing.sku})` : ''}
