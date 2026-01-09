@@ -432,7 +432,7 @@ export default function InventoryIngredients() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
-                            {isLowStock(ingredient) && ingredient.supplierId && (
+                            {isLowStock(ingredient) && (
                               <Button
                                 variant="ghost"
                                 size="icon"
