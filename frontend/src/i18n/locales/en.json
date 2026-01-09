@@ -352,6 +352,7 @@
     "yes": "Yes",
     "no": "No",
     "adding": "Adding...",
+    "moving": "Moving...",
     "processing": "Processing...",
     "cancelling": "Cancelling...",
     "apply": "Apply",
@@ -639,7 +640,15 @@
     "payAmount": "Pay {{amount}}",
     "paidWith": "Paid with {{method}}",
     "splitProgress": "Progress",
-    "remaining": "Remaining"
+    "remaining": "Remaining",
+    "changeTable": "Change Table",
+    "changeTableDesc": "Move this order to a different table",
+    "selectNewTable": "Select New Table",
+    "current": "Current",
+    "noAvailableTables": "No available tables",
+    "tableChanged": "Order moved to new table successfully",
+    "changeTableError": "Failed to change table: ",
+    "moveToTable": "Move to Table"
   },
   "ordersHistory": {
     "title": "Orders History",

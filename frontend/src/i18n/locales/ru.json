@@ -501,7 +501,15 @@
     "payAmount": "Оплатить {{amount}}",
     "paidWith": "Оплачено: {{method}}",
     "splitProgress": "Прогресс",
-    "remaining": "Остаток"
+    "remaining": "Остаток",
+    "changeTable": "Сменить стол",
+    "changeTableDesc": "Переместить заказ на другой стол",
+    "selectNewTable": "Выберите новый стол",
+    "current": "Текущий",
+    "noAvailableTables": "Нет свободных столов",
+    "tableChanged": "Заказ успешно перемещён на новый стол",
+    "changeTableError": "Не удалось сменить стол: ",
+    "moveToTable": "Переместить"
   },
   "ordersHistory": {
     "title": "История заказов",
@@ -806,6 +814,7 @@
     "yes": "Да",
     "no": "Нет",
     "adding": "Добавление...",
+    "moving": "Перемещение...",
     "processing": "Обработка...",
     "cancelling": "Отмена...",
     "apply": "Применить",

@@ -501,7 +501,15 @@
     "payAmount": "{{amount}} to'lash",
     "paidWith": "{{method}} orqali to'langan",
     "splitProgress": "Jarayon",
-    "remaining": "Qoldiq"
+    "remaining": "Qoldiq",
+    "changeTable": "Stolni almashtirish",
+    "changeTableDesc": "Buyurtmani boshqa stolga ko'chirish",
+    "selectNewTable": "Yangi stolni tanlang",
+    "current": "Joriy",
+    "noAvailableTables": "Bo'sh stollar yo'q",
+    "tableChanged": "Buyurtma muvaffaqiyatli yangi stolga ko'chirildi",
+    "changeTableError": "Stolni almashtirib bo'lmadi: ",
+    "moveToTable": "Stolga ko'chirish"
   },
   "ordersHistory": {
     "title": "Buyurtmalar tarixi",
@@ -806,6 +814,7 @@
     "yes": "Ha",
     "no": "Yo'q",
     "adding": "Qo'shilmoqda...",
+    "moving": "Ko'chirilmoqda...",
     "processing": "Jarayonda...",
     "cancelling": "Bekor qilinmoqda...",
     "apply": "Qo'llash",
