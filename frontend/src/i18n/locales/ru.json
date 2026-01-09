@@ -1875,6 +1875,29 @@
         "unrecordedReceipt": "Неучтённое поступление",
         "shrinkage": "Усушка",
         "other": "Другое"
+      },
+      "tabs": {
+        "counts": "Инвентаризации",
+        "varianceReport": "Отчёт о расхождениях"
+      },
+      "report": {
+        "dateRange": "Период",
+        "generateReport": "Сформировать отчёт",
+        "totalVariances": "Всего расхождений",
+        "totalVarianceValue": "Общая сумма расхождений",
+        "itemsWithVariance": "позиций с расхождениями",
+        "estimatedLoss": "оценка потерь",
+        "byReason": "Расхождения по причинам",
+        "byReasonDesc": "Разбивка расхождений по указанным причинам",
+        "count": "Количество",
+        "totalValue": "Общая сумма",
+        "topVarianceItems": "Топ позиций с расхождениями",
+        "topVarianceItemsDesc": "Ингредиенты с наибольшей частотой и суммой расхождений",
+        "varianceCount": "Кол-во расхождений",
+        "noVariances": "Расхождений не найдено",
+        "noVariancesDesc": "За этот период расхождений в инвентаре не зафиксировано.",
+        "selectDates": "Выберите период",
+        "selectDatesDesc": "Выберите даты и нажмите \"Сформировать отчёт\" для просмотра данных."
       }
     },
     "waste": {

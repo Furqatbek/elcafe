@@ -1920,6 +1920,29 @@
         "unrecordedReceipt": "Qayd etilmagan qabul",
         "shrinkage": "Kamayish",
         "other": "Boshqa"
+      },
+      "tabs": {
+        "counts": "Inventarizatsiyalar",
+        "varianceReport": "Farqlar hisoboti"
+      },
+      "report": {
+        "dateRange": "Davr",
+        "generateReport": "Hisobot yaratish",
+        "totalVariances": "Jami farqlar",
+        "totalVarianceValue": "Farqlarning umumiy qiymati",
+        "itemsWithVariance": "ta farq aniqlangan element",
+        "estimatedLoss": "taxminiy ta'sir qiymati",
+        "byReason": "Sabablar bo'yicha farqlar",
+        "byReasonDesc": "Belgilangan sabablarga ko'ra farqlarning taqsimoti",
+        "count": "Soni",
+        "totalValue": "Umumiy qiymat",
+        "topVarianceItems": "Eng ko'p farqli elementlar",
+        "topVarianceItemsDesc": "Eng yuqori farq chastotasi va qiymatiga ega ingredientlar",
+        "varianceCount": "Farqlar soni",
+        "noVariances": "Farqlar topilmadi",
+        "noVariancesDesc": "Bu davrda inventar farqlari qayd etilmagan.",
+        "selectDates": "Davrni tanlang",
+        "selectDatesDesc": "Farqlar ma'lumotlarini ko'rish uchun sanalarni tanlang va \"Hisobot yaratish\" tugmasini bosing."
       }
     },
     "waste": {

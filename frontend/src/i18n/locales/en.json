@@ -1707,6 +1707,29 @@
         "unrecordedReceipt": "Unrecorded Receipt",
         "shrinkage": "Shrinkage",
         "other": "Other"
+      },
+      "tabs": {
+        "counts": "Stock Counts",
+        "varianceReport": "Variance Report"
+      },
+      "report": {
+        "dateRange": "Date Range",
+        "generateReport": "Generate Report",
+        "totalVariances": "Total Variances",
+        "totalVarianceValue": "Total Variance Value",
+        "itemsWithVariance": "items with variance detected",
+        "estimatedLoss": "estimated value impact",
+        "byReason": "Variance by Reason",
+        "byReasonDesc": "Breakdown of variances by assigned reason",
+        "count": "Count",
+        "totalValue": "Total Value",
+        "topVarianceItems": "Top Variance Items",
+        "topVarianceItemsDesc": "Ingredients with the highest variance frequency and value",
+        "varianceCount": "Variance Count",
+        "noVariances": "No variances found",
+        "noVariancesDesc": "No inventory variances were recorded during this period.",
+        "selectDates": "Select a date range",
+        "selectDatesDesc": "Choose a date range and click \"Generate Report\" to view variance data."
       }
     },
     "waste": {

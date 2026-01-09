@@ -31,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import {
   Plus,
   ClipboardCheck,
@@ -41,6 +42,9 @@ import {
   AlertTriangle,
   CheckCircle,
   RefreshCw,
+  BarChart3,
+  Calendar,
+  TrendingDown,
 } from 'lucide-react';
 import { Checkbox } from '../../components/ui/checkbox';
 import { Textarea } from '../../components/ui/textarea';
@@ -78,6 +82,19 @@ export default function InventoryStockCounts() {
   const [varianceReason, setVarianceReason] = useState('');
   const [varianceNotes, setVarianceNotes] = useState('');
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState('counts');
+
+  // Variance report state
+  const [varianceReport, setVarianceReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportStartDate, setReportStartDate] = useState(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - 1);
+    return date.toISOString().split('T')[0];
+  });
+  const [reportEndDate, setReportEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+
   // Variance reasons enum
   const varianceReasons = [
     { value: 'THEFT', label: t('inventory.stockCounts.varianceReasons.theft', 'Theft') },
@@ -105,6 +122,27 @@ export default function InventoryStockCounts() {
       console.error('Failed to load stock counts:', error);
     }
   };
+
+  const loadVarianceReport = async () => {
+    if (!selectedRestaurant) return;
+    try {
+      setReportLoading(true);
+      const response = await stockCountAPI.getVarianceReport(selectedRestaurant, reportStartDate, reportEndDate);
+      setVarianceReport(response.data.data || null);
+    } catch (error) {
+      console.error('Failed to load variance report:', error);
+      setVarianceReport(null);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+  // Load variance report when tab changes or dates change
+  useEffect(() => {
+    if (activeTab === 'report' && selectedRestaurant) {
+      loadVarianceReport();
+    }
+  }, [activeTab, selectedRestaurant]);
 
   const handleCreateStockCount = async () => {
     try {
@@ -268,130 +306,325 @@ export default function InventoryStockCounts() {
     return <Badge className={config.color}>{config.label}</Badge>;
   };
 
+  // Format number for display
+  const formatNumber = (value) => {
+    if (value == null) return '-';
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
   return (
     <InventoryLayout>
-      <div className="space-y-6">
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.stats.total', 'Total Counts')}</CardTitle>
-              <ClipboardCheck className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stockCounts.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.stats.inProgress', 'In Progress')}</CardTitle>
-              <Play className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stockCounts.filter(sc => sc.status === 'IN_PROGRESS').length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.stats.pendingReview', 'Pending Review')}</CardTitle>
-              <Eye className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stockCounts.filter(sc => sc.status === 'PENDING_REVIEW').length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.stats.approved', 'Approved')}</CardTitle>
-              <FileCheck className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stockCounts.filter(sc => sc.status === 'APPROVED').length}</div>
-            </CardContent>
-          </Card>
-        </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="counts">
+            <ClipboardCheck className="h-4 w-4 mr-2" />
+            {t('inventory.stockCounts.tabs.counts', 'Stock Counts')}
+          </TabsTrigger>
+          <TabsTrigger value="report">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            {t('inventory.stockCounts.tabs.varianceReport', 'Variance Report')}
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Actions */}
-        <div className="flex justify-end">
-          <Button onClick={() => setStockCountModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('inventory.stockCounts.newCount', 'New Stock Count')}
-          </Button>
-        </div>
+        {/* Stock Counts Tab */}
+        <TabsContent value="counts" className="space-y-6">
+          {/* Stats */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.stats.total', 'Total Counts')}</CardTitle>
+                <ClipboardCheck className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stockCounts.length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.stats.inProgress', 'In Progress')}</CardTitle>
+                <Play className="h-4 w-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stockCounts.filter(sc => sc.status === 'IN_PROGRESS').length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.stats.pendingReview', 'Pending Review')}</CardTitle>
+                <Eye className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stockCounts.filter(sc => sc.status === 'PENDING_REVIEW').length}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.stats.approved', 'Approved')}</CardTitle>
+                <FileCheck className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stockCounts.filter(sc => sc.status === 'APPROVED').length}</div>
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('inventory.stockCounts.title', 'Stock Counts')}</CardTitle>
-            <CardDescription>{t('inventory.stockCounts.description', 'Physical inventory counts and audits')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('inventory.stockCounts.countNumber', 'Count #')}</TableHead>
-                  <TableHead>{t('inventory.stockCounts.type', 'Type')}</TableHead>
-                  <TableHead>{t('inventory.stockCounts.status', 'Status')}</TableHead>
-                  <TableHead>{t('inventory.stockCounts.progress', 'Progress')}</TableHead>
-                  <TableHead>{t('inventory.stockCounts.scheduledDate', 'Scheduled')}</TableHead>
-                  <TableHead className="text-right">{t('common.actions')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stockCounts.length === 0 ? (
+          {/* Actions */}
+          <div className="flex justify-end">
+            <Button onClick={() => setStockCountModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('inventory.stockCounts.newCount', 'New Stock Count')}
+            </Button>
+          </div>
+
+          {/* Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('inventory.stockCounts.title', 'Stock Counts')}</CardTitle>
+              <CardDescription>{t('inventory.stockCounts.description', 'Physical inventory counts and audits')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      {t('inventory.stockCounts.noData', 'No stock counts found')}
-                    </TableCell>
+                    <TableHead>{t('inventory.stockCounts.countNumber', 'Count #')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.type', 'Type')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.status', 'Status')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.progress', 'Progress')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.scheduledDate', 'Scheduled')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
-                ) : (
-                  stockCounts.map((count) => (
-                    <TableRow key={count.id}>
-                      <TableCell className="font-medium">{count.countNumber}</TableCell>
-                      <TableCell>{getCountTypeBadge(count.countType)}</TableCell>
-                      <TableCell>{getStatusBadge(count.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full"
-                              style={{ width: `${count.totalItems > 0 ? (count.countedItems / count.totalItems) * 100 : 0}%` }}
-                            />
-                          </div>
-                          <span className="text-sm text-muted-foreground">
-                            {count.countedItems}/{count.totalItems}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{count.scheduledDate}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {count.status === 'DRAFT' && (
-                            <Button variant="outline" size="sm" onClick={() => handleStartStockCount(count.id)}>
-                              <Play className="h-4 w-4 mr-1" />
-                              {t('common.start', 'Start')}
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" onClick={() => handleViewStockCount(count)}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            {t('common.view', 'View')}
-                          </Button>
-                          {(count.status === 'DRAFT' || count.status === 'IN_PROGRESS') && (
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleOpenCancelDialog(count)}>
-                              <XCircle className="h-4 w-4 mr-1" />
-                              {t('common.cancel')}
-                            </Button>
-                          )}
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {stockCounts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        {t('inventory.stockCounts.noData', 'No stock counts found')}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </div>
+                  ) : (
+                    stockCounts.map((count) => (
+                      <TableRow key={count.id}>
+                        <TableCell className="font-medium">{count.countNumber}</TableCell>
+                        <TableCell>{getCountTypeBadge(count.countType)}</TableCell>
+                        <TableCell>{getStatusBadge(count.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-blue-600 h-2 rounded-full"
+                                style={{ width: `${count.totalItems > 0 ? (count.countedItems / count.totalItems) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              {count.countedItems}/{count.totalItems}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{count.scheduledDate}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            {count.status === 'DRAFT' && (
+                              <Button variant="outline" size="sm" onClick={() => handleStartStockCount(count.id)}>
+                                <Play className="h-4 w-4 mr-1" />
+                                {t('common.start', 'Start')}
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="sm" onClick={() => handleViewStockCount(count)}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              {t('common.view', 'View')}
+                            </Button>
+                            {(count.status === 'DRAFT' || count.status === 'IN_PROGRESS') && (
+                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleOpenCancelDialog(count)}>
+                                <XCircle className="h-4 w-4 mr-1" />
+                                {t('common.cancel')}
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Variance Report Tab */}
+        <TabsContent value="report" className="space-y-6">
+          {/* Date Range Filter */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                {t('inventory.stockCounts.report.dateRange', 'Date Range')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap items-end gap-4">
+                <div className="space-y-2">
+                  <Label>{t('common.from', 'From')}</Label>
+                  <Input
+                    type="date"
+                    value={reportStartDate}
+                    onChange={(e) => setReportStartDate(e.target.value)}
+                    className="w-40"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('common.to', 'To')}</Label>
+                  <Input
+                    type="date"
+                    value={reportEndDate}
+                    onChange={(e) => setReportEndDate(e.target.value)}
+                    className="w-40"
+                  />
+                </div>
+                <Button onClick={loadVarianceReport} disabled={reportLoading}>
+                  {reportLoading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      {t('common.loading', 'Loading...')}
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {t('inventory.stockCounts.report.generateReport', 'Generate Report')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {reportLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : varianceReport ? (
+            <>
+              {/* Summary Stats */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.report.totalVariances', 'Total Variances')}</CardTitle>
+                    <TrendingDown className="h-4 w-4 text-red-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{varianceReport.totalVarianceCount || 0}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('inventory.stockCounts.report.itemsWithVariance', 'items with variance detected')}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{t('inventory.stockCounts.report.totalVarianceValue', 'Total Variance Value')}</CardTitle>
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">
+                      {formatNumber(varianceReport.totalVarianceValue)}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('inventory.stockCounts.report.estimatedLoss', 'estimated value impact')}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Variance by Reason */}
+              {varianceReport.varianceByReason?.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t('inventory.stockCounts.report.byReason', 'Variance by Reason')}</CardTitle>
+                    <CardDescription>{t('inventory.stockCounts.report.byReasonDesc', 'Breakdown of variances by assigned reason')}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('inventory.stockCounts.fields.reason', 'Reason')}</TableHead>
+                          <TableHead className="text-right">{t('inventory.stockCounts.report.count', 'Count')}</TableHead>
+                          <TableHead className="text-right">{t('inventory.stockCounts.report.totalValue', 'Total Value')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {varianceReport.varianceByReason.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                {item.reason === 'THEFT' && <AlertTriangle className="h-4 w-4 text-red-600" />}
+                                {item.reason === 'DAMAGE' && <XCircle className="h-4 w-4 text-orange-600" />}
+                                {item.reason === 'SPOILAGE' && <AlertTriangle className="h-4 w-4 text-amber-600" />}
+                                {varianceReasons.find(r => r.value === item.reason)?.label || item.reason}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">{item.count}</TableCell>
+                            <TableCell className="text-right text-red-600">{formatNumber(item.totalValue)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Top Variance Ingredients */}
+              {varianceReport.topVarianceIngredients?.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t('inventory.stockCounts.report.topVarianceItems', 'Top Variance Items')}</CardTitle>
+                    <CardDescription>{t('inventory.stockCounts.report.topVarianceItemsDesc', 'Ingredients with the highest variance frequency and value')}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('inventory.stockCounts.fields.ingredient', 'Ingredient')}</TableHead>
+                          <TableHead className="text-right">{t('inventory.stockCounts.report.varianceCount', 'Variance Count')}</TableHead>
+                          <TableHead className="text-right">{t('inventory.stockCounts.report.totalVarianceValue', 'Total Value')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {varianceReport.topVarianceIngredients.map((item) => (
+                          <TableRow key={item.ingredientId}>
+                            <TableCell className="font-medium">{item.ingredientName}</TableCell>
+                            <TableCell className="text-right">{item.varianceCount}</TableCell>
+                            <TableCell className="text-right text-red-600">{formatNumber(item.totalVarianceValue)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* No variance data message */}
+              {(!varianceReport.varianceByReason?.length && !varianceReport.topVarianceIngredients?.length) && (
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
+                    <p className="text-lg font-medium">{t('inventory.stockCounts.report.noVariances', 'No variances found')}</p>
+                    <p className="text-sm">{t('inventory.stockCounts.report.noVariancesDesc', 'No inventory variances were recorded during this period.')}</p>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mx-auto mb-4" />
+                <p className="text-lg font-medium">{t('inventory.stockCounts.report.selectDates', 'Select a date range')}</p>
+                <p className="text-sm">{t('inventory.stockCounts.report.selectDatesDesc', 'Choose a date range and click "Generate Report" to view variance data.')}</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Create Modal */}
       <Dialog open={stockCountModalOpen} onOpenChange={setStockCountModalOpen}>
