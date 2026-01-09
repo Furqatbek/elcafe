@@ -917,6 +917,7 @@ export default function Orders() {
                 const hasOrders = activeOrders.length > 0;
                 const isSelected = selectedTable?.id === table.id;
                 const tableTotal = activeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                const totalGuests = activeOrders.reduce((sum, o) => sum + (o.guestCount || 0), 0);
 
                 return (
                   <button
@@ -944,7 +945,11 @@ export default function Orders() {
                       </p>
                       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                         <Users className="h-3 w-3" />
-                        {table.capacity}
+                        {hasOrders && totalGuests > 0 ? (
+                          <span>{totalGuests}/{table.capacity}</span>
+                        ) : (
+                          <span>{table.capacity}</span>
+                        )}
                       </p>
                     </div>
 
