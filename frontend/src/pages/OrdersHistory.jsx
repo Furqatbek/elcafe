@@ -42,8 +42,10 @@ import {
   Download,
   Search,
   X,
+  Printer,
 } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import PrintReceipt from '../components/PrintReceipt';
 
 const orderStatusColors = {
   NEW: 'bg-blue-100 text-blue-800',
@@ -544,13 +546,24 @@ export default function OrdersHistory() {
                         {(order.total || 0).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewOrder(order)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewOrder(order)}
+                            title={t('common.view', 'View')}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => PrintReceipt({ ...order, entryFee: 0 })}
+                            title={t('common.print', 'Print')}
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -707,6 +720,17 @@ export default function OrdersHistory() {
                   <p className="mt-1 bg-yellow-50 p-3 rounded-lg">{selectedOrder.orderNotes}</p>
                 </div>
               )}
+
+              {/* Print Button */}
+              <div className="flex justify-end pt-4 border-t">
+                <Button
+                  onClick={() => PrintReceipt({ ...selectedOrder, entryFee: 0 })}
+                  className="flex items-center gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  {t('common.printReceipt', 'Print Receipt')}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
