@@ -332,4 +332,20 @@ public class POSOrderController {
 
         return ResponseEntity.ok(ApiResponse.success("Order closed and table released", response));
     }
+
+    @PatchMapping("/{orderId}/guest-count")
+    @Operation(
+            summary = "Update guest count",
+            description = "Update the guest count for a dine-in order"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> updateGuestCount(
+            @PathVariable Long orderId,
+            @RequestParam Integer guestCount) {
+
+        log.info("Updating guest count for order {}: guestCount={}", orderId, guestCount);
+
+        POSOrderResponse response = posOrderService.updateGuestCount(orderId, guestCount);
+
+        return ResponseEntity.ok(ApiResponse.success("Guest count updated successfully", response));
+    }
 }

@@ -1011,4 +1011,31 @@ public class POSOrderService {
 
         return mapToResponse(savedOrder, orderType);
     }
+
+    @Transactional
+    public POSOrderResponse updateGuestCount(Long orderId, Integer guestCount) {
+        log.info("Updating guest count for order {}: guestCount={}", orderId, guestCount);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Validate guest count
+        if (guestCount == null || guestCount < 1) {
+            throw new IllegalArgumentException("Guest count must be at least 1");
+        }
+        if (guestCount > 100) {
+            throw new IllegalArgumentException("Guest count cannot exceed 100");
+        }
+
+        // Update guest count
+        order.setGuestCount(guestCount);
+
+        Order savedOrder = orderRepository.save(order);
+
+        // Determine order type for response
+        String orderType = order.getDiningTable() != null ? "DINE_IN" :
+                (order.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
 }
