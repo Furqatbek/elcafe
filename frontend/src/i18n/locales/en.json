@@ -441,6 +441,7 @@
       "approve": "Approve",
       "recordPayment": "Record Payment",
       "addStock": "Add Stock",
+      "adjustStock": "Adjust Stock",
       "viewHistory": "View History"
     },
     "labels": {

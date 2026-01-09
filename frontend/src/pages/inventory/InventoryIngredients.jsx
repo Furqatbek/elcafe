@@ -45,6 +45,7 @@ import {
   TrendingUp,
   History,
   ShoppingCart,
+  Settings2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -449,6 +450,14 @@ export default function InventoryIngredients() {
                               title={t("common.buttons.addStock")}
                             >
                               <TrendingUp className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleStockAction(ingredient, 'adjust')}
+                              title={t("common.buttons.adjustStock")}
+                            >
+                              <Settings2 className="h-4 w-4 text-purple-600" />
                             </Button>
                             <Button
                               variant="ghost"

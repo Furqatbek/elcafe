@@ -900,6 +900,7 @@
       "approve": "Утвердить",
       "recordPayment": "Записать платеж",
       "addStock": "Добавить запас",
+      "adjustStock": "Скорректировать запас",
       "viewHistory": "Просмотр истории"
     },
     "activeOrderInProgress": "Есть незавершённый заказ",

@@ -899,6 +899,7 @@
       "approve": "Tasdiqlash",
       "recordPayment": "To'lovni qayd qilish",
       "addStock": "Zaxira qo'shish",
+      "adjustStock": "Zaxirani sozlash",
       "viewHistory": "Tarixni ko'rish"
     },
     "activeOrderInProgress": "Tugatilmagan buyurtma mavjud",
