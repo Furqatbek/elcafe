@@ -349,6 +349,8 @@
     "unavailable": "Unavailable",
     "loading": "Loading...",
     "saving": "Saving...",
+    "cancelling": "Cancelling...",
+    "approving": "Approving...",
     "noData": "No data available",
     "na": "N/A",
     "error": "An error occurred",
@@ -1667,6 +1669,7 @@
         "systemQty": "System Qty",
         "countedQty": "Counted Qty",
         "variance": "Variance",
+        "reason": "Reason",
         "status": "Status"
       },
       "itemStatus": {
@@ -1674,6 +1677,36 @@
         "counted": "Counted",
         "recounted": "Recounted",
         "verified": "Verified"
+      },
+      "cancelTitle": "Cancel Stock Count",
+      "cancelDescription": "Are you sure you want to cancel this stock count? This action cannot be undone.",
+      "cancelReason": "Reason for cancellation",
+      "cancelReasonPlaceholder": "Enter the reason for cancelling this stock count...",
+      "confirmCancel": "Confirm Cancel",
+      "approveTitle": "Approve Stock Count",
+      "approveDescription": "Review and approve this stock count. You can optionally adjust inventory levels based on the counted quantities.",
+      "adjustInventoryLabel": "Adjust inventory levels to match counted quantities",
+      "adjustInventoryWarning": "This will update the system inventory quantities to match the physical count. Make sure all variances have been reviewed.",
+      "approveNotes": "Notes (optional)",
+      "approveNotesPlaceholder": "Add any notes about this approval...",
+      "confirmApprove": "Approve",
+      "varianceReasonTitle": "Set Variance Reason",
+      "varianceReasonDesc": "Specify the reason for the variance on {{ingredient}}",
+      "varianceReasonLabel": "Reason",
+      "selectReason": "Select a reason",
+      "varianceNotesLabel": "Additional Notes (optional)",
+      "varianceNotesPlaceholder": "Add any additional details...",
+      "setReason": "Set Reason",
+      "varianceReasons": {
+        "theft": "Theft",
+        "damage": "Damage",
+        "spoilage": "Spoilage",
+        "countingError": "Counting Error",
+        "systemError": "System Error",
+        "unrecordedUsage": "Unrecorded Usage",
+        "unrecordedReceipt": "Unrecorded Receipt",
+        "shrinkage": "Shrinkage",
+        "other": "Other"
       }
     },
     "waste": {

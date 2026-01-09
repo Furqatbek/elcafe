@@ -37,7 +37,13 @@ import {
   Play,
   Eye,
   FileCheck,
+  XCircle,
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw,
 } from 'lucide-react';
+import { Checkbox } from '../../components/ui/checkbox';
+import { Textarea } from '../../components/ui/textarea';
 
 export default function InventoryStockCounts() {
   const { t } = useTranslation();
@@ -54,6 +60,36 @@ export default function InventoryStockCounts() {
     initiatedBy: 'Admin',
     ingredientIds: [],
   });
+
+  // Cancel dialog state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+
+  // Approve dialog state
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [adjustInventory, setAdjustInventory] = useState(true);
+  const [approveNotes, setApproveNotes] = useState('');
+  const [approving, setApproving] = useState(false);
+
+  // Variance reason dialog state
+  const [varianceDialogOpen, setVarianceDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [varianceReason, setVarianceReason] = useState('');
+  const [varianceNotes, setVarianceNotes] = useState('');
+
+  // Variance reasons enum
+  const varianceReasons = [
+    { value: 'THEFT', label: t('inventory.stockCounts.varianceReasons.theft', 'Theft') },
+    { value: 'DAMAGE', label: t('inventory.stockCounts.varianceReasons.damage', 'Damage') },
+    { value: 'SPOILAGE', label: t('inventory.stockCounts.varianceReasons.spoilage', 'Spoilage') },
+    { value: 'COUNTING_ERROR', label: t('inventory.stockCounts.varianceReasons.countingError', 'Counting Error') },
+    { value: 'SYSTEM_ERROR', label: t('inventory.stockCounts.varianceReasons.systemError', 'System Error') },
+    { value: 'UNRECORDED_USAGE', label: t('inventory.stockCounts.varianceReasons.unrecordedUsage', 'Unrecorded Usage') },
+    { value: 'UNRECORDED_RECEIPT', label: t('inventory.stockCounts.varianceReasons.unrecordedReceipt', 'Unrecorded Receipt') },
+    { value: 'SHRINKAGE', label: t('inventory.stockCounts.varianceReasons.shrinkage', 'Shrinkage') },
+    { value: 'OTHER', label: t('inventory.stockCounts.varianceReasons.other', 'Other') },
+  ];
 
   useEffect(() => {
     if (selectedRestaurant) {
@@ -129,7 +165,7 @@ export default function InventoryStockCounts() {
 
   const handleSubmitForReview = async (id) => {
     try {
-      await stockCountAPI.submitForReview(id);
+      await stockCountAPI.submitForReview(id, 'Admin');
       const response = await stockCountAPI.getById(id);
       setSelectedStockCount(response.data.data);
       loadStockCounts();
@@ -138,14 +174,75 @@ export default function InventoryStockCounts() {
     }
   };
 
-  const handleApproveStockCount = async (id) => {
+  const handleOpenApproveDialog = () => {
+    setAdjustInventory(true);
+    setApproveNotes('');
+    setApproveDialogOpen(true);
+  };
+
+  const handleApproveStockCount = async () => {
     try {
-      await stockCountAPI.approve(id);
+      setApproving(true);
+      await stockCountAPI.approve(selectedStockCount.id, {
+        approvedBy: 'Admin',
+        adjustInventory: adjustInventory,
+        notes: approveNotes,
+      });
+      setApproveDialogOpen(false);
       setStockCountDetailModalOpen(false);
       loadStockCounts();
-      loadIngredients();
+      if (adjustInventory) {
+        loadIngredients();
+      }
     } catch (error) {
       console.error('Failed to approve stock count:', error);
+    } finally {
+      setApproving(false);
+    }
+  };
+
+  const handleOpenCancelDialog = (stockCount) => {
+    setSelectedStockCount(stockCount);
+    setCancelReason('');
+    setCancelDialogOpen(true);
+  };
+
+  const handleCancelStockCount = async () => {
+    try {
+      setCancelling(true);
+      await stockCountAPI.cancel(selectedStockCount.id, cancelReason, 'Admin');
+      setCancelDialogOpen(false);
+      setStockCountDetailModalOpen(false);
+      loadStockCounts();
+    } catch (error) {
+      console.error('Failed to cancel stock count:', error);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleOpenVarianceDialog = (item) => {
+    setSelectedItem(item);
+    setVarianceReason(item.varianceReason || '');
+    setVarianceNotes(item.varianceNotes || '');
+    setVarianceDialogOpen(true);
+  };
+
+  const handleSetVarianceReason = async () => {
+    try {
+      await stockCountAPI.setVarianceReason({
+        itemId: selectedItem.id,
+        reason: varianceReason,
+        notes: varianceNotes,
+      });
+      setVarianceDialogOpen(false);
+      // Reload stock count details
+      if (selectedStockCount) {
+        const response = await stockCountAPI.getById(selectedStockCount.id);
+        setSelectedStockCount(response.data.data);
+      }
+    } catch (error) {
+      console.error('Failed to set variance reason:', error);
     }
   };
 
@@ -279,6 +376,12 @@ export default function InventoryStockCounts() {
                             <Eye className="h-4 w-4 mr-1" />
                             {t('common.view', 'View')}
                           </Button>
+                          {(count.status === 'DRAFT' || count.status === 'IN_PROGRESS') && (
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleOpenCancelDialog(count)}>
+                              <XCircle className="h-4 w-4 mr-1" />
+                              {t('common.cancel')}
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -357,6 +460,7 @@ export default function InventoryStockCounts() {
                     <TableHead className="text-right">{t('inventory.stockCounts.fields.systemQty', 'System Qty')}</TableHead>
                     <TableHead className="text-right">{t('inventory.stockCounts.fields.countedQty', 'Counted Qty')}</TableHead>
                     <TableHead className="text-right">{t('inventory.stockCounts.fields.variance', 'Variance')}</TableHead>
+                    <TableHead>{t('inventory.stockCounts.fields.reason', 'Reason')}</TableHead>
                     <TableHead>{t('inventory.stockCounts.fields.status', 'Status')}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -395,6 +499,28 @@ export default function InventoryStockCounts() {
                         ) : '-'}
                       </TableCell>
                       <TableCell>
+                        {item.varianceQuantity != null && item.varianceQuantity !== 0 ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenVarianceDialog(item)}
+                            className={item.varianceReason ? 'text-green-600' : 'text-orange-600'}
+                          >
+                            {item.varianceReason ? (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                {varianceReasons.find(r => r.value === item.varianceReason)?.label || item.varianceReason}
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle className="h-4 w-4 mr-1" />
+                                {t('inventory.stockCounts.setReason', 'Set Reason')}
+                              </>
+                            )}
+                          </Button>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={item.status === 'COUNTED' ? 'success' : 'secondary'}>
                           {item.status === 'PENDING' && t('inventory.stockCounts.itemStatus.pending', 'Pending')}
                           {item.status === 'COUNTED' && t('inventory.stockCounts.itemStatus.counted', 'Counted')}
@@ -406,21 +532,190 @@ export default function InventoryStockCounts() {
                   ))}
                 </TableBody>
               </Table>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setStockCountDetailModalOpen(false)}>{t('common.close')}</Button>
-                {selectedStockCount.status === 'IN_PROGRESS' && selectedStockCount.countedItems === selectedStockCount.totalItems && (
-                  <Button onClick={() => handleSubmitForReview(selectedStockCount.id)}>
-                    {t('inventory.stockCounts.submitForReview', 'Submit for Review')}
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button variant="outline" onClick={() => setStockCountDetailModalOpen(false)}>
+                    {t('common.close')}
                   </Button>
-                )}
-                {selectedStockCount.status === 'PENDING_REVIEW' && (
-                  <Button onClick={() => handleApproveStockCount(selectedStockCount.id)} className="bg-green-600 hover:bg-green-700">
-                    {t('inventory.stockCounts.approveAndAdjust', 'Approve & Adjust Inventory')}
-                  </Button>
-                )}
+                  {(selectedStockCount.status === 'DRAFT' || selectedStockCount.status === 'IN_PROGRESS') && (
+                    <Button variant="destructive" onClick={() => handleOpenCancelDialog(selectedStockCount)}>
+                      <XCircle className="h-4 w-4 mr-1" />
+                      {t('common.cancel')}
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  {selectedStockCount.status === 'IN_PROGRESS' && selectedStockCount.countedItems === selectedStockCount.totalItems && (
+                    <Button onClick={() => handleSubmitForReview(selectedStockCount.id)}>
+                      <FileCheck className="h-4 w-4 mr-1" />
+                      {t('inventory.stockCounts.submitForReview', 'Submit for Review')}
+                    </Button>
+                  )}
+                  {selectedStockCount.status === 'PENDING_REVIEW' && (
+                    <Button onClick={handleOpenApproveDialog} className="bg-green-600 hover:bg-green-700">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      {t('inventory.stockCounts.approveAndAdjust', 'Approve & Adjust Inventory')}
+                    </Button>
+                  )}
+                </div>
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Dialog */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('inventory.stockCounts.cancelTitle', 'Cancel Stock Count')}</DialogTitle>
+            <DialogDescription>
+              {t('inventory.stockCounts.cancelDescription', 'Are you sure you want to cancel this stock count? This action cannot be undone.')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>{t('inventory.stockCounts.cancelReason', 'Reason for cancellation')}</Label>
+              <Textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder={t('inventory.stockCounts.cancelReasonPlaceholder', 'Enter the reason for cancelling this stock count...')}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)} disabled={cancelling}>
+              {t('common.close')}
+            </Button>
+            <Button variant="destructive" onClick={handleCancelStockCount} disabled={cancelling || !cancelReason.trim()}>
+              {cancelling ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                  {t('common.cancelling', 'Cancelling...')}
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 mr-1" />
+                  {t('inventory.stockCounts.confirmCancel', 'Confirm Cancel')}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve Dialog */}
+      <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('inventory.stockCounts.approveTitle', 'Approve Stock Count')}</DialogTitle>
+            <DialogDescription>
+              {t('inventory.stockCounts.approveDescription', 'Review and approve this stock count. You can optionally adjust inventory levels based on the counted quantities.')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="adjustInventory"
+                checked={adjustInventory}
+                onCheckedChange={setAdjustInventory}
+              />
+              <Label htmlFor="adjustInventory" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                {t('inventory.stockCounts.adjustInventoryLabel', 'Adjust inventory levels to match counted quantities')}
+              </Label>
+            </div>
+            {adjustInventory && (
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-sm text-amber-800">
+                <AlertTriangle className="h-4 w-4 inline mr-2" />
+                {t('inventory.stockCounts.adjustInventoryWarning', 'This will update the system inventory quantities to match the physical count. Make sure all variances have been reviewed.')}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>{t('inventory.stockCounts.approveNotes', 'Notes (optional)')}</Label>
+              <Textarea
+                value={approveNotes}
+                onChange={(e) => setApproveNotes(e.target.value)}
+                placeholder={t('inventory.stockCounts.approveNotesPlaceholder', 'Add any notes about this approval...')}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveDialogOpen(false)} disabled={approving}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleApproveStockCount} disabled={approving} className="bg-green-600 hover:bg-green-700">
+              {approving ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                  {t('common.approving', 'Approving...')}
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  {t('inventory.stockCounts.confirmApprove', 'Approve')}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Variance Reason Dialog */}
+      <Dialog open={varianceDialogOpen} onOpenChange={setVarianceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('inventory.stockCounts.varianceReasonTitle', 'Set Variance Reason')}</DialogTitle>
+            <DialogDescription>
+              {selectedItem && (
+                <>
+                  {t('inventory.stockCounts.varianceReasonDesc', 'Specify the reason for the variance on {{ingredient}}', { ingredient: selectedItem.ingredientName })}
+                  <div className="mt-2 text-sm">
+                    <span className="font-medium">{t('inventory.stockCounts.fields.variance', 'Variance')}: </span>
+                    <span className={selectedItem.varianceQuantity !== 0 ? 'text-red-600 font-medium' : ''}>
+                      {selectedItem.varianceQuantity > 0 ? '+' : ''}{selectedItem.varianceQuantity}
+                    </span>
+                  </div>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>{t('inventory.stockCounts.varianceReasonLabel', 'Reason')}</Label>
+              <Select value={varianceReason} onValueChange={setVarianceReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('inventory.stockCounts.selectReason', 'Select a reason')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {varianceReasons.map((reason) => (
+                    <SelectItem key={reason.value} value={reason.value}>
+                      {reason.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('inventory.stockCounts.varianceNotesLabel', 'Additional Notes (optional)')}</Label>
+              <Textarea
+                value={varianceNotes}
+                onChange={(e) => setVarianceNotes(e.target.value)}
+                placeholder={t('inventory.stockCounts.varianceNotesPlaceholder', 'Add any additional details...')}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVarianceDialogOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSetVarianceReason} disabled={!varianceReason}>
+              <CheckCircle className="h-4 w-4 mr-1" />
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </InventoryLayout>
