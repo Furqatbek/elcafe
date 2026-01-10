@@ -40,6 +40,7 @@ export default function FinancialAnalytics() {
       const params = {
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
+        restaurantId: 1, // Default restaurant
       };
 
       const [dailyRevenueRes, salesByCategoryRes, cogsRes, profitabilityRes, marginsRes] =
