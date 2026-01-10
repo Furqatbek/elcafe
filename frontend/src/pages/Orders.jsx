@@ -304,7 +304,7 @@ export default function Orders() {
     // Check if table has unclosed orders
     const existingOrders = tableOrders[selectedTable.id] || [];
     const unclosedOrders = existingOrders.filter(o =>
-      o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && !o.fullyPaid
+      o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && o.status !== 'COMPLETED' && !o.fullyPaid
     );
 
     if (unclosedOrders.length > 0) {
@@ -913,7 +913,7 @@ export default function Orders() {
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {tables.map((table) => {
                 const orders = tableOrders[table.id] || [];
-                const activeOrders = orders.filter(o => o.status !== 'CANCELLED' && o.status !== 'DELIVERED');
+                const activeOrders = orders.filter(o => o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && o.status !== 'COMPLETED');
                 const hasOrders = activeOrders.length > 0;
                 const isSelected = selectedTable?.id === table.id;
                 const tableTotal = activeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
@@ -1168,7 +1168,7 @@ export default function Orders() {
                             {t('orders.print', 'Print')}
                           </Button>
 
-                          {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && !order.fullyPaid && (
+                          {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && order.status !== 'COMPLETED' && !order.fullyPaid && (
                             <>
                               {/* Edit Order */}
                               <Button
@@ -1229,7 +1229,7 @@ export default function Orders() {
 
                   {/* Add New Order Button (only if all orders are closed) */}
                   {selectedTableOrders.every(o =>
-                    o.status === 'CANCELLED' || o.status === 'DELIVERED' || o.fullyPaid
+                    o.status === 'CANCELLED' || o.status === 'DELIVERED' || o.status === 'COMPLETED' || o.fullyPaid
                   ) && selectedTable.status === 'AVAILABLE' && (
                     <Button onClick={handleCreateOrderForTable} className="w-full">
                       <Plus className="h-4 w-4 mr-2" />
@@ -1339,7 +1339,7 @@ export default function Orders() {
             <Button
               onClick={() => {
                 const activeOrder = selectedTableOrders.find(o =>
-                  o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && !o.fullyPaid
+                  o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && o.status !== 'COMPLETED' && !o.fullyPaid
                 );
                 if (activeOrder) {
                   handleAddItemToOrder(activeOrder.id);
