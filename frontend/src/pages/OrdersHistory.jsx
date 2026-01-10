@@ -178,7 +178,7 @@ export default function OrdersHistory() {
 
   // Calculate statistics
   const calculateStats = (ordersList) => {
-    const completed = ordersList.filter(o => o.status === 'DELIVERED' || o.paymentStatus === 'COMPLETED');
+    const completed = ordersList.filter(o => o.status === 'DELIVERED' || o.status === 'COMPLETED' || o.paymentStatus === 'COMPLETED');
     const cancelled = ordersList.filter(o => o.status === 'CANCELLED');
     const totalRevenue = completed.reduce((sum, o) => sum + (o.total || 0), 0);
 
