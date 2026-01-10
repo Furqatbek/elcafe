@@ -133,7 +133,7 @@ if [ "$DEPLOY_TYPE" == "2" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     # Deploy to web directory
     print_section "Deploying Frontend Files"
 
-    WEB_DIR="/var/www/mayamicafe.uz"
+    WEB_DIR="/var/www/lacasa.uz"
 
     if [ -d "$WEB_DIR" ]; then
         echo "Backing up current frontend..."
@@ -176,7 +176,7 @@ fi
 
 if [ "$DEPLOY_TYPE" == "2" ] || [ "$DEPLOY_TYPE" == "3" ]; then
     echo -e "Frontend: ${GREEN}✓ Deployed${NC}"
-    echo -e "URL:      https://mayamicafe.uz"
+    echo -e "URL:      https://lacasa.uz"
 fi
 
 echo -e "${GREEN}========================================${NC}"

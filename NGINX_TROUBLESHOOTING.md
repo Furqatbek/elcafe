@@ -44,17 +44,17 @@ sudo systemctl start nginx
 
 ### 3. Check if NGINX config is in the right place
 ```bash
-ls -la /etc/nginx/sites-available/mayamicafe.uz
-ls -la /etc/nginx/sites-enabled/mayamicafe.uz
+ls -la /etc/nginx/sites-available/lacasa.uz
+ls -la /etc/nginx/sites-enabled/lacasa.uz
 ```
 
 **If files don't exist:**
 ```bash
 # Copy the HTTP-only config first (for testing)
-sudo cp /opt/elcafe/nginx-production-http.conf /etc/nginx/sites-available/mayamicafe.uz
+sudo cp /opt/elcafe/nginx-production-http.conf /etc/nginx/sites-available/lacasa.uz
 
 # Enable the site
-sudo ln -sf /etc/nginx/sites-available/mayamicafe.uz /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/lacasa.uz /etc/nginx/sites-enabled/
 
 # Remove default site
 sudo rm /etc/nginx/sites-enabled/default
@@ -110,7 +110,7 @@ sudo ufw reload
 ### 7. View NGINX error logs
 ```bash
 sudo tail -f /var/log/nginx/error.log
-sudo tail -f /var/log/nginx/mayamicafe-error.log
+sudo tail -f /var/log/nginx/lacasa-error.log
 ```
 
 ---
@@ -136,7 +136,7 @@ docker-compose logs -f  # View logs
 **Solution:**
 ```bash
 # Use HTTP-only config first
-sudo cp /opt/elcafe/nginx-production-http.conf /etc/nginx/sites-available/mayamicafe.uz
+sudo cp /opt/elcafe/nginx-production-http.conf /etc/nginx/sites-available/lacasa.uz
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -151,7 +151,7 @@ sudo systemctl reload nginx
 sudo apt install certbot python3-certbot-nginx -y
 
 # Get SSL certificate
-sudo certbot --nginx -d mayamicafe.uz -d www.mayamicafe.uz
+sudo certbot --nginx -d lacasa.uz -d www.lacasa.uz
 
 # Certbot will automatically update your NGINX config
 ```
@@ -161,7 +161,7 @@ sudo certbot --nginx -d mayamicafe.uz -d www.mayamicafe.uz
 **Cause:** DNS not configured
 
 **Solution:**
-- Check DNS records with: `nslookup mayamicafe.uz`
+- Check DNS records with: `nslookup lacasa.uz`
 - DNS A record should point to your server IP
 - Wait for DNS propagation (can take up to 48 hours)
 
@@ -176,10 +176,10 @@ sudo certbot --nginx -d mayamicafe.uz -d www.mayamicafe.uz
 **Solution:**
 ```bash
 # Check each layer:
-ping mayamicafe.uz  # Test connectivity
-nslookup mayamicafe.uz  # Test DNS
-telnet mayamicafe.uz 80  # Test port 80
-curl http://mayamicafe.uz  # Test HTTP
+ping lacasa.uz  # Test connectivity
+nslookup lacasa.uz  # Test DNS
+telnet lacasa.uz 80  # Test port 80
+curl http://lacasa.uz  # Test HTTP
 
 # Check if server is listening
 sudo netstat -tulpn | grep :80
@@ -236,10 +236,10 @@ docker-compose ps
 ### Step 4: Configure NGINX (HTTP first)
 ```bash
 # Copy HTTP config
-sudo cp /opt/elcafe/nginx-production-http.conf /etc/nginx/sites-available/mayamicafe.uz
+sudo cp /opt/elcafe/nginx-production-http.conf /etc/nginx/sites-available/lacasa.uz
 
 # Enable site
-sudo ln -sf /etc/nginx/sites-available/mayamicafe.uz /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/lacasa.uz /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 
 # Test config
@@ -260,7 +260,7 @@ curl http://localhost/api/actuator/health  # API via NGINX
 curl http://localhost/  # Frontend via NGINX
 
 # Test from outside (replace with your domain/IP)
-curl http://mayamicafe.uz/api/actuator/health
+curl http://lacasa.uz/api/actuator/health
 ```
 
 ### Step 6: Configure Firewall
@@ -278,7 +278,7 @@ sudo ufw enable
 sudo apt install certbot python3-certbot-nginx -y
 
 # Get certificate
-sudo certbot --nginx -d mayamicafe.uz -d www.mayamicafe.uz
+sudo certbot --nginx -d lacasa.uz -d www.lacasa.uz
 
 # Test auto-renewal
 sudo certbot renew --dry-run
@@ -292,18 +292,18 @@ After setup, test these URLs in your browser:
 
 ### Frontend
 ```
-http://mayamicafe.uz/
-http://www.mayamicafe.uz/
+http://lacasa.uz/
+http://www.lacasa.uz/
 ```
 
 ### Backend API
 ```
-http://mayamicafe.uz/api/actuator/health
+http://lacasa.uz/api/actuator/health
 ```
 
 ### Admin Panel (if configured)
 ```
-http://mayamicafe.uz:3000/
+http://lacasa.uz:3000/
 ```
 
 ---
@@ -313,13 +313,13 @@ http://mayamicafe.uz:3000/
 - [ ] Docker containers running: `docker-compose ps`
 - [ ] NGINX installed: `sudo systemctl status nginx`
 - [ ] NGINX config correct: `sudo nginx -t`
-- [ ] Config enabled: `ls /etc/nginx/sites-enabled/mayamicafe.uz`
+- [ ] Config enabled: `ls /etc/nginx/sites-enabled/lacasa.uz`
 - [ ] Firewall configured: `sudo ufw status`
 - [ ] Backend healthy: `curl http://localhost:8080/actuator/health`
 - [ ] Frontend accessible: `curl http://localhost:9090`
 - [ ] NGINX proxying works: `curl http://localhost/api/actuator/health`
-- [ ] Domain resolves: `nslookup mayamicafe.uz`
-- [ ] Website accessible: Open http://mayamicafe.uz in browser
+- [ ] Domain resolves: `nslookup lacasa.uz`
+- [ ] Website accessible: Open http://lacasa.uz in browser
 
 ---
 
@@ -343,8 +343,8 @@ curl http://YOUR_SERVER_IP:8080/actuator/health  # Should show {"status":"UP"}
 # If above works, the issue is with NGINX
 # 4. Reset NGINX config to basic
 sudo rm /etc/nginx/sites-enabled/*
-sudo cp /opt/elcafe/nginx-production-http.conf /etc/nginx/sites-available/mayamicafe.uz
-sudo ln -s /etc/nginx/sites-available/mayamicafe.uz /etc/nginx/sites-enabled/
+sudo cp /opt/elcafe/nginx-production-http.conf /etc/nginx/sites-available/lacasa.uz
+sudo ln -s /etc/nginx/sites-available/lacasa.uz /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 

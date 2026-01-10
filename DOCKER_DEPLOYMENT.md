@@ -125,7 +125,7 @@ docker-compose exec db psql -U elcafe elcafe
 ### 1. Update Environment
 Edit `.env.docker`:
 ```env
-CORS_ORIGINS=https://mayamicafe.uz,https://www.mayamicafe.uz
+CORS_ORIGINS=https://lacasa.uz,https://www.lacasa.uz
 ```
 
 ### 2. Update NGINX for HTTPS
@@ -134,13 +134,13 @@ Create `frontend/nginx-ssl.conf`:
 ```nginx
 server {
     listen 80;
-    server_name mayamicafe.uz www.mayamicafe.uz;
+    server_name lacasa.uz www.lacasa.uz;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name mayamicafe.uz www.mayamicafe.uz;
+    server_name lacasa.uz www.lacasa.uz;
 
     ssl_certificate /etc/nginx/ssl/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/privkey.pem;
@@ -182,12 +182,12 @@ Using Certbot:
 sudo apt install certbot
 
 # Get certificate
-sudo certbot certonly --standalone -d mayamicafe.uz -d www.mayamicafe.uz
+sudo certbot certonly --standalone -d lacasa.uz -d www.lacasa.uz
 
 # Copy certificates
 sudo mkdir -p ./ssl
-sudo cp /etc/letsencrypt/live/mayamicafe.uz/fullchain.pem ./ssl/
-sudo cp /etc/letsencrypt/live/mayamicafe.uz/privkey.pem ./ssl/
+sudo cp /etc/letsencrypt/live/lacasa.uz/fullchain.pem ./ssl/
+sudo cp /etc/letsencrypt/live/lacasa.uz/privkey.pem ./ssl/
 sudo chmod -R 755 ./ssl
 ```
 

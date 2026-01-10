@@ -99,7 +99,7 @@ cd /opt/elcafe/frontend
 git pull
 npm install
 npm run build
-sudo cp -r dist/* /var/www/mayamicafe.uz/
+sudo cp -r dist/* /var/www/lacasa.uz/
 ```
 
 ### Full Update (Both)
@@ -186,7 +186,7 @@ sudo lsof -i :443
 curl http://localhost:8080/actuator/health
 
 # API health (via NGINX)
-curl https://mayamicafe.uz/api/v1/actuator/health
+curl https://lacasa.uz/api/v1/actuator/health
 ```
 
 ### Service Status
@@ -217,7 +217,7 @@ sudo certbot renew --force-renewal
 sudo certbot certificates
 
 # Or check via OpenSSL
-echo | openssl s_client -servername mayamicafe.uz -connect mayamicafe.uz:443 2>/dev/null | openssl x509 -noout -dates
+echo | openssl s_client -servername lacasa.uz -connect lacasa.uz:443 2>/dev/null | openssl x509 -noout -dates
 ```
 
 ---
@@ -274,7 +274,7 @@ sudo chown -R elcafe:elcafe /opt/elcafe
 sudo chown -R elcafe:elcafe /var/log/elcafe
 
 # Fix frontend ownership
-sudo chown -R www-data:www-data /var/www/mayamicafe.uz
+sudo chown -R www-data:www-data /var/www/lacasa.uz
 
 # Fix upload directory
 sudo chown -R elcafe:elcafe /opt/elcafe/uploads
@@ -442,9 +442,9 @@ sudo systemctl start elcafe-backend
 ### Rollback Frontend
 ```bash
 # Restore from backup
-sudo rm -rf /var/www/mayamicafe.uz
-sudo cp -r /var/www/mayamicafe.uz.backup.* /var/www/mayamicafe.uz
-sudo chown -R www-data:www-data /var/www/mayamicafe.uz
+sudo rm -rf /var/www/lacasa.uz
+sudo cp -r /var/www/lacasa.uz.backup.* /var/www/lacasa.uz
+sudo chown -R www-data:www-data /var/www/lacasa.uz
 ```
 
 ### Restore Database
@@ -463,9 +463,9 @@ sudo systemctl start elcafe-backend
 
 ## Support Contacts
 
-- **System Administrator**: [your-email@mayamicafe.uz]
-- **Database Admin**: [db-admin@mayamicafe.uz]
-- **Developer**: [dev@mayamicafe.uz]
+- **System Administrator**: [your-email@lacasa.uz]
+- **Database Admin**: [db-admin@lacasa.uz]
+- **Developer**: [dev@lacasa.uz]
 
 ---
 
@@ -476,11 +476,11 @@ sudo systemctl start elcafe-backend
 | `/opt/elcafe` | Application directory |
 | `/opt/elcafe/.env` | Environment variables |
 | `/opt/elcafe/target/*.jar` | Backend JAR file |
-| `/var/www/mayamicafe.uz` | Frontend files |
+| `/var/www/lacasa.uz` | Frontend files |
 | `/var/log/elcafe` | Application logs |
-| `/etc/nginx/sites-available/mayamicafe.uz` | NGINX config |
+| `/etc/nginx/sites-available/lacasa.uz` | NGINX config |
 | `/etc/systemd/system/elcafe-backend.service` | Backend service |
-| `/etc/letsencrypt/live/mayamicafe.uz` | SSL certificates |
+| `/etc/letsencrypt/live/lacasa.uz` | SSL certificates |
 | `/backups` | Database backups |
 
 ---

@@ -27,9 +27,9 @@
 
 ### Domain Setup
 Ensure your domain is configured:
-- `mayamicafe.uz` → Your server IP
-- `www.mayamicafe.uz` → Your server IP
-- `api.mayamicafe.uz` → Your server IP (optional, for API subdomain)
+- `lacasa.uz` → Your server IP
+- `www.lacasa.uz` → Your server IP
+- `api.lacasa.uz` → Your server IP (optional, for API subdomain)
 
 ---
 
@@ -166,7 +166,7 @@ app:
       access-token-expiration: 3600000
       refresh-token-expiration: 86400000
     cors:
-      allowed-origins: https://mayamicafe.uz,https://www.mayamicafe.uz
+      allowed-origins: https://lacasa.uz,https://www.lacasa.uz
       allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
       allowed-headers: '*'
       allow-credentials: true
@@ -189,7 +189,7 @@ DB_PASSWORD=your_secure_database_password
 JWT_SECRET=your_super_secret_jwt_key_minimum_256_bits
 
 # Optional: Override CORS origins
-# CORS_ORIGINS=https://mayamicafe.uz,https://www.mayamicafe.uz
+# CORS_ORIGINS=https://lacasa.uz,https://www.lacasa.uz
 
 # Spring Profile
 SPRING_PROFILES_ACTIVE=prod
@@ -269,9 +269,9 @@ cd /opt/elcafe/frontend
 
 Create `.env.production`:
 ```env
-VITE_API_URL=https://mayamicafe.uz/api
+VITE_API_URL=https://lacasa.uz/api
 # or if using subdomain:
-# VITE_API_URL=https://api.mayamicafe.uz/api
+# VITE_API_URL=https://api.lacasa.uz/api
 ```
 
 Build:
@@ -282,9 +282,9 @@ npm run build
 
 ### 2. Deploy Built Files
 ```bash
-sudo mkdir -p /var/www/mayamicafe.uz
-sudo cp -r dist/* /var/www/mayamicafe.uz/
-sudo chown -R www-data:www-data /var/www/mayamicafe.uz
+sudo mkdir -p /var/www/lacasa.uz
+sudo cp -r dist/* /var/www/lacasa.uz/
+sudo chown -R www-data:www-data /var/www/lacasa.uz
 ```
 
 ---
@@ -292,9 +292,9 @@ sudo chown -R www-data:www-data /var/www/mayamicafe.uz
 ## NGINX Configuration
 
 ### 1. Create NGINX Configuration
-Create `/etc/nginx/sites-available/mayamicafe.uz`:
+Create `/etc/nginx/sites-available/lacasa.uz`:
 ```bash
-sudo nano /etc/nginx/sites-available/mayamicafe.uz
+sudo nano /etc/nginx/sites-available/lacasa.uz
 ```
 
 ```nginx
@@ -302,7 +302,7 @@ sudo nano /etc/nginx/sites-available/mayamicafe.uz
 server {
     listen 80;
     listen [::]:80;
-    server_name mayamicafe.uz www.mayamicafe.uz;
+    server_name lacasa.uz www.lacasa.uz;
 
     # Allow Let's Encrypt verification
     location /.well-known/acme-challenge/ {
@@ -319,11 +319,11 @@ server {
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name mayamicafe.uz www.mayamicafe.uz;
+    server_name lacasa.uz www.lacasa.uz;
 
     # SSL certificates (will be configured by certbot)
-    ssl_certificate /etc/letsencrypt/live/mayamicafe.uz/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/mayamicafe.uz/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/lacasa.uz/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/lacasa.uz/privkey.pem;
 
     # SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -346,7 +346,7 @@ server {
 
     # Frontend - React SPA
     location / {
-        root /var/www/mayamicafe.uz;
+        root /var/www/lacasa.uz;
         try_files $uri $uri/ /index.html;
         expires 1h;
         add_header Cache-Control "public, must-revalidate, proxy-revalidate";
@@ -354,7 +354,7 @@ server {
 
     # Static assets caching
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        root /var/www/mayamicafe.uz;
+        root /var/www/lacasa.uz;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
@@ -417,7 +417,7 @@ server {
 
 ### 2. Enable Site
 ```bash
-sudo ln -s /etc/nginx/sites-available/mayamicafe.uz /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/lacasa.uz /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -438,7 +438,7 @@ sudo mkdir -p /var/www/certbot
 
 ### 3. Obtain SSL Certificate
 ```bash
-sudo certbot --nginx -d mayamicafe.uz -d www.mayamicafe.uz
+sudo certbot --nginx -d lacasa.uz -d www.lacasa.uz
 ```
 
 Follow the prompts:
@@ -464,7 +464,7 @@ JWT_SECRET=your_super_secret_jwt_key_minimum_256_bits
 
 # Optional
 SPRING_PROFILES_ACTIVE=prod
-CORS_ORIGINS=https://mayamicafe.uz,https://www.mayamicafe.uz
+CORS_ORIGINS=https://lacasa.uz,https://www.lacasa.uz
 
 # Database (if not using default)
 DB_HOST=localhost
@@ -506,11 +506,11 @@ Expected response:
 ```
 
 ### 3. Check Frontend
-Open browser: `https://mayamicafe.uz`
+Open browser: `https://lacasa.uz`
 
 ### 4. Test API
 ```bash
-curl https://mayamicafe.uz/api/v1/actuator/health
+curl https://lacasa.uz/api/v1/actuator/health
 ```
 
 ---
@@ -575,7 +575,7 @@ sudo systemctl restart elcafe-backend
 cd frontend
 npm install
 npm run build
-sudo cp -r dist/* /var/www/mayamicafe.uz/
+sudo cp -r dist/* /var/www/lacasa.uz/
 ```
 
 ### Database Backup
@@ -633,7 +633,7 @@ sudo tail -f /var/log/nginx/error.log
 # Fix ownership
 sudo chown -R elcafe:elcafe /opt/elcafe
 sudo chown -R elcafe:elcafe /var/log/elcafe
-sudo chown -R www-data:www-data /var/www/mayamicafe.uz
+sudo chown -R www-data:www-data /var/www/lacasa.uz
 ```
 
 ---
