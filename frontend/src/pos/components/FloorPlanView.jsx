@@ -33,10 +33,18 @@ const FloorPlanView = ({
     return new Set();
   }, [selectedTable, selectedTables]);
 
-  // Filter tables by section
+  // Filter tables by section and sort by table number
   const filteredTables = useMemo(() => {
-    if (!selectedSection) return tables;
-    return tables.filter((table) => table.section === selectedSection);
+    let result = tables;
+    if (selectedSection) {
+      result = tables.filter((table) => table.section === selectedSection);
+    }
+    // Sort by table number (numeric comparison)
+    return [...result].sort((a, b) => {
+      const numA = parseInt(a.tableNumber) || 0;
+      const numB = parseInt(b.tableNumber) || 0;
+      return numA - numB;
+    });
   }, [tables, selectedSection]);
 
   // Check if any table has position data for floor plan view

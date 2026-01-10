@@ -187,7 +187,13 @@ export default function Orders() {
       // Load all tables for the restaurant
       const tablesResponse = await tablesAPI.getAll(parseInt(selectedRestaurantId));
       const tablesData = tablesResponse?.data?.data?.content || tablesResponse?.data?.data || [];
-      setTables(Array.isArray(tablesData) ? tablesData : []);
+      // Sort tables by table number
+      const sortedTables = (Array.isArray(tablesData) ? tablesData : []).sort((a, b) => {
+        const numA = parseInt(a.tableNumber) || 0;
+        const numB = parseInt(b.tableNumber) || 0;
+        return numA - numB;
+      });
+      setTables(sortedTables);
 
       // Load open dine-in orders
       const ordersResponse = await posAPI.getOpenDineInOrders(parseInt(selectedRestaurantId));
