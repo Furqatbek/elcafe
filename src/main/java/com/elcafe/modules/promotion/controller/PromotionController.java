@@ -17,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 @Slf4j
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class PromotionController {
 
@@ -30,6 +32,7 @@ public class PromotionController {
     // ==================== PROMOTION ENDPOINTS ====================
 
     @PostMapping("/restaurants/{restaurantId}/promotions")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<PromotionResponse> createPromotion(
             @PathVariable Long restaurantId,
             @Valid @RequestBody CreatePromotionRequest request) {
@@ -61,6 +64,7 @@ public class PromotionController {
     }
 
     @PutMapping("/promotions/{promotionId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<PromotionResponse> updatePromotion(
             @PathVariable Long promotionId,
             @RequestBody UpdatePromotionRequest request) {
@@ -70,6 +74,7 @@ public class PromotionController {
     }
 
     @PostMapping("/promotions/{promotionId}/toggle")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<PromotionResponse> togglePromotion(@PathVariable Long promotionId) {
         log.info("Toggling promotion {}", promotionId);
         PromotionResponse response = promotionService.togglePromotion(promotionId);
@@ -77,6 +82,7 @@ public class PromotionController {
     }
 
     @DeleteMapping("/promotions/{promotionId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Void> deletePromotion(@PathVariable Long promotionId) {
         log.info("Deleting promotion {}", promotionId);
         promotionService.deletePromotion(promotionId);
@@ -86,6 +92,7 @@ public class PromotionController {
     // ==================== COUPON ENDPOINTS ====================
 
     @PostMapping("/coupons")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<CouponCodeResponse> createCoupon(@Valid @RequestBody CouponCodeRequest request) {
         log.info("Creating coupon code");
         CouponCodeResponse response = couponService.createCoupon(request);
@@ -93,6 +100,7 @@ public class PromotionController {
     }
 
     @PostMapping("/coupons/generate-batch")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<List<CouponCodeResponse>> generateCoupons(@Valid @RequestBody GenerateCouponsRequest request) {
         log.info("Generating {} coupons", request.getCount());
         List<CouponCodeResponse> coupons = couponService.generateCoupons(request);
@@ -145,6 +153,7 @@ public class PromotionController {
     }
 
     @PutMapping("/coupons/{couponId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<CouponCodeResponse> updateCoupon(
             @PathVariable Long couponId,
             @RequestBody CouponCodeRequest request) {
@@ -154,6 +163,7 @@ public class PromotionController {
     }
 
     @PostMapping("/coupons/{couponId}/toggle")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<CouponCodeResponse> toggleCoupon(@PathVariable Long couponId) {
         log.info("Toggling coupon {}", couponId);
         CouponCodeResponse response = couponService.toggleCoupon(couponId);
@@ -161,6 +171,7 @@ public class PromotionController {
     }
 
     @DeleteMapping("/coupons/{couponId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Void> deleteCoupon(@PathVariable Long couponId) {
         log.info("Deleting coupon {}", couponId);
         couponService.deleteCoupon(couponId);
