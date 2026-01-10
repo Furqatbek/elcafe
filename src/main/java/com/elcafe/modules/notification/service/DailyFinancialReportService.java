@@ -76,12 +76,17 @@ public class DailyFinancialReportService {
             Long restaurantId = entry.getKey();
             List<FinancialAlertSubscription> subscriptions = entry.getValue();
 
+            // Use shift-aware business day instead of calendar date
+            // This handles cases where shift crosses midnight (e.g., 11:00-02:00)
+            // At 01:00 AM, this will correctly return yesterday's date as the business day
+            LocalDate businessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
+
             // Calculate daily metrics once per restaurant
-            DailyMetrics metrics = calculateDailyMetrics(restaurantId, today);
+            DailyMetrics metrics = calculateDailyMetrics(restaurantId, businessDay);
 
             // Send to all subscribers
             for (FinancialAlertSubscription subscription : subscriptions) {
-                sendDailyReport(subscription, metrics, today);
+                sendDailyReport(subscription, metrics, businessDay);
             }
         }
 
@@ -231,8 +236,9 @@ public class DailyFinancialReportService {
      */
     @Transactional
     public void triggerReportForRestaurant(Long restaurantId) {
-        LocalDate today = LocalDate.now();
-        DailyMetrics metrics = calculateDailyMetrics(restaurantId, today);
+        // Use shift-aware business day instead of calendar date
+        LocalDate businessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
+        DailyMetrics metrics = calculateDailyMetrics(restaurantId, businessDay);
 
         List<FinancialAlertSubscription> subscriptions =
             subscriptionRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
@@ -243,7 +249,7 @@ public class DailyFinancialReportService {
         }
 
         for (FinancialAlertSubscription subscription : subscriptions) {
-            sendDailyReport(subscription, metrics, today);
+            sendDailyReport(subscription, metrics, businessDay);
         }
 
         log.info("Manual financial report triggered for restaurant: {}", metrics.restaurantName());
