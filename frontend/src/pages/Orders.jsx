@@ -330,7 +330,7 @@ export default function Orders() {
     setPaymentMethod('CASH');
     setAmountTendered('');
 
-    // Check if order already has service fee, otherwise use default 20%
+    // Check if order already has service fee
     const existingServiceFeePercent = order.serviceFeePercent || 0;
     const existingServiceFee = order.serviceFee || 0;
     const subtotal = order.subtotal || 0;
@@ -342,20 +342,11 @@ export default function Orders() {
       setServiceFeePercentInput(existingServiceFeePercent.toString());
       setServiceFeeAmountInput(existingServiceFee.toString());
     } else {
-      // Apply default 20% service fee
-      const DEFAULT_SERVICE_FEE_PERCENT = 20;
-      const calculatedServiceFee = subtotal * (DEFAULT_SERVICE_FEE_PERCENT / 100);
-      setServiceFeePercent(DEFAULT_SERVICE_FEE_PERCENT);
-      setServiceFeeAmount(calculatedServiceFee);
-      setServiceFeePercentInput(DEFAULT_SERVICE_FEE_PERCENT.toString());
-      setServiceFeeAmountInput(calculatedServiceFee.toString());
-
-      // Apply service fee to backend
-      try {
-        await posAPI.applyServiceFee(order.id, DEFAULT_SERVICE_FEE_PERCENT);
-      } catch (error) {
-        console.error('Failed to apply default service fee:', error);
-      }
+      // No default service fee - user can add manually if needed
+      setServiceFeePercent(0);
+      setServiceFeeAmount(0);
+      setServiceFeePercentInput('0');
+      setServiceFeeAmountInput('0');
     }
 
     setShowServiceFeeInput(false);
