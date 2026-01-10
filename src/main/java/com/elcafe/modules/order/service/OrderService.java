@@ -191,7 +191,8 @@ public class OrderService {
     /**
      * Get orders with filters for order history page.
      * Supports filtering by restaurant, status, date range, and search term.
-     * Date ranges are adjusted to business day boundaries based on restaurant working hours.
+     * Date ranges are adjusted to business day boundaries based on restaurant working hours,
+     * unless isShiftAware is true (dates already calculated by ShiftTimeService).
      */
     @Transactional(readOnly = true)
     public Page<Order> getOrdersWithFilters(
@@ -200,16 +201,17 @@ public class OrderService {
             LocalDateTime fromDate,
             LocalDateTime toDate,
             String search,
+            boolean isShiftAware,
             Pageable pageable
     ) {
-        log.info("Fetching orders with filters: restaurantId={}, status={}, fromDate={}, toDate={}, search={}",
-                restaurantId, status, fromDate, toDate, search);
+        log.info("Fetching orders with filters: restaurantId={}, status={}, fromDate={}, toDate={}, search={}, isShiftAware={}",
+                restaurantId, status, fromDate, toDate, search, isShiftAware);
 
-        // Adjust date range to business day boundaries
+        // Adjust date range to business day boundaries (only if not already shift-aware)
         LocalDateTime adjustedFromDate = fromDate;
         LocalDateTime adjustedToDate = toDate;
 
-        if (fromDate != null || toDate != null) {
+        if (!isShiftAware && (fromDate != null || toDate != null)) {
             BusinessDayService.DateRange adjustedRange = businessDayService.adjustToBusinessDayBoundaries(
                     restaurantId, fromDate, toDate
             );

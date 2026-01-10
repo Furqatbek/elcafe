@@ -97,18 +97,20 @@ public class OrderController {
     ) {
         LocalDateTime effectiveFromDate = fromDate;
         LocalDateTime effectiveToDate = toDate;
+        boolean isShiftAware = false;
 
         // If shiftDate is provided (and no explicit fromDate/toDate), use shift-aware time range
         if (shiftDate != null && fromDate == null && toDate == null) {
             ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, shiftDate);
             effectiveFromDate = shiftRange.start();
             effectiveToDate = shiftRange.end();
+            isShiftAware = true; // Skip further date adjustment since shift times are already calculated
         }
 
         // If any filter is provided, use filtered query
         if (restaurantId != null || status != null || effectiveFromDate != null || effectiveToDate != null || search != null) {
             Page<Order> orders = orderService.getOrdersWithFilters(
-                    restaurantId, status, effectiveFromDate, effectiveToDate, search, pageable
+                    restaurantId, status, effectiveFromDate, effectiveToDate, search, isShiftAware, pageable
             );
             return ResponseEntity.ok(ApiResponse.success(orders));
         }
