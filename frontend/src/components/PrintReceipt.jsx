@@ -246,7 +246,7 @@ const generateReceiptHTML = (order) => {
 
   <div class="receipt">
     <div class="header">
-      <div class="brand-name">Mayami Cafe</div>
+      <div class="brand-name">LaCasa</div>
     </div>
 
     <div class="info-section">
@@ -323,8 +323,8 @@ const generateReceiptHTML = (order) => {
 
     <div class="footer">
       <div class="contact-info">
-        <div>+998 88 153 8888</div>
-        <div>www.mayamicafe.uz</div>
+        <div>+998 97 421 89 89</div>
+        <div>www.lacasa.uz</div>
       </div>
       <div class="thank-you">*** RAHMAT! ***</div>
       <div class="timestamp">${currentDate}</div>
