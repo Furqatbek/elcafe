@@ -113,6 +113,27 @@ public class Order {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
+    @Column(name = "service_fee_percent", precision = 5, scale = 2)
+    private BigDecimal serviceFeePercent;
+
+    @Column(name = "service_fee", precision = 10, scale = 2)
+    private BigDecimal serviceFee;
+
+    @Column(name = "entry_fee", precision = 10, scale = 2)
+    private BigDecimal entryFee;
+
+    @Column(name = "tip_amount", precision = 10, scale = 2)
+    private BigDecimal tipAmount;
+
+    @Column(name = "grand_total", precision = 10, scale = 2)
+    private BigDecimal grandTotal;
+
+    @Column(name = "guest_count")
+    private Integer guestCount;
+
+    @Column(name = "table_ids", length = 255)
+    private String tableIds;
+
     @Column(length = 1000)
     private String customerNotes;
 

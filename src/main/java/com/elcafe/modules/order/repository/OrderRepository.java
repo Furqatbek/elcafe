@@ -106,4 +106,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
            "GROUP BY CAST(o.createdAt AS LocalDate) " +
            "ORDER BY CAST(o.createdAt AS LocalDate) DESC")
     List<Object[]> findDailyRevenueByWaiter(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
+
+    // POS dine-in orders query
+    List<Order> findByRestaurant_IdAndDiningTableIsNotNullAndStatusIn(Long restaurantId, List<OrderStatus> statuses);
 }
