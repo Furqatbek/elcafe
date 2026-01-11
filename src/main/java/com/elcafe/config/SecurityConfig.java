@@ -69,6 +69,10 @@ public class SecurityConfig {
                                 "/actuator/info",
                                 "/uploads/**"
                         ).permitAll()
+                        // Allow public read access to menu/categories/products for POS
+                        .requestMatchers(HttpMethod.GET, "/api/v1/menu/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/categories").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/restaurant/**").permitAll()
                         // Allow GET requests to restaurants and tables for all authenticated users
                         .requestMatchers(HttpMethod.GET, "/api/v1/restaurants/**").authenticated()
                         // Admin only endpoints

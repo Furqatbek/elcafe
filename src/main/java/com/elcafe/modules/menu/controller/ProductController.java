@@ -76,8 +76,7 @@ public class ProductController {
     }
 
     @GetMapping("/restaurant/{restaurantId}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
-    @Operation(summary = "Get products by restaurant", description = "Get all products for a specific restaurant")
+    @Operation(summary = "Get products by restaurant", description = "Get all products for a specific restaurant (public for POS)")
     public ResponseEntity<ApiResponse<List<ProductListDTO>>> getProductsByRestaurant(@PathVariable Long restaurantId) {
         log.info("Fetching products for restaurant: {}", restaurantId);
 
