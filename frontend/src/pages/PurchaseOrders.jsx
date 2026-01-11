@@ -297,15 +297,16 @@ const PurchaseOrders = () => {
 
   const handleSave = async () => {
     try {
-      if (!formData.supplierName || formData.items.length === 0) {
-        alert(t('finance.purchaseOrders.messages.fillSupplierAndItems'));
+      if (formData.items.length === 0) {
+        alert(t('finance.purchaseOrders.messages.addAtLeastOneItem', 'Please add at least one item'));
         return;
       }
 
       setLoading(true);
       const submitData = {
         ...formData,
-        supplierId: formData.supplierId ? parseInt(formData.supplierId) : null
+        supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
+        supplierName: formData.supplierName || t('finance.purchaseOrders.unknownSupplier', 'Unknown Supplier')
       };
       await financialAPI.createPurchaseOrder(submitData);
       alert(t('finance.purchaseOrders.messages.createSuccess'));

@@ -24,7 +24,6 @@ public class PurchaseOrderRequest {
 
     private Long supplierId;
 
-    @NotBlank(message = "Supplier name is required")
     private String supplierName;
 
     private String supplierContact;

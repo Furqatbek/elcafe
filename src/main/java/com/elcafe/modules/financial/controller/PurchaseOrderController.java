@@ -51,6 +51,11 @@ public class PurchaseOrderController {
         String supplierContact = request.getSupplierContact();
         String supplierAddress = request.getSupplierAddress();
 
+        // Default supplier name if not provided
+        if (supplierName == null || supplierName.isBlank()) {
+            supplierName = "Unknown Supplier";
+        }
+
         if (request.getSupplierId() != null) {
             supplier = supplierRepository.findById(request.getSupplierId())
                     .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
