@@ -305,6 +305,7 @@ const PurchaseOrders = () => {
       setLoading(true);
       const submitData = {
         ...formData,
+        restaurantId: selectedRestaurant, // Use selectedRestaurant directly to ensure it's always set
         supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
         supplierName: formData.supplierName || t('finance.purchaseOrders.unknownSupplier', 'Unknown Supplier')
       };
