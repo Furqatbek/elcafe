@@ -1169,6 +1169,7 @@
         "OTHER": "Boshqa"
       },
       "recurringPeriods": {
+        "DAILY": "Kunlik",
         "WEEKLY": "Haftalik",
         "MONTHLY": "Oylik",
         "QUARTERLY": "Choraklik",

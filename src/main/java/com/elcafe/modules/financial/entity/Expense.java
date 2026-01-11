@@ -146,6 +146,7 @@ public class Expense {
     }
 
     public enum RecurringPeriod {
+        DAILY,
         WEEKLY,
         MONTHLY,
         QUARTERLY,

@@ -543,6 +543,7 @@ const Expenses = () => {
                   className="ml-4 px-3 py-1 border border-gray-300 rounded-lg text-sm"
                 >
                   <option value="">{t('finance.expenses.recurringPeriod')}</option>
+                  <option value="DAILY">{t('finance.expenses.recurringPeriods.DAILY')}</option>
                   <option value="WEEKLY">{t('finance.expenses.recurringPeriods.WEEKLY')}</option>
                   <option value="MONTHLY">{t('finance.expenses.recurringPeriods.MONTHLY')}</option>
                   <option value="QUARTERLY">{t('finance.expenses.recurringPeriods.QUARTERLY')}</option>

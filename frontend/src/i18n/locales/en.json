@@ -1321,6 +1321,7 @@
         "OTHER": "Other"
       },
       "recurringPeriods": {
+        "DAILY": "Daily",
         "WEEKLY": "Weekly",
         "MONTHLY": "Monthly",
         "QUARTERLY": "Quarterly",

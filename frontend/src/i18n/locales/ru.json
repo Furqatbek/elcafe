@@ -1170,6 +1170,7 @@
         "OTHER": "Другое"
       },
       "recurringPeriods": {
+        "DAILY": "Ежедневно",
         "WEEKLY": "Еженедельно",
         "MONTHLY": "Ежемесячно",
         "QUARTERLY": "Ежеквартально",
