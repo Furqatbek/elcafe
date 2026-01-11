@@ -13,6 +13,8 @@ import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.settings.service.PrintService;
+import com.elcafe.modules.order.enums.PaymentStatus;
+import com.elcafe.modules.order.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +42,7 @@ public class OrderService {
     private final DailyOrderSequenceService dailyOrderSequenceService;
     private final RestaurantTableRepository restaurantTableRepository;
     private final BusinessDayService businessDayService;
+    private final PaymentRepository paymentRepository;
 
     @Autowired
     @Lazy
@@ -321,6 +324,116 @@ public class OrderService {
         } catch (Exception e) {
             log.error("Failed to release tables for order {}: {}", order.getOrderNumber(), e.getMessage());
             // Don't fail the order status update if table release fails
+        }
+    }
+
+    /**
+     * Revert a closed order (DELIVERED/COMPLETED) back to active status.
+     * This voids all payments and resets the order to the specified target status.
+     * Used when managers mistakenly close orders that should still be active.
+     *
+     * @param orderId The order ID to revert
+     * @param targetStatus The status to revert to (defaults to READY if null)
+     * @param reason The reason for reverting the order
+     * @param revertedBy Who is reverting the order
+     * @return The updated order
+     */
+    @Transactional
+    public Order revertOrderToActive(Long orderId, OrderStatus targetStatus, String reason, String revertedBy) {
+        log.info("Reverting order {} to active status, requested by {}", orderId, revertedBy);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        OrderStatus currentStatus = order.getStatus();
+
+        // Only allow reverting from closed statuses
+        if (currentStatus != OrderStatus.DELIVERED && currentStatus != OrderStatus.COMPLETED) {
+            throw new BadRequestException(
+                    String.format("Cannot revert order with status %s. Only DELIVERED or COMPLETED orders can be reverted.", currentStatus)
+            );
+        }
+
+        // Default target status is READY
+        if (targetStatus == null) {
+            targetStatus = OrderStatus.READY;
+        }
+
+        // Validate target status is an active status
+        if (targetStatus == OrderStatus.DELIVERED || targetStatus == OrderStatus.COMPLETED ||
+            targetStatus == OrderStatus.CANCELLED || targetStatus == OrderStatus.REJECTED) {
+            throw new BadRequestException(
+                    String.format("Cannot revert to status %s. Target must be an active status (e.g., READY, ACCEPTED, PREPARING).", targetStatus)
+            );
+        }
+
+        // Void all payments associated with the order
+        var payments = paymentRepository.findByOrderId(orderId);
+        for (var payment : payments) {
+            if (payment.getStatus() == PaymentStatus.COMPLETED ||
+                payment.getStatus() == PaymentStatus.PENDING ||
+                payment.getStatus() == PaymentStatus.PROCESSING) {
+                payment.setStatus(PaymentStatus.VOIDED);
+                payment.setRefundedAmount(payment.getTotalWithTip());
+                payment.setRefundReason("Order reverted: " + reason);
+                payment.setRefundedAt(java.time.LocalDateTime.now());
+                paymentRepository.save(payment);
+                log.info("Voided payment {} for reverted order {}", payment.getId(), orderId);
+            }
+        }
+
+        // Update order status
+        order.setStatus(targetStatus);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+
+        // Clear completed timestamps
+        order.setCompletedAt(null);
+
+        // Add status history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .status(targetStatus)
+                .changedBy(revertedBy)
+                .notes("Order reverted from " + currentStatus + ": " + reason)
+                .build();
+        order.addStatusHistory(history);
+
+        // Re-occupy tables for dine-in orders
+        boolean isDineInOrder = order.getOrderType() == OrderType.DINE_IN ||
+                (order.getTableIds() != null && !order.getTableIds().isBlank()) ||
+                order.getDiningTable() != null;
+        if (isDineInOrder) {
+            reoccupyOrderTables(order);
+        }
+
+        order = orderRepository.save(order);
+        log.info("Order {} reverted from {} to {}", orderId, currentStatus, targetStatus);
+
+        return order;
+    }
+
+    /**
+     * Re-occupy tables for a reverted dine-in order
+     */
+    private void reoccupyOrderTables(Order order) {
+        try {
+            if (order.getTableIds() != null && !order.getTableIds().isBlank()) {
+                String[] tableIdStrings = order.getTableIds().split(",");
+                for (String tableIdStr : tableIdStrings) {
+                    Long tableId = Long.parseLong(tableIdStr.trim());
+                    restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                        table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+                        restaurantTableRepository.save(table);
+                        log.info("Table {} re-occupied for reverted order {}", table.getTableNumber(), order.getOrderNumber());
+                    });
+                }
+            } else if (order.getDiningTable() != null) {
+                RestaurantTable table = order.getDiningTable();
+                table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+                restaurantTableRepository.save(table);
+                log.info("Table {} re-occupied for reverted order {}", table.getTableNumber(), order.getOrderNumber());
+            }
+        } catch (Exception e) {
+            log.error("Failed to re-occupy tables for reverted order {}: {}", order.getOrderNumber(), e.getMessage());
         }
     }
 }

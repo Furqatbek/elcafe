@@ -43,6 +43,7 @@ import {
   Search,
   X,
   Printer,
+  RotateCcw,
 } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
@@ -98,6 +99,10 @@ export default function OrdersHistory() {
   // Modal state
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [revertModalOpen, setRevertModalOpen] = useState(false);
+  const [orderToRevert, setOrderToRevert] = useState(null);
+  const [revertReason, setRevertReason] = useState('');
+  const [reverting, setReverting] = useState(false);
 
   // Load restaurants
   useEffect(() => {
@@ -282,6 +287,43 @@ export default function OrdersHistory() {
     link.href = URL.createObjectURL(blob);
     link.download = `orders_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
+  };
+
+  // Open revert modal
+  const handleOpenRevertModal = (order) => {
+    setOrderToRevert(order);
+    setRevertReason('');
+    setRevertModalOpen(true);
+  };
+
+  // Revert order to active status
+  const handleRevertOrder = async () => {
+    if (!orderToRevert) return;
+
+    setReverting(true);
+    try {
+      await orderAPI.revertOrder(orderToRevert.id, {
+        targetStatus: 'READY',
+        reason: revertReason || 'Mistakenly closed',
+        revertedBy: 'MANAGER'
+      });
+
+      // Close modal and refresh orders
+      setRevertModalOpen(false);
+      setOrderToRevert(null);
+      setRevertReason('');
+      loadOrders();
+    } catch (error) {
+      console.error('Failed to revert order:', error);
+      alert(error.response?.data?.message || t('ordersHistory.revertError', 'Failed to revert order'));
+    } finally {
+      setReverting(false);
+    }
+  };
+
+  // Check if order can be reverted
+  const canRevertOrder = (order) => {
+    return order.status === 'DELIVERED' || order.status === 'COMPLETED';
   };
 
   return (
@@ -563,6 +605,17 @@ export default function OrdersHistory() {
                           >
                             <Printer className="h-4 w-4" />
                           </Button>
+                          {canRevertOrder(order) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenRevertModal(order)}
+                              title={t('ordersHistory.revertOrder', 'Revert Order')}
+                              className="text-orange-600 hover:text-orange-800 hover:bg-orange-50"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -729,6 +782,87 @@ export default function OrdersHistory() {
                 >
                   <Printer className="h-4 w-4" />
                   {t('common.printReceipt', 'Print Receipt')}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Revert Order Modal */}
+      <Dialog open={revertModalOpen} onOpenChange={setRevertModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <RotateCcw className="h-5 w-5" />
+              {t('ordersHistory.revertOrder', 'Revert Order')}
+            </DialogTitle>
+            <DialogDescription>
+              {t('ordersHistory.revertOrderDescription', 'This will revert the order back to active status and void all payments.')}
+            </DialogDescription>
+          </DialogHeader>
+
+          {orderToRevert && (
+            <div className="space-y-4">
+              {/* Order Info */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('ordersHistory.orderNumber', 'Order #')}</span>
+                  <span className="font-medium">{orderToRevert.orderNumber || `#${orderToRevert.id}`}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('ordersHistory.currentStatus', 'Current Status')}</span>
+                  <Badge className={orderStatusColors[orderToRevert.status]}>
+                    {t(`orders.statuses.${orderToRevert.status}`, orderToRevert.status)}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">{t('ordersHistory.total', 'Total')}</span>
+                  <span className="font-medium">{(orderToRevert.total || 0).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Warning */}
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800">
+                <strong>{t('common.warning', 'Warning')}:</strong> {t('ordersHistory.revertWarning', 'All payments for this order will be voided. The order will be set back to READY status.')}
+              </div>
+
+              {/* Reason Input */}
+              <div className="space-y-2">
+                <Label>{t('ordersHistory.revertReason', 'Reason for reverting')}</Label>
+                <Input
+                  placeholder={t('ordersHistory.revertReasonPlaceholder', 'e.g., Order was closed by mistake')}
+                  value={revertReason}
+                  onChange={(e) => setRevertReason(e.target.value)}
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => setRevertModalOpen(false)}
+                  disabled={reverting}
+                >
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleRevertOrder}
+                  disabled={reverting}
+                  className="bg-orange-600 hover:bg-orange-700"
+                >
+                  {reverting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      {t('ordersHistory.reverting', 'Reverting...')}
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      {t('ordersHistory.confirmRevert', 'Revert Order')}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

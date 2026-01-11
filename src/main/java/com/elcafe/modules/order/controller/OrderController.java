@@ -132,4 +132,16 @@ public class OrderController {
         List<Order> orders = orderService.getPendingOrders();
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
+
+    @PatchMapping("/{id}/revert")
+    @Operation(summary = "Revert closed order to active", description = "Revert a DELIVERED or COMPLETED order back to an active status. This voids all payments and resets the order.")
+    public ResponseEntity<ApiResponse<Order>> revertOrderToActive(
+            @PathVariable Long id,
+            @RequestParam(required = false) OrderStatus targetStatus,
+            @RequestParam(required = false) String reason,
+            @RequestParam(required = false, defaultValue = "MANAGER") String revertedBy
+    ) {
+        Order order = orderService.revertOrderToActive(id, targetStatus, reason, revertedBy);
+        return ResponseEntity.ok(ApiResponse.success("Order reverted to active status", order));
+    }
 }

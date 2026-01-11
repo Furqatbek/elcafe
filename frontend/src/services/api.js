@@ -184,6 +184,8 @@ export const orderAPI = {
   getByRestaurant: (restaurantId) => api.get(`/orders/restaurant/${restaurantId}`),
   updateStatus: (id, status, notes, changedBy = 'OPERATOR') =>
     api.patch(`/orders/${id}/status`, null, { params: { status, notes, changedBy } }),
+  revertOrder: (id, { targetStatus, reason, revertedBy }) =>
+    api.patch(`/orders/${id}/revert`, null, { params: { targetStatus, reason, revertedBy } }),
 };
 
 export const customerAPI = {
