@@ -60,7 +60,7 @@ public class HappyHourController {
             @Valid @RequestBody HappyHourRequest request) {
         log.info("Creating happy hour for restaurant: {}", restaurantId);
         HappyHourResponse created = happyHourService.createHappyHour(restaurantId, request);
-        return ResponseEntity.ok(ApiResponse.success(created, "Happy hour created successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Happy hour created successfully", created));
     }
 
     /**
@@ -73,7 +73,7 @@ public class HappyHourController {
             @Valid @RequestBody HappyHourRequest request) {
         log.info("Updating happy hour: {}", id);
         HappyHourResponse updated = happyHourService.updateHappyHour(id, request);
-        return ResponseEntity.ok(ApiResponse.success(updated, "Happy hour updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Happy hour updated successfully", updated));
     }
 
     /**
@@ -84,7 +84,7 @@ public class HappyHourController {
     public ResponseEntity<ApiResponse<Void>> deleteHappyHour(@PathVariable Long id) {
         log.info("Deleting happy hour: {}", id);
         happyHourService.deleteHappyHour(id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Happy hour deleted successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Happy hour deleted successfully", null));
     }
 
     /**
@@ -95,7 +95,7 @@ public class HappyHourController {
     public ResponseEntity<ApiResponse<HappyHourResponse>> toggleHappyHour(@PathVariable Long id) {
         log.info("Toggling happy hour: {}", id);
         HappyHourResponse toggled = happyHourService.toggleHappyHour(id);
-        return ResponseEntity.ok(ApiResponse.success(toggled, "Happy hour toggled successfully"));
+        return ResponseEntity.ok(ApiResponse.success("Happy hour toggled successfully", toggled));
     }
 
     /**

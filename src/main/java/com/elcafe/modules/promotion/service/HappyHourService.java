@@ -287,7 +287,7 @@ public class HappyHourService {
 
         for (OrderItem item : order.getItems()) {
             if (isProductEligible(item, happyHour)) {
-                applicableAmount = applicableAmount.add(item.getSubtotal());
+                applicableAmount = applicableAmount.add(item.getTotalPrice());
             }
         }
 
@@ -309,9 +309,7 @@ public class HappyHourService {
             return true;
         }
 
-        Long productId = item.getProduct().getId();
-        Long categoryId = item.getProduct().getCategory() != null ?
-                item.getProduct().getCategory().getId() : null;
+        Long productId = item.getProductId();
 
         // Check specific products
         if (happyHour.getApplicableProductIds() != null &&
@@ -319,11 +317,15 @@ public class HappyHourService {
             return true;
         }
 
-        // Check categories
-        if (categoryId != null &&
-            happyHour.getApplicableCategoryIds() != null &&
-            happyHour.getApplicableCategoryIds().contains(categoryId)) {
-            return true;
+        // Check categories - need to look up the product to get its category
+        if (happyHour.getApplicableCategoryIds() != null && !happyHour.getApplicableCategoryIds().isEmpty()) {
+            Optional<Product> product = menuProductRepository.findById(productId);
+            if (product.isPresent() && product.get().getCategory() != null) {
+                Long categoryId = product.get().getCategory().getId();
+                if (happyHour.getApplicableCategoryIds().contains(categoryId)) {
+                    return true;
+                }
+            }
         }
 
         return false;
