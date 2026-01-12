@@ -2675,5 +2675,167 @@
       "copyCode": "Copy Code",
       "codeCopied": "Code copied to clipboard"
     }
+  },
+  "promotions": {
+    "title": "Promotions",
+    "subtitle": "Create and manage promotional offers for your restaurant",
+    "addPromotion": "New Promotion",
+    "manageCoupons": "Manage Coupons",
+    "listTitle": "All Promotions",
+    "listDescription": "View and manage all your promotional offers",
+    "noPromotions": "No promotions found",
+    "getStarted": "Create your first promotion to start offering discounts",
+    "createPromotion": "Create Promotion",
+    "createDescription": "Fill in the details to create a new promotional offer",
+    "editPromotion": "Edit Promotion",
+    "editDescription": "Update the promotion details",
+    "deletePromotion": "Delete Promotion",
+    "deleteConfirmation": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+    "freeItem": "Free Item",
+    "to": "to",
+    "noEnd": "No end date",
+    "uses": "uses",
+    "coupons": "coupons",
+    "types": {
+      "PERCENTAGE": "Percentage Off",
+      "FIXED_AMOUNT": "Fixed Amount",
+      "FREE_ITEM": "Free Item",
+      "BUY_X_GET_Y": "Buy X Get Y"
+    },
+    "scopes": {
+      "ALL": "All Products",
+      "CATEGORY": "Specific Categories",
+      "PRODUCT": "Specific Products",
+      "ORDER_TYPE": "Order Type"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "value": "Value",
+      "dates": "Dates",
+      "usage": "Usage",
+      "status": "Status"
+    },
+    "form": {
+      "name": "Promotion Name",
+      "namePlaceholder": "e.g., Summer Sale 20%",
+      "type": "Promotion Type",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe the promotion...",
+      "percentOff": "Percent Off (%)",
+      "amountOff": "Amount Off",
+      "scope": "Applies To",
+      "buyQuantity": "Buy Quantity",
+      "getQuantity": "Get Free",
+      "freeProduct": "Free Product",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "rules": "Advanced Rules",
+      "minOrder": "Min Order Amount",
+      "maxDiscount": "Max Discount",
+      "usageLimit": "Total Usage Limit",
+      "perCustomerLimit": "Per Customer Limit",
+      "firstOrderOnly": "First Order Only",
+      "stackable": "Stackable",
+      "orderTypes": "Applicable Order Types",
+      "applicableDays": "Applicable Days"
+    },
+    "messages": {
+      "fillRequired": "Please fill in all required fields",
+      "createError": "Failed to create promotion",
+      "updateError": "Failed to update promotion",
+      "deleteError": "Failed to delete promotion"
+    }
+  },
+  "coupons": {
+    "title": "Coupon Codes",
+    "subtitle": "Generate and manage coupon codes for promotions",
+    "addCoupon": "New Coupon",
+    "managePromotions": "Manage Promotions",
+    "generateBatch": "Generate Batch",
+    "listTitle": "All Coupons",
+    "listDescription": "View and manage all your coupon codes",
+    "noCoupons": "No coupon codes found",
+    "getStarted": "Create coupons to let customers redeem discounts",
+    "createCoupon": "Create Coupon",
+    "createDescription": "Create a single coupon code",
+    "generateDescription": "Generate multiple coupon codes at once",
+    "deleteCoupon": "Delete Coupon",
+    "deleteConfirmation": "Are you sure you want to delete coupon \"{{code}}\"? This action cannot be undone.",
+    "allPromotions": "All Promotions",
+    "singleUse": "Single Use",
+    "multiUse": "Multi Use",
+    "noExpiry": "No expiry",
+    "unlimited": "Unlimited",
+    "generate": "Generate",
+    "generating": "Generating...",
+    "generatePreview": "Will generate {{count}} coupons like: {{format}}",
+    "table": {
+      "code": "Code",
+      "promotion": "Promotion",
+      "usage": "Usage",
+      "validity": "Validity",
+      "status": "Status"
+    },
+    "form": {
+      "code": "Coupon Code",
+      "codePlaceholder": "e.g., SAVE20",
+      "promotion": "Linked Promotion",
+      "singleUse": "Single Use Only",
+      "maxUses": "Max Uses",
+      "validFrom": "Valid From",
+      "validUntil": "Valid Until",
+      "count": "Number of Coupons",
+      "prefix": "Code Prefix",
+      "prefixPlaceholder": "e.g., PROMO",
+      "codeLength": "Code Length"
+    },
+    "export": {
+      "button": "Export CSV",
+      "code": "Code",
+      "promotion": "Promotion",
+      "singleUse": "Single Use",
+      "maxUses": "Max Uses",
+      "usedCount": "Used Count",
+      "validFrom": "Valid From",
+      "validUntil": "Valid Until",
+      "active": "Active"
+    },
+    "messages": {
+      "fillRequired": "Please fill in all required fields",
+      "createError": "Failed to create coupon",
+      "generateError": "Failed to generate coupons",
+      "generateSuccess": "Successfully generated {{count}} coupons",
+      "deleteError": "Failed to delete coupon",
+      "copied": "Coupon code copied to clipboard"
+    }
+  },
+  "enums": {
+    "orderTypes": {
+      "DINE_IN": "Dine In",
+      "TAKEAWAY": "Takeaway",
+      "DELIVERY": "Delivery"
+    },
+    "days": {
+      "MON": "Mon",
+      "TUE": "Tue",
+      "WED": "Wed",
+      "THU": "Thu",
+      "FRI": "Fri",
+      "SAT": "Sat",
+      "SUN": "Sun"
+    },
+    "promotionTypes": {
+      "PERCENTAGE": "Percentage Off",
+      "FIXED_AMOUNT": "Fixed Amount",
+      "FREE_ITEM": "Free Item",
+      "BUY_X_GET_Y": "Buy X Get Y"
+    },
+    "promotionScopes": {
+      "ALL": "All Products",
+      "CATEGORY": "Specific Categories",
+      "PRODUCT": "Specific Products",
+      "ORDER_TYPE": "Order Type"
+    }
   }
 }

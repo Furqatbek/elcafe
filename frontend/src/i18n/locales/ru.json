@@ -2293,5 +2293,167 @@
       "copyCode": "Скопировать код",
       "codeCopied": "Код скопирован в буфер обмена"
     }
+  },
+  "promotions": {
+    "title": "Акции",
+    "subtitle": "Создание и управление рекламными предложениями",
+    "addPromotion": "Новая акция",
+    "manageCoupons": "Управление купонами",
+    "listTitle": "Все акции",
+    "listDescription": "Просмотр и управление всеми акциями",
+    "noPromotions": "Акции не найдены",
+    "getStarted": "Создайте первую акцию, чтобы предложить скидки",
+    "createPromotion": "Создать акцию",
+    "createDescription": "Заполните данные для создания новой акции",
+    "editPromotion": "Редактировать акцию",
+    "editDescription": "Обновите данные акции",
+    "deletePromotion": "Удалить акцию",
+    "deleteConfirmation": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие нельзя отменить.",
+    "freeItem": "Бесплатный товар",
+    "to": "до",
+    "noEnd": "Без даты окончания",
+    "uses": "использований",
+    "coupons": "купонов",
+    "types": {
+      "PERCENTAGE": "Процентная скидка",
+      "FIXED_AMOUNT": "Фиксированная сумма",
+      "FREE_ITEM": "Бесплатный товар",
+      "BUY_X_GET_Y": "Купи X получи Y"
+    },
+    "scopes": {
+      "ALL": "Все товары",
+      "CATEGORY": "Определенные категории",
+      "PRODUCT": "Определенные товары",
+      "ORDER_TYPE": "Тип заказа"
+    },
+    "table": {
+      "name": "Название",
+      "type": "Тип",
+      "value": "Значение",
+      "dates": "Даты",
+      "usage": "Использование",
+      "status": "Статус"
+    },
+    "form": {
+      "name": "Название акции",
+      "namePlaceholder": "напр., Летняя распродажа 20%",
+      "type": "Тип акции",
+      "description": "Описание",
+      "descriptionPlaceholder": "Опишите акцию...",
+      "percentOff": "Процент скидки (%)",
+      "amountOff": "Сумма скидки",
+      "scope": "Применяется к",
+      "buyQuantity": "Купить количество",
+      "getQuantity": "Получить бесплатно",
+      "freeProduct": "Бесплатный товар",
+      "startDate": "Дата начала",
+      "endDate": "Дата окончания",
+      "rules": "Дополнительные правила",
+      "minOrder": "Мин. сумма заказа",
+      "maxDiscount": "Макс. скидка",
+      "usageLimit": "Общий лимит",
+      "perCustomerLimit": "Лимит на клиента",
+      "firstOrderOnly": "Только первый заказ",
+      "stackable": "Суммируется",
+      "orderTypes": "Типы заказов",
+      "applicableDays": "Дни недели"
+    },
+    "messages": {
+      "fillRequired": "Заполните все обязательные поля",
+      "createError": "Не удалось создать акцию",
+      "updateError": "Не удалось обновить акцию",
+      "deleteError": "Не удалось удалить акцию"
+    }
+  },
+  "coupons": {
+    "title": "Купоны",
+    "subtitle": "Создание и управление кодами купонов",
+    "addCoupon": "Новый купон",
+    "managePromotions": "Управление акциями",
+    "generateBatch": "Создать партию",
+    "listTitle": "Все купоны",
+    "listDescription": "Просмотр и управление всеми купонами",
+    "noCoupons": "Купоны не найдены",
+    "getStarted": "Создайте купоны, чтобы клиенты могли получать скидки",
+    "createCoupon": "Создать купон",
+    "createDescription": "Создать один код купона",
+    "generateDescription": "Создать несколько купонов сразу",
+    "deleteCoupon": "Удалить купон",
+    "deleteConfirmation": "Вы уверены, что хотите удалить купон \"{{code}}\"? Это действие нельзя отменить.",
+    "allPromotions": "Все акции",
+    "singleUse": "Одноразовый",
+    "multiUse": "Многоразовый",
+    "noExpiry": "Бессрочный",
+    "unlimited": "Безлимитно",
+    "generate": "Создать",
+    "generating": "Создание...",
+    "generatePreview": "Будет создано {{count}} купонов вида: {{format}}",
+    "table": {
+      "code": "Код",
+      "promotion": "Акция",
+      "usage": "Использование",
+      "validity": "Срок действия",
+      "status": "Статус"
+    },
+    "form": {
+      "code": "Код купона",
+      "codePlaceholder": "напр., СКИДКА20",
+      "promotion": "Связанная акция",
+      "singleUse": "Только одно использование",
+      "maxUses": "Макс. использований",
+      "validFrom": "Действует с",
+      "validUntil": "Действует до",
+      "count": "Количество купонов",
+      "prefix": "Префикс кода",
+      "prefixPlaceholder": "напр., PROMO",
+      "codeLength": "Длина кода"
+    },
+    "export": {
+      "button": "Экспорт CSV",
+      "code": "Код",
+      "promotion": "Акция",
+      "singleUse": "Одноразовый",
+      "maxUses": "Макс. использований",
+      "usedCount": "Использовано",
+      "validFrom": "Действует с",
+      "validUntil": "Действует до",
+      "active": "Активен"
+    },
+    "messages": {
+      "fillRequired": "Заполните все обязательные поля",
+      "createError": "Не удалось создать купон",
+      "generateError": "Не удалось создать купоны",
+      "generateSuccess": "Успешно создано {{count}} купонов",
+      "deleteError": "Не удалось удалить купон",
+      "copied": "Код купона скопирован"
+    }
+  },
+  "enums": {
+    "orderTypes": {
+      "DINE_IN": "В зале",
+      "TAKEAWAY": "С собой",
+      "DELIVERY": "Доставка"
+    },
+    "days": {
+      "MON": "Пн",
+      "TUE": "Вт",
+      "WED": "Ср",
+      "THU": "Чт",
+      "FRI": "Пт",
+      "SAT": "Сб",
+      "SUN": "Вс"
+    },
+    "promotionTypes": {
+      "PERCENTAGE": "Процентная скидка",
+      "FIXED_AMOUNT": "Фиксированная сумма",
+      "FREE_ITEM": "Бесплатный товар",
+      "BUY_X_GET_Y": "Купи X получи Y"
+    },
+    "promotionScopes": {
+      "ALL": "Все товары",
+      "CATEGORY": "Определенные категории",
+      "PRODUCT": "Определенные товары",
+      "ORDER_TYPE": "Тип заказа"
+    }
   }
 }

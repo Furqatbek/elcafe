@@ -1,11 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { promotionAPI, restaurantAPI, menuAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Tag, Ticket, ToggleLeft, ToggleRight, Calendar, Percent, DollarSign, Gift, Package } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '../components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Tag,
+  Ticket,
+  ToggleLeft,
+  ToggleRight,
+  Percent,
+  DollarSign,
+  Gift,
+  Package,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 
-const Promotions = () => {
+export default function Promotions() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [promotions, setPromotions] = useState([]);
@@ -14,25 +57,21 @@ const Promotions = () => {
   const [products, setProducts] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [editingPromotion, setEditingPromotion] = useState(null);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedPromotion, setSelectedPromotion] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
   const promotionTypes = [
-    { value: 'PERCENTAGE', label: t('promotions.types.PERCENTAGE', 'Percentage Off'), icon: Percent },
-    { value: 'FIXED_AMOUNT', label: t('promotions.types.FIXED_AMOUNT', 'Fixed Amount Off'), icon: DollarSign },
-    { value: 'FREE_ITEM', label: t('promotions.types.FREE_ITEM', 'Free Item'), icon: Gift },
-    { value: 'BUY_X_GET_Y', label: t('promotions.types.BUY_X_GET_Y', 'Buy X Get Y'), icon: Package },
+    { value: 'PERCENTAGE', icon: Percent },
+    { value: 'FIXED_AMOUNT', icon: DollarSign },
+    { value: 'FREE_ITEM', icon: Gift },
+    { value: 'BUY_X_GET_Y', icon: Package },
   ];
 
-  const promotionScopes = [
-    { value: 'ALL', label: t('promotions.scopes.ALL', 'All Products') },
-    { value: 'CATEGORY', label: t('promotions.scopes.CATEGORY', 'Specific Categories') },
-    { value: 'PRODUCT', label: t('promotions.scopes.PRODUCT', 'Specific Products') },
-    { value: 'ORDER_TYPE', label: t('promotions.scopes.ORDER_TYPE', 'Order Type') },
-  ];
-
+  const promotionScopes = ['ALL', 'CATEGORY', 'PRODUCT', 'ORDER_TYPE'];
   const orderTypes = ['DINE_IN', 'TAKEAWAY', 'DELIVERY'];
   const daysOfWeek = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
@@ -71,7 +110,7 @@ const Promotions = () => {
 
   useEffect(() => {
     if (user?.restaurantId && !selectedRestaurant) {
-      setSelectedRestaurant(user.restaurantId);
+      setSelectedRestaurant(user.restaurantId.toString());
     }
   }, [user]);
 
@@ -90,7 +129,7 @@ const Promotions = () => {
       setRestaurants(Array.isArray(restaurantsData) ? restaurantsData : []);
 
       if (!selectedRestaurant && restaurantsData.length > 0 && !user?.restaurantId) {
-        setSelectedRestaurant(restaurantsData[0].id);
+        setSelectedRestaurant(restaurantsData[0].id.toString());
       }
     } catch (error) {
       console.error('Failed to load restaurants:', error);
@@ -100,7 +139,7 @@ const Promotions = () => {
   const loadPromotions = async () => {
     try {
       setLoading(true);
-      const response = await promotionAPI.getPromotions(selectedRestaurant, { page: currentPage, size: 10 });
+      const response = await promotionAPI.getPromotions(parseInt(selectedRestaurant), { page: currentPage, size: 10 });
       const data = response.data.data || response.data;
       setPromotions(data.content || []);
       setTotalPages(data.totalPages || 1);
@@ -113,7 +152,7 @@ const Promotions = () => {
 
   const loadCategories = async () => {
     try {
-      const response = await menuAPI.getCategories(selectedRestaurant);
+      const response = await menuAPI.getCategories(parseInt(selectedRestaurant));
       setCategories(response.data.data || []);
     } catch (error) {
       console.error('Failed to load categories:', error);
@@ -122,7 +161,7 @@ const Promotions = () => {
 
   const loadProducts = async () => {
     try {
-      const response = await menuAPI.getProducts(selectedRestaurant, { page: 0, size: 100 });
+      const response = await menuAPI.getProducts(parseInt(selectedRestaurant), { page: 0, size: 100 });
       const data = response.data.data || response.data;
       setProducts(data.content || data || []);
     } catch (error) {
@@ -130,10 +169,11 @@ const Promotions = () => {
     }
   };
 
-  const handleSave = async () => {
+  const handleCreate = async (e) => {
+    e.preventDefault();
     try {
       if (!formData.name || formData.discountValue <= 0) {
-        alert(t('promotions.messages.fillRequired', 'Please fill in required fields'));
+        alert(t('promotions.messages.fillRequired'));
         return;
       }
 
@@ -144,35 +184,51 @@ const Promotions = () => {
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
       };
 
-      if (editingPromotion) {
-        await promotionAPI.updatePromotion(editingPromotion.id, payload);
-        alert(t('promotions.messages.updateSuccess', 'Promotion updated successfully'));
-      } else {
-        await promotionAPI.createPromotion(selectedRestaurant, payload);
-        alert(t('promotions.messages.createSuccess', 'Promotion created successfully'));
-      }
-      setShowModal(false);
+      await promotionAPI.createPromotion(parseInt(selectedRestaurant), payload);
+      setCreateModalOpen(false);
       resetForm();
       loadPromotions();
     } catch (error) {
-      console.error('Failed to save promotion:', error);
-      alert(t('promotions.messages.saveError', 'Failed to save promotion') + ': ' + (error.response?.data?.message || error.message));
+      console.error('Failed to create promotion:', error);
+      alert(t('promotions.messages.createError') + ': ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm(t('promotions.messages.confirmDelete', 'Are you sure you want to delete this promotion?'))) {
-      return;
-    }
+  const handleUpdate = async (e) => {
+    e.preventDefault();
     try {
-      await promotionAPI.deletePromotion(id);
-      alert(t('promotions.messages.deleteSuccess', 'Promotion deleted successfully'));
+      setLoading(true);
+      const payload = {
+        ...formData,
+        startDate: formData.startDate ? new Date(formData.startDate).toISOString() : null,
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+      };
+
+      await promotionAPI.updatePromotion(selectedPromotion.id, payload);
+      setEditModalOpen(false);
+      resetForm();
+      setSelectedPromotion(null);
+      loadPromotions();
+    } catch (error) {
+      console.error('Failed to update promotion:', error);
+      alert(t('promotions.messages.updateError') + ': ' + (error.response?.data?.message || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPromotion) return;
+    try {
+      await promotionAPI.deletePromotion(selectedPromotion.id);
+      setDeleteDialogOpen(false);
+      setSelectedPromotion(null);
       loadPromotions();
     } catch (error) {
       console.error('Failed to delete promotion:', error);
-      alert(t('promotions.messages.deleteError', 'Failed to delete promotion'));
+      alert(t('promotions.messages.deleteError'));
     }
   };
 
@@ -185,8 +241,8 @@ const Promotions = () => {
     }
   };
 
-  const handleEdit = (promotion) => {
-    setEditingPromotion(promotion);
+  const handleEditClick = (promotion) => {
+    setSelectedPromotion(promotion);
     setFormData({
       name: promotion.name,
       description: promotion.description || '',
@@ -215,11 +271,15 @@ const Promotions = () => {
       },
       promotionProducts: promotion.promotionProducts || [],
     });
-    setShowModal(true);
+    setEditModalOpen(true);
+  };
+
+  const handleDeleteClick = (promotion) => {
+    setSelectedPromotion(promotion);
+    setDeleteDialogOpen(true);
   };
 
   const resetForm = () => {
-    setEditingPromotion(null);
     setFormData({
       name: '',
       description: '',
@@ -260,488 +320,551 @@ const Promotions = () => {
     return new Date(dateStr).toLocaleDateString();
   };
 
-  return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t('promotions.title', 'Promotions & Discounts')}</h1>
-          <p className="text-gray-500">{t('promotions.subtitle', 'Manage promotional campaigns and discounts')}</p>
+  const formatDiscountValue = (promo) => {
+    switch (promo.promotionType) {
+      case 'PERCENTAGE':
+        return `${promo.discountValue}%`;
+      case 'FIXED_AMOUNT':
+        return `${promo.discountValue}`;
+      case 'FREE_ITEM':
+        return promo.freeProductName || t('promotions.freeItem');
+      case 'BUY_X_GET_Y':
+        return `${promo.buyQuantity}+${promo.getQuantity}`;
+      default:
+        return promo.discountValue;
+    }
+  };
+
+  const renderFormFields = () => (
+    <div className="space-y-4 py-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">{t('promotions.form.name')} *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            placeholder={t('promotions.form.namePlaceholder')}
+            required
+          />
         </div>
-        <div className="flex gap-3">
-          <Link
-            to="/coupons"
-            className="btn btn-outline flex items-center gap-2"
+
+        <div className="space-y-2">
+          <Label htmlFor="type">{t('promotions.form.type')} *</Label>
+          <Select
+            value={formData.promotionType}
+            onValueChange={(value) => setFormData({ ...formData, promotionType: value })}
           >
-            <Ticket size={18} />
-            {t('promotions.manageCoupons', 'Manage Coupons')}
-          </Link>
-          <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <Plus size={18} />
-            {t('promotions.addPromotion', 'Add Promotion')}
-          </button>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {promotionTypes.map(type => (
+                <SelectItem key={type.value} value={type.value}>
+                  {t(`promotions.types.${type.value}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Restaurant Selector */}
-      {restaurants.length > 1 && (
-        <div className="mb-6">
-          <select
-            className="select select-bordered w-full max-w-xs"
-            value={selectedRestaurant || ''}
-            onChange={(e) => setSelectedRestaurant(Number(e.target.value))}
+      <div className="space-y-2">
+        <Label htmlFor="description">{t('promotions.form.description')}</Label>
+        <Textarea
+          id="description"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          placeholder={t('promotions.form.descriptionPlaceholder')}
+          rows={3}
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="discountValue">
+            {formData.promotionType === 'PERCENTAGE'
+              ? t('promotions.form.percentOff')
+              : t('promotions.form.amountOff')} *
+          </Label>
+          <Input
+            id="discountValue"
+            type="number"
+            value={formData.discountValue}
+            onChange={(e) => setFormData({ ...formData, discountValue: parseFloat(e.target.value) || 0 })}
+            min="0"
+            max={formData.promotionType === 'PERCENTAGE' ? 100 : undefined}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="scope">{t('promotions.form.scope')}</Label>
+          <Select
+            value={formData.promotionScope}
+            onValueChange={(value) => setFormData({ ...formData, promotionScope: value })}
           >
-            {restaurants.map(r => (
-              <option key={r.id} value={r.id}>{r.name}</option>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {promotionScopes.map(scope => (
+                <SelectItem key={scope} value={scope}>
+                  {t(`promotions.scopes.${scope}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {formData.promotionType === 'BUY_X_GET_Y' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="buyQuantity">{t('promotions.form.buyQuantity')}</Label>
+            <Input
+              id="buyQuantity"
+              type="number"
+              value={formData.buyQuantity || ''}
+              onChange={(e) => setFormData({ ...formData, buyQuantity: parseInt(e.target.value) || null })}
+              min="1"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="getQuantity">{t('promotions.form.getQuantity')}</Label>
+            <Input
+              id="getQuantity"
+              type="number"
+              value={formData.getQuantity || ''}
+              onChange={(e) => setFormData({ ...formData, getQuantity: parseInt(e.target.value) || null })}
+              min="1"
+            />
+          </div>
+        </div>
+      )}
+
+      {formData.promotionType === 'FREE_ITEM' && (
+        <div className="space-y-2">
+          <Label htmlFor="freeProduct">{t('promotions.form.freeProduct')}</Label>
+          <Select
+            value={formData.freeProductId?.toString() || ''}
+            onValueChange={(value) => setFormData({ ...formData, freeProductId: value ? Number(value) : null })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={t('common.select')} />
+            </SelectTrigger>
+            <SelectContent>
+              {products.map(p => (
+                <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="startDate">{t('promotions.form.startDate')} *</Label>
+          <Input
+            id="startDate"
+            type="datetime-local"
+            value={formData.startDate}
+            onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="endDate">{t('promotions.form.endDate')}</Label>
+          <Input
+            id="endDate"
+            type="datetime-local"
+            value={formData.endDate}
+            onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+          />
+        </div>
+      </div>
+
+      {/* Rules Section */}
+      <div className="border-t pt-4 mt-4">
+        <h4 className="font-medium mb-3">{t('promotions.form.rules')}</h4>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="minOrder">{t('promotions.form.minOrder')}</Label>
+            <Input
+              id="minOrder"
+              type="number"
+              value={formData.rule.minOrderAmount || ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                rule: { ...formData.rule, minOrderAmount: e.target.value ? parseFloat(e.target.value) : null }
+              })}
+              min="0"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="maxDiscount">{t('promotions.form.maxDiscount')}</Label>
+            <Input
+              id="maxDiscount"
+              type="number"
+              value={formData.rule.maxDiscountAmount || ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                rule: { ...formData.rule, maxDiscountAmount: e.target.value ? parseFloat(e.target.value) : null }
+              })}
+              min="0"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="usageLimit">{t('promotions.form.usageLimit')}</Label>
+            <Input
+              id="usageLimit"
+              type="number"
+              value={formData.rule.usageLimit || ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                rule: { ...formData.rule, usageLimit: e.target.value ? parseInt(e.target.value) : null }
+              })}
+              min="1"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="perCustomerLimit">{t('promotions.form.perCustomerLimit')}</Label>
+            <Input
+              id="perCustomerLimit"
+              type="number"
+              value={formData.rule.perCustomerLimit || ''}
+              onChange={(e) => setFormData({
+                ...formData,
+                rule: { ...formData.rule, perCustomerLimit: e.target.value ? parseInt(e.target.value) : null }
+              })}
+              min="1"
+            />
+          </div>
+          <div className="flex items-center space-x-2 pt-6">
+            <input
+              type="checkbox"
+              id="firstOrderOnly"
+              checked={formData.rule.firstOrderOnly}
+              onChange={(e) => setFormData({
+                ...formData,
+                rule: { ...formData.rule, firstOrderOnly: e.target.checked }
+              })}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="firstOrderOnly">{t('promotions.form.firstOrderOnly')}</Label>
+          </div>
+          <div className="flex items-center space-x-2 pt-6">
+            <input
+              type="checkbox"
+              id="stackable"
+              checked={formData.stackable}
+              onChange={(e) => setFormData({ ...formData, stackable: e.target.checked })}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="stackable">{t('promotions.form.stackable')}</Label>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-2">
+          <Label>{t('promotions.form.orderTypes')}</Label>
+          <div className="flex gap-4 flex-wrap">
+            {orderTypes.map(type => (
+              <div key={type} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id={`orderType-${type}`}
+                  checked={formData.rule.applicableOrderTypes?.includes(type)}
+                  onChange={(e) => {
+                    const types = formData.rule.applicableOrderTypes || [];
+                    setFormData({
+                      ...formData,
+                      rule: {
+                        ...formData.rule,
+                        applicableOrderTypes: e.target.checked
+                          ? [...types, type]
+                          : types.filter(t => t !== type)
+                      }
+                    });
+                  }}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor={`orderType-${type}`}>{t(`enums.orderTypes.${type}`)}</Label>
+              </div>
             ))}
-          </select>
+          </div>
         </div>
-      )}
 
-      {/* Promotions List */}
-      <div className="bg-white rounded-lg shadow">
-        {loading ? (
-          <div className="flex justify-center items-center p-12">
-            <span className="loading loading-spinner loading-lg"></span>
+        <div className="mt-4 space-y-2">
+          <Label>{t('promotions.form.applicableDays')}</Label>
+          <div className="flex gap-3 flex-wrap">
+            {daysOfWeek.map(day => (
+              <div key={day} className="flex items-center space-x-1">
+                <input
+                  type="checkbox"
+                  id={`day-${day}`}
+                  checked={formData.rule.applicableDays?.includes(day)}
+                  onChange={(e) => {
+                    const days = formData.rule.applicableDays || [];
+                    setFormData({
+                      ...formData,
+                      rule: {
+                        ...formData.rule,
+                        applicableDays: e.target.checked
+                          ? [...days, day]
+                          : days.filter(d => d !== day)
+                      }
+                    });
+                  }}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor={`day-${day}`} className="text-sm">{t(`enums.days.${day}`)}</Label>
+              </div>
+            ))}
           </div>
-        ) : promotions.length === 0 ? (
-          <div className="text-center py-12">
-            <Tag className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">{t('promotions.noPromotions', 'No promotions')}</h3>
-            <p className="mt-1 text-sm text-gray-500">{t('promotions.getStarted', 'Get started by creating a new promotion.')}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t('promotions.table.name', 'Name')}</th>
-                  <th>{t('promotions.table.type', 'Type')}</th>
-                  <th>{t('promotions.table.value', 'Value')}</th>
-                  <th>{t('promotions.table.dates', 'Valid Period')}</th>
-                  <th>{t('promotions.table.usage', 'Usage')}</th>
-                  <th>{t('promotions.table.status', 'Status')}</th>
-                  <th>{t('common.actions', 'Actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {promotions.map(promo => {
-                  const TypeIcon = getTypeIcon(promo.promotionType);
-                  return (
-                    <tr key={promo.id}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <TypeIcon className="w-5 h-5 text-primary" />
-                          </div>
-                          <div>
-                            <div className="font-medium">{promo.name}</div>
-                            <div className="text-sm text-gray-500">{promo.description}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="badge badge-outline">
-                          {t(`promotions.types.${promo.promotionType}`, promo.promotionType)}
-                        </span>
-                      </td>
-                      <td>
-                        {promo.promotionType === 'PERCENTAGE' && `${promo.discountValue}%`}
-                        {promo.promotionType === 'FIXED_AMOUNT' && `${promo.discountValue}`}
-                        {promo.promotionType === 'FREE_ITEM' && promo.freeProductName}
-                        {promo.promotionType === 'BUY_X_GET_Y' && `${promo.buyQuantity}+${promo.getQuantity}`}
-                      </td>
-                      <td>
-                        <div className="text-sm">
-                          <div>{formatDate(promo.startDate)}</div>
-                          <div className="text-gray-500">to {promo.endDate ? formatDate(promo.endDate) : t('promotions.noEnd', 'No end')}</div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="text-sm">
-                          <div>{promo.totalUsage || 0} {t('promotions.uses', 'uses')}</div>
-                          <div className="text-gray-500">{promo.couponCount || 0} {t('promotions.coupons', 'coupons')}</div>
-                        </div>
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => handleToggle(promo.id)}
-                          className={`badge ${promo.active && promo.currentlyValid ? 'badge-success' : 'badge-ghost'} gap-1`}
-                        >
-                          {promo.active && promo.currentlyValid ? (
-                            <><ToggleRight size={14} /> {t('common.active', 'Active')}</>
-                          ) : (
-                            <><ToggleLeft size={14} /> {t('common.inactive', 'Inactive')}</>
-                          )}
-                        </button>
-                      </td>
-                      <td>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEdit(promo)}
-                            className="btn btn-ghost btn-sm"
-                            title={t('common.edit', 'Edit')}
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <Link
-                            to={`/coupons?promotionId=${promo.id}`}
-                            className="btn btn-ghost btn-sm"
-                            title={t('promotions.viewCoupons', 'View Coupons')}
-                          >
-                            <Ticket size={16} />
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(promo.id)}
-                            className="btn btn-ghost btn-sm text-error"
-                            title={t('common.delete', 'Delete')}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center p-4">
-            <div className="join">
-              <button
-                className="join-item btn btn-sm"
-                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                disabled={currentPage === 0}
-              >
-                «
-              </button>
-              <button className="join-item btn btn-sm">
-                {t('common.page', 'Page')} {currentPage + 1} / {totalPages}
-              </button>
-              <button
-                className="join-item btn btn-sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={currentPage >= totalPages - 1}
-              >
-                »
-              </button>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
-
-      {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="modal modal-open">
-          <div className="modal-box max-w-4xl">
-            <h3 className="font-bold text-lg mb-4">
-              {editingPromotion ? t('promotions.editPromotion', 'Edit Promotion') : t('promotions.createPromotion', 'Create Promotion')}
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Basic Info */}
-              <div className="form-control">
-                <label className="label"><span className="label-text">{t('promotions.form.name', 'Promotion Name')} *</span></label>
-                <input
-                  type="text"
-                  className="input input-bordered"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder={t('promotions.form.namePlaceholder', 'e.g., Summer Sale 20% Off')}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label"><span className="label-text">{t('promotions.form.type', 'Promotion Type')} *</span></label>
-                <select
-                  className="select select-bordered"
-                  value={formData.promotionType}
-                  onChange={(e) => setFormData({ ...formData, promotionType: e.target.value })}
-                >
-                  {promotionTypes.map(type => (
-                    <option key={type.value} value={type.value}>{type.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-control md:col-span-2">
-                <label className="label"><span className="label-text">{t('promotions.form.description', 'Description')}</span></label>
-                <textarea
-                  className="textarea textarea-bordered"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder={t('promotions.form.descriptionPlaceholder', 'Describe the promotion...')}
-                />
-              </div>
-
-              {/* Discount Value */}
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">
-                    {formData.promotionType === 'PERCENTAGE' ? t('promotions.form.percentOff', 'Percent Off') : t('promotions.form.amountOff', 'Amount Off')} *
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  className="input input-bordered"
-                  value={formData.discountValue}
-                  onChange={(e) => setFormData({ ...formData, discountValue: parseFloat(e.target.value) || 0 })}
-                  min="0"
-                  max={formData.promotionType === 'PERCENTAGE' ? 100 : undefined}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label"><span className="label-text">{t('promotions.form.scope', 'Applies To')}</span></label>
-                <select
-                  className="select select-bordered"
-                  value={formData.promotionScope}
-                  onChange={(e) => setFormData({ ...formData, promotionScope: e.target.value })}
-                >
-                  {promotionScopes.map(scope => (
-                    <option key={scope.value} value={scope.value}>{scope.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* BUY_X_GET_Y fields */}
-              {formData.promotionType === 'BUY_X_GET_Y' && (
-                <>
-                  <div className="form-control">
-                    <label className="label"><span className="label-text">{t('promotions.form.buyQuantity', 'Buy Quantity')}</span></label>
-                    <input
-                      type="number"
-                      className="input input-bordered"
-                      value={formData.buyQuantity || ''}
-                      onChange={(e) => setFormData({ ...formData, buyQuantity: parseInt(e.target.value) || null })}
-                      min="1"
-                    />
-                  </div>
-                  <div className="form-control">
-                    <label className="label"><span className="label-text">{t('promotions.form.getQuantity', 'Get Quantity Free')}</span></label>
-                    <input
-                      type="number"
-                      className="input input-bordered"
-                      value={formData.getQuantity || ''}
-                      onChange={(e) => setFormData({ ...formData, getQuantity: parseInt(e.target.value) || null })}
-                      min="1"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* FREE_ITEM product selector */}
-              {formData.promotionType === 'FREE_ITEM' && (
-                <div className="form-control md:col-span-2">
-                  <label className="label"><span className="label-text">{t('promotions.form.freeProduct', 'Free Product')}</span></label>
-                  <select
-                    className="select select-bordered"
-                    value={formData.freeProductId || ''}
-                    onChange={(e) => setFormData({ ...formData, freeProductId: e.target.value ? Number(e.target.value) : null })}
-                  >
-                    <option value="">{t('common.select', 'Select...')}</option>
-                    {products.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Date Range */}
-              <div className="form-control">
-                <label className="label"><span className="label-text">{t('promotions.form.startDate', 'Start Date')} *</span></label>
-                <input
-                  type="datetime-local"
-                  className="input input-bordered"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                />
-              </div>
-
-              <div className="form-control">
-                <label className="label"><span className="label-text">{t('promotions.form.endDate', 'End Date')}</span></label>
-                <input
-                  type="datetime-local"
-                  className="input input-bordered"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                />
-              </div>
-
-              {/* Rules Section */}
-              <div className="md:col-span-2 border-t pt-4 mt-2">
-                <h4 className="font-medium mb-3">{t('promotions.form.rules', 'Promotion Rules')}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="form-control">
-                    <label className="label"><span className="label-text">{t('promotions.form.minOrder', 'Min Order Amount')}</span></label>
-                    <input
-                      type="number"
-                      className="input input-bordered input-sm"
-                      value={formData.rule.minOrderAmount || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        rule: { ...formData.rule, minOrderAmount: e.target.value ? parseFloat(e.target.value) : null }
-                      })}
-                      min="0"
-                    />
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label"><span className="label-text">{t('promotions.form.maxDiscount', 'Max Discount')}</span></label>
-                    <input
-                      type="number"
-                      className="input input-bordered input-sm"
-                      value={formData.rule.maxDiscountAmount || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        rule: { ...formData.rule, maxDiscountAmount: e.target.value ? parseFloat(e.target.value) : null }
-                      })}
-                      min="0"
-                    />
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label"><span className="label-text">{t('promotions.form.usageLimit', 'Total Usage Limit')}</span></label>
-                    <input
-                      type="number"
-                      className="input input-bordered input-sm"
-                      value={formData.rule.usageLimit || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        rule: { ...formData.rule, usageLimit: e.target.value ? parseInt(e.target.value) : null }
-                      })}
-                      min="1"
-                    />
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label"><span className="label-text">{t('promotions.form.perCustomerLimit', 'Per Customer Limit')}</span></label>
-                    <input
-                      type="number"
-                      className="input input-bordered input-sm"
-                      value={formData.rule.perCustomerLimit || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        rule: { ...formData.rule, perCustomerLimit: e.target.value ? parseInt(e.target.value) : null }
-                      })}
-                      min="1"
-                    />
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label cursor-pointer justify-start gap-2">
-                      <input
-                        type="checkbox"
-                        className="checkbox checkbox-sm"
-                        checked={formData.rule.firstOrderOnly}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          rule: { ...formData.rule, firstOrderOnly: e.target.checked }
-                        })}
-                      />
-                      <span className="label-text">{t('promotions.form.firstOrderOnly', 'First Order Only')}</span>
-                    </label>
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label cursor-pointer justify-start gap-2">
-                      <input
-                        type="checkbox"
-                        className="checkbox checkbox-sm"
-                        checked={formData.stackable}
-                        onChange={(e) => setFormData({ ...formData, stackable: e.target.checked })}
-                      />
-                      <span className="label-text">{t('promotions.form.stackable', 'Stackable')}</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Applicable Order Types */}
-                <div className="form-control mt-3">
-                  <label className="label"><span className="label-text">{t('promotions.form.orderTypes', 'Applicable Order Types')}</span></label>
-                  <div className="flex gap-3 flex-wrap">
-                    {orderTypes.map(type => (
-                      <label key={type} className="label cursor-pointer gap-2">
-                        <input
-                          type="checkbox"
-                          className="checkbox checkbox-sm"
-                          checked={formData.rule.applicableOrderTypes?.includes(type)}
-                          onChange={(e) => {
-                            const types = formData.rule.applicableOrderTypes || [];
-                            setFormData({
-                              ...formData,
-                              rule: {
-                                ...formData.rule,
-                                applicableOrderTypes: e.target.checked
-                                  ? [...types, type]
-                                  : types.filter(t => t !== type)
-                              }
-                            });
-                          }}
-                        />
-                        <span className="label-text">{t(`orderTypes.${type}`, type)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Applicable Days */}
-                <div className="form-control mt-3">
-                  <label className="label"><span className="label-text">{t('promotions.form.applicableDays', 'Applicable Days')}</span></label>
-                  <div className="flex gap-2 flex-wrap">
-                    {daysOfWeek.map(day => (
-                      <label key={day} className="label cursor-pointer gap-1">
-                        <input
-                          type="checkbox"
-                          className="checkbox checkbox-xs"
-                          checked={formData.rule.applicableDays?.includes(day)}
-                          onChange={(e) => {
-                            const days = formData.rule.applicableDays || [];
-                            setFormData({
-                              ...formData,
-                              rule: {
-                                ...formData.rule,
-                                applicableDays: e.target.checked
-                                  ? [...days, day]
-                                  : days.filter(d => d !== day)
-                              }
-                            });
-                          }}
-                        />
-                        <span className="label-text text-xs">{day}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-action">
-              <button className="btn btn-ghost" onClick={() => setShowModal(false)}>
-                {t('common.cancel', 'Cancel')}
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={loading}
-              >
-                {loading && <span className="loading loading-spinner loading-sm"></span>}
-                {editingPromotion ? t('common.save', 'Save') : t('common.create', 'Create')}
-              </button>
-            </div>
-          </div>
-          <div className="modal-backdrop" onClick={() => setShowModal(false)}></div>
-        </div>
-      )}
     </div>
   );
-};
 
-export default Promotions;
+  if (loading && promotions.length === 0) {
+    return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">{t('promotions.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('promotions.subtitle')}</p>
+        </div>
+        <div className="flex gap-3">
+          <Link to="/marketing/coupons">
+            <Button variant="outline">
+              <Ticket className="h-4 w-4 mr-2" />
+              {t('promotions.manageCoupons')}
+            </Button>
+          </Link>
+          <Button onClick={() => { resetForm(); setCreateModalOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('promotions.addPromotion')}
+          </Button>
+          {restaurants.length > 1 && (
+            <Select
+              value={selectedRestaurant}
+              onValueChange={setSelectedRestaurant}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder={t('common.selectRestaurant')} />
+              </SelectTrigger>
+              <SelectContent>
+                {restaurants.map((r) => (
+                  <SelectItem key={r.id} value={r.id.toString()}>
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </div>
+
+      {/* Promotions Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('promotions.listTitle')}</CardTitle>
+          <CardDescription>{t('promotions.listDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {promotions.length === 0 ? (
+            <div className="text-center py-12">
+              <Tag className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-sm font-medium">{t('promotions.noPromotions')}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t('promotions.getStarted')}</p>
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('promotions.table.name')}</TableHead>
+                    <TableHead>{t('promotions.table.type')}</TableHead>
+                    <TableHead>{t('promotions.table.value')}</TableHead>
+                    <TableHead>{t('promotions.table.dates')}</TableHead>
+                    <TableHead>{t('promotions.table.usage')}</TableHead>
+                    <TableHead>{t('promotions.table.status')}</TableHead>
+                    <TableHead>{t('common.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {promotions.map(promo => {
+                    const TypeIcon = getTypeIcon(promo.promotionType);
+                    return (
+                      <TableRow key={promo.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-primary/10 rounded-lg">
+                              <TypeIcon className="w-5 h-5 text-primary" />
+                            </div>
+                            <div>
+                              <div className="font-medium">{promo.name}</div>
+                              <div className="text-sm text-muted-foreground line-clamp-1">{promo.description}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {t(`promotions.types.${promo.promotionType}`)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatDiscountValue(promo)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>{formatDate(promo.startDate)}</div>
+                            <div className="text-muted-foreground">
+                              {t('promotions.to')} {promo.endDate ? formatDate(promo.endDate) : t('promotions.noEnd')}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>{promo.totalUsage || 0} {t('promotions.uses')}</div>
+                            <div className="text-muted-foreground">{promo.couponCount || 0} {t('promotions.coupons')}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={promo.active && promo.currentlyValid ? 'default' : 'secondary'}
+                            className="cursor-pointer"
+                            onClick={() => handleToggle(promo.id)}
+                          >
+                            {promo.active && promo.currentlyValid ? (
+                              <><ToggleRight className="h-3 w-3 mr-1" /> {t('common.active')}</>
+                            ) : (
+                              <><ToggleLeft className="h-3 w-3 mr-1" /> {t('common.inactive')}</>
+                            )}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleEditClick(promo)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Link to={`/marketing/coupons?promotionId=${promo.id}`}>
+                              <Button size="sm" variant="ghost">
+                                <Ticket className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => handleDeleteClick(promo)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm">
+                    {t('common.page')} {currentPage + 1} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={currentPage >= totalPages - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create Modal */}
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('promotions.createPromotion')}</DialogTitle>
+            <DialogDescription>{t('promotions.createDescription')}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreate}>
+            {renderFormFields()}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setCreateModalOpen(false); resetForm(); }}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? t('common.creating') : t('common.create')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('promotions.editPromotion')}</DialogTitle>
+            <DialogDescription>{t('promotions.editDescription')}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdate}>
+            {renderFormFields()}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setEditModalOpen(false); resetForm(); setSelectedPromotion(null); }}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? t('common.saving') : t('common.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('promotions.deletePromotion')}</DialogTitle>
+            <DialogDescription>
+              {t('promotions.deleteConfirmation', { name: selectedPromotion?.name })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setSelectedPromotion(null); }}>
+              {t('common.cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              {t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -1,11 +1,51 @@
-import React, { useState, useEffect } from 'react';
-import { promotionAPI, restaurantAPI } from '../services/api';
-import { useAuthStore } from '../store/authStore';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Plus, Trash2, Copy, ToggleLeft, ToggleRight, Tag, Ticket, Download, RefreshCw } from 'lucide-react';
+import { promotionAPI, restaurantAPI } from '../services/api';
+import { useAuthStore } from '../store/authStore';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
+} from '../components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
+import {
+  Plus,
+  Trash2,
+  Copy,
+  ToggleLeft,
+  ToggleRight,
+  Tag,
+  Ticket,
+  Download,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 
-const CouponCodes = () => {
+export default function CouponCodes() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [searchParams] = useSearchParams();
@@ -15,8 +55,10 @@ const CouponCodes = () => {
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [selectedPromotion, setSelectedPromotion] = useState(searchParams.get('promotionId') || '');
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [generateModalOpen, setGenerateModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedCoupon, setSelectedCoupon] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
@@ -47,7 +89,7 @@ const CouponCodes = () => {
 
   useEffect(() => {
     if (user?.restaurantId && !selectedRestaurant) {
-      setSelectedRestaurant(user.restaurantId);
+      setSelectedRestaurant(user.restaurantId.toString());
     }
   }, [user]);
 
@@ -70,7 +112,7 @@ const CouponCodes = () => {
       setRestaurants(Array.isArray(restaurantsData) ? restaurantsData : []);
 
       if (!selectedRestaurant && restaurantsData.length > 0 && !user?.restaurantId) {
-        setSelectedRestaurant(restaurantsData[0].id);
+        setSelectedRestaurant(restaurantsData[0].id.toString());
       }
     } catch (error) {
       console.error('Failed to load restaurants:', error);
@@ -79,7 +121,7 @@ const CouponCodes = () => {
 
   const loadPromotions = async () => {
     try {
-      const response = await promotionAPI.getPromotions(selectedRestaurant, { page: 0, size: 100 });
+      const response = await promotionAPI.getPromotions(parseInt(selectedRestaurant), { page: 0, size: 100 });
       const data = response.data.data || response.data;
       setPromotions(data.content || []);
     } catch (error) {
@@ -94,7 +136,7 @@ const CouponCodes = () => {
       if (selectedPromotion) {
         response = await promotionAPI.getCouponsByPromotion(selectedPromotion, { page: currentPage, size: 20 });
       } else {
-        response = await promotionAPI.getCoupons(selectedRestaurant, { page: currentPage, size: 20 });
+        response = await promotionAPI.getCoupons(parseInt(selectedRestaurant), { page: currentPage, size: 20 });
       }
       const data = response.data.data || response.data;
       setCoupons(data.content || []);
@@ -106,10 +148,11 @@ const CouponCodes = () => {
     }
   };
 
-  const handleCreate = async () => {
+  const handleCreate = async (e) => {
+    e.preventDefault();
     try {
       if (!formData.code || !formData.promotionId) {
-        alert(t('coupons.messages.fillRequired', 'Please fill in required fields'));
+        alert(t('coupons.messages.fillRequired'));
         return;
       }
 
@@ -121,22 +164,22 @@ const CouponCodes = () => {
       };
 
       await promotionAPI.createCoupon(payload);
-      alert(t('coupons.messages.createSuccess', 'Coupon created successfully'));
-      setShowModal(false);
+      setCreateModalOpen(false);
       resetForm();
       loadCoupons();
     } catch (error) {
       console.error('Failed to create coupon:', error);
-      alert(t('coupons.messages.createError', 'Failed to create coupon') + ': ' + (error.response?.data?.message || error.message));
+      alert(t('coupons.messages.createError') + ': ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (e) => {
+    e.preventDefault();
     try {
       if (!generateData.promotionId || generateData.count < 1) {
-        alert(t('coupons.messages.fillRequired', 'Please fill in required fields'));
+        alert(t('coupons.messages.fillRequired'));
         return;
       }
 
@@ -149,29 +192,28 @@ const CouponCodes = () => {
 
       const response = await promotionAPI.generateCoupons(payload);
       const generated = response.data.data || response.data;
-      alert(t('coupons.messages.generateSuccess', `Successfully generated ${generated.length} coupons`));
-      setShowGenerateModal(false);
+      alert(t('coupons.messages.generateSuccess', { count: generated.length }));
+      setGenerateModalOpen(false);
       resetGenerateForm();
       loadCoupons();
     } catch (error) {
       console.error('Failed to generate coupons:', error);
-      alert(t('coupons.messages.generateError', 'Failed to generate coupons') + ': ' + (error.response?.data?.message || error.message));
+      alert(t('coupons.messages.generateError') + ': ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm(t('coupons.messages.confirmDelete', 'Are you sure you want to delete this coupon?'))) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!selectedCoupon) return;
     try {
-      await promotionAPI.deleteCoupon(id);
-      alert(t('coupons.messages.deleteSuccess', 'Coupon deleted successfully'));
+      await promotionAPI.deleteCoupon(selectedCoupon.id);
+      setDeleteDialogOpen(false);
+      setSelectedCoupon(null);
       loadCoupons();
     } catch (error) {
       console.error('Failed to delete coupon:', error);
-      alert(t('coupons.messages.deleteError', 'Failed to delete coupon'));
+      alert(t('coupons.messages.deleteError'));
     }
   };
 
@@ -186,21 +228,32 @@ const CouponCodes = () => {
 
   const copyToClipboard = (code) => {
     navigator.clipboard.writeText(code);
-    alert(t('coupons.messages.copied', 'Coupon code copied to clipboard'));
+    alert(t('coupons.messages.copied'));
   };
 
   const exportCoupons = () => {
+    const headers = [
+      t('coupons.export.code'),
+      t('coupons.export.promotion'),
+      t('coupons.export.singleUse'),
+      t('coupons.export.maxUses'),
+      t('coupons.export.usedCount'),
+      t('coupons.export.validFrom'),
+      t('coupons.export.validUntil'),
+      t('coupons.export.active')
+    ];
+
     const csvContent = [
-      ['Code', 'Promotion', 'Single Use', 'Max Uses', 'Used Count', 'Valid From', 'Valid Until', 'Active'].join(','),
+      headers.join(','),
       ...coupons.map(c => [
         c.code,
         c.promotionName,
-        c.singleUse ? 'Yes' : 'No',
-        c.maxUses || 'Unlimited',
+        c.singleUse ? t('common.yes') : t('common.no'),
+        c.maxUses || t('coupons.unlimited'),
         c.usedCount,
         c.validFrom || '-',
         c.validUntil || '-',
-        c.active ? 'Yes' : 'No'
+        c.active ? t('common.yes') : t('common.no')
       ].join(','))
     ].join('\n');
 
@@ -242,257 +295,275 @@ const CouponCodes = () => {
     return new Date(dateStr).toLocaleDateString();
   };
 
+  if (loading && coupons.length === 0) {
+    return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
+  }
+
   return (
-    <div className="p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{t('coupons.title', 'Coupon Codes')}</h1>
-          <p className="text-gray-500">{t('coupons.subtitle', 'Manage coupon codes for promotions')}</p>
+          <h1 className="text-3xl font-bold">{t('coupons.title')}</h1>
+          <p className="text-muted-foreground mt-1">{t('coupons.subtitle')}</p>
         </div>
         <div className="flex gap-3">
-          <Link
-            to="/promotions"
-            className="btn btn-outline flex items-center gap-2"
-          >
-            <Tag size={18} />
-            {t('coupons.managePromotions', 'Manage Promotions')}
+          <Link to="/marketing/promotions">
+            <Button variant="outline">
+              <Tag className="h-4 w-4 mr-2" />
+              {t('coupons.managePromotions')}
+            </Button>
           </Link>
-          <button
+          <Button
+            variant="outline"
             onClick={exportCoupons}
-            className="btn btn-outline flex items-center gap-2"
             disabled={coupons.length === 0}
           >
-            <Download size={18} />
-            {t('coupons.export', 'Export')}
-          </button>
-          <button
-            onClick={() => { resetGenerateForm(); setShowGenerateModal(true); }}
-            className="btn btn-secondary flex items-center gap-2"
+            <Download className="h-4 w-4 mr-2" />
+            {t('coupons.export.button')}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => { resetGenerateForm(); setGenerateModalOpen(true); }}
           >
-            <RefreshCw size={18} />
-            {t('coupons.generateBatch', 'Generate Batch')}
-          </button>
-          <button
-            onClick={() => { resetForm(); setShowModal(true); }}
-            className="btn btn-primary flex items-center gap-2"
-          >
-            <Plus size={18} />
-            {t('coupons.addCoupon', 'Add Coupon')}
-          </button>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {t('coupons.generateBatch')}
+          </Button>
+          <Button onClick={() => { resetForm(); setCreateModalOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('coupons.addCoupon')}
+          </Button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-4">
         {restaurants.length > 1 && (
-          <select
-            className="select select-bordered"
-            value={selectedRestaurant || ''}
-            onChange={(e) => {
-              setSelectedRestaurant(Number(e.target.value));
+          <Select
+            value={selectedRestaurant}
+            onValueChange={(value) => {
+              setSelectedRestaurant(value);
               setSelectedPromotion('');
               setCurrentPage(0);
             }}
           >
-            {restaurants.map(r => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder={t('common.selectRestaurant')} />
+            </SelectTrigger>
+            <SelectContent>
+              {restaurants.map(r => (
+                <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
 
-        <select
-          className="select select-bordered"
+        <Select
           value={selectedPromotion}
-          onChange={(e) => {
-            setSelectedPromotion(e.target.value);
+          onValueChange={(value) => {
+            setSelectedPromotion(value);
             setCurrentPage(0);
           }}
         >
-          <option value="">{t('coupons.allPromotions', 'All Promotions')}</option>
-          {promotions.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
+          <SelectTrigger className="w-[250px]">
+            <SelectValue placeholder={t('coupons.allPromotions')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">{t('coupons.allPromotions')}</SelectItem>
+            {promotions.map(p => (
+              <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Coupons List */}
-      <div className="bg-white rounded-lg shadow">
-        {loading ? (
-          <div className="flex justify-center items-center p-12">
-            <span className="loading loading-spinner loading-lg"></span>
-          </div>
-        ) : coupons.length === 0 ? (
-          <div className="text-center py-12">
-            <Ticket className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">{t('coupons.noCoupons', 'No coupons')}</h3>
-            <p className="mt-1 text-sm text-gray-500">{t('coupons.getStarted', 'Get started by creating or generating coupons.')}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t('coupons.table.code', 'Code')}</th>
-                  <th>{t('coupons.table.promotion', 'Promotion')}</th>
-                  <th>{t('coupons.table.usage', 'Usage')}</th>
-                  <th>{t('coupons.table.validity', 'Validity')}</th>
-                  <th>{t('coupons.table.status', 'Status')}</th>
-                  <th>{t('common.actions', 'Actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {coupons.map(coupon => (
-                  <tr key={coupon.id}>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <code className="bg-base-200 px-2 py-1 rounded text-sm font-mono">{coupon.code}</code>
-                        <button
-                          onClick={() => copyToClipboard(coupon.code)}
-                          className="btn btn-ghost btn-xs"
-                          title={t('coupons.copy', 'Copy')}
-                        >
-                          <Copy size={14} />
-                        </button>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="text-sm">
-                        <div className="font-medium">{coupon.promotionName}</div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="text-sm">
-                        <div>{coupon.usedCount} / {coupon.singleUse ? '1' : (coupon.maxUses || '∞')}</div>
-                        <div className="text-gray-500 text-xs">
-                          {coupon.singleUse ? t('coupons.singleUse', 'Single use') : t('coupons.multiUse', 'Multi-use')}
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="text-sm">
-                        {coupon.validFrom || coupon.validUntil ? (
-                          <>
-                            <div>{formatDate(coupon.validFrom)} - {formatDate(coupon.validUntil)}</div>
-                          </>
-                        ) : (
-                          <span className="text-gray-500">{t('coupons.noExpiry', 'No expiry')}</span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => handleToggle(coupon.id)}
-                        className={`badge ${coupon.active && coupon.currentlyValid ? 'badge-success' : 'badge-ghost'} gap-1`}
-                      >
-                        {coupon.active && coupon.currentlyValid ? (
-                          <><ToggleRight size={14} /> {t('common.active', 'Active')}</>
-                        ) : (
-                          <><ToggleLeft size={14} /> {t('common.inactive', 'Inactive')}</>
-                        )}
-                      </button>
-                    </td>
-                    <td>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => copyToClipboard(coupon.code)}
-                          className="btn btn-ghost btn-sm"
-                          title={t('coupons.copy', 'Copy')}
-                        >
-                          <Copy size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(coupon.id)}
-                          className="btn btn-ghost btn-sm text-error"
-                          title={t('common.delete', 'Delete')}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center p-4">
-            <div className="join">
-              <button
-                className="join-item btn btn-sm"
-                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                disabled={currentPage === 0}
-              >
-                «
-              </button>
-              <button className="join-item btn btn-sm">
-                {t('common.page', 'Page')} {currentPage + 1} / {totalPages}
-              </button>
-              <button
-                className="join-item btn btn-sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={currentPage >= totalPages - 1}
-              >
-                »
-              </button>
+      {/* Coupons Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('coupons.listTitle')}</CardTitle>
+          <CardDescription>{t('coupons.listDescription')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {coupons.length === 0 ? (
+            <div className="text-center py-12">
+              <Ticket className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-sm font-medium">{t('coupons.noCoupons')}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{t('coupons.getStarted')}</p>
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('coupons.table.code')}</TableHead>
+                    <TableHead>{t('coupons.table.promotion')}</TableHead>
+                    <TableHead>{t('coupons.table.usage')}</TableHead>
+                    <TableHead>{t('coupons.table.validity')}</TableHead>
+                    <TableHead>{t('coupons.table.status')}</TableHead>
+                    <TableHead>{t('common.actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {coupons.map(coupon => (
+                    <TableRow key={coupon.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <code className="bg-muted px-2 py-1 rounded text-sm font-mono">{coupon.code}</code>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => copyToClipboard(coupon.code)}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{coupon.promotionName}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{coupon.usedCount} / {coupon.singleUse ? '1' : (coupon.maxUses || '∞')}</div>
+                          <div className="text-muted-foreground text-xs">
+                            {coupon.singleUse ? t('coupons.singleUse') : t('coupons.multiUse')}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {coupon.validFrom || coupon.validUntil ? (
+                            <div>
+                              {formatDate(coupon.validFrom)} - {formatDate(coupon.validUntil)}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">{t('coupons.noExpiry')}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={coupon.active && coupon.currentlyValid ? 'default' : 'secondary'}
+                          className="cursor-pointer"
+                          onClick={() => handleToggle(coupon.id)}
+                        >
+                          {coupon.active && coupon.currentlyValid ? (
+                            <><ToggleRight className="h-3 w-3 mr-1" /> {t('common.active')}</>
+                          ) : (
+                            <><ToggleLeft className="h-3 w-3 mr-1" /> {t('common.inactive')}</>
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => copyToClipboard(coupon.code)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => {
+                              setSelectedCoupon(coupon);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm">
+                    {t('common.page')} {currentPage + 1} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={currentPage >= totalPages - 1}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Create Single Coupon Modal */}
-      {showModal && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">{t('coupons.createCoupon', 'Create Coupon')}</h3>
-
-            <div className="space-y-4">
-              <div className="form-control">
-                <label className="label"><span className="label-text">{t('coupons.form.code', 'Coupon Code')} *</span></label>
-                <input
-                  type="text"
-                  className="input input-bordered uppercase"
+      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('coupons.createCoupon')}</DialogTitle>
+            <DialogDescription>{t('coupons.createDescription')}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreate}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="code">{t('coupons.form.code')} *</Label>
+                <Input
+                  id="code"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  placeholder="e.g., SUMMER20"
+                  placeholder={t('coupons.form.codePlaceholder')}
+                  className="uppercase"
+                  required
                 />
               </div>
 
-              <div className="form-control">
-                <label className="label"><span className="label-text">{t('coupons.form.promotion', 'Promotion')} *</span></label>
-                <select
-                  className="select select-bordered"
-                  value={formData.promotionId}
-                  onChange={(e) => setFormData({ ...formData, promotionId: Number(e.target.value) })}
+              <div className="space-y-2">
+                <Label htmlFor="promotion">{t('coupons.form.promotion')} *</Label>
+                <Select
+                  value={formData.promotionId?.toString() || ''}
+                  onValueChange={(value) => setFormData({ ...formData, promotionId: Number(value) })}
                 >
-                  <option value="">{t('common.select', 'Select...')}</option>
-                  {promotions.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('common.select')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {promotions.map(p => (
+                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label cursor-pointer justify-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={formData.singleUse}
-                      onChange={(e) => setFormData({ ...formData, singleUse: e.target.checked })}
-                    />
-                    <span className="label-text">{t('coupons.form.singleUse', 'Single Use')}</span>
-                  </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="singleUse"
+                    checked={formData.singleUse}
+                    onChange={(e) => setFormData({ ...formData, singleUse: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="singleUse">{t('coupons.form.singleUse')}</Label>
                 </div>
 
-                <div className="form-control">
-                  <label className="label"><span className="label-text">{t('coupons.form.maxUses', 'Max Uses')}</span></label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="maxUses">{t('coupons.form.maxUses')}</Label>
+                  <Input
+                    id="maxUses"
                     type="number"
-                    className="input input-bordered input-sm"
                     value={formData.maxUses || ''}
                     onChange={(e) => setFormData({ ...formData, maxUses: e.target.value ? parseInt(e.target.value) : null })}
                     min="1"
@@ -502,73 +573,71 @@ const CouponCodes = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className="label-text">{t('coupons.form.validFrom', 'Valid From')}</span></label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="validFrom">{t('coupons.form.validFrom')}</Label>
+                  <Input
+                    id="validFrom"
                     type="datetime-local"
-                    className="input input-bordered input-sm"
                     value={formData.validFrom}
                     onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
                   />
                 </div>
 
-                <div className="form-control">
-                  <label className="label"><span className="label-text">{t('coupons.form.validUntil', 'Valid Until')}</span></label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="validUntil">{t('coupons.form.validUntil')}</Label>
+                  <Input
+                    id="validUntil"
                     type="datetime-local"
-                    className="input input-bordered input-sm"
                     value={formData.validUntil}
                     onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
                   />
                 </div>
               </div>
             </div>
-
-            <div className="modal-action">
-              <button className="btn btn-ghost" onClick={() => setShowModal(false)}>
-                {t('common.cancel', 'Cancel')}
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleCreate}
-                disabled={loading}
-              >
-                {loading && <span className="loading loading-spinner loading-sm"></span>}
-                {t('common.create', 'Create')}
-              </button>
-            </div>
-          </div>
-          <div className="modal-backdrop" onClick={() => setShowModal(false)}></div>
-        </div>
-      )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setCreateModalOpen(false); resetForm(); }}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? t('common.creating') : t('common.create')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Generate Batch Modal */}
-      {showGenerateModal && (
-        <div className="modal modal-open">
-          <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">{t('coupons.generateBatch', 'Generate Batch Coupons')}</h3>
-
-            <div className="space-y-4">
-              <div className="form-control">
-                <label className="label"><span className="label-text">{t('coupons.form.promotion', 'Promotion')} *</span></label>
-                <select
-                  className="select select-bordered"
-                  value={generateData.promotionId}
-                  onChange={(e) => setGenerateData({ ...generateData, promotionId: Number(e.target.value) })}
+      <Dialog open={generateModalOpen} onOpenChange={setGenerateModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('coupons.generateBatch')}</DialogTitle>
+            <DialogDescription>{t('coupons.generateDescription')}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleGenerate}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="gen-promotion">{t('coupons.form.promotion')} *</Label>
+                <Select
+                  value={generateData.promotionId?.toString() || ''}
+                  onValueChange={(value) => setGenerateData({ ...generateData, promotionId: Number(value) })}
                 >
-                  <option value="">{t('common.select', 'Select...')}</option>
-                  {promotions.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('common.select')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {promotions.map(p => (
+                      <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className="label-text">{t('coupons.form.count', 'Number of Coupons')} *</span></label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="count">{t('coupons.form.count')} *</Label>
+                  <Input
+                    id="count"
                     type="number"
-                    className="input input-bordered"
                     value={generateData.count}
                     onChange={(e) => setGenerateData({ ...generateData, count: parseInt(e.target.value) || 1 })}
                     min="1"
@@ -576,24 +645,24 @@ const CouponCodes = () => {
                   />
                 </div>
 
-                <div className="form-control">
-                  <label className="label"><span className="label-text">{t('coupons.form.prefix', 'Code Prefix')}</span></label>
-                  <input
-                    type="text"
-                    className="input input-bordered uppercase"
+                <div className="space-y-2">
+                  <Label htmlFor="prefix">{t('coupons.form.prefix')}</Label>
+                  <Input
+                    id="prefix"
                     value={generateData.prefix}
                     onChange={(e) => setGenerateData({ ...generateData, prefix: e.target.value.toUpperCase() })}
-                    placeholder="e.g., SUMMER"
+                    placeholder={t('coupons.form.prefixPlaceholder')}
+                    className="uppercase"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className="label-text">{t('coupons.form.codeLength', 'Code Length')}</span></label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="codeLength">{t('coupons.form.codeLength')}</Label>
+                  <Input
+                    id="codeLength"
                     type="number"
-                    className="input input-bordered"
                     value={generateData.codeLength}
                     onChange={(e) => setGenerateData({ ...generateData, codeLength: parseInt(e.target.value) || 8 })}
                     min="4"
@@ -601,65 +670,78 @@ const CouponCodes = () => {
                   />
                 </div>
 
-                <div className="form-control">
-                  <label className="label cursor-pointer justify-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="checkbox"
-                      checked={generateData.singleUse}
-                      onChange={(e) => setGenerateData({ ...generateData, singleUse: e.target.checked })}
-                    />
-                    <span className="label-text">{t('coupons.form.singleUse', 'Single Use')}</span>
-                  </label>
+                <div className="flex items-center space-x-2 pt-6">
+                  <input
+                    type="checkbox"
+                    id="gen-singleUse"
+                    checked={generateData.singleUse}
+                    onChange={(e) => setGenerateData({ ...generateData, singleUse: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="gen-singleUse">{t('coupons.form.singleUse')}</Label>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label"><span className="label-text">{t('coupons.form.validFrom', 'Valid From')}</span></label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="gen-validFrom">{t('coupons.form.validFrom')}</Label>
+                  <Input
+                    id="gen-validFrom"
                     type="datetime-local"
-                    className="input input-bordered input-sm"
                     value={generateData.validFrom}
                     onChange={(e) => setGenerateData({ ...generateData, validFrom: e.target.value })}
                   />
                 </div>
 
-                <div className="form-control">
-                  <label className="label"><span className="label-text">{t('coupons.form.validUntil', 'Valid Until')}</span></label>
-                  <input
+                <div className="space-y-2">
+                  <Label htmlFor="gen-validUntil">{t('coupons.form.validUntil')}</Label>
+                  <Input
+                    id="gen-validUntil"
                     type="datetime-local"
-                    className="input input-bordered input-sm"
                     value={generateData.validUntil}
                     onChange={(e) => setGenerateData({ ...generateData, validUntil: e.target.value })}
                   />
                 </div>
               </div>
 
-              <div className="alert alert-info">
-                <span>{t('coupons.generatePreview', `Will generate ${generateData.count} coupons with format: ${generateData.prefix || ''}XXXXXXXX`)}</span>
+              <div className="bg-muted p-3 rounded-md text-sm">
+                {t('coupons.generatePreview', {
+                  count: generateData.count,
+                  format: `${generateData.prefix || ''}${'X'.repeat(generateData.codeLength)}`
+                })}
               </div>
             </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setGenerateModalOpen(false); resetGenerateForm(); }}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? t('coupons.generating') : t('coupons.generate')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-            <div className="modal-action">
-              <button className="btn btn-ghost" onClick={() => setShowGenerateModal(false)}>
-                {t('common.cancel', 'Cancel')}
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleGenerate}
-                disabled={loading}
-              >
-                {loading && <span className="loading loading-spinner loading-sm"></span>}
-                {t('coupons.generate', 'Generate')}
-              </button>
-            </div>
-          </div>
-          <div className="modal-backdrop" onClick={() => setShowGenerateModal(false)}></div>
-        </div>
-      )}
+      {/* Delete Confirmation */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('coupons.deleteCoupon')}</DialogTitle>
+            <DialogDescription>
+              {t('coupons.deleteConfirmation', { code: selectedCoupon?.code })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setSelectedCoupon(null); }}>
+              {t('common.cancel')}
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              {t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-export default CouponCodes;
+}

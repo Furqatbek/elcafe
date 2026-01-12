@@ -2338,5 +2338,167 @@
       "copyCode": "Kodni nusxalash",
       "codeCopied": "Kod vaqtinchalik xotiraga nusxalandi"
     }
+  },
+  "promotions": {
+    "title": "Aksiyalar",
+    "subtitle": "Reklama takliflarini yaratish va boshqarish",
+    "addPromotion": "Yangi aksiya",
+    "manageCoupons": "Kuponlarni boshqarish",
+    "listTitle": "Barcha aksiyalar",
+    "listDescription": "Barcha aksiyalarni ko'rish va boshqarish",
+    "noPromotions": "Aksiyalar topilmadi",
+    "getStarted": "Chegirmalar taklif qilish uchun birinchi aksiyangizni yarating",
+    "createPromotion": "Aksiya yaratish",
+    "createDescription": "Yangi reklama taklifi yaratish uchun ma'lumotlarni to'ldiring",
+    "editPromotion": "Aksiyani tahrirlash",
+    "editDescription": "Aksiya ma'lumotlarini yangilash",
+    "deletePromotion": "Aksiyani o'chirish",
+    "deleteConfirmation": "\"{{name}}\" ni o'chirishga ishonchingiz komilmi? Bu amalni bekor qilib bo'lmaydi.",
+    "freeItem": "Bepul mahsulot",
+    "to": "gacha",
+    "noEnd": "Tugash sanasiz",
+    "uses": "foydalanish",
+    "coupons": "kuponlar",
+    "types": {
+      "PERCENTAGE": "Foizli chegirma",
+      "FIXED_AMOUNT": "Belgilangan summa",
+      "FREE_ITEM": "Bepul mahsulot",
+      "BUY_X_GET_Y": "X sotib oling Y bepul"
+    },
+    "scopes": {
+      "ALL": "Barcha mahsulotlar",
+      "CATEGORY": "Muayyan kategoriyalar",
+      "PRODUCT": "Muayyan mahsulotlar",
+      "ORDER_TYPE": "Buyurtma turi"
+    },
+    "table": {
+      "name": "Nomi",
+      "type": "Turi",
+      "value": "Qiymati",
+      "dates": "Sanalar",
+      "usage": "Foydalanish",
+      "status": "Holat"
+    },
+    "form": {
+      "name": "Aksiya nomi",
+      "namePlaceholder": "masalan, Yozgi chegirma 20%",
+      "type": "Aksiya turi",
+      "description": "Tavsif",
+      "descriptionPlaceholder": "Aksiyani tasvirlang...",
+      "percentOff": "Foiz chegirma (%)",
+      "amountOff": "Summa chegirma",
+      "scope": "Qo'llaniladi",
+      "buyQuantity": "Sotib olish miqdori",
+      "getQuantity": "Bepul olish",
+      "freeProduct": "Bepul mahsulot",
+      "startDate": "Boshlanish sanasi",
+      "endDate": "Tugash sanasi",
+      "rules": "Qo'shimcha qoidalar",
+      "minOrder": "Min. buyurtma summasi",
+      "maxDiscount": "Maks. chegirma",
+      "usageLimit": "Umumiy limit",
+      "perCustomerLimit": "Mijoz boshiga limit",
+      "firstOrderOnly": "Faqat birinchi buyurtma",
+      "stackable": "Jamlash mumkin",
+      "orderTypes": "Buyurtma turlari",
+      "applicableDays": "Hafta kunlari"
+    },
+    "messages": {
+      "fillRequired": "Barcha majburiy maydonlarni to'ldiring",
+      "createError": "Aksiyani yaratib bo'lmadi",
+      "updateError": "Aksiyani yangilab bo'lmadi",
+      "deleteError": "Aksiyani o'chirib bo'lmadi"
+    }
+  },
+  "coupons": {
+    "title": "Kuponlar",
+    "subtitle": "Kupon kodlarini yaratish va boshqarish",
+    "addCoupon": "Yangi kupon",
+    "managePromotions": "Aksiyalarni boshqarish",
+    "generateBatch": "Partiya yaratish",
+    "listTitle": "Barcha kuponlar",
+    "listDescription": "Barcha kupon kodlarini ko'rish va boshqarish",
+    "noCoupons": "Kuponlar topilmadi",
+    "getStarted": "Mijozlar chegirma olishi uchun kuponlar yarating",
+    "createCoupon": "Kupon yaratish",
+    "createDescription": "Bitta kupon kodi yaratish",
+    "generateDescription": "Bir nechta kupon kodlarini bir vaqtda yaratish",
+    "deleteCoupon": "Kuponni o'chirish",
+    "deleteConfirmation": "\"{{code}}\" kuponini o'chirishga ishonchingiz komilmi? Bu amalni bekor qilib bo'lmaydi.",
+    "allPromotions": "Barcha aksiyalar",
+    "singleUse": "Bir martalik",
+    "multiUse": "Ko'p martalik",
+    "noExpiry": "Muddatsiz",
+    "unlimited": "Cheksiz",
+    "generate": "Yaratish",
+    "generating": "Yaratilmoqda...",
+    "generatePreview": "{{count}} ta kupon yaratiladi: {{format}}",
+    "table": {
+      "code": "Kod",
+      "promotion": "Aksiya",
+      "usage": "Foydalanish",
+      "validity": "Amal qilish muddati",
+      "status": "Holat"
+    },
+    "form": {
+      "code": "Kupon kodi",
+      "codePlaceholder": "masalan, CHEGIRMA20",
+      "promotion": "Bog'langan aksiya",
+      "singleUse": "Faqat bir marta",
+      "maxUses": "Maks. foydalanish",
+      "validFrom": "Boshlanish",
+      "validUntil": "Tugash",
+      "count": "Kuponlar soni",
+      "prefix": "Kod prefiksi",
+      "prefixPlaceholder": "masalan, PROMO",
+      "codeLength": "Kod uzunligi"
+    },
+    "export": {
+      "button": "CSV eksport",
+      "code": "Kod",
+      "promotion": "Aksiya",
+      "singleUse": "Bir martalik",
+      "maxUses": "Maks. foydalanish",
+      "usedCount": "Ishlatilgan",
+      "validFrom": "Boshlanish",
+      "validUntil": "Tugash",
+      "active": "Faol"
+    },
+    "messages": {
+      "fillRequired": "Barcha majburiy maydonlarni to'ldiring",
+      "createError": "Kupon yaratib bo'lmadi",
+      "generateError": "Kuponlar yaratib bo'lmadi",
+      "generateSuccess": "{{count}} ta kupon muvaffaqiyatli yaratildi",
+      "deleteError": "Kuponni o'chirib bo'lmadi",
+      "copied": "Kupon kodi nusxalandi"
+    }
+  },
+  "enums": {
+    "orderTypes": {
+      "DINE_IN": "Joyida",
+      "TAKEAWAY": "Olib ketish",
+      "DELIVERY": "Yetkazish"
+    },
+    "days": {
+      "MON": "Dush",
+      "TUE": "Sesh",
+      "WED": "Chor",
+      "THU": "Pay",
+      "FRI": "Jum",
+      "SAT": "Shan",
+      "SUN": "Yak"
+    },
+    "promotionTypes": {
+      "PERCENTAGE": "Foizli chegirma",
+      "FIXED_AMOUNT": "Belgilangan summa",
+      "FREE_ITEM": "Bepul mahsulot",
+      "BUY_X_GET_Y": "X sotib oling Y bepul"
+    },
+    "promotionScopes": {
+      "ALL": "Barcha mahsulotlar",
+      "CATEGORY": "Muayyan kategoriyalar",
+      "PRODUCT": "Muayyan mahsulotlar",
+      "ORDER_TYPE": "Buyurtma turi"
+    }
   }
 }
