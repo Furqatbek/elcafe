@@ -445,4 +445,25 @@ export const happyHourAPI = {
     api.get(`/restaurants/${restaurantId}/happy-hours/is-active`),
 };
 
+// Bundle API
+export const bundleAPI = {
+  // Bundles CRUD
+  getBundles: (restaurantId, params = {}) =>
+    api.get(`/restaurants/${restaurantId}/bundles`, { params }),
+  getMenuBundles: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/bundles/menu`),
+  getBundle: (id) => api.get(`/bundles/${id}`),
+  createBundle: (restaurantId, data) =>
+    api.post(`/restaurants/${restaurantId}/bundles`, data),
+  updateBundle: (id, data) => api.put(`/bundles/${id}`, data),
+  deleteBundle: (id) => api.delete(`/bundles/${id}`),
+  toggleBundle: (id) => api.patch(`/bundles/${id}/toggle`),
+
+  // Price calculation and validation
+  calculatePrice: (id, selectedOptionIds) =>
+    api.post(`/bundles/${id}/calculate-price`, selectedOptionIds),
+  validateOrder: (id, selectedOptionIds) =>
+    api.post(`/bundles/${id}/validate`, selectedOptionIds),
+};
+
 export default api;

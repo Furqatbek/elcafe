@@ -97,7 +97,8 @@
       "billing": "Billing & Payments",
       "promotions": "Promotions",
       "coupons": "Coupons",
-      "happyHours": "Happy Hours"
+      "happyHours": "Happy Hours",
+      "bundles": "Bundles"
     }
   },
   "dashboard": {
@@ -2865,6 +2866,64 @@
       "createError": "Failed to create happy hour",
       "updateError": "Failed to update happy hour",
       "deleteError": "Failed to delete happy hour"
+    }
+  },
+  "bundles": {
+    "title": "Bundle Deals",
+    "subtitle": "Create meal combos and bundle deals with combined pricing",
+    "addBundle": "New Bundle",
+    "listTitle": "All Bundles",
+    "listDescription": "View and manage your meal deals and combos",
+    "noBundles": "No bundles found",
+    "getStarted": "Create your first bundle to start offering meal deals",
+    "createBundle": "Create Bundle",
+    "createDescription": "Set up a new meal deal or combo",
+    "editBundle": "Edit Bundle",
+    "editDescription": "Update bundle details and items",
+    "deleteBundle": "Delete Bundle",
+    "deleteConfirmation": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+    "items": "items",
+    "options": "options",
+    "save": "Save",
+    "available": "Available Now",
+    "table": {
+      "name": "Name",
+      "price": "Price",
+      "savings": "Savings",
+      "items": "Items",
+      "status": "Status"
+    },
+    "form": {
+      "name": "Bundle Name",
+      "namePlaceholder": "e.g., Family Meal Deal",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe what's included in this bundle...",
+      "imageUrl": "Image URL",
+      "bundlePrice": "Bundle Price",
+      "availability": "Availability",
+      "availableFrom": "Available From",
+      "availableUntil": "Available Until",
+      "availableDays": "Available Days",
+      "availableDaysHint": "Leave empty to make available every day",
+      "maxPerOrder": "Max Per Order",
+      "items": "Bundle Items",
+      "addItem": "Add Item",
+      "noItems": "Add at least one item to this bundle",
+      "selectProduct": "Select a product",
+      "qty": "Qty",
+      "optionGroups": "Option Groups",
+      "optionGroupsHint": "Allow customers to choose between options (e.g., choice of drink)",
+      "addOptionGroup": "Add Option Group",
+      "noOptionGroups": "No option groups - customers get exactly what's listed",
+      "groupName": "Group name (e.g., Choose your drink)",
+      "addOption": "Add Option",
+      "default": "Default"
+    },
+    "messages": {
+      "fillRequired": "Please fill in the bundle name and price",
+      "createError": "Failed to create bundle",
+      "updateError": "Failed to update bundle",
+      "deleteError": "Failed to delete bundle"
     }
   },
   "enums": {

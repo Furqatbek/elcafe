@@ -94,7 +94,8 @@
       "billing": "To'lovlar va hisob-kitoblar",
       "promotions": "Aksiyalar",
       "coupons": "Kuponlar",
-      "happyHours": "Happy Hour"
+      "happyHours": "Happy Hour",
+      "bundles": "Kombo"
     }
   },
   "dashboard": {
@@ -2528,6 +2529,64 @@
       "createError": "Happy hour yaratib bo'lmadi",
       "updateError": "Happy hour yangilab bo'lmadi",
       "deleteError": "Happy hour o'chirib bo'lmadi"
+    }
+  },
+  "bundles": {
+    "title": "Kombo takliflar",
+    "subtitle": "Kompleks ovqatlar va kombo to'plamlarni yaratish",
+    "addBundle": "Yangi kombo",
+    "listTitle": "Barcha kombolar",
+    "listDescription": "Kombo to'plamlarni ko'rish va boshqarish",
+    "noBundles": "Kombo topilmadi",
+    "getStarted": "Birinchi komboni yarating",
+    "createBundle": "Kombo yaratish",
+    "createDescription": "Yangi kombo taklif sozlash",
+    "editBundle": "Komboni tahrirlash",
+    "editDescription": "Kombo tafsilotlarini yangilash",
+    "deleteBundle": "Komboni o'chirish",
+    "deleteConfirmation": "\"{{name}}\" ni o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.",
+    "items": "ta",
+    "options": "opsiya",
+    "save": "Tejash",
+    "available": "Hozir mavjud",
+    "table": {
+      "name": "Nomi",
+      "price": "Narxi",
+      "savings": "Tejash",
+      "items": "Tarkibi",
+      "status": "Holat"
+    },
+    "form": {
+      "name": "Kombo nomi",
+      "namePlaceholder": "masalan, Oilaviy ovqat",
+      "description": "Tavsif",
+      "descriptionPlaceholder": "Komboga nimalar kiradi...",
+      "imageUrl": "Rasm URL",
+      "bundlePrice": "Kombo narxi",
+      "availability": "Mavjudlik",
+      "availableFrom": "Mavjud vaqt",
+      "availableUntil": "Tugash vaqti",
+      "availableDays": "Mavjud kunlar",
+      "availableDaysHint": "Har kuni mavjud bo'lish uchun bo'sh qoldiring",
+      "maxPerOrder": "Buyurtmada max",
+      "items": "Kombo tarkibi",
+      "addItem": "Mahsulot qo'shish",
+      "noItems": "Komboga kamida bitta mahsulot qo'shing",
+      "selectProduct": "Mahsulot tanlang",
+      "qty": "Soni",
+      "optionGroups": "Opsiya guruhlari",
+      "optionGroupsHint": "Mijozlarga variantlardan tanlash imkoniyati (masalan, ichimlik tanlash)",
+      "addOptionGroup": "Guruh qo'shish",
+      "noOptionGroups": "Opsiya guruhlari yo'q - mijozlar aynan ko'rsatilganni oladi",
+      "groupName": "Guruh nomi (masalan, Ichimlik tanlang)",
+      "addOption": "Opsiya qo'shish",
+      "default": "Asos"
+    },
+    "messages": {
+      "fillRequired": "Kombo nomi va narxini to'ldiring",
+      "createError": "Kombo yaratib bo'lmadi",
+      "updateError": "Kombo yangilab bo'lmadi",
+      "deleteError": "Kombo o'chirib bo'lmadi"
     }
   },
   "enums": {

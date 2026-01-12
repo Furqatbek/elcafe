@@ -178,6 +178,7 @@ export default function Layout() {
         { label: t('nav.sub.promotions', 'Promotions'), icon: Tag, path: '/marketing/promotions' },
         { label: t('nav.sub.coupons', 'Coupons'), icon: Ticket, path: '/marketing/coupons' },
         { label: t('nav.sub.happyHours', 'Happy Hours'), icon: Wine, path: '/marketing/happy-hours' },
+        { label: t('nav.sub.bundles', 'Bundles'), icon: Package, path: '/marketing/bundles' },
       ],
     },
     {

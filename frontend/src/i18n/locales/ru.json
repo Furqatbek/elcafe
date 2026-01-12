@@ -94,7 +94,8 @@
       "billing": "Оплата и счета",
       "promotions": "Акции",
       "coupons": "Купоны",
-      "happyHours": "Счастливые часы"
+      "happyHours": "Счастливые часы",
+      "bundles": "Комбо"
     }
   },
   "dashboard": {
@@ -2483,6 +2484,64 @@
       "createError": "Не удалось создать happy hour",
       "updateError": "Не удалось обновить happy hour",
       "deleteError": "Не удалось удалить happy hour"
+    }
+  },
+  "bundles": {
+    "title": "Комбо-предложения",
+    "subtitle": "Создание комплексных обедов и комбо-наборов с выгодной ценой",
+    "addBundle": "Новое комбо",
+    "listTitle": "Все комбо",
+    "listDescription": "Просмотр и управление комбо-наборами",
+    "noBundles": "Комбо-наборы не найдены",
+    "getStarted": "Создайте первое комбо для предложения комплексных блюд",
+    "createBundle": "Создать комбо",
+    "createDescription": "Настроить новое комбо-предложение",
+    "editBundle": "Редактировать комбо",
+    "editDescription": "Обновить детали комбо",
+    "deleteBundle": "Удалить комбо",
+    "deleteConfirmation": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие необратимо.",
+    "items": "шт.",
+    "options": "опций",
+    "save": "Экономия",
+    "available": "Доступно сейчас",
+    "table": {
+      "name": "Название",
+      "price": "Цена",
+      "savings": "Выгода",
+      "items": "Состав",
+      "status": "Статус"
+    },
+    "form": {
+      "name": "Название комбо",
+      "namePlaceholder": "например, Семейный обед",
+      "description": "Описание",
+      "descriptionPlaceholder": "Опишите что входит в комбо...",
+      "imageUrl": "URL изображения",
+      "bundlePrice": "Цена комбо",
+      "availability": "Доступность",
+      "availableFrom": "Доступно с",
+      "availableUntil": "Доступно до",
+      "availableDays": "Дни доступности",
+      "availableDaysHint": "Оставьте пустым для доступности каждый день",
+      "maxPerOrder": "Макс. в заказе",
+      "items": "Состав комбо",
+      "addItem": "Добавить товар",
+      "noItems": "Добавьте хотя бы один товар в комбо",
+      "selectProduct": "Выберите продукт",
+      "qty": "Кол",
+      "optionGroups": "Группы опций",
+      "optionGroupsHint": "Позвольте клиентам выбирать между опциями (напр. выбор напитка)",
+      "addOptionGroup": "Добавить группу опций",
+      "noOptionGroups": "Нет групп опций - клиенты получат точно то, что указано",
+      "groupName": "Название группы (напр. Выберите напиток)",
+      "addOption": "Добавить опцию",
+      "default": "По умолчанию"
+    },
+    "messages": {
+      "fillRequired": "Заполните название и цену комбо",
+      "createError": "Не удалось создать комбо",
+      "updateError": "Не удалось обновить комбо",
+      "deleteError": "Не удалось удалить комбо"
     }
   },
   "enums": {
