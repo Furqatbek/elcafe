@@ -32,7 +32,7 @@ public class ReferralCodeResponse {
                 .id(referralCode.getId())
                 .restaurantId(referralCode.getRestaurant() != null ? referralCode.getRestaurant().getId() : null)
                 .customerId(referralCode.getCustomer() != null ? referralCode.getCustomer().getId() : null)
-                .customerName(referralCode.getCustomer() != null ? referralCode.getCustomer().getName() : null)
+                .customerName(referralCode.getCustomer() != null ? referralCode.getCustomer().getFirstName() + " " + referralCode.getCustomer().getLastName() : null)
                 .customerEmail(referralCode.getCustomer() != null ? referralCode.getCustomer().getEmail() : null)
                 .code(referralCode.getCode())
                 .active(referralCode.getActive())

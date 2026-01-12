@@ -355,7 +355,7 @@ public class ReferralService {
 
         if (rewardType == RewardType.BONUS_POINTS) {
             grantBonusPointsReward(referral.getReferrer().getId(), rewardAmount,
-                    "Referral reward for inviting " + referral.getReferee().getName(),
+                    "Referral reward for inviting " + referral.getReferee().getFirstName() + " " + referral.getReferee().getLastName(),
                     "referrer-bonus-" + referral.getId());
         }
         // Other reward types (discount, free item) would create coupons/vouchers
@@ -438,7 +438,7 @@ public class ReferralService {
         if (!topReferrers.isEmpty()) {
             ReferralCode topReferrer = topReferrers.get(0);
             builder.topReferrerId(topReferrer.getCustomer().getId())
-                   .topReferrerName(topReferrer.getCustomer().getName())
+                   .topReferrerName(topReferrer.getCustomer().getFirstName() + " " + topReferrer.getCustomer().getLastName())
                    .topReferrerCount(topReferrer.getUsageCount());
         }
 
