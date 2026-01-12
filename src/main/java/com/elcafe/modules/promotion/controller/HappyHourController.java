@@ -1,6 +1,6 @@
 package com.elcafe.modules.promotion.controller;
 
-import com.elcafe.common.dto.ApiResponse;
+import com.elcafe.utils.ApiResponse;
 import com.elcafe.modules.promotion.dto.ActiveHappyHourResponse;
 import com.elcafe.modules.promotion.dto.HappyHourRequest;
 import com.elcafe.modules.promotion.dto.HappyHourResponse;
