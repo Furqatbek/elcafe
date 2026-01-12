@@ -126,7 +126,7 @@ export default function ReferralProgram() {
   const loadRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll({ page: 0, size: 100 });
-      setRestaurants(response.data?.content || []);
+      setRestaurants(response.data?.data?.content || []);
     } catch (error) {
       console.error('Error loading restaurants:', error);
     }
@@ -136,18 +136,19 @@ export default function ReferralProgram() {
     setLoading(true);
     try {
       const response = await referralAPI.getSettings(selectedRestaurant);
-      setSettings(response.data);
-      if (response.data) {
+      const data = response.data?.data;
+      setSettings(data);
+      if (data) {
         setSettingsForm({
-          programActive: response.data.programActive || false,
-          referrerRewardType: response.data.referrerRewardType || 'BONUS_POINTS',
-          referrerRewardAmount: response.data.referrerRewardAmount?.toString() || '100',
-          refereeRewardType: response.data.refereeRewardType || 'BONUS_POINTS',
-          refereeRewardAmount: response.data.refereeRewardAmount?.toString() || '50',
-          minOrderAmount: response.data.minOrderAmount?.toString() || '',
-          maxReferralsPerCustomer: response.data.maxReferralsPerCustomer?.toString() || '',
-          rewardExpiresDays: response.data.rewardExpiresDays?.toString() || '30',
-          termsAndConditions: response.data.termsAndConditions || '',
+          programActive: data.programActive || false,
+          referrerRewardType: data.referrerRewardType || 'BONUS_POINTS',
+          referrerRewardAmount: data.referrerRewardAmount?.toString() || '100',
+          refereeRewardType: data.refereeRewardType || 'BONUS_POINTS',
+          refereeRewardAmount: data.refereeRewardAmount?.toString() || '50',
+          minOrderAmount: data.minOrderAmount?.toString() || '',
+          maxReferralsPerCustomer: data.maxReferralsPerCustomer?.toString() || '',
+          rewardExpiresDays: data.rewardExpiresDays?.toString() || '30',
+          termsAndConditions: data.termsAndConditions || '',
         });
       }
     } catch (error) {
@@ -161,8 +162,8 @@ export default function ReferralProgram() {
     setLoading(true);
     try {
       const response = await referralAPI.getReferrals(selectedRestaurant, { page: referralPage, size: 10 });
-      setReferrals(response.data?.content || []);
-      setReferralTotalPages(response.data?.totalPages || 0);
+      setReferrals(response.data?.data?.content || []);
+      setReferralTotalPages(response.data?.data?.totalPages || 0);
     } catch (error) {
       console.error('Error loading referrals:', error);
     } finally {
@@ -174,8 +175,8 @@ export default function ReferralProgram() {
     setLoading(true);
     try {
       const response = await referralAPI.getCodes(selectedRestaurant, { page: codePage, size: 10 });
-      setCodes(response.data?.content || []);
-      setCodeTotalPages(response.data?.totalPages || 0);
+      setCodes(response.data?.data?.content || []);
+      setCodeTotalPages(response.data?.data?.totalPages || 0);
     } catch (error) {
       console.error('Error loading codes:', error);
     } finally {
@@ -186,7 +187,7 @@ export default function ReferralProgram() {
   const loadStats = async () => {
     try {
       const response = await referralAPI.getStats(selectedRestaurant);
-      setStats(response.data);
+      setStats(response.data?.data);
     } catch (error) {
       console.error('Error loading stats:', error);
     }
