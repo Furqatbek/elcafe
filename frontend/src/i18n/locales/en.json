@@ -94,7 +94,10 @@
       "printers": "Printer Settings",
       "general": "General Settings",
       "security": "Security",
-      "billing": "Billing & Payments"
+      "billing": "Billing & Payments",
+      "promotions": "Promotions",
+      "coupons": "Coupons",
+      "happyHours": "Happy Hours"
     }
   },
   "dashboard": {
@@ -361,6 +364,11 @@
     "items": "items",
     "total": "Total",
     "update": "Update",
+    "or": "or",
+    "none": "None",
+    "select": "Select",
+    "more": "more",
+    "creating": "Creating...",
     "languages": {
       "en": "English",
       "ru": "Русский",
@@ -2808,6 +2816,55 @@
       "generateSuccess": "Successfully generated {{count}} coupons",
       "deleteError": "Failed to delete coupon",
       "copied": "Coupon code copied to clipboard"
+    }
+  },
+  "happyHour": {
+    "title": "Happy Hours",
+    "subtitle": "Manage time-based discounts and happy hour promotions",
+    "addHappyHour": "New Happy Hour",
+    "listTitle": "All Happy Hours",
+    "listDescription": "View and manage your time-based promotions",
+    "noHappyHours": "No happy hours found",
+    "getStarted": "Create your first happy hour to start offering time-based discounts",
+    "createHappyHour": "Create Happy Hour",
+    "createDescription": "Set up a new time-based promotion",
+    "editHappyHour": "Edit Happy Hour",
+    "editDescription": "Update happy hour settings",
+    "deleteHappyHour": "Delete Happy Hour",
+    "deleteConfirmation": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+    "allProducts": "All products",
+    "nowActive": "Now Active",
+    "table": {
+      "name": "Name",
+      "discount": "Discount",
+      "schedule": "Schedule",
+      "targets": "Targets",
+      "status": "Status"
+    },
+    "form": {
+      "name": "Happy Hour Name",
+      "namePlaceholder": "e.g., Weekday Happy Hour",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe the happy hour offer...",
+      "discountPercent": "Discount Percentage",
+      "priority": "Priority",
+      "priorityHint": "Higher priority happy hours take precedence when multiple are active",
+      "schedules": "Schedules",
+      "addSchedule": "Add Schedule",
+      "noSchedules": "Add at least one schedule to define when this happy hour is active",
+      "to": "to",
+      "productTargets": "Product Targets",
+      "productTargetsHint": "Leave empty to apply to all products",
+      "addTarget": "Add Target",
+      "allProducts": "Applies to all products",
+      "category": "Category",
+      "product": "Product"
+    },
+    "messages": {
+      "fillRequired": "Please fill in name, discount, and at least one schedule",
+      "createError": "Failed to create happy hour",
+      "updateError": "Failed to update happy hour",
+      "deleteError": "Failed to delete happy hour"
     }
   },
   "enums": {

@@ -91,7 +91,10 @@
       "printers": "Настройки принтеров",
       "general": "Общие настройки",
       "security": "Безопасность",
-      "billing": "Оплата и счета"
+      "billing": "Оплата и счета",
+      "promotions": "Акции",
+      "coupons": "Купоны",
+      "happyHours": "Счастливые часы"
     }
   },
   "dashboard": {
@@ -746,6 +749,11 @@
     "items": "шт.",
     "total": "Всего",
     "update": "Обновить",
+    "or": "или",
+    "none": "Нет",
+    "select": "Выбрать",
+    "more": "ещё",
+    "creating": "Создание...",
     "languages": {
       "en": "English",
       "ru": "Русский",
@@ -2426,6 +2434,55 @@
       "generateSuccess": "Успешно создано {{count}} купонов",
       "deleteError": "Не удалось удалить купон",
       "copied": "Код купона скопирован"
+    }
+  },
+  "happyHour": {
+    "title": "Счастливые часы",
+    "subtitle": "Управление скидками по времени и акциями happy hour",
+    "addHappyHour": "Новый Happy Hour",
+    "listTitle": "Все счастливые часы",
+    "listDescription": "Просмотр и управление временными акциями",
+    "noHappyHours": "Счастливые часы не найдены",
+    "getStarted": "Создайте первый happy hour для предложения скидок по времени",
+    "createHappyHour": "Создать Happy Hour",
+    "createDescription": "Настроить новую временную акцию",
+    "editHappyHour": "Редактировать Happy Hour",
+    "editDescription": "Обновить настройки happy hour",
+    "deleteHappyHour": "Удалить Happy Hour",
+    "deleteConfirmation": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие необратимо.",
+    "allProducts": "Все продукты",
+    "nowActive": "Сейчас активен",
+    "table": {
+      "name": "Название",
+      "discount": "Скидка",
+      "schedule": "Расписание",
+      "targets": "Продукты",
+      "status": "Статус"
+    },
+    "form": {
+      "name": "Название Happy Hour",
+      "namePlaceholder": "например, Будний Happy Hour",
+      "description": "Описание",
+      "descriptionPlaceholder": "Опишите предложение happy hour...",
+      "discountPercent": "Процент скидки",
+      "priority": "Приоритет",
+      "priorityHint": "Happy hour с высшим приоритетом имеет преимущество при активации нескольких",
+      "schedules": "Расписания",
+      "addSchedule": "Добавить расписание",
+      "noSchedules": "Добавьте хотя бы одно расписание для определения времени активности",
+      "to": "до",
+      "productTargets": "Целевые продукты",
+      "productTargetsHint": "Оставьте пустым для применения ко всем продуктам",
+      "addTarget": "Добавить продукт",
+      "allProducts": "Применяется ко всем продуктам",
+      "category": "Категория",
+      "product": "Продукт"
+    },
+    "messages": {
+      "fillRequired": "Заполните название, скидку и хотя бы одно расписание",
+      "createError": "Не удалось создать happy hour",
+      "updateError": "Не удалось обновить happy hour",
+      "deleteError": "Не удалось удалить happy hour"
     }
   },
   "enums": {

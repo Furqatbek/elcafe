@@ -55,6 +55,7 @@ import {
   Monitor,
   Calculator,
   Ticket,
+  Wine,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -176,6 +177,7 @@ export default function Layout() {
       subItems: [
         { label: t('nav.sub.promotions', 'Promotions'), icon: Tag, path: '/marketing/promotions' },
         { label: t('nav.sub.coupons', 'Coupons'), icon: Ticket, path: '/marketing/coupons' },
+        { label: t('nav.sub.happyHours', 'Happy Hours'), icon: Wine, path: '/marketing/happy-hours' },
       ],
     },
     {

@@ -33,6 +33,7 @@ public class DiscountCalculationService {
     private final CouponCodeRepository couponCodeRepository;
     private final PromotionRepository promotionRepository;
     private final PromotionUsageRepository promotionUsageRepository;
+    private final HappyHourService happyHourService;
 
     /**
      * Apply a discount to an order and return the updated discount amount
@@ -59,6 +60,11 @@ public class DiscountCalculationService {
                 discountAmount = applyManualDiscount(order, request);
                 order.setDiscountType(DiscountType.MANUAL.name());
                 order.setDiscountReason(request.getDiscountReason());
+                break;
+
+            case HAPPY_HOUR:
+                discountAmount = applyHappyHourDiscount(order, request.getHappyHourId());
+                order.setDiscountType(DiscountType.HAPPY_HOUR.name());
                 break;
         }
 
@@ -175,6 +181,29 @@ public class DiscountCalculationService {
     }
 
     /**
+     * Apply a happy hour discount
+     */
+    private BigDecimal applyHappyHourDiscount(Order order, Long happyHourId) {
+        // If specific happy hour ID provided, validate it's currently active
+        if (happyHourId != null) {
+            var happyHour = happyHourService.getHappyHour(happyHourId);
+            if (!happyHour.getCurrentlyActive()) {
+                throw new BadRequestException("This happy hour is not currently active");
+            }
+            order.setHappyHourId(happyHourId);
+        }
+
+        // Calculate discount based on order items
+        BigDecimal discount = happyHourService.calculateHappyHourDiscount(order);
+
+        if (discount.compareTo(BigDecimal.ZERO) == 0) {
+            throw new BadRequestException("No happy hour discount applicable for this order");
+        }
+
+        return discount;
+    }
+
+    /**
      * Record promotion usage for analytics
      */
     private void recordPromotionUsage(Promotion promotion, CouponCode couponCode, Customer customer,
@@ -202,6 +231,7 @@ public class DiscountCalculationService {
 
         order.setDiscount(BigDecimal.ZERO);
         order.setPromotionId(null);
+        order.setHappyHourId(null);
         order.setCouponCode(null);
         order.setDiscountType(null);
         order.setDiscountReason(null);

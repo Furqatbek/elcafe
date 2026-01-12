@@ -34,6 +34,7 @@ import PricingDashboard from './pages/PricingDashboard';
 import FinancialAlerts from './pages/FinancialAlerts';
 import Promotions from './pages/Promotions';
 import CouponCodes from './pages/CouponCodes';
+import HappyHours from './pages/HappyHours';
 import {
   InventoryIngredients,
   InventoryRecipes,
@@ -121,8 +122,10 @@ function App() {
           <Route path="finance/alerts" element={<AdminRoute><FinancialAlerts /></AdminRoute>} />
           <Route path="marketing/promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
           <Route path="marketing/coupons" element={<AdminRoute><CouponCodes /></AdminRoute>} />
+          <Route path="marketing/happy-hours" element={<AdminRoute><HappyHours /></AdminRoute>} />
           <Route path="promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
           <Route path="coupons" element={<AdminRoute><CouponCodes /></AdminRoute>} />
+          <Route path="happy-hours" element={<AdminRoute><HappyHours /></AdminRoute>} />
           <Route path="settings/printers" element={<PrinterSettings />} />
           <Route path="pos" element={<POSApp />} />
         </Route>

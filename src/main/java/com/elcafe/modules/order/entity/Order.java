@@ -97,6 +97,9 @@ public class Order {
     @Column(name = "promotion_id")
     private Long promotionId;
 
+    @Column(name = "happy_hour_id")
+    private Long happyHourId;
+
     @Column(name = "coupon_code", length = 50)
     private String couponCode;
 

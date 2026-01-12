@@ -426,4 +426,23 @@ export const promotionAPI = {
   getCustomerCoupons: (customerId) => api.get(`/customers/${customerId}/coupons`),
 };
 
+// Happy Hour API
+export const happyHourAPI = {
+  // Happy Hours CRUD
+  getHappyHours: (restaurantId, params = {}) =>
+    api.get(`/restaurants/${restaurantId}/happy-hours`, { params }),
+  getHappyHour: (id) => api.get(`/happy-hours/${id}`),
+  createHappyHour: (restaurantId, data) =>
+    api.post(`/restaurants/${restaurantId}/happy-hours`, data),
+  updateHappyHour: (id, data) => api.put(`/happy-hours/${id}`, data),
+  deleteHappyHour: (id) => api.delete(`/happy-hours/${id}`),
+  toggleHappyHour: (id) => api.patch(`/happy-hours/${id}/toggle`),
+
+  // Active status
+  getActiveHappyHour: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/happy-hours/active`),
+  isHappyHourActive: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/happy-hours/is-active`),
+};
+
 export default api;

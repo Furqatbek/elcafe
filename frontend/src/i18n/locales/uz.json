@@ -91,7 +91,10 @@
       "printers": "Printer sozlamalari",
       "general": "Umumiy sozlamalar",
       "security": "Xavfsizlik",
-      "billing": "To'lovlar va hisob-kitoblar"
+      "billing": "To'lovlar va hisob-kitoblar",
+      "promotions": "Aksiyalar",
+      "coupons": "Kuponlar",
+      "happyHours": "Happy Hour"
     }
   },
   "dashboard": {
@@ -745,6 +748,11 @@
     "items": "ta",
     "total": "Jami",
     "update": "Yangilash",
+    "or": "yoki",
+    "none": "Hech biri",
+    "select": "Tanlash",
+    "more": "yana",
+    "creating": "Yaratilmoqda...",
     "languages": {
       "en": "English",
       "ru": "Русский",
@@ -2471,6 +2479,55 @@
       "generateSuccess": "{{count}} ta kupon muvaffaqiyatli yaratildi",
       "deleteError": "Kuponni o'chirib bo'lmadi",
       "copied": "Kupon kodi nusxalandi"
+    }
+  },
+  "happyHour": {
+    "title": "Happy Hour",
+    "subtitle": "Vaqtga asoslangan chegirmalar va happy hour aksiyalarni boshqarish",
+    "addHappyHour": "Yangi Happy Hour",
+    "listTitle": "Barcha Happy Hourlar",
+    "listDescription": "Vaqtga asoslangan aksiyalarni ko'rish va boshqarish",
+    "noHappyHours": "Happy hour topilmadi",
+    "getStarted": "Vaqtga asoslangan chegirmalarni taklif qilish uchun birinchi happy hour yarating",
+    "createHappyHour": "Happy Hour yaratish",
+    "createDescription": "Yangi vaqtga asoslangan aksiya sozlash",
+    "editHappyHour": "Happy Hour tahrirlash",
+    "editDescription": "Happy hour sozlamalarini yangilash",
+    "deleteHappyHour": "Happy Hour o'chirish",
+    "deleteConfirmation": "\"{{name}}\" ni o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.",
+    "allProducts": "Barcha mahsulotlar",
+    "nowActive": "Hozir faol",
+    "table": {
+      "name": "Nomi",
+      "discount": "Chegirma",
+      "schedule": "Jadval",
+      "targets": "Mahsulotlar",
+      "status": "Holat"
+    },
+    "form": {
+      "name": "Happy Hour nomi",
+      "namePlaceholder": "masalan, Hafta kunlari Happy Hour",
+      "description": "Tavsif",
+      "descriptionPlaceholder": "Happy hour taklifini tavsiflang...",
+      "discountPercent": "Chegirma foizi",
+      "priority": "Ustunlik",
+      "priorityHint": "Yuqori ustunlikdagi happy hour bir nechta faol bo'lganda ustuvor bo'ladi",
+      "schedules": "Jadvallar",
+      "addSchedule": "Jadval qo'shish",
+      "noSchedules": "Happy hour faol bo'lish vaqtini belgilash uchun kamida bitta jadval qo'shing",
+      "to": "gacha",
+      "productTargets": "Maqsadli mahsulotlar",
+      "productTargetsHint": "Barcha mahsulotlarga qo'llash uchun bo'sh qoldiring",
+      "addTarget": "Mahsulot qo'shish",
+      "allProducts": "Barcha mahsulotlarga qo'llaniladi",
+      "category": "Kategoriya",
+      "product": "Mahsulot"
+    },
+    "messages": {
+      "fillRequired": "Nom, chegirma va kamida bitta jadvalni to'ldiring",
+      "createError": "Happy hour yaratib bo'lmadi",
+      "updateError": "Happy hour yangilab bo'lmadi",
+      "deleteError": "Happy hour o'chirib bo'lmadi"
     }
   },
   "enums": {

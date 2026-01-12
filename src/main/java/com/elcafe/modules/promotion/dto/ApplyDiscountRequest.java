@@ -19,6 +19,8 @@ public class ApplyDiscountRequest {
 
     private Long promotionId;
 
+    private Long happyHourId;
+
     @NotNull(message = "Discount type is required")
     private DiscountType discountType;
 
