@@ -95,7 +95,8 @@
       "promotions": "Aksiyalar",
       "coupons": "Kuponlar",
       "happyHours": "Happy Hour",
-      "bundles": "Kombo"
+      "bundles": "Kombo",
+      "referrals": "Referallar"
     }
   },
   "dashboard": {
@@ -2616,5 +2617,89 @@
       "PRODUCT": "Muayyan mahsulotlar",
       "ORDER_TYPE": "Buyurtma turi"
     }
+  },
+  "referral": {
+    "title": "Referal dasturi",
+    "subtitle": "Mijoz referallari va mukofotlarini boshqarish",
+    "tabs": {
+      "settings": "Sozlamalar",
+      "referrals": "Referallar",
+      "codes": "Kodlar"
+    },
+    "stats": {
+      "totalReferrals": "Jami referallar",
+      "completed": "Bajarilgan",
+      "activeCodes": "Faol kodlar",
+      "thisMonth": "Bu oy"
+    },
+    "settingsCard": {
+      "title": "Dastur sozlamalari",
+      "description": "Referal dasturi mukofotlari va chegaralarini sozlash"
+    },
+    "referralsCard": {
+      "title": "Referal tarixi",
+      "description": "Barcha referallar va ularning holatini kuzatish"
+    },
+    "codesCard": {
+      "title": "Referal kodlari",
+      "description": "Barcha mijoz referal kodlarini ko'rish"
+    },
+    "programActive": "Dastur faol",
+    "programInactive": "Dastur nofaol",
+    "configureSettings": "Sozlash",
+    "referrerReward": "Taklif qiluvchi mukofoti",
+    "refereeReward": "Taklif qilinuvchi mukofoti",
+    "type": "Turi",
+    "amount": "Miqdori",
+    "minOrderAmount": "Min buyurtma summasi",
+    "maxReferrals": "Mijoz uchun max referallar",
+    "rewardExpiry": "Mukofot muddati",
+    "topReferrer": "Eng yaxshi referal",
+    "referrals": "referallar",
+    "noSettingsYet": "Referal dasturi hali sozlanmagan",
+    "setupProgram": "Dasturni sozlash",
+    "noReferrals": "Hozircha referallar yo'q",
+    "noCodes": "Referal kodlari hali yaratilmagan",
+    "pending": "Kutilmoqda",
+    "active": "Faol",
+    "inactive": "Nofaol",
+    "table": {
+      "referrer": "Taklif qiluvchi",
+      "referee": "Taklif qilinuvchi",
+      "code": "Kod",
+      "status": "Holat",
+      "referrerReward": "Taklif qiluvchi mukofoti",
+      "refereeReward": "Taklif qilinuvchi mukofoti",
+      "createdAt": "Yaratilgan",
+      "customer": "Mijoz",
+      "usageCount": "Foydalanish",
+      "actions": "Harakatlar"
+    },
+    "status": {
+      "pending": "Kutilmoqda",
+      "completed": "Bajarilgan",
+      "expired": "Muddati tugagan",
+      "cancelled": "Bekor qilingan"
+    },
+    "rewardTypes": {
+      "bonuspoints": "Bonus ballar",
+      "discountamount": "Chegirma summasi",
+      "discountpercent": "Foiz chegirma",
+      "freeitem": "Bepul mahsulot"
+    },
+    "settingsModal": {
+      "title": "Referal dasturi sozlamalari",
+      "description": "Taklif qiluvchi va qilinuvchi uchun mukofotlarni sozlash"
+    },
+    "referrerRewardType": "Taklif qiluvchi mukofot turi",
+    "referrerRewardAmount": "Taklif qiluvchi mukofot miqdori",
+    "refereeRewardType": "Taklif qilinuvchi mukofot turi",
+    "refereeRewardAmount": "Taklif qilinuvchi mukofot miqdori",
+    "maxReferralsPerCustomer": "Mijoz uchun max referallar",
+    "rewardExpiresDays": "Mukofot muddati (kun)",
+    "termsAndConditions": "Shartlar va qoidalar",
+    "termsPlaceholder": "Referal dasturi shartlarini kiriting...",
+    "optional": "Ixtiyoriy",
+    "unlimited": "Cheklanmagan"
   }
 }

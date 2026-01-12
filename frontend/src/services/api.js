@@ -466,4 +466,35 @@ export const bundleAPI = {
     api.post(`/bundles/${id}/validate`, selectedOptionIds),
 };
 
+// Referral Program API
+export const referralAPI = {
+  // Settings
+  getSettings: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/referrals/settings`),
+  saveSettings: (restaurantId, data) =>
+    api.post(`/restaurants/${restaurantId}/referrals/settings`, data),
+  toggleProgram: (restaurantId) =>
+    api.post(`/restaurants/${restaurantId}/referrals/settings/toggle`),
+
+  // Referral codes
+  generateCode: (restaurantId, customerId) =>
+    api.post(`/restaurants/${restaurantId}/referrals/codes/generate`, null, { params: { customerId } }),
+  getCustomerCode: (restaurantId, customerId) =>
+    api.get(`/restaurants/${restaurantId}/referrals/codes/customer/${customerId}`),
+  getCodes: (restaurantId, params = {}) =>
+    api.get(`/restaurants/${restaurantId}/referrals/codes`, { params }),
+  validateCode: (restaurantId, code) =>
+    api.get(`/restaurants/${restaurantId}/referrals/codes/validate`, { params: { code } }),
+
+  // Referrals
+  applyReferral: (restaurantId, data) =>
+    api.post(`/restaurants/${restaurantId}/referrals/apply`, data),
+  getReferrals: (restaurantId, params = {}) =>
+    api.get(`/restaurants/${restaurantId}/referrals`, { params }),
+  getCustomerReferrals: (restaurantId, customerId) =>
+    api.get(`/restaurants/${restaurantId}/referrals/customer/${customerId}`),
+  getStats: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/referrals/stats`),
+};
+
 export default api;

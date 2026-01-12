@@ -95,7 +95,8 @@
       "promotions": "Акции",
       "coupons": "Купоны",
       "happyHours": "Счастливые часы",
-      "bundles": "Комбо"
+      "bundles": "Комбо",
+      "referrals": "Рефералы"
     }
   },
   "dashboard": {
@@ -2571,5 +2572,89 @@
       "PRODUCT": "Определенные товары",
       "ORDER_TYPE": "Тип заказа"
     }
+  },
+  "referral": {
+    "title": "Реферальная программа",
+    "subtitle": "Управление рефералами и вознаграждениями",
+    "tabs": {
+      "settings": "Настройки",
+      "referrals": "Рефералы",
+      "codes": "Коды"
+    },
+    "stats": {
+      "totalReferrals": "Всего рефералов",
+      "completed": "Завершено",
+      "activeCodes": "Активные коды",
+      "thisMonth": "В этом месяце"
+    },
+    "settingsCard": {
+      "title": "Настройки программы",
+      "description": "Настройте вознаграждения и лимиты программы"
+    },
+    "referralsCard": {
+      "title": "История рефералов",
+      "description": "Отслеживайте все рефералы и их статус"
+    },
+    "codesCard": {
+      "title": "Реферальные коды",
+      "description": "Просмотр всех реферальных кодов клиентов"
+    },
+    "programActive": "Программа активна",
+    "programInactive": "Программа неактивна",
+    "configureSettings": "Настроить",
+    "referrerReward": "Вознаграждение реферера",
+    "refereeReward": "Вознаграждение приглашенного",
+    "type": "Тип",
+    "amount": "Сумма",
+    "minOrderAmount": "Мин. сумма заказа",
+    "maxReferrals": "Макс. рефералов на клиента",
+    "rewardExpiry": "Срок действия",
+    "topReferrer": "Лучший реферер",
+    "referrals": "рефералов",
+    "noSettingsYet": "Реферальная программа еще не настроена",
+    "setupProgram": "Настроить программу",
+    "noReferrals": "Рефералов пока нет",
+    "noCodes": "Реферальные коды еще не созданы",
+    "pending": "Ожидает",
+    "active": "Активен",
+    "inactive": "Неактивен",
+    "table": {
+      "referrer": "Реферер",
+      "referee": "Приглашенный",
+      "code": "Код",
+      "status": "Статус",
+      "referrerReward": "Награда реферера",
+      "refereeReward": "Награда приглашенного",
+      "createdAt": "Создано",
+      "customer": "Клиент",
+      "usageCount": "Использований",
+      "actions": "Действия"
+    },
+    "status": {
+      "pending": "Ожидает",
+      "completed": "Завершен",
+      "expired": "Истек",
+      "cancelled": "Отменен"
+    },
+    "rewardTypes": {
+      "bonuspoints": "Бонусные баллы",
+      "discountamount": "Фиксированная скидка",
+      "discountpercent": "Процентная скидка",
+      "freeitem": "Бесплатный товар"
+    },
+    "settingsModal": {
+      "title": "Настройки реферальной программы",
+      "description": "Настройте вознаграждения для рефереров и приглашенных"
+    },
+    "referrerRewardType": "Тип вознаграждения реферера",
+    "referrerRewardAmount": "Сумма вознаграждения реферера",
+    "refereeRewardType": "Тип вознаграждения приглашенного",
+    "refereeRewardAmount": "Сумма вознаграждения приглашенного",
+    "maxReferralsPerCustomer": "Макс. рефералов на клиента",
+    "rewardExpiresDays": "Срок действия награды (дней)",
+    "termsAndConditions": "Условия и положения",
+    "termsPlaceholder": "Введите условия реферальной программы...",
+    "optional": "Необязательно",
+    "unlimited": "Без ограничений"
   }
 }

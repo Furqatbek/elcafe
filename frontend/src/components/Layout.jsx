@@ -56,6 +56,7 @@ import {
   Calculator,
   Ticket,
   Wine,
+  Share2,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -179,6 +180,7 @@ export default function Layout() {
         { label: t('nav.sub.coupons', 'Coupons'), icon: Ticket, path: '/marketing/coupons' },
         { label: t('nav.sub.happyHours', 'Happy Hours'), icon: Wine, path: '/marketing/happy-hours' },
         { label: t('nav.sub.bundles', 'Bundles'), icon: Package, path: '/marketing/bundles' },
+        { label: t('nav.sub.referrals', 'Referrals'), icon: Share2, path: '/marketing/referrals' },
       ],
     },
     {

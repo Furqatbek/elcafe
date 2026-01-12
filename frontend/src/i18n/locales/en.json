@@ -98,7 +98,8 @@
       "promotions": "Promotions",
       "coupons": "Coupons",
       "happyHours": "Happy Hours",
-      "bundles": "Bundles"
+      "bundles": "Bundles",
+      "referrals": "Referrals"
     }
   },
   "dashboard": {
@@ -2953,5 +2954,89 @@
       "PRODUCT": "Specific Products",
       "ORDER_TYPE": "Order Type"
     }
+  },
+  "referral": {
+    "title": "Referral Program",
+    "subtitle": "Manage customer referrals and rewards",
+    "tabs": {
+      "settings": "Settings",
+      "referrals": "Referrals",
+      "codes": "Codes"
+    },
+    "stats": {
+      "totalReferrals": "Total Referrals",
+      "completed": "Completed",
+      "activeCodes": "Active Codes",
+      "thisMonth": "This Month"
+    },
+    "settingsCard": {
+      "title": "Program Settings",
+      "description": "Configure your referral program rewards and limits"
+    },
+    "referralsCard": {
+      "title": "Referral History",
+      "description": "Track all referrals and their status"
+    },
+    "codesCard": {
+      "title": "Referral Codes",
+      "description": "View all customer referral codes"
+    },
+    "programActive": "Program Active",
+    "programInactive": "Program Inactive",
+    "configureSettings": "Configure Settings",
+    "referrerReward": "Referrer Reward",
+    "refereeReward": "Referee Reward",
+    "type": "Type",
+    "amount": "Amount",
+    "minOrderAmount": "Min Order Amount",
+    "maxReferrals": "Max Referrals per Customer",
+    "rewardExpiry": "Reward Expiry",
+    "topReferrer": "Top Referrer",
+    "referrals": "referrals",
+    "noSettingsYet": "Referral program has not been set up yet",
+    "setupProgram": "Set Up Program",
+    "noReferrals": "No referrals yet",
+    "noCodes": "No referral codes generated yet",
+    "pending": "Pending",
+    "active": "Active",
+    "inactive": "Inactive",
+    "table": {
+      "referrer": "Referrer",
+      "referee": "Referee",
+      "code": "Code",
+      "status": "Status",
+      "referrerReward": "Referrer Reward",
+      "refereeReward": "Referee Reward",
+      "createdAt": "Created",
+      "customer": "Customer",
+      "usageCount": "Uses",
+      "actions": "Actions"
+    },
+    "status": {
+      "pending": "Pending",
+      "completed": "Completed",
+      "expired": "Expired",
+      "cancelled": "Cancelled"
+    },
+    "rewardTypes": {
+      "bonuspoints": "Bonus Points",
+      "discountamount": "Discount Amount",
+      "discountpercent": "Discount Percent",
+      "freeitem": "Free Item"
+    },
+    "settingsModal": {
+      "title": "Referral Program Settings",
+      "description": "Configure rewards for referrers and referees"
+    },
+    "referrerRewardType": "Referrer Reward Type",
+    "referrerRewardAmount": "Referrer Reward Amount",
+    "refereeRewardType": "Referee Reward Type",
+    "refereeRewardAmount": "Referee Reward Amount",
+    "maxReferralsPerCustomer": "Max Referrals per Customer",
+    "rewardExpiresDays": "Reward Expiry (Days)",
+    "termsAndConditions": "Terms & Conditions",
+    "termsPlaceholder": "Enter the terms and conditions for your referral program...",
+    "optional": "Optional",
+    "unlimited": "Unlimited"
   }
 }
