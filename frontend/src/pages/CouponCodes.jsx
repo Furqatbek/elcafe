@@ -359,9 +359,9 @@ export default function CouponCodes() {
         )}
 
         <Select
-          value={selectedPromotion}
+          value={selectedPromotion || 'all'}
           onValueChange={(value) => {
-            setSelectedPromotion(value);
+            setSelectedPromotion(value === 'all' ? '' : value);
             setCurrentPage(0);
           }}
         >
@@ -369,7 +369,7 @@ export default function CouponCodes() {
             <SelectValue placeholder={t('coupons.allPromotions')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">{t('coupons.allPromotions')}</SelectItem>
+            <SelectItem value="all">{t('coupons.allPromotions')}</SelectItem>
             {promotions.map(p => (
               <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
             ))}

@@ -161,9 +161,9 @@ export default function Promotions() {
 
   const loadProducts = async () => {
     try {
-      const response = await menuAPI.getProducts(parseInt(selectedRestaurant), { page: 0, size: 100 });
+      const response = await menuAPI.getProductsByRestaurant(parseInt(selectedRestaurant));
       const data = response.data.data || response.data;
-      setProducts(data.content || data || []);
+      setProducts(Array.isArray(data) ? data : (data.content || []));
     } catch (error) {
       console.error('Failed to load products:', error);
     }
