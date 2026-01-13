@@ -5,6 +5,7 @@ import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.financial.service.RevenueService;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.referral.service.ReferralService;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -39,6 +40,10 @@ public class OrderService {
     @Autowired
     @Lazy
     private PrintService printService;
+
+    @Autowired
+    @Lazy
+    private ReferralService referralService;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -130,6 +135,16 @@ public class OrderService {
                 } catch (Exception e) {
                     log.error("Failed to record revenue for order {}: {}", order.getOrderNumber(), e.getMessage());
                     // Don't fail the order status update if revenue recording fails
+                }
+            }
+
+            // Complete pending referrals for this customer's first order
+            if (referralService != null) {
+                try {
+                    referralService.completeReferral(order);
+                } catch (Exception e) {
+                    log.error("Failed to process referral for order {}: {}", order.getOrderNumber(), e.getMessage());
+                    // Don't fail the order status update if referral processing fails
                 }
             }
         }

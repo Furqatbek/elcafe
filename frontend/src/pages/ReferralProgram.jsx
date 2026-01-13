@@ -88,10 +88,10 @@ export default function ReferralProgram() {
   const [copiedCode, setCopiedCode] = useState(null);
 
   const rewardTypes = [
-    { value: 'BONUS_POINTS', label: t('referral.rewardTypes.bonusPoints') },
-    { value: 'DISCOUNT_AMOUNT', label: t('referral.rewardTypes.discountAmount') },
-    { value: 'DISCOUNT_PERCENT', label: t('referral.rewardTypes.discountPercent') },
-    { value: 'FREE_ITEM', label: t('referral.rewardTypes.freeItem') },
+    { value: 'BONUS_POINTS', label: t('referral.rewardTypes.bonuspoints') },
+    { value: 'DISCOUNT_AMOUNT', label: t('referral.rewardTypes.discountamount') },
+    { value: 'DISCOUNT_PERCENT', label: t('referral.rewardTypes.discountpercent') },
+    { value: 'FREE_ITEM', label: t('referral.rewardTypes.freeitem') },
   ];
 
   useEffect(() => {
@@ -126,7 +126,12 @@ export default function ReferralProgram() {
   const loadRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll({ page: 0, size: 100 });
-      setRestaurants(response.data?.data?.content || []);
+      const restaurantList = response.data?.data?.content || [];
+      setRestaurants(restaurantList);
+      // Select first restaurant by default if none selected
+      if (restaurantList.length > 0 && !selectedRestaurant && !user?.restaurantId) {
+        setSelectedRestaurant(restaurantList[0].id.toString());
+      }
     } catch (error) {
       console.error('Error loading restaurants:', error);
     }
