@@ -479,7 +479,11 @@ export default function OrdersHistory() {
               <Input
                 type="date"
                 value={dateFrom}
-                onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setUseShiftFilter(false); // Disable shift filter when using custom date range
+                  setCurrentPage(1);
+                }}
               />
             </div>
 
@@ -489,7 +493,11 @@ export default function OrdersHistory() {
               <Input
                 type="date"
                 value={dateTo}
-                onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setUseShiftFilter(false); // Disable shift filter when using custom date range
+                  setCurrentPage(1);
+                }}
               />
             </div>
           </div>
