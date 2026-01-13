@@ -2387,6 +2387,346 @@
 				}
 			],
 			"description": "Marketing, promotions, and coupon management"
+		},
+		{
+			"name": "Self-Service QR Ordering",
+			"item": [
+				{
+					"name": "QR Code Management",
+					"item": [
+						{
+							"name": "Create QR Code",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"restaurantId\": {{restaurant_id}},\n  \"tableId\": 1,\n  \"type\": \"TABLE\",\n  \"description\": \"Table 1 QR Code\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/qr-codes",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "qr-codes"]
+								},
+								"description": "Create a new QR code for a table"
+							},
+							"response": []
+						},
+						{
+							"name": "Get QR Codes by Restaurant",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/qr-codes/restaurant/{{restaurant_id}}",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "qr-codes", "restaurant", "{{restaurant_id}}"]
+								},
+								"description": "Get all QR codes for a restaurant"
+							},
+							"response": []
+						},
+						{
+							"name": "Get QR Code Image",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/qr-codes/1/image?size=300",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "qr-codes", "1", "image"],
+									"query": [
+										{
+											"key": "size",
+											"value": "300"
+										}
+									]
+								},
+								"description": "Get QR code image as PNG"
+							},
+							"response": []
+						}
+					],
+					"description": "QR code generation and management"
+				},
+				{
+					"name": "Self-Service Session",
+					"item": [
+						{
+							"name": "Start Session (Scan QR)",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"qrCode\": \"ABC12345\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/session/start",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "session", "start"]
+								},
+								"description": "Start a self-service session by scanning QR code"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Session Info",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Session-Token",
+										"value": "{{session_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/session",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "session"]
+								},
+								"description": "Get current session information"
+							},
+							"response": []
+						}
+					],
+					"description": "Self-service session management"
+				},
+				{
+					"name": "Menu & Cart",
+					"item": [
+						{
+							"name": "Get Menu Categories",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/menu/{{restaurant_id}}/categories",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "menu", "{{restaurant_id}}", "categories"]
+								},
+								"description": "Get menu categories for self-service"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Products",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/menu/{{restaurant_id}}/products?categoryId=1",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "menu", "{{restaurant_id}}", "products"],
+									"query": [
+										{
+											"key": "categoryId",
+											"value": "1"
+										}
+									]
+								},
+								"description": "Get products by category"
+							},
+							"response": []
+						},
+						{
+							"name": "Add to Cart",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Session-Token",
+										"value": "{{session_token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"productId\": 1,\n  \"quantity\": 1,\n  \"variantId\": null,\n  \"modifiers\": []\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/cart/add",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "cart", "add"]
+								},
+								"description": "Add item to cart"
+							},
+							"response": []
+						},
+						{
+							"name": "Get Cart",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "GET",
+								"header": [
+									{
+										"key": "X-Session-Token",
+										"value": "{{session_token}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/cart",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "cart"]
+								},
+								"description": "Get cart contents"
+							},
+							"response": []
+						},
+						{
+							"name": "Submit Order",
+							"request": {
+								"auth": {
+									"type": "noauth"
+								},
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-Session-Token",
+										"value": "{{session_token}}"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"customerName\": \"Guest\",\n  \"customerPhone\": \"+998901234567\",\n  \"orderType\": \"DINE_IN\",\n  \"specialInstructions\": \"\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/v1/self-service/order/submit",
+									"host": ["{{base_url}}"],
+									"path": ["api", "v1", "self-service", "order", "submit"]
+								},
+								"description": "Submit order from cart"
+							},
+							"response": []
+						}
+					],
+					"description": "Self-service menu browsing and cart management"
+				}
+			],
+			"description": "QR code-based self-service ordering system"
+		},
+		{
+			"name": "Push Notifications",
+			"item": [
+				{
+					"name": "Get VAPID Public Key",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/push/vapid-public-key",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "push", "vapid-public-key"]
+						},
+						"description": "Get VAPID public key for web push subscription"
+					},
+					"response": []
+				},
+				{
+					"name": "Subscribe to Push",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"endpoint\": \"https://fcm.googleapis.com/fcm/send/...\",\n  \"p256dh\": \"public_key_here\",\n  \"auth\": \"auth_secret_here\",\n  \"userAgent\": \"Mozilla/5.0...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/push/subscribe",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "push", "subscribe"]
+						},
+						"description": "Subscribe to push notifications"
+					},
+					"response": []
+				},
+				{
+					"name": "Unsubscribe from Push",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"endpoint\": \"https://fcm.googleapis.com/fcm/send/...\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/push/unsubscribe",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "push", "unsubscribe"]
+						},
+						"description": "Unsubscribe from push notifications"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Test Notification",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Test Notification\",\n  \"body\": \"This is a test push notification\",\n  \"icon\": \"/icon.png\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/push/test",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "push", "test"]
+						},
+						"description": "Send a test push notification"
+					},
+					"response": []
+				}
+			],
+			"description": "Web push notification subscription and management"
 		}
 	],
 	"variable": [
