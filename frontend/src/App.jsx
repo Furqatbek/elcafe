@@ -38,6 +38,7 @@ import HappyHours from './pages/HappyHours';
 import Bundles from './pages/Bundles';
 import ReferralProgram from './pages/ReferralProgram';
 import SmsMarketing from './pages/SmsMarketing';
+import TelegramMarketing from './pages/TelegramMarketing';
 import {
   InventoryIngredients,
   InventoryRecipes,
@@ -129,6 +130,7 @@ function App() {
           <Route path="marketing/bundles" element={<AdminRoute><Bundles /></AdminRoute>} />
           <Route path="marketing/referrals" element={<AdminRoute><ReferralProgram /></AdminRoute>} />
           <Route path="marketing/sms" element={<AdminRoute><SmsMarketing /></AdminRoute>} />
+          <Route path="marketing/telegram" element={<AdminRoute><TelegramMarketing /></AdminRoute>} />
           <Route path="promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
           <Route path="coupons" element={<AdminRoute><CouponCodes /></AdminRoute>} />
           <Route path="happy-hours" element={<AdminRoute><HappyHours /></AdminRoute>} />
