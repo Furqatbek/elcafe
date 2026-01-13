@@ -72,15 +72,15 @@ public class SmsController {
     }
 
     /**
-     * Get user templates
-     * GET /api/v1/sms/templates
+     * Get Eskiz broker templates
+     * GET /api/v1/sms/broker/templates
      */
-    @GetMapping("/templates")
+    @GetMapping("/broker/templates")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    public ResponseEntity<ApiResponse<TemplateResponse>> getTemplates() {
-        log.info("Getting SMS templates");
+    public ResponseEntity<ApiResponse<TemplateResponse>> getBrokerTemplates() {
+        log.info("Getting Eskiz broker SMS templates");
         TemplateResponse response = smsService.getTemplates();
-        return ResponseEntity.ok(ApiResponse.success("Templates retrieved successfully", response));
+        return ResponseEntity.ok(ApiResponse.success("Broker templates retrieved successfully", response));
     }
 
     /**
