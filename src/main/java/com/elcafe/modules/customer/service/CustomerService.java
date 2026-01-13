@@ -1,11 +1,15 @@
 package com.elcafe.modules.customer.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.customer.dto.CreateCustomerRequest;
 import com.elcafe.modules.customer.dto.UpdateConsumerProfileRequest;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.referral.service.ReferralService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -18,10 +22,65 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
 
+    @Autowired
+    @Lazy
+    private ReferralService referralService;
+
     @Transactional
     public Customer createCustomer(Customer customer) {
         log.info("Creating customer: {}", customer.getEmail());
         return customerRepository.save(customer);
+    }
+
+    /**
+     * Create customer with optional referral code processing
+     */
+    @Transactional
+    public Customer createCustomerWithReferral(CreateCustomerRequest request) {
+        log.info("Creating customer with referral support: {}", request.getEmail());
+
+        // Build customer entity from request
+        Customer customer = Customer.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmail())
+                .phone(request.getPhone())
+                .defaultAddress(request.getDefaultAddress())
+                .city(request.getCity())
+                .state(request.getState())
+                .zipCode(request.getZipCode())
+                .notes(request.getNotes())
+                .tags(request.getTags())
+                .birthDate(request.getBirthDate())
+                .language(request.getLanguage())
+                .registrationSource(request.getRegistrationSource())
+                .active(request.getActive() != null ? request.getActive() : true)
+                .build();
+
+        // Save customer first
+        Customer savedCustomer = customerRepository.save(customer);
+        log.info("Customer created with ID: {}", savedCustomer.getId());
+
+        // Process referral code if provided
+        String referralCode = request.getReferralCode();
+
+        if (referralCode != null && !referralCode.trim().isEmpty()) {
+            try {
+                log.info("Processing referral code: {} for customer: {}",
+                        referralCode, savedCustomer.getId());
+
+                // Use the method that auto-detects restaurant from the code
+                referralService.processReferralByCode(referralCode.trim(), savedCustomer.getId());
+                log.info("Referral successfully applied for customer: {}", savedCustomer.getId());
+            } catch (Exception e) {
+                // Log the error but don't fail customer creation
+                log.warn("Failed to apply referral code '{}' for customer {}: {}",
+                        referralCode, savedCustomer.getId(), e.getMessage());
+                // We don't throw the exception - customer is still created
+            }
+        }
+
+        return savedCustomer;
     }
 
     @Transactional

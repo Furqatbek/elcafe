@@ -198,6 +198,22 @@ public class ReferralService {
     // ==================== Referral Processing ====================
 
     /**
+     * Process a referral using only the code (auto-detect restaurant from code)
+     * Used when creating customers from admin panel without restaurant context
+     */
+    @Transactional
+    public ReferralResponse processReferralByCode(String code, Long newCustomerId) {
+        log.info("Processing referral with code {} for customer {} (auto-detect restaurant)", code, newCustomerId);
+
+        // Find referral code first to get restaurant
+        ReferralCode referralCode = referralCodeRepository.findByCode(code)
+                .orElseThrow(() -> new BadRequestException("Invalid referral code"));
+
+        Long restaurantId = referralCode.getRestaurant().getId();
+        return processReferral(restaurantId, code, newCustomerId);
+    }
+
+    /**
      * Process a referral when a new customer uses a referral code
      */
     @Transactional

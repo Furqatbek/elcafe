@@ -1,5 +1,6 @@
 package com.elcafe.modules.customer.controller;
 
+import com.elcafe.modules.customer.dto.CreateCustomerRequest;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.service.CustomerService;
 import com.elcafe.modules.order.entity.Order;
@@ -8,6 +9,7 @@ import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,9 +30,10 @@ public class CustomerController {
     private final OrderService orderService;
 
     @PostMapping
-    @Operation(summary = "Create customer", description = "Create a new customer")
-    public ResponseEntity<ApiResponse<Customer>> createCustomer(@RequestBody Customer customer) {
-        Customer createdCustomer = customerService.createCustomer(customer);
+    @Operation(summary = "Create customer", description = "Create a new customer with optional referral code")
+    public ResponseEntity<ApiResponse<Customer>> createCustomer(
+            @Valid @RequestBody CreateCustomerRequest request) {
+        Customer createdCustomer = customerService.createCustomerWithReferral(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Customer created successfully", createdCustomer));

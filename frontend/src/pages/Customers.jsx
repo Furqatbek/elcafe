@@ -22,6 +22,7 @@ import {
   MapPin,
   Tag,
   FileText,
+  Gift,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -46,6 +47,7 @@ export default function Customers() {
     tags: '',
     active: true,
     registrationSource: 'ADMIN_PANEL',
+    referralCode: '',
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -174,6 +176,7 @@ export default function Customers() {
         tags: '',
         active: true,
         registrationSource: 'ADMIN_PANEL',
+        referralCode: '',
       });
       setFormErrors({});
       loadCustomers();
@@ -351,6 +354,22 @@ export default function Customers() {
                     <option value="WALK_IN">{t('customers.sources.walkin')}</option>
                     <option value="OTHER">{t('customers.sources.other')}</option>
                   </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="referralCode">{t('customers.referralCode')}</Label>
+                  <div className="relative">
+                    <Gift className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="referralCode"
+                      value={formData.referralCode}
+                      onChange={(e) => setFormData({ ...formData, referralCode: e.target.value.toUpperCase() })}
+                      placeholder={t('customers.referralCodePlaceholder')}
+                      className="pl-10 uppercase"
+                      maxLength={10}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t('customers.referralCodeHint')}</p>
                 </div>
 
                 <div className="space-y-2">
