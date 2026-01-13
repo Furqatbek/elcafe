@@ -6,6 +6,8 @@ import com.elcafe.modules.customer.dto.UpdateConsumerProfileRequest;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.referral.service.ReferralService;
+import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final RestaurantRepository restaurantRepository;
 
     @Autowired
     @Lazy
@@ -61,7 +64,7 @@ public class CustomerService {
         Customer savedCustomer = customerRepository.save(customer);
         log.info("Customer created with ID: {}", savedCustomer.getId());
 
-        // Process referral code if provided
+        // Process referral code if provided (customer was referred by someone)
         String referralCode = request.getReferralCode();
 
         if (referralCode != null && !referralCode.trim().isEmpty()) {
@@ -78,6 +81,21 @@ public class CustomerService {
                         referralCode, savedCustomer.getId(), e.getMessage());
                 // We don't throw the exception - customer is still created
             }
+        }
+
+        // Auto-generate a referral code for the new customer so they can invite others
+        try {
+            Restaurant restaurant = restaurantRepository.findAll().stream().findFirst().orElse(null);
+            if (restaurant != null) {
+                referralService.generateReferralCode(restaurant.getId(), savedCustomer.getId());
+                log.info("Referral code auto-generated for new customer: {}", savedCustomer.getId());
+            } else {
+                log.warn("No restaurant found - skipping referral code generation for customer: {}", savedCustomer.getId());
+            }
+        } catch (Exception e) {
+            // Log the error but don't fail customer creation
+            log.warn("Failed to auto-generate referral code for customer {}: {}",
+                    savedCustomer.getId(), e.getMessage());
         }
 
         return savedCustomer;
