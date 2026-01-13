@@ -594,4 +594,66 @@ export const telegramAPI = {
   deleteCampaign: (id) => api.delete(`/telegram/campaigns/${id}`),
 };
 
+// QR Code / Self-Service API
+export const qrCodeAPI = {
+  // QR Code CRUD (Admin)
+  getByRestaurant: (restaurantId, params = {}) =>
+    api.get(`/qr-codes/restaurant/${restaurantId}`, { params }),
+  getById: (id) => api.get(`/qr-codes/${id}`),
+  create: (data) => api.post('/qr-codes', data),
+  generateForAllTables: (restaurantId) =>
+    api.post(`/qr-codes/restaurant/${restaurantId}/generate-all`),
+  toggle: (id) => api.patch(`/qr-codes/${id}/toggle`),
+  delete: (id) => api.delete(`/qr-codes/${id}`),
+  getImage: (id, width = 300, height = 300) =>
+    api.get(`/qr-codes/${id}/image`, { params: { width, height } }),
+  getStats: (restaurantId) => api.get(`/qr-codes/restaurant/${restaurantId}/stats`),
+
+  // Self-Service Settings (Admin)
+  getSettings: (restaurantId) => api.get(`/qr-codes/restaurant/${restaurantId}/settings`),
+  saveSettings: (restaurantId, data) =>
+    api.post(`/qr-codes/restaurant/${restaurantId}/settings`, data),
+};
+
+// Self-Service Public API (no auth required)
+export const selfServiceAPI = {
+  // Session
+  startSession: (code) => api.post('/self-service/session/start', null, { params: { code } }),
+  getSession: (token) => api.get('/self-service/session', {
+    headers: { 'X-Session-Token': token }
+  }),
+
+  // Restaurant & Menu
+  getRestaurantInfo: (restaurantId) => api.get(`/self-service/restaurant/${restaurantId}`),
+  getCategories: (restaurantId) => api.get(`/self-service/menu/${restaurantId}/categories`),
+  getProducts: (restaurantId, categoryId) =>
+    api.get(`/self-service/menu/${restaurantId}/products`, { params: { categoryId } }),
+  getProductDetails: (productId) => api.get(`/self-service/menu/product/${productId}`),
+
+  // Cart
+  addToCart: (token, data) => api.post('/self-service/cart/add', data, {
+    headers: { 'X-Session-Token': token }
+  }),
+  updateCartItem: (token, itemId, quantity) =>
+    api.put(`/self-service/cart/item/${itemId}`, null, {
+      headers: { 'X-Session-Token': token },
+      params: { quantity }
+    }),
+  removeFromCart: (token, itemId) => api.delete(`/self-service/cart/item/${itemId}`, {
+    headers: { 'X-Session-Token': token }
+  }),
+  getCart: (token) => api.get('/self-service/cart', {
+    headers: { 'X-Session-Token': token }
+  }),
+  clearCart: (token) => api.delete('/self-service/cart', {
+    headers: { 'X-Session-Token': token }
+  }),
+
+  // Orders
+  submitOrder: (token, data) => api.post('/self-service/order/submit', data, {
+    headers: { 'X-Session-Token': token }
+  }),
+  getOrderStatus: (orderId) => api.get(`/self-service/order/${orderId}/status`),
+};
+
 export default api;

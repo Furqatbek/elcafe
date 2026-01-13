@@ -60,6 +60,7 @@ public class SecurityConfig {
                                 "/api/v1/waiters/auth",
                                 "/api/v1/menu/public/**",
                                 "/api/v1/courier/webhook/**",
+                                "/api/v1/self-service/**",  // Self-service ordering (QR code)
                                 "/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",

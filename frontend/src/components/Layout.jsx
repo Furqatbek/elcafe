@@ -60,6 +60,7 @@ import {
   Share2,
   MessageSquare,
   Send,
+  QrCode,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -186,6 +187,7 @@ export default function Layout() {
         { label: t('nav.sub.referrals', 'Referrals'), icon: Share2, path: '/marketing/referrals' },
         { label: t('nav.sub.smsMarketing', 'SMS Marketing'), icon: MessageSquare, path: '/marketing/sms' },
         { label: t('nav.sub.telegramMarketing', 'Telegram'), icon: Send, path: '/marketing/telegram' },
+        { label: t('nav.sub.qrCodes', 'QR Codes'), icon: QrCode, path: '/marketing/qr-codes' },
       ],
     },
     {
