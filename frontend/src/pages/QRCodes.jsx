@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { qrCodeAPI, restaurantAPI } from '../services/api';
+import { qrCodeAPI, restaurantAPI, tablesAPI } from '../services/api';
 import {
   QrCode,
   Plus,
@@ -11,12 +11,15 @@ import {
   RefreshCw,
   Settings,
   Scan,
+  Printer,
+  X,
 } from 'lucide-react';
 
 export default function QRCodes() {
   const { t } = useTranslation();
   const [qrCodes, setQrCodes] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
+  const [tables, setTables] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
@@ -25,6 +28,14 @@ export default function QRCodes() {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedQR, setSelectedQR] = useState(null);
   const [qrImage, setQrImage] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    tableId: '',
+    name: '',
+    qrType: 'TABLE',
+  });
+  const [creating, setCreating] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     loadRestaurants();
@@ -35,6 +46,7 @@ export default function QRCodes() {
       loadQRCodes();
       loadStats();
       loadSettings();
+      loadTables();
     }
   }, [selectedRestaurant]);
 
@@ -48,6 +60,15 @@ export default function QRCodes() {
       }
     } catch (error) {
       console.error('Failed to load restaurants:', error);
+    }
+  };
+
+  const loadTables = async () => {
+    try {
+      const response = await tablesAPI.getAll(selectedRestaurant);
+      setTables(response.data || []);
+    } catch (error) {
+      console.error('Failed to load tables:', error);
     }
   };
 
@@ -149,6 +170,124 @@ export default function QRCodes() {
     }
   };
 
+  // Get tables that don't have QR codes yet
+  const getAvailableTables = () => {
+    const assignedTableIds = qrCodes
+      .filter(qr => qr.table)
+      .map(qr => qr.table.id);
+    return tables.filter(t => !assignedTableIds.includes(t.id));
+  };
+
+  const handleCreateQR = async () => {
+    setCreating(true);
+    try {
+      await qrCodeAPI.create({
+        restaurantId: selectedRestaurant,
+        tableId: createForm.tableId || null,
+        name: createForm.name || (createForm.tableId ? `Table ${tables.find(t => t.id === Number(createForm.tableId))?.tableNumber}` : 'Takeaway QR'),
+        qrType: createForm.qrType,
+      });
+      alert(t('qrCodes.createSuccess', 'QR code created successfully'));
+      setShowCreateModal(false);
+      setCreateForm({ tableId: '', name: '', qrType: 'TABLE' });
+      loadQRCodes();
+      loadStats();
+    } catch (error) {
+      alert(t('qrCodes.createError', 'Failed to create QR code'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Bulk print all QR codes as PDF
+  const handleBulkPrint = async () => {
+    if (qrCodes.length === 0) {
+      alert(t('qrCodes.noQRToPrint', 'No QR codes to print'));
+      return;
+    }
+
+    setPrinting(true);
+    try {
+      // Load all QR images
+      const qrImages = await Promise.all(
+        qrCodes.map(async (qr) => {
+          const response = await qrCodeAPI.getImage(qr.id, 300, 300);
+          return {
+            ...qr,
+            imageData: response.data.image,
+          };
+        })
+      );
+
+      // Create print window
+      const printWindow = window.open('', '_blank');
+      const restaurant = restaurants.find(r => r.id === selectedRestaurant);
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>QR Codes - ${restaurant?.name || 'Restaurant'}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; }
+            .page {
+              width: 210mm;
+              min-height: 297mm;
+              padding: 10mm;
+              display: grid;
+              grid-template-columns: repeat(3, 1fr);
+              gap: 5mm;
+            }
+            .qr-card {
+              border: 1px solid #ddd;
+              border-radius: 8px;
+              padding: 10px;
+              text-align: center;
+              page-break-inside: avoid;
+            }
+            .qr-card img { width: 150px; height: 150px; }
+            .qr-card h3 { font-size: 14px; margin: 8px 0 4px; }
+            .qr-card p { font-size: 10px; color: #666; }
+            .qr-card .table-num {
+              font-size: 18px;
+              font-weight: bold;
+              color: #333;
+              margin-top: 4px;
+            }
+            @media print {
+              .page { page-break-after: always; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="page">
+            ${qrImages.map(qr => `
+              <div class="qr-card">
+                <img src="${qr.imageData}" alt="QR Code" />
+                <h3>${qr.name}</h3>
+                ${qr.table ? `<p class="table-num">Table ${qr.table.tableNumber}</p>` : ''}
+                <p>${qr.code}</p>
+              </div>
+            `).join('')}
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    } catch (error) {
+      console.error('Failed to print QR codes:', error);
+      alert(t('qrCodes.printError', 'Failed to print QR codes'));
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -175,11 +314,26 @@ export default function QRCodes() {
             {t('common.settings', 'Settings')}
           </button>
           <button
+            onClick={handleBulkPrint}
+            disabled={printing || qrCodes.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+          >
+            <Printer className="w-4 h-4" />
+            {printing ? t('common.printing', 'Printing...') : t('qrCodes.printAll', 'Print All')}
+          </button>
+          <button
             onClick={handleGenerateAll}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
           >
             <RefreshCw className="w-4 h-4" />
             {t('qrCodes.generateAll', 'Generate for Tables')}
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            {t('qrCodes.create', 'Create QR')}
           </button>
         </div>
       </div>
@@ -288,6 +442,90 @@ export default function QRCodes() {
         )}
       </div>
 
+      {/* Create QR Code Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">{t('qrCodes.createQR', 'Create QR Code')}</h3>
+              <button onClick={() => setShowCreateModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('qrCodes.qrType', 'QR Type')}
+                </label>
+                <select
+                  value={createForm.qrType}
+                  onChange={(e) => setCreateForm({ ...createForm, qrType: e.target.value, tableId: e.target.value === 'TAKEAWAY' ? '' : createForm.tableId })}
+                  className="w-full border rounded-lg px-3 py-2"
+                >
+                  <option value="TABLE">{t('qrCodes.typeTable', 'Table')}</option>
+                  <option value="TAKEAWAY">{t('qrCodes.typeTakeaway', 'Takeaway')}</option>
+                </select>
+              </div>
+
+              {createForm.qrType === 'TABLE' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('qrCodes.selectTable', 'Select Table')}
+                  </label>
+                  <select
+                    value={createForm.tableId}
+                    onChange={(e) => setCreateForm({ ...createForm, tableId: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2"
+                  >
+                    <option value="">{t('qrCodes.selectTablePlaceholder', '-- Select a table --')}</option>
+                    {getAvailableTables().map((table) => (
+                      <option key={table.id} value={table.id}>
+                        Table {table.tableNumber} ({table.capacity} seats) - {table.section || 'Main'}
+                      </option>
+                    ))}
+                  </select>
+                  {getAvailableTables().length === 0 && (
+                    <p className="text-sm text-orange-600 mt-1">
+                      {t('qrCodes.allTablesAssigned', 'All tables already have QR codes assigned')}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('qrCodes.qrName', 'Name (optional)')}
+                </label>
+                <input
+                  type="text"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                  placeholder={t('qrCodes.namePlaceholder', 'Auto-generated if empty')}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCreateQR}
+                disabled={creating || (createForm.qrType === 'TABLE' && !createForm.tableId)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {creating ? t('common.creating', 'Creating...') : t('common.create', 'Create')}
+              </button>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                {t('common.cancel', 'Cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* QR Code Modal */}
       {showQRModal && selectedQR && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -302,6 +540,9 @@ export default function QRCodes() {
                 </div>
               )}
               <p className="mt-4 text-sm text-gray-500">{selectedQR.shortUrl}</p>
+              {selectedQR.table && (
+                <p className="mt-2 text-lg font-semibold">Table {selectedQR.table.tableNumber}</p>
+              )}
             </div>
             <div className="flex gap-3 mt-6">
               <button

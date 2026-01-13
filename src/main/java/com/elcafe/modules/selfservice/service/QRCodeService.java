@@ -40,7 +40,7 @@ public class QRCodeService {
     private final RestaurantRepository restaurantRepository;
     private final TableRepository tableRepository;
 
-    @Value("${app.selfservice.base-url:http://localhost:5173}")
+    @Value("${app.selfservice.base-url:http://localhost:3000/order}")
     private String selfServiceBaseUrl;
 
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
