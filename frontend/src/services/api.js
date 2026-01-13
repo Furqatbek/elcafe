@@ -497,4 +497,77 @@ export const referralAPI = {
     api.get(`/restaurants/${restaurantId}/referrals/stats`),
 };
 
+// SMS Marketing API
+export const smsAPI = {
+  // Templates
+  getTemplates: (params = {}) => api.get('/sms/templates', { params }),
+  getActiveTemplates: () => api.get('/sms/templates/active'),
+  getTemplate: (id) => api.get(`/sms/templates/${id}`),
+  createTemplate: (data) => api.post('/sms/templates', data),
+  updateTemplate: (id, data) => api.put(`/sms/templates/${id}`, data),
+  deleteTemplate: (id) => api.delete(`/sms/templates/${id}`),
+  toggleTemplate: (id) => api.patch(`/sms/templates/${id}/toggle`),
+  previewTemplate: (id, data) => api.post(`/sms/templates/${id}/preview`, data),
+  getTemplateTypes: () => api.get('/sms/templates/types'),
+
+  // Campaigns
+  getCampaigns: (params = {}) => api.get('/sms/campaigns', { params }),
+  getCampaign: (id) => api.get(`/sms/campaigns/${id}`),
+  getCampaignStats: (id) => api.get(`/sms/campaigns/${id}/stats`),
+  getCampaignRecipients: (id, params = {}) => api.get(`/sms/campaigns/${id}/recipients`, { params }),
+  createCampaign: (data) => api.post('/sms/campaigns', data),
+  updateCampaign: (id, data) => api.put(`/sms/campaigns/${id}`, data),
+  sendCampaign: (id) => api.post(`/sms/campaigns/${id}/send`),
+  cancelCampaign: (id) => api.post(`/sms/campaigns/${id}/cancel`),
+  deleteCampaign: (id) => api.delete(`/sms/campaigns/${id}`),
+
+  // Automation
+  getAutomationRules: (params = {}) => api.get('/sms/automation/rules', { params }),
+  getActiveAutomationRules: () => api.get('/sms/automation/rules/active'),
+  getAutomationRule: (id) => api.get(`/sms/automation/rules/${id}`),
+  createAutomationRule: (data) => api.post('/sms/automation/rules', data),
+  updateAutomationRule: (id, data) => api.put(`/sms/automation/rules/${id}`, data),
+  deleteAutomationRule: (id) => api.delete(`/sms/automation/rules/${id}`),
+  toggleAutomationRule: (id) => api.patch(`/sms/automation/rules/${id}/toggle`),
+  getTriggerTypes: () => api.get('/sms/automation/triggers'),
+
+  // Logs
+  getLogs: (params = {}) => api.get('/sms/logs', { params }),
+  getLogsByCustomer: (customerId) => api.get(`/sms/logs/customer/${customerId}`),
+  getLogsByCampaign: (campaignId) => api.get(`/sms/logs/campaign/${campaignId}`),
+  getStatistics: (days = 30) => api.get('/sms/logs/statistics', { params: { days } }),
+};
+
+// Telegram Marketing API
+export const telegramAPI = {
+  // Subscribers
+  getSubscribers: (params = {}) => api.get('/telegram/subscribers', { params }),
+  getActiveSubscribers: (params = {}) => api.get('/telegram/subscribers/active', { params }),
+  getSubscriber: (id) => api.get(`/telegram/subscribers/${id}`),
+  blockSubscriber: (id) => api.post(`/telegram/subscribers/${id}/block`),
+  unblockSubscriber: (id) => api.post(`/telegram/subscribers/${id}/unblock`),
+  searchSubscribers: (query, params = {}) => api.get('/telegram/subscribers/search', { params: { query, ...params } }),
+  getSubscriberStats: () => api.get('/telegram/subscribers/statistics'),
+
+  // Templates
+  getTemplates: (params = {}) => api.get('/telegram/templates', { params }),
+  getActiveTemplates: () => api.get('/telegram/templates/active'),
+  getTemplate: (id) => api.get(`/telegram/templates/${id}`),
+  createTemplate: (data) => api.post('/telegram/templates', data),
+  updateTemplate: (id, data) => api.put(`/telegram/templates/${id}`, data),
+  deleteTemplate: (id) => api.delete(`/telegram/templates/${id}`),
+  toggleTemplate: (id) => api.patch(`/telegram/templates/${id}/toggle`),
+  previewTemplate: (id, data) => api.post(`/telegram/templates/${id}/preview`, data),
+
+  // Campaigns
+  getCampaigns: (params = {}) => api.get('/telegram/campaigns', { params }),
+  getCampaign: (id) => api.get(`/telegram/campaigns/${id}`),
+  getCampaignStats: (id) => api.get(`/telegram/campaigns/${id}/stats`),
+  createCampaign: (data) => api.post('/telegram/campaigns', data),
+  updateCampaign: (id, data) => api.put(`/telegram/campaigns/${id}`, data),
+  sendCampaign: (id) => api.post(`/telegram/campaigns/${id}/send`),
+  cancelCampaign: (id) => api.post(`/telegram/campaigns/${id}/cancel`),
+  deleteCampaign: (id) => api.delete(`/telegram/campaigns/${id}`),
+};
+
 export default api;

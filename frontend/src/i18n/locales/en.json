@@ -3041,5 +3041,106 @@
     "termsPlaceholder": "Enter the terms and conditions for your referral program...",
     "optional": "Optional",
     "unlimited": "Unlimited"
+  },
+  "sms": {
+    "title": "SMS Marketing",
+    "description": "Manage SMS campaigns, templates, and automation",
+    "tabs": {
+      "campaigns": "Campaigns",
+      "templates": "Templates",
+      "automation": "Automation",
+      "statistics": "Statistics"
+    },
+    "campaigns": {
+      "title": "SMS Campaigns",
+      "description": "Create and manage bulk SMS campaigns",
+      "create": "New Campaign",
+      "edit": "Edit Campaign",
+      "name": "Campaign Name",
+      "namePlaceholder": "Enter campaign name",
+      "descriptionPlaceholder": "Enter campaign description",
+      "audience": "Target Audience",
+      "recipients": "Recipients",
+      "status": "Status",
+      "sent": "Sent",
+      "message": "Message",
+      "messagePlaceholder": "Enter your message. Use {name} for personalization",
+      "placeholderHint": "Use {name}, {phone} for personalization",
+      "modalDescription": "Create a new SMS campaign to send to your customers",
+      "empty": "No campaigns yet. Create your first campaign to get started.",
+      "confirmDelete": "Are you sure you want to delete this campaign?",
+      "created": "Campaign created successfully",
+      "updated": "Campaign updated successfully",
+      "deleted": "Campaign deleted successfully",
+      "sending": "Campaign is being sent",
+      "cancelled": "Campaign cancelled"
+    },
+    "templates": {
+      "title": "SMS Templates",
+      "description": "Create reusable SMS message templates",
+      "create": "New Template",
+      "edit": "Edit Template",
+      "name": "Template Name",
+      "namePlaceholder": "Enter template name",
+      "type": "Template Type",
+      "content": "Message Content",
+      "contentPlaceholder": "Enter your template message",
+      "descriptionPlaceholder": "Enter template description",
+      "usage": "Usage Count",
+      "status": "Status",
+      "placeholderHint": "Use {name}, {phone}, {amount}, {code} for placeholders",
+      "modalDescription": "Create a reusable SMS template",
+      "empty": "No templates yet. Create your first template to get started.",
+      "confirmDelete": "Are you sure you want to delete this template?",
+      "created": "Template created successfully",
+      "updated": "Template updated successfully",
+      "deleted": "Template deleted successfully",
+      "toggled": "Template status updated"
+    },
+    "stats": {
+      "totalSent": "Total Sent",
+      "delivered": "Delivered",
+      "pending": "Pending",
+      "failed": "Failed",
+      "deliveryRate": "Delivery Rate",
+      "deliveryRateDescription": "Percentage of messages successfully delivered"
+    },
+    "errors": {
+      "loadCampaigns": "Failed to load campaigns",
+      "loadTemplates": "Failed to load templates",
+      "loadStats": "Failed to load statistics",
+      "saveCampaign": "Failed to save campaign",
+      "sendCampaign": "Failed to send campaign",
+      "cancelCampaign": "Failed to cancel campaign",
+      "deleteCampaign": "Failed to delete campaign",
+      "saveTemplate": "Failed to save template",
+      "toggleTemplate": "Failed to toggle template",
+      "deleteTemplate": "Failed to delete template"
+    }
+  },
+  "telegram": {
+    "title": "Telegram Marketing",
+    "description": "Manage Telegram bot campaigns and subscribers",
+    "tabs": {
+      "subscribers": "Subscribers",
+      "campaigns": "Campaigns",
+      "templates": "Templates"
+    },
+    "subscribers": {
+      "title": "Telegram Subscribers",
+      "description": "Manage your Telegram bot subscribers",
+      "total": "Total Subscribers",
+      "active": "Active",
+      "blocked": "Blocked",
+      "newThisWeek": "New This Week"
+    },
+    "campaigns": {
+      "title": "Telegram Campaigns",
+      "description": "Create broadcast campaigns for your subscribers"
+    },
+    "templates": {
+      "title": "Telegram Templates",
+      "description": "Create message templates with rich formatting"
+    }
   }
 }
