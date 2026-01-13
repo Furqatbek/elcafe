@@ -185,7 +185,11 @@ public class TelegramCampaignService {
         List<Object[]> statusCounts = recipientRepository.getStatusCountsByCampaign(campaignId);
         Map<String, Long> statusMap = new HashMap<>();
         for (Object[] row : statusCounts) {
-            statusMap.put(((MessageStatus) row[0]).name(), (Long) row[1]);
+            // row[0] is returned as String (enum name) from JPQL query
+            String statusName = row[0] instanceof MessageStatus
+                    ? ((MessageStatus) row[0]).name()
+                    : row[0].toString();
+            statusMap.put(statusName, (Long) row[1]);
         }
 
         Map<String, Object> stats = new HashMap<>();
@@ -213,14 +217,16 @@ public class TelegramCampaignService {
             case ACTIVE:
                 int activeDays = 7;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("active_days")) {
-                    activeDays = (Integer) campaign.getFilterCriteria().get("active_days");
+                    // JSON numbers may be Long, use Number to handle both Integer and Long
+                    activeDays = ((Number) campaign.getFilterCriteria().get("active_days")).intValue();
                 }
                 LocalDateTime activeSince = LocalDateTime.now().minusDays(activeDays);
                 return subscriberRepository.findActiveSubscribers(activeSince);
             case INACTIVE:
                 int inactiveDays = 14;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("days_inactive")) {
-                    inactiveDays = (Integer) campaign.getFilterCriteria().get("days_inactive");
+                    // JSON numbers may be Long, use Number to handle both Integer and Long
+                    inactiveDays = ((Number) campaign.getFilterCriteria().get("days_inactive")).intValue();
                 }
                 LocalDateTime inactiveBefore = LocalDateTime.now().minusDays(inactiveDays);
                 return subscriberRepository.findInactiveSubscribers(inactiveBefore);

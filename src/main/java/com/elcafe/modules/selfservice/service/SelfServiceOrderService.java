@@ -153,6 +153,10 @@ public class SelfServiceOrderService {
                 LinkedItem linkedItem = linkedItemRepository.findById(modReq.getLinkedItemId())
                         .orElseThrow(() -> new RuntimeException("Modifier not found"));
 
+                if (linkedItem.getLinkedProduct() == null) {
+                    throw new RuntimeException("Modifier product not found for linked item: " + linkedItem.getId());
+                }
+
                 SelfServiceCartModifier modifier = SelfServiceCartModifier.builder()
                         .cartItem(cartItem)
                         .linkedItem(linkedItem)

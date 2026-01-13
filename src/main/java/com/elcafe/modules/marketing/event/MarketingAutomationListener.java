@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -100,7 +101,7 @@ public class MarketingAutomationListener {
             );
 
             // Notify referee about their welcome bonus (if applicable)
-            if (event.getRefereeReward() != null && event.getRefereeReward().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            if (event.getRefereeReward() != null && event.getRefereeReward().compareTo(BigDecimal.ZERO) > 0) {
                 Map<String, Object> context = new HashMap<>();
                 context.put("rewardAmount", event.getRefereeReward());
                 context.put("referrerName", event.getReferrer().getFirstName() + " " + event.getReferrer().getLastName());

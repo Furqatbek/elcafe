@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -40,7 +41,7 @@ public interface SmsCampaignRepository extends JpaRepository<SmsCampaign, Long> 
     Long getTotalDeliveredSince(@Param("since") LocalDateTime since);
 
     @Query("SELECT SUM(c.totalCost) FROM SmsCampaign c WHERE c.completedAt >= :since")
-    java.math.BigDecimal getTotalCostSince(@Param("since") LocalDateTime since);
+    BigDecimal getTotalCostSince(@Param("since") LocalDateTime since);
 
     @Query("SELECT c FROM SmsCampaign c WHERE c.scheduledAt >= :from AND c.scheduledAt <= :to ORDER BY c.scheduledAt")
     List<SmsCampaign> findScheduledBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);

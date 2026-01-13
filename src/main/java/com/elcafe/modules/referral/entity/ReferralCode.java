@@ -56,7 +56,7 @@ public class ReferralCode {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToMany(mappedBy = "referralCode", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "referralCode", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
     private List<Referral> referrals = new ArrayList<>();

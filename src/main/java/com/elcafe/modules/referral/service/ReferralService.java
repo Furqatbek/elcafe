@@ -8,6 +8,7 @@ import com.elcafe.modules.loyalty.entity.CustomerLoyalty;
 import com.elcafe.modules.loyalty.repository.CustomerLoyaltyRepository;
 import com.elcafe.modules.loyalty.service.BonusService;
 import com.elcafe.modules.loyalty.service.LoyaltyService;
+import com.elcafe.modules.marketing.event.MarketingEventPublisher;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.referral.dto.*;
 import com.elcafe.modules.referral.entity.Referral;
@@ -23,6 +24,8 @@ import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -50,6 +53,10 @@ public class ReferralService {
     private final LoyaltyService loyaltyService;
     private final BonusService bonusService;
     private final CustomerLoyaltyRepository customerLoyaltyRepository;
+
+    @Autowired
+    @Lazy
+    private MarketingEventPublisher marketingEventPublisher;
 
     private static final String CODE_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final int CODE_LENGTH = 8;
@@ -332,6 +339,16 @@ public class ReferralService {
 
         referralRepository.save(referral);
         log.info("Referral {} completed for order {}", referral.getId(), order.getId());
+
+        // Publish referral completed event for marketing automation
+        if (marketingEventPublisher != null) {
+            marketingEventPublisher.publishReferralCompleted(
+                    referral.getReferrer(),
+                    referral.getReferee(),
+                    settings.getReferrerRewardAmount(),
+                    settings.getRefereeRewardAmount()
+            );
+        }
     }
 
     /**

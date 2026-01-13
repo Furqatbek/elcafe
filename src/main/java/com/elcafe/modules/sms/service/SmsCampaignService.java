@@ -270,7 +270,11 @@ public class SmsCampaignService {
         List<Object[]> statusCounts = recipientRepository.getStatusCountsByCampaign(campaignId);
         Map<String, Long> statusMap = new HashMap<>();
         for (Object[] row : statusCounts) {
-            statusMap.put(((MessageStatus) row[0]).name(), (Long) row[1]);
+            // row[0] is returned as String (enum name) from JPQL query
+            String statusName = row[0] instanceof MessageStatus
+                    ? ((MessageStatus) row[0]).name()
+                    : row[0].toString();
+            statusMap.put(statusName, (Long) row[1]);
         }
 
         return CampaignStatsResponse.builder()
@@ -301,14 +305,16 @@ public class SmsCampaignService {
             case INACTIVE:
                 int daysInactive = 30;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("days_inactive")) {
-                    daysInactive = (Integer) campaign.getFilterCriteria().get("days_inactive");
+                    // JSON numbers may be Long, use Number to handle both Integer and Long
+                    daysInactive = ((Number) campaign.getFilterCriteria().get("days_inactive")).intValue();
                 }
                 LocalDateTime cutoff = LocalDateTime.now().minusDays(daysInactive);
                 return customerRepository.findInactiveCustomers(cutoff);
             case NEW_CUSTOMERS:
                 int days = 7;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("days")) {
-                    days = (Integer) campaign.getFilterCriteria().get("days");
+                    // JSON numbers may be Long, use Number to handle both Integer and Long
+                    days = ((Number) campaign.getFilterCriteria().get("days")).intValue();
                 }
                 LocalDateTime since = LocalDateTime.now().minusDays(days);
                 return customerRepository.findByCreatedAtAfter(since);
