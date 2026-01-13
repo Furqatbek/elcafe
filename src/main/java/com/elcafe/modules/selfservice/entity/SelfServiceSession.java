@@ -2,7 +2,7 @@ package com.elcafe.modules.selfservice.entity;
 
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.elcafe.modules.restaurant.entity.Table;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,7 +35,7 @@ public class SelfServiceSession {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id")
-    private Table table;
+    private RestaurantTable table;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "qr_code_id")

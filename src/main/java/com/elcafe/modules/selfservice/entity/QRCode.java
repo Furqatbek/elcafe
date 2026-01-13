@@ -1,7 +1,7 @@
 package com.elcafe.modules.selfservice.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.elcafe.modules.restaurant.entity.Table;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.selfservice.enums.QRCodeType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,7 +30,7 @@ public class QRCode {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id")
-    private Table table;
+    private RestaurantTable table;
 
     @Column(nullable = false, unique = true, length = 50)
     private String code;

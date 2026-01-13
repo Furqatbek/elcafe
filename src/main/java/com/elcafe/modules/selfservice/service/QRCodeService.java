@@ -1,9 +1,9 @@
 package com.elcafe.modules.selfservice.service;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.elcafe.modules.restaurant.entity.Table;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
-import com.elcafe.modules.restaurant.repository.TableRepository;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.selfservice.dto.CreateQRCodeRequest;
 import com.elcafe.modules.selfservice.entity.QRCode;
 import com.elcafe.modules.selfservice.enums.QRCodeType;
@@ -38,7 +38,7 @@ public class QRCodeService {
 
     private final QRCodeRepository qrCodeRepository;
     private final RestaurantRepository restaurantRepository;
-    private final TableRepository tableRepository;
+    private final RestaurantTableRepository tableRepository;
 
     @Value("${app.selfservice.base-url:http://localhost:3000/order}")
     private String selfServiceBaseUrl;
@@ -55,7 +55,7 @@ public class QRCodeService {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
-        Table table = null;
+        RestaurantTable table = null;
         if (request.getTableId() != null) {
             table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new RuntimeException("Table not found"));
@@ -92,7 +92,7 @@ public class QRCodeService {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
-        List<Table> tables = tableRepository.findByRestaurantId(restaurantId);
+        List<RestaurantTable> tables = tableRepository.findByRestaurantId(restaurantId);
 
         return tables.stream()
                 .filter(table -> qrCodeRepository.findByTableId(table.getId()).isEmpty())
