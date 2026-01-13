@@ -153,3 +153,11 @@ eskiz:
     read-timeout: 30000
     token-expiration-ms: 2505600000 # 29 days
     callback-url: ${ESKIZ_SMS_CALLBACK_URL:}
+
+# Web Push Notifications Configuration
+push:
+  vapid:
+    # Generate VAPID keys using: npx web-push generate-vapid-keys
+    public-key: ${PUSH_VAPID_PUBLIC_KEY:}
+    private-key: ${PUSH_VAPID_PRIVATE_KEY:}
+    subject: ${PUSH_VAPID_SUBJECT:mailto:admin@elcafe.com}

@@ -2809,5 +2809,14 @@
       "toggleTemplate": "Shablon holatini o'zgartirishda xatolik",
       "deleteTemplate": "Shablonni o'chirishda xatolik"
     }
+  },
+  "push": {
+    "promptTitle": "Bildirishnomalarni yoqish",
+    "promptMessage": "Buyurtmalar, aksiyalar va yangiliklar haqida xabar oling.",
+    "enable": "Yoqish",
+    "enabled": "Bildirishnomalar yoqildi",
+    "disabled": "Bildirishnomalar o'chirildi",
+    "unsupported": "Push-bildirishnomalar bu brauzerda qo'llab-quvvatlanmaydi",
+    "permissionDenied": "Bildirishnomaga ruxsat berilmadi"
   }
 }

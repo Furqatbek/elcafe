@@ -538,6 +538,30 @@ export const smsAPI = {
   getStatistics: (days = 30) => api.get('/sms/logs/statistics', { params: { days } }),
 };
 
+// Push Notifications API
+export const pushAPI = {
+  // VAPID Key
+  getVapidKey: () => api.get('/push/vapid-key'),
+
+  // Customer subscription
+  subscribeCustomer: (data) => api.post('/push/subscribe/customer', data),
+
+  // Admin subscription
+  subscribeAdmin: (data) => api.post('/push/subscribe/admin', data),
+
+  // Unsubscribe
+  unsubscribe: (endpoint) => api.post('/push/unsubscribe', { endpoint }),
+
+  // Check status
+  getStatus: (endpoint) => api.get('/push/status', { params: { endpoint } }),
+
+  // Admin endpoints
+  sendToCustomer: (customerId, data) => api.post(`/push/admin/send/customer/${customerId}`, data),
+  broadcast: (data) => api.post('/push/admin/send/broadcast', data),
+  getSubscriptions: () => api.get('/push/admin/subscriptions'),
+  getStats: () => api.get('/push/admin/stats'),
+};
+
 // Telegram Marketing API
 export const telegramAPI = {
   // Subscribers

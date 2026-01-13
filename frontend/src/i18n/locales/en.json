@@ -3222,5 +3222,14 @@
       "toggleTemplate": "Failed to toggle template",
       "deleteTemplate": "Failed to delete template"
     }
+  },
+  "push": {
+    "promptTitle": "Enable Notifications",
+    "promptMessage": "Get notified about orders, promotions, and updates.",
+    "enable": "Enable",
+    "enabled": "Notifications enabled",
+    "disabled": "Notifications disabled",
+    "unsupported": "Push notifications are not supported in this browser",
+    "permissionDenied": "Notification permission denied"
   }
 }

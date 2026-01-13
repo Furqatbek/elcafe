@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { Button } from './ui/button';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import PushPermissionPrompt from './PushPermissionPrompt';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -342,6 +343,9 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+
+      {/* Push Notification Permission Prompt */}
+      <PushPermissionPrompt isAdmin={true} />
     </div>
   );
 }
