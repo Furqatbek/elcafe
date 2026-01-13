@@ -87,7 +87,6 @@ export default function OrdersHistory() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [shiftDate, setShiftDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Default to today's shift
-  const [useShiftFilter, setUseShiftFilter] = useState(true); // Use shift-aware filtering by default
   const [searchQuery, setSearchQuery] = useState('');
 
   // Pagination state
@@ -134,16 +133,19 @@ export default function OrdersHistory() {
         params.status = selectedStatus;
       }
 
-      // Use shift-aware filtering or explicit date range
-      if (useShiftFilter && shiftDate) {
-        params.shiftDate = shiftDate;
-      } else {
+      // All date filtering uses shift-aware logic on backend
+      // If custom date range is set, use that; otherwise use shiftDate for single-day filtering
+      if (dateFrom || dateTo) {
+        // Date range - backend will apply shift-aware boundaries
         if (dateFrom) {
           params.fromDate = startOfDay(new Date(dateFrom)).toISOString();
         }
         if (dateTo) {
           params.toDate = endOfDay(new Date(dateTo)).toISOString();
         }
+      } else if (shiftDate) {
+        // Single day shift-aware filter
+        params.shiftDate = shiftDate;
       }
 
       if (searchQuery) {
@@ -175,7 +177,7 @@ export default function OrdersHistory() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, selectedRestaurant, selectedStatus, dateFrom, dateTo, shiftDate, useShiftFilter, searchQuery]);
+  }, [currentPage, pageSize, selectedRestaurant, selectedStatus, dateFrom, dateTo, shiftDate, searchQuery]);
 
   useEffect(() => {
     loadOrders();
@@ -196,41 +198,36 @@ export default function OrdersHistory() {
     });
   };
 
-  // Quick date filters
+  // Quick date filters - all use shift-aware logic on backend
   const applyQuickFilter = (filter) => {
     const today = new Date();
     switch (filter) {
       case 'today':
-        // Use shift-aware filtering for today
-        setUseShiftFilter(true);
+        // Single day - use shiftDate
         setShiftDate(format(today, 'yyyy-MM-dd'));
         setDateFrom('');
         setDateTo('');
         break;
       case 'yesterday':
-        // Use shift-aware filtering for yesterday
+        // Single day - use shiftDate
         const yesterday = subDays(today, 1);
-        setUseShiftFilter(true);
         setShiftDate(format(yesterday, 'yyyy-MM-dd'));
         setDateFrom('');
         setDateTo('');
         break;
       case 'week':
-        // Use date range for week (not shift-aware)
-        setUseShiftFilter(false);
+        // Date range - backend applies shift-aware boundaries
         setShiftDate('');
         setDateFrom(format(subDays(today, 7), 'yyyy-MM-dd'));
         setDateTo(format(today, 'yyyy-MM-dd'));
         break;
       case 'month':
-        // Use date range for month (not shift-aware)
-        setUseShiftFilter(false);
+        // Date range - backend applies shift-aware boundaries
         setShiftDate('');
         setDateFrom(format(startOfMonth(today), 'yyyy-MM-dd'));
         setDateTo(format(endOfMonth(today), 'yyyy-MM-dd'));
         break;
       case 'all':
-        setUseShiftFilter(false);
         setShiftDate('');
         setDateFrom('');
         setDateTo('');
@@ -246,7 +243,6 @@ export default function OrdersHistory() {
     setDateFrom('');
     setDateTo('');
     setShiftDate(format(new Date(), 'yyyy-MM-dd'));
-    setUseShiftFilter(true);
     setSearchQuery('');
     setCurrentPage(1);
   };
@@ -481,7 +477,7 @@ export default function OrdersHistory() {
                 value={dateFrom}
                 onChange={(e) => {
                   setDateFrom(e.target.value);
-                  setUseShiftFilter(false); // Disable shift filter when using custom date range
+                  setShiftDate(''); // Clear single-day filter when using date range
                   setCurrentPage(1);
                 }}
               />
@@ -495,7 +491,7 @@ export default function OrdersHistory() {
                 value={dateTo}
                 onChange={(e) => {
                   setDateTo(e.target.value);
-                  setUseShiftFilter(false); // Disable shift filter when using custom date range
+                  setShiftDate(''); // Clear single-day filter when using date range
                   setCurrentPage(1);
                 }}
               />

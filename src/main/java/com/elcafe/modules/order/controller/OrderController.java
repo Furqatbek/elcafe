@@ -85,7 +85,7 @@ public class OrderController {
     }
 
     @GetMapping
-    @Operation(summary = "List orders", description = "Get all orders with pagination and filters. Use shiftDate for shift-aware filtering based on business hours.")
+    @Operation(summary = "List orders", description = "Get all orders with pagination and filters. All date filtering uses shift-aware logic based on restaurant business hours.")
     public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(
             @RequestParam(required = false) Long restaurantId,
             @RequestParam(required = false) OrderStatus status,
@@ -97,20 +97,38 @@ public class OrderController {
     ) {
         LocalDateTime effectiveFromDate = fromDate;
         LocalDateTime effectiveToDate = toDate;
-        boolean isShiftAware = false;
 
-        // If shiftDate is provided (and no explicit fromDate/toDate), use shift-aware time range
+        // If shiftDate is provided (single day shift-aware filtering)
         if (shiftDate != null && fromDate == null && toDate == null) {
             ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, shiftDate);
             effectiveFromDate = shiftRange.start();
             effectiveToDate = shiftRange.end();
-            isShiftAware = true; // Skip further date adjustment since shift times are already calculated
+        }
+        // If date range is provided, use shift-aware boundaries for both dates
+        else if (fromDate != null || toDate != null) {
+            LocalDate startDate = fromDate != null ? fromDate.toLocalDate() : null;
+            LocalDate endDate = toDate != null ? toDate.toLocalDate() : null;
+
+            if (startDate != null && endDate != null) {
+                // Multi-day range: use shift boundaries
+                ShiftTimeService.ShiftTimeRange range = shiftTimeService.getShiftTimeRangeForPeriod(restaurantId, startDate, endDate);
+                effectiveFromDate = range.start();
+                effectiveToDate = range.end();
+            } else if (startDate != null) {
+                // Only start date provided
+                ShiftTimeService.ShiftTimeRange range = shiftTimeService.getShiftTimeRange(restaurantId, startDate);
+                effectiveFromDate = range.start();
+            } else if (endDate != null) {
+                // Only end date provided
+                ShiftTimeService.ShiftTimeRange range = shiftTimeService.getShiftTimeRange(restaurantId, endDate);
+                effectiveToDate = range.end();
+            }
         }
 
         // If any filter is provided, use filtered query
         if (restaurantId != null || status != null || effectiveFromDate != null || effectiveToDate != null || search != null) {
             Page<Order> orders = orderService.getOrdersWithFilters(
-                    restaurantId, status, effectiveFromDate, effectiveToDate, search, isShiftAware, pageable
+                    restaurantId, status, effectiveFromDate, effectiveToDate, search, true, pageable
             );
             return ResponseEntity.ok(ApiResponse.success(orders));
         }
