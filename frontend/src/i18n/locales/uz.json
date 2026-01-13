@@ -2706,5 +2706,108 @@
     "termsPlaceholder": "Referal dasturi shartlarini kiriting...",
     "optional": "Ixtiyoriy",
     "unlimited": "Cheklanmagan"
+  },
+  "telegram": {
+    "title": "Telegram Marketing",
+    "description": "Telegram bot kampaniyalari va obunachilarni boshqarish",
+    "tabs": {
+      "subscribers": "Obunchilar",
+      "campaigns": "Kampaniyalar",
+      "templates": "Shablonlar"
+    },
+    "stats": {
+      "totalSubscribers": "Jami obunchilar",
+      "activeSubscribers": "Faol obunchilar",
+      "blockedSubscribers": "Bloklangan",
+      "newThisMonth": "Shu oyda yangi"
+    },
+    "subscribers": {
+      "title": "Telegram Obunchilari",
+      "description": "Telegram bot obunchilarini boshqarish",
+      "username": "Foydalanuvchi nomi",
+      "firstName": "Ismi",
+      "customer": "Bog'langan mijoz",
+      "status": "Holat",
+      "subscribed": "Obuna bo'lgan",
+      "blockedStatus": "Bloklangan",
+      "activeStatus": "Faol",
+      "blocked": "Obunchi bloklandi",
+      "unblocked": "Obunchi blokdan chiqarildi",
+      "empty": "Hozircha obunchilar yo'q"
+    },
+    "campaigns": {
+      "title": "Telegram Kampaniyalari",
+      "description": "Obunchilar uchun tarqatmalar yaratish",
+      "name": "Kampaniya nomi",
+      "namePlaceholder": "Kampaniya nomini kiriting",
+      "audience": "Maqsadli auditoriya",
+      "recipients": "Qabul qiluvchilar",
+      "status": "Holat",
+      "sent": "Yuborilgan",
+      "create": "Kampaniya yaratish",
+      "edit": "Kampaniyani tahrirlash",
+      "modalDescription": "Telegram tarqatmasini sozlang",
+      "descriptionPlaceholder": "Kampaniya tavsifini kiriting",
+      "message": "Xabar",
+      "messagePlaceholder": "Xabaringizni kiriting...",
+      "placeholderHint": "{name}, {phone} ni o'rniga qo'yuvchi sifatida ishlating",
+      "updated": "Kampaniya yangilandi",
+      "created": "Kampaniya yaratildi",
+      "sending": "Kampaniya yuborilmoqda",
+      "cancelled": "Kampaniya bekor qilindi",
+      "deleted": "Kampaniya o'chirildi",
+      "confirmDelete": "Bu kampaniyani o'chirishni xohlaysizmi?",
+      "empty": "Hozircha kampaniyalar yo'q"
+    },
+    "templates": {
+      "title": "Xabar shablonlari",
+      "description": "Qayta ishlatiluvchi xabar shablonlarini yaratish",
+      "name": "Shablon nomi",
+      "namePlaceholder": "Shablon nomini kiriting",
+      "type": "Turi",
+      "content": "Mazmun",
+      "contentPlaceholder": "Xabar matnini kiriting...",
+      "usage": "Ishlatildi",
+      "status": "Holat",
+      "create": "Shablon yaratish",
+      "edit": "Shablonni tahrirlash",
+      "modalDescription": "Qayta ishlatiluvchi xabar shablonini yarating",
+      "descriptionPlaceholder": "Shablon tavsifini kiriting",
+      "placeholderHint": "{name}, {phone} ni o'rniga qo'yuvchi sifatida ishlating",
+      "updated": "Shablon yangilandi",
+      "created": "Shablon yaratildi",
+      "toggled": "Shablon holati o'zgartirildi",
+      "deleted": "Shablon o'chirildi",
+      "confirmDelete": "Bu shablonni o'chirishni xohlaysizmi?",
+      "empty": "Hozircha shablonlar yo'q"
+    },
+    "audience": {
+      "all": "Barcha obunchilar",
+      "active": "Faqat faollar",
+      "new": "Yangi obunchilar"
+    },
+    "templateTypes": {
+      "welcome": "Salomlash",
+      "promotion": "Aksiya",
+      "birthday": "Tug'ilgan kun",
+      "reminder": "Eslatma",
+      "orderStatus": "Buyurtma holati",
+      "referral": "Referal",
+      "custom": "Maxsus"
+    },
+    "errors": {
+      "loadSubscribers": "Obunchilarni yuklashda xatolik",
+      "loadCampaigns": "Kampaniyalarni yuklashda xatolik",
+      "loadTemplates": "Shablonlarni yuklashda xatolik",
+      "blockSubscriber": "Obunchini bloklashda xatolik",
+      "unblockSubscriber": "Obunchini blokdan chiqarishda xatolik",
+      "saveCampaign": "Kampaniyani saqlashda xatolik",
+      "sendCampaign": "Kampaniyani yuborishda xatolik",
+      "cancelCampaign": "Kampaniyani bekor qilishda xatolik",
+      "deleteCampaign": "Kampaniyani o'chirishda xatolik",
+      "saveTemplate": "Shablonni saqlashda xatolik",
+      "toggleTemplate": "Shablon holatini o'zgartirishda xatolik",
+      "deleteTemplate": "Shablonni o'chirishda xatolik"
+    }
   }
 }

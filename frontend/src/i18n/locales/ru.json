@@ -2661,5 +2661,108 @@
     "termsPlaceholder": "Введите условия реферальной программы...",
     "optional": "Необязательно",
     "unlimited": "Без ограничений"
+  },
+  "telegram": {
+    "title": "Telegram Маркетинг",
+    "description": "Управление кампаниями и подписчиками Telegram бота",
+    "tabs": {
+      "subscribers": "Подписчики",
+      "campaigns": "Кампании",
+      "templates": "Шаблоны"
+    },
+    "stats": {
+      "totalSubscribers": "Всего подписчиков",
+      "activeSubscribers": "Активные подписчики",
+      "blockedSubscribers": "Заблокированные",
+      "newThisMonth": "Новые за месяц"
+    },
+    "subscribers": {
+      "title": "Подписчики Telegram",
+      "description": "Управление подписчиками Telegram бота",
+      "username": "Имя пользователя",
+      "firstName": "Имя",
+      "customer": "Связанный клиент",
+      "status": "Статус",
+      "subscribed": "Подписан",
+      "blockedStatus": "Заблокирован",
+      "activeStatus": "Активен",
+      "blocked": "Подписчик заблокирован",
+      "unblocked": "Подписчик разблокирован",
+      "empty": "Подписчиков пока нет"
+    },
+    "campaigns": {
+      "title": "Кампании Telegram",
+      "description": "Создание рассылок для подписчиков",
+      "name": "Название кампании",
+      "namePlaceholder": "Введите название кампании",
+      "audience": "Целевая аудитория",
+      "recipients": "Получатели",
+      "status": "Статус",
+      "sent": "Отправлено",
+      "create": "Создать кампанию",
+      "edit": "Редактировать кампанию",
+      "modalDescription": "Настройте рассылку Telegram",
+      "descriptionPlaceholder": "Введите описание кампании",
+      "message": "Сообщение",
+      "messagePlaceholder": "Введите сообщение...",
+      "placeholderHint": "Используйте {name}, {phone} как плейсхолдеры",
+      "updated": "Кампания обновлена",
+      "created": "Кампания создана",
+      "sending": "Кампания отправляется",
+      "cancelled": "Кампания отменена",
+      "deleted": "Кампания удалена",
+      "confirmDelete": "Вы уверены, что хотите удалить эту кампанию?",
+      "empty": "Кампаний пока нет"
+    },
+    "templates": {
+      "title": "Шаблоны сообщений",
+      "description": "Создание шаблонов сообщений",
+      "name": "Название шаблона",
+      "namePlaceholder": "Введите название шаблона",
+      "type": "Тип",
+      "content": "Содержимое",
+      "contentPlaceholder": "Введите текст сообщения...",
+      "usage": "Использований",
+      "status": "Статус",
+      "create": "Создать шаблон",
+      "edit": "Редактировать шаблон",
+      "modalDescription": "Создайте шаблон сообщения",
+      "descriptionPlaceholder": "Введите описание шаблона",
+      "placeholderHint": "Используйте {name}, {phone} как плейсхолдеры",
+      "updated": "Шаблон обновлен",
+      "created": "Шаблон создан",
+      "toggled": "Статус шаблона изменен",
+      "deleted": "Шаблон удален",
+      "confirmDelete": "Вы уверены, что хотите удалить этот шаблон?",
+      "empty": "Шаблонов пока нет"
+    },
+    "audience": {
+      "all": "Все подписчики",
+      "active": "Только активные",
+      "new": "Новые подписчики"
+    },
+    "templateTypes": {
+      "welcome": "Приветствие",
+      "promotion": "Акция",
+      "birthday": "День рождения",
+      "reminder": "Напоминание",
+      "orderStatus": "Статус заказа",
+      "referral": "Реферал",
+      "custom": "Пользовательский"
+    },
+    "errors": {
+      "loadSubscribers": "Не удалось загрузить подписчиков",
+      "loadCampaigns": "Не удалось загрузить кампании",
+      "loadTemplates": "Не удалось загрузить шаблоны",
+      "blockSubscriber": "Не удалось заблокировать подписчика",
+      "unblockSubscriber": "Не удалось разблокировать подписчика",
+      "saveCampaign": "Не удалось сохранить кампанию",
+      "sendCampaign": "Не удалось отправить кампанию",
+      "cancelCampaign": "Не удалось отменить кампанию",
+      "deleteCampaign": "Не удалось удалить кампанию",
+      "saveTemplate": "Не удалось сохранить шаблон",
+      "toggleTemplate": "Не удалось изменить статус шаблона",
+      "deleteTemplate": "Не удалось удалить шаблон"
+    }
   }
 }

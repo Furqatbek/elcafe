@@ -3128,21 +3128,99 @@
       "campaigns": "Campaigns",
       "templates": "Templates"
     },
+    "stats": {
+      "totalSubscribers": "Total Subscribers",
+      "activeSubscribers": "Active Subscribers",
+      "blockedSubscribers": "Blocked",
+      "newThisMonth": "New This Month"
+    },
     "subscribers": {
       "title": "Telegram Subscribers",
       "description": "Manage your Telegram bot subscribers",
-      "total": "Total Subscribers",
-      "active": "Active",
-      "blocked": "Blocked",
-      "newThisWeek": "New This Week"
+      "username": "Username",
+      "firstName": "Name",
+      "customer": "Linked Customer",
+      "status": "Status",
+      "subscribed": "Subscribed",
+      "blockedStatus": "Blocked",
+      "activeStatus": "Active",
+      "blocked": "Subscriber blocked",
+      "unblocked": "Subscriber unblocked",
+      "empty": "No subscribers yet"
     },
     "campaigns": {
       "title": "Telegram Campaigns",
-      "description": "Create broadcast campaigns for your subscribers"
+      "description": "Create broadcast campaigns for your subscribers",
+      "name": "Campaign Name",
+      "namePlaceholder": "Enter campaign name",
+      "audience": "Target Audience",
+      "recipients": "Recipients",
+      "status": "Status",
+      "sent": "Sent",
+      "create": "Create Campaign",
+      "edit": "Edit Campaign",
+      "modalDescription": "Configure your Telegram broadcast campaign",
+      "descriptionPlaceholder": "Enter campaign description",
+      "message": "Message",
+      "messagePlaceholder": "Enter your message...",
+      "placeholderHint": "Use {name}, {phone} as placeholders",
+      "updated": "Campaign updated",
+      "created": "Campaign created",
+      "sending": "Campaign is being sent",
+      "cancelled": "Campaign cancelled",
+      "deleted": "Campaign deleted",
+      "confirmDelete": "Are you sure you want to delete this campaign?",
+      "empty": "No campaigns yet"
     },
     "templates": {
-      "title": "Telegram Templates",
-      "description": "Create message templates with rich formatting"
+      "title": "Message Templates",
+      "description": "Create reusable message templates",
+      "name": "Template Name",
+      "namePlaceholder": "Enter template name",
+      "type": "Type",
+      "content": "Content",
+      "contentPlaceholder": "Enter message content...",
+      "usage": "Usage",
+      "status": "Status",
+      "create": "Create Template",
+      "edit": "Edit Template",
+      "modalDescription": "Create a reusable message template",
+      "descriptionPlaceholder": "Enter template description",
+      "placeholderHint": "Use {name}, {phone} as placeholders",
+      "updated": "Template updated",
+      "created": "Template created",
+      "toggled": "Template status updated",
+      "deleted": "Template deleted",
+      "confirmDelete": "Are you sure you want to delete this template?",
+      "empty": "No templates yet"
+    },
+    "audience": {
+      "all": "All Subscribers",
+      "active": "Active Only",
+      "new": "New Subscribers"
+    },
+    "templateTypes": {
+      "welcome": "Welcome",
+      "promotion": "Promotion",
+      "birthday": "Birthday",
+      "reminder": "Reminder",
+      "orderStatus": "Order Status",
+      "referral": "Referral",
+      "custom": "Custom"
+    },
+    "errors": {
+      "loadSubscribers": "Failed to load subscribers",
+      "loadCampaigns": "Failed to load campaigns",
+      "loadTemplates": "Failed to load templates",
+      "blockSubscriber": "Failed to block subscriber",
+      "unblockSubscriber": "Failed to unblock subscriber",
+      "saveCampaign": "Failed to save campaign",
+      "sendCampaign": "Failed to send campaign",
+      "cancelCampaign": "Failed to cancel campaign",
+      "deleteCampaign": "Failed to delete campaign",
+      "saveTemplate": "Failed to save template",
+      "toggleTemplate": "Failed to toggle template",
+      "deleteTemplate": "Failed to delete template"
     }
   }
 }

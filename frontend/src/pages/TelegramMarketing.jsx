@@ -760,9 +760,9 @@ export default function TelegramMarketing() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All Subscribers</SelectItem>
-                  <SelectItem value="ACTIVE">Active Only</SelectItem>
-                  <SelectItem value="NEW">New Subscribers</SelectItem>
+                  <SelectItem value="ALL">{t('telegram.audience.all')}</SelectItem>
+                  <SelectItem value="ACTIVE">{t('telegram.audience.active')}</SelectItem>
+                  <SelectItem value="NEW">{t('telegram.audience.new')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -824,13 +824,13 @@ export default function TelegramMarketing() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="WELCOME">Welcome</SelectItem>
-                  <SelectItem value="PROMOTION">Promotion</SelectItem>
-                  <SelectItem value="BIRTHDAY">Birthday</SelectItem>
-                  <SelectItem value="REMINDER">Reminder</SelectItem>
-                  <SelectItem value="ORDER_STATUS">Order Status</SelectItem>
-                  <SelectItem value="REFERRAL">Referral</SelectItem>
-                  <SelectItem value="CUSTOM">Custom</SelectItem>
+                  <SelectItem value="WELCOME">{t('telegram.templateTypes.welcome')}</SelectItem>
+                  <SelectItem value="PROMOTION">{t('telegram.templateTypes.promotion')}</SelectItem>
+                  <SelectItem value="BIRTHDAY">{t('telegram.templateTypes.birthday')}</SelectItem>
+                  <SelectItem value="REMINDER">{t('telegram.templateTypes.reminder')}</SelectItem>
+                  <SelectItem value="ORDER_STATUS">{t('telegram.templateTypes.orderStatus')}</SelectItem>
+                  <SelectItem value="REFERRAL">{t('telegram.templateTypes.referral')}</SelectItem>
+                  <SelectItem value="CUSTOM">{t('telegram.templateTypes.custom')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
