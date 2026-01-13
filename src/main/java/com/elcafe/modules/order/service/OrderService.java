@@ -2,8 +2,10 @@ package com.elcafe.modules.order.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.financial.service.RevenueService;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.marketing.event.MarketingEventPublisher;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.referral.service.ReferralService;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
@@ -44,6 +46,10 @@ public class OrderService {
     @Autowired
     @Lazy
     private ReferralService referralService;
+
+    @Autowired
+    @Lazy
+    private MarketingEventPublisher marketingEventPublisher;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -145,6 +151,23 @@ public class OrderService {
                 } catch (Exception e) {
                     log.error("Failed to process referral for order {}: {}", order.getOrderNumber(), e.getMessage());
                     // Don't fail the order status update if referral processing fails
+                }
+            }
+
+            // Publish order completion event for marketing automation (thank you SMS, etc.)
+            if (marketingEventPublisher != null && order.getCustomer() != null) {
+                try {
+                    // Check if this is the customer's first completed order
+                    boolean isFirstOrder = orderRepository.countCompletedOrdersByCustomer(
+                            order.getCustomer().getId()) <= 1;
+
+                    marketingEventPublisher.publishOrderCompleted(
+                            order,
+                            order.getCustomer(),
+                            isFirstOrder
+                    );
+                } catch (Exception e) {
+                    log.warn("Failed to publish order completion event: {}", e.getMessage());
                 }
             }
         }

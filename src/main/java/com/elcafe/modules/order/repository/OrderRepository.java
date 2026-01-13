@@ -109,4 +109,10 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     // POS dine-in orders query
     List<Order> findByRestaurant_IdAndDiningTableIsNotNullAndStatusIn(Long restaurantId, List<OrderStatus> statuses);
+
+    /**
+     * Count completed/delivered orders for a customer (for first order detection)
+     */
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.customer.id = :customerId AND o.status IN ('COMPLETED', 'DELIVERED')")
+    long countCompletedOrdersByCustomer(@Param("customerId") Long customerId);
 }

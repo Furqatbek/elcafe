@@ -5,6 +5,7 @@ import com.elcafe.modules.customer.dto.CreateCustomerRequest;
 import com.elcafe.modules.customer.dto.UpdateConsumerProfileRequest;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.marketing.event.MarketingEventPublisher;
 import com.elcafe.modules.referral.service.ReferralService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -24,6 +25,7 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final RestaurantRepository restaurantRepository;
+    private final MarketingEventPublisher marketingEventPublisher;
 
     @Autowired
     @Lazy
@@ -96,6 +98,13 @@ public class CustomerService {
             // Log the error but don't fail customer creation
             log.warn("Failed to auto-generate referral code for customer {}: {}",
                     savedCustomer.getId(), e.getMessage());
+        }
+
+        // Publish customer registration event for marketing automation (welcome SMS, etc.)
+        try {
+            marketingEventPublisher.publishCustomerRegistered(savedCustomer);
+        } catch (Exception e) {
+            log.warn("Failed to publish customer registration event: {}", e.getMessage());
         }
 
         return savedCustomer;
