@@ -99,7 +99,9 @@
       "coupons": "Coupons",
       "happyHours": "Happy Hours",
       "bundles": "Bundles",
-      "referrals": "Referrals"
+      "referrals": "Referrals",
+      "smsMarketing": "SMS Marketing",
+      "telegramMarketing": "Telegram"
     }
   },
   "dashboard": {

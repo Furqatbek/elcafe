@@ -96,7 +96,9 @@
       "coupons": "Kuponlar",
       "happyHours": "Happy Hour",
       "bundles": "Kombo",
-      "referrals": "Referallar"
+      "referrals": "Referallar",
+      "smsMarketing": "SMS Marketing",
+      "telegramMarketing": "Telegram"
     }
   },
   "dashboard": {

@@ -96,7 +96,9 @@
       "coupons": "Купоны",
       "happyHours": "Счастливые часы",
       "bundles": "Комбо",
-      "referrals": "Рефералы"
+      "referrals": "Рефералы",
+      "smsMarketing": "SMS Маркетинг",
+      "telegramMarketing": "Telegram"
     }
   },
   "dashboard": {

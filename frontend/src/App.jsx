@@ -37,6 +37,7 @@ import CouponCodes from './pages/CouponCodes';
 import HappyHours from './pages/HappyHours';
 import Bundles from './pages/Bundles';
 import ReferralProgram from './pages/ReferralProgram';
+import SmsMarketing from './pages/SmsMarketing';
 import {
   InventoryIngredients,
   InventoryRecipes,
@@ -127,6 +128,7 @@ function App() {
           <Route path="marketing/happy-hours" element={<AdminRoute><HappyHours /></AdminRoute>} />
           <Route path="marketing/bundles" element={<AdminRoute><Bundles /></AdminRoute>} />
           <Route path="marketing/referrals" element={<AdminRoute><ReferralProgram /></AdminRoute>} />
+          <Route path="marketing/sms" element={<AdminRoute><SmsMarketing /></AdminRoute>} />
           <Route path="promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
           <Route path="coupons" element={<AdminRoute><CouponCodes /></AdminRoute>} />
           <Route path="happy-hours" element={<AdminRoute><HappyHours /></AdminRoute>} />

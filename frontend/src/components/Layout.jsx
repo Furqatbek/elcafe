@@ -57,6 +57,8 @@ import {
   Ticket,
   Wine,
   Share2,
+  MessageSquare,
+  Send,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -181,6 +183,8 @@ export default function Layout() {
         { label: t('nav.sub.happyHours', 'Happy Hours'), icon: Wine, path: '/marketing/happy-hours' },
         { label: t('nav.sub.bundles', 'Bundles'), icon: Package, path: '/marketing/bundles' },
         { label: t('nav.sub.referrals', 'Referrals'), icon: Share2, path: '/marketing/referrals' },
+        { label: t('nav.sub.smsMarketing', 'SMS Marketing'), icon: MessageSquare, path: '/marketing/sms' },
+        { label: t('nav.sub.telegramMarketing', 'Telegram'), icon: Send, path: '/marketing/telegram' },
       ],
     },
     {
