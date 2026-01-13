@@ -47,4 +47,14 @@ public interface SmsCampaignRepository extends JpaRepository<SmsCampaign, Long> 
 
     @Query("SELECT c FROM SmsCampaign c LEFT JOIN FETCH c.template WHERE c.id = :id")
     SmsCampaign findByIdWithTemplate(@Param("id") Long id);
+
+    /**
+     * Find scheduled campaigns that are due to be sent.
+     */
+    List<SmsCampaign> findByStatusAndScheduledAtBefore(CampaignStatus status, LocalDateTime dateTime);
+
+    /**
+     * Count campaigns by status and created before a certain date.
+     */
+    long countByStatusAndCreatedAtBefore(CampaignStatus status, LocalDateTime dateTime);
 }
