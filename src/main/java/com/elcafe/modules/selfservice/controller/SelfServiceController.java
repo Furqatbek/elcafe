@@ -2,6 +2,7 @@ package com.elcafe.modules.selfservice.controller;
 
 import com.elcafe.modules.menu.entity.Category;
 import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.CategoryRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
@@ -140,16 +141,14 @@ public class SelfServiceController {
     public ResponseEntity<List<Map<String, Object>>> getCategories(
             @PathVariable Long restaurantId) {
 
-        List<Category> categories = categoryRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        List<Category> categories = categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
 
         List<Map<String, Object>> response = categories.stream().map(cat -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", cat.getId());
             map.put("name", cat.getName());
-            map.put("nameUz", cat.getNameUz());
-            map.put("nameRu", cat.getNameRu());
             map.put("imageUrl", cat.getImageUrl());
-            map.put("displayOrder", cat.getDisplayOrder());
+            map.put("sortOrder", cat.getSortOrder());
             return map;
         }).toList();
 
@@ -167,24 +166,22 @@ public class SelfServiceController {
 
         List<Product> products;
         if (categoryId != null) {
-            products = productRepository.findByCategoryIdAndAvailableTrue(categoryId);
+            products = productRepository.findByCategoryIdAndStatusOrderBySortOrder(categoryId, ProductStatus.ACTIVE);
         } else {
-            products = productRepository.findByRestaurantIdAndAvailableTrue(restaurantId);
+            products = productRepository.findByRestaurantIdAndStatus(restaurantId, ProductStatus.ACTIVE);
         }
 
-        List<Map<String, Object>> response = products.stream().map(p -> {
+        List<Map<String, Object>> response = products.stream()
+                .filter(Product::getInStock)
+                .map(p -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", p.getId());
             map.put("name", p.getName());
-            map.put("nameUz", p.getNameUz());
-            map.put("nameRu", p.getNameRu());
             map.put("description", p.getDescription());
-            map.put("descriptionUz", p.getDescriptionUz());
-            map.put("descriptionRu", p.getDescriptionRu());
             map.put("price", p.getPrice());
             map.put("imageUrl", p.getImageUrl());
             map.put("categoryId", p.getCategory().getId());
-            map.put("preparationTime", p.getPreparationTime());
+            map.put("inStock", p.getInStock());
             return map;
         }).toList();
 
@@ -205,14 +202,10 @@ public class SelfServiceController {
         Map<String, Object> response = new HashMap<>();
         response.put("id", product.getId());
         response.put("name", product.getName());
-        response.put("nameUz", product.getNameUz());
-        response.put("nameRu", product.getNameRu());
         response.put("description", product.getDescription());
-        response.put("descriptionUz", product.getDescriptionUz());
-        response.put("descriptionRu", product.getDescriptionRu());
         response.put("price", product.getPrice());
         response.put("imageUrl", product.getImageUrl());
-        response.put("preparationTime", product.getPreparationTime());
+        response.put("inStock", product.getInStock());
 
         // Variants
         if (product.getVariants() != null && !product.getVariants().isEmpty()) {
@@ -220,10 +213,8 @@ public class SelfServiceController {
                 Map<String, Object> vmap = new HashMap<>();
                 vmap.put("id", v.getId());
                 vmap.put("name", v.getName());
-                vmap.put("nameUz", v.getNameUz());
-                vmap.put("nameRu", v.getNameRu());
                 vmap.put("price", v.getPrice());
-                vmap.put("available", v.getAvailable());
+                vmap.put("inStock", v.getInStock());
                 return vmap;
             }).toList());
         }
@@ -231,14 +222,12 @@ public class SelfServiceController {
         // Linked items (modifiers)
         if (product.getLinkedItems() != null && !product.getLinkedItems().isEmpty()) {
             response.put("modifiers", product.getLinkedItems().stream()
-                    .filter(li -> li.getLinkedProduct().getAvailable())
+                    .filter(li -> li.getLinkedProduct().getInStock())
                     .map(li -> {
                         Map<String, Object> lmap = new HashMap<>();
                         lmap.put("id", li.getId());
                         lmap.put("name", li.getLinkedProduct().getName());
-                        lmap.put("nameUz", li.getLinkedProduct().getNameUz());
-                        lmap.put("nameRu", li.getLinkedProduct().getNameRu());
-                        lmap.put("price", li.getPriceAdjustment());
+                        lmap.put("price", li.getLinkedProduct().getPrice());
                         lmap.put("linkType", li.getLinkType().name());
                         return lmap;
                     }).toList());

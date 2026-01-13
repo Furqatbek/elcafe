@@ -13,6 +13,7 @@ import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.order.service.DailyOrderSequenceService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.selfservice.dto.AddToCartRequest;
@@ -51,6 +52,7 @@ public class SelfServiceOrderService {
     private final OrderRepository orderRepository;
     private final RestaurantRepository restaurantRepository;
     private final CustomerRepository customerRepository;
+    private final DailyOrderSequenceService dailyOrderSequenceService;
 
     private static final int SESSION_EXPIRY_HOURS = 4;
 
@@ -109,7 +111,7 @@ public class SelfServiceOrderService {
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
         // Check if product belongs to session's restaurant
-        if (!product.getRestaurant().getId().equals(session.getRestaurant().getId())) {
+        if (!product.getCategory().getRestaurant().getId().equals(session.getRestaurant().getId())) {
             throw new RuntimeException("Product not available at this restaurant");
         }
 
@@ -155,7 +157,7 @@ public class SelfServiceOrderService {
                         .cartItem(cartItem)
                         .linkedItem(linkedItem)
                         .quantity(modReq.getQuantity())
-                        .price(linkedItem.getPriceAdjustment())
+                        .price(linkedItem.getLinkedProduct().getPrice())
                         .build();
                 cartItem.getModifiers().add(modifier);
             }
@@ -267,16 +269,18 @@ public class SelfServiceOrderService {
 
         // Create main order
         Order order = Order.builder()
+                .orderNumber(dailyOrderSequenceService.generateNextOrderNumber())
                 .restaurant(session.getRestaurant())
                 .customer(customer)
-                .table(session.getTable())
+                .diningTable(session.getTable())
                 .orderType(OrderType.DINE_IN)
-                .status(settings.getAutoAcceptOrders() ? OrderStatus.CONFIRMED : OrderStatus.PENDING)
+                .status(settings.getAutoAcceptOrders() ? OrderStatus.ACCEPTED : OrderStatus.PENDING)
                 .subtotal(subtotal)
                 .tax(BigDecimal.ZERO)
+                .discount(BigDecimal.ZERO)
                 .deliveryFee(BigDecimal.ZERO)
                 .total(subtotal)
-                .notes(request.getSpecialInstructions())
+                .customerNotes(request.getSpecialInstructions())
                 .build();
 
         // Convert cart items to order items
@@ -284,12 +288,14 @@ public class SelfServiceOrderService {
         for (SelfServiceCartItem cartItem : cartItems) {
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
-                    .product(cartItem.getProduct())
-                    .variant(cartItem.getVariant())
+                    .productId(cartItem.getProduct().getId())
+                    .productName(cartItem.getProduct().getName())
+                    .variantId(cartItem.getVariant() != null ? cartItem.getVariant().getId() : null)
+                    .variantName(cartItem.getVariant() != null ? cartItem.getVariant().getName() : null)
                     .quantity(cartItem.getQuantity())
                     .unitPrice(cartItem.getUnitPrice())
                     .totalPrice(cartItem.getTotalPrice())
-                    .notes(cartItem.getSpecialInstructions())
+                    .specialInstructions(cartItem.getSpecialInstructions())
                     .build();
             orderItems.add(orderItem);
         }
@@ -402,8 +408,6 @@ public class SelfServiceOrderService {
                 .id(item.getId())
                 .productId(product.getId())
                 .productName(product.getName())
-                .productNameUz(product.getNameUz())
-                .productNameRu(product.getNameRu())
                 .imageUrl(product.getImageUrl())
                 .variantId(item.getVariant() != null ? item.getVariant().getId() : null)
                 .variantName(item.getVariant() != null ? item.getVariant().getName() : null)

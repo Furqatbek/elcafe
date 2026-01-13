@@ -157,7 +157,7 @@ public class PushSubscriptionController {
             @Valid @RequestBody PushNotificationRequest request) {
 
         if (request.getType() == null) {
-            request.setType(PushNotificationType.GENERAL);
+            request.setType(PushNotificationType.SYSTEM);
         }
 
         webPushService.sendToCustomer(customerId, request);
@@ -178,7 +178,7 @@ public class PushSubscriptionController {
             @Valid @RequestBody PushNotificationRequest request) {
 
         if (request.getType() == null) {
-            request.setType(PushNotificationType.MARKETING);
+            request.setType(PushNotificationType.PROMOTION);
         }
 
         long subscriberCount = subscriptionRepository.countByIsActiveTrue();

@@ -26,8 +26,9 @@ public class LoyaltyTierUpgradeEvent extends MarketingEvent {
 
     @Override
     public String getDescription() {
-        return String.format("Customer %s upgraded from %s to %s tier (%d points)",
-                customer.getFullName(),
+        return String.format("Customer %s %s upgraded from %s to %s tier (%d points)",
+                customer.getFirstName(),
+                customer.getLastName(),
                 previousTier,
                 newTier,
                 totalPoints);

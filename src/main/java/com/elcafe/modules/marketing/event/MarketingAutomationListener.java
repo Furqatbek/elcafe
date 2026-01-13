@@ -96,14 +96,14 @@ public class MarketingAutomationListener {
             // Notify referrer about successful referral
             smsAutomationService.triggerReferralRewardSms(
                     event.getReferrer(),
-                    event.getReferrerReward()
+                    event.getReferrerReward().toString()
             );
 
             // Notify referee about their welcome bonus (if applicable)
             if (event.getRefereeReward() != null && event.getRefereeReward().compareTo(java.math.BigDecimal.ZERO) > 0) {
                 Map<String, Object> context = new HashMap<>();
                 context.put("rewardAmount", event.getRefereeReward());
-                context.put("referrerName", event.getReferrer().getFullName());
+                context.put("referrerName", event.getReferrer().getFirstName() + " " + event.getReferrer().getLastName());
 
                 smsAutomationService.triggerAutomation(
                         AutomationTrigger.REFERRAL_SIGNUP,

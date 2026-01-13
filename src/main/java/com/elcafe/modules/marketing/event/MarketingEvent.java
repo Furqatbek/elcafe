@@ -11,12 +11,12 @@ import java.time.LocalDateTime;
 @Getter
 public abstract class MarketingEvent extends ApplicationEvent {
 
-    private final LocalDateTime timestamp;
+    private final LocalDateTime eventTime;
     private final String eventType;
 
     protected MarketingEvent(Object source, String eventType) {
         super(source);
-        this.timestamp = LocalDateTime.now();
+        this.eventTime = LocalDateTime.now();
         this.eventType = eventType;
     }
 

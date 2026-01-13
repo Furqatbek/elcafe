@@ -235,7 +235,7 @@ public class WebPushService {
                 .badge(request.getBadge())
                 .tag(request.getTag())
                 .data(request.getData())
-                .notificationType(request.getType() != null ? request.getType() : PushNotificationType.GENERAL)
+                .notificationType(request.getType() != null ? request.getType() : PushNotificationType.SYSTEM)
                 .status(PushNotificationStatus.PENDING)
                 .build();
 

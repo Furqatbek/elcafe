@@ -27,7 +27,7 @@ public class CustomerRegisteredEvent extends MarketingEvent {
 
     @Override
     public String getDescription() {
-        return String.format("Customer %s registered with phone %s",
-                customer.getFullName(), customer.getPhone());
+        return String.format("Customer %s %s registered with phone %s",
+                customer.getFirstName(), customer.getLastName(), customer.getPhone());
     }
 }

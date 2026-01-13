@@ -18,6 +18,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -206,5 +208,13 @@ public class CustomerService {
         Customer updated = customerRepository.save(customer);
         log.info("Consumer profile updated successfully: customerId={}", customerId);
         return updated;
+    }
+
+    /**
+     * Find customer by phone number.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Customer> findByPhone(String phone) {
+        return customerRepository.findByPhone(phone);
     }
 }

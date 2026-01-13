@@ -23,14 +23,15 @@ public class OrderCompletedEvent extends MarketingEvent {
         this.order = order;
         this.customer = customer;
         this.isFirstOrder = isFirstOrder;
-        this.orderTotal = order.getTotalAmount();
+        this.orderTotal = order.getTotal();
     }
 
     @Override
     public String getDescription() {
-        return String.format("Order %s completed for customer %s (Total: %s)%s",
+        return String.format("Order %s completed for customer %s %s (Total: %s)%s",
                 order.getOrderNumber(),
-                customer.getFullName(),
+                customer.getFirstName(),
+                customer.getLastName(),
                 orderTotal,
                 isFirstOrder ? " [FIRST ORDER]" : "");
     }

@@ -28,9 +28,11 @@ public class ReferralCompletedEvent extends MarketingEvent {
 
     @Override
     public String getDescription() {
-        return String.format("Referral completed: %s referred %s (Rewards: %s / %s)",
-                referrer.getFullName(),
-                referee.getFullName(),
+        return String.format("Referral completed: %s %s referred %s %s (Rewards: %s / %s)",
+                referrer.getFirstName(),
+                referrer.getLastName(),
+                referee.getFirstName(),
+                referee.getLastName(),
                 referrerReward,
                 refereeReward);
     }

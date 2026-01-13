@@ -12,8 +12,6 @@ public class CartItemResponse {
     private Long id;
     private Long productId;
     private String productName;
-    private String productNameUz;
-    private String productNameRu;
     private String imageUrl;
     private Long variantId;
     private String variantName;
