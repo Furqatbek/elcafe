@@ -51,7 +51,6 @@ import {
   BarChart3,
   RefreshCw
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 const targetAudienceOptions = [
   { value: 'ALL', label: 'All Customers' },
@@ -125,7 +124,7 @@ export default function SmsMarketing() {
       setCampaignPage(page);
     } catch (error) {
       console.error('Failed to load campaigns:', error);
-      toast.error(t('sms.errors.loadCampaigns'));
+      alert(t('sms.errors.loadCampaigns'));
     } finally {
       setLoading(false);
     }
@@ -140,7 +139,7 @@ export default function SmsMarketing() {
       setTemplatePage(page);
     } catch (error) {
       console.error('Failed to load templates:', error);
-      toast.error(t('sms.errors.loadTemplates'));
+      alert(t('sms.errors.loadTemplates'));
     } finally {
       setLoading(false);
     }
@@ -153,7 +152,7 @@ export default function SmsMarketing() {
       setStats(response.data);
     } catch (error) {
       console.error('Failed to load statistics:', error);
-      toast.error(t('sms.errors.loadStats'));
+      alert(t('sms.errors.loadStats'));
     } finally {
       setLoading(false);
     }
@@ -195,39 +194,39 @@ export default function SmsMarketing() {
 
       if (editingCampaign) {
         await smsAPI.updateCampaign(editingCampaign.id, data);
-        toast.success(t('sms.campaigns.updated'));
+        alert(t('sms.campaigns.updated'));
       } else {
         await smsAPI.createCampaign(data);
-        toast.success(t('sms.campaigns.created'));
+        alert(t('sms.campaigns.created'));
       }
 
       setCampaignModalOpen(false);
       loadCampaigns(campaignPage);
     } catch (error) {
       console.error('Failed to save campaign:', error);
-      toast.error(t('sms.errors.saveCampaign'));
+      alert(t('sms.errors.saveCampaign'));
     }
   };
 
   const handleSendCampaign = async (id) => {
     try {
       await smsAPI.sendCampaign(id);
-      toast.success(t('sms.campaigns.sending'));
+      alert(t('sms.campaigns.sending'));
       loadCampaigns(campaignPage);
     } catch (error) {
       console.error('Failed to send campaign:', error);
-      toast.error(t('sms.errors.sendCampaign'));
+      alert(t('sms.errors.sendCampaign'));
     }
   };
 
   const handleCancelCampaign = async (id) => {
     try {
       await smsAPI.cancelCampaign(id);
-      toast.success(t('sms.campaigns.cancelled'));
+      alert(t('sms.campaigns.cancelled'));
       loadCampaigns(campaignPage);
     } catch (error) {
       console.error('Failed to cancel campaign:', error);
-      toast.error(t('sms.errors.cancelCampaign'));
+      alert(t('sms.errors.cancelCampaign'));
     }
   };
 
@@ -235,11 +234,11 @@ export default function SmsMarketing() {
     if (!window.confirm(t('sms.campaigns.confirmDelete'))) return;
     try {
       await smsAPI.deleteCampaign(id);
-      toast.success(t('sms.campaigns.deleted'));
+      alert(t('sms.campaigns.deleted'));
       loadCampaigns(campaignPage);
     } catch (error) {
       console.error('Failed to delete campaign:', error);
-      toast.error(t('sms.errors.deleteCampaign'));
+      alert(t('sms.errors.deleteCampaign'));
     }
   };
 
@@ -272,28 +271,28 @@ export default function SmsMarketing() {
     try {
       if (editingTemplate) {
         await smsAPI.updateTemplate(editingTemplate.id, templateForm);
-        toast.success(t('sms.templates.updated'));
+        alert(t('sms.templates.updated'));
       } else {
         await smsAPI.createTemplate(templateForm);
-        toast.success(t('sms.templates.created'));
+        alert(t('sms.templates.created'));
       }
 
       setTemplateModalOpen(false);
       loadTemplates(templatePage);
     } catch (error) {
       console.error('Failed to save template:', error);
-      toast.error(t('sms.errors.saveTemplate'));
+      alert(t('sms.errors.saveTemplate'));
     }
   };
 
   const handleToggleTemplate = async (id) => {
     try {
       await smsAPI.toggleTemplate(id);
-      toast.success(t('sms.templates.toggled'));
+      alert(t('sms.templates.toggled'));
       loadTemplates(templatePage);
     } catch (error) {
       console.error('Failed to toggle template:', error);
-      toast.error(t('sms.errors.toggleTemplate'));
+      alert(t('sms.errors.toggleTemplate'));
     }
   };
 
@@ -301,11 +300,11 @@ export default function SmsMarketing() {
     if (!window.confirm(t('sms.templates.confirmDelete'))) return;
     try {
       await smsAPI.deleteTemplate(id);
-      toast.success(t('sms.templates.deleted'));
+      alert(t('sms.templates.deleted'));
       loadTemplates(templatePage);
     } catch (error) {
       console.error('Failed to delete template:', error);
-      toast.error(t('sms.errors.deleteTemplate'));
+      alert(t('sms.errors.deleteTemplate'));
     }
   };
 
