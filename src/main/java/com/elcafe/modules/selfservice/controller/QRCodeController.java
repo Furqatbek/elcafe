@@ -39,9 +39,19 @@ public class QRCodeController {
      */
     @PostMapping
     @Operation(summary = "Create QR code", description = "Create a new QR code")
-    public ResponseEntity<QRCode> createQRCode(@Valid @RequestBody CreateQRCodeRequest request) {
-        QRCode qrCode = qrCodeService.createQRCode(request);
-        return ResponseEntity.ok(qrCode);
+    public ResponseEntity<Map<String, Object>> createQRCode(@Valid @RequestBody CreateQRCodeRequest request) {
+        try {
+            QRCode qrCode = qrCodeService.createQRCode(request);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", qrCode);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
     }
 
     /**
@@ -52,14 +62,23 @@ public class QRCodeController {
     public ResponseEntity<Map<String, Object>> generateForAllTables(
             @PathVariable Long restaurantId) {
 
-        List<QRCode> generated = qrCodeService.generateForAllTables(restaurantId);
+        try {
+            List<QRCode> generated = qrCodeService.generateForAllTables(restaurantId);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("success", true);
-        response.put("generated", generated.size());
-        response.put("qrCodes", generated);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("generated", generated.size());
+            response.put("qrCodes", generated);
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            errorResponse.put("generated", 0);
+            errorResponse.put("qrCodes", List.of());
+            return ResponseEntity.ok(errorResponse);
+        }
     }
 
     /**
@@ -80,10 +99,20 @@ public class QRCodeController {
      */
     @GetMapping("/{id}")
     @Operation(summary = "Get QR code", description = "Get a QR code by ID")
-    public ResponseEntity<QRCode> getById(@PathVariable Long id) {
-        QRCode qrCode = qrCodeService.getById(id)
-                .orElseThrow(() -> new RuntimeException("QR code not found"));
-        return ResponseEntity.ok(qrCode);
+    public ResponseEntity<Map<String, Object>> getById(@PathVariable Long id) {
+        return qrCodeService.getById(id)
+                .map(qrCode -> {
+                    Map<String, Object> response = new HashMap<>();
+                    response.put("success", true);
+                    response.put("data", qrCode);
+                    return ResponseEntity.ok(response);
+                })
+                .orElseGet(() -> {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "QR code not found");
+                    return ResponseEntity.status(404).body(errorResponse);
+                });
     }
 
     /**
@@ -91,9 +120,19 @@ public class QRCodeController {
      */
     @PatchMapping("/{id}/toggle")
     @Operation(summary = "Toggle active status", description = "Toggle QR code active/inactive status")
-    public ResponseEntity<QRCode> toggleActive(@PathVariable Long id) {
-        QRCode qrCode = qrCodeService.toggleActive(id);
-        return ResponseEntity.ok(qrCode);
+    public ResponseEntity<Map<String, Object>> toggleActive(@PathVariable Long id) {
+        try {
+            QRCode qrCode = qrCodeService.toggleActive(id);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("data", qrCode);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", e.getMessage());
+            return ResponseEntity.status(404).body(errorResponse);
+        }
     }
 
     /**
@@ -116,17 +155,31 @@ public class QRCodeController {
             @RequestParam(defaultValue = "300") int width,
             @RequestParam(defaultValue = "300") int height) {
 
-        QRCode qrCode = qrCodeService.getById(id)
-                .orElseThrow(() -> new RuntimeException("QR code not found"));
+        return qrCodeService.getById(id)
+                .map(qrCode -> {
+                    try {
+                        String imageBase64 = qrCodeService.generateQRCodeImage(qrCode.getCode(), width, height);
 
-        String imageBase64 = qrCodeService.generateQRCodeImage(qrCode.getCode(), width, height);
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", true);
+                        response.put("code", qrCode.getCode());
+                        response.put("url", qrCode.getShortUrl());
+                        response.put("image", "data:image/png;base64," + imageBase64);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("code", qrCode.getCode());
-        response.put("url", qrCode.getShortUrl());
-        response.put("image", "data:image/png;base64," + imageBase64);
-
-        return ResponseEntity.ok(response);
+                        return ResponseEntity.ok(response);
+                    } catch (RuntimeException e) {
+                        Map<String, Object> errorResponse = new HashMap<>();
+                        errorResponse.put("success", false);
+                        errorResponse.put("message", "Failed to generate QR code image");
+                        return ResponseEntity.status(500).body(errorResponse);
+                    }
+                })
+                .orElseGet(() -> {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "QR code not found");
+                    return ResponseEntity.status(404).body(errorResponse);
+                });
     }
 
     /**
@@ -149,7 +202,17 @@ public class QRCodeController {
     public ResponseEntity<SelfServiceSettings> getSettings(@PathVariable Long restaurantId) {
         SelfServiceSettings settings = orderService.getSettings(restaurantId);
         if (settings == null) {
-            return ResponseEntity.notFound().build();
+            // Return default settings if none exist
+            settings = new SelfServiceSettings();
+            settings.setEnabled(false);
+            settings.setRequirePayment(false);
+            settings.setAllowTakeaway(true);
+            settings.setAllowDineIn(true);
+            settings.setAutoAcceptOrders(false);
+            settings.setEstimatedPrepTimeMinutes(15);
+            settings.setShowWaitTime(true);
+            settings.setAllowSpecialInstructions(true);
+            settings.setMaxItemsPerOrder(20);
         }
         return ResponseEntity.ok(settings);
     }
