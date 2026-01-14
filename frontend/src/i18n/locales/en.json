@@ -63,6 +63,7 @@
       "clientHistory": "Client History",
       "operators": "Operators",
       "waiters": "Waiters",
+      "waiterPerformance": "Waiter Performance",
       "couriers": "Couriers",
       "courierMap": "Courier Map",
       "schedule": "Schedule",
@@ -1058,6 +1059,76 @@
       "HANDLE_PAYMENTS": "Handle Payments",
       "APPLY_DISCOUNTS": "Apply Discounts",
       "REFUND_ORDERS": "Refund Orders"
+    }
+  },
+  "waiterPerformance": {
+    "title": "Waiter Performance",
+    "subtitle": "Track and manage waiter KPIs and performance metrics",
+    "tabs": {
+      "leaderboard": "Leaderboard",
+      "kpiSettings": "KPI Settings",
+      "details": "Details"
+    },
+    "leaderboard": {
+      "title": "Performance Leaderboard",
+      "rank": "Rank",
+      "waiter": "Waiter",
+      "orders": "Orders",
+      "revenue": "Revenue",
+      "avgRating": "Avg Rating",
+      "kpiScore": "KPI Score",
+      "tips": "Tips",
+      "bonus": "Bonus",
+      "noData": "No performance data for this period"
+    },
+    "kpiSettings": {
+      "title": "KPI Configuration",
+      "description": "Set performance targets and bonus thresholds for waiters",
+      "addConfig": "Add KPI Config",
+      "editConfig": "Edit KPI Config",
+      "configType": "Configuration Type",
+      "restaurantDefault": "Restaurant Default",
+      "individualWaiter": "Individual Waiter",
+      "selectWaiter": "Select Waiter",
+      "targets": {
+        "title": "Performance Targets",
+        "ordersPerShift": "Orders per Shift",
+        "revenuePerShift": "Revenue per Shift",
+        "avgServiceTime": "Avg Service Time (mins)",
+        "targetRating": "Target Rating",
+        "upsellPercentage": "Upsell Percentage"
+      },
+      "bonus": {
+        "title": "Bonus Settings",
+        "threshold": "KPI Threshold for Bonus",
+        "amount": "Bonus Amount"
+      },
+      "noConfigs": "No KPI configurations found. Add one to start tracking performance."
+    },
+    "details": {
+      "title": "Waiter Details",
+      "selectWaiter": "Select a waiter to view details",
+      "summary": "Performance Summary",
+      "totalOrders": "Total Orders",
+      "totalRevenue": "Total Revenue",
+      "avgServiceTime": "Avg Service Time",
+      "complaints": "Complaints",
+      "voidItems": "Void Items",
+      "totalTips": "Total Tips",
+      "totalBonus": "Total Bonus",
+      "avgKpiScore": "Avg KPI Score"
+    },
+    "dateRange": {
+      "today": "Today",
+      "thisWeek": "This Week",
+      "thisMonth": "This Month",
+      "custom": "Custom Range"
+    },
+    "messages": {
+      "configSaved": "KPI configuration saved successfully",
+      "configDeleted": "KPI configuration deleted",
+      "saveError": "Failed to save configuration",
+      "loadError": "Failed to load data"
     }
   },
   "workingHours": {

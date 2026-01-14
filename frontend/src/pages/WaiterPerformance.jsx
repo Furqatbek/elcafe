@@ -280,7 +280,7 @@ export default function WaiterPerformance() {
             onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
             className="border rounded px-3 py-2"
           />
-          <span className="text-gray-500">to</span>
+          <span className="text-gray-500">{t('common.to', 'to')}</span>
           <input
             type="date"
             value={dateRange.endDate}
@@ -299,7 +299,7 @@ export default function WaiterPerformance() {
             }}
             className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
           >
-            Today
+            {t('waiterPerformance.dateRange.today', 'Today')}
           </button>
           <button
             onClick={() => {
@@ -312,7 +312,7 @@ export default function WaiterPerformance() {
             }}
             className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
           >
-            Last 7 Days
+            {t('waiterPerformance.dateRange.thisWeek', 'Last 7 Days')}
           </button>
           <button
             onClick={() => {
@@ -325,7 +325,7 @@ export default function WaiterPerformance() {
             }}
             className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
           >
-            Last 30 Days
+            {t('waiterPerformance.dateRange.thisMonth', 'Last 30 Days')}
           </button>
         </div>
       </div>
@@ -384,13 +384,13 @@ export default function WaiterPerformance() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Rank</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Waiter</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Orders</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Revenue</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Avg Rating</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">KPI Score</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Actions</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.rank', 'Rank')}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.waiter', 'Waiter')}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.orders', 'Orders')}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.revenue', 'Revenue')}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.avgRating', 'Avg Rating')}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.kpiScore', 'KPI Score')}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('common.actions', 'Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -424,7 +424,7 @@ export default function WaiterPerformance() {
                         onClick={() => { setSelectedWaiter(entry.waiterId); setActiveTab('details'); }}
                         className="text-blue-600 hover:text-blue-800 text-sm"
                       >
-                        View Details
+                        {t('common.viewDetails', 'View Details')}
                       </button>
                     </td>
                   </tr>
@@ -447,7 +447,7 @@ export default function WaiterPerformance() {
               onClick={() => { resetKPIForm(); setEditingKPI(null); setShowKPIModal(true); }}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
             >
-              + Add KPI Config
+              {t('waiterPerformance.kpiSettings.addConfig', '+ Add KPI Config')}
             </button>
           </div>
           {kpiConfigs.length === 0 ? (
@@ -475,19 +475,19 @@ export default function WaiterPerformance() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 text-xs rounded ${config.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                        {config.active ? 'Active' : 'Inactive'}
+                        {config.active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
                       </span>
                       <button
                         onClick={() => openEditKPI(config)}
                         className="text-blue-600 hover:text-blue-800 text-sm"
                       >
-                        Edit
+                        {t('common.edit', 'Edit')}
                       </button>
                       <button
                         onClick={() => handleDeleteKPI(config.id)}
                         className="text-red-600 hover:text-red-800 text-sm"
                       >
-                        Delete
+                        {t('common.delete', 'Delete')}
                       </button>
                     </div>
                   </div>
@@ -509,7 +509,7 @@ export default function WaiterPerformance() {
                   <TrendingUp className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Total Orders</p>
+                  <p className="text-sm text-gray-500">{t('waiterPerformance.details.totalOrders', 'Total Orders')}</p>
                   <p className="text-2xl font-bold">{waiterPerformance.totalOrders || 0}</p>
                 </div>
               </div>
@@ -520,7 +520,7 @@ export default function WaiterPerformance() {
                   <DollarSign className="w-6 h-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Total Revenue</p>
+                  <p className="text-sm text-gray-500">{t('waiterPerformance.details.totalRevenue', 'Total Revenue')}</p>
                   <p className="text-2xl font-bold">{formatCurrency(waiterPerformance.totalRevenue)}</p>
                 </div>
               </div>
@@ -531,7 +531,7 @@ export default function WaiterPerformance() {
                   <Award className="w-6 h-6 text-yellow-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Tips Earned</p>
+                  <p className="text-sm text-gray-500">{t('waiterPerformance.details.totalTips', 'Tips Earned')}</p>
                   <p className="text-2xl font-bold">{formatCurrency(waiterPerformance.totalTips)}</p>
                 </div>
               </div>
@@ -542,7 +542,7 @@ export default function WaiterPerformance() {
                   <Target className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Avg KPI Score</p>
+                  <p className="text-sm text-gray-500">{t('waiterPerformance.details.avgKpiScore', 'Avg KPI Score')}</p>
                   <p className={`text-2xl font-bold ${waiterPerformance.avgKpiScore >= 100 ? 'text-green-600' : waiterPerformance.avgKpiScore >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
                     {formatPercent(waiterPerformance.avgKpiScore)}
                   </p>
@@ -603,7 +603,7 @@ export default function WaiterPerformance() {
             onClick={() => { setSelectedWaiter(null); setActiveTab('leaderboard'); }}
             className="text-gray-600 hover:text-gray-800"
           >
-            &larr; Back to Leaderboard
+            &larr; {t('waiterPerformance.backToLeaderboard', 'Back to Leaderboard')}
           </button>
         </div>
       )}
@@ -614,7 +614,7 @@ export default function WaiterPerformance() {
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">
-                {editingKPI ? 'Edit KPI Configuration' : 'Create KPI Configuration'}
+                {editingKPI ? t('waiterPerformance.kpiSettings.editConfig', 'Edit KPI Configuration') : t('waiterPerformance.kpiSettings.addConfig', 'Create KPI Configuration')}
               </h3>
               <button onClick={() => setShowKPIModal(false)} className="text-gray-500 hover:text-gray-700">
                 <X className="w-5 h-5" />

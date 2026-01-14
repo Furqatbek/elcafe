@@ -58,6 +58,7 @@
       "clientHistory": "Mijozlar tarixi",
       "operators": "Operatorlar",
       "waiters": "Ofitsiantlar",
+      "waiterPerformance": "Ofitsiant samaradorligi",
       "couriers": "Kuryerlar",
       "schedule": "Jadval",
       "tables": "Stollar",
@@ -907,6 +908,76 @@
       "HANDLE_PAYMENTS": "To'lovlarni amalga oshirish",
       "APPLY_DISCOUNTS": "Chegirmalarni qo'llash",
       "REFUND_ORDERS": "Buyurtmalarni qaytarish"
+    }
+  },
+  "waiterPerformance": {
+    "title": "Ofitsiant samaradorligi",
+    "subtitle": "Ofitsiantlarning KPI va samaradorlik ko'rsatkichlarini kuzatish",
+    "tabs": {
+      "leaderboard": "Reyting",
+      "kpiSettings": "KPI sozlamalari",
+      "details": "Tafsilotlar"
+    },
+    "leaderboard": {
+      "title": "Samaradorlik reytingi",
+      "rank": "O'rin",
+      "waiter": "Ofitsiant",
+      "orders": "Buyurtmalar",
+      "revenue": "Daromad",
+      "avgRating": "O'rtacha baho",
+      "kpiScore": "KPI ball",
+      "tips": "Tip",
+      "bonus": "Bonus",
+      "noData": "Bu davr uchun ma'lumot yo'q"
+    },
+    "kpiSettings": {
+      "title": "KPI konfiguratsiyasi",
+      "description": "Ofitsiantlar uchun maqsad ko'rsatkichlar va bonus chegaralarini belgilang",
+      "addConfig": "Konfiguratsiya qo'shish",
+      "editConfig": "Konfiguratsiyani tahrirlash",
+      "configType": "Konfiguratsiya turi",
+      "restaurantDefault": "Restoran uchun standart",
+      "individualWaiter": "Individual ofitsiant",
+      "selectWaiter": "Ofitsiantni tanlang",
+      "targets": {
+        "title": "Maqsad ko'rsatkichlar",
+        "ordersPerShift": "Smenada buyurtmalar",
+        "revenuePerShift": "Smenada daromad",
+        "avgServiceTime": "O'rtacha xizmat vaqti (daqiqa)",
+        "targetRating": "Maqsad baho",
+        "upsellPercentage": "Qo'shimcha sotish foizi"
+      },
+      "bonus": {
+        "title": "Bonus sozlamalari",
+        "threshold": "Bonus uchun KPI chegarasi",
+        "amount": "Bonus miqdori"
+      },
+      "noConfigs": "KPI konfiguratsiyalari topilmadi. Kuzatishni boshlash uchun bitta qo'shing."
+    },
+    "details": {
+      "title": "Ofitsiant tafsilotlari",
+      "selectWaiter": "Ko'rish uchun ofitsiantni tanlang",
+      "summary": "Samaradorlik xulosasi",
+      "totalOrders": "Jami buyurtmalar",
+      "totalRevenue": "Jami daromad",
+      "avgServiceTime": "O'rtacha xizmat vaqti",
+      "complaints": "Shikoyatlar",
+      "voidItems": "Bekor qilingan mahsulotlar",
+      "totalTips": "Jami tip",
+      "totalBonus": "Jami bonus",
+      "avgKpiScore": "O'rtacha KPI ball"
+    },
+    "dateRange": {
+      "today": "Bugun",
+      "thisWeek": "Bu hafta",
+      "thisMonth": "Bu oy",
+      "custom": "Maxsus davr"
+    },
+    "messages": {
+      "configSaved": "KPI konfiguratsiyasi saqlandi",
+      "configDeleted": "KPI konfiguratsiyasi o'chirildi",
+      "saveError": "Konfiguratsiyani saqlashda xato",
+      "loadError": "Ma'lumotlarni yuklashda xato"
     }
   },
   "workingHours": {

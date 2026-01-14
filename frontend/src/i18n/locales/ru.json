@@ -58,6 +58,7 @@
       "clientHistory": "История клиентов",
       "operators": "Операторы",
       "waiters": "Официанты",
+      "waiterPerformance": "Эффективность официантов",
       "couriers": "Курьеры",
       "schedule": "Расписание",
       "tables": "Столы",
@@ -908,6 +909,76 @@
       "HANDLE_PAYMENTS": "Обработка платежей",
       "APPLY_DISCOUNTS": "Применение скидок",
       "REFUND_ORDERS": "Возврат заказов"
+    }
+  },
+  "waiterPerformance": {
+    "title": "Эффективность официантов",
+    "subtitle": "Отслеживание и управление KPI официантов",
+    "tabs": {
+      "leaderboard": "Рейтинг",
+      "kpiSettings": "Настройки KPI",
+      "details": "Детали"
+    },
+    "leaderboard": {
+      "title": "Рейтинг эффективности",
+      "rank": "Место",
+      "waiter": "Официант",
+      "orders": "Заказы",
+      "revenue": "Выручка",
+      "avgRating": "Средний рейтинг",
+      "kpiScore": "Балл KPI",
+      "tips": "Чаевые",
+      "bonus": "Бонус",
+      "noData": "Нет данных за этот период"
+    },
+    "kpiSettings": {
+      "title": "Конфигурация KPI",
+      "description": "Установите целевые показатели и пороги бонусов для официантов",
+      "addConfig": "Добавить конфигурацию",
+      "editConfig": "Редактировать конфигурацию",
+      "configType": "Тип конфигурации",
+      "restaurantDefault": "По умолчанию для ресторана",
+      "individualWaiter": "Индивидуальный официант",
+      "selectWaiter": "Выберите официанта",
+      "targets": {
+        "title": "Целевые показатели",
+        "ordersPerShift": "Заказов за смену",
+        "revenuePerShift": "Выручка за смену",
+        "avgServiceTime": "Среднее время обслуживания (мин)",
+        "targetRating": "Целевой рейтинг",
+        "upsellPercentage": "Процент допродаж"
+      },
+      "bonus": {
+        "title": "Настройки бонуса",
+        "threshold": "Порог KPI для бонуса",
+        "amount": "Сумма бонуса"
+      },
+      "noConfigs": "Конфигурации KPI не найдены. Добавьте одну для начала отслеживания."
+    },
+    "details": {
+      "title": "Детали официанта",
+      "selectWaiter": "Выберите официанта для просмотра",
+      "summary": "Сводка эффективности",
+      "totalOrders": "Всего заказов",
+      "totalRevenue": "Общая выручка",
+      "avgServiceTime": "Среднее время обслуживания",
+      "complaints": "Жалобы",
+      "voidItems": "Отмененные позиции",
+      "totalTips": "Всего чаевых",
+      "totalBonus": "Всего бонусов",
+      "avgKpiScore": "Средний балл KPI"
+    },
+    "dateRange": {
+      "today": "Сегодня",
+      "thisWeek": "Эта неделя",
+      "thisMonth": "Этот месяц",
+      "custom": "Произвольный период"
+    },
+    "messages": {
+      "configSaved": "Конфигурация KPI сохранена",
+      "configDeleted": "Конфигурация KPI удалена",
+      "saveError": "Ошибка сохранения конфигурации",
+      "loadError": "Ошибка загрузки данных"
     }
   },
   "workingHours": {
