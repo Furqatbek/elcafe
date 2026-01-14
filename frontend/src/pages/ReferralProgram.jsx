@@ -126,7 +126,9 @@ export default function ReferralProgram() {
   const loadRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll({ page: 0, size: 100 });
-      const restaurantList = response.data?.data?.content || [];
+      // Handle both paginated and direct array responses
+      const data = response.data?.data;
+      const restaurantList = Array.isArray(data) ? data : (data?.content || []);
       setRestaurants(restaurantList);
       // Select first restaurant by default if none selected
       if (restaurantList.length > 0 && !selectedRestaurant && !user?.restaurantId) {
@@ -134,6 +136,7 @@ export default function ReferralProgram() {
       }
     } catch (error) {
       console.error('Error loading restaurants:', error);
+      setRestaurants([]);
     }
   };
 
@@ -167,10 +170,13 @@ export default function ReferralProgram() {
     setLoading(true);
     try {
       const response = await referralAPI.getReferrals(selectedRestaurant, { page: referralPage, size: 10 });
-      setReferrals(response.data?.data?.content || []);
-      setReferralTotalPages(response.data?.data?.totalPages || 0);
+      const data = response.data?.data;
+      const referralList = Array.isArray(data) ? data : (data?.content || []);
+      setReferrals(referralList);
+      setReferralTotalPages(data?.totalPages || 0);
     } catch (error) {
       console.error('Error loading referrals:', error);
+      setReferrals([]);
     } finally {
       setLoading(false);
     }
@@ -180,10 +186,13 @@ export default function ReferralProgram() {
     setLoading(true);
     try {
       const response = await referralAPI.getCodes(selectedRestaurant, { page: codePage, size: 10 });
-      setCodes(response.data?.data?.content || []);
-      setCodeTotalPages(response.data?.data?.totalPages || 0);
+      const data = response.data?.data;
+      const codeList = Array.isArray(data) ? data : (data?.content || []);
+      setCodes(codeList);
+      setCodeTotalPages(data?.totalPages || 0);
     } catch (error) {
       console.error('Error loading codes:', error);
+      setCodes([]);
     } finally {
       setLoading(false);
     }
@@ -280,7 +289,7 @@ export default function ReferralProgram() {
             <SelectValue placeholder={t('common.selectRestaurant')} />
           </SelectTrigger>
           <SelectContent>
-            {restaurants.map((restaurant) => (
+            {Array.isArray(restaurants) && restaurants.map((restaurant) => (
               <SelectItem key={restaurant.id} value={restaurant.id.toString()}>
                 {restaurant.name}
               </SelectItem>
