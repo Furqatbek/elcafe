@@ -38,7 +38,7 @@ public class WorkingHoursService {
         restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
 
-        List<WorkingHours> workingHours = workingHoursRepository.findByRestaurantId(restaurantId);
+        List<WorkingHours> workingHours = workingHoursRepository.findByRestaurant_Id(restaurantId);
         log.debug("Found {} working hours for restaurant ID: {}", workingHours.size(), restaurantId);
 
         return workingHours.stream()
@@ -72,7 +72,7 @@ public class WorkingHoursService {
         userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        List<WorkingHours> workingHours = workingHoursRepository.findByRestaurantIdAndUserId(restaurantId, userId);
+        List<WorkingHours> workingHours = workingHoursRepository.findByRestaurant_IdAndUserId(restaurantId, userId);
         log.debug("Found {} working hours for restaurant ID: {} and user ID: {}", workingHours.size(), restaurantId, userId);
 
         return workingHours.stream()
@@ -88,7 +88,7 @@ public class WorkingHoursService {
         restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
 
-        List<WorkingHours> workingHours = workingHoursRepository.findByRestaurantIdAndDayOfWeek(restaurantId, dayOfWeek);
+        List<WorkingHours> workingHours = workingHoursRepository.findByRestaurant_IdAndDayOfWeek(restaurantId, dayOfWeek);
         log.debug("Found {} working hours for restaurant ID: {} on {}", workingHours.size(), restaurantId, dayOfWeek);
 
         return workingHours.stream()

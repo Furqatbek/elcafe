@@ -144,7 +144,6 @@ export default function Customers() {
     const errors = {};
     if (!formData.firstName.trim()) errors.firstName = t('validation.required');
     if (!formData.lastName.trim()) errors.lastName = t('validation.required');
-    if (!formData.email.trim()) errors.email = t('validation.required');
     if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = t('validation.email');
     }
@@ -252,7 +251,7 @@ export default function Customers() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">{t('customers.email')} *</Label>
+                    <Label htmlFor="email">{t('customers.email')}</Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input

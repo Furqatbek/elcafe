@@ -21,9 +21,11 @@ public class PurchaseOrderResponse {
     private Long restaurantId;
     private String restaurantName;
     private String poNumber;
+    private Long supplierId;
     private String supplierName;
     private String supplierContact;
     private String supplierAddress;
+    private String supplierPaymentTerms;
     private LocalDate orderDate;
     private LocalDate expectedDeliveryDate;
     private LocalDate actualDeliveryDate;
@@ -43,4 +45,8 @@ public class PurchaseOrderResponse {
     private List<PurchaseOrderItemResponse> items;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Linked expense information
+    private Long expenseId;
+    private String expenseNumber;
 }

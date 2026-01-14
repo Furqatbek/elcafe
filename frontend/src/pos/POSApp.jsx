@@ -1,15 +1,21 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import usePOSStore from './store/posStore';
+import { posAPI } from '../services/api';
 
 // Screens
 import StartOrderScreen from './screens/StartOrderScreen';
+import TableSelectionScreen from './screens/TableSelectionScreen';
 import MenuSelectionScreen from './screens/MenuSelectionScreen';
 import ProductModifiersScreen from './screens/ProductModifiersScreen';
 import CartScreen from './screens/CartScreen';
 import OrderDetailsScreen from './screens/OrderDetailsScreen';
 import PaymentScreen from './screens/PaymentScreen';
-import OrderConfirmationScreen from './screens/OrderConfirmationScreen';
+import ActiveOrdersScreen from './screens/ActiveOrdersScreen';
+import OrderModificationScreen from './screens/OrderModificationScreen';
+import SplitBillScreen from './screens/SplitBillScreen';
 
 /**
  * POSApp - Main POS application with screen routing
@@ -17,7 +23,121 @@ import OrderConfirmationScreen from './screens/OrderConfirmationScreen';
  */
 const POSApp = () => {
   const { t } = useTranslation();
-  const { ui } = usePOSStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { ui, setCurrentScreen } = usePOSStore();
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isLoadingOrder, setIsLoadingOrder] = useState(false);
+
+  // Check for pending payment order on mount
+  useEffect(() => {
+    const screen = searchParams.get('screen');
+    const pendingOrderId = localStorage.getItem('pendingPaymentOrderId');
+
+    if (screen === 'payment' && pendingOrderId) {
+      // Clear the pending order ID
+      localStorage.removeItem('pendingPaymentOrderId');
+      // Clear the URL param
+      setSearchParams({});
+
+      // Fetch and load the order
+      setIsLoadingOrder(true);
+      posAPI.getOrderById(pendingOrderId)
+        .then(response => {
+          const fullOrder = response.data.data;
+
+          // Map order items to POS format
+          const posItems = (fullOrder.items || []).map((item, index) => ({
+            id: item.id || `${item.productId}-${index}`,
+            productId: item.productId,
+            name: item.productName || item.name,
+            basePrice: item.unitPrice || item.price || 0,
+            modifiers: item.modifiers || [],
+            quantity: item.quantity,
+            itemTotal: item.totalPrice || (item.unitPrice || item.price || 0) * item.quantity,
+            notes: item.notes || item.specialInstructions || '',
+          }));
+
+          // Calculate totals
+          const subtotal = fullOrder.subtotal || posItems.reduce((sum, item) => sum + item.itemTotal, 0);
+          const tax = fullOrder.tax || 0;
+          const deliveryFee = fullOrder.deliveryFee || 0;
+          const serviceFeePercent = fullOrder.serviceFeePercent || 0;
+          const serviceFee = fullOrder.serviceFee || 0;
+          const total = fullOrder.total || (subtotal + tax + deliveryFee + serviceFee);
+
+          // Set up POS store with order data
+          usePOSStore.setState({
+            currentOrder: {
+              id: fullOrder.id,
+              orderNumber: fullOrder.orderNumber,
+              type: fullOrder.orderType || 'DINE_IN',
+              items: posItems,
+              subtotal,
+              tax,
+              deliveryFee,
+              serviceFeePercent,
+              serviceFee,
+              total,
+              notes: fullOrder.orderNotes || '',
+            },
+            customer: {
+              id: null,
+              name: fullOrder.customerName || '',
+              phone: fullOrder.customerPhone || '',
+              email: '',
+              address: null,
+              deliveryInstructions: '',
+              tableNumber: fullOrder.dineInInfo?.tableNumber || null,
+              tableIds: fullOrder.dineInInfo?.tableIds || null,
+              guestCount: fullOrder.dineInInfo?.guestCount || null,
+            },
+            payment: {
+              method: null,
+              amountTendered: 0,
+              changeDue: 0,
+              status: 'PENDING',
+            },
+            ui: {
+              currentScreen: 'payment',
+              isLoading: false,
+              error: null,
+              selectedCategory: null,
+              selectedProduct: null,
+            },
+          });
+        })
+        .catch(error => {
+          console.error('Failed to load order for payment:', error);
+          usePOSStore.setState({
+            ui: { ...usePOSStore.getState().ui, error: t('pos.errors.loadOrderFailed', 'Failed to load order') }
+          });
+        })
+        .finally(() => {
+          setIsLoadingOrder(false);
+        });
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Fullscreen toggle function (manual only, no auto-fullscreen)
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.log('Fullscreen request failed:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  // Listen for fullscreen changes (including ESC key exit)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // Prevent accidental page navigation
   useEffect(() => {
@@ -36,9 +156,24 @@ const POSApp = () => {
 
   // Render current screen based on UI state
   const renderScreen = () => {
+    // Show loading while fetching order for payment
+    if (isLoadingOrder) {
+      return (
+        <div className="h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-xl font-semibold text-gray-900">{t('pos.loading', 'Loading order...')}</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (ui.currentScreen) {
       case 'start':
         return <StartOrderScreen />;
+
+      case 'tables':
+        return <TableSelectionScreen />;
 
       case 'menu':
         return <MenuSelectionScreen />;
@@ -55,8 +190,14 @@ const POSApp = () => {
       case 'payment':
         return <PaymentScreen />;
 
-      case 'confirmation':
-        return <OrderConfirmationScreen />;
+      case 'active-orders':
+        return <ActiveOrdersScreen />;
+
+      case 'modify-order':
+        return <OrderModificationScreen />;
+
+      case 'split-bill':
+        return <SplitBillScreen />;
 
       default:
         return <StartOrderScreen />;
@@ -66,6 +207,15 @@ const POSApp = () => {
   return (
     <div className="pos-app h-screen overflow-hidden">
       {renderScreen()}
+
+      {/* Fullscreen Toggle Button */}
+      <button
+        onClick={toggleFullscreen}
+        className="fixed bottom-4 right-4 z-50 p-3 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg opacity-50 hover:opacity-100 transition-opacity"
+        title={isFullscreen ? t('pos.exitFullscreen', 'Exit Fullscreen (ESC)') : t('pos.enterFullscreen', 'Enter Fullscreen')}
+      >
+        {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+      </button>
 
       {/* Global Loading Overlay */}
       {ui.isLoading && (

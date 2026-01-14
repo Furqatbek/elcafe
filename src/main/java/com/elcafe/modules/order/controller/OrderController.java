@@ -5,6 +5,7 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.service.OrderService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.security.CurrentUser;
 import com.elcafe.security.UserPrincipal;
 import com.elcafe.utils.ApiResponse;
@@ -20,6 +21,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -32,6 +37,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final RestaurantRepository restaurantRepository;
+    private final ShiftTimeService shiftTimeService;
 
     @PostMapping
     @Operation(summary = "Create order", description = "Create a new order")
@@ -81,8 +87,54 @@ public class OrderController {
     }
 
     @GetMapping
-    @Operation(summary = "List orders", description = "Get all orders with pagination")
-    public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(Pageable pageable) {
+    @Operation(summary = "List orders", description = "Get all orders with pagination and filters. All date filtering uses shift-aware logic based on restaurant business hours.")
+    public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(
+            @RequestParam(required = false) Long restaurantId,
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
+            @RequestParam(required = false) String search,
+            Pageable pageable
+    ) {
+        LocalDateTime effectiveFromDate = fromDate;
+        LocalDateTime effectiveToDate = toDate;
+
+        // If shiftDate is provided (single day shift-aware filtering)
+        if (shiftDate != null && fromDate == null && toDate == null) {
+            ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, shiftDate);
+            effectiveFromDate = shiftRange.start();
+            effectiveToDate = shiftRange.end();
+        }
+        // If date range is provided, use shift-aware boundaries for both dates
+        else if (fromDate != null || toDate != null) {
+            LocalDate startDate = fromDate != null ? fromDate.toLocalDate() : null;
+            LocalDate endDate = toDate != null ? toDate.toLocalDate() : null;
+
+            if (startDate != null && endDate != null) {
+                // Multi-day range: use shift boundaries
+                ShiftTimeService.ShiftTimeRange range = shiftTimeService.getShiftTimeRangeForPeriod(restaurantId, startDate, endDate);
+                effectiveFromDate = range.start();
+                effectiveToDate = range.end();
+            } else if (startDate != null) {
+                // Only start date provided
+                ShiftTimeService.ShiftTimeRange range = shiftTimeService.getShiftTimeRange(restaurantId, startDate);
+                effectiveFromDate = range.start();
+            } else if (endDate != null) {
+                // Only end date provided
+                ShiftTimeService.ShiftTimeRange range = shiftTimeService.getShiftTimeRange(restaurantId, endDate);
+                effectiveToDate = range.end();
+            }
+        }
+
+        // If any filter is provided, use filtered query
+        if (restaurantId != null || status != null || effectiveFromDate != null || effectiveToDate != null || search != null) {
+            Page<Order> orders = orderService.getOrdersWithFilters(
+                    restaurantId, status, effectiveFromDate, effectiveToDate, search, true, pageable
+            );
+            return ResponseEntity.ok(ApiResponse.success(orders));
+        }
+        // Otherwise, use simple query
         Page<Order> orders = orderService.getAllOrders(pageable);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
@@ -99,5 +151,17 @@ public class OrderController {
     public ResponseEntity<ApiResponse<List<Order>>> getPendingOrders() {
         List<Order> orders = orderService.getPendingOrders();
         return ResponseEntity.ok(ApiResponse.success(orders));
+    }
+
+    @PatchMapping("/{id}/revert")
+    @Operation(summary = "Revert closed order to active", description = "Revert a DELIVERED or COMPLETED order back to an active status. This voids all payments and resets the order.")
+    public ResponseEntity<ApiResponse<Order>> revertOrderToActive(
+            @PathVariable Long id,
+            @RequestParam(required = false) OrderStatus targetStatus,
+            @RequestParam(required = false) String reason,
+            @RequestParam(required = false, defaultValue = "MANAGER") String revertedBy
+    ) {
+        Order order = orderService.revertOrderToActive(id, targetStatus, reason, revertedBy);
+        return ResponseEntity.ok(ApiResponse.success("Order reverted to active status", order));
     }
 }

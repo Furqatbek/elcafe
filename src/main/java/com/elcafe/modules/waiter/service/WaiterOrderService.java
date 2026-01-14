@@ -4,6 +4,7 @@ import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductVariant;
 import com.elcafe.modules.menu.repository.ProductRepository;
@@ -12,6 +13,7 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.waiter.dto.AddOrderItemRequest;
 import com.elcafe.modules.waiter.dto.CreateOrderRequest;
@@ -57,6 +59,7 @@ public class WaiterOrderService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final OrderEventService orderEventService;
+    private final InventoryService inventoryService;
 
     /**
      * Create a new order for a table (with optional items)
@@ -90,7 +93,9 @@ public class WaiterOrderService {
                 .diningTable(table)
                 .waiter(waiter)
                 .status(OrderStatus.NEW)
+                .orderType(OrderType.DINE_IN)
                 .orderSource(OrderSource.WAITER)
+                .guestCount(request.getGuestCount())
                 .subtotal(BigDecimal.ZERO)
                 .deliveryFee(BigDecimal.ZERO)
                 .tax(BigDecimal.ZERO)
@@ -139,6 +144,36 @@ public class WaiterOrderService {
             // Recalculate totals if items were added
             recalculateOrderTotals(savedOrder);
             savedOrder = orderRepository.save(savedOrder);
+
+            // Check ingredient availability and deduct inventory for items
+            log.info("Checking ingredient availability for new order {}", savedOrder.getOrderNumber());
+            if (!inventoryService.checkIngredientAvailability(savedOrder)) {
+                List<String> missingIngredients = new ArrayList<>();
+                for (var item : savedOrder.getItems()) {
+                    missingIngredients.addAll(
+                        inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity())
+                    );
+                }
+                String errorMsg = "Insufficient ingredients: " + String.join(", ", missingIngredients);
+                log.error("Cannot create order with items: {}", errorMsg);
+                throw new BadRequestException(errorMsg);
+            }
+
+            // Deduct ingredients from inventory
+            try {
+                inventoryService.deductIngredientsForOrder(savedOrder);
+                log.info("Deducted ingredients for new order {} with {} items",
+                    savedOrder.getOrderNumber(), savedOrder.getItems().size());
+
+                // Auto-submit to kitchen since inventory is now deducted
+                savedOrder.setStatus(OrderStatus.PREPARING);
+                savedOrder = orderRepository.save(savedOrder);
+                log.info("Order {} auto-submitted to kitchen with items", savedOrder.getOrderNumber());
+            } catch (Exception e) {
+                log.error("Failed to deduct ingredients for order {}: {}",
+                    savedOrder.getOrderNumber(), e.getMessage());
+                throw new BadRequestException("Failed to process inventory: " + e.getMessage());
+            }
         }
 
         // Record event
@@ -153,6 +188,7 @@ public class WaiterOrderService {
 
     /**
      * Add items to an order
+     * If order is already submitted to kitchen (PREPARING+), deducts ingredients for new items
      */
     @Transactional
     public Order addItems(Long orderId, List<AddOrderItemRequest> items, Long waiterId) {
@@ -166,6 +202,12 @@ public class WaiterOrderService {
         if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
             throw new BadRequestException("Cannot modify completed or cancelled order");
         }
+
+        // Track if order is currently a draft (NEW status) - will auto-submit after adding items
+        boolean isNewOrder = order.getStatus() == OrderStatus.NEW;
+
+        // Build list of new order items first (for inventory check)
+        List<OrderItem> newItems = new ArrayList<>();
 
         for (AddOrderItemRequest itemRequest : items) {
             Product product = productRepository.findById(itemRequest.getProductId())
@@ -197,11 +239,44 @@ public class WaiterOrderService {
                     .specialInstructions(itemRequest.getSpecialInstructions())
                     .build();
 
-            order.addItem(orderItem);
+            newItems.add(orderItem);
+        }
+
+        // Add items to order first
+        for (OrderItem item : newItems) {
+            order.addItem(item);
         }
 
         // Recalculate totals
         recalculateOrderTotals(order);
+
+        // Check availability for new items
+        for (OrderItem item : newItems) {
+            if (!inventoryService.canMakeProduct(item.getProductId(), item.getQuantity())) {
+                List<String> missing = inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity());
+                throw new BadRequestException("Insufficient ingredients for " + item.getProductName() + ": " + String.join(", ", missing));
+            }
+        }
+
+        // Create a temporary order with just new items to deduct ingredients
+        Order tempOrder = Order.builder()
+                .orderNumber(order.getOrderNumber() + "-ADD")
+                .items(newItems)
+                .build();
+
+        try {
+            inventoryService.deductIngredientsForOrder(tempOrder);
+            log.info("Deducted ingredients for {} new items added to order {}", newItems.size(), order.getOrderNumber());
+        } catch (Exception e) {
+            log.error("Failed to deduct ingredients for new items in order {}: {}", order.getOrderNumber(), e.getMessage());
+            throw new BadRequestException("Failed to process inventory: " + e.getMessage());
+        }
+
+        // Auto-submit to kitchen if order was NEW
+        if (isNewOrder) {
+            order.setStatus(OrderStatus.PREPARING);
+            log.info("Order {} auto-submitted to kitchen after adding items", order.getOrderNumber());
+        }
 
         Order updatedOrder = orderRepository.save(order);
 
@@ -307,6 +382,7 @@ public class WaiterOrderService {
 
     /**
      * Submit order to kitchen
+     * Checks ingredient availability and deducts ingredients from inventory
      */
     @Transactional
     public Order submitToKitchen(Long orderId, Long waiterId) {
@@ -322,6 +398,30 @@ public class WaiterOrderService {
 
         if (order.getStatus() != OrderStatus.NEW) {
             throw new BadRequestException("Order has already been submitted");
+        }
+
+        // Check ingredient availability before submitting to kitchen
+        log.info("Checking ingredient availability for order {}", order.getOrderNumber());
+        if (!inventoryService.checkIngredientAvailability(order)) {
+            // Get detailed missing ingredients info
+            List<String> missingIngredients = new ArrayList<>();
+            for (var item : order.getItems()) {
+                missingIngredients.addAll(
+                    inventoryService.getMissingIngredients(item.getProductId(), item.getQuantity())
+                );
+            }
+            String errorMsg = "Insufficient ingredients: " + String.join(", ", missingIngredients);
+            log.error("Cannot submit order {} to kitchen: {}", order.getOrderNumber(), errorMsg);
+            throw new BadRequestException(errorMsg);
+        }
+
+        // Deduct ingredients from inventory
+        try {
+            inventoryService.deductIngredientsForOrder(order);
+            log.info("Successfully deducted ingredients for order {}", order.getOrderNumber());
+        } catch (Exception e) {
+            log.error("Failed to deduct ingredients for order {}: {}", order.getOrderNumber(), e.getMessage());
+            throw new BadRequestException("Failed to process inventory: " + e.getMessage());
         }
 
         order.setStatus(OrderStatus.PREPARING);
@@ -480,19 +580,25 @@ public class WaiterOrderService {
     }
 
     /**
-     * Get waiter performance metrics
+     * Get waiter performance metrics with period filter
+     * @param waiterId the waiter ID
+     * @param period the time period: "daily", "weekly", or "monthly"
      */
     @Transactional(readOnly = true)
-    public WaiterMetricsResponse getWaiterMetrics(Long waiterId) {
+    public WaiterMetricsResponse getWaiterMetrics(Long waiterId, String period) {
         // Verify waiter exists
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
-        // Calculate total revenue (excluding PENDING and CANCELLED)
-        BigDecimal totalRevenue = orderRepository.calculateTotalRevenueByWaiter(waiterId);
+        // Calculate start date based on period
+        LocalDateTime startDate = calculateStartDate(period);
+        int activityDays = getActivityDays(period);
 
-        // Count valid orders (excluding PENDING and CANCELLED)
-        Long totalOrders = orderRepository.countValidOrdersByWaiter(waiterId);
+        // Calculate total revenue for the period
+        BigDecimal totalRevenue = orderRepository.calculateTotalRevenueByWaiterSince(waiterId, startDate);
+
+        // Count valid orders for the period
+        Long totalOrders = orderRepository.countValidOrdersByWaiterSince(waiterId, startDate);
 
         // Calculate average ticket
         BigDecimal averageTicket = BigDecimal.ZERO;
@@ -500,11 +606,11 @@ public class WaiterOrderService {
             averageTicket = totalRevenue.divide(BigDecimal.valueOf(totalOrders), 2, RoundingMode.HALF_UP);
         }
 
-        // Get weekly activity (last 7 days)
-        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-        List<Object[]> dailyData = orderRepository.findDailyRevenueByWaiter(waiterId, sevenDaysAgo);
+        // Get activity data for the period
+        LocalDateTime activityStartDate = LocalDateTime.now().minusDays(activityDays);
+        List<Object[]> dailyData = orderRepository.findDailyRevenueByWaiter(waiterId, activityStartDate);
 
-        List<DailyRevenueData> weeklyActivity = dailyData.stream()
+        List<DailyRevenueData> activity = dailyData.stream()
                 .map(row -> DailyRevenueData.builder()
                         .date((LocalDate) row[0])
                         .revenue((BigDecimal) row[1])
@@ -512,8 +618,8 @@ public class WaiterOrderService {
                         .build())
                 .collect(Collectors.toList());
 
-        // Get recent transactions (last 5 orders)
-        List<Order> recentOrders = orderRepository.findRecentOrdersByWaiter(waiterId, PageRequest.of(0, 5));
+        // Get recent transactions within the period (last 5 orders)
+        List<Order> recentOrders = orderRepository.findRecentOrdersByWaiterSince(waiterId, startDate, PageRequest.of(0, 5));
 
         List<RecentTransactionData> recentTransactions = recentOrders.stream()
                 .map(order -> RecentTransactionData.builder()
@@ -531,9 +637,32 @@ public class WaiterOrderService {
                 .totalRevenue(totalRevenue)
                 .totalOrders(totalOrders)
                 .averageTicket(averageTicket)
-                .weeklyActivity(weeklyActivity)
+                .weeklyActivity(activity)
                 .recentTransactions(recentTransactions)
                 .build();
+    }
+
+    /**
+     * Calculate the start date based on the period parameter
+     */
+    private LocalDateTime calculateStartDate(String period) {
+        LocalDateTime now = LocalDateTime.now();
+        return switch (period.toLowerCase()) {
+            case "daily" -> now.toLocalDate().atStartOfDay();
+            case "monthly" -> now.minusDays(30).toLocalDate().atStartOfDay();
+            default -> now.minusDays(7).toLocalDate().atStartOfDay(); // weekly (default)
+        };
+    }
+
+    /**
+     * Get the number of days for activity chart based on period
+     */
+    private int getActivityDays(String period) {
+        return switch (period.toLowerCase()) {
+            case "daily" -> 1;
+            case "monthly" -> 30;
+            default -> 7; // weekly (default)
+        };
     }
 
     /**
@@ -555,8 +684,8 @@ public class WaiterOrderService {
 
         order.setSubtotal(subtotal);
 
-        // Calculate tax (assuming 10% tax rate)
-        BigDecimal tax = subtotal.multiply(BigDecimal.valueOf(0.10));
+        // No tax
+        BigDecimal tax = BigDecimal.ZERO;
         order.setTax(tax);
 
         // Calculate total

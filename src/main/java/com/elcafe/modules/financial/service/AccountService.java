@@ -71,19 +71,19 @@ public class AccountService {
     }
 
     public List<Account> getAccountsByRestaurant(Long restaurantId) {
-        return accountRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        return accountRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
     }
 
     public List<Account> getAccountsByType(Long restaurantId, Account.AccountType type) {
-        return accountRepository.findByRestaurantIdAndType(restaurantId, type);
+        return accountRepository.findByRestaurant_IdAndType(restaurantId, type);
     }
 
     public List<Account> getAccountsByCategory(Long restaurantId, Account.AccountCategory category) {
-        return accountRepository.findByRestaurantIdAndCategory(restaurantId, category);
+        return accountRepository.findByRestaurant_IdAndCategory(restaurantId, category);
     }
 
     public Account getAccountByCode(Long restaurantId, String code) {
-        return accountRepository.findByRestaurantIdAndCode(restaurantId, code)
+        return accountRepository.findByRestaurant_IdAndCode(restaurantId, code)
                 .orElseThrow(() -> new RuntimeException("Account not found with code: " + code));
     }
 
@@ -93,6 +93,12 @@ public class AccountService {
     @Transactional
     public void initializeChartOfAccounts(Long restaurantId) {
         log.info("Initializing chart of accounts for restaurant: {}", restaurantId);
+
+        // Check if accounts already exist for this restaurant
+        if (accountRepository.existsByRestaurant_Id(restaurantId)) {
+            log.info("Chart of accounts already exists for restaurant: {}, skipping initialization", restaurantId);
+            return;
+        }
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + restaurantId));
@@ -122,6 +128,10 @@ public class AccountService {
                 Account.AccountCategory.SALES, Account.NormalBalance.CREDIT, true);
         createDefaultAccount(restaurant, "4100", "Delivery Fees", Account.AccountType.REVENUE,
                 Account.AccountCategory.DELIVERY_FEES, Account.NormalBalance.CREDIT, true);
+        createDefaultAccount(restaurant, "4200", "Service Fees", Account.AccountType.REVENUE,
+                Account.AccountCategory.SERVICE_FEES, Account.NormalBalance.CREDIT, true);
+        createDefaultAccount(restaurant, "4900", "Other Revenue", Account.AccountType.REVENUE,
+                Account.AccountCategory.OTHER_REVENUE, Account.NormalBalance.CREDIT, true);
 
         // Create default expense accounts
         createDefaultAccount(restaurant, "5000", "Cost of Goods Sold", Account.AccountType.EXPENSE,
@@ -136,8 +146,52 @@ public class AccountService {
                 Account.AccountCategory.SUPPLIES, Account.NormalBalance.DEBIT, true);
         createDefaultAccount(restaurant, "5500", "Delivery Costs", Account.AccountType.EXPENSE,
                 Account.AccountCategory.DELIVERY_COSTS, Account.NormalBalance.DEBIT, true);
+        createDefaultAccount(restaurant, "5600", "Marketing Expense", Account.AccountType.EXPENSE,
+                Account.AccountCategory.MARKETING, Account.NormalBalance.DEBIT, true);
+        createDefaultAccount(restaurant, "5900", "Other Expenses", Account.AccountType.EXPENSE,
+                Account.AccountCategory.OTHER_EXPENSE, Account.NormalBalance.DEBIT, true);
 
         log.info("Chart of accounts initialized successfully for restaurant: {}", restaurantId);
+    }
+
+    /**
+     * Add missing accounts for an existing restaurant.
+     * This is used to update restaurants that were created before new account types were added.
+     */
+    @Transactional
+    public void addMissingAccounts(Long restaurantId) {
+        log.info("Adding missing accounts for restaurant: {}", restaurantId);
+
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + restaurantId));
+
+        int added = 0;
+
+        // Check and add missing revenue accounts
+        if (accountRepository.findByRestaurant_IdAndCategory(restaurantId, Account.AccountCategory.SERVICE_FEES).isEmpty()) {
+            createDefaultAccount(restaurant, "4200", "Service Fees", Account.AccountType.REVENUE,
+                    Account.AccountCategory.SERVICE_FEES, Account.NormalBalance.CREDIT, true);
+            added++;
+        }
+        if (accountRepository.findByRestaurant_IdAndCategory(restaurantId, Account.AccountCategory.OTHER_REVENUE).isEmpty()) {
+            createDefaultAccount(restaurant, "4900", "Other Revenue", Account.AccountType.REVENUE,
+                    Account.AccountCategory.OTHER_REVENUE, Account.NormalBalance.CREDIT, true);
+            added++;
+        }
+
+        // Check and add missing expense accounts
+        if (accountRepository.findByRestaurant_IdAndCategory(restaurantId, Account.AccountCategory.MARKETING).isEmpty()) {
+            createDefaultAccount(restaurant, "5600", "Marketing Expense", Account.AccountType.EXPENSE,
+                    Account.AccountCategory.MARKETING, Account.NormalBalance.DEBIT, true);
+            added++;
+        }
+        if (accountRepository.findByRestaurant_IdAndCategory(restaurantId, Account.AccountCategory.OTHER_EXPENSE).isEmpty()) {
+            createDefaultAccount(restaurant, "5900", "Other Expenses", Account.AccountType.EXPENSE,
+                    Account.AccountCategory.OTHER_EXPENSE, Account.NormalBalance.DEBIT, true);
+            added++;
+        }
+
+        log.info("Added {} missing accounts for restaurant: {}", added, restaurantId);
     }
 
     private void createDefaultAccount(Restaurant restaurant, String code, String name,

@@ -9,9 +9,9 @@ import java.util.List;
 @Repository
 public interface DeliveryZoneRepository extends JpaRepository<DeliveryZone, Long> {
 
-    List<DeliveryZone> findByRestaurantId(Long restaurantId);
+    List<DeliveryZone> findByRestaurant_Id(Long restaurantId);
 
-    List<DeliveryZone> findByRestaurantIdAndActiveTrue(Long restaurantId);
+    List<DeliveryZone> findByRestaurant_IdAndActiveTrue(Long restaurantId);
 
-    List<DeliveryZone> findByRestaurantIdAndCity(Long restaurantId, String city);
+    List<DeliveryZone> findByRestaurant_IdAndCity(Long restaurantId, String city);
 }

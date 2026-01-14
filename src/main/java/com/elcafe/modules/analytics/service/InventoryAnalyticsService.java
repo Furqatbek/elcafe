@@ -1,6 +1,10 @@
 package com.elcafe.modules.analytics.service;
 
 import com.elcafe.modules.analytics.dto.InventoryTurnoverDTO;
+import com.elcafe.modules.financial.service.ShiftTimeService;
+import com.elcafe.modules.inventory.enums.ValuationMethod;
+import com.elcafe.modules.inventory.service.BatchConsumptionService;
+import com.elcafe.modules.inventory.service.InventoryValuationService;
 import com.elcafe.modules.menu.entity.Ingredient;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductIngredient;
@@ -18,13 +22,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for inventory analytics calculations
+ * Service for inventory analytics calculations.
+ * Uses shift-based time ranges for consistent reporting across midnight-crossing shifts.
  */
 @Slf4j
 @Service
@@ -34,44 +38,79 @@ public class InventoryAnalyticsService {
     private final IngredientRepository ingredientRepository;
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final InventoryValuationService valuationService;
+    private final BatchConsumptionService batchConsumptionService;
+    private final ShiftTimeService shiftTimeService;
 
     /**
-     * Calculate inventory turnover ratio and related metrics
+     * Calculate inventory turnover ratio and related metrics.
      * Inventory Turnover Ratio = Cost of Goods Sold / Average Inventory Value
      * Days to Sell Inventory = 365 / Inventory Turnover Ratio
+     *
+     * Now uses actual batch consumption COGS and valuation method for inventory value.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public InventoryTurnoverDTO getInventoryTurnover(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Inventory turnover using shift range: {} to {}", shift.start(), shift.end());
 
         // Get all completed orders in the period
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
-        // Calculate COGS (Cost of Goods Sold)
-        BigDecimal totalCOGS = orders.stream()
-                .flatMap(order -> order.getItems().stream())
-                .map(item -> {
-                    Product product = productRepository.findById(item.getProductId()).orElse(null);
-                    if (product != null && product.getCostPrice() != null) {
-                        return product.getCostPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                    }
-                    return BigDecimal.ZERO;
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Try to get COGS from batch consumption data first
+        BigDecimal totalCOGS = BigDecimal.ZERO;
+        if (restaurantId != null) {
+            try {
+                totalCOGS = batchConsumptionService.calculateTotalCOGS(restaurantId, shift.start(), shift.end());
+            } catch (Exception e) {
+                log.debug("Could not get batch-based COGS: {}", e.getMessage());
+            }
+        }
+
+        // Fall back to product-based COGS if no batch data
+        if (totalCOGS.compareTo(BigDecimal.ZERO) == 0) {
+            totalCOGS = orders.stream()
+                    .flatMap(order -> order.getItems().stream())
+                    .map(item -> {
+                        Product product = productRepository.findById(item.getProductId()).orElse(null);
+                        if (product != null && product.getCostPrice() != null) {
+                            return product.getCostPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                        }
+                        return BigDecimal.ZERO;
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
 
         // Get all active ingredients
         List<Ingredient> allIngredients = ingredientRepository.findAll().stream()
                 .filter(Ingredient::getIsActive)
                 .collect(Collectors.toList());
 
-        // Calculate average inventory value (current stock * cost per unit)
-        BigDecimal totalInventoryValue = allIngredients.stream()
-                .map(ingredient -> {
-                    BigDecimal stock = ingredient.getCurrentStock() != null ? ingredient.getCurrentStock() : BigDecimal.ZERO;
-                    BigDecimal cost = ingredient.getCostPerUnit() != null ? ingredient.getCostPerUnit() : BigDecimal.ZERO;
-                    return stock.multiply(cost);
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Try to get inventory value using valuation service
+        BigDecimal totalInventoryValue = BigDecimal.ZERO;
+        if (restaurantId != null) {
+            try {
+                ValuationMethod method = valuationService.getValuationMethod(restaurantId);
+                InventoryValuationService.InventoryValuation valuation =
+                        valuationService.calculateInventoryValue(restaurantId, method);
+                totalInventoryValue = valuation.totalValue();
+            } catch (Exception e) {
+                log.debug("Could not get valuation-based inventory value: {}", e.getMessage());
+            }
+        }
+
+        // Fall back to simple calculation if valuation service fails
+        if (totalInventoryValue.compareTo(BigDecimal.ZERO) == 0) {
+            totalInventoryValue = allIngredients.stream()
+                    .map(ingredient -> {
+                        BigDecimal stock = ingredient.getCurrentStock() != null ? ingredient.getCurrentStock() : BigDecimal.ZERO;
+                        BigDecimal cost = ingredient.getCostPerUnit() != null ? ingredient.getCostPerUnit() : BigDecimal.ZERO;
+                        return stock.multiply(cost);
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
 
         // Calculate ingredient usage during the period
         Map<Long, BigDecimal> ingredientUsage = calculateIngredientUsage(orders);
@@ -145,17 +184,23 @@ public class InventoryAnalyticsService {
 
     // Helper methods
 
+    /**
+     * Get orders with revenue-generating statuses within the given time range.
+     * Uses shared REVENUE_STATUSES for consistency across all reports.
+     */
     private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
         if (restaurantId != null) {
-            return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         } else {
             return orderRepository.findAll().stream()
                     .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         }
     }

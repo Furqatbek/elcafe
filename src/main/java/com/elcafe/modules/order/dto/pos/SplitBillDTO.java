@@ -18,19 +18,19 @@ public class SplitBillDTO {
     @NotNull(message = "Split mode is required")
     private SplitMode mode;
 
-    // For ITEMS mode
+    // For ITEMS mode - list of item assignments to persons
     private List<ItemSplit> itemSplits;
 
-    // For EVEN mode
+    // For EVEN mode - number of people to split between
     private Integer numPeople;
 
-    // For AMOUNT mode
+    // For AMOUNT mode - custom amount splits
     private List<AmountSplit> amountSplits;
 
     public enum SplitMode {
-        ITEMS,
-        EVEN,
-        AMOUNT
+        ITEMS,    // Split by assigning items to different persons
+        EVEN,     // Split evenly between N people
+        AMOUNT    // Split by custom amounts
     }
 
     @Data
@@ -51,28 +51,7 @@ public class SplitBillDTO {
         private BigDecimal amount;
     }
 
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class SplitItemInfo {
-        private Long itemId;
-        private String productName;
-        private Integer quantity;
-        private BigDecimal price;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class BillSplit {
-        private Integer personNumber;
-        private BigDecimal amount;
-        private List<SplitItemInfo> items;
-        private Boolean paid;
-    }
-
+    // Response classes
     @Data
     @Builder
     @NoArgsConstructor
@@ -83,5 +62,28 @@ public class SplitBillDTO {
         private SplitMode mode;
         private BigDecimal originalTotal;
         private List<BillSplit> splits;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BillSplit {
+        private Integer personNumber;
+        private BigDecimal amount;
+        private List<SplitItemInfo> items;
+        private boolean paid;
+        private String paymentMethod;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class SplitItemInfo {
+        private Long itemId;
+        private String productName;
+        private Integer quantity;
+        private BigDecimal price;
     }
 }

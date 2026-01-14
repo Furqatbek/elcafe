@@ -99,7 +99,8 @@
       "bundles": "Kombo",
       "referrals": "Referallar",
       "smsMarketing": "SMS Marketing",
-      "telegramMarketing": "Telegram"
+      "telegramMarketing": "Telegram",
+      "ordersHistory": "Buyurtmalar tarixi"
     }
   },
   "dashboard": {
@@ -155,7 +156,11 @@
       "avgDeliveryTime": "O'rtacha yetkazib berish vaqti"
     },
     "recentOrders": "So'nggi buyurtmalar",
-    "recentActivity": "So'nggi faoliyat"
+    "recentActivity": "So'nggi faoliyat",
+    "yesterday": "Kecha",
+    "lastWeek": "O'tgan hafta",
+    "lastMonth": "O'tgan oy",
+    "custom": "Maxsus davr"
   },
   "analytics": {
     "financial": {
@@ -407,7 +412,6 @@
       "zipCode": "Pochta indeksi",
       "customerNotes": "Mijoz eslatmalari"
     },
-    "closeTable": "Stolni yopish",
     "processPayment": "To'lovni amalga oshirish",
     "processPaymentDesc": "Buyurtma uchun to'lovni yakunlang",
     "selectPaymentMethod": "To'lov usuli",
@@ -456,7 +460,7 @@
     "paid": "To'langan",
     "addItemToOrder": "Buyurtmaga mahsulot qo'shish",
     "category": "Kategoriya",
-    "allCategories": "Barcha kategoriyalar",
+    "allCategories": "Hammasi",
     "product": "Mahsulot",
     "selectProduct": "Mahsulotni tanlang",
     "quantity": "Miqdor",
@@ -473,14 +477,92 @@
     "paymentSuccess": "To'lov muvaffaqiyatli amalga oshirildi",
     "cancelError": "Buyurtmani bekor qilib bo'lmadi",
     "addItemError": "Mahsulot qo'shib bo'lmadi: ",
-    "capacity": "Sig'imi"
+    "capacity": "Sig'imi",
+    "orderTypes": {
+      "DINE_IN": "Zalda",
+      "DELIVERY": "Yetkazib berish",
+      "TAKEAWAY": "Olib ketish"
+    },
+    "mandatoryServiceFee": "Xizmat haqi (20%)",
+    "serviceFeeAutoApplied": "Avtomatik qo'llaniladi",
+    "djServices": "DJ xizmatlari",
+    "djServicesPerGuest": "10 000 × {{count}} mehmon",
+    "editOrder": "Buyurtmani tahrirlash",
+    "editOrderDesc": "Ushbu buyurtmaga mahsulot qo'shing, o'chiring yoki o'zgartiring",
+    "currentItems": "Joriy mahsulotlar",
+    "noItems": "Bu buyurtmada mahsulotlar yo'q",
+    "addNewItem": "Yangi mahsulot qo'shish",
+    "confirmRemoveItem": "Ushbu mahsulotni o'chirishga ishonchingiz komilmi?",
+    "updateItemError": "Miqdorni o'zgartirib bo'lmadi",
+    "removeItemError": "Mahsulotni o'chirib bo'lmadi",
+    "splitPayment": "Hisobni bo'lish",
+    "splitEnabled": "Yoqilgan",
+    "splitDisabled": "O'chirilgan",
+    "splitBetween": "Bo'lish",
+    "people": "kishi",
+    "person": "Mehmon",
+    "pending": "Kutilmoqda",
+    "amount": "Summa",
+    "tendered": "Berilgan",
+    "payAmount": "{{amount}} to'lash",
+    "paidWith": "{{method}} orqali to'langan",
+    "splitProgress": "Jarayon",
+    "remaining": "Qoldiq",
+    "changeTable": "Stolni almashtirish",
+    "changeTableDesc": "Buyurtmani boshqa stolga ko'chirish",
+    "selectNewTable": "Yangi stolni tanlang",
+    "current": "Joriy",
+    "noAvailableTables": "Bo'sh stollar yo'q",
+    "tableChanged": "Buyurtma muvaffaqiyatli yangi stolga ko'chirildi",
+    "changeTableError": "Stolni almashtirib bo'lmadi: ",
+    "moveToTable": "Stolga ko'chirish"
   },
   "tables": {
+    "title": "Stollar",
+    "createNew": "Stol qo'shish",
+    "editTable": "Stolni tahrirlash",
+    "tableNumber": "Stol raqami",
+    "tableName": "Stol nomi",
+    "capacity": "Sig'im",
+    "section": "Bo'lim",
+    "notes": "Izohlar",
+    "active": "Faol",
+    "searchPlaceholder": "Raqam, nom yoki bo'lim bo'yicha qidirish...",
+    "selectRestaurantFirst": "Stollarni ko'rish uchun restoranni tanlang",
+    "noTables": "Stollar topilmadi",
+    "confirmDelete": "Ushbu stolni o'chirishga ishonchingiz komilmi?",
+    "confirmUnmerge": "Ushbu stollarni ajratishga ishonchingiz komilmi?",
+    "merged": "Birlashtirilgan stol",
+    "originalCapacity": "Asl",
+    "mergeTables": "Stollarni birlashtirish",
+    "unmerge": "Ajratish",
+    "increased": "Oshirilgan",
     "status": {
+      "AVAILABLE": "Bo'sh",
+      "OCCUPIED": "Band",
+      "RESERVED": "Bron qilingan",
+      "CLEANING": "Tozalanmoqda",
+      "OUT_OF_SERVICE": "Xizmat ko'rsatilmaydi"
+    },
+    "stats": {
+      "total": "Jami stollar",
       "available": "Bo'sh",
       "occupied": "Band",
-      "reserved": "Bron qilingan",
-      "unavailable": "Mavjud emas"
+      "reserved": "Bron qilingan"
+    },
+    "messages": {
+      "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
+      "createSuccess": "Stol muvaffaqiyatli yaratildi",
+      "updateSuccess": "Stol muvaffaqiyatli yangilandi",
+      "saveError": "Stolni saqlab bo'lmadi",
+      "deleteSuccess": "Stol muvaffaqiyatli o'chirildi",
+      "deleteError": "Stolni o'chirib bo'lmadi",
+      "statusError": "Stol holatini yangilab bo'lmadi",
+      "selectAtLeast2Tables": "Iltimos, birlashtirish uchun kamida 2 ta stol tanlang",
+      "mergeSuccess": "Stollar muvaffaqiyatli birlashtirildi",
+      "mergeError": "Stollarni birlashtirib bo'lmadi",
+      "unmergeSuccess": "Stollar muvaffaqiyatli ajratildi",
+      "unmergeError": "Stollarni ajratib bo'lmadi"
     }
   },
   "restaurants": {
@@ -814,7 +896,13 @@
       "approve": "Tasdiqlash",
       "recordPayment": "To'lovni qayd qilish",
       "addStock": "Zaxira qo'shish",
-      "viewHistory": "Tarixni ko'rish"
+      "viewHistory": "Tarixni ko'rish",
+      "change": "O'zgartirish",
+      "confirm": "Tasdiqlash",
+      "refresh": "Yangilash",
+      "tryAgain": "Qayta urinish",
+      "back": "Orqaga",
+      "adjustStock": "Zaxirani sozlash"
     },
     "labels": {
       "total": "Jami",
@@ -834,7 +922,22 @@
       "noAvailableTables": "Bo'sh stollar yo'q",
       "confirmDelete": "\"{name}\" ni o'chirishga ishonchingiz komilmi? Bu amalni bekor qilib bo'lmaydi.",
       "confirmUnmerge": "Bu stollarni ajratishga ishonchingiz komilmi?"
-    }
+    },
+    "allCategories": "Barcha kategoriyalar",
+    "approving": "Tasdiqlanmoqda...",
+    "moving": "Ko'chirilmoqda...",
+    "dateRange": "Sana oralig'i",
+    "startDate": "Boshlanish sanasi",
+    "endDate": "Tugash sanasi",
+    "margin": "Marja",
+    "cash": "Naqd",
+    "card": "Karta",
+    "online": "Onlayn",
+    "category": "Kategoriya",
+    "product": "Mahsulot",
+    "date": "Sana",
+    "activeOrderInProgress": "Tugatilmagan buyurtma mavjud",
+    "incompleteOrderMessage": "Sizda {{count}} ta mahsulotli tugatilmagan {{type}} buyurtmasi mavjud"
   },
   "validation": {
     "required": "Bu maydon majburiy",
@@ -1190,7 +1293,8 @@
         "WEEKLY": "Haftalik",
         "MONTHLY": "Oylik",
         "QUARTERLY": "Choraklik",
-        "YEARLY": "Yillik"
+        "YEARLY": "Yillik",
+        "DAILY": "Kunlik"
       },
       "statuses": {
         "UNPAID": "To'lanmagan",
@@ -1394,9 +1498,513 @@
     "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
   },
   "inventory": {
-    "form": {
-      "newQuantity": "Yangi miqdor *",
-      "notes": "Eslatmalar"
+    "title": "Inventar boshqaruvi",
+    "subtitle": "Ingredientlar va zaxiralarni boshqarish",
+    "addIngredient": "Ingredient qo'shish",
+    "editIngredient": "Ingredientni tahrirlash",
+    "addDescription": "Inventar kuzatuvi uchun yangi ingredient yaratish",
+    "editDescription": "Ingredient ma'lumotlarini yangilash",
+    "ingredientsList": "Ingredientlar ro'yxati",
+    "ingredientsDescription": "Barcha ingredientlarni boshqarish va kuzatish",
+    "noIngredients": "Ingredientlar topilmadi",
+    "searchPlaceholder": "Nom, SKU yoki yetkazib beruvchi bo'yicha qidirish...",
+    "confirmDelete": "Ushbu ingredientni o'chirishga ishonchingiz komilmi?",
+    "addStock": "Zaxira qo'shish",
+    "adjustStock": "Zaxirani sozlash",
+    "updateStock": "Zaxirani yangilash",
+    "currentStockLabel": "Joriy zaxira: {{currentStock}} {{unit}}",
+    "quantityToAdd": "Qo'shiladigan miqdor",
+    "newQuantity": "Yangi miqdor",
+    "performedBy": "Bajaruvchi",
+    "transactionHistory": "Tranzaksiyalar tarixi",
+    "transactionHistoryDesc": "Ushbu ingredient uchun barcha zaxira harakatlari",
+    "noTransactions": "Tranzaksiyalar topilmadi",
+    "stats": {
+      "total": "Jami ingredientlar",
+      "active": "faol",
+      "lowStock": "Kam zaxira",
+      "needsAttention": "E'tibor talab etadi",
+      "reorder": "Tez orada buyurtma bering",
+      "reorderSoon": "Tez orada buyurtma bering",
+      "tracked": "Kuzatilayotgan mahsulotlar",
+      "monitoring": "Monitoring"
+    },
+    "filters": {
+      "all": "Barcha ingredientlar",
+      "active": "Faqat faol",
+      "inactive": "Faqat faol emas",
+      "lowStock": "Kam zaxira",
+      "reorder": "Qayta buyurtma darajasi"
+    },
+    "fields": {
+      "name": "Ingredient nomi",
+      "sku": "SKU",
+      "description": "Tavsif",
+      "unit": "O'lchov birligi",
+      "supplier": "Yetkazib beruvchi",
+      "currentStock": "Joriy zaxira",
+      "minimumStock": "Minimal zaxira",
+      "reorderLevel": "Qayta buyurtma darajasi",
+      "costPerUnit": "Birlik narxi",
+      "status": "Holat",
+      "active": "Faol",
+      "trackInventory": "Inventarni kuzatish",
+      "trackExpiry": "Yaroqlilik muddatini kuzatish"
+    },
+    "placeholders": {
+      "name": "masalan, Pomidor, Tovuq go'shti",
+      "sku": "masalan, ING-001",
+      "description": "Ingredient haqida qisqacha tavsif",
+      "supplier": "masalan, ABC Oziq-ovqat yetkazib beruvchilar"
+    },
+    "units": {
+      "kg": "Kilogramm (kg)",
+      "g": "Gramm (g)",
+      "L": "Litr (L)",
+      "ml": "Millilitr (ml)",
+      "pieces": "Dona",
+      "dozens": "O'nlab"
+    },
+    "status": {
+      "notTracked": "Kuzatilmaydi",
+      "lowStock": "Kam zaxira",
+      "reorderSoon": "Tez orada buyurtma bering",
+      "inStock": "Omborda bor"
+    },
+    "transactionFields": {
+      "date": "Sana",
+      "type": "Tur",
+      "change": "O'zgarish",
+      "balanceAfter": "Qoldiqdan keyin",
+      "performedBy": "Bajaruvchi",
+      "notes": "Izohlar"
+    },
+    "errors": {
+      "saveFailed": "Ingredientni saqlab bo'lmadi",
+      "deleteFailed": "Ingredientni o'chirib bo'lmadi"
+    },
+    "tabs": {
+      "ingredients": "Ingredientlar",
+      "recipes": "Retseptlar",
+      "expiry": "Yaroqlilik muddati",
+      "stockCounts": "Inventarizatsiya",
+      "waste": "Isrofgarchilik",
+      "suppliers": "Yetkazib beruvchilar",
+      "stockAlerts": "Zaxira ogohlantirishlari",
+      "valuation": "Baholash"
+    },
+    "stockCounts": {
+      "title": "Inventarizatsiya",
+      "description": "Fizik inventar hisob-kitobi va tekshiruvi",
+      "newCount": "Yangi hisob-kitob",
+      "createTitle": "Inventarizatsiya yaratish",
+      "createDescription": "Yangi fizik inventar hisob-kitobini boshlash",
+      "noData": "Inventarizatsiyalar topilmadi",
+      "scheduled": "Rejalashtirilgan",
+      "progress": "Progress",
+      "items": "ta element",
+      "variances": "Farqlar",
+      "countNumber": "Hisob №",
+      "type": {
+        "full": "To'liq hisob-kitob",
+        "cycle": "Tsiklik hisob-kitob",
+        "spotCheck": "Tanlab tekshirish"
+      },
+      "status": {
+        "draft": "Qoralama",
+        "inProgress": "Jarayonda",
+        "pendingReview": "Tekshiruvda",
+        "approved": "Tasdiqlangan",
+        "cancelled": "Bekor qilingan"
+      },
+      "variance": "Farq",
+      "scheduledDate": "Rejalashtirilgan",
+      "submitForReview": "Tekshiruvga yuborish",
+      "approveAndAdjust": "Tasdiqlash va tuzatish",
+      "stats": {
+        "total": "Jami hisoblar",
+        "inProgress": "Jarayonda",
+        "pendingReview": "Tekshiruvda",
+        "approved": "Tasdiqlangan"
+      },
+      "fields": {
+        "type": "Hisob turi",
+        "scheduledDate": "Sana",
+        "ingredient": "Ingredient",
+        "systemQty": "Tizimda",
+        "countedQty": "Hisoblangan",
+        "variance": "Farq",
+        "status": "Holat",
+        "reason": "Sabab"
+      },
+      "itemStatus": {
+        "pending": "Kutilmoqda",
+        "counted": "Hisoblangan",
+        "recounted": "Qayta hisoblangan",
+        "verified": "Tasdiqlangan"
+      },
+      "cancelTitle": "Inventarizatsiyani bekor qilish",
+      "cancelDescription": "Rostdan ham bu inventarizatsiyani bekor qilmoqchimisiz? Bu amalni ortga qaytarib bo'lmaydi.",
+      "cancelReason": "Bekor qilish sababi",
+      "cancelReasonPlaceholder": "Inventarizatsiyani bekor qilish sababini kiriting...",
+      "confirmCancel": "Bekor qilishni tasdiqlash",
+      "approveTitle": "Inventarizatsiyani tasdiqlash",
+      "approveDescription": "Inventarizatsiyani ko'rib chiqing va tasdiqlang. Siz hisoblangan miqdorlarga asoslanib zaxira darajalarini o'zgartirishingiz mumkin.",
+      "adjustInventoryLabel": "Zaxira darajalarini hisoblangan miqdorlarga moslashtirish",
+      "adjustInventoryWarning": "Bu tizim inventar miqdorlarini fizik hisob-kitobga moslashtiradi. Barcha farqlar ko'rib chiqilganligiga ishonch hosil qiling.",
+      "approveNotes": "Izohlar (ixtiyoriy)",
+      "approveNotesPlaceholder": "Tasdiqlash haqida izoh qo'shing...",
+      "confirmApprove": "Tasdiqlash",
+      "varianceReasonTitle": "Farq sababini belgilash",
+      "varianceReasonDesc": "{{ingredient}} uchun farq sababini belgilang",
+      "varianceReasonLabel": "Sabab",
+      "selectReason": "Sababni tanlang",
+      "varianceNotesLabel": "Qo'shimcha izohlar (ixtiyoriy)",
+      "varianceNotesPlaceholder": "Qo'shimcha ma'lumotlarni kiriting...",
+      "setReason": "Sababni belgilash",
+      "varianceReasons": {
+        "theft": "O'g'irlik",
+        "damage": "Shikastlanish",
+        "spoilage": "Buzilish",
+        "countingError": "Hisoblash xatosi",
+        "systemError": "Tizim xatosi",
+        "unrecordedUsage": "Qayd etilmagan foydalanish",
+        "unrecordedReceipt": "Qayd etilmagan qabul",
+        "shrinkage": "Kamayish",
+        "other": "Boshqa"
+      },
+      "tabs": {
+        "counts": "Inventarizatsiyalar",
+        "varianceReport": "Farqlar hisoboti"
+      },
+      "report": {
+        "dateRange": "Davr",
+        "generateReport": "Hisobot yaratish",
+        "totalVariances": "Jami farqlar",
+        "totalVarianceValue": "Farqlarning umumiy qiymati",
+        "itemsWithVariance": "ta farq aniqlangan element",
+        "estimatedLoss": "taxminiy ta'sir qiymati",
+        "byReason": "Sabablar bo'yicha farqlar",
+        "byReasonDesc": "Belgilangan sabablarga ko'ra farqlarning taqsimoti",
+        "count": "Soni",
+        "totalValue": "Umumiy qiymat",
+        "topVarianceItems": "Eng ko'p farqli elementlar",
+        "topVarianceItemsDesc": "Eng yuqori farq chastotasi va qiymatiga ega ingredientlar",
+        "varianceCount": "Farqlar soni",
+        "noVariances": "Farqlar topilmadi",
+        "noVariancesDesc": "Bu davrda inventar farqlari qayd etilmagan.",
+        "selectDates": "Davrni tanlang",
+        "selectDatesDesc": "Farqlar ma'lumotlarini ko'rish uchun sanalarni tanlang va \"Hisobot yaratish\" tugmasini bosing."
+      }
+    },
+    "waste": {
+      "title": "Isrofgarchilik boshqaruvi",
+      "records": "Isrofgarchilik yozuvlari",
+      "recordsDesc": "Inventar bo'yicha isrofgarchilikni kuzatish va tahlil qilish",
+      "recordWaste": "Isrofgarchilikni yozish",
+      "recordWasteDesc": "Ingredient uchun isrofgarchilik hodisasini qayd etish",
+      "selectIngredient": "Ingredientni tanlang",
+      "noRecords": "Isrofgarchilik yozuvlari topilmadi. Birinchi yozuvni qo'shish uchun \"Isrofgarchilikni yozish\" tugmasini bosing.",
+      "totalWaste": "Jami isrofgarchilik (30 kun)",
+      "mostCommonReason": "Eng ko'p sabab",
+      "totalQuantity": "Jami miqdor",
+      "avgPerRecord": "O'rtacha narx",
+      "units": "birlik isrof qilindi",
+      "date": "Sana",
+      "quantity": "Miqdor",
+      "reason": "Sabab",
+      "cost": "Narx",
+      "totalCost": "Jami narx",
+      "recordedBy": "Yozuvchi",
+      "notes": "Izohlar",
+      "notesPlaceholder": "Isrofgarchilik haqida ixtiyoriy izohlar",
+      "record": "Yozish",
+      "byReason": "Sabab bo'yicha isrofgarchilik",
+      "topWasted": "Eng ko'p isrof qilingan ingredientlar",
+      "percentage": "Jami %",
+      "reasons": {
+        "expired": "Muddati o'tgan",
+        "spoiled": "Buzilgan",
+        "damaged": "Shikastlangan",
+        "preparation": "Tayyorlash",
+        "overProduction": "Ortiqcha ishlab chiqarish",
+        "customerReturn": "Mijoz qaytarishi",
+        "qualityIssue": "Sifat muammosi",
+        "contamination": "Ifloslanish",
+        "theft": "O'g'irlik",
+        "other": "Boshqa"
+      }
+    },
+    "recipes": {
+      "selectProduct": "Mahsulotni tanlang",
+      "selectProductDesc": "Retseptni ko'rish va boshqarish uchun mahsulotni tanlang",
+      "selectProductFirst": "Retseptni ko'rish uchun mahsulotni tanlang",
+      "noProducts": "Mavjud mahsulotlar yo'q",
+      "ingredientLinks": "Ingredient bog'lanishlari",
+      "for": "Retsept uchun",
+      "addIngredient": "Ingredient qo'shish",
+      "noIngredients": "Bu mahsulotga ingredientlar bog'lanmagan",
+      "addFirst": "Birinchi ingredientni qo'shish",
+      "ingredient": "Ingredient",
+      "quantity": "Miqdor",
+      "unit": "Birlik",
+      "selectIngredient": "Ingredientni tanlang",
+      "confirmDelete": "Ushbu retseptni o'chirishga ishonchingiz komilmi?",
+      "errors": {
+        "saveFailed": "Retseptni saqlab bo'lmadi",
+        "deleteFailed": "Retseptni o'chirib bo'lmadi"
+      },
+      "changeIngredientNote": "Bog'langan ingredientni o'zgartirishingiz mumkin",
+      "searchIngredients": "Ingredientlarni qidirish...",
+      "filterByUnit": "Birlik bo'yicha filtr",
+      "noIngredientsFound": "Ingredientlar topilmadi",
+      "ingredientsFound": "{{count}} ta ingredient topildi",
+      "filterByCategory": "Kategoriya bo'yicha filtr",
+      "productsFound": "{{count}} ta mahsulot topildi"
+    },
+    "stockAlerts": {
+      "lowStockItems": "Kam zaxira mahsulotlar",
+      "reorderItems": "Buyurtma kerak",
+      "activeSubscriptions": "Faol obunalar",
+      "sendAlert": "Ogohlantirish yuborish",
+      "trigger": "Hozir yuborish",
+      "subscriptions": "Telegram obunalari",
+      "subscriptionsDesc": "Zaxira ogohlantirishlari uchun Telegram chat obunalarini boshqarish",
+      "addSubscription": "Obuna qo'shish",
+      "editSubscription": "Obunani tahrirlash",
+      "subscriberName": "Obunachi",
+      "chatId": "Telegram Chat ID",
+      "lowStockAlerts": "Kam zaxira",
+      "reorderAlerts": "Buyurtma",
+      "status": "Holat",
+      "lastAlert": "Oxirgi ogohlantirish",
+      "never": "Hech qachon",
+      "noSubscriptions": "Obunalar topilmadi. Ogohlantirish olish uchun Telegram chat qo'shing.",
+      "subscriptionDesc": "Zaxira ogohlantirishlari uchun Telegram sozlamalari",
+      "namePlaceholder": "masalan, Menejer Javohir",
+      "alertOnLowStock": "Kam zaxirada ogohlantirish",
+      "alertOnReorder": "Buyurtma kerakligida ogohlantirish",
+      "alertTriggered": "Zaxira ogohlantirishlari muvaffaqiyatli yuborildi!",
+      "confirmDelete": "Ushbu obunani o'chirishga ishonchingiz komilmi?",
+      "howToSetup": "Telegram Chat ID ni qanday olish mumkin",
+      "step1": "Telegram botingiz bilan chat boshlang",
+      "step2": "Botga /start buyrug'ini yuboring",
+      "step3": "Bot sizga Chat ID ni yuboradi",
+      "step4": "Chat ID ni nusxalang va shu yerga obuna sifatida qo'shing",
+      "errors": {
+        "saveFailed": "Obunani saqlab bo'lmadi",
+        "triggerFailed": "Ogohlantirishni yuborib bo'lmadi"
+      }
+    },
+    "poSuggestions": {
+      "title": "Xarid buyurtmasi takliflari",
+      "subtitle": "Qayta buyurtma darajalariga asoslangan avtomatik takliflar",
+      "noSuggestions": "Barcha mahsulotlar yetarli",
+      "allStocked": "Hozirda qayta buyurtma talab qiladigan mahsulotlar yo'q.",
+      "createPO": "XB yaratish",
+      "createAllPOs": "Barcha XBlarni yaratish",
+      "confirmGenerateAll": "Barcha taklif etilgan yetkazib beruvchilar uchun xarid buyurtmalarini yaratmoqchimisiz?",
+      "totalSuppliers": "Yetkazib beruvchilar",
+      "totalItems": "Buyurtma kerak bo'lgan mahsulotlar",
+      "estimatedCost": "Taxminiy narx",
+      "ingredient": "Ingredient",
+      "sku": "SKU",
+      "currentStock": "Joriy zaxira",
+      "reorderLevel": "Buyurtma darajasi",
+      "suggestedQty": "Taklif etilgan miqdor",
+      "unitPrice": "Birlik narxi",
+      "estimatedCostCol": "Taxminiy narx",
+      "itemsNeedReorder": "ta mahsulot buyurtma talab qiladi",
+      "total": "Jami",
+      "paymentTerms": "To'lov shartlari",
+      "urgency": {
+        "CRITICAL": "Juda muhim - Mavjud emas",
+        "HIGH": "Yuqori - Minimal darajadan past",
+        "MEDIUM": "O'rtacha - Buyurtma darajasidan past"
+      },
+      "messages": {
+        "poCreated": "Xarid buyurtmasi muvaffaqiyatli yaratildi!",
+        "allPOsCreated": "Barcha xarid buyurtmalari muvaffaqiyatli yaratildi!",
+        "poCreateError": "Xarid buyurtmasini yaratib bo'lmadi"
+      }
+    },
+    "suppliers": {
+      "title": "Yetkazib beruvchilar",
+      "subtitle": "Ingredient yetkazib beruvchilarini boshqarish",
+      "addSupplier": "Yetkazib beruvchi qo'shish",
+      "editSupplier": "Yetkazib beruvchini tahrirlash",
+      "noSuppliers": "Yetkazib beruvchilar topilmadi. Birinchi yetkazib beruvchini qo'shing.",
+      "confirmDelete": "Ushbu yetkazib beruvchini o'chirishni xohlaysizmi?",
+      "fields": {
+        "name": "Kompaniya nomi",
+        "code": "Yetkazib beruvchi kodi",
+        "contactPerson": "Aloqa shaxsi",
+        "phone": "Telefon",
+        "email": "Elektron pochta",
+        "address": "Manzil",
+        "paymentTerms": "To'lov shartlari",
+        "creditLimit": "Kredit limiti",
+        "currency": "Valyuta",
+        "rating": "Reyting",
+        "totalOrders": "Jami buyurtmalar",
+        "onTimeDeliveryRate": "O'z vaqtida yetkazish",
+        "active": "Faol",
+        "notes": "Izohlar"
+      },
+      "placeholders": {
+        "name": "Kompaniya nomini kiriting",
+        "code": "masalan, SUP-001",
+        "contactPerson": "Aloqa shaxsi ismi",
+        "phone": "+998 XX XXX XX XX",
+        "email": "supplier@example.com",
+        "address": "To'liq manzil",
+        "notes": "Qo'shimcha izohlar..."
+      },
+      "paymentTerms": {
+        "cod": "Yetkazib berishda to'lov",
+        "net15": "15 kun ichida to'lov",
+        "net30": "30 kun ichida to'lov",
+        "net60": "60 kun ichida to'lov",
+        "prepaid": "Oldindan to'lov"
+      },
+      "stats": {
+        "total": "Jami yetkazib beruvchilar",
+        "active": "Faol",
+        "avgRating": "O'rtacha reyting",
+        "topPerformer": "Eng yaxshi yetkazib beruvchi"
+      },
+      "errors": {
+        "saveFailed": "Yetkazib beruvchini saqlab bo'lmadi",
+        "deleteFailed": "Yetkazib beruvchini o'chirib bo'lmadi",
+        "loadFailed": "Yetkazib beruvchilarni yuklab bo'lmadi"
+      }
+    },
+    "expiry": {
+      "stats": {
+        "expired": "Muddati o'tgan partiyalar",
+        "expiringSoon": "Tez orada tugaydi",
+        "activeBatches": "Faol partiyalar",
+        "tracked": "Kuzatilayotgan ingredientlar"
+      },
+      "within7Days": "7 kun ichida",
+      "addBatch": "Partiya qo'shish",
+      "addBatchDesc": "Yaroqlilik muddatini kuzatish bilan yangi partiya yaratish",
+      "markExpired": "Holatni yangilash",
+      "expiredBatches": "Muddati o'tgan partiyalar",
+      "expiredBatchesDesc": "Bu partiyalar muddati o'tgan va hisobdan chiqarilishi kerak",
+      "expiringBatches": "Tez orada tugaydi",
+      "expiringBatchesDesc": "Bu partiyalar keyingi 7 kun ichida tugaydi",
+      "ingredientsWithExpiry": "Yaroqlilik muddati kuzatiladigan ingredientlar",
+      "ingredientsWithExpiryDesc": "Yaroqlilik muddatini kuzatish uchun sozlangan ingredientlar",
+      "noExpiryTracking": "Hech bir ingredient yaroqlilik muddatini kuzatishga ega emas. Uni yoqish uchun ingredientni tahrirlang.",
+      "viewBatches": "Partiyalarni ko'rish",
+      "batchesFor": "Partiyalar",
+      "batchesDesc": "Ushbu ingredient uchun barcha faol partiyalar (FEFO tartibi)",
+      "noBatches": "Ushbu ingredient uchun partiyalar topilmadi",
+      "writeOff": "Hisobdan chiqarish",
+      "writeOffBatch": "Partiyani hisobdan chiqarish",
+      "writeOffDesc": "Bu partiyani doimiy ravishda hisobdan chiqarilgan deb belgilaydi va zaxirani olib tashlaydi.",
+      "confirmWriteOff": "Hisobdan chiqarishni tasdiqlash",
+      "fields": {
+        "ingredient": "Ingredient",
+        "batchNumber": "Partiya №",
+        "quantity": "Miqdor",
+        "expiryDate": "Yaroqlilik muddati",
+        "receivedDate": "Qabul qilingan sana",
+        "daysRemaining": "Qolgan kunlar",
+        "daysExpired": "O'tgan kunlar",
+        "status": "Holat",
+        "shelfLife": "Standart saqlash muddati (kun)",
+        "alertDays": "Tugashidan oldin ogohlantirish (kun)",
+        "activeBatches": "Faol partiyalar",
+        "expiringBatches": "Tugayotgan",
+        "costPerUnit": "Birlik narxi",
+        "supplier": "Yetkazib beruvchi",
+        "poReference": "XB raqami",
+        "reason": "Hisobdan chiqarish sababi"
+      },
+      "placeholders": {
+        "selectIngredient": "Ingredientni tanlang",
+        "batchNumber": "masalan, PARTIYA-001",
+        "poReference": "masalan, XB-2024-001",
+        "reason": "masalan, Muddati o'tgan, Shikastlangan, Sifat muammosi",
+        "shelfLife": "masalan, 30",
+        "alertDays": "masalan, 7"
+      },
+      "status": {
+        "expired": "Muddati o'tgan",
+        "expiringSoon": "Tez orada tugaydi",
+        "fresh": "Yangi"
+      },
+      "errors": {
+        "saveFailed": "Partiyani saqlab bo'lmadi",
+        "writeOffFailed": "Partiyani hisobdan chiqarib bo'lmadi"
+      }
+    },
+    "valuation": {
+      "title": "Inventar baholash",
+      "subtitle": "Turli baholash usullari yordamida inventar xarajatlarini hisoblash",
+      "settings": "Baholash sozlamalari",
+      "settingsDesc": "Inventar xarajatlarini qanday hisoblanishini sozlang",
+      "currentMethod": "Joriy usul",
+      "changeMethod": "Baholash usulini o'zgartirish",
+      "methodChanged": "Baholash usuli muvaffaqiyatli yangilandi",
+      "methods": {
+        "FIFO": "FIFO (Birinchi kelgan - birinchi ketdi)",
+        "LIFO": "LIFO (Oxirgi kelgan - birinchi ketdi)",
+        "WEIGHTED_AVERAGE": "O'rtacha tortilgan narx",
+        "FEFO": "FEFO (Birinchi tugaydigani - birinchi ketdi)"
+      },
+      "methodDescriptions": {
+        "FIFO": "Birinchi bo'lib eng eski inventar ishlatiladi. Inflyatsiya davrida odatda past COGS beradi.",
+        "LIFO": "Birinchi bo'lib eng yangi inventar ishlatiladi. Inflyatsiya davrida odatda yuqori COGS beradi.",
+        "WEIGHTED_AVERAGE": "Inventardagi barcha birliklarning o'rtacha narxi. Narx o'zgarishlarini tekislaydi.",
+        "FEFO": "Birinchi bo'lib muddat tugashga yaqin partiyalar ishlatiladi. Tez buziladigan mahsulotlar uchun eng yaxshi."
+      },
+      "inventoryValue": "Inventar qiymati",
+      "totalValue": "Jami inventar qiymati",
+      "calculateValue": "Qiymatni hisoblash",
+      "compareValues": "Usullarni solishtirish",
+      "comparison": {
+        "title": "Baholash solishtiruvi",
+        "description": "Turli usullar bo'yicha inventar qiymatini solishtirish",
+        "fifoValue": "FIFO qiymati",
+        "lifoValue": "LIFO qiymati",
+        "wacValue": "O'rtacha tortilgan qiymat",
+        "difference": "Farq"
+      },
+      "costHistory": {
+        "title": "Narx tarixi",
+        "description": "Ingredient narxlarining vaqt davomida o'zgarishini kuzatish",
+        "previousCost": "Oldingi narx",
+        "newCost": "Yangi narx",
+        "change": "O'zgarish",
+        "reason": "Sabab",
+        "effectiveFrom": "Kuchga kirish sanasi",
+        "recordCostChange": "Narx o'zgarishini qayd etish",
+        "noCostHistory": "Bu ingredient uchun narx tarixi topilmadi"
+      },
+      "costVariance": {
+        "title": "Narx og'ishi",
+        "description": "Joriy narxlarni tarixiy o'rtacha bilan solishtirish",
+        "currentCost": "Joriy narx",
+        "averageCost": "O'rtacha narx",
+        "variance": "Og'ish",
+        "variancePercent": "Og'ish %"
+      },
+      "consumption": {
+        "title": "Iste'mol tarixi",
+        "description": "Inventar qanday ishlatilganini kuzatish",
+        "summary": "Iste'mol xulosasi",
+        "byIngredient": "Ingredient bo'yicha iste'mol",
+        "totalQuantity": "Jami miqdor",
+        "totalCost": "Jami xarajat",
+        "averageCost": "O'rtacha xarajat",
+        "batchNumber": "Partiya №"
+      },
+      "errors": {
+        "saveFailed": "Baholash sozlamalarini saqlab bo'lmadi"
+      }
     }
   },
   "linkedItems": {
@@ -1414,54 +2022,6 @@
     "priority": "Ustuvorlik",
     "noLinkedItems": "Ushbu mahsulot uchun bog'langan mahsulotlar topilmadi",
     "productId": "Mahsulot ID"
-  },
-  "tables": {
-    "title": "Stollar",
-    "createNew": "Stol qo'shish",
-    "editTable": "Stolni tahrirlash",
-    "tableNumber": "Stol raqami",
-    "tableName": "Stol nomi",
-    "capacity": "Sig'im",
-    "section": "Bo'lim",
-    "notes": "Izohlar",
-    "active": "Faol",
-    "searchPlaceholder": "Raqam, nom yoki bo'lim bo'yicha qidirish...",
-    "selectRestaurantFirst": "Stollarni ko'rish uchun restoranni tanlang",
-    "noTables": "Stollar topilmadi",
-    "confirmDelete": "Ushbu stolni o'chirishga ishonchingiz komilmi?",
-    "confirmUnmerge": "Ushbu stollarni ajratishga ishonchingiz komilmi?",
-    "merged": "Birlashtirilgan stol",
-    "originalCapacity": "Asl",
-    "mergeTables": "Stollarni birlashtirish",
-    "unmerge": "Ajratish",
-    "increased": "Oshirilgan",
-    "status": {
-      "AVAILABLE": "Bo'sh",
-      "OCCUPIED": "Band",
-      "RESERVED": "Bron qilingan",
-      "CLEANING": "Tozalanmoqda",
-      "OUT_OF_SERVICE": "Xizmat ko'rsatilmaydi"
-    },
-    "stats": {
-      "total": "Jami stollar",
-      "available": "Bo'sh",
-      "occupied": "Band",
-      "reserved": "Bron qilingan"
-    },
-    "messages": {
-      "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
-      "createSuccess": "Stol muvaffaqiyatli yaratildi",
-      "updateSuccess": "Stol muvaffaqiyatli yangilandi",
-      "saveError": "Stolni saqlab bo'lmadi",
-      "deleteSuccess": "Stol muvaffaqiyatli o'chirildi",
-      "deleteError": "Stolni o'chirib bo'lmadi",
-      "statusError": "Stol holatini yangilab bo'lmadi",
-      "selectAtLeast2Tables": "Iltimos, birlashtirish uchun kamida 2 ta stol tanlang",
-      "mergeSuccess": "Stollar muvaffaqiyatli birlashtirildi",
-      "mergeError": "Stollarni birlashtirib bo'lmadi",
-      "unmergeSuccess": "Stollar muvaffaqiyatli ajratildi",
-      "unmergeError": "Stollarni ajratib bo'lmadi"
-    }
   },
   "days": {
     "MONDAY": "Dushanba",
@@ -1771,451 +2331,6 @@
       "originalTotal": "Asl jami",
       "paid": "To'langan",
       "unpaid": "To'lanmagan"
-    }
-  },
-  "inventory": {
-    "title": "Inventar boshqaruvi",
-    "subtitle": "Ingredientlar va zaxiralarni boshqarish",
-    "addIngredient": "Ingredient qo'shish",
-    "editIngredient": "Ingredientni tahrirlash",
-    "addDescription": "Inventar kuzatuvi uchun yangi ingredient yaratish",
-    "editDescription": "Ingredient ma'lumotlarini yangilash",
-    "ingredientsList": "Ingredientlar ro'yxati",
-    "ingredientsDescription": "Barcha ingredientlarni boshqarish va kuzatish",
-    "noIngredients": "Ingredientlar topilmadi",
-    "searchPlaceholder": "Nom, SKU yoki yetkazib beruvchi bo'yicha qidirish...",
-    "confirmDelete": "Ushbu ingredientni o'chirishga ishonchingiz komilmi?",
-    "addStock": "Zaxira qo'shish",
-    "adjustStock": "Zaxirani sozlash",
-    "updateStock": "Zaxirani yangilash",
-    "currentStockLabel": "Joriy zaxira: {{currentStock}} {{unit}}",
-    "quantityToAdd": "Qo'shiladigan miqdor",
-    "newQuantity": "Yangi miqdor",
-    "performedBy": "Bajaruvchi",
-    "transactionHistory": "Tranzaksiyalar tarixi",
-    "transactionHistoryDesc": "Ushbu ingredient uchun barcha zaxira harakatlari",
-    "noTransactions": "Tranzaksiyalar topilmadi",
-    "stats": {
-      "total": "Jami ingredientlar",
-      "active": "faol",
-      "lowStock": "Kam zaxira",
-      "needsAttention": "E'tibor talab etadi",
-      "reorder": "Tez orada buyurtma bering",
-      "reorderSoon": "Tez orada buyurtma bering",
-      "tracked": "Kuzatilayotgan mahsulotlar",
-      "monitoring": "Monitoring"
-    },
-    "filters": {
-      "all": "Barcha ingredientlar",
-      "active": "Faqat faol",
-      "inactive": "Faqat faol emas",
-      "lowStock": "Kam zaxira",
-      "reorder": "Qayta buyurtma darajasi"
-    },
-    "fields": {
-      "name": "Ingredient nomi",
-      "sku": "SKU",
-      "description": "Tavsif",
-      "unit": "O'lchov birligi",
-      "supplier": "Yetkazib beruvchi",
-      "currentStock": "Joriy zaxira",
-      "minimumStock": "Minimal zaxira",
-      "reorderLevel": "Qayta buyurtma darajasi",
-      "costPerUnit": "Birlik narxi",
-      "status": "Holat",
-      "active": "Faol",
-      "trackInventory": "Inventarni kuzatish",
-      "trackExpiry": "Yaroqlilik muddatini kuzatish"
-    },
-    "placeholders": {
-      "name": "masalan, Pomidor, Tovuq go'shti",
-      "sku": "masalan, ING-001",
-      "description": "Ingredient haqida qisqacha tavsif",
-      "supplier": "masalan, ABC Oziq-ovqat yetkazib beruvchilar"
-    },
-    "units": {
-      "kg": "Kilogramm (kg)",
-      "g": "Gramm (g)",
-      "L": "Litr (L)",
-      "ml": "Millilitr (ml)",
-      "pieces": "Dona",
-      "dozens": "O'nlab"
-    },
-    "status": {
-      "notTracked": "Kuzatilmaydi",
-      "lowStock": "Kam zaxira",
-      "reorderSoon": "Tez orada buyurtma bering",
-      "inStock": "Omborda bor"
-    },
-    "transactionFields": {
-      "date": "Sana",
-      "type": "Tur",
-      "change": "O'zgarish",
-      "balanceAfter": "Qoldiqdan keyin",
-      "performedBy": "Bajaruvchi",
-      "notes": "Izohlar"
-    },
-    "errors": {
-      "saveFailed": "Ingredientni saqlab bo'lmadi",
-      "deleteFailed": "Ingredientni o'chirib bo'lmadi"
-    },
-    "tabs": {
-      "ingredients": "Ingredientlar",
-      "recipes": "Retseptlar",
-      "expiry": "Yaroqlilik muddati",
-      "stockCounts": "Inventarizatsiya",
-      "waste": "Isrofgarchilik",
-      "suppliers": "Yetkazib beruvchilar",
-      "stockAlerts": "Zaxira ogohlantirishlari",
-      "valuation": "Baholash"
-    },
-    "stockCounts": {
-      "title": "Inventarizatsiya",
-      "description": "Fizik inventar hisob-kitobi va tekshiruvi",
-      "newCount": "Yangi hisob-kitob",
-      "createTitle": "Inventarizatsiya yaratish",
-      "createDescription": "Yangi fizik inventar hisob-kitobini boshlash",
-      "noData": "Inventarizatsiyalar topilmadi",
-      "scheduled": "Rejalashtirilgan",
-      "progress": "Progress",
-      "items": "ta element",
-      "variances": "Farqlar",
-      "countNumber": "Hisob №",
-      "type": "Turi",
-      "status": "Holat",
-      "variance": "Farq",
-      "scheduledDate": "Rejalashtirilgan",
-      "submitForReview": "Tekshiruvga yuborish",
-      "approveAndAdjust": "Tasdiqlash va tuzatish",
-      "stats": {
-        "total": "Jami hisoblar",
-        "inProgress": "Jarayonda",
-        "pendingReview": "Tekshiruvda",
-        "approved": "Tasdiqlangan"
-      },
-      "type": {
-        "full": "To'liq hisob-kitob",
-        "cycle": "Tsiklik hisob-kitob",
-        "spotCheck": "Tanlab tekshirish"
-      },
-      "status": {
-        "draft": "Qoralama",
-        "inProgress": "Jarayonda",
-        "pendingReview": "Tekshiruvda",
-        "approved": "Tasdiqlangan",
-        "cancelled": "Bekor qilingan"
-      },
-      "fields": {
-        "type": "Hisob turi",
-        "scheduledDate": "Sana",
-        "ingredient": "Ingredient",
-        "systemQty": "Tizimda",
-        "countedQty": "Hisoblangan",
-        "variance": "Farq",
-        "status": "Holat"
-      }
-    },
-    "waste": {
-      "title": "Isrofgarchilik boshqaruvi",
-      "records": "Isrofgarchilik yozuvlari",
-      "recordsDesc": "Inventar bo'yicha isrofgarchilikni kuzatish va tahlil qilish",
-      "recordWaste": "Isrofgarchilikni yozish",
-      "recordWasteDesc": "Ingredient uchun isrofgarchilik hodisasini qayd etish",
-      "selectIngredient": "Ingredientni tanlang",
-      "noRecords": "Isrofgarchilik yozuvlari topilmadi. Birinchi yozuvni qo'shish uchun \"Isrofgarchilikni yozish\" tugmasini bosing.",
-      "totalWaste": "Jami isrofgarchilik (30 kun)",
-      "mostCommonReason": "Eng ko'p sabab",
-      "totalQuantity": "Jami miqdor",
-      "avgPerRecord": "O'rtacha narx",
-      "units": "birlik isrof qilindi",
-      "date": "Sana",
-      "quantity": "Miqdor",
-      "reason": "Sabab",
-      "cost": "Narx",
-      "totalCost": "Jami narx",
-      "recordedBy": "Yozuvchi",
-      "notes": "Izohlar",
-      "notesPlaceholder": "Isrofgarchilik haqida ixtiyoriy izohlar",
-      "record": "Yozish",
-      "byReason": "Sabab bo'yicha isrofgarchilik",
-      "topWasted": "Eng ko'p isrof qilingan ingredientlar",
-      "percentage": "Jami %",
-      "reasons": {
-        "expired": "Muddati o'tgan",
-        "spoiled": "Buzilgan",
-        "damaged": "Shikastlangan",
-        "preparation": "Tayyorlash",
-        "overProduction": "Ortiqcha ishlab chiqarish",
-        "customerReturn": "Mijoz qaytarishi",
-        "qualityIssue": "Sifat muammosi",
-        "contamination": "Ifloslanish",
-        "theft": "O'g'irlik",
-        "other": "Boshqa"
-      }
-    },
-    "recipes": {
-      "selectProduct": "Mahsulotni tanlang",
-      "selectProductDesc": "Retseptni ko'rish va boshqarish uchun mahsulotni tanlang",
-      "selectProductFirst": "Retseptni ko'rish uchun mahsulotni tanlang",
-      "noProducts": "Mavjud mahsulotlar yo'q",
-      "ingredientLinks": "Ingredient bog'lanishlari",
-      "for": "Retsept uchun",
-      "addIngredient": "Ingredient qo'shish",
-      "noIngredients": "Bu mahsulotga ingredientlar bog'lanmagan",
-      "addFirst": "Birinchi ingredientni qo'shish",
-      "ingredient": "Ingredient",
-      "quantity": "Miqdor",
-      "unit": "Birlik",
-      "selectIngredient": "Ingredientni tanlang",
-      "confirmDelete": "Ushbu retseptni o'chirishga ishonchingiz komilmi?",
-      "errors": {
-        "saveFailed": "Retseptni saqlab bo'lmadi",
-        "deleteFailed": "Retseptni o'chirib bo'lmadi"
-      }
-    },
-    "stockAlerts": {
-      "lowStockItems": "Kam zaxira mahsulotlar",
-      "reorderItems": "Buyurtma kerak",
-      "activeSubscriptions": "Faol obunalar",
-      "sendAlert": "Ogohlantirish yuborish",
-      "trigger": "Hozir yuborish",
-      "subscriptions": "Telegram obunalari",
-      "subscriptionsDesc": "Zaxira ogohlantirishlari uchun Telegram chat obunalarini boshqarish",
-      "addSubscription": "Obuna qo'shish",
-      "editSubscription": "Obunani tahrirlash",
-      "subscriberName": "Obunachi",
-      "chatId": "Telegram Chat ID",
-      "lowStockAlerts": "Kam zaxira",
-      "reorderAlerts": "Buyurtma",
-      "status": "Holat",
-      "lastAlert": "Oxirgi ogohlantirish",
-      "never": "Hech qachon",
-      "noSubscriptions": "Obunalar topilmadi. Ogohlantirish olish uchun Telegram chat qo'shing.",
-      "subscriptionDesc": "Zaxira ogohlantirishlari uchun Telegram sozlamalari",
-      "namePlaceholder": "masalan, Menejer Javohir",
-      "alertOnLowStock": "Kam zaxirada ogohlantirish",
-      "alertOnReorder": "Buyurtma kerakligida ogohlantirish",
-      "alertTriggered": "Zaxira ogohlantirishlari muvaffaqiyatli yuborildi!",
-      "confirmDelete": "Ushbu obunani o'chirishga ishonchingiz komilmi?",
-      "howToSetup": "Telegram Chat ID ni qanday olish mumkin",
-      "step1": "Telegram botingiz bilan chat boshlang",
-      "step2": "Botga /start buyrug'ini yuboring",
-      "step3": "Bot sizga Chat ID ni yuboradi",
-      "step4": "Chat ID ni nusxalang va shu yerga obuna sifatida qo'shing",
-      "errors": {
-        "saveFailed": "Obunani saqlab bo'lmadi",
-        "triggerFailed": "Ogohlantirishni yuborib bo'lmadi"
-      }
-    },
-    "poSuggestions": {
-      "title": "Xarid buyurtmasi takliflari",
-      "subtitle": "Qayta buyurtma darajalariga asoslangan avtomatik takliflar",
-      "noSuggestions": "Barcha mahsulotlar yetarli",
-      "allStocked": "Hozirda qayta buyurtma talab qiladigan mahsulotlar yo'q.",
-      "createPO": "XB yaratish",
-      "createAllPOs": "Barcha XBlarni yaratish",
-      "confirmGenerateAll": "Barcha taklif etilgan yetkazib beruvchilar uchun xarid buyurtmalarini yaratmoqchimisiz?",
-      "totalSuppliers": "Yetkazib beruvchilar",
-      "totalItems": "Buyurtma kerak bo'lgan mahsulotlar",
-      "estimatedCost": "Taxminiy narx",
-      "ingredient": "Ingredient",
-      "sku": "SKU",
-      "currentStock": "Joriy zaxira",
-      "reorderLevel": "Buyurtma darajasi",
-      "suggestedQty": "Taklif etilgan miqdor",
-      "unitPrice": "Birlik narxi",
-      "estimatedCostCol": "Taxminiy narx",
-      "itemsNeedReorder": "ta mahsulot buyurtma talab qiladi",
-      "total": "Jami",
-      "paymentTerms": "To'lov shartlari",
-      "urgency": {
-        "CRITICAL": "Juda muhim - Mavjud emas",
-        "HIGH": "Yuqori - Minimal darajadan past",
-        "MEDIUM": "O'rtacha - Buyurtma darajasidan past"
-      },
-      "messages": {
-        "poCreated": "Xarid buyurtmasi muvaffaqiyatli yaratildi!",
-        "allPOsCreated": "Barcha xarid buyurtmalari muvaffaqiyatli yaratildi!",
-        "poCreateError": "Xarid buyurtmasini yaratib bo'lmadi"
-      }
-    },
-    "suppliers": {
-      "title": "Yetkazib beruvchilar",
-      "subtitle": "Ingredient yetkazib beruvchilarini boshqarish",
-      "addSupplier": "Yetkazib beruvchi qo'shish",
-      "editSupplier": "Yetkazib beruvchini tahrirlash",
-      "noSuppliers": "Yetkazib beruvchilar topilmadi. Birinchi yetkazib beruvchini qo'shing.",
-      "confirmDelete": "Ushbu yetkazib beruvchini o'chirishni xohlaysizmi?",
-      "fields": {
-        "name": "Kompaniya nomi",
-        "code": "Yetkazib beruvchi kodi",
-        "contactPerson": "Aloqa shaxsi",
-        "phone": "Telefon",
-        "email": "Elektron pochta",
-        "address": "Manzil",
-        "paymentTerms": "To'lov shartlari",
-        "creditLimit": "Kredit limiti",
-        "currency": "Valyuta",
-        "rating": "Reyting",
-        "totalOrders": "Jami buyurtmalar",
-        "onTimeDeliveryRate": "O'z vaqtida yetkazish",
-        "active": "Faol",
-        "notes": "Izohlar"
-      },
-      "placeholders": {
-        "name": "Kompaniya nomini kiriting",
-        "code": "masalan, SUP-001",
-        "contactPerson": "Aloqa shaxsi ismi",
-        "phone": "+998 XX XXX XX XX",
-        "email": "supplier@example.com",
-        "address": "To'liq manzil",
-        "notes": "Qo'shimcha izohlar..."
-      },
-      "paymentTerms": {
-        "cod": "Yetkazib berishda to'lov",
-        "net15": "15 kun ichida to'lov",
-        "net30": "30 kun ichida to'lov",
-        "net60": "60 kun ichida to'lov",
-        "prepaid": "Oldindan to'lov"
-      },
-      "stats": {
-        "total": "Jami yetkazib beruvchilar",
-        "active": "Faol",
-        "avgRating": "O'rtacha reyting",
-        "topPerformer": "Eng yaxshi yetkazib beruvchi"
-      },
-      "errors": {
-        "saveFailed": "Yetkazib beruvchini saqlab bo'lmadi",
-        "deleteFailed": "Yetkazib beruvchini o'chirib bo'lmadi",
-        "loadFailed": "Yetkazib beruvchilarni yuklab bo'lmadi"
-      }
-    },
-    "expiry": {
-      "stats": {
-        "expired": "Muddati o'tgan partiyalar",
-        "expiringSoon": "Tez orada tugaydi",
-        "activeBatches": "Faol partiyalar",
-        "tracked": "Kuzatilayotgan ingredientlar"
-      },
-      "within7Days": "7 kun ichida",
-      "addBatch": "Partiya qo'shish",
-      "addBatchDesc": "Yaroqlilik muddatini kuzatish bilan yangi partiya yaratish",
-      "markExpired": "Holatni yangilash",
-      "expiredBatches": "Muddati o'tgan partiyalar",
-      "expiredBatchesDesc": "Bu partiyalar muddati o'tgan va hisobdan chiqarilishi kerak",
-      "expiringBatches": "Tez orada tugaydi",
-      "expiringBatchesDesc": "Bu partiyalar keyingi 7 kun ichida tugaydi",
-      "ingredientsWithExpiry": "Yaroqlilik muddati kuzatiladigan ingredientlar",
-      "ingredientsWithExpiryDesc": "Yaroqlilik muddatini kuzatish uchun sozlangan ingredientlar",
-      "noExpiryTracking": "Hech bir ingredient yaroqlilik muddatini kuzatishga ega emas. Uni yoqish uchun ingredientni tahrirlang.",
-      "viewBatches": "Partiyalarni ko'rish",
-      "batchesFor": "Partiyalar",
-      "batchesDesc": "Ushbu ingredient uchun barcha faol partiyalar (FEFO tartibi)",
-      "noBatches": "Ushbu ingredient uchun partiyalar topilmadi",
-      "writeOff": "Hisobdan chiqarish",
-      "writeOffBatch": "Partiyani hisobdan chiqarish",
-      "writeOffDesc": "Bu partiyani doimiy ravishda hisobdan chiqarilgan deb belgilaydi va zaxirani olib tashlaydi.",
-      "confirmWriteOff": "Hisobdan chiqarishni tasdiqlash",
-      "fields": {
-        "ingredient": "Ingredient",
-        "batchNumber": "Partiya №",
-        "quantity": "Miqdor",
-        "expiryDate": "Yaroqlilik muddati",
-        "receivedDate": "Qabul qilingan sana",
-        "daysRemaining": "Qolgan kunlar",
-        "daysExpired": "O'tgan kunlar",
-        "status": "Holat",
-        "shelfLife": "Standart saqlash muddati (kun)",
-        "alertDays": "Tugashidan oldin ogohlantirish (kun)",
-        "activeBatches": "Faol partiyalar",
-        "expiringBatches": "Tugayotgan",
-        "costPerUnit": "Birlik narxi",
-        "supplier": "Yetkazib beruvchi",
-        "poReference": "XB raqami",
-        "reason": "Hisobdan chiqarish sababi"
-      },
-      "placeholders": {
-        "selectIngredient": "Ingredientni tanlang",
-        "batchNumber": "masalan, PARTIYA-001",
-        "poReference": "masalan, XB-2024-001",
-        "reason": "masalan, Muddati o'tgan, Shikastlangan, Sifat muammosi",
-        "shelfLife": "masalan, 30",
-        "alertDays": "masalan, 7"
-      },
-      "status": {
-        "expired": "Muddati o'tgan",
-        "expiringSoon": "Tez orada tugaydi",
-        "fresh": "Yangi"
-      },
-      "errors": {
-        "saveFailed": "Partiyani saqlab bo'lmadi",
-        "writeOffFailed": "Partiyani hisobdan chiqarib bo'lmadi"
-      }
-    },
-    "valuation": {
-      "title": "Inventar baholash",
-      "subtitle": "Turli baholash usullari yordamida inventar xarajatlarini hisoblash",
-      "settings": "Baholash sozlamalari",
-      "settingsDesc": "Inventar xarajatlarini qanday hisoblanishini sozlang",
-      "currentMethod": "Joriy usul",
-      "changeMethod": "Baholash usulini o'zgartirish",
-      "methodChanged": "Baholash usuli muvaffaqiyatli yangilandi",
-      "methods": {
-        "FIFO": "FIFO (Birinchi kelgan - birinchi ketdi)",
-        "LIFO": "LIFO (Oxirgi kelgan - birinchi ketdi)",
-        "WEIGHTED_AVERAGE": "O'rtacha tortilgan narx",
-        "FEFO": "FEFO (Birinchi tugaydigani - birinchi ketdi)"
-      },
-      "methodDescriptions": {
-        "FIFO": "Birinchi bo'lib eng eski inventar ishlatiladi. Inflyatsiya davrida odatda past COGS beradi.",
-        "LIFO": "Birinchi bo'lib eng yangi inventar ishlatiladi. Inflyatsiya davrida odatda yuqori COGS beradi.",
-        "WEIGHTED_AVERAGE": "Inventardagi barcha birliklarning o'rtacha narxi. Narx o'zgarishlarini tekislaydi.",
-        "FEFO": "Birinchi bo'lib muddat tugashga yaqin partiyalar ishlatiladi. Tez buziladigan mahsulotlar uchun eng yaxshi."
-      },
-      "inventoryValue": "Inventar qiymati",
-      "totalValue": "Jami inventar qiymati",
-      "calculateValue": "Qiymatni hisoblash",
-      "compareValues": "Usullarni solishtirish",
-      "comparison": {
-        "title": "Baholash solishtiruvi",
-        "description": "Turli usullar bo'yicha inventar qiymatini solishtirish",
-        "fifoValue": "FIFO qiymati",
-        "lifoValue": "LIFO qiymati",
-        "wacValue": "O'rtacha tortilgan qiymat",
-        "difference": "Farq"
-      },
-      "costHistory": {
-        "title": "Narx tarixi",
-        "description": "Ingredient narxlarining vaqt davomida o'zgarishini kuzatish",
-        "previousCost": "Oldingi narx",
-        "newCost": "Yangi narx",
-        "change": "O'zgarish",
-        "reason": "Sabab",
-        "effectiveFrom": "Kuchga kirish sanasi",
-        "recordCostChange": "Narx o'zgarishini qayd etish",
-        "noCostHistory": "Bu ingredient uchun narx tarixi topilmadi"
-      },
-      "costVariance": {
-        "title": "Narx og'ishi",
-        "description": "Joriy narxlarni tarixiy o'rtacha bilan solishtirish",
-        "currentCost": "Joriy narx",
-        "averageCost": "O'rtacha narx",
-        "variance": "Og'ish",
-        "variancePercent": "Og'ish %"
-      },
-      "consumption": {
-        "title": "Iste'mol tarixi",
-        "description": "Inventar qanday ishlatilganini kuzatish",
-        "summary": "Iste'mol xulosasi",
-        "byIngredient": "Ingredient bo'yicha iste'mol",
-        "totalQuantity": "Jami miqdor",
-        "totalCost": "Jami xarajat",
-        "averageCost": "O'rtacha xarajat",
-        "batchNumber": "Partiya №"
-      },
-      "errors": {
-        "saveFailed": "Baholash sozlamalarini saqlab bo'lmadi"
-      }
     }
   },
   "pages": {
@@ -2956,5 +3071,43 @@
     "prepTime": "Tayyorlash vaqti (daqiqa)",
     "settingsSaved": "Sozlamalar saqlandi",
     "settingsError": "Sozlamalarni saqlashda xatolik"
+  },
+  "ordersHistory": {
+    "title": "Buyurtmalar tarixi",
+    "subtitle": "Barcha buyurtmalarni ko'rish va tahlil qilish",
+    "totalOrders": "Jami buyurtmalar",
+    "totalRevenue": "Jami daromad",
+    "avgOrderValue": "O'rtacha buyurtma qiymati",
+    "completed": "Bajarilgan",
+    "cancelled": "Bekor qilingan",
+    "filters": "Filtrlar",
+    "search": "Qidirish",
+    "searchPlaceholder": "Buyurtma raqami...",
+    "restaurant": "Restoran",
+    "status": "Holat",
+    "dateFrom": "Dan",
+    "dateTo": "Gacha",
+    "today": "Bugun",
+    "yesterday": "Kecha",
+    "lastWeek": "Oxirgi 7 kun",
+    "thisMonth": "Shu oy",
+    "allTime": "Barcha vaqt",
+    "clearFilters": "Filtrlarni tozalash",
+    "ordersList": "Buyurtmalar ro'yxati",
+    "showing": "Ko'rsatilmoqda",
+    "of": "dan",
+    "orderNumber": "Buyurtma №",
+    "date": "Sana",
+    "table": "Stol",
+    "waiter": "Ofitsiant",
+    "customer": "Mijoz",
+    "type": "Turi",
+    "payment": "To'lov",
+    "total": "Jami",
+    "page": "Sahifa",
+    "orderDetails": "Buyurtma tafsilotlari",
+    "items": "Mahsulotlar",
+    "noItems": "Mahsulotlar yo'q",
+    "noOrders": "Buyurtmalar topilmadi"
   }
 }

@@ -32,9 +32,17 @@ public class ExpenseService {
 
         String expenseNumber = generateExpenseNumber(expense.getRestaurant().getId());
         expense.setExpenseNumber(expenseNumber);
-        expense.setPaymentStatus(Expense.PaymentStatus.UNPAID);
+        expense.setPaymentStatus(Expense.PaymentStatus.PAID);  // Created as paid
+        if (expense.getPaymentDate() == null) {
+            expense.setPaymentDate(expense.getExpenseDate());  // Set payment date to expense date
+        }
 
         Expense savedExpense = expenseRepository.save(expense);
+
+        // Create journal entry for the paid expense
+        if (expense.getCreatedBy() != null) {
+            createExpenseJournalEntry(savedExpense, expense.getCreatedBy());
+        }
 
         log.info("Expense created: {}", expenseNumber);
         return savedExpense;
@@ -92,15 +100,15 @@ public class ExpenseService {
     }
 
     public List<Expense> getExpensesByRestaurant(Long restaurantId) {
-        return expenseRepository.findByRestaurantId(restaurantId);
+        return expenseRepository.findByRestaurant_Id(restaurantId);
     }
 
     public List<Expense> getExpensesByCategory(Long restaurantId, Expense.ExpenseCategory category) {
-        return expenseRepository.findByRestaurantIdAndCategory(restaurantId, category);
+        return expenseRepository.findByRestaurant_IdAndCategory(restaurantId, category);
     }
 
     public List<Expense> getExpensesByDateRange(Long restaurantId, LocalDate startDate, LocalDate endDate) {
-        return expenseRepository.findByRestaurantIdAndExpenseDateBetween(restaurantId, startDate, endDate);
+        return expenseRepository.findByRestaurant_IdAndExpenseDateBetween(restaurantId, startDate, endDate);
     }
 
     public List<Expense> getUnpaidExpenses(Long restaurantId) {
@@ -128,7 +136,7 @@ public class ExpenseService {
                     ? Account.AccountCategory.CASH
                     : Account.AccountCategory.BANK;
 
-            Account paymentAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account paymentAccount = accountRepository.findByRestaurant_IdAndCategory(
                     expense.getRestaurant().getId(), paymentCategory
             ).stream().findFirst().orElse(null);
 
@@ -144,9 +152,15 @@ public class ExpenseService {
                         expense.getTotalAmount(),
                         recordedBy
                 );
+                log.info("Journal entry created for expense {}: amount={}", expense.getExpenseNumber(), expense.getTotalAmount());
+            } else {
+                log.error("Cannot create journal entry for expense {}: expenseAccount={}, paymentAccount={}. " +
+                        "Category: {}, PaymentMethod: {}. Please check chart of accounts for restaurant {}",
+                        expense.getExpenseNumber(), expenseAccount != null, paymentAccount != null,
+                        expense.getCategory(), expense.getPaymentMethod(), expense.getRestaurant().getId());
             }
         } catch (Exception e) {
-            log.warn("Failed to create expense journal entry: {}", e.getMessage());
+            log.error("Failed to create expense journal entry for {}: {}", expense.getExpenseNumber(), e.getMessage(), e);
         }
     }
 
@@ -155,18 +169,79 @@ public class ExpenseService {
             case RENT -> Account.AccountCategory.RENT;
             case UTILITIES -> Account.AccountCategory.UTILITIES;
             case SUPPLIES -> Account.AccountCategory.SUPPLIES;
+            case INVENTORY -> Account.AccountCategory.INVENTORY;
+            case COST_OF_GOODS_SOLD -> Account.AccountCategory.COGS;
             case MARKETING -> Account.AccountCategory.MARKETING;
             case DELIVERY_COSTS -> Account.AccountCategory.DELIVERY_COSTS;
             default -> Account.AccountCategory.OTHER_EXPENSE;
         };
 
-        return accountRepository.findByRestaurantIdAndCategory(restaurantId, accountCategory)
+        return accountRepository.findByRestaurant_IdAndCategory(restaurantId, accountCategory)
                 .stream().findFirst().orElse(null);
+    }
+
+    /**
+     * Create an expense record from a received purchase order
+     */
+    @Transactional
+    public Expense createExpenseFromPurchaseOrder(
+            Restaurant restaurant,
+            Long purchaseOrderId,
+            String poNumber,
+            String supplierName,
+            BigDecimal subtotal,
+            BigDecimal taxAmount,
+            LocalDate expenseDate,
+            String createdBy
+    ) {
+        log.info("Creating expense from PO: {} for restaurant: {}", poNumber, restaurant.getId());
+
+        String expenseNumber = generateExpenseNumber(restaurant.getId());
+
+        Expense expense = Expense.builder()
+                .restaurant(restaurant)
+                .expenseNumber(expenseNumber)
+                .expenseDate(expenseDate)
+                .category(Expense.ExpenseCategory.INVENTORY)
+                .description("Purchase Order: " + poNumber)
+                .vendor(supplierName)
+                .amount(subtotal)
+                .taxAmount(taxAmount != null ? taxAmount : BigDecimal.ZERO)
+                .totalAmount(subtotal.add(taxAmount != null ? taxAmount : BigDecimal.ZERO))
+                .paymentMethod(Expense.PaymentMethod.BANK_TRANSFER)
+                .paymentStatus(Expense.PaymentStatus.UNPAID)
+                .referenceNumber(poNumber)
+                .purchaseOrderId(purchaseOrderId)
+                .createdBy(createdBy)
+                .recurring(false)
+                .build();
+
+        Expense savedExpense = expenseRepository.save(expense);
+
+        log.info("Expense created from PO: {} -> {}", poNumber, expenseNumber);
+        return savedExpense;
+    }
+
+    /**
+     * Update expense payment status when linked PO payment is recorded
+     */
+    @Transactional
+    public void updateExpensePaymentByPurchaseOrderId(Long purchaseOrderId, LocalDate paymentDate, String recordedBy) {
+        expenseRepository.findByPurchaseOrderId(purchaseOrderId).ifPresent(expense -> {
+            expense.setPaymentDate(paymentDate);
+            expense.setPaymentStatus(Expense.PaymentStatus.PAID);
+            expenseRepository.save(expense);
+
+            // Create journal entry for the expense payment
+            createExpenseJournalEntry(expense, recordedBy);
+
+            log.info("Expense {} marked as paid for PO ID: {}", expense.getExpenseNumber(), purchaseOrderId);
+        });
     }
 
     private String generateExpenseNumber(Long restaurantId) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        long count = expenseRepository.findByRestaurantId(restaurantId).stream()
+        long count = expenseRepository.findByRestaurant_Id(restaurantId).stream()
                 .filter(exp -> exp.getExpenseNumber().startsWith("EXP-" + datePrefix))
                 .count();
         return String.format("EXP-%s-%04d", datePrefix, count + 1);

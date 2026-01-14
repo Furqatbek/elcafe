@@ -12,7 +12,10 @@ import java.util.Set;
 /**
  * Validator for order status transitions based on the state machine defined in the documentation.
  *
- * State Machine:
+ * Simplified State Machine for POS:
+ * PENDING → READY or CANCELLED
+ *
+ * Legacy State Machine (for delivery/online orders):
  * PENDING → PLACED → ACCEPTED → PREPARING → READY → PICKED_UP → COMPLETED
  *             ↓         ↓
  *         REJECTED   CANCELLED
@@ -28,8 +31,9 @@ public class OrderStatusTransitionValidator {
     }
 
     private void initializeTransitions() {
-        // PENDING can transition to PLACED or CANCELLED
+        // PENDING can transition to READY (simplified POS flow) or PLACED or CANCELLED
         allowedTransitions.put(OrderStatus.PENDING, EnumSet.of(
+            OrderStatus.READY,
             OrderStatus.PLACED,
             OrderStatus.CANCELLED
         ));

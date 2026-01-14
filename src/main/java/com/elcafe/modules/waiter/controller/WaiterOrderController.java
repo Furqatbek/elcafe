@@ -167,10 +167,11 @@ public class WaiterOrderController {
     @GetMapping("/waiter/{waiterId}/metrics")
     @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR', 'ADMIN', 'OPERATOR')")
     @Operation(summary = "Get waiter performance metrics",
-            description = "Get comprehensive performance metrics including total revenue, order count, average ticket, weekly activity chart, and recent transactions")
+            description = "Get comprehensive performance metrics including total revenue, order count, average ticket, activity chart, and recent transactions. Use period parameter to filter: daily, weekly (default), or monthly")
     public ResponseEntity<ApiResponse<WaiterMetricsResponse>> getWaiterMetrics(
-            @PathVariable Long waiterId) {
-        WaiterMetricsResponse metrics = waiterOrderService.getWaiterMetrics(waiterId);
+            @PathVariable Long waiterId,
+            @RequestParam(defaultValue = "weekly") String period) {
+        WaiterMetricsResponse metrics = waiterOrderService.getWaiterMetrics(waiterId, period);
         return ResponseEntity.ok(ApiResponse.success("Waiter metrics retrieved successfully", metrics));
     }
 }

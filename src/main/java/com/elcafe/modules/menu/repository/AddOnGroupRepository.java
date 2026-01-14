@@ -10,9 +10,9 @@ import java.util.Optional;
 @Repository
 public interface AddOnGroupRepository extends JpaRepository<AddOnGroup, Long> {
 
-    List<AddOnGroup> findByRestaurantIdAndActiveTrue(Long restaurantId);
+    List<AddOnGroup> findByRestaurant_IdAndActiveTrue(Long restaurantId);
 
-    List<AddOnGroup> findByRestaurantId(Long restaurantId);
+    List<AddOnGroup> findByRestaurant_Id(Long restaurantId);
 
     Optional<AddOnGroup> findByIdAndRestaurantId(Long id, Long restaurantId);
 

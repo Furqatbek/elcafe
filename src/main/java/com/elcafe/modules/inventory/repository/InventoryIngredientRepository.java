@@ -11,11 +11,11 @@ import java.util.Optional;
 @Repository
 public interface InventoryIngredientRepository extends JpaRepository<Ingredient, Long> {
 
-    List<Ingredient> findByRestaurantId(Long restaurantId);
+    List<Ingredient> findByRestaurant_Id(Long restaurantId);
 
-    List<Ingredient> findByRestaurantIdAndActiveTrue(Long restaurantId);
+    List<Ingredient> findByRestaurant_IdAndActiveTrue(Long restaurantId);
 
-    Optional<Ingredient> findByRestaurantIdAndName(Long restaurantId, String name);
+    Optional<Ingredient> findByRestaurant_IdAndName(Long restaurantId, String name);
 
     @Query("SELECT i FROM InventoryIngredient i WHERE i.restaurant.id = :restaurantId AND i.currentStock <= i.minimumStock AND i.active = true")
     List<Ingredient> findLowStockIngredients(Long restaurantId);

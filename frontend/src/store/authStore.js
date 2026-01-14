@@ -86,6 +86,7 @@ const validateStoredTokens = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('access_token_expiry');
     localStorage.removeItem('token_set_time');
+    localStorage.removeItem('user');
     return false;
   }
 
@@ -96,14 +97,25 @@ const validateStoredTokens = () => {
     localStorage.removeItem('access_token_expiry');
     localStorage.removeItem('refresh_token_expiry');
     localStorage.removeItem('token_set_time');
+    localStorage.removeItem('user');
     return false;
   }
 
   return !!accessToken && !isAccessTokenExpired();
 };
 
+// Helper to get stored user
+const getStoredUser = () => {
+  try {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const useAuthStore = create((set) => ({
-  user: null,
+  user: getStoredUser(),
   token: localStorage.getItem('access_token'),
   isAuthenticated: validateStoredTokens(),
 
@@ -113,6 +125,7 @@ export const useAuthStore = create((set) => ({
       const { accessToken, refreshToken, user } = response.data.data;
 
       setTokenWithExpiry(accessToken, refreshToken);
+      localStorage.setItem('user', JSON.stringify(user));
 
       set({ user, token: accessToken, isAuthenticated: true });
       return { success: true };
@@ -130,6 +143,7 @@ export const useAuthStore = create((set) => ({
       const { accessToken, refreshToken, user } = response.data.data;
 
       setTokenWithExpiry(accessToken, refreshToken);
+      localStorage.setItem('user', JSON.stringify(user));
 
       set({ user, token: accessToken, isAuthenticated: true });
       return { success: true };
@@ -168,6 +182,7 @@ export const useAuthStore = create((set) => ({
       localStorage.removeItem('access_token_expiry');
       localStorage.removeItem('refresh_token_expiry');
       localStorage.removeItem('token_set_time');
+      localStorage.removeItem('user');
       set({ user: null, token: null, isAuthenticated: false });
       return { success: false, error: 'Session expired' };
     }
@@ -179,6 +194,7 @@ export const useAuthStore = create((set) => ({
     localStorage.removeItem('access_token_expiry');
     localStorage.removeItem('refresh_token_expiry');
     localStorage.removeItem('token_set_time');
+    localStorage.removeItem('user');
     set({ user: null, token: null, isAuthenticated: false });
   },
 

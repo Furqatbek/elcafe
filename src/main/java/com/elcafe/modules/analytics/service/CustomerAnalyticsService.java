@@ -5,6 +5,7 @@ import com.elcafe.modules.analytics.dto.CustomerRetentionDTO;
 import com.elcafe.modules.analytics.dto.CustomerSatisfactionDTO;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -16,13 +17,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for customer analytics calculations
+ * Service for customer analytics calculations.
+ * Uses shift-based time ranges for consistent reporting across midnight-crossing shifts.
  */
 @Slf4j
 @Service
@@ -31,31 +32,36 @@ public class CustomerAnalyticsService {
 
     private final CustomerRepository customerRepository;
     private final OrderRepository orderRepository;
+    private final ShiftTimeService shiftTimeService;
 
     /**
-     * Calculate customer retention rate
+     * Calculate customer retention rate.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public CustomerRetentionDTO getCustomerRetention(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Customer retention using shift range: {} to {}", shift.start(), shift.end());
 
         // Get all customers that existed at the start of the period
         List<Customer> customersAtStart = customerRepository.findAll().stream()
-                .filter(c -> c.getCreatedAt().isBefore(startDateTime))
+                .filter(c -> c.getCreatedAt().isBefore(shift.start()))
                 .collect(Collectors.toList());
 
         // Get new customers during the period
         List<Customer> newCustomers = customerRepository.findAll().stream()
-                .filter(c -> c.getCreatedAt().isAfter(startDateTime) && c.getCreatedAt().isBefore(endDateTime))
+                .filter(c -> c.getCreatedAt().isAfter(shift.start()) && c.getCreatedAt().isBefore(shift.end()))
                 .collect(Collectors.toList());
 
         // Get all customers at the end of the period
         List<Customer> customersAtEnd = customerRepository.findAll().stream()
-                .filter(c -> c.getCreatedAt().isBefore(endDateTime))
+                .filter(c -> c.getCreatedAt().isBefore(shift.end()))
                 .collect(Collectors.toList());
 
         // Get returning customers (customers who made orders during the period)
-        Set<Long> returningCustomerIds = getCompletedOrders(startDateTime, endDateTime, restaurantId).stream()
+        Set<Long> returningCustomerIds = getCompletedOrders(shift.start(), shift.end(), restaurantId).stream()
+                .filter(order -> order.getCustomer() != null)
                 .map(order -> order.getCustomer().getId())
                 .filter(customerId -> customersAtStart.stream().anyMatch(c -> c.getId().equals(customerId)))
                 .collect(Collectors.toSet());
@@ -74,7 +80,8 @@ public class CustomerAnalyticsService {
         double churnRate = 100.0 - retentionRate;
 
         // Count one-time vs repeat customers
-        Map<Long, Long> orderCountByCustomer = getCompletedOrders(startDateTime, endDateTime, restaurantId).stream()
+        Map<Long, Long> orderCountByCustomer = getCompletedOrders(shift.start(), shift.end(), restaurantId).stream()
+                .filter(order -> order.getCustomer() != null)
                 .collect(Collectors.groupingBy(
                         order -> order.getCustomer().getId(),
                         Collectors.counting()
@@ -230,24 +237,31 @@ public class CustomerAnalyticsService {
 
     // Helper methods
 
+    /**
+     * Get orders with revenue-generating statuses within the given time range.
+     * Uses shared REVENUE_STATUSES for consistency across all reports.
+     */
     private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
         if (restaurantId != null) {
-            return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         } else {
             return orderRepository.findAll().stream()
                     .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         }
     }
 
     private CustomerMetrics calculateCustomerMetrics(Customer customer, Long restaurantId) {
-        List<Order> customerOrders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId()).stream()
-                .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+        List<Order> customerOrders = orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customer.getId()).stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                 .filter(order -> restaurantId == null || order.getRestaurant().getId().equals(restaurantId))
                 .collect(Collectors.toList());
 

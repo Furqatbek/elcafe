@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
 import { Button } from './ui/button';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import PushPermissionPrompt from './PushPermissionPrompt';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -55,13 +54,6 @@ import {
   Trash2,
   Monitor,
   Calculator,
-  Ticket,
-  Wine,
-  Share2,
-  MessageSquare,
-  Send,
-  QrCode,
-  Trophy,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -110,7 +102,9 @@ export default function Layout() {
       label: t('nav.orders'),
       icon: ShoppingCart,
       path: '/orders',
-      subItems: [],
+      subItems: [
+        { label: t('nav.sub.ordersHistory'), icon: History, path: '/orders/history' },
+      ],
     },
     {
       id: 'restaurant',
@@ -141,7 +135,7 @@ export default function Layout() {
       subItems: [
         { label: t('nav.sub.operators'), icon: UserCog, path: '/operators' },
         { label: t('nav.sub.waiters'), icon: UserCheck, path: '/employees/waiters' },
-        { label: t('nav.sub.waiterPerformance', 'Waiter Performance'), icon: Trophy, path: '/employees/waiter-performance' },
+        { label: t('nav.sub.waiterPerformance', 'Waiter Performance'), icon: TrendingUp, path: '/employees/waiter-performance' },
         { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
         { label: t('nav.sub.courierMap'), icon: MapPin, path: '/courier-map' },
       ],
@@ -177,22 +171,6 @@ export default function Layout() {
       ],
     },
     {
-      id: 'marketing',
-      label: t('nav.marketing'),
-      icon: Megaphone,
-      path: '/marketing/promotions',
-      subItems: [
-        { label: t('nav.sub.promotions', 'Promotions'), icon: Tag, path: '/marketing/promotions' },
-        { label: t('nav.sub.coupons', 'Coupons'), icon: Ticket, path: '/marketing/coupons' },
-        { label: t('nav.sub.happyHours', 'Happy Hours'), icon: Wine, path: '/marketing/happy-hours' },
-        { label: t('nav.sub.bundles', 'Bundles'), icon: Package, path: '/marketing/bundles' },
-        { label: t('nav.sub.referrals', 'Referrals'), icon: Share2, path: '/marketing/referrals' },
-        { label: t('nav.sub.smsMarketing', 'SMS Marketing'), icon: MessageSquare, path: '/marketing/sms' },
-        { label: t('nav.sub.telegramMarketing', 'Telegram'), icon: Send, path: '/marketing/telegram' },
-        { label: t('nav.sub.qrCodes', 'QR Codes'), icon: QrCode, path: '/marketing/qr-codes' },
-      ],
-    },
-    {
       id: 'finance',
       label: t('nav.finance'),
       icon: Wallet,
@@ -220,7 +198,7 @@ export default function Layout() {
   // OPERATOR role cannot access dashboard and finance
   const isOperator = user?.role === 'OPERATOR';
   const filteredMenuItems = isOperator
-    ? menuItems.filter((item) => !['dashboard', 'finance', 'marketing'].includes(item.id))
+    ? menuItems.filter((item) => !['dashboard', 'finance'].includes(item.id))
     : menuItems;
 
   return (
@@ -347,9 +325,6 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
-
-      {/* Push Notification Permission Prompt */}
-      <PushPermissionPrompt isAdmin={true} />
     </div>
   );
 }

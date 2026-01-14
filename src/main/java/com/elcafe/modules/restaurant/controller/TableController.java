@@ -1,8 +1,10 @@
 package com.elcafe.modules.restaurant.controller;
 
 import com.elcafe.modules.restaurant.dto.CreateTableRequest;
+import com.elcafe.modules.restaurant.dto.FloorPlanDTO;
 import com.elcafe.modules.restaurant.dto.MergeTablesRequest;
 import com.elcafe.modules.restaurant.dto.TableResponse;
+import com.elcafe.modules.restaurant.dto.UpdateTablePositionRequest;
 import com.elcafe.modules.restaurant.dto.UpdateTableRequest;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.service.TableService;
@@ -178,6 +180,27 @@ public class TableController {
         log.info("Getting merged tables for table: {}", tableId);
 
         List<TableResponse> response = tableService.getMergedTables(tableId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PutMapping("/tables/{id}/position")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @Operation(summary = "Update table position", description = "Update the floor plan position of a table")
+    public ResponseEntity<ApiResponse<TableResponse>> updateTablePosition(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTablePositionRequest request) {
+        log.info("Updating position for table: {}", id);
+
+        TableResponse response = tableService.updateTablePosition(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Table position updated successfully", response));
+    }
+
+    @GetMapping("/restaurants/{restaurantId}/floor-plan")
+    @Operation(summary = "Get floor plan", description = "Get the floor plan with all table positions for a restaurant")
+    public ResponseEntity<ApiResponse<FloorPlanDTO>> getFloorPlan(@PathVariable Long restaurantId) {
+        log.info("Getting floor plan for restaurant: {}", restaurantId);
+
+        FloorPlanDTO response = tableService.getFloorPlan(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

@@ -1,35 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { financialAPI } from '../services/api';
+import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar } from 'lucide-react';
+import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar, AlertCircle, RefreshCw, Settings, Building2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const FinancialReports = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [restaurants, setRestaurants] = useState([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('profitLoss');
+  const [accountsExist, setAccountsExist] = useState(true);
+  const [initializingAccounts, setInitializingAccounts] = useState(false);
+  const [periodType, setPeriodType] = useState('monthly'); // 'daily' or 'monthly'
 
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
-  });
+  // Helper to get date range based on period type
+  const getDateRange = (type) => {
+    const today = new Date();
+    if (type === 'daily') {
+      const dateStr = today.toISOString().split('T')[0];
+      return { startDate: dateStr, endDate: dateStr };
+    } else {
+      // Monthly - first day of current month to today
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      return {
+        startDate: firstDay.toISOString().split('T')[0],
+        endDate: today.toISOString().split('T')[0]
+      };
+    }
+  };
+
+  const [dateRange, setDateRange] = useState(getDateRange('monthly'));
 
   const [profitLossReport, setProfitLossReport] = useState(null);
   const [balanceSheet, setBalanceSheet] = useState(null);
   const [cashFlowReport, setCashFlowReport] = useState(null);
   const [cogsReport, setCogsReport] = useState(null);
 
+  // Fetch restaurants on mount
   useEffect(() => {
-    if (user?.restaurantId) {
-      setSelectedRestaurant(user.restaurantId);
-      loadReports(user.restaurantId);
+    const fetchRestaurants = async () => {
+      try {
+        const response = await restaurantAPI.getAll();
+        const restaurantList = response.data.data?.content || response.data.data || [];
+        setRestaurants(restaurantList);
+
+        // Set initial restaurant: user's restaurant or first available
+        if (!selectedRestaurant) {
+          if (user?.restaurantId) {
+            setSelectedRestaurant(user.restaurantId);
+          } else if (restaurantList.length > 0) {
+            setSelectedRestaurant(restaurantList[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching restaurants:', error);
+      }
+    };
+    fetchRestaurants();
+  }, [user]);
+
+  // Load reports when restaurant or date range changes
+  useEffect(() => {
+    if (selectedRestaurant) {
+      checkAccountsAndLoadReports(selectedRestaurant);
     }
-  }, [user, dateRange]);
+  }, [selectedRestaurant, dateRange]);
+
+  const checkAccountsAndLoadReports = async (restaurantId) => {
+    setLoading(true);
+    try {
+      // First check if accounts exist
+      const accountsResponse = await financialAPI.getAccounts(restaurantId);
+      const accounts = accountsResponse.data?.data || [];
+
+      if (accounts.length === 0) {
+        setAccountsExist(false);
+        setLoading(false);
+        return;
+      }
+
+      setAccountsExist(true);
+      await loadReports(restaurantId);
+    } catch (error) {
+      console.error('Failed to check accounts:', error);
+      setAccountsExist(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadReports = async (restaurantId) => {
-    setLoading(true);
     try {
       const [plResponse, bsResponse, cfResponse, cogsResponse] = await Promise.all([
         financialAPI.getProfitLossReport(restaurantId, dateRange.startDate, dateRange.endDate),
@@ -44,15 +106,34 @@ const FinancialReports = () => {
       setCogsReport(cogsResponse.data.data);
     } catch (error) {
       console.error('Failed to load reports:', error);
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const initializeChartOfAccounts = async () => {
+    if (!selectedRestaurant) return;
+
+    setInitializingAccounts(true);
+    try {
+      await financialAPI.initializeAccounts(selectedRestaurant);
+      setAccountsExist(true);
+      await loadReports(selectedRestaurant);
+    } catch (error) {
+      console.error('Failed to initialize accounts:', error);
+      alert(t('finance.reports.initializationFailed', 'Failed to initialize Chart of Accounts'));
+    } finally {
+      setInitializingAccounts(false);
+    }
+  };
+
+  const handlePeriodChange = (type) => {
+    setPeriodType(type);
+    setDateRange(getDateRange(type));
   };
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount || 0);
   };
 
@@ -402,24 +483,122 @@ const FinancialReports = () => {
     );
   };
 
+  const handleRefresh = () => {
+    if (selectedRestaurant) {
+      checkAccountsAndLoadReports(selectedRestaurant);
+    }
+  };
+
+  const handleReinitialize = async () => {
+    if (!selectedRestaurant) return;
+
+    if (!confirm(t('finance.reports.confirmReinitialize', 'This will reset all accounts to default values. Existing account balances will be preserved. Continue?'))) {
+      return;
+    }
+
+    setInitializingAccounts(true);
+    try {
+      await financialAPI.initializeAccounts(selectedRestaurant);
+      await loadReports(selectedRestaurant);
+      alert(t('finance.reports.reinitializeSuccess', 'Chart of Accounts re-initialized successfully'));
+    } catch (error) {
+      console.error('Failed to re-initialize accounts:', error);
+      alert(t('finance.reports.initializationFailed', 'Failed to initialize Chart of Accounts'));
+    } finally {
+      setInitializingAccounts(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('finance.reports.title')}</h1>
         <div className="flex items-center gap-4">
+          {/* Restaurant Selector */}
+          <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-gray-500" />
+            <select
+              value={selectedRestaurant || ''}
+              onChange={(e) => setSelectedRestaurant(e.target.value ? parseInt(e.target.value) : null)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
+            >
+              <option value="">{t('finance.common.selectRestaurant', 'Select Restaurant')}</option>
+              {restaurants.map((restaurant) => (
+                <option key={restaurant.id} value={restaurant.id}>
+                  {restaurant.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Refresh and Initialize Buttons */}
+          {accountsExist && selectedRestaurant && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                title={t('finance.reports.refresh', 'Refresh Reports')}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                {t('finance.reports.refresh', 'Refresh')}
+              </button>
+              <button
+                onClick={handleReinitialize}
+                disabled={initializingAccounts}
+                className="inline-flex items-center px-3 py-2 border border-blue-300 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                title={t('finance.reports.reinitializeAccounts', 'Re-initialize Accounts')}
+              >
+                <Settings className={`h-4 w-4 mr-2 ${initializingAccounts ? 'animate-spin' : ''}`} />
+                {t('finance.reports.initializeAccounts', 'Initialize Accounts')}
+              </button>
+            </div>
+          )}
+
+          {/* Period Type Filter */}
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+            <button
+              onClick={() => handlePeriodChange('daily')}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                periodType === 'daily'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {t('finance.reports.daily', 'Daily')}
+            </button>
+            <button
+              onClick={() => handlePeriodChange('monthly')}
+              className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-300 ${
+                periodType === 'monthly'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {t('finance.reports.monthly', 'Monthly')}
+            </button>
+          </div>
+
+          {/* Date Range Selector */}
           <div className="flex items-center gap-2">
             <Calendar size={20} className="text-gray-500" />
             <input
               type="date"
               value={dateRange.startDate}
-              onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+              onChange={(e) => {
+                setPeriodType('custom');
+                setDateRange({ ...dateRange, startDate: e.target.value });
+              }}
               className="px-3 py-2 border border-gray-300 rounded-lg"
             />
             <span className="text-gray-500">{t('finance.common.to')}</span>
             <input
               type="date"
               value={dateRange.endDate}
-              onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+              onChange={(e) => {
+                setPeriodType('custom');
+                setDateRange({ ...dateRange, endDate: e.target.value });
+              }}
               className="px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
@@ -485,6 +664,35 @@ const FinancialReports = () => {
       {loading ? (
         <div className="flex justify-center items-center py-12">
           <div className="text-gray-500">{t('finance.common.loadingReports')}</div>
+        </div>
+      ) : !accountsExist ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 max-w-lg text-center">
+            <AlertCircle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+            <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+              {t('finance.reports.noAccountsTitle', 'Chart of Accounts Not Initialized')}
+            </h3>
+            <p className="text-yellow-700 mb-6">
+              {t('finance.reports.noAccountsDescription',
+                'Financial reports require a Chart of Accounts to be set up first. Initialize the default accounts to start tracking revenue, expenses, and generating financial reports.')}
+            </p>
+            <button
+              onClick={initializeChartOfAccounts}
+              disabled={initializingAccounts}
+              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {initializingAccounts ? (
+                <>
+                  <RefreshCw className="animate-spin -ml-1 mr-2 h-5 w-5" />
+                  {t('finance.reports.initializing', 'Initializing...')}
+                </>
+              ) : (
+                <>
+                  {t('finance.reports.initializeAccounts', 'Initialize Chart of Accounts')}
+                </>
+              )}
+            </button>
+          </div>
         </div>
       ) : (
         <div>

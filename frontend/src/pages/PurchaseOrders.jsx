@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { financialAPI, inventoryAPI, restaurantAPI } from '../services/api';
+import { financialAPI, inventoryAPI, restaurantAPI, supplierAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { Plus, Edit, Trash2, Check, X, Package } from 'lucide-react';
+import { Plus, Edit, Trash2, Check, X, Package, Link as LinkIcon } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const PurchaseOrders = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
+  const location = useLocation();
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [ingredients, setIngredients] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [suppliers, setSuppliers] = useState([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [prefillProcessed, setPrefillProcessed] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPO, setSelectedPO] = useState(null);
@@ -21,6 +25,7 @@ const PurchaseOrders = () => {
 
   const [formData, setFormData] = useState({
     restaurantId: '',
+    supplierId: '',
     supplierName: '',
     supplierContact: '',
     supplierAddress: '',
@@ -73,8 +78,59 @@ const PurchaseOrders = () => {
     if (selectedRestaurant) {
       loadPurchaseOrders(selectedRestaurant);
       loadIngredients(selectedRestaurant);
+      loadSuppliers(selectedRestaurant);
     }
   }, [selectedRestaurant]);
+
+  // Handle prefill data from inventory navigation
+  useEffect(() => {
+    if (location.state?.prefillData && suppliers.length > 0 && ingredients.length > 0 && !prefillProcessed) {
+      const prefill = location.state.prefillData;
+
+      // Set restaurant if provided
+      if (prefill.restaurantId && !selectedRestaurant) {
+        setSelectedRestaurant(prefill.restaurantId);
+        setFormData(prev => ({ ...prev, restaurantId: prefill.restaurantId }));
+      }
+
+      // Find and set supplier
+      if (prefill.supplierId) {
+        const supplier = suppliers.find(s => s.id === parseInt(prefill.supplierId));
+        if (supplier) {
+          setFormData(prev => ({
+            ...prev,
+            supplierId: supplier.id.toString(),
+            supplierName: supplier.name,
+            supplierContact: supplier.contactPerson ?
+              `${supplier.contactPerson}${supplier.phone ? ' - ' + supplier.phone : ''}` :
+              supplier.phone || '',
+            supplierAddress: supplier.address || ''
+          }));
+        }
+      }
+
+      // Pre-fill the item form with ingredient data
+      if (prefill.ingredientId) {
+        setItemForm({
+          ingredientId: prefill.ingredientId.toString(),
+          itemName: prefill.ingredientName || '',
+          description: '',
+          sku: prefill.sku || '',
+          quantity: prefill.reorderQuantity || 1,
+          unit: prefill.unit || '',
+          unitPrice: prefill.unitPrice || 0,
+          notes: ''
+        });
+      }
+
+      // Open the modal
+      setShowModal(true);
+      setPrefillProcessed(true);
+
+      // Clear the state to prevent re-processing
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, suppliers, ingredients, prefillProcessed, selectedRestaurant]);
 
   const loadRestaurants = async () => {
     try {
@@ -113,6 +169,91 @@ const PurchaseOrders = () => {
       setIngredients(response.data.data || []);
     } catch (error) {
       console.error('Failed to load ingredients:', error);
+    }
+  };
+
+  const loadSuppliers = async (restaurantId) => {
+    try {
+      const response = await supplierAPI.getAll(restaurantId, true); // activeOnly = true
+      setSuppliers(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load suppliers:', error);
+    }
+  };
+
+  const handleSupplierChange = (supplierId) => {
+    if (!supplierId) {
+      setFormData(prev => ({
+        ...prev,
+        supplierId: '',
+        supplierName: '',
+        supplierContact: '',
+        supplierAddress: ''
+      }));
+      // Clear ingredient selection when supplier is cleared
+      setItemForm(prev => ({
+        ...prev,
+        ingredientId: '',
+        itemName: '',
+        sku: '',
+        unit: '',
+        unitPrice: 0
+      }));
+      return;
+    }
+
+    const supplier = suppliers.find(s => s.id === parseInt(supplierId));
+    if (supplier) {
+      setFormData(prev => ({
+        ...prev,
+        supplierId: supplier.id.toString(),
+        supplierName: supplier.name,
+        supplierContact: supplier.contactPerson ?
+          `${supplier.contactPerson}${supplier.phone ? ' - ' + supplier.phone : ''}` :
+          supplier.phone || '',
+        supplierAddress: supplier.address || ''
+      }));
+      // Clear ingredient selection when supplier changes
+      setItemForm(prev => ({
+        ...prev,
+        ingredientId: '',
+        itemName: '',
+        sku: '',
+        unit: '',
+        unitPrice: 0
+      }));
+    }
+  };
+
+  // Filter ingredients by selected supplier
+  const filteredIngredients = formData.supplierId
+    ? ingredients.filter(ing => ing.supplierId === parseInt(formData.supplierId))
+    : ingredients;
+
+  const handleIngredientChange = (ingredientId) => {
+    if (!ingredientId) {
+      setItemForm(prev => ({
+        ...prev,
+        ingredientId: '',
+        itemName: '',
+        sku: '',
+        unit: '',
+        unitPrice: 0
+      }));
+      return;
+    }
+
+    const ingredient = ingredients.find(i => i.id === parseInt(ingredientId));
+    if (ingredient) {
+      setItemForm(prev => ({
+        ...prev,
+        ingredientId: ingredient.id.toString(),
+        itemName: ingredient.name,
+        sku: ingredient.sku || '',
+        unit: ingredient.unit || '',
+        unitPrice: ingredient.costPerUnit || 0,
+        quantity: ingredient.reorderQuantity || prev.quantity
+      }));
     }
   };
 
@@ -156,13 +297,19 @@ const PurchaseOrders = () => {
 
   const handleSave = async () => {
     try {
-      if (!formData.supplierName || formData.items.length === 0) {
-        alert(t('finance.purchaseOrders.messages.fillSupplierAndItems'));
+      if (formData.items.length === 0) {
+        alert(t('finance.purchaseOrders.messages.addAtLeastOneItem', 'Please add at least one item'));
         return;
       }
 
       setLoading(true);
-      await financialAPI.createPurchaseOrder(formData);
+      const submitData = {
+        ...formData,
+        restaurantId: selectedRestaurant, // Use selectedRestaurant directly to ensure it's always set
+        supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
+        supplierName: formData.supplierName || t('finance.purchaseOrders.unknownSupplier', 'Unknown Supplier')
+      };
+      await financialAPI.createPurchaseOrder(submitData);
       alert(t('finance.purchaseOrders.messages.createSuccess'));
       setShowModal(false);
       resetForm();
@@ -254,6 +401,7 @@ const PurchaseOrders = () => {
   const resetForm = () => {
     setFormData({
       restaurantId: selectedRestaurant,
+      supplierId: '',
       supplierName: '',
       supplierContact: '',
       supplierAddress: '',
@@ -384,17 +532,18 @@ const PurchaseOrders = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.totalAmount')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.status')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.payment')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.purchaseOrders.linkedExpense', 'Linked Expense')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.actions')}</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">{t('finance.common.loading')}</td>
+                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">{t('finance.common.loading')}</td>
               </tr>
             ) : filteredPOs.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">{t('finance.purchaseOrders.noPurchaseOrders')}</td>
+                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">{t('finance.purchaseOrders.noPurchaseOrders')}</td>
               </tr>
             ) : (
               filteredPOs.map((po) => (
@@ -402,9 +551,22 @@ const PurchaseOrders = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{po.poNumber}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{po.supplierName}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{po.orderDate}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${po.totalAmount?.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{po.totalAmount?.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(po.status)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getPaymentStatusBadge(po.paymentStatus)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {po.expenseId ? (
+                      <Link
+                        to={`/expenses?id=${po.expenseId}`}
+                        className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                      >
+                        <LinkIcon size={14} />
+                        <span>{po.expenseNumber}</span>
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex gap-2">
                       {po.status === 'DRAFT' && (
@@ -451,12 +613,29 @@ const PurchaseOrders = () => {
 
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplierName')} *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplier')}</label>
+                <select
+                  value={formData.supplierId}
+                  onChange={(e) => handleSupplierChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">{t('finance.purchaseOrders.manualEntry', 'Manual Entry')}</option>
+                  {suppliers.map(supplier => (
+                    <option key={supplier.id} value={supplier.id}>
+                      {supplier.name} {supplier.code ? `(${supplier.code})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.supplierName', 'Supplier Name')} *</label>
                 <input
                   type="text"
                   value={formData.supplierName}
                   onChange={(e) => setFormData({ ...formData, supplierName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${formData.supplierId ? 'bg-gray-50' : ''}`}
+                  placeholder={t('finance.purchaseOrders.enterSupplierName', 'Enter supplier name')}
+                  readOnly={!!formData.supplierId}
                 />
               </div>
               <div>
@@ -465,7 +644,8 @@ const PurchaseOrders = () => {
                   type="text"
                   value={formData.supplierContact}
                   onChange={(e) => setFormData({ ...formData, supplierContact: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${formData.supplierId ? 'bg-gray-50' : ''}`}
+                  placeholder={formData.supplierId ? t('finance.purchaseOrders.autoPopulated') : t('finance.purchaseOrders.enterSupplierContact', 'Enter contact info')}
                 />
               </div>
               <div>
@@ -493,8 +673,9 @@ const PurchaseOrders = () => {
               <textarea
                 value={formData.supplierAddress}
                 onChange={(e) => setFormData({ ...formData, supplierAddress: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
                 rows="2"
+                placeholder={t('finance.purchaseOrders.autoPopulated')}
               />
             </div>
 
@@ -506,15 +687,38 @@ const PurchaseOrders = () => {
               <div className="bg-gray-50 p-4 rounded-lg mb-4">
                 <div className="grid grid-cols-4 gap-2 mb-2">
                   <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.linkToIngredient')}</label>
+                    <select
+                      value={itemForm.ingredientId}
+                      onChange={(e) => handleIngredientChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="">{t('finance.common.none')} ({t('finance.purchaseOrders.optional', 'Optional')})</option>
+                      {(Array.isArray(filteredIngredients) ? filteredIngredients : []).map(ing => (
+                        <option key={ing.id} value={ing.id}>
+                          {ing.name} {ing.sku ? `(${ing.sku})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {itemForm.ingredientId && (
+                      <p className="text-xs text-blue-600 mt-1">{t('finance.purchaseOrders.autoPopulated')}</p>
+                    )}
+                    {formData.supplierId && filteredIngredients.length === 0 && (
+                      <p className="text-xs text-orange-600 mt-1">{t('finance.purchaseOrders.noIngredientsForSupplier')}</p>
+                    )}
+                  </div>
+                  <div className="col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.itemName')} *</label>
                     <input
                       type="text"
                       value={itemForm.itemName}
                       onChange={(e) => setItemForm({ ...itemForm, itemName: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${itemForm.ingredientId ? 'bg-gray-50' : ''}`}
                       placeholder={t('finance.purchaseOrders.itemNamePlaceholder')}
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2 mb-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.quantity')} *</label>
                     <input
@@ -532,19 +736,17 @@ const PurchaseOrders = () => {
                       type="text"
                       value={itemForm.unit}
                       onChange={(e) => setItemForm({ ...itemForm, unit: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${itemForm.ingredientId ? 'bg-gray-50' : ''}`}
                       placeholder={t('finance.purchaseOrders.unitPlaceholder')}
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.common.unitPrice')} *</label>
                     <input
                       type="number"
                       value={itemForm.unitPrice}
                       onChange={(e) => setItemForm({ ...itemForm, unitPrice: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${itemForm.ingredientId ? 'bg-gray-50' : ''}`}
                       min="0"
                       step="0.01"
                     />
@@ -555,21 +757,8 @@ const PurchaseOrders = () => {
                       type="text"
                       value={itemForm.sku}
                       onChange={(e) => setItemForm({ ...itemForm, sku: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${itemForm.ingredientId ? 'bg-gray-50' : ''}`}
                     />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('finance.purchaseOrders.linkToIngredient')}</label>
-                    <select
-                      value={itemForm.ingredientId}
-                      onChange={(e) => setItemForm({ ...itemForm, ingredientId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">{t('finance.common.none')}</option>
-                      {(Array.isArray(ingredients) ? ingredients : []).map(ing => (
-                        <option key={ing.id} value={ing.id}>{ing.name}</option>
-                      ))}
-                    </select>
                   </div>
                 </div>
                 <button
@@ -598,8 +787,8 @@ const PurchaseOrders = () => {
                         <tr key={index}>
                           <td className="px-4 py-2 text-sm">{item.itemName}</td>
                           <td className="px-4 py-2 text-sm">{item.quantity} {item.unit}</td>
-                          <td className="px-4 py-2 text-sm">${item.unitPrice}</td>
-                          <td className="px-4 py-2 text-sm">${(item.quantity * item.unitPrice).toFixed(2)}</td>
+                          <td className="px-4 py-2 text-sm">{item.unitPrice}</td>
+                          <td className="px-4 py-2 text-sm">{(item.quantity * item.unitPrice).toFixed(2)}</td>
                           <td className="px-4 py-2 text-sm">
                             <button
                               onClick={() => handleRemoveItem(index)}
@@ -645,10 +834,10 @@ const PurchaseOrders = () => {
 
               <div className="text-right space-y-2">
                 <div className="text-lg">
-                  <span className="font-medium">{t('finance.common.subtotal')}:</span> ${calculateSubtotal().toFixed(2)}
+                  <span className="font-medium">{t('finance.common.subtotal')}:</span> {calculateSubtotal().toFixed(2)}
                 </div>
                 <div className="text-xl font-bold">
-                  <span>{t('finance.common.total')}:</span> ${calculateTotal().toFixed(2)}
+                  <span>{t('finance.common.total')}:</span> {calculateTotal().toFixed(2)}
                 </div>
               </div>
             </div>
@@ -768,16 +957,16 @@ const PurchaseOrders = () => {
               <div className="bg-gray-50 p-3 rounded-lg mb-4">
                 <div className="flex justify-between mb-2">
                   <span className="text-sm text-gray-600">{t('finance.common.totalAmount')}:</span>
-                  <span className="font-medium">${selectedPO.totalAmount?.toFixed(2)}</span>
+                  <span className="font-medium">{selectedPO.totalAmount?.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between mb-2">
                   <span className="text-sm text-gray-600">{t('finance.purchaseOrders.alreadyPaid')}:</span>
-                  <span className="font-medium">${(selectedPO.paidAmount || 0).toFixed(2)}</span>
+                  <span className="font-medium">{(selectedPO.paidAmount || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
                   <span className="text-sm font-semibold">{t('finance.common.remaining')}:</span>
                   <span className="font-bold text-red-600">
-                    ${(selectedPO.totalAmount - (selectedPO.paidAmount || 0)).toFixed(2)}
+                    {(selectedPO.totalAmount - (selectedPO.paidAmount || 0)).toFixed(2)}
                   </span>
                 </div>
               </div>

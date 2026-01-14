@@ -36,30 +36,28 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     Optional<Order> findByOrderNumber(String orderNumber);
 
-    List<Order> findByRestaurantIdAndStatusOrderByCreatedAtDesc(Long restaurantId, OrderStatus status);
+    List<Order> findByRestaurant_IdAndStatusOrderByCreatedAtDesc(Long restaurantId, OrderStatus status);
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.status = :status ORDER BY o.createdAt DESC")
-    List<Order> findByRestaurantIdAndStatusWithItemsOrderByCreatedAtDesc(@Param("restaurantId") Long restaurantId, @Param("status") OrderStatus status);
+    List<Order> findByRestaurant_IdAndStatusWithItemsOrderByCreatedAtDesc(@Param("restaurantId") Long restaurantId, @Param("status") OrderStatus status);
 
-    List<Order> findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+    List<Order> findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             Long restaurantId,
             LocalDateTime startDate,
             LocalDateTime endDate
     );
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
-    List<Order> findByRestaurantIdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
+    List<Order> findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
             @Param("restaurantId") Long restaurantId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
 
-    List<Order> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
+    List<Order> findByCustomer_IdOrderByCreatedAtDesc(Long customerId);
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.customer.id = :customerId ORDER BY o.createdAt DESC")
-    List<Order> findByCustomerIdWithItemsOrderByCreatedAtDesc(@Param("customerId") Long customerId);
-
-    long countByCustomer_Id(Long customerId);
+    List<Order> findByCustomer_IdWithItemsOrderByCreatedAtDesc(@Param("customerId") Long customerId);
 
     List<Order> findByStatusOrderByCreatedAtAsc(OrderStatus status);
 
@@ -68,7 +66,10 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.waiter = :waiter AND o.status IN :statuses ORDER BY o.createdAt DESC")
     List<Order> findByWaiterAndStatusInWithItemsOrderByCreatedAtDesc(@Param("waiter") Waiter waiter, @Param("statuses") List<OrderStatus> statuses);
 
-    List<Order> findByRestaurantIdAndStatus(Long restaurantId, OrderStatus status);
+    List<Order> findByRestaurant_IdAndStatus(Long restaurantId, OrderStatus status);
+
+    // Find active orders by table
+    List<Order> findByDiningTable_IdAndStatusIn(Long tableId, List<OrderStatus> statuses);
 
     List<Order> findByStatus(OrderStatus status);
 
@@ -88,15 +89,25 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Query("SELECT DISTINCT o.orderSource FROM Order o WHERE o.customer.id = :customerId")
     List<OrderSource> findDistinctOrderSourcesByCustomerId(@Param("customerId") Long customerId);
 
-    // Waiter metrics queries
+    // Waiter metrics queries (all-time - backward compatibility)
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED')")
     BigDecimal calculateTotalRevenueByWaiter(@Param("waiterId") Long waiterId);
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED')")
     Long countValidOrdersByWaiter(@Param("waiterId") Long waiterId);
 
+    // Waiter metrics queries (with date filter for period support)
+    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate")
+    BigDecimal calculateTotalRevenueByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
+
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate")
+    Long countValidOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
+
     @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') ORDER BY o.createdAt DESC")
     List<Order> findRecentOrdersByWaiter(@Param("waiterId") Long waiterId, Pageable pageable);
+
+    @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate ORDER BY o.createdAt DESC")
+    List<Order> findRecentOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate, Pageable pageable);
 
     @Query("SELECT CAST(o.createdAt AS LocalDate) as date, COALESCE(SUM(o.total), 0) as revenue, COUNT(o) as orderCount " +
            "FROM Order o " +
@@ -107,12 +118,16 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
            "ORDER BY CAST(o.createdAt AS LocalDate) DESC")
     List<Object[]> findDailyRevenueByWaiter(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
 
-    // POS dine-in orders query
-    List<Order> findByRestaurant_IdAndDiningTableIsNotNullAndStatusIn(Long restaurantId, List<OrderStatus> statuses);
+    // POS: Find open dine-in orders for a restaurant (includes orders with diningTable or tableIds)
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND (o.diningTable IS NOT NULL OR o.tableIds IS NOT NULL) AND o.status IN :statuses ORDER BY o.createdAt DESC")
+    List<Order> findByRestaurant_IdAndDiningTableIsNotNullAndStatusIn(
+            @Param("restaurantId") Long restaurantId,
+            @Param("statuses") List<OrderStatus> statuses);
 
-    /**
-     * Count completed/delivered orders for a customer (for first order detection)
-     */
-    @Query("SELECT COUNT(o) FROM Order o WHERE o.customer.id = :customerId AND o.status IN ('COMPLETED', 'DELIVERED')")
-    long countCompletedOrdersByCustomer(@Param("customerId") Long customerId);
+    // Financial reports: Find orders with payments for revenue calculation
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.payments WHERE o.restaurant.id = :restaurantId AND o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
+    List<Order> findByRestaurant_IdAndCreatedAtBetweenWithPaymentsOrderByCreatedAtDesc(
+            @Param("restaurantId") Long restaurantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 }

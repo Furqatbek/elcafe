@@ -1,6 +1,7 @@
 package com.elcafe.modules.analytics.service;
 
 import com.elcafe.modules.analytics.dto.*;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.kitchen.entity.KitchenOrder;
 import com.elcafe.modules.kitchen.enums.KitchenOrderStatus;
 import com.elcafe.modules.kitchen.repository.KitchenOrderRepository;
@@ -9,6 +10,8 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,7 +26,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for operational analytics calculations
+ * Service for operational analytics calculations.
+ * Uses shift-based time ranges for consistent reporting across midnight-crossing shifts.
  */
 @Slf4j
 @Service
@@ -32,15 +36,20 @@ public class OperationalAnalyticsService {
 
     private final OrderRepository orderRepository;
     private final KitchenOrderRepository kitchenOrderRepository;
+    private final ShiftTimeService shiftTimeService;
+    private final RestaurantTableRepository restaurantTableRepository;
 
     /**
-     * Calculate sales per hour
+     * Calculate sales per hour.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public List<SalesPerHourDTO> getSalesPerHour(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Sales per hour using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         BigDecimal totalRevenue = orders.stream()
                 .map(Order::getTotal)
@@ -134,28 +143,72 @@ public class OperationalAnalyticsService {
     }
 
     /**
-     * Calculate table turnover rate
-     * Note: This requires table/seat configuration data which should be provided
+     * Calculate table turnover rate.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
+     * Fetches actual table count from database when not provided.
      */
     public TableTurnoverDTO getTableTurnover(
             LocalDate startDate, LocalDate endDate, Long restaurantId,
             Integer totalTables, Integer totalSeats, Integer operatingHoursPerDay) {
 
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Table turnover using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         // Count dine-in orders (orders without delivery info)
         long totalDineInOrders = orders.stream()
                 .filter(order -> order.getDeliveryInfo() == null)
                 .count();
 
-        long daysBetween = Duration.between(startDateTime, endDateTime).toDays() + 1;
+        long daysBetween = Duration.between(shift.start(), shift.end()).toDays() + 1;
 
-        int tables = totalTables != null ? totalTables : 20; // default
-        int seats = totalSeats != null ? totalSeats : tables * 4; // default 4 seats per table
-        int operatingHours = operatingHoursPerDay != null ? operatingHoursPerDay : 12; // default 12 hours
+        // Fetch actual tables from database if not provided
+        int tables;
+        int seats;
+        if (totalTables == null && restaurantId != null) {
+            List<RestaurantTable> activeTables = restaurantTableRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
+            tables = activeTables.size();
+            if (tables == 0) {
+                log.warn("No active tables found for restaurant {}, table turnover will be 0", restaurantId);
+            }
+            seats = totalSeats != null ? totalSeats : activeTables.stream()
+                    .mapToInt(t -> {
+                        if (t.getCapacity() == null) {
+                            log.warn("Table {} has no capacity set, using 4 as fallback", t.getTableNumber());
+                            return 4;
+                        }
+                        return t.getCapacity();
+                    })
+                    .sum();
+        } else {
+            tables = totalTables != null ? totalTables : 0;
+            seats = totalSeats != null ? totalSeats : 0;
+            if (tables == 0 && restaurantId == null) {
+                log.warn("No restaurantId provided and no table count specified, cannot calculate table turnover accurately");
+            }
+        }
+
+        // Calculate operating hours from business hours if not provided
+        int operatingHours;
+        if (operatingHoursPerDay != null) {
+            operatingHours = operatingHoursPerDay;
+        } else if (shift.openTime() != null && shift.closeTime() != null) {
+            // Calculate hours from business hours
+            long hours;
+            if (shift.closeTime().isBefore(shift.openTime())) {
+                // Crosses midnight: e.g., 11:00 to 02:00 = 15 hours
+                hours = 24 - shift.openTime().getHour() + shift.closeTime().getHour();
+            } else {
+                hours = Duration.between(shift.openTime(), shift.closeTime()).toHours();
+            }
+            operatingHours = (int) Math.max(hours, 1);
+        } else {
+            operatingHours = 12; // fallback default
+            log.warn("Could not determine operating hours for restaurant {}, using default 12", restaurantId);
+        }
 
         double averageTurnoverRate = tables > 0 && daysBetween > 0
                 ? (double) totalDineInOrders / tables / daysBetween
@@ -184,13 +237,16 @@ public class OperationalAnalyticsService {
     }
 
     /**
-     * Calculate order timing analytics (preparation, wait time, delivery)
+     * Calculate order timing analytics (preparation, wait time, delivery).
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public OrderTimingAnalyticsDTO getOrderTimingAnalytics(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Order timing analytics using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(startDateTime, endDateTime, restaurantId);
+        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
         // Calculate preparation times (from NEW to PREPARING to READY/COMPLETED)
         List<Double> preparationTimes = orders.stream()
@@ -257,17 +313,23 @@ public class OperationalAnalyticsService {
 
     // Helper methods
 
+    /**
+     * Get orders with revenue-generating statuses within the given time range.
+     * Uses shared REVENUE_STATUSES for consistency across all reports.
+     */
     private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
         if (restaurantId != null) {
-            return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, startDateTime, endDateTime
             ).stream()
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         } else {
             return orderRepository.findAll().stream()
                     .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
-                    .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         }
     }
@@ -366,19 +428,22 @@ public class OperationalAnalyticsService {
     }
 
     /**
-     * Get kitchen performance analytics
-     * Provides metrics on kitchen efficiency, preparation times, and chef performance
+     * Get kitchen performance analytics.
+     * Provides metrics on kitchen efficiency, preparation times, and chef performance.
+     * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
     public Map<String, Object> getKitchenAnalytics(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        // Get shift-based time range
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Kitchen analytics using shift range: {} to {}", shift.start(), shift.end());
 
         List<KitchenOrder> kitchenOrders;
         if (restaurantId != null) {
             kitchenOrders = kitchenOrderRepository.findByRestaurantAndCreatedAtBetween(
-                    restaurantId, startDateTime, endDateTime);
+                    restaurantId, shift.start(), shift.end());
         } else {
-            kitchenOrders = kitchenOrderRepository.findByCreatedAtBetween(startDateTime, endDateTime);
+            kitchenOrders = kitchenOrderRepository.findByCreatedAtBetween(shift.start(), shift.end());
         }
 
         // Calculate status distribution

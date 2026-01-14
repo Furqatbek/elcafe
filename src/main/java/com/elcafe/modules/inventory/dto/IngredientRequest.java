@@ -39,14 +39,28 @@ public class IngredientRequest {
     @PositiveOrZero(message = "Reorder level must be zero or positive")
     private BigDecimal reorderLevel;
 
+    @PositiveOrZero(message = "Reorder quantity must be zero or positive")
+    private BigDecimal reorderQuantity;
+
     @PositiveOrZero(message = "Cost per unit must be zero or positive")
     private BigDecimal costPerUnit;
 
     private String supplier;
+
+    private Long supplierId;
 
     private String sku;
 
     private Boolean active;
 
     private Boolean trackInventory;
+
+    // Expiry tracking fields
+    private Boolean trackExpiry;
+
+    @PositiveOrZero(message = "Default shelf life days must be zero or positive")
+    private Integer defaultShelfLifeDays;
+
+    @PositiveOrZero(message = "Expiry alert days must be zero or positive")
+    private Integer expiryAlertDays;
 }

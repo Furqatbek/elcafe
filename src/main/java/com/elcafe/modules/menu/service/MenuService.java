@@ -43,7 +43,7 @@ public class MenuService {
             throw new ResourceNotFoundException("Restaurant is not active");
         }
 
-        List<Category> categories = categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
+        List<Category> categories = categoryRepository.findByRestaurant_IdAndActiveTrueOrderBySortOrder(restaurantId);
 
         return categories.stream()
                 .map(category -> {
@@ -114,13 +114,13 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<Category> getCategoriesByRestaurant(Long restaurantId) {
-        return categoryRepository.findByRestaurantIdOrderBySortOrder(restaurantId);
+        return categoryRepository.findByRestaurant_IdOrderBySortOrder(restaurantId);
     }
 
     @Transactional(readOnly = true)
     public List<Category> getActiveCategoriesByRestaurant(Long restaurantId) {
         log.info("Fetching active categories for restaurant: {}", restaurantId);
-        return categoryRepository.findByRestaurantIdAndActiveTrueOrderBySortOrder(restaurantId);
+        return categoryRepository.findByRestaurant_IdAndActiveTrueOrderBySortOrder(restaurantId);
     }
 
     @Transactional
@@ -147,14 +147,21 @@ public class MenuService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
 
+        // Update all fields
+        if (productData.getCategory() != null) {
+            product.setCategory(productData.getCategory());
+        }
         product.setName(productData.getName());
         product.setDescription(productData.getDescription());
         product.setImageUrl(productData.getImageUrl());
         product.setPrice(productData.getPrice());
+        product.setCostPrice(productData.getCostPrice());
+        product.setItemType(productData.getItemType());
         product.setSortOrder(productData.getSortOrder());
         product.setStatus(productData.getStatus());
         product.setInStock(productData.getInStock());
         product.setFeatured(productData.getFeatured());
+        product.setHasVariants(productData.getHasVariants());
 
         return productRepository.save(product);
     }
@@ -198,7 +205,7 @@ public class MenuService {
     public List<ProductListDTO> getProductsByRestaurant(Long restaurantId) {
         log.info("Fetching products for restaurant: {}", restaurantId);
 
-        List<Category> categories = categoryRepository.findByRestaurantIdOrderBySortOrder(restaurantId);
+        List<Category> categories = categoryRepository.findByRestaurant_IdOrderBySortOrder(restaurantId);
 
         return categories.stream()
                 .flatMap(category -> category.getProducts().stream()
@@ -209,6 +216,8 @@ public class MenuService {
                                 .imageUrl(product.getImageUrl())
                                 .price(product.getPrice())
                                 .priceWithMargin(product.getPriceWithMargin())
+                                .costPrice(product.getCostPrice())
+                                .marginPercentage(product.getMarginPercentage())
                                 .itemType(product.getItemType())
                                 .sortOrder(product.getSortOrder())
                                 .status(product.getStatus())
@@ -284,7 +293,7 @@ public class MenuService {
 
     @Transactional(readOnly = true)
     public List<AddOnGroup> getAddOnGroupsByRestaurant(Long restaurantId) {
-        return addOnGroupRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        return addOnGroupRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
     }
 
     @Transactional

@@ -10,9 +10,9 @@ import java.util.List;
 @Repository
 public interface PurchaseOrderItemRepository extends JpaRepository<PurchaseOrderItem, Long> {
 
-    List<PurchaseOrderItem> findByPurchaseOrderId(Long purchaseOrderId);
+    List<PurchaseOrderItem> findByPurchaseOrder_Id(Long purchaseOrderId);
 
-    List<PurchaseOrderItem> findByIngredientId(Long ingredientId);
+    List<PurchaseOrderItem> findByIngredient_Id(Long ingredientId);
 
     @Query("SELECT poi FROM FinancialPurchaseOrderItem poi " +
            "WHERE poi.purchaseOrder.id = :purchaseOrderId " +

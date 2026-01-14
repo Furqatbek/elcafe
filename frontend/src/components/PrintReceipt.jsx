@@ -1,5 +1,28 @@
 import { format } from 'date-fns';
 
+/**
+ * Get table number from order data
+ * Handles different data structures:
+ * - order.diningTable.tableNumber (from Order entity)
+ * - order.dineInInfo.tableNumber (from POSOrderResponse)
+ * - order.tableIds (comma-separated table IDs for multi-table orders)
+ */
+const getTableNumber = (order) => {
+  // Try diningTable (Order entity structure)
+  if (order.diningTable?.tableNumber) {
+    return order.diningTable.tableNumber;
+  }
+  // Try dineInInfo (POSOrderResponse structure)
+  if (order.dineInInfo?.tableNumber) {
+    return order.dineInInfo.tableNumber;
+  }
+  // Fallback: try tableIds field
+  if (order.tableIds) {
+    return order.tableIds;
+  }
+  return null;
+};
+
 const PrintReceipt = (order, onPrint) => {
   const printWindow = window.open('', '_blank');
   const receiptHTML = generateReceiptHTML(order);
@@ -18,8 +41,7 @@ const PrintReceipt = (order, onPrint) => {
 };
 
 const generateReceiptHTML = (order) => {
-    const currentDate = format(new Date(), 'dd/MM/yyyy HH:mm:ss');
-    const cashier = order.createdBy || 'System';
+    const currentDate = format(new Date(), 'dd/MM/yyyy HH:mm');
 
     return `
 <!DOCTYPE html>
@@ -35,7 +57,7 @@ const generateReceiptHTML = (order) => {
     }
 
     @page {
-      size: 80mm auto;
+      size: 58mm auto;
       margin: 0;
     }
 
@@ -50,10 +72,11 @@ const generateReceiptHTML = (order) => {
     }
 
     body {
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 16px;
-      line-height: 1.4;
-      width: 80mm;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.3;
+      width: 58mm;
       margin: 0 auto;
       padding: 0;
       background: white;
@@ -62,374 +85,248 @@ const generateReceiptHTML = (order) => {
 
     .receipt {
       width: 100%;
-      padding: 10mm 5mm;
+      padding: 2mm;
     }
 
-    /* Header */
     .header {
       text-align: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 3px solid black;
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px dashed black;
     }
 
     .brand-name {
-      font-size: 32px;
+      font-size: 20px;
       font-weight: bold;
-      letter-spacing: 4px;
-      margin-bottom: 5px;
-      text-transform: uppercase;
+      letter-spacing: 2px;
     }
 
-    .restaurant-name {
-      font-size: 18px;
-      font-weight: bold;
-      margin-top: 5px;
+    .info-section {
+      margin: 4px 0;
+      padding: 3px 0;
+      border-bottom: 1px dashed black;
+      font-size: 12px;
+      font-weight: 600;
     }
 
-    /* Subheader */
-    .subheader {
-      margin: 15px 0;
-      padding: 10px;
-      border: 2px solid black;
-      background: white;
-    }
-
-    .subheader-line {
+    .info-line {
       display: flex;
       justify-content: space-between;
-      margin: 5px 0;
-      font-size: 16px;
-      line-height: 1.6;
-    }
-
-    .subheader-line .label {
-      font-weight: bold;
-    }
-
-    .subheader-line .value {
-      text-align: right;
-    }
-
-    .order-number {
-      text-align: center;
-      font-size: 24px;
-      font-weight: bold;
-      margin: 15px 0;
-      padding: 10px;
-      border: 3px solid black;
-    }
-
-    /* Customer Info */
-    .customer-info {
-      margin: 15px 0;
-      padding: 10px;
-      border: 2px solid black;
-    }
-
-    .customer-info-title {
-      font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 8px;
-      text-decoration: underline;
-    }
-
-    .customer-info-line {
-      font-size: 16px;
-      margin: 5px 0;
-      line-height: 1.5;
-    }
-
-    /* Items Table */
-    .items-section {
-      margin: 15px 0;
-    }
-
-    .items-title {
-      display: none;
+      margin: 2px 0;
     }
 
     .items-table {
       width: 100%;
       border-collapse: collapse;
-      margin: 10px 0;
+      margin: 4px 0;
+      font-size: 12px;
     }
 
     .items-table th {
-      display: none;
+      border-bottom: 1px solid black;
+      padding: 3px 1px;
+      font-size: 11px;
+      font-weight: bold;
+      text-align: left;
+    }
+
+    .items-table th:nth-child(2),
+    .items-table th:nth-child(3),
+    .items-table th:nth-child(4) {
+      text-align: right;
     }
 
     .items-table td {
-      border: 2px solid black;
-      padding: 8px 4px;
-      font-size: 16px;
-      line-height: 1.5;
+      padding: 3px 1px;
+      font-size: 12px;
+      font-weight: 500;
+      vertical-align: top;
     }
 
     .items-table td.qty {
-      text-align: center;
-      font-weight: bold;
+      text-align: right;
+      width: 20px;
+      font-weight: 600;
     }
 
-    .items-table td.name {
-      font-weight: bold;
+    .items-table td.unit-price {
+      text-align: right;
+      width: 45px;
     }
 
     .items-table td.price {
       text-align: right;
       font-weight: bold;
+      width: 50px;
     }
 
     .item-variant {
-      font-size: 14px;
-      font-weight: normal;
+      font-size: 10px;
       font-style: italic;
-      margin-top: 2px;
     }
 
-    /* Totals */
     .totals {
-      margin: 15px 0;
-      border: 3px solid black;
-      padding: 10px;
+      margin: 4px 0;
+      padding-top: 4px;
+      border-top: 1px dashed black;
     }
 
     .total-line {
       display: flex;
       justify-content: space-between;
-      margin: 8px 0;
-      font-size: 18px;
-      padding: 5px 0;
-    }
-
-    .total-line .label {
-      font-weight: bold;
-    }
-
-    .total-line .amount {
-      font-weight: bold;
-      text-align: right;
-    }
-
-    .total-line.subtotal {
-      border-bottom: 1px solid black;
-      padding-bottom: 8px;
+      margin: 2px 0;
+      font-size: 12px;
+      font-weight: 600;
     }
 
     .total-line.grand-total {
-      border-top: 3px solid black;
-      border-bottom: 3px solid black;
-      padding: 12px 0;
-      margin-top: 10px;
-      font-size: 24px;
-    }
-
-    .total-line.grand-total .label {
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-
-    .total-line.grand-total .amount {
-      font-weight: bold;
-      font-size: 28px;
-    }
-
-    /* Payment Info */
-    .payment-info {
-      margin: 15px 0;
-      padding: 10px;
-      border: 2px solid black;
-      text-align: center;
-      font-size: 18px;
+      border-top: 2px solid black;
+      padding-top: 4px;
+      margin-top: 4px;
+      font-size: 16px;
       font-weight: bold;
     }
 
-    /* Notes */
     .notes-section {
-      margin: 15px 0;
-      padding: 10px;
-      border: 2px solid black;
+      margin: 4px 0;
+      padding: 3px;
+      border: 1px dashed black;
+      font-size: 11px;
     }
 
     .notes-title {
       font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 5px;
+      font-size: 11px;
     }
 
-    .notes-content {
-      font-size: 16px;
-      font-style: italic;
-      line-height: 1.5;
-    }
-
-    /* Footer */
     .footer {
-      margin-top: 20px;
-      padding-top: 15px;
-      border-top: 3px solid black;
+      margin-top: 5px;
+      padding-top: 4px;
+      border-top: 1px dashed black;
       text-align: center;
+      font-size: 11px;
+      font-weight: 500;
     }
 
     .contact-info {
-      margin: 10px 0;
-      font-size: 16px;
-      line-height: 1.8;
-    }
-
-    .contact-info div {
-      margin: 5px 0;
-      font-weight: bold;
+      margin: 3px 0;
+      line-height: 1.4;
+      font-weight: 600;
     }
 
     .thank-you {
-      font-size: 24px;
+      font-size: 14px;
       font-weight: bold;
-      margin: 15px 0;
-      padding: 10px;
-      border: 3px solid black;
-    }
-
-    .visit-again {
-      font-size: 18px;
-      font-weight: bold;
-      margin: 10px 0;
+      margin: 4px 0;
     }
 
     .timestamp {
-      margin-top: 15px;
-      font-size: 14px;
-      padding-top: 10px;
-      border-top: 2px solid black;
+      margin-top: 4px;
+      font-size: 10px;
+      border-top: 1px dashed black;
+      padding-top: 3px;
     }
 
-    /* Print button */
     .print-button {
       position: fixed;
-      top: 20px;
-      right: 20px;
+      top: 10px;
+      right: 10px;
       background: black;
       color: white;
-      border: 3px solid black;
-      padding: 15px 30px;
+      border: none;
+      padding: 8px 16px;
       font-weight: bold;
-      font-size: 16px;
+      font-size: 12px;
       cursor: pointer;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-
-    .print-button:hover {
-      background: #333;
-    }
-
-    .print-button:active {
-      background: #555;
     }
   </style>
 </head>
 <body>
-  <!-- Print Button -->
-  <button class="print-button no-print" onclick="window.print()">CHEK CHOP ETISH</button>
+  <button class="print-button no-print" onclick="window.print()">CHOP ETISH</button>
 
   <div class="receipt">
-    <!-- Header -->
     <div class="header">
-      <div class="brand-name">LaCasa</div>
+      <div class="brand-name">Mayami Cafe</div>
     </div>
 
-    <!-- Order Number -->
-    <div class="order-number">
-      BUYURTMA #${order.orderNumber}
-    </div>
-
-    <!-- Customer Info -->
-    ${order.deliveryInfo ? `
-    <div class="customer-info">
-      <div class="customer-info-title">MIJOZ MA'LUMOTLARI</div>
-      <div class="customer-info-line">
-        <strong>Ism:</strong> ${order.deliveryInfo.contactName || 'N/A'}
+    <div class="info-section">
+      <div class="info-line">
+        <span>Sana:</span>
+        <span>${currentDate}</span>
       </div>
-      <div class="customer-info-line">
-        <strong>Telefon:</strong> ${order.deliveryInfo.contactPhone || 'N/A'}
+      ${getTableNumber(order) ? `
+      <div class="info-line">
+        <span>Stol:</span>
+        <span>${getTableNumber(order)}</span>
       </div>
-      ${order.deliveryInfo.address ? `
-      <div class="customer-info-line">
-        <strong>Manzil:</strong> ${order.deliveryInfo.address}, ${order.deliveryInfo.city || ''}
+      ` : ''}
+      ${order.waiter?.name ? `
+      <div class="info-line">
+        <span>Ofitsiant:</span>
+        <span>${order.waiter.name}</span>
       </div>
       ` : ''}
     </div>
-    ` : ''}
 
-    <!-- Items Section -->
-    <div class="items-section">
-      <table class="items-table">
-        <tbody>
-          ${(order.items || []).map(item => `
-          <tr>
-            <td class="name">
-              ${item.productName}
-              ${item.variantName ? ` (${item.variantName})` : ''}
-            </td>
-            <td class="qty">${item.quantity}</td>
-            <td class="price">${(item.totalPrice || 0).toFixed(2)}</td>
-          </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    </div>
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>Nomi</th>
+          <th>Narx</th>
+          <th>x</th>
+          <th>Jami</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(order.items || []).map(item => `
+        <tr>
+          <td>${item.productName}${item.variantName ? `<br><span class="item-variant">${item.variantName}</span>` : ''}</td>
+          <td class="unit-price">${Math.round(item.unitPrice || item.price || 0)}</td>
+          <td class="qty">${item.quantity}</td>
+          <td class="price">${Math.round(item.totalPrice || item.total || 0)}</td>
+        </tr>
+        `).join('')}
+      </tbody>
+    </table>
 
-    <!-- Totals -->
     <div class="totals">
-      <div class="total-line subtotal">
-        <span class="label">Oraliq summa:</span>
-        <span class="amount">${(order.subtotal || 0).toFixed(2)}</span>
-      </div>
-
-      ${order.deliveryFee && order.deliveryFee > 0 ? `
+      ${Number(order.deliveryFee) > 0 ? `
       <div class="total-line">
-        <span class="label">Yetkazib berish:</span>
-        <span class="amount">${(order.deliveryFee || 0).toFixed(2)}</span>
+        <span>Yetkazish:</span>
+        <span>${Math.round(order.deliveryFee)}</span>
       </div>
       ` : ''}
-
-      ${order.discount && order.discount > 0 ? `
+      ${Number(order.serviceFee) > 0 ? `
       <div class="total-line">
-        <span class="label">Chegirma:</span>
-        <span class="amount">-${(order.discount || 0).toFixed(2)}</span>
+        <span>Xizmat haqi (${order.serviceFeePercent || 0}%):</span>
+        <span>${Math.round(order.serviceFee)}</span>
       </div>
       ` : ''}
-
+      ${Number(order.discount) > 0 ? `
+      <div class="total-line">
+        <span>Chegirma:</span>
+        <span>-${Math.round(order.discount)}</span>
+      </div>
+      ` : ''}
       <div class="total-line grand-total">
-        <span class="label">JAMI:</span>
-        <span class="amount">${(order.total || 0).toFixed(2)}</span>
+        <span>JAMI:</span>
+        <span>${Math.round(order.total || 0)}</span>
       </div>
     </div>
 
-    <!-- Payment Info -->
-    ${order.payment ? `
-    <div class="payment-info">
-      TO'LOV: ${order.payment.method || 'N/A'} - ${order.payment.status || 'N/A'}
-    </div>
-    ` : ''}
-
-    <!-- Notes -->
     ${order.customerNotes ? `
     <div class="notes-section">
-      <div class="notes-title">MAXSUS ESLATMALAR:</div>
-      <div class="notes-content">${order.customerNotes}</div>
+      <div class="notes-title">Eslatma:</div>
+      <div>${order.customerNotes}</div>
     </div>
     ` : ''}
 
-    <!-- Footer -->
     <div class="footer">
       <div class="contact-info">
-        <div>Telefon: +99 (897) 421 8989</div>
-        <div>www.lacasa.uz</div>
+        <div>+998 88 153 88 88</div>
+        <div>www.mayamicafe.uz</div>
       </div>
-
       <div class="thank-you">*** RAHMAT! ***</div>
-      <div class="visit-again">Yana tashrif buyuring!</div>
-
       <div class="timestamp">${currentDate}</div>
     </div>
   </div>

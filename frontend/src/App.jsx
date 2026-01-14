@@ -33,14 +33,6 @@ import FinancialReports from './pages/FinancialReports';
 import PrinterSettings from './pages/PrinterSettings';
 import PricingDashboard from './pages/PricingDashboard';
 import FinancialAlerts from './pages/FinancialAlerts';
-import Promotions from './pages/Promotions';
-import CouponCodes from './pages/CouponCodes';
-import HappyHours from './pages/HappyHours';
-import Bundles from './pages/Bundles';
-import ReferralProgram from './pages/ReferralProgram';
-import SmsMarketing from './pages/SmsMarketing';
-import TelegramMarketing from './pages/TelegramMarketing';
-import QRCodes from './pages/QRCodes';
 import {
   InventoryIngredients,
   InventoryRecipes,
@@ -52,6 +44,7 @@ import {
   InventoryValuation,
 } from './pages/inventory';
 import POSApp from './pos/POSApp';
+import OrdersHistory from './pages/OrdersHistory';
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -96,6 +89,7 @@ function App() {
           <Route path="dashboard/customer-analytics" element={<AdminRoute><CustomerAnalytics /></AdminRoute>} />
           <Route path="dashboard/inventory-analytics" element={<AdminRoute><InventoryAnalytics /></AdminRoute>} />
           <Route path="orders" element={<Orders />} />
+          <Route path="orders/history" element={<OrdersHistory />} />
           <Route path="restaurants" element={<Restaurants />} />
           <Route path="restaurants/tables" element={<Tables />} />
           <Route path="restaurants/working-hours" element={<WorkingHours />} />
@@ -108,7 +102,7 @@ function App() {
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="operators" element={<Operators />} />
           <Route path="employees/waiters" element={<Waiters />} />
-          <Route path="employees/waiter-performance" element={<AdminRoute><WaiterPerformance /></AdminRoute>} />
+          <Route path="employees/waiter-performance" element={<WaiterPerformance />} />
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
@@ -127,19 +121,6 @@ function App() {
           <Route path="finance/reports" element={<AdminRoute><FinancialReports /></AdminRoute>} />
           <Route path="finance/pricing" element={<AdminRoute><PricingDashboard /></AdminRoute>} />
           <Route path="finance/alerts" element={<AdminRoute><FinancialAlerts /></AdminRoute>} />
-          <Route path="marketing/promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
-          <Route path="marketing/coupons" element={<AdminRoute><CouponCodes /></AdminRoute>} />
-          <Route path="marketing/happy-hours" element={<AdminRoute><HappyHours /></AdminRoute>} />
-          <Route path="marketing/bundles" element={<AdminRoute><Bundles /></AdminRoute>} />
-          <Route path="marketing/referrals" element={<AdminRoute><ReferralProgram /></AdminRoute>} />
-          <Route path="marketing/sms" element={<AdminRoute><SmsMarketing /></AdminRoute>} />
-          <Route path="marketing/telegram" element={<AdminRoute><TelegramMarketing /></AdminRoute>} />
-          <Route path="marketing/qr-codes" element={<AdminRoute><QRCodes /></AdminRoute>} />
-          <Route path="promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
-          <Route path="coupons" element={<AdminRoute><CouponCodes /></AdminRoute>} />
-          <Route path="happy-hours" element={<AdminRoute><HappyHours /></AdminRoute>} />
-          <Route path="bundles" element={<AdminRoute><Bundles /></AdminRoute>} />
-          <Route path="referrals" element={<AdminRoute><ReferralProgram /></AdminRoute>} />
           <Route path="settings/printers" element={<PrinterSettings />} />
           <Route path="pos" element={<POSApp />} />
         </Route>

@@ -32,7 +32,7 @@ public class PrinterSettingsController {
             @RequestParam Long restaurantId) {
         log.info("Getting printers for restaurant: {}", restaurantId);
 
-        List<PrinterSettings> printers = printerSettingsRepository.findByRestaurantId(restaurantId);
+        List<PrinterSettings> printers = printerSettingsRepository.findByRestaurant_Id(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Printers retrieved successfully", printers));
     }
 

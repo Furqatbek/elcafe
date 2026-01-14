@@ -12,16 +12,15 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class POSKitchenStatusDTO {
-
     private Long orderId;
     private String orderNumber;
-    private String orderStatus;
     private Long kitchenOrderId;
-    private String kitchenStatus;
-    private String priority;
+    private String kitchenStatus; // PENDING, PREPARING, READY, PICKED_UP
+    private String priority; // LOW, NORMAL, HIGH, URGENT
     private String assignedChef;
     private LocalDateTime preparationStartedAt;
     private LocalDateTime preparationCompletedAt;
     private Integer estimatedMinutes;
     private Integer actualMinutes;
+    private String orderStatus; // From main order
 }

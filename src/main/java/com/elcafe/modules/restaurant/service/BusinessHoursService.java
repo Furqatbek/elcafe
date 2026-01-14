@@ -34,7 +34,7 @@ public class BusinessHoursService {
         restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
 
-        List<BusinessHours> businessHours = businessHoursRepository.findByRestaurantId(restaurantId);
+        List<BusinessHours> businessHours = businessHoursRepository.findByRestaurant_Id(restaurantId);
         log.debug("Found {} business hours for restaurant ID: {}", businessHours.size(), restaurantId);
 
         return businessHours.stream()
@@ -61,7 +61,7 @@ public class BusinessHoursService {
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", request.getRestaurantId()));
 
         // Check if business hours already exist for this day
-        businessHoursRepository.findByRestaurantIdAndDayOfWeek(request.getRestaurantId(), request.getDayOfWeek())
+        businessHoursRepository.findByRestaurant_IdAndDayOfWeek(request.getRestaurantId(), request.getDayOfWeek())
                 .ifPresent(existing -> {
                     throw new IllegalArgumentException(
                             String.format("Business hours already exist for %s on %s",
@@ -96,7 +96,7 @@ public class BusinessHoursService {
         // Check if day of week is being changed and if it conflicts
         if (request.getDayOfWeek() != null && !request.getDayOfWeek().equals(businessHours.getDayOfWeek())) {
             Long restaurantId = businessHours.getRestaurant().getId();
-            businessHoursRepository.findByRestaurantIdAndDayOfWeek(restaurantId, request.getDayOfWeek())
+            businessHoursRepository.findByRestaurant_IdAndDayOfWeek(restaurantId, request.getDayOfWeek())
                     .ifPresent(existing -> {
                         if (!existing.getId().equals(id)) {
                             throw new IllegalArgumentException(
@@ -147,7 +147,7 @@ public class BusinessHoursService {
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
 
         // Get existing business hours
-        List<BusinessHours> existingHours = businessHoursRepository.findByRestaurantId(restaurantId);
+        List<BusinessHours> existingHours = businessHoursRepository.findByRestaurant_Id(restaurantId);
 
         // Process each request
         for (UpdateBusinessHoursRequest request : requests) {

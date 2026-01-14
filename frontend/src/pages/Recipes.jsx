@@ -48,7 +48,7 @@ export default function Recipes() {
   const [productIngredients, setProductIngredients] = useState([]);
   const [availableIngredients, setAvailableIngredients] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -60,6 +60,9 @@ export default function Recipes() {
     notes: '',
     optional: false,
   });
+  const [ingredientSearch, setIngredientSearch] = useState('');
+  const [ingredientUnitFilter, setIngredientUnitFilter] = useState('all');
+  const [productCategoryFilter, setProductCategoryFilter] = useState('all');
 
   useEffect(() => {
     loadRestaurants();
@@ -136,18 +139,33 @@ export default function Recipes() {
       notes: '',
       optional: false,
     });
+    setIngredientSearch('');
+    setIngredientUnitFilter('all');
     setModalOpen(true);
   };
+
+  // Get unique units from available ingredients for filter
+  const availableUnits = [...new Set(availableIngredients.map((ing) => ing.unit).filter(Boolean))].sort();
+
+  // Filter ingredients based on search and unit filter
+  const filteredIngredients = availableIngredients.filter((ingredient) => {
+    const matchesSearch = ingredient.name.toLowerCase().includes(ingredientSearch.toLowerCase());
+    const matchesUnit = ingredientUnitFilter === 'all' || ingredient.unit === ingredientUnitFilter;
+    return matchesSearch && matchesUnit;
+  });
 
   const handleEditRecipe = (recipe) => {
     setEditingRecipe(recipe);
     setFormData({
-      ingredientId: recipe.ingredient.id,
+      ingredientId: recipe.ingredient.id.toString(),
       quantityRequired: recipe.quantityRequired,
       unit: recipe.unit || '',
       notes: recipe.notes || '',
       optional: recipe.optional,
     });
+    // Clear filters so the current ingredient is visible in dropdown
+    setIngredientSearch('');
+    setIngredientUnitFilter('all');
     setModalOpen(true);
   };
 
@@ -188,9 +206,16 @@ export default function Recipes() {
     }
   };
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get unique categories from products for filter
+  const productCategories = [...new Set(products.map((p) => p.category?.name || p.categoryName).filter(Boolean))].sort();
+
+  // Filter products based on search and category filter
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const categoryName = product.category?.name || product.categoryName;
+    const matchesCategory = productCategoryFilter === 'all' || categoryName === productCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const currentProduct = products.find((p) => p.id === selectedProduct);
   const totalIngredients = productIngredients.length;
@@ -243,16 +268,45 @@ export default function Recipes() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('recipes.searchProducts')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+              {/* Filter Zone - Highlighted */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 space-y-3">
+                <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">
+                  {t('recipes.filterProducts', 'Filter Products')}
+                </p>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t('recipes.searchProducts')}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-white"
+                  />
+                </div>
+                <Select
+                  value={productCategoryFilter}
+                  onValueChange={setProductCategoryFilter}
+                >
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue placeholder={t('recipes.filterByCategory')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('common.allCategories')}</SelectItem>
+                    {productCategories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {filteredProducts.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('recipes.productsFound', { count: filteredProducts.length })}
+                  </p>
+                )}
               </div>
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
+
+              {/* Products List */}
+              <div className="space-y-2 max-h-[400px] overflow-y-auto">
                 {filteredProducts.map((product) => (
                   <button
                     key={product.id}
@@ -415,10 +469,56 @@ export default function Recipes() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Show current ingredient when editing */}
+            {editingRecipe && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-600 font-medium">{t('recipes.currentIngredient', 'Current Ingredient')}</p>
+                <p className="text-lg font-bold text-blue-800">{editingRecipe.ingredient.name}</p>
+                <p className="text-sm text-blue-600">
+                  {editingRecipe.ingredient.unit} • SKU: {editingRecipe.ingredient.sku || 'N/A'}
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="ingredient">{t('recipes.fields.ingredient')} *</Label>
+              <Label htmlFor="ingredient">
+                {editingRecipe
+                  ? t('recipes.changeIngredient', 'Change Ingredient (optional)')
+                  : t('recipes.fields.ingredient') + ' *'}
+              </Label>
+
+              {/* Search and Filter Controls */}
+              <div className="flex gap-2 mb-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t('recipes.searchIngredients')}
+                    value={ingredientSearch}
+                    onChange={(e) => setIngredientSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select
+                  value={ingredientUnitFilter}
+                  onValueChange={setIngredientUnitFilter}
+                >
+                  <SelectTrigger className="w-[120px]">
+                    <SelectValue placeholder={t('recipes.filterByUnit')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('common.all')}</SelectItem>
+                    {availableUnits.map((unit) => (
+                      <SelectItem key={unit} value={unit}>
+                        {unit}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Ingredient Select */}
               <Select
-                value={formData.ingredientId.toString()}
+                value={formData.ingredientId}
                 onValueChange={(value) => {
                   const ingredient = availableIngredients.find((ing) => ing.id === parseInt(value));
                   setFormData({
@@ -427,19 +527,30 @@ export default function Recipes() {
                     unit: ingredient?.unit || '',
                   });
                 }}
-                disabled={!!editingRecipe}
               >
                 <SelectTrigger id="ingredient">
                   <SelectValue placeholder={t('recipes.placeholders.selectIngredient')} />
                 </SelectTrigger>
-                <SelectContent>
-                  {availableIngredients.map((ingredient) => (
-                    <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
-                      {ingredient.name} ({ingredient.unit})
-                    </SelectItem>
-                  ))}
+                <SelectContent className="max-h-[200px]">
+                  {filteredIngredients.length === 0 ? (
+                    <div className="py-2 px-3 text-sm text-muted-foreground text-center">
+                      {t('recipes.noIngredientsFound')}
+                    </div>
+                  ) : (
+                    filteredIngredients.map((ingredient) => (
+                      <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
+                        {ingredient.name} ({ingredient.unit})
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+
+              {filteredIngredients.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {t('recipes.ingredientsFound', { count: filteredIngredients.length })}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">

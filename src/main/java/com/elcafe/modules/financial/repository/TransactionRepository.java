@@ -13,18 +13,18 @@ import java.util.List;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
-    List<Transaction> findByRestaurantId(Long restaurantId);
+    List<Transaction> findByRestaurant_Id(Long restaurantId);
 
-    Page<Transaction> findByRestaurantId(Long restaurantId, Pageable pageable);
+    Page<Transaction> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
-    List<Transaction> findByAccountId(Long accountId);
+    List<Transaction> findByAccount_Id(Long accountId);
 
-    Page<Transaction> findByAccountId(Long accountId, Pageable pageable);
+    Page<Transaction> findByAccount_Id(Long accountId, Pageable pageable);
 
-    List<Transaction> findByRestaurantIdAndTransactionDateBetween(
+    List<Transaction> findByRestaurant_IdAndTransactionDateBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
-    List<Transaction> findByAccountIdAndTransactionDateBetween(
+    List<Transaction> findByAccount_IdAndTransactionDateBetween(
             Long accountId, LocalDate startDate, LocalDate endDate);
 
     List<Transaction> findByReferenceTypeAndReferenceId(String referenceType, Long referenceId);

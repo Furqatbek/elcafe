@@ -38,7 +38,7 @@ export default function KitchenDashboard() {
   const { t } = useTranslation();
   const [activeOrders, setActiveOrders] = useState([]);
   const [readyOrders, setReadyOrders] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startModalOpen, setStartModalOpen] = useState(false);
@@ -49,19 +49,22 @@ export default function KitchenDashboard() {
 
   useEffect(() => {
     loadRestaurants();
-    const interval = setInterval(() => {
-      if (selectedRestaurant) {
-        loadOrders();
-      }
-    }, 10000); // Refresh every 10 seconds
+  }, []);
 
-    return () => clearInterval(interval);
+  useEffect(() => {
+    if (selectedRestaurant) {
+      loadOrders(); // Load orders immediately when restaurant is selected
+      const interval = setInterval(() => {
+        loadOrders();
+      }, 10000); // Refresh every 10 seconds
+      return () => clearInterval(interval);
+    }
   }, [selectedRestaurant]);
 
   const loadRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll({ page: 0, size: 100 });
-      const restaurantList = response.data.data?.content || [];
+      const restaurantList = response.data?.data?.content || [];
       setRestaurants(restaurantList);
       if (restaurantList.length > 0) {
         setSelectedRestaurant(restaurantList[0].id);
@@ -167,12 +170,6 @@ export default function KitchenDashboard() {
       case 'PICKED_UP': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
-  };
-
-  const formatTime = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
   const getElapsedTime = (startTime) => {

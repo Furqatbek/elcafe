@@ -130,11 +130,11 @@ export default function Restaurants() {
                 <div className="pt-2 border-t">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">{t('restaurants.minimumOrder')}:</span>
-                    <span className="font-medium">${restaurant.minimumOrderAmount?.toFixed(2)}</span>
+                    <span className="font-medium">{restaurant.minimumOrderAmount?.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm mt-1">
                     <span className="text-muted-foreground">{t('restaurants.deliveryFee')}:</span>
-                    <span className="font-medium">${restaurant.deliveryFee?.toFixed(2)}</span>
+                    <span className="font-medium">{restaurant.deliveryFee?.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="pt-2 flex gap-2">

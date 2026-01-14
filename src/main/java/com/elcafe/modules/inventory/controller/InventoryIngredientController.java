@@ -7,8 +7,11 @@ import com.elcafe.modules.inventory.dto.IngredientRequest;
 import com.elcafe.modules.inventory.dto.IngredientResponse;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
+import com.elcafe.modules.inventory.entity.Supplier;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
+import com.elcafe.modules.inventory.repository.SupplierRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.menu.service.ProductCostService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import jakarta.validation.Valid;
@@ -31,14 +34,16 @@ public class InventoryIngredientController {
 
     private final InventoryIngredientRepository ingredientRepository;
     private final RestaurantRepository restaurantRepository;
+    private final SupplierRepository supplierRepository;
     private final InventoryService inventoryService;
+    private final ProductCostService productCostService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<IngredientResponse>>> getIngredients(
             @RequestParam Long restaurantId) {
         log.info("Fetching ingredients for restaurant: {}", restaurantId);
 
-        List<Ingredient> ingredients = ingredientRepository.findByRestaurantId(restaurantId);
+        List<Ingredient> ingredients = ingredientRepository.findByRestaurant_Id(restaurantId);
         List<IngredientResponse> responses = ingredients.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -90,6 +95,12 @@ public class InventoryIngredientController {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + request.getRestaurantId()));
 
+        Supplier supplier = null;
+        if (request.getSupplierId() != null) {
+            supplier = supplierRepository.findById(request.getSupplierId())
+                    .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
+        }
+
         Ingredient ingredient = Ingredient.builder()
                 .restaurant(restaurant)
                 .name(request.getName())
@@ -98,11 +109,16 @@ public class InventoryIngredientController {
                 .currentStock(request.getCurrentStock())
                 .minimumStock(request.getMinimumStock())
                 .reorderLevel(request.getReorderLevel())
+                .reorderQuantity(request.getReorderQuantity())
                 .costPerUnit(request.getCostPerUnit())
                 .supplier(request.getSupplier())
+                .supplierEntity(supplier)
                 .sku(request.getSku())
                 .active(request.getActive() != null ? request.getActive() : true)
                 .trackInventory(request.getTrackInventory() != null ? request.getTrackInventory() : true)
+                .trackExpiry(request.getTrackExpiry() != null ? request.getTrackExpiry() : false)
+                .defaultShelfLifeDays(request.getDefaultShelfLifeDays())
+                .expiryAlertDays(request.getExpiryAlertDays() != null ? request.getExpiryAlertDays() : 7)
                 .build();
 
         Ingredient savedIngredient = ingredientRepository.save(ingredient);
@@ -120,19 +136,33 @@ public class InventoryIngredientController {
         Ingredient ingredient = ingredientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
 
+        Supplier supplier = null;
+        if (request.getSupplierId() != null) {
+            supplier = supplierRepository.findById(request.getSupplierId())
+                    .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
+        }
+
         ingredient.setName(request.getName());
         ingredient.setDescription(request.getDescription());
         ingredient.setUnit(request.getUnit());
         ingredient.setCurrentStock(request.getCurrentStock());
         ingredient.setMinimumStock(request.getMinimumStock());
         ingredient.setReorderLevel(request.getReorderLevel());
+        ingredient.setReorderQuantity(request.getReorderQuantity());
         ingredient.setCostPerUnit(request.getCostPerUnit());
         ingredient.setSupplier(request.getSupplier());
+        ingredient.setSupplierEntity(supplier);
         ingredient.setSku(request.getSku());
         ingredient.setActive(request.getActive());
         ingredient.setTrackInventory(request.getTrackInventory());
+        ingredient.setTrackExpiry(request.getTrackExpiry());
+        ingredient.setDefaultShelfLifeDays(request.getDefaultShelfLifeDays());
+        ingredient.setExpiryAlertDays(request.getExpiryAlertDays());
 
         Ingredient updatedIngredient = ingredientRepository.save(ingredient);
+
+        // Recalculate cost for all products using this ingredient
+        productCostService.recalculateProductsUsingIngredient(id);
 
         return ResponseEntity.ok(ApiResponse.success("Ingredient updated successfully", mapToResponse(updatedIngredient)));
     }
@@ -202,6 +232,7 @@ public class InventoryIngredientController {
     }
 
     private IngredientResponse mapToResponse(Ingredient ingredient) {
+        Supplier supplierEntity = ingredient.getSupplierEntity();
         return IngredientResponse.builder()
                 .id(ingredient.getId())
                 .restaurantId(ingredient.getRestaurant().getId())
@@ -212,11 +243,17 @@ public class InventoryIngredientController {
                 .currentStock(ingredient.getCurrentStock())
                 .minimumStock(ingredient.getMinimumStock())
                 .reorderLevel(ingredient.getReorderLevel())
+                .reorderQuantity(ingredient.getReorderQuantity())
                 .costPerUnit(ingredient.getCostPerUnit())
                 .supplier(ingredient.getSupplier())
+                .supplierId(supplierEntity != null ? supplierEntity.getId() : null)
+                .supplierName(supplierEntity != null ? supplierEntity.getName() : ingredient.getSupplier())
                 .sku(ingredient.getSku())
                 .active(ingredient.getActive())
                 .trackInventory(ingredient.getTrackInventory())
+                .trackExpiry(ingredient.getTrackExpiry())
+                .defaultShelfLifeDays(ingredient.getDefaultShelfLifeDays())
+                .expiryAlertDays(ingredient.getExpiryAlertDays())
                 .createdAt(ingredient.getCreatedAt())
                 .updatedAt(ingredient.getUpdatedAt())
                 .build();

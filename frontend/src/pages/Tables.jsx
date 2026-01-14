@@ -9,7 +9,7 @@ const Tables = () => {
   const { user } = useAuthStore();
   const [tables, setTables] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
@@ -195,7 +195,7 @@ const Tables = () => {
 
   const handleMergeTables = async () => {
     if (selectedTables.length < 2) {
-      alert(t('tables.messages.selectAtLeast2Tables') || 'Please select at least 2 tables to merge');
+      alert(t('tables.messages.selectAtLeast2Tables', 'Please select at least 2 tables to merge'));
       return;
     }
 
@@ -205,31 +205,31 @@ const Tables = () => {
     try {
       setLoading(true);
       await tablesAPI.merge({ mainTableId, tableIdsToMerge });
-      alert(t('tables.messages.mergeSuccess') || 'Tables merged successfully');
+      alert(t('tables.messages.mergeSuccess', 'Tables merged successfully'));
       setSelectedTables([]);
       loadTables();
       loadStats();
     } catch (error) {
       console.error('Failed to merge tables:', error);
-      alert(t('tables.messages.mergeError') || 'Failed to merge tables: ' + (error.response?.data?.message || error.message));
+      alert(t('tables.messages.mergeError', 'Failed to merge tables') + ': ' + (error.response?.data?.message || error.message));
     } finally {
       setLoading(false);
     }
   };
 
   const handleUnmergeTables = async (tableId) => {
-    if (!window.confirm(t('tables.confirmUnmerge') || 'Are you sure you want to unmerge these tables?')) return;
+    if (!window.confirm(t('tables.confirmUnmerge', 'Are you sure you want to unmerge these tables?'))) return;
 
     try {
       setLoading(true);
       await tablesAPI.unmerge(tableId);
-      alert(t('tables.messages.unmergeSuccess') || 'Tables unmerged successfully');
+      alert(t('tables.messages.unmergeSuccess', 'Tables unmerged successfully'));
       setSelectedTables([]);
       loadTables();
       loadStats();
     } catch (error) {
       console.error('Failed to unmerge tables:', error);
-      alert(t('tables.messages.unmergeError') || 'Failed to unmerge tables');
+      alert(t('tables.messages.unmergeError', 'Failed to unmerge tables'));
     } finally {
       setLoading(false);
     }
@@ -267,7 +267,7 @@ const Tables = () => {
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
             >
               <GitMerge size={20} />
-              {t('tables.mergeTables') || `Merge ${selectedTables.length} Tables`}
+              {t('tables.mergeTables', 'Merge {{count}} Tables', { count: selectedTables.length })}
             </button>
           )}
           <button
@@ -344,7 +344,7 @@ const Tables = () => {
             <div className="text-gray-400 mb-2">
               <Grid size={48} className="mx-auto mb-2" />
             </div>
-            <p className="text-gray-600">{t('tables.selectRestaurantFirst') || 'Please select a restaurant to view tables'}</p>
+            <p className="text-gray-600">{t('tables.selectRestaurantFirst', 'Please select a restaurant to view tables')}</p>
           </div>
         ) : loading ? (
           <div className="col-span-full text-center py-8 text-gray-500">{t('common.loading')}</div>
@@ -357,9 +357,9 @@ const Tables = () => {
               {table.mergedTable && (
                 <div className="mb-2 flex items-center gap-2 px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-xs font-medium">
                   <GitMerge size={14} />
-                  <span>{t('tables.merged') || 'Merged Table'}</span>
+                  <span>{t('tables.merged', 'Merged Table')}</span>
                   {table.originalCapacity && (
-                    <span className="text-purple-600">({t('tables.originalCapacity') || 'Original'}: {table.originalCapacity})</span>
+                    <span className="text-purple-600">({t('tables.originalCapacity', 'Original')}: {table.originalCapacity})</span>
                   )}
                 </div>
               )}
@@ -382,7 +382,7 @@ const Tables = () => {
                     <button
                       onClick={() => handleUnmergeTables(table.id)}
                       className="p-1 text-white bg-purple-600 hover:bg-purple-700 rounded"
-                      title={t('tables.unmerge') || 'Unmerge tables'}
+                      title={t('tables.unmerge', 'Unmerge tables')}
                     >
                       <GitBranch size={16} />
                     </button>
@@ -401,7 +401,7 @@ const Tables = () => {
                   <Users size={16} />
                   <span>{t('tables.capacity')}: {table.capacity}</span>
                   {table.mergedTable && table.originalCapacity && table.capacity !== table.originalCapacity && (
-                    <span className="text-purple-600 font-medium">↑ {t('tables.increased') || 'Increased'}</span>
+                    <span className="text-purple-600 font-medium">↑ {t('tables.increased', 'Increased')}</span>
                   )}
                 </div>
                 {table.section && (

@@ -24,6 +24,8 @@ public class ProductListDTO {
     private String imageUrl;
     private BigDecimal price;
     private BigDecimal priceWithMargin;
+    private BigDecimal costPrice;
+    private BigDecimal marginPercentage;
     private ItemType itemType;
     private Integer sortOrder;
     private ProductStatus status;

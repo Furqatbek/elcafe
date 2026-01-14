@@ -15,20 +15,20 @@ import java.util.Optional;
 @Repository
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
-    List<Expense> findByRestaurantId(Long restaurantId);
+    List<Expense> findByRestaurant_Id(Long restaurantId);
 
-    Page<Expense> findByRestaurantId(Long restaurantId, Pageable pageable);
+    Page<Expense> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
     Optional<Expense> findByExpenseNumber(String expenseNumber);
 
-    List<Expense> findByRestaurantIdAndCategory(Long restaurantId, Expense.ExpenseCategory category);
+    List<Expense> findByRestaurant_IdAndCategory(Long restaurantId, Expense.ExpenseCategory category);
 
-    List<Expense> findByRestaurantIdAndPaymentStatus(Long restaurantId, Expense.PaymentStatus paymentStatus);
+    List<Expense> findByRestaurant_IdAndPaymentStatus(Long restaurantId, Expense.PaymentStatus paymentStatus);
 
-    List<Expense> findByRestaurantIdAndExpenseDateBetween(
+    List<Expense> findByRestaurant_IdAndExpenseDateBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
-    List<Expense> findByRestaurantIdAndRecurringTrue(Long restaurantId);
+    List<Expense> findByRestaurant_IdAndRecurringTrue(Long restaurantId);
 
     @Query("SELECT e FROM FinancialExpense e WHERE e.restaurant.id = :restaurantId " +
            "AND e.paymentStatus = 'UNPAID' " +
@@ -57,4 +57,6 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
            "AND e.paymentStatus = 'PAID' " +
            "GROUP BY e.category")
     List<Object[]> getExpensesByCategory(Long restaurantId, LocalDate startDate, LocalDate endDate);
+
+    Optional<Expense> findByPurchaseOrderId(Long purchaseOrderId);
 }

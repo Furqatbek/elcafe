@@ -40,7 +40,7 @@ export default function EmployeeSchedule() {
   const [filteredWorkingHours, setFilteredWorkingHours] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [selectedDay, setSelectedDay] = useState('all');
   const [loading, setLoading] = useState(true);

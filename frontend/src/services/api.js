@@ -185,11 +185,15 @@ export const orderAPI = {
   getByRestaurant: (restaurantId) => api.get(`/orders/restaurant/${restaurantId}`),
   updateStatus: (id, status, notes, changedBy = 'OPERATOR') =>
     api.patch(`/orders/${id}/status`, null, { params: { status, notes, changedBy } }),
+  revertOrder: (id, { targetStatus, reason, revertedBy }) =>
+    api.patch(`/orders/${id}/revert`, null, { params: { targetStatus, reason, revertedBy } }),
 };
 
 export const customerAPI = {
   getAll: (params) => api.get('/customers', { params }),
   getById: (id) => api.get(`/customers/${id}`),
+  getByPhone: (phone) => api.get('/customers/search/phone', { params: { phone } }),
+  suggestByPhone: (phone) => api.get('/customers/suggest/phone', { params: { phone } }),
   create: (data) => api.post('/customers', data),
   update: (id, data) => api.put(`/customers/${id}`, data),
   delete: (id) => api.delete(`/customers/${id}`),
@@ -276,9 +280,11 @@ export const tablesAPI = {
   update: (id, data) => api.put(`/tables/${id}`, data),
   delete: (id) => api.delete(`/tables/${id}`),
   updateStatus: (id, status) => api.patch(`/tables/${id}/status`, { status }),
+  updatePosition: (id, positionData) => api.put(`/tables/${id}/position`, positionData),
   getAvailable: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/available`),
   getSections: (restaurantId) => api.get(`/restaurants/${restaurantId}/tables/sections`),
   getBySection: (restaurantId, section) => api.get(`/restaurants/${restaurantId}/tables/section/${section}`),
+  getFloorPlan: (restaurantId) => api.get(`/restaurants/${restaurantId}/floor-plan`),
   merge: (data) => api.post('/tables/merge', data),
   unmerge: (tableId) => api.post(`/tables/${tableId}/unmerge`),
   getMerged: (tableId) => api.get(`/tables/${tableId}/merged`),
@@ -334,8 +340,35 @@ export const waiterPerformanceAPI = {
 
 export const posAPI = {
   createOrder: (orderData) => api.post('/pos/orders', orderData),
-  getCategories: (restaurantId) => api.get(`/menu/restaurants/${restaurantId}/categories`),
+  getCategories: (restaurantId) => api.get('/categories', { params: { restaurantId } }),
   getProducts: (restaurantId) => api.get(`/products/restaurant/${restaurantId}`),
+  checkProductAvailability: (productId, restaurantId) =>
+    api.get(`/pos/orders/products/${productId}/availability`, { params: { restaurantId } }),
+  getKitchenStatus: (orderId) => api.get(`/pos/orders/${orderId}/kitchen-status`),
+  // Order Management
+  getOpenDineInOrders: (restaurantId) => api.get(`/pos/orders/open/${restaurantId}`),
+  getOrderById: (orderId) => api.get(`/pos/orders/${orderId}`),
+  addItemToOrder: (orderId, item) => api.post(`/pos/orders/${orderId}/items`, item),
+  removeItemFromOrder: (orderId, itemId) => api.delete(`/pos/orders/${orderId}/items/${itemId}`),
+  updateItemQuantity: (orderId, itemId, quantity) =>
+    api.patch(`/pos/orders/${orderId}/items/${itemId}/quantity`, null, { params: { quantity } }),
+  // Split Bill
+  splitBill: (orderId, splitData) => api.post(`/pos/orders/${orderId}/split`, splitData),
+  // Payment Processing
+  processPayment: (orderId, paymentData) => api.post(`/pos/orders/${orderId}/payments`, paymentData),
+  getPayments: (orderId) => api.get(`/pos/orders/${orderId}/payments`),
+  processRefund: (orderId, refundData) => api.post(`/pos/orders/${orderId}/refund`, refundData),
+  voidOrder: (orderId, reason, voidedBy) =>
+    api.post(`/pos/orders/${orderId}/void`, null, { params: { reason, voidedBy } }),
+  addTip: (orderId, tipAmount) =>
+    api.post(`/pos/orders/${orderId}/tip`, null, { params: { tipAmount } }),
+  closeOrder: (orderId) => api.post(`/pos/orders/${orderId}/close`),
+  applyServiceFee: (orderId, serviceFeePercent) =>
+    api.post(`/pos/orders/${orderId}/service-fee`, null, { params: { serviceFeePercent } }),
+  applyServiceFeeAmount: (orderId, serviceFeeAmount) =>
+    api.post(`/pos/orders/${orderId}/service-fee-amount`, null, { params: { serviceFeeAmount } }),
+  changeTable: (orderId, newTableId) =>
+    api.patch(`/pos/orders/${orderId}/change-table`, null, { params: { newTableId } }),
 };
 
 export const waiterOrderAPI = {
@@ -400,19 +433,272 @@ export const financialAPI = {
     api.get('/financial/reports/cash-flow', { params: { restaurantId, startDate, endDate } }),
   getCogsReport: (restaurantId, startDate, endDate) =>
     api.get('/financial/reports/cogs', { params: { restaurantId, startDate, endDate } }),
+
+  // Chart of Accounts
+  getAccounts: (restaurantId) =>
+    api.get('/financial/accounts', { params: { restaurantId } }),
+  initializeAccounts: (restaurantId) =>
+    api.post(`/financial/accounts/initialize/${restaurantId}`),
+
+  // Dashboard
+  getDashboard: (restaurantId, startDate, endDate) =>
+    api.get('/dashboard', { params: { restaurantId, startDate, endDate } }),
+  getTodaySummary: (restaurantId) =>
+    api.get('/dashboard/today', { params: { restaurantId } }),
+  getWeekSummary: (restaurantId) =>
+    api.get('/dashboard/week', { params: { restaurantId } }),
+  getMonthSummary: (restaurantId) =>
+    api.get('/dashboard/month', { params: { restaurantId } }),
+  getCurrentBusinessDay: (restaurantId) =>
+    api.get('/dashboard/current-business-day', { params: { restaurantId } }),
 };
 
 export const inventoryAPI = {
+  // Ingredients CRUD
   getIngredients: (restaurantId) => api.get('/inventory/ingredients', { params: { restaurantId } }),
   getIngredientById: (id) => api.get(`/inventory/ingredients/${id}`),
   createIngredient: (data) => api.post('/inventory/ingredients', data),
   updateIngredient: (id, data) => api.put(`/inventory/ingredients/${id}`, data),
   deleteIngredient: (id) => api.delete(`/inventory/ingredients/${id}`),
 
+  // Stock alerts
+  getLowStock: (restaurantId) => api.get('/inventory/ingredients/low-stock', { params: { restaurantId } }),
+  getReorderIngredients: (restaurantId) => api.get('/inventory/ingredients/reorder', { params: { restaurantId } }),
+
   // Stock management
-  getStock: (restaurantId) => api.get('/inventory/stock', { params: { restaurantId } }),
-  updateStock: (id, data) => api.put(`/inventory/stock/${id}`, data),
-  recordStockMovement: (data) => api.post('/inventory/stock/movement', data),
+  addStock: (id, data) => api.post(`/inventory/ingredients/${id}/add-stock`, data),
+  adjustStock: (id, data) => api.post(`/inventory/ingredients/${id}/adjust-stock`, data),
+
+  // Transaction history
+  getTransactions: (id) => api.get(`/inventory/ingredients/${id}/transactions`),
+
+  // Recipes
+  getRecipesByProduct: (productId) => api.get(`/inventory/recipes/product/${productId}`),
+  getRecipesByIngredient: (ingredientId) => api.get(`/inventory/recipes/ingredient/${ingredientId}`),
+  createRecipe: (data) => api.post('/inventory/recipes', data),
+  updateRecipe: (id, data) => api.put(`/inventory/recipes/${id}`, data),
+  deleteRecipe: (id) => api.delete(`/inventory/recipes/${id}`),
+  checkProductAvailability: (productId, quantity = 1) =>
+    api.get(`/inventory/recipes/product/${productId}/check-availability`, { params: { quantity } }),
+};
+
+// Recipes API (separate export for convenience)
+export const recipesAPI = {
+  getProductRecipe: (productId) => api.get(`/inventory/recipes/product/${productId}`),
+  getIngredientUsage: (ingredientId) => api.get(`/inventory/recipes/ingredient/${ingredientId}`),
+  createRecipe: (data) => api.post('/inventory/recipes', data),
+  updateRecipe: (id, data) => api.put(`/inventory/recipes/${id}`, data),
+  deleteRecipe: (id) => api.delete(`/inventory/recipes/${id}`),
+  checkAvailability: (productId, quantity = 1) =>
+    api.get(`/inventory/recipes/product/${productId}/check-availability`, { params: { quantity } }),
+  recalculateCost: (productId) => api.post(`/inventory/recipes/product/${productId}/recalculate-cost`),
+  recalculateAllCosts: () => api.post('/inventory/recipes/recalculate-all-costs'),
+  getCostBreakdown: (productId) => api.get(`/inventory/recipes/product/${productId}/cost-breakdown`),
+};
+
+export const inventoryBatchAPI = {
+  // Batch CRUD
+  createBatch: (data) => api.post('/inventory/batches', data),
+  getBatchesByIngredient: (ingredientId) => api.get(`/inventory/batches/ingredient/${ingredientId}`),
+  updateBatchExpiry: (batchId, expiryDate) =>
+    api.patch(`/inventory/batches/${batchId}/expiry`, { expiryDate }),
+  writeOffBatch: (batchId, reason) =>
+    api.post(`/inventory/batches/${batchId}/write-off`, { reason }),
+
+  // Expiry management
+  getExpiringBatches: (restaurantId, withinDays = 7) =>
+    api.get('/inventory/batches/expiring', { params: { restaurantId, withinDays } }),
+  getExpiredBatches: (restaurantId) =>
+    api.get('/inventory/batches/expired', { params: { restaurantId } }),
+  getExpirySummary: (restaurantId, alertDays = 7) =>
+    api.get('/inventory/batches/summary', { params: { restaurantId, alertDays } }),
+  markExpiredBatches: (restaurantId) =>
+    api.post('/inventory/batches/mark-expired', null, { params: { restaurantId } }),
+};
+
+export const stockCountAPI = {
+  // Stock Count CRUD
+  getAll: (restaurantId) => api.get('/inventory/stock-counts', { params: { restaurantId } }),
+  getActive: (restaurantId) => api.get('/inventory/stock-counts/active', { params: { restaurantId } }),
+  getById: (id) => api.get(`/inventory/stock-counts/${id}`),
+  create: (data) => api.post('/inventory/stock-counts', data),
+
+  // Stock Count workflow
+  start: (id, countedBy) => api.post(`/inventory/stock-counts/${id}/start`, null, { params: { countedBy } }),
+  submitForReview: (id, reviewedBy) => api.post(`/inventory/stock-counts/${id}/submit-review`, null, { params: { reviewedBy } }),
+  approve: (id, data) => api.post(`/inventory/stock-counts/${id}/approve`, data),
+  cancel: (id, reason, cancelledBy) => api.post(`/inventory/stock-counts/${id}/cancel`, null, { params: { reason, cancelledBy } }),
+
+  // Stock Count Items
+  recordCount: (data) => api.post('/inventory/stock-counts/items/record-count', data),
+  setVarianceReason: (data) => api.post('/inventory/stock-counts/items/variance-reason', data),
+  getItemsWithVariance: (id) => api.get(`/inventory/stock-counts/${id}/variances`),
+
+  // Variance Reports
+  getVarianceReport: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/stock-counts/variance-report', { params: { restaurantId, startDate, endDate } }),
+};
+
+export const wasteAPI = {
+  // Waste Records CRUD
+  getAll: (restaurantId, params = {}) =>
+    api.get('/inventory/waste', { params: { restaurantId, ...params } }),
+  getById: (id) => api.get(`/inventory/waste/${id}`),
+  record: (data) => api.post('/inventory/waste', data),
+  delete: (id) => api.delete(`/inventory/waste/${id}`),
+
+  // Waste Reports
+  getReport: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/waste/report', { params: { restaurantId, startDate, endDate } }),
+
+  // Get waste reasons
+  getReasons: () => api.get('/inventory/waste/reasons'),
+};
+
+export const stockAlertAPI = {
+  // Subscriptions
+  getSubscriptions: (restaurantId) => api.get('/stock-alerts/subscriptions', { params: { restaurantId } }),
+  getSubscriptionById: (id) => api.get(`/stock-alerts/subscriptions/${id}`),
+  createSubscription: (data) => api.post('/stock-alerts/subscriptions', data),
+  updateSubscription: (id, data) => api.put(`/stock-alerts/subscriptions/${id}`, data),
+  toggleSubscription: (id) => api.patch(`/stock-alerts/subscriptions/${id}/toggle`),
+  deleteSubscription: (id) => api.delete(`/stock-alerts/subscriptions/${id}`),
+
+  // Alerts
+  trigger: (restaurantId) => api.post(`/stock-alerts/trigger/${restaurantId}`),
+  getSummary: (restaurantId) => api.get(`/stock-alerts/summary/${restaurantId}`),
+};
+
+export const supplierAPI = {
+  getAll: (restaurantId, activeOnly = false) =>
+    api.get('/inventory/suppliers', { params: { restaurantId, activeOnly } }),
+  getById: (id) => api.get(`/inventory/suppliers/${id}`),
+  create: (data) => api.post('/inventory/suppliers', data),
+  update: (id, data) => api.put(`/inventory/suppliers/${id}`, data),
+  delete: (id) => api.delete(`/inventory/suppliers/${id}`),
+  toggle: (id) => api.post(`/inventory/suppliers/${id}/toggle`),
+};
+
+export const poSuggestionAPI = {
+  getSuggestions: (restaurantId) =>
+    api.get('/inventory/po-suggestions', { params: { restaurantId } }),
+  getCount: (restaurantId) =>
+    api.get('/inventory/po-suggestions/count', { params: { restaurantId } }),
+  generate: (data) => api.post('/inventory/po-suggestions/generate', data),
+  generateAll: (restaurantId) =>
+    api.post('/inventory/po-suggestions/generate-all', null, { params: { restaurantId } }),
+};
+
+export const valuationAPI = {
+  // Valuation Settings
+  getValuationMethod: (restaurantId) =>
+    api.get('/inventory/valuation/settings', { params: { restaurantId } }),
+  setValuationMethod: (data) => api.post('/inventory/valuation/settings', data),
+
+  // Inventory Valuation
+  calculateInventoryValue: (restaurantId, method = null) => {
+    const params = { restaurantId };
+    if (method) params.method = method;
+    return api.get('/inventory/valuation/calculate', { params });
+  },
+  compareValuationMethods: (restaurantId) =>
+    api.get('/inventory/valuation/compare', { params: { restaurantId } }),
+  getIngredientValuation: (ingredientId, method = null) => {
+    const params = method ? { method } : {};
+    return api.get(`/inventory/valuation/ingredient/${ingredientId}`, { params });
+  },
+  recalculateWAC: (ingredientId) =>
+    api.post(`/inventory/valuation/ingredient/${ingredientId}/recalculate-wac`),
+
+  // Cost History
+  getCostHistory: (ingredientId) =>
+    api.get(`/inventory/valuation/cost-history/${ingredientId}`),
+  getCostHistoryPaginated: (ingredientId, page = 0, size = 20) =>
+    api.get(`/inventory/valuation/cost-history/${ingredientId}/paginated`, {
+      params: { page, size }
+    }),
+  getCostHistoryInRange: (ingredientId, startDate, endDate) =>
+    api.get(`/inventory/valuation/cost-history/${ingredientId}/range`, {
+      params: { startDate, endDate }
+    }),
+  recordCostChange: (ingredientId, data) =>
+    api.post(`/inventory/valuation/cost-history/${ingredientId}`, data),
+  getCostVariance: (ingredientId, startDate, endDate) =>
+    api.get(`/inventory/valuation/cost-variance/${ingredientId}`, {
+      params: { startDate, endDate }
+    }),
+
+  // Consumption History
+  getConsumptionHistory: (ingredientId) =>
+    api.get(`/inventory/valuation/consumption/${ingredientId}`),
+  getConsumptionSummary: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/valuation/consumption/summary', {
+      params: { restaurantId, startDate, endDate }
+    }),
+  getConsumptionStats: (ingredientId, startDate, endDate) =>
+    api.get(`/inventory/valuation/consumption/${ingredientId}/stats`, {
+      params: { startDate, endDate }
+    }),
+
+  // COGS
+  getOrderCOGS: (orderId) => api.get(`/inventory/valuation/cogs/order/${orderId}`),
+  getTotalCOGS: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/valuation/cogs/total', {
+      params: { restaurantId, startDate, endDate }
+    }),
+
+  // Valuation Reports
+  getComparisonReport: (restaurantId) =>
+    api.get('/inventory/valuation/reports/comparison', { params: { restaurantId } }),
+  getInventoryValuationReport: (restaurantId, method = null) => {
+    const params = { restaurantId };
+    if (method) params.method = method;
+    return api.get('/inventory/valuation/reports/inventory', { params });
+  },
+  getCostVarianceReport: (restaurantId, startDate, endDate) =>
+    api.get('/inventory/valuation/reports/variance', {
+      params: { restaurantId, startDate, endDate }
+    }),
+};
+
+export const financialAlertAPI = {
+  // Subscriptions
+  getSubscriptions: (restaurantId) =>
+    api.get('/notifications/financial-alerts/restaurant/' + restaurantId),
+  createSubscription: (data) =>
+    api.post('/notifications/financial-alerts', data),
+  updateSubscription: (id, data) =>
+    api.put('/notifications/financial-alerts/' + id, data),
+  toggleSubscription: (id) =>
+    api.post('/notifications/financial-alerts/' + id + '/toggle'),
+  deleteSubscription: (id) =>
+    api.delete('/notifications/financial-alerts/' + id),
+
+  // Reports
+  trigger: (restaurantId) =>
+    api.post('/notifications/financial-alerts/trigger/' + restaurantId),
+  getMetrics: (restaurantId, date = null) => {
+    const params = date ? { date } : {};
+    return api.get('/notifications/financial-alerts/metrics/' + restaurantId, { params });
+  },
+};
+
+export const pricingAPI = {
+  // Pricing Analytics
+  getAnalytics: (restaurantId, params = {}) =>
+    api.get(`/pricing/analytics/${restaurantId}`, { params }),
+  getRecommendations: (restaurantId, targetMargin = null) => {
+    const params = targetMargin ? { targetMargin } : {};
+    return api.get(`/pricing/recommendations/${restaurantId}`, { params });
+  },
+  getProfitability: (restaurantId, params = {}) =>
+    api.get(`/pricing/profitability/${restaurantId}`, { params }),
+  getProductProfitability: (restaurantId, productId, params = {}) =>
+    api.get(`/pricing/profitability/${restaurantId}/product/${productId}`, { params }),
+  calculateCostPlus: (costPrice, targetMarginPercentage) =>
+    api.get('/pricing/calculate/cost-plus', { params: { costPrice, targetMarginPercentage } }),
+  applyPsychologicalPricing: (price) =>
+    api.get('/pricing/calculate/psychological', { params: { price } }),
 };
 
 export const printerAPI = {

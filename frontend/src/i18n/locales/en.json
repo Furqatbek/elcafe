@@ -102,7 +102,8 @@
       "bundles": "Bundles",
       "referrals": "Referrals",
       "smsMarketing": "SMS Marketing",
-      "telegramMarketing": "Telegram"
+      "telegramMarketing": "Telegram",
+      "ordersHistory": "Orders History"
     }
   },
   "dashboard": {
@@ -158,7 +159,11 @@
       "avgDeliveryTime": "Avg Delivery Time"
     },
     "recentOrders": "Recent Orders",
-    "recentActivity": "Recent Activity"
+    "recentActivity": "Recent Activity",
+    "yesterday": "Yesterday",
+    "lastWeek": "Last Week",
+    "lastMonth": "Last Month",
+    "custom": "Custom Range"
   },
   "analytics": {
     "financial": {
@@ -332,10 +337,27 @@
     "active": "Active",
     "inactive": "Inactive",
     "optional": "Optional",
-    "error": "Error",
+    "error": "An error occurred",
     "buttons": {
-      "back": "Back",
-      "cancel": "Cancel"
+      "create": "Create",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save",
+      "update": "Update",
+      "reset": "Reset",
+      "filter": "Filter",
+      "search": "Search",
+      "apply": "Apply",
+      "remove": "Remove",
+      "addVariant": "Add Variant",
+      "createVariant": "Create Variant",
+      "updateVariant": "Update Variant",
+      "approve": "Approve",
+      "recordPayment": "Record Payment",
+      "addStock": "Add Stock",
+      "viewHistory": "View History",
+      "adjustStock": "Adjust Stock"
     },
     "page": "Page",
     "of": "of",
@@ -345,7 +367,6 @@
     "saving": "Saving...",
     "noData": "No data available",
     "na": "N/A",
-    "error": "An error occurred",
     "success": "Success",
     "confirm": "Confirm",
     "from": "From",
@@ -358,7 +379,6 @@
     "cancelling": "Cancelling...",
     "apply": "Apply",
     "remove": "Remove",
-    "back": "Back",
     "selectLanguage": "Select Language",
     "language": "Language",
     "min": "Min",
@@ -409,26 +429,6 @@
       "decimalValue": "0.000",
       "priceValue": "0.00"
     },
-    "buttons": {
-      "create": "Create",
-      "edit": "Edit",
-      "delete": "Delete",
-      "cancel": "Cancel",
-      "save": "Save",
-      "update": "Update",
-      "reset": "Reset",
-      "filter": "Filter",
-      "search": "Search",
-      "apply": "Apply",
-      "remove": "Remove",
-      "addVariant": "Add Variant",
-      "createVariant": "Create Variant",
-      "updateVariant": "Update Variant",
-      "approve": "Approve",
-      "recordPayment": "Record Payment",
-      "addStock": "Add Stock",
-      "viewHistory": "View History"
-    },
     "labels": {
       "total": "Total",
       "sortOrder": "Sort Order",
@@ -447,7 +447,22 @@
       "noAvailableTables": "No available tables",
       "confirmDelete": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
       "confirmUnmerge": "Are you sure you want to unmerge these tables?"
-    }
+    },
+    "allCategories": "All Categories",
+    "activeOrderInProgress": "Active Order in Progress",
+    "incompleteOrderMessage": "You have an incomplete {{type}} order with {{count}} item(s)",
+    "approving": "Approving...",
+    "moving": "Moving...",
+    "dateRange": "Date Range",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "margin": "Margin",
+    "cash": "Cash",
+    "card": "Card",
+    "online": "Online",
+    "category": "Category",
+    "product": "Product",
+    "date": "Date"
   },
   "orders": {
     "title": "Orders",
@@ -549,7 +564,6 @@
       "zipCode": "ZIP Code",
       "customerNotes": "Customer Notes"
     },
-    "closeTable": "Close Table",
     "processPayment": "Process Payment",
     "processPaymentDesc": "Complete payment for order",
     "selectPaymentMethod": "Payment Method",
@@ -598,7 +612,7 @@
     "paid": "Paid",
     "addItemToOrder": "Add Item to Order",
     "category": "Category",
-    "allCategories": "All Categories",
+    "allCategories": "All",
     "product": "Product",
     "selectProduct": "Select product",
     "quantity": "Quantity",
@@ -615,14 +629,92 @@
     "paymentSuccess": "Payment processed successfully",
     "cancelError": "Failed to cancel order",
     "addItemError": "Failed to add item: ",
-    "capacity": "Capacity"
+    "capacity": "Capacity",
+    "orderTypes": {
+      "DINE_IN": "Dine-In",
+      "DELIVERY": "Delivery",
+      "TAKEAWAY": "Takeaway"
+    },
+    "mandatoryServiceFee": "Service Fee (20%)",
+    "serviceFeeAutoApplied": "Automatically applied",
+    "djServices": "DJ Services",
+    "djServicesPerGuest": "10,000 × {{count}} guests",
+    "editOrder": "Edit Order",
+    "editOrderDesc": "Add, remove, or modify items in this order",
+    "currentItems": "Current Items",
+    "noItems": "No items in this order",
+    "addNewItem": "Add New Item",
+    "confirmRemoveItem": "Are you sure you want to remove this item?",
+    "updateItemError": "Failed to update item quantity",
+    "removeItemError": "Failed to remove item",
+    "splitPayment": "Split Payment",
+    "splitEnabled": "Enabled",
+    "splitDisabled": "Disabled",
+    "splitBetween": "Split between",
+    "people": "people",
+    "person": "Person",
+    "pending": "Pending",
+    "amount": "Amount",
+    "tendered": "Tendered",
+    "payAmount": "Pay {{amount}}",
+    "paidWith": "Paid with {{method}}",
+    "splitProgress": "Progress",
+    "remaining": "Remaining",
+    "changeTable": "Change Table",
+    "changeTableDesc": "Move this order to a different table",
+    "selectNewTable": "Select New Table",
+    "current": "Current",
+    "noAvailableTables": "No available tables",
+    "tableChanged": "Order moved to new table successfully",
+    "changeTableError": "Failed to change table: ",
+    "moveToTable": "Move to Table"
   },
   "tables": {
+    "title": "Tables",
+    "createNew": "Add Table",
+    "editTable": "Edit Table",
+    "tableNumber": "Table Number",
+    "tableName": "Table Name",
+    "capacity": "Capacity",
+    "section": "Section",
+    "notes": "Notes",
+    "active": "Active",
+    "searchPlaceholder": "Search by table number, name or section...",
+    "selectRestaurantFirst": "Please select a restaurant to view tables",
+    "noTables": "No tables found",
+    "confirmDelete": "Are you sure you want to delete this table?",
+    "confirmUnmerge": "Are you sure you want to unmerge these tables?",
+    "merged": "Merged Table",
+    "originalCapacity": "Original",
+    "mergeTables": "Merge Tables",
+    "unmerge": "Unmerge",
+    "increased": "Increased",
     "status": {
+      "AVAILABLE": "Available",
+      "OCCUPIED": "Occupied",
+      "RESERVED": "Reserved",
+      "CLEANING": "Cleaning",
+      "OUT_OF_SERVICE": "Out of Service"
+    },
+    "stats": {
+      "total": "Total Tables",
       "available": "Available",
       "occupied": "Occupied",
-      "reserved": "Reserved",
-      "unavailable": "Unavailable"
+      "reserved": "Reserved"
+    },
+    "messages": {
+      "fillRequiredFields": "Please fill all required fields",
+      "createSuccess": "Table created successfully",
+      "updateSuccess": "Table updated successfully",
+      "saveError": "Failed to save table",
+      "deleteSuccess": "Table deleted successfully",
+      "deleteError": "Failed to delete table",
+      "statusError": "Failed to update table status",
+      "selectAtLeast2Tables": "Please select at least 2 tables to merge",
+      "mergeSuccess": "Tables merged successfully",
+      "mergeError": "Failed to merge tables",
+      "unmergeSuccess": "Tables unmerged successfully",
+      "unmergeError": "Failed to unmerge tables"
     }
   },
   "restaurants": {
@@ -1341,7 +1433,8 @@
         "WEEKLY": "Weekly",
         "MONTHLY": "Monthly",
         "QUARTERLY": "Quarterly",
-        "YEARLY": "Yearly"
+        "YEARLY": "Yearly",
+        "DAILY": "Daily"
       },
       "statuses": {
         "UNPAID": "Unpaid",
@@ -1656,18 +1749,6 @@
       "items": "items",
       "variances": "Variances",
       "countNumber": "Count #",
-      "type": "Type",
-      "status": "Status",
-      "variance": "Variance",
-      "scheduledDate": "Scheduled",
-      "submitForReview": "Submit for Review",
-      "approveAndAdjust": "Approve & Adjust Inventory",
-      "stats": {
-        "total": "Total Counts",
-        "inProgress": "In Progress",
-        "pendingReview": "Pending Review",
-        "approved": "Approved"
-      },
       "type": {
         "full": "Full Count",
         "cycle": "Cycle Count",
@@ -1680,6 +1761,16 @@
         "approved": "Approved",
         "cancelled": "Cancelled"
       },
+      "variance": "Variance",
+      "scheduledDate": "Scheduled",
+      "submitForReview": "Submit for Review",
+      "approveAndAdjust": "Approve & Adjust Inventory",
+      "stats": {
+        "total": "Total Counts",
+        "inProgress": "In Progress",
+        "pendingReview": "Pending Review",
+        "approved": "Approved"
+      },
       "fields": {
         "type": "Count Type",
         "scheduledDate": "Scheduled Date",
@@ -1687,13 +1778,67 @@
         "systemQty": "System Qty",
         "countedQty": "Counted Qty",
         "variance": "Variance",
-        "status": "Status"
+        "status": "Status",
+        "reason": "Reason"
       },
       "itemStatus": {
         "pending": "Pending",
         "counted": "Counted",
         "recounted": "Recounted",
         "verified": "Verified"
+      },
+      "cancelTitle": "Cancel Stock Count",
+      "cancelDescription": "Are you sure you want to cancel this stock count? This action cannot be undone.",
+      "cancelReason": "Reason for cancellation",
+      "cancelReasonPlaceholder": "Enter the reason for cancelling this stock count...",
+      "confirmCancel": "Confirm Cancel",
+      "approveTitle": "Approve Stock Count",
+      "approveDescription": "Review and approve this stock count. You can optionally adjust inventory levels based on the counted quantities.",
+      "adjustInventoryLabel": "Adjust inventory levels to match counted quantities",
+      "adjustInventoryWarning": "This will update the system inventory quantities to match the physical count. Make sure all variances have been reviewed.",
+      "approveNotes": "Notes (optional)",
+      "approveNotesPlaceholder": "Add any notes about this approval...",
+      "confirmApprove": "Approve",
+      "varianceReasonTitle": "Set Variance Reason",
+      "varianceReasonDesc": "Specify the reason for the variance on {{ingredient}}",
+      "varianceReasonLabel": "Reason",
+      "selectReason": "Select a reason",
+      "varianceNotesLabel": "Additional Notes (optional)",
+      "varianceNotesPlaceholder": "Add any additional details...",
+      "setReason": "Set Reason",
+      "varianceReasons": {
+        "theft": "Theft",
+        "damage": "Damage",
+        "spoilage": "Spoilage",
+        "countingError": "Counting Error",
+        "systemError": "System Error",
+        "unrecordedUsage": "Unrecorded Usage",
+        "unrecordedReceipt": "Unrecorded Receipt",
+        "shrinkage": "Shrinkage",
+        "other": "Other"
+      },
+      "tabs": {
+        "counts": "Stock Counts",
+        "varianceReport": "Variance Report"
+      },
+      "report": {
+        "dateRange": "Date Range",
+        "generateReport": "Generate Report",
+        "totalVariances": "Total Variances",
+        "totalVarianceValue": "Total Variance Value",
+        "itemsWithVariance": "items with variance detected",
+        "estimatedLoss": "estimated value impact",
+        "byReason": "Variance by Reason",
+        "byReasonDesc": "Breakdown of variances by assigned reason",
+        "count": "Count",
+        "totalValue": "Total Value",
+        "topVarianceItems": "Top Variance Items",
+        "topVarianceItemsDesc": "Ingredients with the highest variance frequency and value",
+        "varianceCount": "Variance Count",
+        "noVariances": "No variances found",
+        "noVariancesDesc": "No inventory variances were recorded during this period.",
+        "selectDates": "Select a date range",
+        "selectDatesDesc": "Choose a date range and click \"Generate Report\" to view variance data."
       }
     },
     "waste": {
@@ -1752,7 +1897,14 @@
       "errors": {
         "saveFailed": "Failed to save recipe",
         "deleteFailed": "Failed to delete recipe"
-      }
+      },
+      "changeIngredientNote": "You can change the linked ingredient",
+      "searchIngredients": "Search ingredients...",
+      "filterByUnit": "Filter by unit",
+      "noIngredientsFound": "No ingredients found",
+      "ingredientsFound": "{{count}} ingredients found",
+      "filterByCategory": "Filter by category",
+      "productsFound": "{{count}} products found"
     },
     "stockAlerts": {
       "lowStockItems": "Low Stock Items",
@@ -2037,7 +2189,8 @@
           "oldestBatchCost": "Oldest Batch Cost",
           "newestBatchCost": "Newest Batch Cost",
           "ingredientsWithStock": "Ingredients with Stock",
-          "averageCost": "Average Cost"
+          "averageCost": "Average Cost",
+          "ofTotal": "of total"
         },
         "variance": {
           "title": "Cost Variance Report",
@@ -2071,54 +2224,6 @@
     "priority": "Priority",
     "noLinkedItems": "No linked items found for this product",
     "productId": "Product ID"
-  },
-  "tables": {
-    "title": "Tables",
-    "createNew": "Add Table",
-    "editTable": "Edit Table",
-    "tableNumber": "Table Number",
-    "tableName": "Table Name",
-    "capacity": "Capacity",
-    "section": "Section",
-    "notes": "Notes",
-    "active": "Active",
-    "searchPlaceholder": "Search by table number, name or section...",
-    "selectRestaurantFirst": "Please select a restaurant to view tables",
-    "noTables": "No tables found",
-    "confirmDelete": "Are you sure you want to delete this table?",
-    "confirmUnmerge": "Are you sure you want to unmerge these tables?",
-    "merged": "Merged Table",
-    "originalCapacity": "Original",
-    "mergeTables": "Merge Tables",
-    "unmerge": "Unmerge",
-    "increased": "Increased",
-    "status": {
-      "AVAILABLE": "Available",
-      "OCCUPIED": "Occupied",
-      "RESERVED": "Reserved",
-      "CLEANING": "Cleaning",
-      "OUT_OF_SERVICE": "Out of Service"
-    },
-    "stats": {
-      "total": "Total Tables",
-      "available": "Available",
-      "occupied": "Occupied",
-      "reserved": "Reserved"
-    },
-    "messages": {
-      "fillRequiredFields": "Please fill all required fields",
-      "createSuccess": "Table created successfully",
-      "updateSuccess": "Table updated successfully",
-      "saveError": "Failed to save table",
-      "deleteSuccess": "Table deleted successfully",
-      "deleteError": "Failed to delete table",
-      "statusError": "Failed to update table status",
-      "selectAtLeast2Tables": "Please select at least 2 tables to merge",
-      "mergeSuccess": "Tables merged successfully",
-      "mergeError": "Failed to merge tables",
-      "unmergeSuccess": "Tables unmerged successfully",
-      "unmergeError": "Failed to unmerge tables"
-    }
   },
   "days": {
     "MONDAY": "Monday",
@@ -3369,5 +3474,43 @@
     "prepTime": "Estimated Prep Time (minutes)",
     "settingsSaved": "Settings saved successfully",
     "settingsError": "Failed to save settings"
+  },
+  "ordersHistory": {
+    "title": "Orders History",
+    "subtitle": "View and analyze all orders",
+    "totalOrders": "Total Orders",
+    "totalRevenue": "Total Revenue",
+    "avgOrderValue": "Avg. Order Value",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "filters": "Filters",
+    "search": "Search",
+    "searchPlaceholder": "Order number...",
+    "restaurant": "Restaurant",
+    "status": "Status",
+    "dateFrom": "From",
+    "dateTo": "To",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "lastWeek": "Last 7 Days",
+    "thisMonth": "This Month",
+    "allTime": "All Time",
+    "clearFilters": "Clear Filters",
+    "ordersList": "Orders List",
+    "showing": "Showing",
+    "of": "of",
+    "orderNumber": "Order #",
+    "date": "Date",
+    "table": "Table",
+    "waiter": "Waiter",
+    "customer": "Customer",
+    "type": "Type",
+    "payment": "Payment",
+    "total": "Total",
+    "page": "Page",
+    "orderDetails": "Order Details",
+    "items": "Items",
+    "noItems": "No items",
+    "noOrders": "No orders found"
   }
 }

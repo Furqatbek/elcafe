@@ -10,7 +10,7 @@ const PrinterSettings = () => {
   const [printers, setPrinters] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [availablePrinters, setAvailablePrinters] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState(null);

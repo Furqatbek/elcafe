@@ -2,9 +2,14 @@ package com.elcafe.modules.restaurant.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.dto.CreateTableRequest;
+import com.elcafe.modules.restaurant.dto.FloorPlanDTO;
 import com.elcafe.modules.restaurant.dto.MergeTablesRequest;
 import com.elcafe.modules.restaurant.dto.TableResponse;
+import com.elcafe.modules.restaurant.dto.UpdateTablePositionRequest;
 import com.elcafe.modules.restaurant.dto.UpdateTableRequest;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
@@ -28,6 +33,7 @@ public class TableService {
     private final RestaurantTableRepository tableRepository;
     private final RestaurantRepository restaurantRepository;
     private final TableMapper tableMapper;
+    private final OrderRepository orderRepository;
 
     @Transactional
     public TableResponse createTable(CreateTableRequest request) {
@@ -37,7 +43,7 @@ public class TableService {
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", request.getRestaurantId()));
 
         // Check if table number already exists for this restaurant
-        tableRepository.findByRestaurantIdAndTableNumber(request.getRestaurantId(), request.getTableNumber())
+        tableRepository.findByRestaurant_IdAndTableNumber(request.getRestaurantId(), request.getTableNumber())
                 .ifPresent(t -> {
                     throw new IllegalArgumentException("Table number " + request.getTableNumber() + " already exists");
                 });
@@ -60,7 +66,7 @@ public class TableService {
 
         // If updating table number, check uniqueness
         if (request.getTableNumber() != null && !request.getTableNumber().equals(table.getTableNumber())) {
-            tableRepository.findByRestaurantIdAndTableNumber(table.getRestaurant().getId(), request.getTableNumber())
+            tableRepository.findByRestaurant_IdAndTableNumber(table.getRestaurant().getId(), request.getTableNumber())
                     .ifPresent(t -> {
                         throw new IllegalArgumentException("Table number " + request.getTableNumber() + " already exists");
                     });
@@ -86,7 +92,7 @@ public class TableService {
     public List<TableResponse> getTablesByRestaurant(Long restaurantId) {
         log.info("Getting tables for restaurant: {}", restaurantId);
 
-        List<RestaurantTable> tables = tableRepository.findByRestaurantId(restaurantId);
+        List<RestaurantTable> tables = tableRepository.findByRestaurant_Id(restaurantId);
         return tables.stream()
                 .map(tableMapper::toResponse)
                 .collect(Collectors.toList());
@@ -96,7 +102,7 @@ public class TableService {
     public List<TableResponse> getAvailableTables(Long restaurantId) {
         log.info("Getting available tables for restaurant: {}", restaurantId);
 
-        List<RestaurantTable> tables = tableRepository.findByRestaurantIdAndStatus(
+        List<RestaurantTable> tables = tableRepository.findByRestaurant_IdAndStatus(
                 restaurantId, RestaurantTable.TableStatus.AVAILABLE);
         return tables.stream()
                 .map(tableMapper::toResponse)
@@ -107,7 +113,7 @@ public class TableService {
     public List<TableResponse> getTablesBySection(Long restaurantId, String section) {
         log.info("Getting tables for restaurant {} in section {}", restaurantId, section);
 
-        List<RestaurantTable> tables = tableRepository.findByRestaurantIdAndSection(restaurantId, section);
+        List<RestaurantTable> tables = tableRepository.findByRestaurant_IdAndSection(restaurantId, section);
         return tables.stream()
                 .map(tableMapper::toResponse)
                 .collect(Collectors.toList());
@@ -301,5 +307,86 @@ public class TableService {
         return mergedTables.stream()
                 .map(tableMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public TableResponse updateTablePosition(Long id, UpdateTablePositionRequest request) {
+        log.info("Updating position for table {}: x={}, y={}", id, request.getPositionX(), request.getPositionY());
+
+        RestaurantTable table = tableRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Table", "id", id));
+
+        table.setPositionX(request.getPositionX());
+        table.setPositionY(request.getPositionY());
+
+        if (request.getWidth() != null) {
+            table.setWidth(request.getWidth());
+        }
+        if (request.getHeight() != null) {
+            table.setHeight(request.getHeight());
+        }
+
+        RestaurantTable updatedTable = tableRepository.save(table);
+        log.info("Updated position for table {}", id);
+
+        return tableMapper.toResponse(updatedTable);
+    }
+
+    @Transactional(readOnly = true)
+    public FloorPlanDTO getFloorPlan(Long restaurantId) {
+        log.info("Getting floor plan for restaurant: {}", restaurantId);
+
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
+
+        List<RestaurantTable> tables = tableRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
+        List<String> sections = tableRepository.findDistinctSectionsByRestaurantId(restaurantId);
+
+        // Get active order statuses (orders that are still open)
+        List<OrderStatus> activeStatuses = List.of(
+                OrderStatus.NEW, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.ON_DELIVERY
+        );
+
+        List<FloorPlanDTO.FloorPlanTableDTO> tableDTOs = tables.stream()
+                .map(table -> {
+                        // Find active order for this table
+                        Long currentOrderId = null;
+                        if (table.getStatus() == RestaurantTable.TableStatus.OCCUPIED) {
+                            List<Order> activeOrders = orderRepository.findByDiningTable_IdAndStatusIn(
+                                    table.getId(), activeStatuses);
+                            if (!activeOrders.isEmpty()) {
+                                currentOrderId = activeOrders.get(0).getId();
+                            }
+                        }
+
+                        return FloorPlanDTO.FloorPlanTableDTO.builder()
+                        .id(table.getId())
+                        .tableNumber(table.getTableNumber())
+                        .tableName(table.getTableName())
+                        .status(table.getStatus())
+                        .capacity(table.getCapacity())
+                        .section(table.getSection())
+                        .positionX(table.getPositionX())
+                        .positionY(table.getPositionY())
+                        .width(table.getWidth())
+                        .height(table.getHeight())
+                        // Current order info
+                        .currentOrderId(currentOrderId)
+                        // Merge info
+                        .mergedTable(table.getMergedTable() != null ||
+                                tableRepository.findByMergedTable(table).size() > 0)
+                        .mergedWithTableId(table.getMergedTable() != null ?
+                                table.getMergedTable().getId() : null)
+                        .originalCapacity(table.getOriginalCapacity())
+                        .build();
+                })
+                .collect(Collectors.toList());
+
+        return FloorPlanDTO.builder()
+                .restaurantId(restaurantId)
+                .restaurantName(restaurant.getName())
+                .tables(tableDTOs)
+                .sections(sections)
+                .build();
     }
 }

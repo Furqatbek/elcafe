@@ -22,6 +22,11 @@ public class TableResponse {
     private RestaurantTable.TableStatus status;
     private Integer capacity;
     private String section;
+    // Floor plan positioning
+    private Integer positionX;
+    private Integer positionY;
+    private Integer width;
+    private Integer height;
     private Boolean active;
     private String notes;
     private String qrCode;

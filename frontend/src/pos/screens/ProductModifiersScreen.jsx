@@ -110,7 +110,7 @@ const ProductModifiersScreen = () => {
                   </p>
                 )}
                 <p className="text-2xl font-bold text-blue-600">
-                  ${basePrice.toFixed(2)}
+                  {basePrice.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -141,7 +141,7 @@ const ProductModifiersScreen = () => {
                       {variant.name}
                     </span>
                     <span className="text-sm text-gray-600 mt-1">
-                      ${variant.price.toFixed(2)}
+                      {variant.price.toFixed(2)}
                     </span>
                   </button>
                 ))}
@@ -200,7 +200,7 @@ const ProductModifiersScreen = () => {
                         </div>
                       </div>
                       <span className="font-bold text-gray-900">
-                        +${addon.price.toFixed(2)}
+                        +{addon.price.toFixed(2)}
                       </span>
                     </button>
                   );
@@ -263,7 +263,7 @@ const ProductModifiersScreen = () => {
             <div className="text-right">
               <p className="text-sm text-gray-600">{t('pos.cart.total', 'Total')}</p>
               <p className="text-3xl font-bold text-gray-900">
-                ${totalPrice.toFixed(2)}
+                {totalPrice.toFixed(2)}
               </p>
             </div>
             <TouchButton

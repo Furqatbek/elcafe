@@ -30,7 +30,7 @@ public class AddOnGroupService {
     @Transactional(readOnly = true)
     public List<AddOnGroupResponse> getAllAddOnGroupsByRestaurant(Long restaurantId) {
         log.info("Fetching all add-on groups for restaurant: {}", restaurantId);
-        List<AddOnGroup> addOnGroups = addOnGroupRepository.findByRestaurantId(restaurantId);
+        List<AddOnGroup> addOnGroups = addOnGroupRepository.findByRestaurant_Id(restaurantId);
         return addOnGroups.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -39,7 +39,7 @@ public class AddOnGroupService {
     @Transactional(readOnly = true)
     public List<AddOnGroupResponse> getActiveAddOnGroupsByRestaurant(Long restaurantId) {
         log.info("Fetching active add-on groups for restaurant: {}", restaurantId);
-        List<AddOnGroup> addOnGroups = addOnGroupRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+        List<AddOnGroup> addOnGroups = addOnGroupRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
         return addOnGroups.stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());

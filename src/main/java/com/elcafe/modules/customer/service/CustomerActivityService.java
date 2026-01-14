@@ -59,7 +59,7 @@ public class CustomerActivityService {
      */
     private CustomerActivityDTO calculateCustomerActivity(Customer customer) {
         // Get all customer orders
-        List<Order> orders = orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId());
+        List<Order> orders = orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customer.getId());
 
         // Calculate frequency (total orders)
         Integer frequency = orders.size();

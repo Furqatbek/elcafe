@@ -12,11 +12,10 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class POSProductAvailabilityDTO {
-
     private Long productId;
     private String productName;
-    private Boolean available;
-    private Integer maxQuantityAvailable;
+    private boolean available;
+    private int maxQuantityAvailable;
     private String stockStatus; // AVAILABLE, LOW_STOCK, OUT_OF_STOCK
     private List<IngredientAvailability> ingredientDetails;
 
@@ -30,7 +29,7 @@ public class POSProductAvailabilityDTO {
         private String unit;
         private Double currentStock;
         private Double requiredPerUnit;
-        private Integer maxServings;
-        private Boolean sufficient;
+        private int maxServings;
+        private boolean sufficient;
     }
 }
