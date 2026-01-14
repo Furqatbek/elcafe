@@ -129,6 +129,17 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success("Product updated successfully", updatedProduct));
     }
 
+    @PatchMapping("/{id}/toggle-status")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Toggle product status", description = "Toggle product status between DRAFT and LIVE")
+    public ResponseEntity<ApiResponse<Product>> toggleProductStatus(@PathVariable Long id) {
+        log.info("Toggling status for product: {}", id);
+
+        Product product = menuService.toggleProductStatus(id);
+
+        return ResponseEntity.ok(ApiResponse.success("Product status updated successfully", product));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Delete product", description = "Delete a product")

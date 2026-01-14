@@ -227,6 +227,23 @@ public class MenuService {
 
     @Transactional
     @CacheEvict(value = "menu", allEntries = true)
+    public Product toggleProductStatus(Long id) {
+        log.info("Toggling status for product: {}", id);
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
+
+        // Toggle between DRAFT and LIVE
+        if (product.getStatus() == ProductStatus.LIVE) {
+            product.setStatus(ProductStatus.DRAFT);
+        } else {
+            product.setStatus(ProductStatus.LIVE);
+        }
+
+        return productRepository.save(product);
+    }
+
+    @Transactional
+    @CacheEvict(value = "menu", allEntries = true)
     public void deleteProduct(Long id) {
         log.info("Deleting product: {}", id);
         Product product = productRepository.findById(id)

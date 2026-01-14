@@ -145,6 +145,7 @@ export const menuAPI = {
   getProductsByRestaurant: (restaurantId) => api.get(`/products/restaurant/${restaurantId}`),
   getProductsByCategory: (categoryId) => api.get(`/products/category/${categoryId}`),
   deleteProduct: (id) => api.delete(`/products/${id}`),
+  toggleProductStatus: (id) => api.patch(`/products/${id}/toggle-status`),
 };
 
 export const menuCollectionAPI = {

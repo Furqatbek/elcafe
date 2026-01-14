@@ -29,7 +29,9 @@ import {
   Star,
   Edit,
   Trash2,
-  List
+  List,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
 
 export default function Products() {
@@ -265,6 +267,16 @@ export default function Products() {
     } catch (error) {
       console.error('Failed to delete product:', error);
       alert(t('menu.messages.deleteProductError') + ': ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleToggleStatus = async (product) => {
+    try {
+      await menuAPI.toggleProductStatus(product.id);
+      loadProducts();
+    } catch (error) {
+      console.error('Failed to toggle product status:', error);
+      alert(t('menu.messages.toggleStatusError', 'Failed to toggle status') + ': ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -504,6 +516,18 @@ export default function Products() {
                   >
                     <List className="h-4 w-4 mr-1" />
                     {t('pages.products.variants', 'Variants')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`flex-1 min-w-[80px] ${product.status === 'LIVE' ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'}`}
+                    onClick={() => handleToggleStatus(product)}
+                  >
+                    {product.status === 'LIVE' ? (
+                      <><ToggleRight className="h-4 w-4 mr-1" />{t('pages.products.live', 'Live')}</>
+                    ) : (
+                      <><ToggleLeft className="h-4 w-4 mr-1" />{t('pages.products.draft', 'Draft')}</>
+                    )}
                   </Button>
                   <Button
                     size="sm"
