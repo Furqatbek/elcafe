@@ -53,22 +53,29 @@ export default function QRCodes() {
   const loadRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll();
-      const data = response.data?.content || response.data || [];
+      // Handle ApiResponse wrapper: response.data.data contains the actual data
+      const apiData = response.data?.data;
+      const data = Array.isArray(apiData) ? apiData : (apiData?.content || []);
       setRestaurants(data);
       if (data.length > 0) {
         setSelectedRestaurant(data[0].id);
       }
     } catch (error) {
       console.error('Failed to load restaurants:', error);
+      setRestaurants([]);
     }
   };
 
   const loadTables = async () => {
     try {
       const response = await tablesAPI.getAll(selectedRestaurant);
-      setTables(response.data || []);
+      // Handle ApiResponse wrapper
+      const apiData = response.data?.data;
+      const data = Array.isArray(apiData) ? apiData : (apiData?.content || []);
+      setTables(data);
     } catch (error) {
       console.error('Failed to load tables:', error);
+      setTables([]);
     }
   };
 
@@ -76,9 +83,13 @@ export default function QRCodes() {
     setLoading(true);
     try {
       const response = await qrCodeAPI.getByRestaurant(selectedRestaurant);
-      setQrCodes(response.data?.content || response.data || []);
+      // Handle ApiResponse wrapper
+      const apiData = response.data?.data;
+      const data = Array.isArray(apiData) ? apiData : (apiData?.content || []);
+      setQrCodes(data);
     } catch (error) {
       console.error('Failed to load QR codes:', error);
+      setQrCodes([]);
     } finally {
       setLoading(false);
     }
@@ -87,7 +98,7 @@ export default function QRCodes() {
   const loadStats = async () => {
     try {
       const response = await qrCodeAPI.getStats(selectedRestaurant);
-      setStats(response.data);
+      setStats(response.data?.data || null);
     } catch (error) {
       console.error('Failed to load stats:', error);
     }
@@ -96,7 +107,7 @@ export default function QRCodes() {
   const loadSettings = async () => {
     try {
       const response = await qrCodeAPI.getSettings(selectedRestaurant);
-      setSettings(response.data);
+      setSettings(response.data?.data || null);
     } catch (error) {
       setSettings({
         enabled: false,
@@ -172,6 +183,7 @@ export default function QRCodes() {
 
   // Get tables that don't have QR codes yet
   const getAvailableTables = () => {
+    if (!Array.isArray(qrCodes) || !Array.isArray(tables)) return [];
     const assignedTableIds = qrCodes
       .filter(qr => qr.table)
       .map(qr => qr.table.id);
@@ -302,7 +314,7 @@ export default function QRCodes() {
             onChange={(e) => setSelectedRestaurant(Number(e.target.value))}
             className="border rounded-lg px-3 py-2"
           >
-            {restaurants.map((r) => (
+            {Array.isArray(restaurants) && restaurants.map((r) => (
               <option key={r.id} value={r.id}>{r.name}</option>
             ))}
           </select>
@@ -388,7 +400,7 @@ export default function QRCodes() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {qrCodes.map((qr) => (
+                {Array.isArray(qrCodes) && qrCodes.map((qr) => (
                   <tr key={qr.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <button
