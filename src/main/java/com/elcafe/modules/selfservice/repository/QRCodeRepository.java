@@ -27,6 +27,8 @@ public interface QRCodeRepository extends JpaRepository<QRCode, Long> {
 
     Optional<QRCode> findByTableId(Long tableId);
 
+    Optional<QRCode> findByTableIdAndIsActiveTrue(Long tableId);
+
     @Query("SELECT q FROM QRCode q WHERE q.restaurant.id = :restaurantId AND q.table IS NULL AND q.isActive = true")
     List<QRCode> findUnassignedByRestaurant(@Param("restaurantId") Long restaurantId);
 

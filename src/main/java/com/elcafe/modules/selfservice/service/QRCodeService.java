@@ -60,10 +60,10 @@ public class QRCodeService {
             table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new RuntimeException("Table not found"));
 
-            // Check if table already has a QR code
-            Optional<QRCode> existing = qrCodeRepository.findByTableId(request.getTableId());
+            // Check if table already has an active QR code
+            Optional<QRCode> existing = qrCodeRepository.findByTableIdAndIsActiveTrue(request.getTableId());
             if (existing.isPresent()) {
-                throw new RuntimeException("Table already has a QR code assigned");
+                throw new RuntimeException("Table already has an active QR code assigned");
             }
         }
 
@@ -95,7 +95,7 @@ public class QRCodeService {
         List<RestaurantTable> tables = tableRepository.findByRestaurantId(restaurantId);
 
         return tables.stream()
-                .filter(table -> qrCodeRepository.findByTableId(table.getId()).isEmpty())
+                .filter(table -> qrCodeRepository.findByTableIdAndIsActiveTrue(table.getId()).isEmpty())
                 .map(table -> {
                     String code = generateUniqueCode();
                     return qrCodeRepository.save(QRCode.builder()
