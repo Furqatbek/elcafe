@@ -478,7 +478,7 @@ export default function ReferralProgram() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {referrals.length === 0 ? (
+                      {!Array.isArray(referrals) || referrals.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                             {t('referral.noReferrals')}
@@ -577,7 +577,7 @@ export default function ReferralProgram() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {codes.length === 0 ? (
+                      {!Array.isArray(codes) || codes.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                             {t('referral.noCodes')}
@@ -676,7 +676,7 @@ export default function ReferralProgram() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {rewardTypes.map((type) => (
+                    {Array.isArray(rewardTypes) && rewardTypes.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {type.label}
                       </SelectItem>
@@ -706,7 +706,7 @@ export default function ReferralProgram() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {rewardTypes.map((type) => (
+                    {Array.isArray(rewardTypes) && rewardTypes.map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {type.label}
                       </SelectItem>
