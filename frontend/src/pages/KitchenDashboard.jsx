@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { kitchenAPI } from '../services/api';
+import { kitchenAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -60,9 +60,8 @@ export default function KitchenDashboard() {
 
   const loadRestaurants = async () => {
     try {
-      const response = await fetch('/api/v1/restaurants?page=0&size=100');
-      const result = await response.json();
-      const restaurantList = result.data?.content || [];
+      const response = await restaurantAPI.getAll({ page: 0, size: 100 });
+      const restaurantList = response.data.data?.content || [];
       setRestaurants(restaurantList);
       if (restaurantList.length > 0) {
         setSelectedRestaurant(restaurantList[0].id);
