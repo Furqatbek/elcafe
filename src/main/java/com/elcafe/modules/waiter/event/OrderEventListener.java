@@ -1,7 +1,10 @@
 package com.elcafe.modules.waiter.event;
 
+import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.waiter.entity.OrderEvent;
 import com.elcafe.modules.waiter.repository.OrderEventRepository;
+import com.elcafe.modules.waiter.service.WaiterPerformanceService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +14,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
 
 /**
  * Listener for all waiter-related events
@@ -22,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderEventListener {
 
     private final OrderEventRepository orderEventRepository;
+    private final OrderRepository orderRepository;
+    private final WaiterPerformanceService performanceService;
     private final ObjectMapper objectMapper;
 
     /**
@@ -140,11 +147,18 @@ public class OrderEventListener {
         try {
             createAuditTrail(event);
 
-            // TODO: Close table if all orders are paid
-            // tableService.checkAndCloseTable(event.getTableId());
-
-            // TODO: Update waiter metrics
-            // waiterService.updatePerformanceMetrics(event.getWaiterId(), event.getAmount());
+            // Update waiter performance metrics
+            if (event.getWaiterId() != null && event.getOrderId() != null) {
+                try {
+                    Order order = orderRepository.findById(event.getOrderId()).orElse(null);
+                    if (order != null && order.getRestaurant() != null) {
+                        performanceService.recordOrderCompletion(order, event.getWaiterId(), order.getRestaurant().getId());
+                        log.info("Updated performance metrics for waiter {}", event.getWaiterId());
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to update waiter performance: {}", e.getMessage());
+                }
+            }
 
             log.info("Payment completed for order {} - Amount: ${}, Transaction: {}",
                     event.getOrderNumber(), event.getAmount(), event.getTransactionId());
@@ -186,8 +200,21 @@ public class OrderEventListener {
         try {
             createAuditTrail(event);
 
-            // TODO: Track void items for reporting
-            // reportingService.trackVoidItem(event.getOrderId(), event.getItemName(), event.getReason());
+            // Track void items for waiter performance
+            if (event.getWaiterId() != null && event.getOrderId() != null) {
+                try {
+                    Order order = orderRepository.findById(event.getOrderId()).orElse(null);
+                    if (order != null && order.getRestaurant() != null) {
+                        BigDecimal itemValue = event.getItemPrice() != null
+                                ? event.getItemPrice() : BigDecimal.ZERO;
+                        performanceService.recordVoidItem(event.getWaiterId(),
+                                order.getRestaurant().getId(), itemValue);
+                        log.info("Recorded void item for waiter {}", event.getWaiterId());
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to record void item: {}", e.getMessage());
+                }
+            }
 
             log.info("Item '{}' removed from order {} - Reason: {}",
                     event.getItemName(), event.getOrderNumber(), event.getReason());
