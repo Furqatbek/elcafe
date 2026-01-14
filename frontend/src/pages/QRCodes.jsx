@@ -83,8 +83,8 @@ export default function QRCodes() {
     setLoading(true);
     try {
       const response = await qrCodeAPI.getByRestaurant(selectedRestaurant);
-      // Handle ApiResponse wrapper
-      const apiData = response.data?.data;
+      // Handle both wrapped (response.data.data) and unwrapped (response.data) responses
+      const apiData = response.data?.data || response.data;
       const data = Array.isArray(apiData) ? apiData : (apiData?.content || []);
       setQrCodes(data);
     } catch (error) {
@@ -98,7 +98,7 @@ export default function QRCodes() {
   const loadStats = async () => {
     try {
       const response = await qrCodeAPI.getStats(selectedRestaurant);
-      setStats(response.data?.data || null);
+      setStats(response.data?.data || response.data || null);
     } catch (error) {
       console.error('Failed to load stats:', error);
     }
@@ -107,7 +107,7 @@ export default function QRCodes() {
   const loadSettings = async () => {
     try {
       const response = await qrCodeAPI.getSettings(selectedRestaurant);
-      setSettings(response.data?.data || null);
+      setSettings(response.data?.data || response.data || null);
     } catch (error) {
       setSettings({
         enabled: false,
@@ -181,11 +181,12 @@ export default function QRCodes() {
     }
   };
 
-  // Get tables that don't have QR codes yet
+  // Get tables that don't have active QR codes yet
   const getAvailableTables = () => {
     if (!Array.isArray(qrCodes) || !Array.isArray(tables)) return [];
+    // Only exclude tables with ACTIVE QR codes
     const assignedTableIds = qrCodes
-      .filter(qr => qr.table)
+      .filter(qr => qr.table && qr.isActive)
       .map(qr => qr.table.id);
     return tables.filter(t => !assignedTableIds.includes(t.id));
   };
