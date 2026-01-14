@@ -142,6 +142,9 @@ app:
     max-file-size: 10MB
     max-request-size: 10MB
 
+  selfservice:
+    base-url: ${SELFSERVICE_BASE_URL:http://localhost:5173}
+
 # Eskiz.uz SMS Broker Configuration
 eskiz:
   sms:
@@ -163,6 +166,4 @@ push:
     subject: ${PUSH_VAPID_SUBJECT:mailto:admin@elcafe.com}
 
 # Self-Service / QR Code Ordering Configuration
-app:
-  selfservice:
-    base-url: ${SELFSERVICE_BASE_URL:http://localhost:5173}
+# Note: selfservice config is under main 'app:' section above
