@@ -86,6 +86,8 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.customer.id = :customerId")
     BigDecimal sumTotalByCustomerId(@Param("customerId") Long customerId);
 
+    long countByCustomer_Id(Long customerId);
+
     @Query("SELECT DISTINCT o.orderSource FROM Order o WHERE o.customer.id = :customerId")
     List<OrderSource> findDistinctOrderSourcesByCustomerId(@Param("customerId") Long customerId);
 

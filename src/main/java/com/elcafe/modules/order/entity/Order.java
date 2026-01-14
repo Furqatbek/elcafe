@@ -107,6 +107,21 @@ public class Order {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal discount;
 
+    @Column(name = "coupon_code", length = 100)
+    private String couponCode;
+
+    @Column(name = "discount_type", length = 50)
+    private String discountType;
+
+    @Column(name = "discount_reason", length = 500)
+    private String discountReason;
+
+    @Column(name = "promotion_id")
+    private Long promotionId;
+
+    @Column(name = "happy_hour_id")
+    private Long happyHourId;
+
     @Column(name = "bonus_used", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal bonusUsed = BigDecimal.ZERO;

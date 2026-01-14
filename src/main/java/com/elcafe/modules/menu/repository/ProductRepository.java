@@ -19,6 +19,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p JOIN p.category c WHERE c.restaurant.id = :restaurantId AND p.status = :status ORDER BY c.sortOrder, p.sortOrder")
     List<Product> findByRestaurant_IdAndStatus(@Param("restaurantId") Long restaurantId, @Param("status") ProductStatus status);
 
+    // Alias for findByRestaurant_IdAndStatus - used by SelfServiceController
+    default List<Product> findByRestaurantIdAndStatus(Long restaurantId, ProductStatus status) {
+        return findByRestaurant_IdAndStatus(restaurantId, status);
+    }
+
     @Query("SELECT p FROM Product p JOIN p.category c WHERE c.restaurant.id = :restaurantId ORDER BY c.sortOrder, p.sortOrder")
     List<Product> findByRestaurant_Id(@Param("restaurantId") Long restaurantId);
 }

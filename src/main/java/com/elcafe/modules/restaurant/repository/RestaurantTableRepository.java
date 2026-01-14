@@ -13,6 +13,11 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
 
     List<RestaurantTable> findByRestaurant_Id(Long restaurantId);
 
+    // Alias for findByRestaurant_Id - used by QRCodeService
+    default List<RestaurantTable> findByRestaurantId(Long restaurantId) {
+        return findByRestaurant_Id(restaurantId);
+    }
+
     List<RestaurantTable> findByRestaurant_IdAndActive(Long restaurantId, Boolean active);
 
     List<RestaurantTable> findByRestaurant_IdAndActiveTrue(Long restaurantId);
