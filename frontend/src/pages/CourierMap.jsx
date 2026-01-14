@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import { MapPin, Navigation, Clock, User, RefreshCw, Circle as CircleIcon } from 'lucide-react';
 import { courierAPI } from '../services/api';
+import { formatDate, formatTime } from '../utils/dateUtils';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -178,7 +179,7 @@ export default function CourierMap() {
     if (minutes < 1) return t('courier.map.justNow', 'Just now');
     if (minutes < 60) return t('courier.map.minutesAgo', { minutes }, `${minutes}m ago`);
     if (hours < 24) return t('courier.map.hoursAgo', { hours }, `${hours}h ago`);
-    return new Date(lastSeenAt).toLocaleDateString();
+    return formatDate(lastSeenAt);
   };
 
   // Filter couriers with valid location data
@@ -266,7 +267,7 @@ export default function CourierMap() {
       {/* Last Update Info */}
       <div className="flex items-center text-sm text-gray-500">
         <Clock className="mr-2 h-4 w-4" />
-        {t('courier.map.lastUpdate', 'Last updated')}: {lastUpdate.toLocaleTimeString()}
+        {t('courier.map.lastUpdate', 'Last updated')}: {formatTime(lastUpdate)}
       </div>
 
       {/* Interactive Map */}

@@ -29,11 +29,6 @@ public class POSOrderResponse {
     private BigDecimal serviceFeePercent;
     private BigDecimal serviceFee;
     private BigDecimal entryFee;
-    private BigDecimal discount;
-    private String couponCode;
-    private Long promotionId;
-    private String discountType;
-    private String discountReason;
     private BigDecimal total;
     private String paymentMethod;
     private String orderNotes;

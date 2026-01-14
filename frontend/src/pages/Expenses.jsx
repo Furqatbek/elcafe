@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Check, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Check, Calendar, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Expenses = () => {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [expenses, setExpenses] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -23,7 +24,7 @@ const Expenses = () => {
   });
 
   const [formData, setFormData] = useState({
-    restaurantId: '',
+    restaurantId: 1,
     expenseDate: new Date().toISOString().split('T')[0],
     category: 'SUPPLIES',
     description: '',
@@ -41,6 +42,7 @@ const Expenses = () => {
     { value: 'RENT', label: t('finance.expenses.categories.RENT') },
     { value: 'UTILITIES', label: t('finance.expenses.categories.UTILITIES') },
     { value: 'SUPPLIES', label: t('finance.expenses.categories.SUPPLIES') },
+    { value: 'INVENTORY', label: t('finance.expenses.categories.INVENTORY', 'Inventory') },
     { value: 'MARKETING', label: t('finance.expenses.categories.MARKETING') },
     { value: 'INSURANCE', label: t('finance.expenses.categories.INSURANCE') },
     { value: 'MAINTENANCE', label: t('finance.expenses.categories.MAINTENANCE') },
@@ -204,6 +206,7 @@ const Expenses = () => {
       RENT: 'bg-purple-100 text-purple-800',
       UTILITIES: 'bg-blue-100 text-blue-800',
       SUPPLIES: 'bg-green-100 text-green-800',
+      INVENTORY: 'bg-emerald-100 text-emerald-800',
       MARKETING: 'bg-pink-100 text-pink-800',
       INSURANCE: 'bg-indigo-100 text-indigo-800',
       MAINTENANCE: 'bg-orange-100 text-orange-800',
@@ -238,7 +241,10 @@ const Expenses = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('finance.expenses.title')}</h1>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setFormData(prev => ({ ...prev, restaurantId: selectedRestaurant || 1 }));
+            setShowModal(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus size={20} />
@@ -250,11 +256,11 @@ const Expenses = () => {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-sm text-gray-600 mb-1">{t('finance.expenses.totalExpenses')}</div>
-          <div className="text-2xl font-bold text-gray-900">${totalExpenses.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-gray-900">{totalExpenses.toFixed(2)}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-sm text-gray-600 mb-1">{t('finance.expenses.unpaidExpenses')}</div>
-          <div className="text-2xl font-bold text-red-600">${unpaidExpenses.toFixed(2)}</div>
+          <div className="text-2xl font-bold text-red-600">{unpaidExpenses.toFixed(2)}</div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-sm text-gray-600 mb-1">{t('finance.expenses.totalItems')}</div>
@@ -333,6 +339,7 @@ const Expenses = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.category')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.description')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.vendor')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.linkedPO', 'Linked PO')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.amount')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.expenses.status')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.actions')}</th>
@@ -341,11 +348,11 @@ const Expenses = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {loading ? (
               <tr>
-                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">{t('finance.expenses.loading')}</td>
+                <td colSpan="9" className="px-6 py-4 text-center text-gray-500">{t('finance.expenses.loading')}</td>
               </tr>
             ) : filteredExpenses.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-6 py-4 text-center text-gray-500">{t('finance.expenses.noExpenses')}</td>
+                <td colSpan="9" className="px-6 py-4 text-center text-gray-500">{t('finance.expenses.noExpenses')}</td>
               </tr>
             ) : (
               filteredExpenses.map((expense) => (
@@ -355,7 +362,20 @@ const Expenses = () => {
                   <td className="px-6 py-4 whitespace-nowrap">{getCategoryBadge(expense.category)}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{expense.description}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.vendor || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${expense.totalAmount?.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {expense.purchaseOrderId ? (
+                      <Link
+                        to={`/purchase-orders?id=${expense.purchaseOrderId}`}
+                        className="flex items-center gap-1 text-blue-600 hover:text-blue-800"
+                      >
+                        <LinkIcon size={14} />
+                        <span>PO #{expense.purchaseOrderId}</span>
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.totalAmount?.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(expense.paymentStatus)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex gap-2">
@@ -523,6 +543,7 @@ const Expenses = () => {
                   className="ml-4 px-3 py-1 border border-gray-300 rounded-lg text-sm"
                 >
                   <option value="">{t('finance.expenses.recurringPeriod')}</option>
+                  <option value="DAILY">{t('finance.expenses.recurringPeriods.DAILY')}</option>
                   <option value="WEEKLY">{t('finance.expenses.recurringPeriods.WEEKLY')}</option>
                   <option value="MONTHLY">{t('finance.expenses.recurringPeriods.MONTHLY')}</option>
                   <option value="QUARTERLY">{t('finance.expenses.recurringPeriods.QUARTERLY')}</option>
@@ -534,13 +555,13 @@ const Expenses = () => {
             <div className="border-t pt-4 mb-4">
               <div className="text-right space-y-2">
                 <div className="text-lg">
-                  <span className="font-medium">{t('finance.expenses.amount')}:</span> ${(parseFloat(formData.amount) || 0).toFixed(2)}
+                  <span className="font-medium">{t('finance.expenses.amount')}:</span> {(parseFloat(formData.amount) || 0).toFixed(2)}
                 </div>
                 <div className="text-lg">
-                  <span className="font-medium">{t('finance.expenses.taxAmount')}:</span> ${(parseFloat(formData.taxAmount) || 0).toFixed(2)}
+                  <span className="font-medium">{t('finance.expenses.taxAmount')}:</span> {(parseFloat(formData.taxAmount) || 0).toFixed(2)}
                 </div>
                 <div className="text-xl font-bold">
-                  <span>{t('finance.common.total')}:</span> ${((parseFloat(formData.amount) || 0) + (parseFloat(formData.taxAmount) || 0)).toFixed(2)}
+                  <span>{t('finance.common.total')}:</span> {((parseFloat(formData.amount) || 0) + (parseFloat(formData.taxAmount) || 0)).toFixed(2)}
                 </div>
               </div>
             </div>
@@ -581,7 +602,7 @@ const Expenses = () => {
               </div>
               <div className="border-t pt-2 mt-2">
                 <div className="text-sm text-gray-600">{t('finance.expenses.amountToPay')}</div>
-                <div className="text-2xl font-bold text-green-600">${selectedExpense.totalAmount?.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-green-600">{selectedExpense.totalAmount?.toFixed(2)}</div>
               </div>
             </div>
 

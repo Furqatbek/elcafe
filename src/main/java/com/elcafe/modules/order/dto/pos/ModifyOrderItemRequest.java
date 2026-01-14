@@ -25,9 +25,9 @@ public class ModifyOrderItemRequest {
 
     private BigDecimal price;
 
-    private String notes;
-
     private List<ModifierInfo> modifiers;
+
+    private String notes;
 
     @Data
     @Builder

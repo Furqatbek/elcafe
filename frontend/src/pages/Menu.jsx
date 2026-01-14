@@ -29,7 +29,7 @@ export default function Menu() {
   const { t } = useTranslation();
   const [menu, setMenu] = useState(null);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
+  const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('accordion'); // 'accordion' or 'grid'
 

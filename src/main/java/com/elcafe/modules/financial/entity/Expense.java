@@ -78,6 +78,9 @@ public class Expense {
     @Column(length = 100)
     private String referenceNumber; // Invoice number, receipt number, etc.
 
+    @Column
+    private Long purchaseOrderId; // Link to purchase order if expense is from PO
+
     @Column(length = 1000)
     private String notes;
 
@@ -113,6 +116,8 @@ public class Expense {
         RENT,
         UTILITIES,
         SUPPLIES,
+        INVENTORY,           // For purchase order / inventory costs
+        COST_OF_GOODS_SOLD,  // For COGS tracking
         MARKETING,
         INSURANCE,
         MAINTENANCE,
@@ -141,6 +146,7 @@ public class Expense {
     }
 
     public enum RecurringPeriod {
+        DAILY,
         WEEKLY,
         MONTHLY,
         QUARTERLY,

@@ -167,9 +167,7 @@ export default function Operators() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
-      newErrors.email = t('operators.validation.emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = t('operators.validation.emailInvalid');
     }
 

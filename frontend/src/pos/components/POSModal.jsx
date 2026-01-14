@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { X } from 'lucide-react';
 import * as Dialog from '@radix-ui/react-dialog';
@@ -17,6 +18,7 @@ const POSModal = ({
   showCloseButton = true,
   className = '',
 }) => {
+  const { t } = useTranslation();
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (open) {
@@ -69,7 +71,7 @@ const POSModal = ({
                     'rounded-lg transition-colors active:scale-95',
                     'focus:outline-none focus:ring-4 focus:ring-gray-200'
                   )}
-                  aria-label="Close"
+                  aria-label={t('common.close', 'Close')}
                 >
                   <X className="w-6 h-6" />
                 </button>

@@ -54,11 +54,11 @@ public class AnalyticsController {
 
     @GetMapping("/financial/daily-revenue")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    @Operation(summary = "Get daily revenue", description = "Daily revenue breakdown with payment methods")
+    @Operation(summary = "Get daily revenue", description = "Daily revenue breakdown with payment methods. Uses restaurant's business hours for shift-aware date ranges.")
     public ResponseEntity<ApiResponse<List<DailyRevenueDTO>>> getDailyRevenue(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Long restaurantId
+            @RequestParam Long restaurantId
     ) {
         List<DailyRevenueDTO> revenue = financialAnalyticsService.getDailyRevenue(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Daily revenue retrieved successfully", revenue));
@@ -66,11 +66,11 @@ public class AnalyticsController {
 
     @GetMapping("/financial/sales-by-category")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    @Operation(summary = "Get sales per category", description = "Sales breakdown by product category")
+    @Operation(summary = "Get sales per category", description = "Sales breakdown by product category. Uses restaurant's business hours for shift-aware date ranges.")
     public ResponseEntity<ApiResponse<List<SalesPerCategoryDTO>>> getSalesPerCategory(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Long restaurantId
+            @RequestParam Long restaurantId
     ) {
         List<SalesPerCategoryDTO> sales = financialAnalyticsService.getSalesPerCategory(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Sales per category retrieved successfully", sales));
@@ -78,11 +78,11 @@ public class AnalyticsController {
 
     @GetMapping("/financial/cogs")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    @Operation(summary = "Get COGS analytics", description = "Cost of Goods Sold and food cost percentage")
+    @Operation(summary = "Get COGS analytics", description = "Cost of Goods Sold and food cost percentage. Uses restaurant's business hours for shift-aware date ranges.")
     public ResponseEntity<ApiResponse<COGSAnalyticsDTO>> getCOGSAnalytics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Long restaurantId
+            @RequestParam Long restaurantId
     ) {
         COGSAnalyticsDTO cogs = financialAnalyticsService.getCOGSAnalytics(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("COGS analytics retrieved successfully", cogs));
@@ -90,11 +90,11 @@ public class AnalyticsController {
 
     @GetMapping("/financial/profitability")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get profitability analytics", description = "Comprehensive profitability including labor costs")
+    @Operation(summary = "Get profitability analytics", description = "Comprehensive profitability including labor costs. Uses restaurant's business hours for shift-aware date ranges.")
     public ResponseEntity<ApiResponse<ProfitabilityAnalyticsDTO>> getProfitabilityAnalytics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Long restaurantId,
+            @RequestParam Long restaurantId,
             @RequestParam(required = false) BigDecimal laborCosts,
             @RequestParam(required = false) BigDecimal operatingExpenses
     ) {
@@ -105,11 +105,11 @@ public class AnalyticsController {
 
     @GetMapping("/financial/contribution-margins")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
-    @Operation(summary = "Get contribution margins", description = "Contribution margin per menu item")
+    @Operation(summary = "Get contribution margins", description = "Contribution margin per menu item. Uses restaurant's business hours for shift-aware date ranges.")
     public ResponseEntity<ApiResponse<List<ContributionMarginDTO>>> getContributionMargins(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Long restaurantId
+            @RequestParam Long restaurantId
     ) {
         List<ContributionMarginDTO> margins = financialAnalyticsService.getContributionMargins(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Contribution margins retrieved successfully", margins));

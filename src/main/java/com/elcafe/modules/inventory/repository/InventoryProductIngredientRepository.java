@@ -17,8 +17,17 @@ public interface InventoryProductIngredientRepository extends JpaRepository<Prod
 
     Optional<ProductIngredient> findByProductIdAndIngredientId(Long productId, Long ingredientId);
 
-    @Query("SELECT pi FROM InventoryProductIngredient pi JOIN FETCH pi.ingredient WHERE pi.product.id = :productId")
+    @Query("SELECT pi FROM InventoryProductIngredient pi JOIN FETCH pi.product JOIN FETCH pi.ingredient WHERE pi.product.id = :productId")
     List<ProductIngredient> findByProductIdWithIngredients(Long productId);
+
+    @Query("SELECT pi FROM InventoryProductIngredient pi JOIN FETCH pi.product JOIN FETCH pi.ingredient WHERE pi.ingredient.id = :ingredientId")
+    List<ProductIngredient> findByIngredientIdWithProductAndIngredient(Long ingredientId);
+
+    @Query("SELECT pi FROM InventoryProductIngredient pi JOIN FETCH pi.product WHERE pi.ingredient.id = :ingredientId")
+    List<ProductIngredient> findByIngredientIdWithProduct(Long ingredientId);
+
+    @Query("SELECT pi FROM InventoryProductIngredient pi JOIN FETCH pi.product JOIN FETCH pi.ingredient WHERE pi.id = :id")
+    Optional<ProductIngredient> findByIdWithProductAndIngredient(Long id);
 
     void deleteByProductId(Long productId);
 

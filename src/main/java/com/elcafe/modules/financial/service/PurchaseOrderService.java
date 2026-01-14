@@ -7,8 +7,14 @@ import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.repository.PurchaseOrderItemRepository;
 import com.elcafe.modules.financial.repository.PurchaseOrderRepository;
 import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.entity.InventoryBatch;
+import com.elcafe.modules.inventory.enums.CostChangeReason;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
+import com.elcafe.modules.inventory.service.CostHistoryService;
+import com.elcafe.modules.inventory.service.InventoryBatchService;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.inventory.service.InventoryValuationService;
+import com.elcafe.modules.inventory.dto.BatchRequest;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +40,10 @@ public class PurchaseOrderService {
     private final AccountRepository accountRepository;
     private final JournalService journalService;
     private final InventoryService inventoryService;
+    private final ExpenseService expenseService;
+    private final InventoryBatchService batchService;
+    private final CostHistoryService costHistoryService;
+    private final InventoryValuationService valuationService;
 
     @Transactional
     public PurchaseOrder createPurchaseOrder(PurchaseOrder purchaseOrder, List<PurchaseOrderItem> items) {
@@ -42,7 +52,7 @@ public class PurchaseOrderService {
         // Generate PO number
         String poNumber = generatePoNumber(purchaseOrder.getRestaurant().getId());
         purchaseOrder.setPoNumber(poNumber);
-        purchaseOrder.setStatus(PurchaseOrder.Status.DRAFT);
+        purchaseOrder.setStatus(PurchaseOrder.Status.APPROVED);  // Created as approved
         purchaseOrder.setPaymentStatus(PurchaseOrder.PaymentStatus.UNPAID);
 
         PurchaseOrder savedPo = purchaseOrderRepository.save(purchaseOrder);
@@ -111,12 +121,50 @@ public class PurchaseOrderService {
 
             // Add to inventory if linked to an ingredient
             if (item.getIngredient() != null) {
-                inventoryService.addStock(
-                        item.getIngredient().getId(),
-                        receivedItem.getReceivedQuantity(),
-                        "PO Receipt: " + po.getPoNumber(),
-                        receivedBy
-                );
+                Ingredient ingredient = item.getIngredient();
+                BigDecimal quantity = receivedItem.getReceivedQuantity();
+                BigDecimal unitPrice = item.getUnitPrice();
+
+                // Create a batch with cost tracking
+                try {
+                    BatchRequest batchRequest = new BatchRequest();
+                    batchRequest.setIngredientId(ingredient.getId());
+                    batchRequest.setQuantity(quantity);
+                    batchRequest.setReceivedDate(actualDeliveryDate);
+                    batchRequest.setCostPerUnit(unitPrice);
+                    batchRequest.setPoReference(po.getPoNumber());
+                    batchRequest.setNotes("Auto-created from PO: " + po.getPoNumber());
+
+                    InventoryBatch batch = batchService.createBatch(batchRequest);
+
+                    // Update weighted average cost
+                    ingredient.updateWeightedAverageCost(quantity, unitPrice);
+                    ingredientRepository.save(ingredient);
+
+                    // Record cost history if cost changed significantly
+                    if (unitPrice != null && ingredient.getCostPerUnit() != null &&
+                        unitPrice.compareTo(ingredient.getCostPerUnit()) != 0) {
+                        costHistoryService.recordCostChangeFromPurchase(
+                                ingredient.getId(), unitPrice, batch, po.getId(), receivedBy);
+                    }
+
+                    // Recalculate WAC from all active batches
+                    valuationService.recalculateWAC(ingredient.getId());
+
+                    log.info("Created batch {} with cost {} for ingredient {}",
+                            batch.getBatchNumber(), unitPrice, ingredient.getName());
+
+                } catch (Exception e) {
+                    log.warn("Failed to create batch for PO item, falling back to simple stock add: {}",
+                            e.getMessage());
+                    // Fallback to simple stock add
+                    inventoryService.addStock(
+                            ingredient.getId(),
+                            quantity,
+                            "PO Receipt: " + po.getPoNumber(),
+                            receivedBy
+                    );
+                }
             }
 
             // Check if fully received
@@ -132,6 +180,22 @@ public class PurchaseOrderService {
         // Create journal entry for inventory and accounts payable
         if (fullyReceived) {
             createPurchaseJournalEntry(savedPo, receivedBy);
+
+            // Create expense record for the purchase order
+            try {
+                expenseService.createExpenseFromPurchaseOrder(
+                        savedPo.getRestaurant(),
+                        savedPo.getId(),
+                        savedPo.getPoNumber(),
+                        savedPo.getSupplierName(),
+                        savedPo.getSubtotal(),
+                        savedPo.getTaxAmount(),
+                        actualDeliveryDate,
+                        receivedBy
+                );
+            } catch (Exception e) {
+                log.warn("Failed to create expense for PO {}: {}", savedPo.getPoNumber(), e.getMessage());
+            }
         }
 
         log.info("Purchase order received: {}", po.getPoNumber());
@@ -161,12 +225,21 @@ public class PurchaseOrderService {
         // Create journal entry for payment
         createPaymentJournalEntry(savedPo, amount, paymentMethod, paymentDate, recordedBy);
 
+        // Update linked expense payment status when PO is fully paid
+        if (savedPo.getPaymentStatus() == PurchaseOrder.PaymentStatus.PAID) {
+            try {
+                expenseService.updateExpensePaymentByPurchaseOrderId(savedPo.getId(), paymentDate, recordedBy);
+            } catch (Exception e) {
+                log.warn("Failed to update expense payment for PO {}: {}", savedPo.getPoNumber(), e.getMessage());
+            }
+        }
+
         log.info("Payment recorded for PO: {}, amount: {}", po.getPoNumber(), amount);
         return savedPo;
     }
 
     public List<PurchaseOrder> getPurchaseOrdersByRestaurant(Long restaurantId) {
-        return purchaseOrderRepository.findByRestaurantId(restaurantId);
+        return purchaseOrderRepository.findByRestaurant_Id(restaurantId);
     }
 
     public PurchaseOrder getPurchaseOrderById(Long id) {
@@ -181,11 +254,11 @@ public class PurchaseOrderService {
     private void createPurchaseJournalEntry(PurchaseOrder po, String recordedBy) {
         try {
             // Debit: Inventory, Credit: Accounts Payable
-            Account inventoryAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account inventoryAccount = accountRepository.findByRestaurant_IdAndCategory(
                     po.getRestaurant().getId(), Account.AccountCategory.INVENTORY
             ).stream().findFirst().orElse(null);
 
-            Account apAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account apAccount = accountRepository.findByRestaurant_IdAndCategory(
                     po.getRestaurant().getId(), Account.AccountCategory.ACCOUNTS_PAYABLE
             ).stream().findFirst().orElse(null);
 
@@ -212,7 +285,7 @@ public class PurchaseOrderService {
                                           String recordedBy) {
         try {
             // Debit: Accounts Payable, Credit: Cash/Bank
-            Account apAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account apAccount = accountRepository.findByRestaurant_IdAndCategory(
                     po.getRestaurant().getId(), Account.AccountCategory.ACCOUNTS_PAYABLE
             ).stream().findFirst().orElse(null);
 
@@ -220,7 +293,7 @@ public class PurchaseOrderService {
                     ? Account.AccountCategory.CASH
                     : Account.AccountCategory.BANK;
 
-            Account paymentAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account paymentAccount = accountRepository.findByRestaurant_IdAndCategory(
                     po.getRestaurant().getId(), paymentCategory
             ).stream().findFirst().orElse(null);
 
@@ -244,7 +317,7 @@ public class PurchaseOrderService {
 
     private String generatePoNumber(Long restaurantId) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        long count = purchaseOrderRepository.findByRestaurantId(restaurantId).stream()
+        long count = purchaseOrderRepository.findByRestaurant_Id(restaurantId).stream()
                 .filter(po -> po.getPoNumber().startsWith("PO-" + datePrefix))
                 .count();
         return String.format("PO-%s-%04d", datePrefix, count + 1);

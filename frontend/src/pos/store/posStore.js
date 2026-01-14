@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { posAPI, tablesAPI, promotionAPI } from '../../services/api';
+import { posAPI, tablesAPI } from '../../services/api';
 
 /**
  * POS Store - Centralized state management for POS operations
@@ -20,12 +20,6 @@ const usePOSStore = create(
         deliveryFee: 0,
         serviceFeePercent: 0,
         serviceFee: 0,
-        entryFee: 0,
-        discount: 0,
-        couponCode: null,
-        promotionId: null,
-        discountType: null, // 'COUPON' | 'MANUAL'
-        discountReason: null,
         total: 0,
         notes: '',
       },
@@ -161,9 +155,7 @@ const usePOSStore = create(
         const deliveryFee = state.currentOrder.deliveryFee;
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const entryFee = state.currentOrder.entryFee || 0;
-        const discount = state.currentOrder.discount || 0;
-        const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
+        const total = subtotal + tax + deliveryFee + serviceFee;
 
         return {
           currentOrder: {
@@ -172,7 +164,6 @@ const usePOSStore = create(
             subtotal,
             tax,
             serviceFee,
-            entryFee,
             total,
           },
         };
@@ -196,9 +187,7 @@ const usePOSStore = create(
         const deliveryFee = state.currentOrder.deliveryFee;
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const entryFee = state.currentOrder.entryFee || 0;
-        const discount = state.currentOrder.discount || 0;
-        const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
+        const total = subtotal + tax + deliveryFee + serviceFee;
 
         return {
           currentOrder: {
@@ -207,7 +196,6 @@ const usePOSStore = create(
             subtotal,
             tax,
             serviceFee,
-            entryFee,
             total,
           },
         };
@@ -220,9 +208,7 @@ const usePOSStore = create(
         const deliveryFee = state.currentOrder.deliveryFee;
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const entryFee = state.currentOrder.entryFee || 0;
-        const discount = state.currentOrder.discount || 0;
-        const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
+        const total = subtotal + tax + deliveryFee + serviceFee;
 
         return {
           currentOrder: {
@@ -231,7 +217,6 @@ const usePOSStore = create(
             subtotal,
             tax,
             serviceFee,
-            entryFee,
             total,
           },
         };
@@ -252,12 +237,6 @@ const usePOSStore = create(
           tax: 0,
           serviceFeePercent: 0,
           serviceFee: 0,
-          entryFee: 0,
-          discount: 0,
-          couponCode: null,
-          promotionId: null,
-          discountType: null,
-          discountReason: null,
           total: state.currentOrder.deliveryFee,
         },
       })),
@@ -266,117 +245,12 @@ const usePOSStore = create(
       setServiceFee: (serviceFeePercent) => set((state) => {
         const subtotal = state.currentOrder.subtotal;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const entryFee = state.currentOrder.entryFee || 0;
-        const discount = state.currentOrder.discount || 0;
-        const total = Math.max(0, subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee - discount);
+        const total = subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee;
         return {
           currentOrder: {
             ...state.currentOrder,
             serviceFeePercent,
             serviceFee,
-            total,
-          },
-        };
-      }),
-
-      // Actions: Entry Fee
-      setEntryFee: (entryFee) => set((state) => {
-        const subtotal = state.currentOrder.subtotal;
-        const serviceFee = state.currentOrder.serviceFee || 0;
-        const discount = state.currentOrder.discount || 0;
-        const total = Math.max(0, subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee - discount);
-        return {
-          currentOrder: {
-            ...state.currentOrder,
-            entryFee,
-            total,
-          },
-        };
-      }),
-
-      // Actions: Coupon/Discount Management
-      applyCoupon: async (couponCode, restaurantId) => {
-        const state = get();
-        const { items, subtotal, type } = state.currentOrder;
-
-        try {
-          // Build validation request
-          const validateRequest = {
-            code: couponCode,
-            restaurantId,
-            customerId: state.customer?.id || null,
-            orderSubtotal: subtotal,
-            orderType: type,
-            items: items.map(item => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.basePrice,
-            })),
-          };
-
-          // Call API to validate coupon
-          const response = await promotionAPI.validateCoupon(validateRequest);
-          const result = response.data.data || response.data;
-
-          if (!result.valid) {
-            throw new Error(result.errorMessage || 'Invalid coupon');
-          }
-
-          // Apply discount
-          const discount = result.calculatedDiscount || 0;
-          const tax = state.currentOrder.tax;
-          const deliveryFee = state.currentOrder.deliveryFee;
-          const serviceFee = state.currentOrder.serviceFee || 0;
-          const entryFee = state.currentOrder.entryFee || 0;
-          const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
-
-          set({
-            currentOrder: {
-              ...state.currentOrder,
-              discount,
-              couponCode: result.code,
-              promotionId: result.promotionId,
-              discountType: 'COUPON',
-              total,
-            },
-          });
-
-          return result;
-        } catch (error) {
-          throw error;
-        }
-      },
-
-      setManualDiscount: (discountAmount, reason = '') => set((state) => {
-        const discount = Math.max(0, discountAmount);
-        const { subtotal, tax, deliveryFee, serviceFee = 0, entryFee = 0 } = state.currentOrder;
-        const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
-
-        return {
-          currentOrder: {
-            ...state.currentOrder,
-            discount,
-            couponCode: null,
-            promotionId: null,
-            discountType: discount > 0 ? 'MANUAL' : null,
-            discountReason: reason,
-            total,
-          },
-        };
-      }),
-
-      removeDiscount: () => set((state) => {
-        const { subtotal, tax, deliveryFee, serviceFee = 0, entryFee = 0 } = state.currentOrder;
-        const total = subtotal + tax + deliveryFee + serviceFee + entryFee;
-
-        return {
-          currentOrder: {
-            ...state.currentOrder,
-            discount: 0,
-            couponCode: null,
-            promotionId: null,
-            discountType: null,
-            discountReason: null,
             total,
           },
         };
@@ -611,7 +485,6 @@ const usePOSStore = create(
                 deliveryFee: 0,
                 serviceFeePercent: existingOrder.serviceFeePercent || 0,
                 serviceFee: existingOrder.serviceFee || 0,
-                entryFee: existingOrder.entryFee || 0,
                 total: existingOrder.total || 0,
                 notes: existingOrder.orderNotes || '',
               },
@@ -815,6 +688,8 @@ const usePOSStore = create(
             subtotal: state.currentOrder.subtotal,
             tax: state.currentOrder.tax,
             deliveryFee: state.currentOrder.deliveryFee,
+            serviceFeePercent: state.currentOrder.serviceFeePercent || 0,
+            serviceFee: state.currentOrder.serviceFee || 0,
             total: state.currentOrder.total,
             amountTendered: state.payment.amountTendered || null,
             changeDue: state.payment.changeDue || null,
@@ -868,7 +743,6 @@ const usePOSStore = create(
             deliveryFee: 0,
             serviceFeePercent: 0,
             serviceFee: 0,
-            entryFee: 0,
             total: 0,
             notes: '',
           },
@@ -932,7 +806,6 @@ const usePOSStore = create(
             deliveryFee: 0,
             serviceFeePercent: 0,
             serviceFee: 0,
-            entryFee: 0,
             total: 0,
             notes: '',
           },

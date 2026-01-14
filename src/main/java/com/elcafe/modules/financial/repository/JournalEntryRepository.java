@@ -14,18 +14,20 @@ import java.util.Optional;
 @Repository
 public interface JournalEntryRepository extends JpaRepository<JournalEntry, Long> {
 
-    List<JournalEntry> findByRestaurantId(Long restaurantId);
+    List<JournalEntry> findByRestaurant_Id(Long restaurantId);
 
-    Page<JournalEntry> findByRestaurantId(Long restaurantId, Pageable pageable);
+    Page<JournalEntry> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
     Optional<JournalEntry> findByEntryNumber(String entryNumber);
 
-    List<JournalEntry> findByRestaurantIdAndStatus(Long restaurantId, JournalEntry.Status status);
+    List<JournalEntry> findByRestaurant_IdAndStatus(Long restaurantId, JournalEntry.Status status);
 
-    List<JournalEntry> findByRestaurantIdAndEntryDateBetween(
+    List<JournalEntry> findByRestaurant_IdAndEntryDateBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
     List<JournalEntry> findByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
+
+    boolean existsByReferenceTypeAndReferenceId(String referenceType, Long referenceId);
 
     @Query("SELECT je FROM FinancialJournalEntry je WHERE je.restaurant.id = :restaurantId " +
            "AND je.balanced = false AND je.status = 'DRAFT'")

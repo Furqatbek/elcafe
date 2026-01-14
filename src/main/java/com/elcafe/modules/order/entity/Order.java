@@ -10,6 +10,7 @@ import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.waiter.entity.Waiter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,7 +35,11 @@ import java.util.List;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @NamedEntityGraph(
     name = "Order.withItems",
-    attributeNodes = @NamedAttributeNode("items")
+    attributeNodes = {
+        @NamedAttributeNode("items"),
+        @NamedAttributeNode("diningTable"),
+        @NamedAttributeNode("waiter")
+    }
 )
 public class Order {
 
@@ -57,12 +62,20 @@ public class Order {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dining_table_id")
-    @JsonIgnore
+    @JsonIgnoreProperties({"orders", "restaurant", "waiterTables", "hibernateLazyInitializer", "handler"})
     private RestaurantTable diningTable;
+
+    // For multi-table orders: comma-separated table IDs (e.g., "1,2,3")
+    @Column(name = "table_ids", length = 255)
+    private String tableIds;
+
+    // Guest count for dine-in orders
+    @Column(name = "guest_count")
+    private Integer guestCount;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "waiter_id")
-    @JsonIgnore
+    @JsonIgnoreProperties({"waiterTables", "permissions", "hibernateLazyInitializer", "handler"})
     private Waiter waiter;
 
     @Enumerated(EnumType.STRING)
@@ -94,48 +107,31 @@ public class Order {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal discount;
 
-    @Column(name = "promotion_id")
-    private Long promotionId;
-
-    @Column(name = "happy_hour_id")
-    private Long happyHourId;
-
-    @Column(name = "coupon_code", length = 50)
-    private String couponCode;
-
-    @Column(name = "discount_type", length = 50)
-    private String discountType;
-
-    @Column(name = "discount_reason", length = 500)
-    private String discountReason;
-
     @Column(name = "bonus_used", precision = 10, scale = 2)
     @Builder.Default
     private BigDecimal bonusUsed = BigDecimal.ZERO;
 
+    @Column(name = "service_fee_percent", precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal serviceFeePercent = BigDecimal.ZERO;
+
+    @Column(name = "service_fee", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal serviceFee = BigDecimal.ZERO;
+
+    @Column(name = "entry_fee", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal entryFee = BigDecimal.ZERO;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
-    @Column(name = "service_fee_percent", precision = 5, scale = 2)
-    private BigDecimal serviceFeePercent;
-
-    @Column(name = "service_fee", precision = 10, scale = 2)
-    private BigDecimal serviceFee;
-
-    @Column(name = "entry_fee", precision = 10, scale = 2)
-    private BigDecimal entryFee;
-
     @Column(name = "tip_amount", precision = 10, scale = 2)
-    private BigDecimal tipAmount;
+    @Builder.Default
+    private BigDecimal tipAmount = BigDecimal.ZERO;
 
     @Column(name = "grand_total", precision = 10, scale = 2)
     private BigDecimal grandTotal;
-
-    @Column(name = "guest_count")
-    private Integer guestCount;
-
-    @Column(name = "table_ids", length = 255)
-    private String tableIds;
 
     @Column(length = 1000)
     private String customerNotes;
@@ -186,9 +182,10 @@ public class Order {
     @JsonIgnore
     private DeliveryInfo deliveryInfo;
 
-    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     @JsonIgnore
-    private Payment payment;
+    private List<Payment> payments = new ArrayList<>();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -220,11 +217,82 @@ public class Order {
         }
     }
 
-    public void setPayment(Payment payment) {
-        this.payment = payment;
-        if (payment != null) {
-            payment.setOrder(this);
+    public void addPayment(Payment payment) {
+        payments.add(payment);
+        payment.setOrder(this);
+    }
+
+    /**
+     * Get the primary payment (first payment) - backward compatibility
+     */
+    public Payment getPayment() {
+        if (payments == null || payments.isEmpty()) {
+            return null;
         }
+        return payments.get(0);
+    }
+
+    /**
+     * Set a single payment - backward compatibility for single payment flow
+     */
+    public void setPayment(Payment payment) {
+        if (payment == null) {
+            return;
+        }
+        // Clear existing payments and add the new one
+        if (this.payments == null) {
+            this.payments = new ArrayList<>();
+        }
+        // For backward compatibility, if setting a single payment, replace the first one
+        if (!this.payments.isEmpty()) {
+            this.payments.set(0, payment);
+        } else {
+            this.payments.add(payment);
+        }
+        payment.setOrder(this);
+    }
+
+    /**
+     * Get total amount paid across all completed payments
+     */
+    public BigDecimal getTotalPaid() {
+        return payments.stream()
+                .filter(p -> p.getStatus() == PaymentStatus.COMPLETED)
+                .map(Payment::getNetAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * Get the effective grand total amount.
+     * Falls back to total if grandTotal is null or zero.
+     */
+    private BigDecimal getEffectiveGrandTotal() {
+        if (grandTotal != null && grandTotal.compareTo(BigDecimal.ZERO) > 0) {
+            return grandTotal;
+        }
+        return total != null ? total : BigDecimal.ZERO;
+    }
+
+    /**
+     * Get remaining balance to be paid
+     */
+    public BigDecimal getRemainingBalance() {
+        return getEffectiveGrandTotal().subtract(getTotalPaid());
+    }
+
+    /**
+     * Check if order is fully paid
+     * An order with total = 0 is NOT considered fully paid (no items to pay for)
+     * Exposed as 'fullyPaid' in JSON for frontend use
+     */
+    @JsonProperty("fullyPaid")
+    public boolean isFullyPaid() {
+        BigDecimal effectiveTotal = getEffectiveGrandTotal();
+        // Order must have a positive total to be considered "fully paid"
+        if (effectiveTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return false;
+        }
+        return getRemainingBalance().compareTo(BigDecimal.ZERO) <= 0;
     }
 
     /**
@@ -237,7 +305,15 @@ public class Order {
         if (deliveryFee == null) deliveryFee = BigDecimal.ZERO;
         if (tax == null) tax = BigDecimal.ZERO;
         if (discount == null) discount = BigDecimal.ZERO;
+        if (serviceFeePercent == null) serviceFeePercent = BigDecimal.ZERO;
+        if (serviceFee == null) serviceFee = BigDecimal.ZERO;
+        if (entryFee == null) entryFee = BigDecimal.ZERO;
         if (total == null) total = BigDecimal.ZERO;
         if (bonusUsed == null) bonusUsed = BigDecimal.ZERO;
+        if (tipAmount == null) tipAmount = BigDecimal.ZERO;
+        // Grand total = total + tip (recalculate if null or zero)
+        if (grandTotal == null || grandTotal.compareTo(BigDecimal.ZERO) == 0) {
+            grandTotal = total.add(tipAmount != null ? tipAmount : BigDecimal.ZERO);
+        }
     }
 }

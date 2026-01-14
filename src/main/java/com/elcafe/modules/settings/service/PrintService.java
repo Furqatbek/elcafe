@@ -36,7 +36,7 @@ public class PrintService {
             log.info("Printing kitchen order: {}", order.getOrderNumber());
 
             Optional<PrinterSettings> printerSettings = printerSettingsRepository
-                    .findByRestaurantIdAndPrinterTypeAndEnabled(
+                    .findByRestaurant_IdAndPrinterTypeAndEnabled(
                             order.getRestaurant().getId(),
                             PrinterSettings.PrinterType.KITCHEN,
                             true
@@ -165,9 +165,11 @@ public class PrintService {
             escpos.writeLF(normalStyle, "Turi: " + order.getOrderType().toString().replace("_", " "));
         }
 
-        if (order.getDiningTable() != null) {
-            escpos.writeLF(headerStyle, "STOL: " + order.getDiningTable().getTableNumber());
-            if (order.getDiningTable().getSection() != null) {
+        // Print table information - check both diningTable and tableIds
+        String tableInfo = getTableNumberFromOrder(order);
+        if (tableInfo != null && !tableInfo.isEmpty()) {
+            escpos.writeLF(headerStyle, "STOL: " + tableInfo);
+            if (order.getDiningTable() != null && order.getDiningTable().getSection() != null) {
                 escpos.writeLF(normalStyle, "Bo'lim: " + order.getDiningTable().getSection());
             }
         }
@@ -266,9 +268,11 @@ public class PrintService {
         if (order.getOrderType() != null) {
             html.append("<div>Turi: ").append(order.getOrderType().toString().replace("_", " ")).append("</div>");
         }
-        if (order.getDiningTable() != null) {
+        // Print table information - check both diningTable and tableIds
+        String tableInfo = getTableNumberFromOrder(order);
+        if (tableInfo != null && !tableInfo.isEmpty()) {
             html.append("<div style='font-size: 20px; font-weight: bold; margin-top: 5px;'>STOL: ")
-                    .append(order.getDiningTable().getTableNumber()).append("</div>");
+                    .append(tableInfo).append("</div>");
         }
         html.append("</div>");
 
@@ -315,6 +319,22 @@ public class PrintService {
         html.append("</html>");
 
         return html.toString();
+    }
+
+    /**
+     * Get table number from order
+     * Handles both diningTable and tableIds for multi-table orders
+     */
+    private String getTableNumberFromOrder(Order order) {
+        // First, try to get from diningTable (single table)
+        if (order.getDiningTable() != null && order.getDiningTable().getTableNumber() != null) {
+            return order.getDiningTable().getTableNumber();
+        }
+        // Fallback to tableIds (multi-table orders, comma-separated)
+        if (order.getTableIds() != null && !order.getTableIds().isEmpty()) {
+            return order.getTableIds();
+        }
+        return null;
     }
 
     /**

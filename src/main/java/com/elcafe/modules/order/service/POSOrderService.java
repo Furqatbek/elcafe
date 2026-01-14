@@ -28,18 +28,8 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
-import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
-import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
-import com.elcafe.modules.promotion.entity.CouponCode;
-import com.elcafe.modules.promotion.entity.Promotion;
-import com.elcafe.modules.promotion.entity.PromotionUsage;
-import com.elcafe.modules.promotion.repository.CouponCodeRepository;
-import com.elcafe.modules.promotion.repository.PromotionUsageRepository;
-import com.elcafe.modules.promotion.service.CouponValidationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,18 +54,6 @@ public class POSOrderService {
     private final KitchenOrderRepository kitchenOrderRepository;
     private final RestaurantTableRepository restaurantTableRepository;
     private final DailyOrderSequenceService dailyOrderSequenceService;
-
-    @Autowired
-    @Lazy
-    private CouponValidationService couponValidationService;
-
-    @Autowired
-    @Lazy
-    private CouponCodeRepository couponCodeRepository;
-
-    @Autowired
-    @Lazy
-    private PromotionUsageRepository promotionUsageRepository;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -103,18 +81,8 @@ public class POSOrderService {
         order.setDeliveryFee(request.getDeliveryFee() != null ? request.getDeliveryFee() : BigDecimal.ZERO);
         order.setServiceFeePercent(request.getServiceFeePercent() != null ? request.getServiceFeePercent() : BigDecimal.ZERO);
         order.setServiceFee(request.getServiceFee() != null ? request.getServiceFee() : BigDecimal.ZERO);
-
-        // Handle discount (coupon or manual)
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
-            discountAmount = applyCouponToOrder(order, request, customer);
-        } else if (request.getDiscount() != null && request.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
-            // Manual discount
-            discountAmount = request.getDiscount();
-            order.setDiscountType("MANUAL");
-            order.setDiscountReason(request.getDiscountReason());
-        }
-        order.setDiscount(discountAmount);
+        order.setEntryFee(request.getEntryFee() != null ? request.getEntryFee() : BigDecimal.ZERO);
+        order.setDiscount(BigDecimal.ZERO); // Discount applied separately if needed
         order.setTotal(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO);
 
         // Add order items
@@ -215,9 +183,6 @@ public class POSOrderService {
         } catch (Exception e) {
             log.error("Failed to send notifications for order {}", savedOrder.getOrderNumber(), e);
         }
-
-        // Record coupon usage if applicable
-        recordCouponUsage(savedOrder);
 
         return mapToResponse(savedOrder, request.getOrderType().name());
     }
@@ -379,11 +344,6 @@ public class POSOrderService {
                 .serviceFeePercent(order.getServiceFeePercent())
                 .serviceFee(order.getServiceFee())
                 .entryFee(order.getEntryFee())
-                .discount(order.getDiscount())
-                .couponCode(order.getCouponCode())
-                .promotionId(order.getPromotionId())
-                .discountType(order.getDiscountType())
-                .discountReason(order.getDiscountReason())
                 .total(order.getTotal())
                 .orderNotes(order.getCustomerNotes())
                 .createdAt(order.getCreatedAt())
@@ -725,165 +685,7 @@ public class POSOrderService {
         // Keep existing delivery fee and entry fee
         BigDecimal serviceFee = order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO;
         BigDecimal entryFee = order.getEntryFee() != null ? order.getEntryFee() : BigDecimal.ZERO;
-        BigDecimal discount = order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO;
-        order.setTotal(subtotal.add(order.getTax()).add(order.getDeliveryFee()).add(serviceFee).add(entryFee).subtract(discount));
-    }
-
-    // ==================== COUPON/DISCOUNT METHODS ====================
-
-    /**
-     * Apply a coupon code to an order during creation
-     */
-    private BigDecimal applyCouponToOrder(Order order, CreatePOSOrderRequest request, Customer customer) {
-        String couponCode = request.getCouponCode();
-        log.info("Applying coupon {} to order", couponCode);
-
-        // Build validation request
-        ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
-                .code(couponCode)
-                .restaurantId(request.getRestaurantId())
-                .customerId(customer != null ? customer.getId() : null)
-                .orderSubtotal(request.getSubtotal())
-                .orderType(request.getOrderType().name())
-                .items(request.getItems().stream()
-                        .map(item -> ValidateCouponRequest.OrderItemInfo.builder()
-                                .productId(item.getProductId())
-                                .quantity(item.getQuantity())
-                                .price(item.getPrice())
-                                .build())
-                        .collect(Collectors.toList()))
-                .build();
-
-        // Validate coupon
-        ValidateCouponResponse response = couponValidationService.validateCoupon(validateRequest);
-        if (!response.getValid()) {
-            throw new IllegalArgumentException("Invalid coupon: " + response.getErrorMessage());
-        }
-
-        // Set coupon info on order
-        order.setCouponCode(couponCode);
-        order.setPromotionId(response.getPromotionId());
-        order.setDiscountType("COUPON");
-
-        log.info("Coupon {} applied, discount: {}", couponCode, response.getCalculatedDiscount());
-        return response.getCalculatedDiscount();
-    }
-
-    /**
-     * Record promotion usage after order is saved (call this after order save)
-     */
-    private void recordCouponUsage(Order savedOrder) {
-        if (savedOrder.getCouponCode() == null || savedOrder.getCouponCode().isBlank()) {
-            return;
-        }
-
-        try {
-            CouponCode coupon = couponCodeRepository.findByCodeIgnoreCase(savedOrder.getCouponCode())
-                    .orElse(null);
-            if (coupon == null) {
-                log.warn("Coupon code {} not found for recording usage", savedOrder.getCouponCode());
-                return;
-            }
-
-            // Record usage
-            PromotionUsage usage = PromotionUsage.builder()
-                    .promotion(coupon.getPromotion())
-                    .couponCode(coupon)
-                    .customer(savedOrder.getCustomer())
-                    .order(savedOrder)
-                    .discountAmount(savedOrder.getDiscount())
-                    .usedAt(LocalDateTime.now())
-                    .build();
-            promotionUsageRepository.save(usage);
-
-            // Increment coupon usage count
-            coupon.incrementUsage();
-            couponCodeRepository.save(coupon);
-
-            log.info("Recorded usage for coupon {} on order {}", coupon.getCode(), savedOrder.getOrderNumber());
-        } catch (Exception e) {
-            log.error("Failed to record coupon usage for order {}: {}", savedOrder.getOrderNumber(), e.getMessage());
-            // Don't fail the order if usage recording fails
-        }
-    }
-
-    /**
-     * Apply coupon to an existing order
-     */
-    @Transactional
-    public POSOrderResponse applyCouponToExistingOrder(Long orderId, String couponCode) {
-        log.info("Applying coupon {} to existing order {}", couponCode, orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
-
-        // Build validation request
-        ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
-                .code(couponCode)
-                .restaurantId(order.getRestaurant().getId())
-                .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
-                .orderSubtotal(order.getSubtotal())
-                .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
-                .items(order.getItems().stream()
-                        .map(item -> ValidateCouponRequest.OrderItemInfo.builder()
-                                .productId(item.getProductId())
-                                .quantity(item.getQuantity())
-                                .price(item.getUnitPrice())
-                                .build())
-                        .collect(Collectors.toList()))
-                .build();
-
-        // Validate coupon
-        ValidateCouponResponse response = couponValidationService.validateCoupon(validateRequest);
-        if (!response.getValid()) {
-            throw new IllegalArgumentException("Invalid coupon: " + response.getErrorMessage());
-        }
-
-        // Apply discount
-        order.setCouponCode(couponCode);
-        order.setPromotionId(response.getPromotionId());
-        order.setDiscountType("COUPON");
-        order.setDiscount(response.getCalculatedDiscount());
-
-        // Recalculate total
-        recalculateOrderTotals(order);
-
-        Order savedOrder = orderRepository.save(order);
-
-        // Record usage
-        recordCouponUsage(savedOrder);
-
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
-    }
-
-    /**
-     * Remove discount from an existing order
-     */
-    @Transactional
-    public POSOrderResponse removeDiscountFromOrder(Long orderId) {
-        log.info("Removing discount from order {}", orderId);
-
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
-
-        order.setCouponCode(null);
-        order.setPromotionId(null);
-        order.setDiscountType(null);
-        order.setDiscountReason(null);
-        order.setDiscount(BigDecimal.ZERO);
-
-        // Recalculate total
-        recalculateOrderTotals(order);
-
-        Order savedOrder = orderRepository.save(order);
-
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        order.setTotal(subtotal.add(order.getTax()).add(order.getDeliveryFee()).add(serviceFee).add(entryFee));
     }
 
     // ==================== SPLIT BILL METHODS ====================
@@ -1065,6 +867,56 @@ public class POSOrderService {
         return mapToResponse(savedOrder, orderType);
     }
 
+    /**
+     * Apply service fee to an order by fixed amount
+     */
+    @Transactional
+    public POSOrderResponse applyServiceFeeAmount(Long orderId, BigDecimal serviceFeeAmount) {
+        log.info("Applying service fee amount to order {}: amount={}", orderId, serviceFeeAmount);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Validate service fee amount
+        if (serviceFeeAmount == null || serviceFeeAmount.compareTo(BigDecimal.ZERO) < 0) {
+            serviceFeeAmount = BigDecimal.ZERO;
+        }
+
+        // Calculate percentage for display purposes
+        BigDecimal serviceFeePercent = BigDecimal.ZERO;
+        if (serviceFeeAmount.compareTo(BigDecimal.ZERO) > 0 && order.getSubtotal().compareTo(BigDecimal.ZERO) > 0) {
+            serviceFeePercent = serviceFeeAmount.multiply(BigDecimal.valueOf(100))
+                    .divide(order.getSubtotal(), 2, java.math.RoundingMode.HALF_UP);
+        }
+
+        // Set service fee amount and calculated percent
+        order.setServiceFee(serviceFeeAmount);
+        order.setServiceFeePercent(serviceFeePercent);
+
+        // Recalculate total (include entry fee if present)
+        BigDecimal entryFee = order.getEntryFee() != null ? order.getEntryFee() : BigDecimal.ZERO;
+        BigDecimal total = order.getSubtotal()
+                .add(order.getTax())
+                .add(order.getDeliveryFee())
+                .add(serviceFeeAmount)
+                .add(entryFee)
+                .subtract(order.getDiscount());
+        order.setTotal(total);
+
+        // Update grand total (total + tip)
+        BigDecimal tipAmount = order.getTipAmount() != null ? order.getTipAmount() : BigDecimal.ZERO;
+        order.setGrandTotal(total.add(tipAmount));
+
+        Order savedOrder = orderRepository.save(order);
+
+        log.info("Service fee amount applied to order {}: fee={}, newTotal={}", orderId, serviceFeeAmount, total);
+
+        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
+                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
+
     // ==================== ENTRY FEE METHODS ====================
 
     /**
@@ -1158,5 +1010,70 @@ public class POSOrderService {
                 (order.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
 
         return mapToResponse(savedOrder, orderType);
+    }
+
+    @Transactional
+    public POSOrderResponse changeTable(Long orderId, Long newTableId) {
+        log.info("Changing table for order {}: newTableId={}", orderId, newTableId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Validate order is a dine-in order and not closed
+        if (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("Cannot change table for a closed or cancelled order");
+        }
+
+        // Find the new table
+        RestaurantTable newTable = restaurantTableRepository.findById(newTableId)
+                .orElseThrow(() -> new IllegalArgumentException("Table not found with ID: " + newTableId));
+
+        // Check if new table is available or the same as current
+        Long currentTableId = order.getDiningTable() != null ? order.getDiningTable().getId() : null;
+        if (newTableId.equals(currentTableId)) {
+            // Same table, no change needed
+            return mapToResponse(order, "DINE_IN");
+        }
+
+        if (newTable.getStatus() == RestaurantTable.TableStatus.OCCUPIED) {
+            throw new IllegalArgumentException("Table " + newTable.getTableNumber() + " is already occupied");
+        }
+
+        // Release the current table(s)
+        if (order.getDiningTable() != null) {
+            RestaurantTable oldTable = order.getDiningTable();
+            oldTable.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+            restaurantTableRepository.save(oldTable);
+            log.info("Released old table {}", oldTable.getTableNumber());
+        }
+
+        // Release any additional tables from tableIds
+        if (order.getTableIds() != null && !order.getTableIds().isEmpty()) {
+            List<Long> tableIdList = java.util.Arrays.stream(order.getTableIds().split(","))
+                    .map(String::trim)
+                    .map(Long::parseLong)
+                    .collect(Collectors.toList());
+
+            for (Long tableId : tableIdList) {
+                if (!tableId.equals(newTableId)) {
+                    restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                        table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                        restaurantTableRepository.save(table);
+                        log.info("Released additional table {}", table.getTableNumber());
+                    });
+                }
+            }
+        }
+
+        // Assign new table
+        newTable.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+        restaurantTableRepository.save(newTable);
+        order.setDiningTable(newTable);
+        order.setTableIds(String.valueOf(newTableId));
+        log.info("Assigned new table {} to order {}", newTable.getTableNumber(), orderId);
+
+        Order savedOrder = orderRepository.save(order);
+
+        return mapToResponse(savedOrder, "DINE_IN");
     }
 }

@@ -99,7 +99,8 @@
       "bundles": "Комбо",
       "referrals": "Рефералы",
       "smsMarketing": "SMS Маркетинг",
-      "telegramMarketing": "Telegram"
+      "telegramMarketing": "Telegram",
+      "ordersHistory": "История заказов"
     }
   },
   "dashboard": {
@@ -155,7 +156,11 @@
       "avgDeliveryTime": "Среднее время доставки"
     },
     "recentOrders": "Последние заказы",
-    "recentActivity": "Последняя активность"
+    "recentActivity": "Последняя активность",
+    "yesterday": "Вчера",
+    "lastWeek": "Прошлая неделя",
+    "lastMonth": "Прошлый месяц",
+    "custom": "Произвольный период"
   },
   "analytics": {
     "financial": {
@@ -407,7 +412,6 @@
       "zipCode": "Индекс",
       "customerNotes": "Примечания клиента"
     },
-    "closeTable": "Закрыть стол",
     "processPayment": "Провести оплату",
     "processPaymentDesc": "Завершите оплату заказа",
     "selectPaymentMethod": "Способ оплаты",
@@ -456,7 +460,7 @@
     "paid": "Оплачено",
     "addItemToOrder": "Добавить позицию в заказ",
     "category": "Категория",
-    "allCategories": "Все категории",
+    "allCategories": "Все",
     "product": "Продукт",
     "selectProduct": "Выберите продукт",
     "quantity": "Количество",
@@ -473,14 +477,92 @@
     "paymentSuccess": "Оплата успешно проведена",
     "cancelError": "Не удалось отменить заказ",
     "addItemError": "Не удалось добавить позицию: ",
-    "capacity": "Вместимость"
+    "capacity": "Вместимость",
+    "orderTypes": {
+      "DINE_IN": "В зале",
+      "DELIVERY": "Доставка",
+      "TAKEAWAY": "С собой"
+    },
+    "mandatoryServiceFee": "Сервисный сбор (20%)",
+    "serviceFeeAutoApplied": "Применяется автоматически",
+    "djServices": "Услуги диджея",
+    "djServicesPerGuest": "10 000 × {{count}} гостей",
+    "editOrder": "Редактировать заказ",
+    "editOrderDesc": "Добавляйте, удаляйте или изменяйте позиции в этом заказе",
+    "currentItems": "Текущие позиции",
+    "noItems": "В этом заказе нет позиций",
+    "addNewItem": "Добавить новую позицию",
+    "confirmRemoveItem": "Вы уверены, что хотите удалить эту позицию?",
+    "updateItemError": "Не удалось изменить количество",
+    "removeItemError": "Не удалось удалить позицию",
+    "splitPayment": "Разделить счёт",
+    "splitEnabled": "Включено",
+    "splitDisabled": "Выключено",
+    "splitBetween": "Разделить между",
+    "people": "человек",
+    "person": "Гость",
+    "pending": "Ожидает",
+    "amount": "Сумма",
+    "tendered": "Внесено",
+    "payAmount": "Оплатить {{amount}}",
+    "paidWith": "Оплачено: {{method}}",
+    "splitProgress": "Прогресс",
+    "remaining": "Остаток",
+    "changeTable": "Сменить стол",
+    "changeTableDesc": "Переместить заказ на другой стол",
+    "selectNewTable": "Выберите новый стол",
+    "current": "Текущий",
+    "noAvailableTables": "Нет свободных столов",
+    "tableChanged": "Заказ успешно перемещён на новый стол",
+    "changeTableError": "Не удалось сменить стол: ",
+    "moveToTable": "Переместить"
   },
   "tables": {
+    "title": "Столы",
+    "createNew": "Добавить стол",
+    "editTable": "Редактировать стол",
+    "tableNumber": "Номер стола",
+    "tableName": "Название стола",
+    "capacity": "Вместимость",
+    "section": "Зона",
+    "notes": "Заметки",
+    "active": "Активен",
+    "searchPlaceholder": "Поиск по номеру, названию или зоне...",
+    "selectRestaurantFirst": "Пожалуйста, выберите ресторан для просмотра столов",
+    "noTables": "Столы не найдены",
+    "confirmDelete": "Вы уверены, что хотите удалить этот стол?",
+    "confirmUnmerge": "Вы уверены, что хотите разъединить эти столы?",
+    "merged": "Объединённый стол",
+    "originalCapacity": "Исходная",
+    "mergeTables": "Объединить столы",
+    "unmerge": "Разъединить",
+    "increased": "Увеличено",
     "status": {
-      "available": "Свободен",
-      "occupied": "Занят",
-      "reserved": "Зарезервирован",
-      "unavailable": "Недоступен"
+      "AVAILABLE": "Свободен",
+      "OCCUPIED": "Занят",
+      "RESERVED": "Забронирован",
+      "CLEANING": "Уборка",
+      "OUT_OF_SERVICE": "Не обслуживается"
+    },
+    "stats": {
+      "total": "Всего столов",
+      "available": "Свободно",
+      "occupied": "Занято",
+      "reserved": "Забронировано"
+    },
+    "messages": {
+      "fillRequiredFields": "Пожалуйста, заполните все обязательные поля",
+      "createSuccess": "Стол успешно создан",
+      "updateSuccess": "Стол успешно обновлён",
+      "saveError": "Не удалось сохранить стол",
+      "deleteSuccess": "Стол успешно удалён",
+      "deleteError": "Не удалось удалить стол",
+      "statusError": "Не удалось обновить статус стола",
+      "selectAtLeast2Tables": "Пожалуйста, выберите минимум 2 стола для объединения",
+      "mergeSuccess": "Столы успешно объединены",
+      "mergeError": "Не удалось объединить столы",
+      "unmergeSuccess": "Столы успешно разъединены",
+      "unmergeError": "Не удалось разъединить столы"
     }
   },
   "restaurants": {
@@ -746,7 +828,6 @@
     "cancelling": "Отмена...",
     "apply": "Применить",
     "remove": "Удалить",
-    "back": "Назад",
     "selectLanguage": "Выберите язык",
     "language": "Язык",
     "min": "Мин",
@@ -815,7 +896,13 @@
       "approve": "Утвердить",
       "recordPayment": "Записать платеж",
       "addStock": "Добавить запас",
-      "viewHistory": "Просмотр истории"
+      "viewHistory": "Просмотр истории",
+      "change": "Изменить",
+      "confirm": "Подтвердить",
+      "refresh": "Обновить",
+      "tryAgain": "Повторить",
+      "back": "Назад",
+      "adjustStock": "Скорректировать запас"
     },
     "labels": {
       "total": "Итого",
@@ -835,7 +922,22 @@
       "noAvailableTables": "Нет доступных столов",
       "confirmDelete": "Вы уверены, что хотите удалить \"{name}\"? Это действие не может быть отменено.",
       "confirmUnmerge": "Вы уверены, что хотите разъединить эти столы?"
-    }
+    },
+    "allCategories": "Все категории",
+    "approving": "Утверждение...",
+    "moving": "Перемещение...",
+    "dateRange": "Период",
+    "startDate": "Дата начала",
+    "endDate": "Дата окончания",
+    "margin": "Маржа",
+    "cash": "Наличные",
+    "card": "Карта",
+    "online": "Онлайн",
+    "category": "Категория",
+    "product": "Продукт",
+    "date": "Дата",
+    "activeOrderInProgress": "Есть незавершённый заказ",
+    "incompleteOrderMessage": "У вас есть незавершённый заказ {{type}} с {{count}} товаром(ами)"
   },
   "validation": {
     "required": "Это поле обязательно",
@@ -1191,7 +1293,8 @@
         "WEEKLY": "Еженедельно",
         "MONTHLY": "Ежемесячно",
         "QUARTERLY": "Ежеквартально",
-        "YEARLY": "Ежегодно"
+        "YEARLY": "Ежегодно",
+        "DAILY": "Ежедневно"
       },
       "statuses": {
         "UNPAID": "Неоплачено",
@@ -1395,9 +1498,513 @@
     "demoCredentials": "Демо: admin@elcafe.com / Admin123!"
   },
   "inventory": {
-    "form": {
-      "newQuantity": "Новое количество *",
+    "title": "Управление запасами",
+    "subtitle": "Управление ингредиентами и уровнями запасов",
+    "addIngredient": "Добавить ингредиент",
+    "editIngredient": "Редактировать ингредиент",
+    "addDescription": "Создать новый ингредиент для отслеживания запасов",
+    "editDescription": "Обновить информацию об ингредиенте",
+    "ingredientsList": "Список ингредиентов",
+    "ingredientsDescription": "Управление и отслеживание всех ингредиентов",
+    "noIngredients": "Ингредиенты не найдены",
+    "searchPlaceholder": "Поиск по названию, SKU или поставщику...",
+    "confirmDelete": "Вы уверены, что хотите удалить этот ингредиент?",
+    "addStock": "Добавить запас",
+    "adjustStock": "Скорректировать запас",
+    "updateStock": "Обновить запас",
+    "currentStockLabel": "Текущий запас: {{currentStock}} {{unit}}",
+    "quantityToAdd": "Количество для добавления",
+    "newQuantity": "Новое количество",
+    "performedBy": "Выполнено",
+    "transactionHistory": "История транзакций",
+    "transactionHistoryDesc": "Все движения запасов для этого ингредиента",
+    "noTransactions": "Транзакции не найдены",
+    "stats": {
+      "total": "Всего ингредиентов",
+      "active": "активно",
+      "lowStock": "Мало на складе",
+      "needsAttention": "Требует внимания",
+      "reorder": "Скоро заказать",
+      "reorderSoon": "Скоро заказать",
+      "tracked": "Отслеживаемые товары",
+      "monitoring": "Мониторинг"
+    },
+    "filters": {
+      "all": "Все ингредиенты",
+      "active": "Только активные",
+      "inactive": "Только неактивные",
+      "lowStock": "Мало на складе",
+      "reorder": "Уровень повторного заказа"
+    },
+    "fields": {
+      "name": "Название ингредиента",
+      "sku": "SKU",
+      "description": "Описание",
+      "unit": "Единица измерения",
+      "supplier": "Поставщик",
+      "currentStock": "Текущий запас",
+      "minimumStock": "Минимальный запас",
+      "reorderLevel": "Уровень повторного заказа",
+      "costPerUnit": "Стоимость за единицу",
+      "status": "Статус",
+      "active": "Активно",
+      "trackInventory": "Отслеживать запасы",
+      "trackExpiry": "Отслеживать срок годности"
+    },
+    "placeholders": {
+      "name": "напр., Помидоры, Куриная грудка",
+      "sku": "напр., ING-001",
+      "description": "Краткое описание ингредиента",
+      "supplier": "напр., ABC Поставщики продуктов"
+    },
+    "units": {
+      "kg": "Килограммы (кг)",
+      "g": "Граммы (г)",
+      "L": "Литры (л)",
+      "ml": "Миллилитры (мл)",
+      "pieces": "Штуки",
+      "dozens": "Дюжины"
+    },
+    "status": {
+      "notTracked": "Не отслеживается",
+      "lowStock": "Мало на складе",
+      "reorderSoon": "Скоро заказать",
+      "inStock": "В наличии"
+    },
+    "transactionFields": {
+      "date": "Дата",
+      "type": "Тип",
+      "change": "Изменение",
+      "balanceAfter": "Остаток после",
+      "performedBy": "Выполнено",
       "notes": "Примечания"
+    },
+    "errors": {
+      "saveFailed": "Не удалось сохранить ингредиент",
+      "deleteFailed": "Не удалось удалить ингредиент"
+    },
+    "tabs": {
+      "ingredients": "Ингредиенты",
+      "recipes": "Рецепты",
+      "expiry": "Срок годности",
+      "stockCounts": "Инвентаризация",
+      "waste": "Списание",
+      "suppliers": "Поставщики",
+      "stockAlerts": "Уведомления о запасах",
+      "valuation": "Оценка"
+    },
+    "stockCounts": {
+      "title": "Инвентаризация",
+      "description": "Физический подсчёт и аудит запасов",
+      "newCount": "Новый подсчёт",
+      "createTitle": "Создать инвентаризацию",
+      "createDescription": "Начать новый физический подсчёт запасов",
+      "noData": "Инвентаризации не найдены",
+      "scheduled": "Запланировано",
+      "progress": "Прогресс",
+      "items": "позиций",
+      "variances": "Расхождения",
+      "countNumber": "№ подсчёта",
+      "type": {
+        "full": "Полный подсчёт",
+        "cycle": "Цикличный подсчёт",
+        "spotCheck": "Выборочная проверка"
+      },
+      "status": {
+        "draft": "Черновик",
+        "inProgress": "В процессе",
+        "pendingReview": "На проверке",
+        "approved": "Утверждено",
+        "cancelled": "Отменено"
+      },
+      "variance": "Расхождение",
+      "scheduledDate": "Запланировано",
+      "submitForReview": "Отправить на проверку",
+      "approveAndAdjust": "Утвердить и скорректировать",
+      "stats": {
+        "total": "Всего подсчётов",
+        "inProgress": "В процессе",
+        "pendingReview": "На проверке",
+        "approved": "Утверждено"
+      },
+      "fields": {
+        "type": "Тип подсчёта",
+        "scheduledDate": "Дата",
+        "ingredient": "Ингредиент",
+        "systemQty": "По системе",
+        "countedQty": "Подсчитано",
+        "variance": "Расхождение",
+        "status": "Статус",
+        "reason": "Причина"
+      },
+      "itemStatus": {
+        "pending": "Ожидает",
+        "counted": "Подсчитано",
+        "recounted": "Пересчитано",
+        "verified": "Проверено"
+      },
+      "cancelTitle": "Отменить инвентаризацию",
+      "cancelDescription": "Вы уверены, что хотите отменить эту инвентаризацию? Это действие нельзя отменить.",
+      "cancelReason": "Причина отмены",
+      "cancelReasonPlaceholder": "Введите причину отмены инвентаризации...",
+      "confirmCancel": "Подтвердить отмену",
+      "approveTitle": "Утвердить инвентаризацию",
+      "approveDescription": "Проверьте и утвердите инвентаризацию. Вы можете при желании скорректировать уровни запасов на основе подсчитанных количеств.",
+      "adjustInventoryLabel": "Скорректировать уровни запасов по подсчитанным количествам",
+      "adjustInventoryWarning": "Это обновит количества запасов в системе в соответствии с физическим подсчётом. Убедитесь, что все расхождения были проверены.",
+      "approveNotes": "Примечания (необязательно)",
+      "approveNotesPlaceholder": "Добавьте примечания к утверждению...",
+      "confirmApprove": "Утвердить",
+      "varianceReasonTitle": "Указать причину расхождения",
+      "varianceReasonDesc": "Укажите причину расхождения для {{ingredient}}",
+      "varianceReasonLabel": "Причина",
+      "selectReason": "Выберите причину",
+      "varianceNotesLabel": "Дополнительные примечания (необязательно)",
+      "varianceNotesPlaceholder": "Добавьте дополнительные детали...",
+      "setReason": "Указать причину",
+      "varianceReasons": {
+        "theft": "Кража",
+        "damage": "Повреждение",
+        "spoilage": "Порча",
+        "countingError": "Ошибка подсчёта",
+        "systemError": "Системная ошибка",
+        "unrecordedUsage": "Неучтённое использование",
+        "unrecordedReceipt": "Неучтённое поступление",
+        "shrinkage": "Усушка",
+        "other": "Другое"
+      },
+      "tabs": {
+        "counts": "Инвентаризации",
+        "varianceReport": "Отчёт о расхождениях"
+      },
+      "report": {
+        "dateRange": "Период",
+        "generateReport": "Сформировать отчёт",
+        "totalVariances": "Всего расхождений",
+        "totalVarianceValue": "Общая сумма расхождений",
+        "itemsWithVariance": "позиций с расхождениями",
+        "estimatedLoss": "оценка потерь",
+        "byReason": "Расхождения по причинам",
+        "byReasonDesc": "Разбивка расхождений по указанным причинам",
+        "count": "Количество",
+        "totalValue": "Общая сумма",
+        "topVarianceItems": "Топ позиций с расхождениями",
+        "topVarianceItemsDesc": "Ингредиенты с наибольшей частотой и суммой расхождений",
+        "varianceCount": "Кол-во расхождений",
+        "noVariances": "Расхождений не найдено",
+        "noVariancesDesc": "За этот период расхождений в инвентаре не зафиксировано.",
+        "selectDates": "Выберите период",
+        "selectDatesDesc": "Выберите даты и нажмите \"Сформировать отчёт\" для просмотра данных."
+      }
+    },
+    "waste": {
+      "title": "Управление списанием",
+      "records": "Записи списания",
+      "recordsDesc": "Отслеживание и анализ списаний по инвентарю",
+      "recordWaste": "Записать списание",
+      "recordWasteDesc": "Зарегистрировать событие списания ингредиента",
+      "selectIngredient": "Выберите ингредиент",
+      "noRecords": "Записи списания не найдены. Нажмите \"Записать списание\" для добавления первой записи.",
+      "totalWaste": "Всего списано (30 дней)",
+      "mostCommonReason": "Частая причина",
+      "totalQuantity": "Общее количество",
+      "avgPerRecord": "Средняя стоимость",
+      "units": "единиц списано",
+      "date": "Дата",
+      "quantity": "Количество",
+      "reason": "Причина",
+      "cost": "Стоимость",
+      "totalCost": "Общая стоимость",
+      "recordedBy": "Записал",
+      "notes": "Примечания",
+      "notesPlaceholder": "Необязательные примечания о списании",
+      "record": "Записать",
+      "byReason": "Списание по причинам",
+      "topWasted": "Топ списанных ингредиентов",
+      "percentage": "% от общего",
+      "reasons": {
+        "expired": "Истёк срок",
+        "spoiled": "Испорчено",
+        "damaged": "Повреждено",
+        "preparation": "Приготовление",
+        "overProduction": "Перепроизводство",
+        "customerReturn": "Возврат клиента",
+        "qualityIssue": "Проблема качества",
+        "contamination": "Загрязнение",
+        "theft": "Кража",
+        "other": "Другое"
+      }
+    },
+    "recipes": {
+      "selectProduct": "Выберите продукт",
+      "selectProductDesc": "Выберите продукт для просмотра и управления рецептом",
+      "selectProductFirst": "Выберите продукт для просмотра рецепта",
+      "noProducts": "Нет доступных продуктов",
+      "ingredientLinks": "Связи с ингредиентами",
+      "for": "Рецепт для",
+      "addIngredient": "Добавить ингредиент",
+      "noIngredients": "К этому продукту не привязаны ингредиенты",
+      "addFirst": "Добавить первый ингредиент",
+      "ingredient": "Ингредиент",
+      "quantity": "Количество",
+      "unit": "Единица",
+      "selectIngredient": "Выберите ингредиент",
+      "confirmDelete": "Вы уверены, что хотите удалить этот рецепт?",
+      "errors": {
+        "saveFailed": "Не удалось сохранить рецепт",
+        "deleteFailed": "Не удалось удалить рецепт"
+      },
+      "changeIngredientNote": "Вы можете изменить привязанный ингредиент",
+      "searchIngredients": "Поиск ингредиентов...",
+      "filterByUnit": "Фильтр по единице",
+      "noIngredientsFound": "Ингредиенты не найдены",
+      "ingredientsFound": "Найдено {{count}} ингредиентов",
+      "filterByCategory": "Фильтр по категории",
+      "productsFound": "Найдено {{count}} продуктов"
+    },
+    "stockAlerts": {
+      "lowStockItems": "Низкий запас",
+      "reorderItems": "Требуется заказ",
+      "activeSubscriptions": "Активные подписки",
+      "sendAlert": "Отправить уведомление",
+      "trigger": "Отправить сейчас",
+      "subscriptions": "Telegram подписки",
+      "subscriptionsDesc": "Управление подписками Telegram для уведомлений о запасах",
+      "addSubscription": "Добавить подписку",
+      "editSubscription": "Редактировать подписку",
+      "subscriberName": "Подписчик",
+      "chatId": "Telegram Chat ID",
+      "lowStockAlerts": "Низкий запас",
+      "reorderAlerts": "Заказ",
+      "status": "Статус",
+      "lastAlert": "Последнее уведомление",
+      "never": "Никогда",
+      "noSubscriptions": "Подписки не найдены. Добавьте чат Telegram для получения уведомлений.",
+      "subscriptionDesc": "Настройка Telegram уведомлений о запасах",
+      "namePlaceholder": "напр., Менеджер Иван",
+      "alertOnLowStock": "Уведомлять о низком запасе",
+      "alertOnReorder": "Уведомлять о необходимости заказа",
+      "alertTriggered": "Уведомление о запасах отправлено!",
+      "confirmDelete": "Вы уверены, что хотите удалить эту подписку?",
+      "howToSetup": "Как получить Telegram Chat ID",
+      "step1": "Начните чат с вашим Telegram ботом",
+      "step2": "Отправьте команду /start боту",
+      "step3": "Бот ответит вашим Chat ID",
+      "step4": "Скопируйте Chat ID и добавьте его как подписку",
+      "errors": {
+        "saveFailed": "Не удалось сохранить подписку",
+        "triggerFailed": "Не удалось отправить уведомление"
+      }
+    },
+    "poSuggestions": {
+      "title": "Предложения по закупкам",
+      "subtitle": "Автоматические предложения на основе уровней повторного заказа",
+      "noSuggestions": "Все товары в достаточном количестве",
+      "allStocked": "В данный момент нет товаров, требующих повторного заказа.",
+      "createPO": "Создать ЗП",
+      "createAllPOs": "Создать все ЗП",
+      "confirmGenerateAll": "Создать заказы на закупку для всех предложенных поставщиков?",
+      "totalSuppliers": "Поставщики",
+      "totalItems": "Товаров для заказа",
+      "estimatedCost": "Расчетная стоимость",
+      "ingredient": "Ингредиент",
+      "sku": "Артикул",
+      "currentStock": "Текущий запас",
+      "reorderLevel": "Уровень заказа",
+      "suggestedQty": "Рекомендуемое кол-во",
+      "unitPrice": "Цена за единицу",
+      "estimatedCostCol": "Расч. стоимость",
+      "itemsNeedReorder": "товаров требуют заказа",
+      "total": "Итого",
+      "paymentTerms": "Условия оплаты",
+      "urgency": {
+        "CRITICAL": "Критично - Нет в наличии",
+        "HIGH": "Высокий - Ниже минимума",
+        "MEDIUM": "Средний - Ниже уровня заказа"
+      },
+      "messages": {
+        "poCreated": "Заказ на закупку успешно создан!",
+        "allPOsCreated": "Все заказы на закупку успешно созданы!",
+        "poCreateError": "Не удалось создать заказ на закупку"
+      }
+    },
+    "suppliers": {
+      "title": "Поставщики",
+      "subtitle": "Управление поставщиками ингредиентов",
+      "addSupplier": "Добавить поставщика",
+      "editSupplier": "Редактировать поставщика",
+      "noSuppliers": "Поставщики не найдены. Добавьте первого поставщика.",
+      "confirmDelete": "Вы уверены, что хотите удалить этого поставщика?",
+      "fields": {
+        "name": "Название компании",
+        "code": "Код поставщика",
+        "contactPerson": "Контактное лицо",
+        "phone": "Телефон",
+        "email": "Эл. почта",
+        "address": "Адрес",
+        "paymentTerms": "Условия оплаты",
+        "creditLimit": "Кредитный лимит",
+        "currency": "Валюта",
+        "rating": "Рейтинг",
+        "totalOrders": "Всего заказов",
+        "onTimeDeliveryRate": "Своевременная доставка",
+        "active": "Активен",
+        "notes": "Примечания"
+      },
+      "placeholders": {
+        "name": "Введите название компании",
+        "code": "напр., SUP-001",
+        "contactPerson": "Имя контактного лица",
+        "phone": "+998 XX XXX XX XX",
+        "email": "supplier@example.com",
+        "address": "Полный адрес",
+        "notes": "Дополнительные примечания..."
+      },
+      "paymentTerms": {
+        "cod": "Оплата при доставке",
+        "net15": "Оплата через 15 дней",
+        "net30": "Оплата через 30 дней",
+        "net60": "Оплата через 60 дней",
+        "prepaid": "Предоплата"
+      },
+      "stats": {
+        "total": "Всего поставщиков",
+        "active": "Активных",
+        "avgRating": "Ср. рейтинг",
+        "topPerformer": "Лучший поставщик"
+      },
+      "errors": {
+        "saveFailed": "Не удалось сохранить поставщика",
+        "deleteFailed": "Не удалось удалить поставщика",
+        "loadFailed": "Не удалось загрузить поставщиков"
+      }
+    },
+    "expiry": {
+      "stats": {
+        "expired": "Просроченные партии",
+        "expiringSoon": "Скоро истекает",
+        "activeBatches": "Активные партии",
+        "tracked": "Отслеживаемые ингредиенты"
+      },
+      "within7Days": "В течение 7 дней",
+      "addBatch": "Добавить партию",
+      "addBatchDesc": "Создать новую партию с отслеживанием срока годности",
+      "markExpired": "Обновить статус",
+      "expiredBatches": "Просроченные партии",
+      "expiredBatchesDesc": "Эти партии просрочены и должны быть списаны",
+      "expiringBatches": "Скоро истекает",
+      "expiringBatchesDesc": "Эти партии истекут в течение следующих 7 дней",
+      "ingredientsWithExpiry": "Ингредиенты с отслеживанием срока",
+      "ingredientsWithExpiryDesc": "Ингредиенты с настроенным отслеживанием сроков годности",
+      "noExpiryTracking": "Ни один ингредиент не имеет отслеживания срока годности. Отредактируйте ингредиент, чтобы включить его.",
+      "viewBatches": "Просмотр партий",
+      "batchesFor": "Партии для",
+      "batchesDesc": "Все активные партии для этого ингредиента (порядок FEFO)",
+      "noBatches": "Партии для этого ингредиента не найдены",
+      "writeOff": "Списать",
+      "writeOffBatch": "Списать партию",
+      "writeOffDesc": "Это навсегда пометит партию как списанную и удалит остатки.",
+      "confirmWriteOff": "Подтвердить списание",
+      "fields": {
+        "ingredient": "Ингредиент",
+        "batchNumber": "№ партии",
+        "quantity": "Количество",
+        "expiryDate": "Срок годности",
+        "receivedDate": "Дата получения",
+        "daysRemaining": "Дней осталось",
+        "daysExpired": "Дней просрочено",
+        "status": "Статус",
+        "shelfLife": "Срок хранения по умолчанию (дней)",
+        "alertDays": "Уведомить до истечения (дней)",
+        "activeBatches": "Активные партии",
+        "expiringBatches": "Истекающие",
+        "costPerUnit": "Цена за единицу",
+        "supplier": "Поставщик",
+        "poReference": "Номер ЗП",
+        "reason": "Причина списания"
+      },
+      "placeholders": {
+        "selectIngredient": "Выберите ингредиент",
+        "batchNumber": "напр., ПАРТИЯ-001",
+        "poReference": "напр., ЗП-2024-001",
+        "reason": "напр., Просрочено, Повреждено, Проблема качества",
+        "shelfLife": "напр., 30",
+        "alertDays": "напр., 7"
+      },
+      "status": {
+        "expired": "Просрочено",
+        "expiringSoon": "Скоро истекает",
+        "fresh": "Свежее"
+      },
+      "errors": {
+        "saveFailed": "Не удалось сохранить партию",
+        "writeOffFailed": "Не удалось списать партию"
+      }
+    },
+    "valuation": {
+      "title": "Оценка запасов",
+      "subtitle": "Расчёт стоимости запасов различными методами",
+      "settings": "Настройки оценки",
+      "settingsDesc": "Настройте метод расчёта стоимости запасов",
+      "currentMethod": "Текущий метод",
+      "changeMethod": "Изменить метод оценки",
+      "methodChanged": "Метод оценки успешно обновлён",
+      "methods": {
+        "FIFO": "ФИФО (первым пришёл - первым ушёл)",
+        "LIFO": "ЛИФО (последним пришёл - первым ушёл)",
+        "WEIGHTED_AVERAGE": "Средневзвешенная стоимость",
+        "FEFO": "ФЕФО (с ближайшим сроком - первым ушёл)"
+      },
+      "methodDescriptions": {
+        "FIFO": "Сначала используются самые старые запасы. Обычно приводит к более низкой себестоимости при инфляции.",
+        "LIFO": "Сначала используются самые новые запасы. Обычно приводит к более высокой себестоимости при инфляции.",
+        "WEIGHTED_AVERAGE": "Средняя стоимость всех единиц на складе. Сглаживает колебания цен.",
+        "FEFO": "Партии с ближайшим сроком годности используются первыми. Лучше всего подходит для скоропортящихся товаров."
+      },
+      "inventoryValue": "Стоимость запасов",
+      "totalValue": "Общая стоимость запасов",
+      "calculateValue": "Рассчитать стоимость",
+      "compareValues": "Сравнить методы",
+      "comparison": {
+        "title": "Сравнение методов оценки",
+        "description": "Сравнение стоимости запасов по разным методам",
+        "fifoValue": "Стоимость по ФИФО",
+        "lifoValue": "Стоимость по ЛИФО",
+        "wacValue": "Средневзвешенная стоимость",
+        "difference": "Разница"
+      },
+      "costHistory": {
+        "title": "История цен",
+        "description": "Отслеживание изменений цен ингредиентов",
+        "previousCost": "Предыдущая цена",
+        "newCost": "Новая цена",
+        "change": "Изменение",
+        "reason": "Причина",
+        "effectiveFrom": "Действует с",
+        "recordCostChange": "Записать изменение цены",
+        "noCostHistory": "История цен для этого ингредиента не найдена"
+      },
+      "costVariance": {
+        "title": "Отклонение цены",
+        "description": "Сравнение текущих цен со средними историческими",
+        "currentCost": "Текущая цена",
+        "averageCost": "Средняя цена",
+        "variance": "Отклонение",
+        "variancePercent": "Отклонение %"
+      },
+      "consumption": {
+        "title": "История потребления",
+        "description": "Отслеживание расхода запасов",
+        "summary": "Сводка потребления",
+        "byIngredient": "Потребление по ингредиентам",
+        "totalQuantity": "Общее количество",
+        "totalCost": "Общая стоимость",
+        "averageCost": "Средняя стоимость",
+        "batchNumber": "№ партии"
+      },
+      "errors": {
+        "saveFailed": "Не удалось сохранить настройки оценки"
+      }
     }
   },
   "linkedItems": {
@@ -1415,54 +2022,6 @@
     "priority": "Приоритет",
     "noLinkedItems": "Связанные товары для этого продукта не найдены",
     "productId": "ID продукта"
-  },
-  "tables": {
-    "title": "Столы",
-    "createNew": "Добавить стол",
-    "editTable": "Редактировать стол",
-    "tableNumber": "Номер стола",
-    "tableName": "Название стола",
-    "capacity": "Вместимость",
-    "section": "Зона",
-    "notes": "Заметки",
-    "active": "Активен",
-    "searchPlaceholder": "Поиск по номеру, названию или зоне...",
-    "selectRestaurantFirst": "Пожалуйста, выберите ресторан для просмотра столов",
-    "noTables": "Столы не найдены",
-    "confirmDelete": "Вы уверены, что хотите удалить этот стол?",
-    "confirmUnmerge": "Вы уверены, что хотите разъединить эти столы?",
-    "merged": "Объединённый стол",
-    "originalCapacity": "Исходная",
-    "mergeTables": "Объединить столы",
-    "unmerge": "Разъединить",
-    "increased": "Увеличено",
-    "status": {
-      "AVAILABLE": "Свободен",
-      "OCCUPIED": "Занят",
-      "RESERVED": "Забронирован",
-      "CLEANING": "Уборка",
-      "OUT_OF_SERVICE": "Не обслуживается"
-    },
-    "stats": {
-      "total": "Всего столов",
-      "available": "Свободно",
-      "occupied": "Занято",
-      "reserved": "Забронировано"
-    },
-    "messages": {
-      "fillRequiredFields": "Пожалуйста, заполните все обязательные поля",
-      "createSuccess": "Стол успешно создан",
-      "updateSuccess": "Стол успешно обновлён",
-      "saveError": "Не удалось сохранить стол",
-      "deleteSuccess": "Стол успешно удалён",
-      "deleteError": "Не удалось удалить стол",
-      "statusError": "Не удалось обновить статус стола",
-      "selectAtLeast2Tables": "Пожалуйста, выберите минимум 2 стола для объединения",
-      "mergeSuccess": "Столы успешно объединены",
-      "mergeError": "Не удалось объединить столы",
-      "unmergeSuccess": "Столы успешно разъединены",
-      "unmergeError": "Не удалось разъединить столы"
-    }
   },
   "days": {
     "MONDAY": "Понедельник",
@@ -1727,451 +2286,6 @@
     },
     "enterFullscreen": "Полный экран",
     "exitFullscreen": "Выход из полного экрана (ESC)"
-  },
-  "inventory": {
-    "title": "Управление запасами",
-    "subtitle": "Управление ингредиентами и уровнями запасов",
-    "addIngredient": "Добавить ингредиент",
-    "editIngredient": "Редактировать ингредиент",
-    "addDescription": "Создать новый ингредиент для отслеживания запасов",
-    "editDescription": "Обновить информацию об ингредиенте",
-    "ingredientsList": "Список ингредиентов",
-    "ingredientsDescription": "Управление и отслеживание всех ингредиентов",
-    "noIngredients": "Ингредиенты не найдены",
-    "searchPlaceholder": "Поиск по названию, SKU или поставщику...",
-    "confirmDelete": "Вы уверены, что хотите удалить этот ингредиент?",
-    "addStock": "Добавить запас",
-    "adjustStock": "Скорректировать запас",
-    "updateStock": "Обновить запас",
-    "currentStockLabel": "Текущий запас: {{currentStock}} {{unit}}",
-    "quantityToAdd": "Количество для добавления",
-    "newQuantity": "Новое количество",
-    "performedBy": "Выполнено",
-    "transactionHistory": "История транзакций",
-    "transactionHistoryDesc": "Все движения запасов для этого ингредиента",
-    "noTransactions": "Транзакции не найдены",
-    "stats": {
-      "total": "Всего ингредиентов",
-      "active": "активно",
-      "lowStock": "Мало на складе",
-      "needsAttention": "Требует внимания",
-      "reorder": "Скоро заказать",
-      "reorderSoon": "Скоро заказать",
-      "tracked": "Отслеживаемые товары",
-      "monitoring": "Мониторинг"
-    },
-    "filters": {
-      "all": "Все ингредиенты",
-      "active": "Только активные",
-      "inactive": "Только неактивные",
-      "lowStock": "Мало на складе",
-      "reorder": "Уровень повторного заказа"
-    },
-    "fields": {
-      "name": "Название ингредиента",
-      "sku": "SKU",
-      "description": "Описание",
-      "unit": "Единица измерения",
-      "supplier": "Поставщик",
-      "currentStock": "Текущий запас",
-      "minimumStock": "Минимальный запас",
-      "reorderLevel": "Уровень повторного заказа",
-      "costPerUnit": "Стоимость за единицу",
-      "status": "Статус",
-      "active": "Активно",
-      "trackInventory": "Отслеживать запасы",
-      "trackExpiry": "Отслеживать срок годности"
-    },
-    "placeholders": {
-      "name": "напр., Помидоры, Куриная грудка",
-      "sku": "напр., ING-001",
-      "description": "Краткое описание ингредиента",
-      "supplier": "напр., ABC Поставщики продуктов"
-    },
-    "units": {
-      "kg": "Килограммы (кг)",
-      "g": "Граммы (г)",
-      "L": "Литры (л)",
-      "ml": "Миллилитры (мл)",
-      "pieces": "Штуки",
-      "dozens": "Дюжины"
-    },
-    "status": {
-      "notTracked": "Не отслеживается",
-      "lowStock": "Мало на складе",
-      "reorderSoon": "Скоро заказать",
-      "inStock": "В наличии"
-    },
-    "transactionFields": {
-      "date": "Дата",
-      "type": "Тип",
-      "change": "Изменение",
-      "balanceAfter": "Остаток после",
-      "performedBy": "Выполнено",
-      "notes": "Примечания"
-    },
-    "errors": {
-      "saveFailed": "Не удалось сохранить ингредиент",
-      "deleteFailed": "Не удалось удалить ингредиент"
-    },
-    "tabs": {
-      "ingredients": "Ингредиенты",
-      "recipes": "Рецепты",
-      "expiry": "Срок годности",
-      "stockCounts": "Инвентаризация",
-      "waste": "Списание",
-      "suppliers": "Поставщики",
-      "stockAlerts": "Уведомления о запасах",
-      "valuation": "Оценка"
-    },
-    "stockCounts": {
-      "title": "Инвентаризация",
-      "description": "Физический подсчёт и аудит запасов",
-      "newCount": "Новый подсчёт",
-      "createTitle": "Создать инвентаризацию",
-      "createDescription": "Начать новый физический подсчёт запасов",
-      "noData": "Инвентаризации не найдены",
-      "scheduled": "Запланировано",
-      "progress": "Прогресс",
-      "items": "позиций",
-      "variances": "Расхождения",
-      "countNumber": "№ подсчёта",
-      "type": "Тип",
-      "status": "Статус",
-      "variance": "Расхождение",
-      "scheduledDate": "Запланировано",
-      "submitForReview": "Отправить на проверку",
-      "approveAndAdjust": "Утвердить и скорректировать",
-      "stats": {
-        "total": "Всего подсчётов",
-        "inProgress": "В процессе",
-        "pendingReview": "На проверке",
-        "approved": "Утверждено"
-      },
-      "type": {
-        "full": "Полный подсчёт",
-        "cycle": "Цикличный подсчёт",
-        "spotCheck": "Выборочная проверка"
-      },
-      "status": {
-        "draft": "Черновик",
-        "inProgress": "В процессе",
-        "pendingReview": "На проверке",
-        "approved": "Утверждено",
-        "cancelled": "Отменено"
-      },
-      "fields": {
-        "type": "Тип подсчёта",
-        "scheduledDate": "Дата",
-        "ingredient": "Ингредиент",
-        "systemQty": "По системе",
-        "countedQty": "Подсчитано",
-        "variance": "Расхождение",
-        "status": "Статус"
-      }
-    },
-    "waste": {
-      "title": "Управление списанием",
-      "records": "Записи списания",
-      "recordsDesc": "Отслеживание и анализ списаний по инвентарю",
-      "recordWaste": "Записать списание",
-      "recordWasteDesc": "Зарегистрировать событие списания ингредиента",
-      "selectIngredient": "Выберите ингредиент",
-      "noRecords": "Записи списания не найдены. Нажмите \"Записать списание\" для добавления первой записи.",
-      "totalWaste": "Всего списано (30 дней)",
-      "mostCommonReason": "Частая причина",
-      "totalQuantity": "Общее количество",
-      "avgPerRecord": "Средняя стоимость",
-      "units": "единиц списано",
-      "date": "Дата",
-      "quantity": "Количество",
-      "reason": "Причина",
-      "cost": "Стоимость",
-      "totalCost": "Общая стоимость",
-      "recordedBy": "Записал",
-      "notes": "Примечания",
-      "notesPlaceholder": "Необязательные примечания о списании",
-      "record": "Записать",
-      "byReason": "Списание по причинам",
-      "topWasted": "Топ списанных ингредиентов",
-      "percentage": "% от общего",
-      "reasons": {
-        "expired": "Истёк срок",
-        "spoiled": "Испорчено",
-        "damaged": "Повреждено",
-        "preparation": "Приготовление",
-        "overProduction": "Перепроизводство",
-        "customerReturn": "Возврат клиента",
-        "qualityIssue": "Проблема качества",
-        "contamination": "Загрязнение",
-        "theft": "Кража",
-        "other": "Другое"
-      }
-    },
-    "recipes": {
-      "selectProduct": "Выберите продукт",
-      "selectProductDesc": "Выберите продукт для просмотра и управления рецептом",
-      "selectProductFirst": "Выберите продукт для просмотра рецепта",
-      "noProducts": "Нет доступных продуктов",
-      "ingredientLinks": "Связи с ингредиентами",
-      "for": "Рецепт для",
-      "addIngredient": "Добавить ингредиент",
-      "noIngredients": "К этому продукту не привязаны ингредиенты",
-      "addFirst": "Добавить первый ингредиент",
-      "ingredient": "Ингредиент",
-      "quantity": "Количество",
-      "unit": "Единица",
-      "selectIngredient": "Выберите ингредиент",
-      "confirmDelete": "Вы уверены, что хотите удалить этот рецепт?",
-      "errors": {
-        "saveFailed": "Не удалось сохранить рецепт",
-        "deleteFailed": "Не удалось удалить рецепт"
-      }
-    },
-    "stockAlerts": {
-      "lowStockItems": "Низкий запас",
-      "reorderItems": "Требуется заказ",
-      "activeSubscriptions": "Активные подписки",
-      "sendAlert": "Отправить уведомление",
-      "trigger": "Отправить сейчас",
-      "subscriptions": "Telegram подписки",
-      "subscriptionsDesc": "Управление подписками Telegram для уведомлений о запасах",
-      "addSubscription": "Добавить подписку",
-      "editSubscription": "Редактировать подписку",
-      "subscriberName": "Подписчик",
-      "chatId": "Telegram Chat ID",
-      "lowStockAlerts": "Низкий запас",
-      "reorderAlerts": "Заказ",
-      "status": "Статус",
-      "lastAlert": "Последнее уведомление",
-      "never": "Никогда",
-      "noSubscriptions": "Подписки не найдены. Добавьте чат Telegram для получения уведомлений.",
-      "subscriptionDesc": "Настройка Telegram уведомлений о запасах",
-      "namePlaceholder": "напр., Менеджер Иван",
-      "alertOnLowStock": "Уведомлять о низком запасе",
-      "alertOnReorder": "Уведомлять о необходимости заказа",
-      "alertTriggered": "Уведомление о запасах отправлено!",
-      "confirmDelete": "Вы уверены, что хотите удалить эту подписку?",
-      "howToSetup": "Как получить Telegram Chat ID",
-      "step1": "Начните чат с вашим Telegram ботом",
-      "step2": "Отправьте команду /start боту",
-      "step3": "Бот ответит вашим Chat ID",
-      "step4": "Скопируйте Chat ID и добавьте его как подписку",
-      "errors": {
-        "saveFailed": "Не удалось сохранить подписку",
-        "triggerFailed": "Не удалось отправить уведомление"
-      }
-    },
-    "poSuggestions": {
-      "title": "Предложения по закупкам",
-      "subtitle": "Автоматические предложения на основе уровней повторного заказа",
-      "noSuggestions": "Все товары в достаточном количестве",
-      "allStocked": "В данный момент нет товаров, требующих повторного заказа.",
-      "createPO": "Создать ЗП",
-      "createAllPOs": "Создать все ЗП",
-      "confirmGenerateAll": "Создать заказы на закупку для всех предложенных поставщиков?",
-      "totalSuppliers": "Поставщики",
-      "totalItems": "Товаров для заказа",
-      "estimatedCost": "Расчетная стоимость",
-      "ingredient": "Ингредиент",
-      "sku": "Артикул",
-      "currentStock": "Текущий запас",
-      "reorderLevel": "Уровень заказа",
-      "suggestedQty": "Рекомендуемое кол-во",
-      "unitPrice": "Цена за единицу",
-      "estimatedCostCol": "Расч. стоимость",
-      "itemsNeedReorder": "товаров требуют заказа",
-      "total": "Итого",
-      "paymentTerms": "Условия оплаты",
-      "urgency": {
-        "CRITICAL": "Критично - Нет в наличии",
-        "HIGH": "Высокий - Ниже минимума",
-        "MEDIUM": "Средний - Ниже уровня заказа"
-      },
-      "messages": {
-        "poCreated": "Заказ на закупку успешно создан!",
-        "allPOsCreated": "Все заказы на закупку успешно созданы!",
-        "poCreateError": "Не удалось создать заказ на закупку"
-      }
-    },
-    "suppliers": {
-      "title": "Поставщики",
-      "subtitle": "Управление поставщиками ингредиентов",
-      "addSupplier": "Добавить поставщика",
-      "editSupplier": "Редактировать поставщика",
-      "noSuppliers": "Поставщики не найдены. Добавьте первого поставщика.",
-      "confirmDelete": "Вы уверены, что хотите удалить этого поставщика?",
-      "fields": {
-        "name": "Название компании",
-        "code": "Код поставщика",
-        "contactPerson": "Контактное лицо",
-        "phone": "Телефон",
-        "email": "Эл. почта",
-        "address": "Адрес",
-        "paymentTerms": "Условия оплаты",
-        "creditLimit": "Кредитный лимит",
-        "currency": "Валюта",
-        "rating": "Рейтинг",
-        "totalOrders": "Всего заказов",
-        "onTimeDeliveryRate": "Своевременная доставка",
-        "active": "Активен",
-        "notes": "Примечания"
-      },
-      "placeholders": {
-        "name": "Введите название компании",
-        "code": "напр., SUP-001",
-        "contactPerson": "Имя контактного лица",
-        "phone": "+998 XX XXX XX XX",
-        "email": "supplier@example.com",
-        "address": "Полный адрес",
-        "notes": "Дополнительные примечания..."
-      },
-      "paymentTerms": {
-        "cod": "Оплата при доставке",
-        "net15": "Оплата через 15 дней",
-        "net30": "Оплата через 30 дней",
-        "net60": "Оплата через 60 дней",
-        "prepaid": "Предоплата"
-      },
-      "stats": {
-        "total": "Всего поставщиков",
-        "active": "Активных",
-        "avgRating": "Ср. рейтинг",
-        "topPerformer": "Лучший поставщик"
-      },
-      "errors": {
-        "saveFailed": "Не удалось сохранить поставщика",
-        "deleteFailed": "Не удалось удалить поставщика",
-        "loadFailed": "Не удалось загрузить поставщиков"
-      }
-    },
-    "expiry": {
-      "stats": {
-        "expired": "Просроченные партии",
-        "expiringSoon": "Скоро истекает",
-        "activeBatches": "Активные партии",
-        "tracked": "Отслеживаемые ингредиенты"
-      },
-      "within7Days": "В течение 7 дней",
-      "addBatch": "Добавить партию",
-      "addBatchDesc": "Создать новую партию с отслеживанием срока годности",
-      "markExpired": "Обновить статус",
-      "expiredBatches": "Просроченные партии",
-      "expiredBatchesDesc": "Эти партии просрочены и должны быть списаны",
-      "expiringBatches": "Скоро истекает",
-      "expiringBatchesDesc": "Эти партии истекут в течение следующих 7 дней",
-      "ingredientsWithExpiry": "Ингредиенты с отслеживанием срока",
-      "ingredientsWithExpiryDesc": "Ингредиенты с настроенным отслеживанием сроков годности",
-      "noExpiryTracking": "Ни один ингредиент не имеет отслеживания срока годности. Отредактируйте ингредиент, чтобы включить его.",
-      "viewBatches": "Просмотр партий",
-      "batchesFor": "Партии для",
-      "batchesDesc": "Все активные партии для этого ингредиента (порядок FEFO)",
-      "noBatches": "Партии для этого ингредиента не найдены",
-      "writeOff": "Списать",
-      "writeOffBatch": "Списать партию",
-      "writeOffDesc": "Это навсегда пометит партию как списанную и удалит остатки.",
-      "confirmWriteOff": "Подтвердить списание",
-      "fields": {
-        "ingredient": "Ингредиент",
-        "batchNumber": "№ партии",
-        "quantity": "Количество",
-        "expiryDate": "Срок годности",
-        "receivedDate": "Дата получения",
-        "daysRemaining": "Дней осталось",
-        "daysExpired": "Дней просрочено",
-        "status": "Статус",
-        "shelfLife": "Срок хранения по умолчанию (дней)",
-        "alertDays": "Уведомить до истечения (дней)",
-        "activeBatches": "Активные партии",
-        "expiringBatches": "Истекающие",
-        "costPerUnit": "Цена за единицу",
-        "supplier": "Поставщик",
-        "poReference": "Номер ЗП",
-        "reason": "Причина списания"
-      },
-      "placeholders": {
-        "selectIngredient": "Выберите ингредиент",
-        "batchNumber": "напр., ПАРТИЯ-001",
-        "poReference": "напр., ЗП-2024-001",
-        "reason": "напр., Просрочено, Повреждено, Проблема качества",
-        "shelfLife": "напр., 30",
-        "alertDays": "напр., 7"
-      },
-      "status": {
-        "expired": "Просрочено",
-        "expiringSoon": "Скоро истекает",
-        "fresh": "Свежее"
-      },
-      "errors": {
-        "saveFailed": "Не удалось сохранить партию",
-        "writeOffFailed": "Не удалось списать партию"
-      }
-    },
-    "valuation": {
-      "title": "Оценка запасов",
-      "subtitle": "Расчёт стоимости запасов различными методами",
-      "settings": "Настройки оценки",
-      "settingsDesc": "Настройте метод расчёта стоимости запасов",
-      "currentMethod": "Текущий метод",
-      "changeMethod": "Изменить метод оценки",
-      "methodChanged": "Метод оценки успешно обновлён",
-      "methods": {
-        "FIFO": "ФИФО (первым пришёл - первым ушёл)",
-        "LIFO": "ЛИФО (последним пришёл - первым ушёл)",
-        "WEIGHTED_AVERAGE": "Средневзвешенная стоимость",
-        "FEFO": "ФЕФО (с ближайшим сроком - первым ушёл)"
-      },
-      "methodDescriptions": {
-        "FIFO": "Сначала используются самые старые запасы. Обычно приводит к более низкой себестоимости при инфляции.",
-        "LIFO": "Сначала используются самые новые запасы. Обычно приводит к более высокой себестоимости при инфляции.",
-        "WEIGHTED_AVERAGE": "Средняя стоимость всех единиц на складе. Сглаживает колебания цен.",
-        "FEFO": "Партии с ближайшим сроком годности используются первыми. Лучше всего подходит для скоропортящихся товаров."
-      },
-      "inventoryValue": "Стоимость запасов",
-      "totalValue": "Общая стоимость запасов",
-      "calculateValue": "Рассчитать стоимость",
-      "compareValues": "Сравнить методы",
-      "comparison": {
-        "title": "Сравнение методов оценки",
-        "description": "Сравнение стоимости запасов по разным методам",
-        "fifoValue": "Стоимость по ФИФО",
-        "lifoValue": "Стоимость по ЛИФО",
-        "wacValue": "Средневзвешенная стоимость",
-        "difference": "Разница"
-      },
-      "costHistory": {
-        "title": "История цен",
-        "description": "Отслеживание изменений цен ингредиентов",
-        "previousCost": "Предыдущая цена",
-        "newCost": "Новая цена",
-        "change": "Изменение",
-        "reason": "Причина",
-        "effectiveFrom": "Действует с",
-        "recordCostChange": "Записать изменение цены",
-        "noCostHistory": "История цен для этого ингредиента не найдена"
-      },
-      "costVariance": {
-        "title": "Отклонение цены",
-        "description": "Сравнение текущих цен со средними историческими",
-        "currentCost": "Текущая цена",
-        "averageCost": "Средняя цена",
-        "variance": "Отклонение",
-        "variancePercent": "Отклонение %"
-      },
-      "consumption": {
-        "title": "История потребления",
-        "description": "Отслеживание расхода запасов",
-        "summary": "Сводка потребления",
-        "byIngredient": "Потребление по ингредиентам",
-        "totalQuantity": "Общее количество",
-        "totalCost": "Общая стоимость",
-        "averageCost": "Средняя стоимость",
-        "batchNumber": "№ партии"
-      },
-      "errors": {
-        "saveFailed": "Не удалось сохранить настройки оценки"
-      }
-    }
   },
   "pages": {
     "menu": {
@@ -2911,5 +3025,43 @@
     "prepTime": "Время приготовления (минуты)",
     "settingsSaved": "Настройки сохранены",
     "settingsError": "Не удалось сохранить настройки"
+  },
+  "ordersHistory": {
+    "title": "История заказов",
+    "subtitle": "Просмотр и анализ всех заказов",
+    "totalOrders": "Всего заказов",
+    "totalRevenue": "Общая выручка",
+    "avgOrderValue": "Средний чек",
+    "completed": "Выполнено",
+    "cancelled": "Отменено",
+    "filters": "Фильтры",
+    "search": "Поиск",
+    "searchPlaceholder": "Номер заказа...",
+    "restaurant": "Ресторан",
+    "status": "Статус",
+    "dateFrom": "С",
+    "dateTo": "По",
+    "today": "Сегодня",
+    "yesterday": "Вчера",
+    "lastWeek": "Последние 7 дней",
+    "thisMonth": "Этот месяц",
+    "allTime": "Все время",
+    "clearFilters": "Сбросить фильтры",
+    "ordersList": "Список заказов",
+    "showing": "Показано",
+    "of": "из",
+    "orderNumber": "Заказ №",
+    "date": "Дата",
+    "table": "Стол",
+    "waiter": "Официант",
+    "customer": "Клиент",
+    "type": "Тип",
+    "payment": "Оплата",
+    "total": "Итого",
+    "page": "Страница",
+    "orderDetails": "Детали заказа",
+    "items": "Позиции",
+    "noItems": "Нет позиций",
+    "noOrders": "Заказы не найдены"
   }
 }

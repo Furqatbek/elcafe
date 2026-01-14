@@ -17,7 +17,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateCourierRequest {
 
-    @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     @Size(max = 100)
     private String email;

@@ -225,7 +225,7 @@ public class JournalService {
     }
 
     public List<JournalEntry> getJournalEntriesByRestaurant(Long restaurantId) {
-        return journalEntryRepository.findByRestaurantId(restaurantId);
+        return journalEntryRepository.findByRestaurant_Id(restaurantId);
     }
 
     public List<JournalEntry> getJournalEntriesByDateRange(Long restaurantId, LocalDate startDate, LocalDate endDate) {
@@ -233,7 +233,7 @@ public class JournalService {
     }
 
     public List<Transaction> getTransactionsByAccount(Long accountId) {
-        return transactionRepository.findByAccountId(accountId);
+        return transactionRepository.findByAccount_Id(accountId);
     }
 
     public List<Transaction> getTransactionsByDateRange(Long restaurantId, LocalDate startDate, LocalDate endDate) {
@@ -242,7 +242,7 @@ public class JournalService {
 
     private String generateEntryNumber(Long restaurantId) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        long count = journalEntryRepository.findByRestaurantId(restaurantId).stream()
+        long count = journalEntryRepository.findByRestaurant_Id(restaurantId).stream()
                 .filter(je -> je.getEntryNumber().startsWith("JE-" + datePrefix))
                 .count();
         return String.format("JE-%s-%04d", datePrefix, count + 1);

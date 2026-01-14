@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface LoyaltyConfigRepository extends JpaRepository<LoyaltyConfig, Long> {
 
-    Optional<LoyaltyConfig> findByRestaurantIdAndEnabled(Long restaurantId, Boolean enabled);
+    Optional<LoyaltyConfig> findByRestaurant_IdAndEnabled(Long restaurantId, Boolean enabled);
 
     @Query("SELECT lc FROM LoyaltyConfig lc WHERE " +
            "(lc.restaurant.id = :restaurantId OR lc.restaurant IS NULL) AND lc.enabled = true " +

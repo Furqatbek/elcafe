@@ -17,6 +17,12 @@ RUN npm run build
 
 FROM nginx:alpine
 
+# Set timezone to Tashkent (GMT+5)
+ENV TZ=Asia/Tashkent
+RUN apk add --no-cache tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
+
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

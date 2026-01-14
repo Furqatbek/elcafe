@@ -215,9 +215,7 @@ export default function Couriers() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
-      newErrors.email = t('couriers.validation.emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = t('couriers.validation.emailInvalid');
     }
 
@@ -603,7 +601,7 @@ export default function Couriers() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('couriers.email')} *
+                    {t('couriers.email')}
                   </label>
                   <input
                     type="email"
@@ -873,31 +871,31 @@ export default function Couriers() {
                 <div className="bg-green-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.balance')}</p>
                   <p className="text-2xl font-bold text-green-600">
-                    ${selectedWallet.balance?.toFixed(2) || '0.00'}
+                    {selectedWallet.balance?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.totalEarned')}</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    ${selectedWallet.totalEarned?.toFixed(2) || '0.00'}
+                    {selectedWallet.totalEarned?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.totalBonuses')}</p>
                   <p className="text-xl font-bold text-purple-600">
-                    ${selectedWallet.totalBonuses?.toFixed(2) || '0.00'}
+                    {selectedWallet.totalBonuses?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="bg-red-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.totalFines')}</p>
                   <p className="text-xl font-bold text-red-600">
-                    ${selectedWallet.totalFines?.toFixed(2) || '0.00'}
+                    {selectedWallet.totalFines?.toFixed(2) || '0.00'}
                   </p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-600">{t('couriers.totalWithdrawn')}</p>
                   <p className="text-xl font-bold text-gray-600">
-                    ${selectedWallet.totalWithdrawn?.toFixed(2) || '0.00'}
+                    {selectedWallet.totalWithdrawn?.toFixed(2) || '0.00'}
                   </p>
                 </div>
               </div>

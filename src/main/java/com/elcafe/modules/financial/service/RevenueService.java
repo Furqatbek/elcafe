@@ -2,6 +2,7 @@ package com.elcafe.modules.financial.service;
 
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.repository.AccountRepository;
+import com.elcafe.modules.financial.repository.JournalEntryRepository;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
@@ -23,6 +24,7 @@ public class RevenueService {
 
     private final JournalService journalService;
     private final AccountRepository accountRepository;
+    private final JournalEntryRepository journalEntryRepository;
     private final InventoryProductIngredientRepository productIngredientRepository;
 
     /**
@@ -33,14 +35,25 @@ public class RevenueService {
         log.info("Recording revenue for order: {}", order.getId());
 
         try {
+            // Check if revenue has already been recorded for this order
+            if (journalEntryRepository.existsByReferenceTypeAndReferenceId("ORDER", order.getId())) {
+                log.info("Revenue already recorded for order: {}, skipping", order.getId());
+                return;
+            }
+
             Long restaurantId = order.getRestaurant().getId();
 
+            // Use order's completion date or creation date for accurate historical reporting
+            LocalDate orderDate = order.getCompletedAt() != null
+                    ? order.getCompletedAt().toLocalDate()
+                    : (order.getCreatedAt() != null ? order.getCreatedAt().toLocalDate() : LocalDate.now());
+
             // Find revenue and cash accounts
-            Account salesAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account salesAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.SALES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.CASH
             ).stream().findFirst().orElse(null);
 
@@ -48,7 +61,7 @@ public class RevenueService {
                 // Debit: Cash, Credit: Sales Revenue
                 journalService.createJournalEntry(
                         restaurantId,
-                        LocalDate.now(),
+                        orderDate,
                         "Sales from Order #" + order.getId(),
                         "ORDER",
                         order.getId(),
@@ -57,15 +70,24 @@ public class RevenueService {
                         order.getTotal(),
                         "SYSTEM"
                 );
+            } else {
+                log.error("Cannot record revenue for order {}: salesAccount={}, cashAccount={}. " +
+                        "Please initialize chart of accounts for restaurant {}",
+                        order.getId(), salesAccount != null, cashAccount != null, restaurantId);
+            }
+
+            // Record service fees if applicable
+            if (order.getServiceFee() != null && order.getServiceFee().compareTo(BigDecimal.ZERO) > 0) {
+                recordServiceFee(order, orderDate);
             }
 
             // Record delivery fees if applicable
             if (order.getDeliveryFee() != null && order.getDeliveryFee().compareTo(BigDecimal.ZERO) > 0) {
-                recordDeliveryFee(order);
+                recordDeliveryFee(order, orderDate);
             }
 
             // Record COGS for the order
-            recordCogs(order);
+            recordCogs(order, orderDate);
 
         } catch (Exception e) {
             log.error("Failed to record order revenue for order: {}", order.getId(), e);
@@ -74,17 +96,54 @@ public class RevenueService {
     }
 
     /**
-     * Record delivery fees
+     * Record service fees
      */
-    private void recordDeliveryFee(Order order) {
+    private void recordServiceFee(Order order, LocalDate orderDate) {
         try {
             Long restaurantId = order.getRestaurant().getId();
 
-            Account deliveryFeeAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account serviceFeeAccount = accountRepository.findByRestaurant_IdAndCategory(
+                    restaurantId, Account.AccountCategory.SERVICE_FEES
+            ).stream().findFirst().orElse(null);
+
+            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
+                    restaurantId, Account.AccountCategory.CASH
+            ).stream().findFirst().orElse(null);
+
+            if (serviceFeeAccount != null && cashAccount != null) {
+                // Debit: Cash, Credit: Service Fees Revenue
+                journalService.createJournalEntry(
+                        restaurantId,
+                        orderDate,
+                        "Service Fee from Order #" + order.getId(),
+                        "SERVICE_FEE",
+                        order.getId(),
+                        cashAccount.getId(),
+                        serviceFeeAccount.getId(),
+                        order.getServiceFee(),
+                        "SYSTEM"
+                );
+            } else {
+                log.warn("Cannot record service fee for order {}: serviceFeeAccount={}, cashAccount={}",
+                        order.getId(), serviceFeeAccount != null, cashAccount != null);
+            }
+        } catch (Exception e) {
+            log.error("Failed to record service fee for order {}: {}", order.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Record delivery fees
+     */
+    private void recordDeliveryFee(Order order, LocalDate orderDate) {
+        try {
+            Long restaurantId = order.getRestaurant().getId();
+
+            Account deliveryFeeAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.DELIVERY_FEES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.CASH
             ).stream().findFirst().orElse(null);
 
@@ -92,7 +151,7 @@ public class RevenueService {
                 // Debit: Cash, Credit: Delivery Fees Revenue
                 journalService.createJournalEntry(
                         restaurantId,
-                        LocalDate.now(),
+                        orderDate,
                         "Delivery Fee from Order #" + order.getId(),
                         "DELIVERY_FEE",
                         order.getId(),
@@ -101,9 +160,12 @@ public class RevenueService {
                         order.getDeliveryFee(),
                         "SYSTEM"
                 );
+            } else {
+                log.warn("Cannot record delivery fee for order {}: deliveryFeeAccount={}, cashAccount={}",
+                        order.getId(), deliveryFeeAccount != null, cashAccount != null);
             }
         } catch (Exception e) {
-            log.warn("Failed to record delivery fee for order: {}", order.getId(), e);
+            log.error("Failed to record delivery fee for order {}: {}", order.getId(), e.getMessage(), e);
         }
     }
 
@@ -111,23 +173,25 @@ public class RevenueService {
      * Record COGS (Cost of Goods Sold) for the order
      */
     @Transactional
-    public void recordCogs(Order order) {
+    public void recordCogs(Order order, LocalDate orderDate) {
         log.info("Recording COGS for order: {}", order.getId());
 
         try {
             Long restaurantId = order.getRestaurant().getId();
 
             // Find COGS and Inventory accounts
-            Account cogsAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account cogsAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.COGS
             ).stream().findFirst().orElse(null);
 
-            Account inventoryAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account inventoryAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.INVENTORY
             ).stream().findFirst().orElse(null);
 
             if (cogsAccount == null || inventoryAccount == null) {
-                log.warn("COGS or Inventory account not found for restaurant: {}", restaurantId);
+                log.error("Cannot record COGS for order {}: cogsAccount={}, inventoryAccount={}. " +
+                        "Please initialize chart of accounts for restaurant {}",
+                        order.getId(), cogsAccount != null, inventoryAccount != null, restaurantId);
                 return;
             }
 
@@ -143,7 +207,7 @@ public class RevenueService {
                 // Debit: COGS, Credit: Inventory
                 journalService.createJournalEntry(
                         restaurantId,
-                        LocalDate.now(),
+                        orderDate,
                         "COGS for Order #" + order.getId(),
                         "ORDER_COGS",
                         order.getId(),
@@ -207,11 +271,11 @@ public class RevenueService {
             Long restaurantId = order.getRestaurant().getId();
 
             // Find revenue and cash accounts
-            Account salesAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account salesAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.SALES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurantIdAndCategory(
+            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.CASH
             ).stream().findFirst().orElse(null);
 

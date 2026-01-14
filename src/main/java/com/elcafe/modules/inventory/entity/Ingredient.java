@@ -52,10 +52,25 @@ public class Ingredient {
     private BigDecimal reorderLevel = BigDecimal.ZERO;
 
     @Column(precision = 10, scale = 2)
+    private BigDecimal reorderQuantity;
+
+    @Column(precision = 10, scale = 2)
     private BigDecimal costPerUnit;
+
+    // Weighted Average Cost - recalculated on each purchase
+    @Column(precision = 15, scale = 4)
+    private BigDecimal weightedAverageCost;
+
+    // Last time cost was updated
+    @Column
+    private LocalDateTime lastCostUpdate;
 
     @Column(length = 100)
     private String supplier;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id")
+    private Supplier supplierEntity;
 
     @Column(length = 50)
     private String sku;
@@ -67,6 +82,18 @@ public class Ingredient {
     @Column(nullable = false)
     @Builder.Default
     private Boolean trackInventory = true;
+
+    // Expiry tracking fields
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean trackExpiry = false;
+
+    @Column
+    private Integer defaultShelfLifeDays; // Auto-calculate expiry date from this
+
+    @Column
+    @Builder.Default
+    private Integer expiryAlertDays = 7; // Days before expiry to trigger alert
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -101,5 +128,43 @@ public class Ingredient {
         if (this.currentStock.compareTo(BigDecimal.ZERO) < 0) {
             this.currentStock = BigDecimal.ZERO;
         }
+    }
+
+    /**
+     * Get the effective cost per unit (WAC if available, else costPerUnit)
+     */
+    public BigDecimal getEffectiveCost() {
+        if (weightedAverageCost != null && weightedAverageCost.compareTo(BigDecimal.ZERO) > 0) {
+            return weightedAverageCost;
+        }
+        return costPerUnit != null ? costPerUnit : BigDecimal.ZERO;
+    }
+
+    /**
+     * Update weighted average cost after a new purchase
+     * Formula: WAC = (Existing Value + New Purchase Value) / (Existing Qty + New Qty)
+     */
+    public void updateWeightedAverageCost(BigDecimal newQuantity, BigDecimal newCostPerUnit) {
+        if (newQuantity == null || newCostPerUnit == null ||
+            newQuantity.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        BigDecimal existingValue = currentStock.multiply(getEffectiveCost());
+        BigDecimal newValue = newQuantity.multiply(newCostPerUnit);
+        BigDecimal totalQuantity = currentStock.add(newQuantity);
+
+        if (totalQuantity.compareTo(BigDecimal.ZERO) > 0) {
+            this.weightedAverageCost = existingValue.add(newValue)
+                    .divide(totalQuantity, 4, java.math.RoundingMode.HALF_UP);
+            this.lastCostUpdate = LocalDateTime.now();
+        }
+    }
+
+    /**
+     * Calculate total inventory value using effective cost
+     */
+    public BigDecimal getInventoryValue() {
+        return currentStock.multiply(getEffectiveCost());
     }
 }

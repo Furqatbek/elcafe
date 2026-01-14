@@ -1,5 +1,6 @@
 import React from 'react';
 import usePOSStore from '../store/posStore';
+import { formatDateTime } from '../../utils/dateUtils';
 
 /**
  * KitchenTicket - Print-optimized kitchen ticket
@@ -8,10 +9,7 @@ import usePOSStore from '../store/posStore';
 const KitchenTicket = () => {
   const { currentOrder, customer } = usePOSStore();
 
-  const orderDateTime = new Date().toLocaleString('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  const orderDateTime = formatDateTime(new Date());
 
   return (
     <div className="kitchen-ticket max-w-[80mm] mx-auto p-4 font-mono text-sm bg-white">

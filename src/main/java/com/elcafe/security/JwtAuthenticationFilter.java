@@ -5,7 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,11 +21,15 @@ import java.io.IOException;
 import java.util.Collections;
 
 @Component
-@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, @Lazy UserDetailsService userDetailsService) {
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
+    }
 
     @Override
     protected void doFilterInternal(
@@ -77,6 +81,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                         logger.debug("Waiter authentication set successfully");
+                    }
+                } else if ("consumer".equals(tokenType)) {
+                    // Handle consumer/customer authentication
+                    Long customerId = claims.get("customerId", Long.class);
+                    logger.debug("Processing consumer token - customerId: " + customerId);
+
+                    if (customerId != null && jwtUtil.isTokenExpired(jwt) == false) {
+                        // Create UserDetails for consumer with CUSTOMER role
+                        UserDetails consumerDetails = User.builder()
+                                .username(username)
+                                .password("") // Password not needed for token auth
+                                .authorities(Collections.singletonList(
+                                        new SimpleGrantedAuthority("ROLE_CUSTOMER")
+                                ))
+                                .build();
+
+                        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                                consumerDetails,
+                                null,
+                                consumerDetails.getAuthorities()
+                        );
+                        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authToken);
+                        logger.debug("Consumer authentication set successfully for customerId: " + customerId);
                     }
                 } else {
                     // Handle regular user authentication

@@ -22,7 +22,8 @@ public class PurchaseOrderRequest {
     @NotNull(message = "Restaurant ID is required")
     private Long restaurantId;
 
-    @NotBlank(message = "Supplier name is required")
+    private Long supplierId;
+
     private String supplierName;
 
     private String supplierContact;

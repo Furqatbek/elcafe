@@ -11,7 +11,6 @@ import {
   RotateCcw,
   XCircle,
   Percent,
-  Tag,
 } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import CashPaymentDialog from '../components/CashPaymentDialog';
@@ -61,16 +60,17 @@ const PaymentScreen = () => {
   const [serviceFeePercentInput, setServiceFeePercentInput] = useState(
     currentOrder.serviceFeePercent || 0
   );
+  const [serviceFeeAmountInput, setServiceFeeAmountInput] = useState(
+    currentOrder.serviceFee || 0
+  );
+  const [serviceFeeMode, setServiceFeeMode] = useState('percent'); // 'percent' or 'amount'
 
   // Calculate totals
   const subtotal = currentOrder.subtotal || 0;
   const tax = currentOrder.tax || 0;
   const deliveryFee = currentOrder.deliveryFee || 0;
   const serviceFee = currentOrder.serviceFee || 0;
-  const entryFee = currentOrder.entryFee || 0;
-  const discount = currentOrder.discount || 0;
-  const couponCode = currentOrder.couponCode || null;
-  const grandTotal = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
+  const grandTotal = subtotal + tax + deliveryFee + serviceFee;
 
   // For split payments
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -120,7 +120,6 @@ const PaymentScreen = () => {
       deliveryFee: deliveryFee,
       serviceFee: serviceFee,
       serviceFeePercent: currentOrder.serviceFeePercent,
-      entryFee: entryFee,
       total: grandTotal,
       diningTable: customer.tableNumber ? { tableNumber: customer.tableNumber } : null,
       customerNotes: currentOrder.notes || null,
@@ -235,8 +234,6 @@ const PaymentScreen = () => {
           subtotal: currentOrder.subtotal,
           tax: currentOrder.tax,
           deliveryFee: currentOrder.deliveryFee,
-          discount: currentOrder.discount || 0,
-          couponCode: currentOrder.couponCode || null,
           total: grandTotal,
           tipAmount: 0,
           amountTendered: paymentData.amountTendered || grandTotal,
@@ -326,19 +323,55 @@ const PaymentScreen = () => {
   };
 
   const handleApplyServiceFee = async () => {
-    const percent = parseFloat(serviceFeePercentInput) || 0;
-    if (percent >= 0 && percent <= 100) {
-      // Update local state
-      setServiceFee(percent);
-      setShowServiceFeeInput(false);
+    if (serviceFeeMode === 'percent') {
+      const percent = parseFloat(serviceFeePercentInput) || 0;
+      if (percent >= 0 && percent <= 100) {
+        // Update local state with percentage
+        setServiceFee(percent);
+        setShowServiceFeeInput(false);
 
-      // If order exists in backend, save to database
-      const orderId = currentOrder.id;
-      if (orderId && !String(orderId).startsWith('temp-')) {
-        try {
-          await posAPI.applyServiceFee(orderId, percent);
-        } catch (error) {
-          console.error('Failed to save service fee to backend:', error);
+        // If order exists in backend, save to database
+        const orderId = currentOrder.id;
+        if (orderId && !String(orderId).startsWith('temp-')) {
+          try {
+            await posAPI.applyServiceFee(orderId, percent);
+          } catch (error) {
+            console.error('Failed to save service fee to backend:', error);
+          }
+        }
+      }
+    } else {
+      // Fixed amount mode
+      const amount = parseFloat(serviceFeeAmountInput) || 0;
+      if (amount >= 0) {
+        // Update local state with fixed amount (pass negative to indicate fixed amount)
+        // Calculate what percentage this would be for display purposes
+        const calculatedPercent = subtotal > 0 ? (amount / subtotal) * 100 : 0;
+
+        // Use setServiceFee with the calculated percent, but we'll need to update the store to support fixed amounts
+        usePOSStore.setState(state => ({
+          currentOrder: {
+            ...state.currentOrder,
+            serviceFeePercent: parseFloat(calculatedPercent.toFixed(2)),
+            serviceFee: amount,
+          }
+        }));
+        setShowServiceFeeInput(false);
+
+        // If order exists in backend, save to database
+        const orderId = currentOrder.id;
+        if (orderId && !String(orderId).startsWith('temp-')) {
+          try {
+            await posAPI.applyServiceFeeAmount(orderId, amount);
+          } catch (error) {
+            console.error('Failed to save service fee to backend:', error);
+            // Fallback to percent-based API
+            try {
+              await posAPI.applyServiceFee(orderId, calculatedPercent);
+            } catch (e) {
+              console.error('Fallback also failed:', e);
+            }
+          }
         }
       }
     }
@@ -346,6 +379,7 @@ const PaymentScreen = () => {
 
   const handleRemoveServiceFee = async () => {
     setServiceFeePercentInput(0);
+    setServiceFeeAmountInput(0);
     setServiceFee(0);
     setShowServiceFeeInput(false);
 
@@ -604,15 +638,6 @@ const PaymentScreen = () => {
                       <span>{serviceFee.toFixed(2)}</span>
                     </div>
                   )}
-                  {discount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span className="flex items-center gap-1">
-                        <Tag className="w-3 h-3" />
-                        {couponCode || t('pos.cart.discount', 'Discount')}
-                      </span>
-                      <span>-{discount.toFixed(2)}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>{t('pos.cart.total', 'Total')}</span>
                     <span>{grandTotal.toFixed(2)}</span>
@@ -666,23 +691,76 @@ const PaymentScreen = () => {
                 }
               </TouchButton>
             ) : (
-              <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-3 space-y-2">
-                <label className="block text-sm font-semibold text-purple-800">
-                  {t('pos.payment.serviceFeePercent', 'Service Fee %')}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.5"
-                    value={serviceFeePercentInput}
-                    onChange={(e) => setServiceFeePercentInput(e.target.value)}
-                    className="flex-1 px-3 py-2 border-2 border-purple-300 rounded-lg text-center font-semibold focus:border-purple-500 focus:outline-none"
-                    placeholder="0"
-                  />
-                  <span className="flex items-center text-lg font-bold text-purple-700">%</span>
+              <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-3 space-y-3">
+                {/* Mode Toggle */}
+                <div className="flex gap-1 bg-purple-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setServiceFeeMode('percent')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-md text-sm font-medium transition-colors',
+                      serviceFeeMode === 'percent'
+                        ? 'bg-white text-purple-700 shadow-sm'
+                        : 'text-purple-600 hover:text-purple-800'
+                    )}
+                  >
+                    {t('pos.payment.percent', 'Percent')}
+                  </button>
+                  <button
+                    onClick={() => setServiceFeeMode('amount')}
+                    className={cn(
+                      'flex-1 py-1.5 px-2 rounded-md text-sm font-medium transition-colors',
+                      serviceFeeMode === 'amount'
+                        ? 'bg-white text-purple-700 shadow-sm'
+                        : 'text-purple-600 hover:text-purple-800'
+                    )}
+                  >
+                    {t('pos.payment.fixedAmount', 'Fixed Amount')}
+                  </button>
                 </div>
+
+                {/* Input Field */}
+                {serviceFeeMode === 'percent' ? (
+                  <div>
+                    <label className="block text-sm font-semibold text-purple-800 mb-1">
+                      {t('pos.payment.serviceFeePercent', 'Service Fee %')}
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={serviceFeePercentInput}
+                        onChange={(e) => setServiceFeePercentInput(e.target.value)}
+                        className="flex-1 px-3 py-2 border-2 border-purple-300 rounded-lg text-center font-semibold focus:border-purple-500 focus:outline-none"
+                        placeholder="0"
+                      />
+                      <span className="flex items-center text-lg font-bold text-purple-700">%</span>
+                    </div>
+                    {serviceFeePercentInput > 0 && (
+                      <p className="text-xs text-purple-600 mt-1">
+                        = {((parseFloat(serviceFeePercentInput) || 0) / 100 * subtotal).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-semibold text-purple-800 mb-1">
+                      {t('pos.payment.serviceFeeAmount', 'Service Fee Amount')}
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1000"
+                      value={serviceFeeAmountInput}
+                      onChange={(e) => setServiceFeeAmountInput(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-purple-300 rounded-lg text-center font-semibold focus:border-purple-500 focus:outline-none"
+                      placeholder="0"
+                    />
+                  </div>
+                )}
+
+                {/* Action Buttons */}
                 <div className="flex gap-2">
                   <TouchButton
                     variant="primary"
@@ -733,15 +811,6 @@ const PaymentScreen = () => {
               <div className="flex justify-between text-purple-700">
                 <span>{t('pos.payment.serviceFee', 'Service Fee')} ({currentOrder.serviceFeePercent}%)</span>
                 <span>{serviceFee.toFixed(2)}</span>
-              </div>
-            )}
-            {discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span className="flex items-center gap-1">
-                  <Tag className="w-4 h-4" />
-                  {couponCode || t('pos.cart.discount', 'Discount')}
-                </span>
-                <span>-{discount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t-2 border-gray-200">

@@ -51,7 +51,7 @@ spring:
       indent-output: true
     deserialization:
       fail-on-unknown-properties: false
-    time-zone: UTC
+    time-zone: Asia/Tashkent
 
   servlet:
     multipart:
@@ -90,6 +90,13 @@ logging:
     org.springframework.web: INFO
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
+  file:
+    name: ${LOG_FILE_PATH:/app/logs/elcafe.log}
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 30
+      total-size-cap: 500MB
   pattern:
     console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
     file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
@@ -167,3 +174,22 @@ push:
 
 # Self-Service / QR Code Ordering Configuration
 # Note: selfservice config is under main 'app:' section above
+
+# Telegram Bot Configuration
+telegram:
+  bot:
+    enabled: ${TELEGRAM_BOT_ENABLED:true}
+    token: ${TELEGRAM_BOT_TOKEN:}
+    username: ${TELEGRAM_BOT_USERNAME:}
+
+# Stock Alert Configuration
+stock-alert:
+  enabled: ${STOCK_ALERT_ENABLED:true}
+  check-interval-minutes: ${STOCK_ALERT_CHECK_INTERVAL:30}
+  alert-cooldown-hours: ${STOCK_ALERT_COOLDOWN:4}
+
+# Financial Alert Configuration (Daily Reports via Telegram)
+financial-alert:
+  enabled: ${FINANCIAL_ALERT_ENABLED:true}
+  check-interval-minutes: ${FINANCIAL_ALERT_CHECK_INTERVAL:15}
+  default-report-time: ${FINANCIAL_ALERT_DEFAULT_TIME:23:00}

@@ -17,9 +17,9 @@ import java.util.List;
 @Repository
 public interface MenuCollectionRepository extends JpaRepository<MenuCollection, Long> {
 
-    Page<MenuCollection> findByRestaurantId(Long restaurantId, Pageable pageable);
+    Page<MenuCollection> findByRestaurant_Id(Long restaurantId, Pageable pageable);
 
-    Page<MenuCollection> findByRestaurantIdAndIsActive(Long restaurantId, Boolean isActive, Pageable pageable);
+    Page<MenuCollection> findByRestaurant_IdAndIsActive(Long restaurantId, Boolean isActive, Pageable pageable);
 
     @Query("SELECT mc FROM MenuCollection mc WHERE mc.restaurant.id = :restaurantId AND " +
            "mc.isActive = true AND " +

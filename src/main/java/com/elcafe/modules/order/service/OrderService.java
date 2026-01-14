@@ -2,16 +2,19 @@ package com.elcafe.modules.order.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
-import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.financial.service.RevenueService;
 import com.elcafe.modules.inventory.service.InventoryService;
-import com.elcafe.modules.marketing.event.MarketingEventPublisher;
+import com.elcafe.modules.inventory.service.InventoryValuationService;
 import com.elcafe.modules.order.entity.Order;
-import com.elcafe.modules.referral.service.ReferralService;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.settings.service.PrintService;
+import com.elcafe.modules.order.enums.PaymentStatus;
+import com.elcafe.modules.order.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +23,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.elcafe.modules.order.specification.OrderSpecification;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -34,6 +40,9 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final InventoryService inventoryService;
     private final DailyOrderSequenceService dailyOrderSequenceService;
+    private final RestaurantTableRepository restaurantTableRepository;
+    private final BusinessDayService businessDayService;
+    private final PaymentRepository paymentRepository;
 
     @Autowired
     @Lazy
@@ -45,11 +54,7 @@ public class OrderService {
 
     @Autowired
     @Lazy
-    private ReferralService referralService;
-
-    @Autowired
-    @Lazy
-    private MarketingEventPublisher marketingEventPublisher;
+    private InventoryValuationService inventoryValuationService;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -143,32 +148,26 @@ public class OrderService {
                     // Don't fail the order status update if revenue recording fails
                 }
             }
+        }
 
-            // Complete pending referrals for this customer's first order
-            if (referralService != null) {
-                try {
-                    referralService.completeReferral(order);
-                } catch (Exception e) {
-                    log.error("Failed to process referral for order {}: {}", order.getOrderNumber(), e.getMessage());
-                    // Don't fail the order status update if referral processing fails
-                }
-            }
+        // Release tables when dine-in order is completed, delivered, or cancelled
+        // Also check for tableIds/diningTable as fallback for orders without orderType set
+        boolean isDineInOrder = order.getOrderType() == OrderType.DINE_IN ||
+                (order.getTableIds() != null && !order.getTableIds().isBlank()) ||
+                order.getDiningTable() != null;
+        if (isDineInOrder &&
+                (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED)) {
+            releaseOrderTables(order);
+        }
 
-            // Publish order completion event for marketing automation (thank you SMS, etc.)
-            if (marketingEventPublisher != null && order.getCustomer() != null) {
-                try {
-                    // Check if this is the customer's first completed order
-                    boolean isFirstOrder = orderRepository.countCompletedOrdersByCustomer(
-                            order.getCustomer().getId()) <= 1;
-
-                    marketingEventPublisher.publishOrderCompleted(
-                            order,
-                            order.getCustomer(),
-                            isFirstOrder
-                    );
-                } catch (Exception e) {
-                    log.warn("Failed to publish order completion event: {}", e.getMessage());
-                }
+        // Restore inventory when order is cancelled (only if it was previously accepted/deducted)
+        if (newStatus == OrderStatus.CANCELLED && inventoryValuationService != null) {
+            try {
+                inventoryValuationService.restoreInventoryForOrder(order.getId());
+                log.info("Inventory restored for cancelled order: {}", order.getOrderNumber());
+            } catch (Exception e) {
+                log.error("Failed to restore inventory for cancelled order {}: {}", order.getOrderNumber(), e.getMessage());
+                // Don't fail the order cancellation if inventory restoration fails
             }
         }
 
@@ -192,18 +191,69 @@ public class OrderService {
         return orderRepository.findAll(pageable);
     }
 
+    /**
+     * Get orders with filters for order history page.
+     * Supports filtering by restaurant, status, date range, and search term.
+     * Date ranges are adjusted to business day boundaries based on restaurant working hours,
+     * unless isShiftAware is true (dates already calculated by ShiftTimeService).
+     */
+    @Transactional(readOnly = true)
+    public Page<Order> getOrdersWithFilters(
+            Long restaurantId,
+            OrderStatus status,
+            LocalDateTime fromDate,
+            LocalDateTime toDate,
+            String search,
+            boolean isShiftAware,
+            Pageable pageable
+    ) {
+        log.info("Fetching orders with filters: restaurantId={}, status={}, fromDate={}, toDate={}, search={}, isShiftAware={}",
+                restaurantId, status, fromDate, toDate, search, isShiftAware);
+
+        // Adjust date range to business day boundaries (only if not already shift-aware)
+        LocalDateTime adjustedFromDate = fromDate;
+        LocalDateTime adjustedToDate = toDate;
+
+        if (!isShiftAware && (fromDate != null || toDate != null)) {
+            BusinessDayService.DateRange adjustedRange = businessDayService.adjustToBusinessDayBoundaries(
+                    restaurantId, fromDate, toDate
+            );
+            adjustedFromDate = adjustedRange.from();
+            adjustedToDate = adjustedRange.to();
+
+            log.info("Adjusted to business day boundaries: {} to {} -> {} to {}",
+                    fromDate, toDate, adjustedFromDate, adjustedToDate);
+        }
+
+        Specification<Order> spec = OrderSpecification.withFilters(
+                restaurantId,
+                status,
+                adjustedFromDate,
+                adjustedToDate,
+                search
+        );
+
+        return orderRepository.findAll(spec, pageable);
+    }
+
     @Transactional(readOnly = true)
     public List<Order> getOrdersByRestaurant(Long restaurantId) {
-        return orderRepository.findByRestaurantIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        // Get business day boundaries for 7 days ago to now
+        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
+        BusinessDayService.DateRange adjustedRange = businessDayService.adjustToBusinessDayBoundaries(
+                restaurantId, sevenDaysAgo, LocalDateTime.now()
+        );
+
+        return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId,
-                LocalDateTime.now().minusDays(7),
-                LocalDateTime.now()
+                adjustedRange.from(),
+                adjustedRange.to()
         );
     }
 
     @Transactional(readOnly = true)
     public List<Order> getOrdersByCustomer(Long customerId) {
-        return orderRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        return orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customerId);
     }
 
     @Transactional(readOnly = true)
@@ -245,5 +295,145 @@ public class OrderService {
             case DELIVERED -> next == OrderStatus.COMPLETED;
             case COMPLETED, CANCELLED -> false;
         };
+    }
+
+    /**
+     * Release all tables associated with a dine-in order by setting status to AVAILABLE
+     */
+    private void releaseOrderTables(Order order) {
+        try {
+            // Release tables from tableIds field (for multi-table orders)
+            if (order.getTableIds() != null && !order.getTableIds().isBlank()) {
+                String[] tableIdStrings = order.getTableIds().split(",");
+                for (String tableIdStr : tableIdStrings) {
+                    Long tableId = Long.parseLong(tableIdStr.trim());
+                    restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                        table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                        restaurantTableRepository.save(table);
+                        log.info("Table {} released (set to AVAILABLE) for order {}", table.getTableNumber(), order.getOrderNumber());
+                    });
+                }
+            }
+            // Also check the diningTable field for backwards compatibility
+            else if (order.getDiningTable() != null) {
+                RestaurantTable table = order.getDiningTable();
+                table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                restaurantTableRepository.save(table);
+                log.info("Table {} released (set to AVAILABLE) for order {}", table.getTableNumber(), order.getOrderNumber());
+            }
+        } catch (Exception e) {
+            log.error("Failed to release tables for order {}: {}", order.getOrderNumber(), e.getMessage());
+            // Don't fail the order status update if table release fails
+        }
+    }
+
+    /**
+     * Revert a closed order (DELIVERED/COMPLETED) back to active status.
+     * This voids all payments and resets the order to the specified target status.
+     * Used when managers mistakenly close orders that should still be active.
+     *
+     * @param orderId The order ID to revert
+     * @param targetStatus The status to revert to (defaults to READY if null)
+     * @param reason The reason for reverting the order
+     * @param revertedBy Who is reverting the order
+     * @return The updated order
+     */
+    @Transactional
+    public Order revertOrderToActive(Long orderId, OrderStatus targetStatus, String reason, String revertedBy) {
+        log.info("Reverting order {} to active status, requested by {}", orderId, revertedBy);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
+
+        OrderStatus currentStatus = order.getStatus();
+
+        // Only allow reverting from closed statuses
+        if (currentStatus != OrderStatus.DELIVERED && currentStatus != OrderStatus.COMPLETED) {
+            throw new BadRequestException(
+                    String.format("Cannot revert order with status %s. Only DELIVERED or COMPLETED orders can be reverted.", currentStatus)
+            );
+        }
+
+        // Default target status is READY
+        if (targetStatus == null) {
+            targetStatus = OrderStatus.READY;
+        }
+
+        // Validate target status is an active status
+        if (targetStatus == OrderStatus.DELIVERED || targetStatus == OrderStatus.COMPLETED ||
+            targetStatus == OrderStatus.CANCELLED || targetStatus == OrderStatus.REJECTED) {
+            throw new BadRequestException(
+                    String.format("Cannot revert to status %s. Target must be an active status (e.g., READY, ACCEPTED, PREPARING).", targetStatus)
+            );
+        }
+
+        // Void all payments associated with the order
+        var payments = paymentRepository.findByOrderId(orderId);
+        for (var payment : payments) {
+            if (payment.getStatus() == PaymentStatus.COMPLETED ||
+                payment.getStatus() == PaymentStatus.PENDING ||
+                payment.getStatus() == PaymentStatus.PROCESSING) {
+                payment.setStatus(PaymentStatus.VOIDED);
+                payment.setRefundedAmount(payment.getTotalWithTip());
+                payment.setRefundReason("Order reverted: " + reason);
+                payment.setRefundedAt(java.time.LocalDateTime.now());
+                paymentRepository.save(payment);
+                log.info("Voided payment {} for reverted order {}", payment.getId(), orderId);
+            }
+        }
+
+        // Update order status
+        order.setStatus(targetStatus);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+
+        // Clear completed timestamps
+        order.setCompletedAt(null);
+
+        // Add status history
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .status(targetStatus)
+                .changedBy(revertedBy)
+                .notes("Order reverted from " + currentStatus + ": " + reason)
+                .build();
+        order.addStatusHistory(history);
+
+        // Re-occupy tables for dine-in orders
+        boolean isDineInOrder = order.getOrderType() == OrderType.DINE_IN ||
+                (order.getTableIds() != null && !order.getTableIds().isBlank()) ||
+                order.getDiningTable() != null;
+        if (isDineInOrder) {
+            reoccupyOrderTables(order);
+        }
+
+        order = orderRepository.save(order);
+        log.info("Order {} reverted from {} to {}", orderId, currentStatus, targetStatus);
+
+        return order;
+    }
+
+    /**
+     * Re-occupy tables for a reverted dine-in order
+     */
+    private void reoccupyOrderTables(Order order) {
+        try {
+            if (order.getTableIds() != null && !order.getTableIds().isBlank()) {
+                String[] tableIdStrings = order.getTableIds().split(",");
+                for (String tableIdStr : tableIdStrings) {
+                    Long tableId = Long.parseLong(tableIdStr.trim());
+                    restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                        table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+                        restaurantTableRepository.save(table);
+                        log.info("Table {} re-occupied for reverted order {}", table.getTableNumber(), order.getOrderNumber());
+                    });
+                }
+            } else if (order.getDiningTable() != null) {
+                RestaurantTable table = order.getDiningTable();
+                table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+                restaurantTableRepository.save(table);
+                log.info("Table {} re-occupied for reverted order {}", table.getTableNumber(), order.getOrderNumber());
+            }
+        } catch (Exception e) {
+            log.error("Failed to re-occupy tables for reverted order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
     }
 }

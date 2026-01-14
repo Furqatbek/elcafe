@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.entity;
 
 import com.elcafe.modules.order.entity.Order;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,6 +17,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class RestaurantTable {
 
     @Id
@@ -48,6 +50,21 @@ public class RestaurantTable {
 
     @Column(length = 100)
     private String section;
+
+    // Floor plan positioning
+    @Column(name = "position_x")
+    private Integer positionX;
+
+    @Column(name = "position_y")
+    private Integer positionY;
+
+    @Column(name = "table_width")
+    @Builder.Default
+    private Integer width = 100;
+
+    @Column(name = "table_height")
+    @Builder.Default
+    private Integer height = 100;
 
     @Column(nullable = false)
     @Builder.Default
