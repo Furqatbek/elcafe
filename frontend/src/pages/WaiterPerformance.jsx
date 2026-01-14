@@ -375,7 +375,7 @@ export default function WaiterPerformance() {
             </h2>
           </div>
           {loading ? (
-            <div className="p-8 text-center text-gray-500">Loading...</div>
+            <div className="p-8 text-center text-gray-500">{t('waiterPerformance.loading', 'Loading...')}</div>
           ) : leaderboard.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               {t('waiterPerformance.noData', 'No performance data for selected period')}
@@ -461,16 +461,16 @@ export default function WaiterPerformance() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-medium">
-                        {config.name || (config.waiter ? `${config.waiter.name}'s KPI` : 'Restaurant Default')}
+                        {config.name || (config.waiter ? `${config.waiter.name}'s KPI` : t('waiterPerformance.kpiSettings.restaurantDefault', 'Restaurant Default'))}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        {config.waiter ? `For: ${config.waiter.name}` : 'Applies to all waiters'}
+                        {config.waiter ? t('waiterPerformance.kpiSettings.forWaiter', 'For: {{name}}', { name: config.waiter.name }) : t('waiterPerformance.kpiSettings.appliesToAll', 'Applies to all waiters')}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-600">
-                        <span>Orders: {config.targetOrdersPerDay}/day</span>
-                        <span>Revenue: {formatCurrency(config.targetRevenuePerDay)}/day</span>
-                        <span>Avg Ticket: {formatCurrency(config.targetAvgTicket)}</span>
-                        <span>Rating: {config.minCustomerRating}+</span>
+                        <span>{t('waiterPerformance.kpiSettings.ordersDay', 'Orders: {{count}}/day', { count: config.targetOrdersPerDay })}</span>
+                        <span>{t('waiterPerformance.kpiSettings.revenueDay', 'Revenue: {{amount}}/day', { amount: formatCurrency(config.targetRevenuePerDay) })}</span>
+                        <span>{t('waiterPerformance.kpiSettings.avgTicketLabel', 'Avg Ticket: {{amount}}', { amount: formatCurrency(config.targetAvgTicket) })}</span>
+                        <span>{t('waiterPerformance.kpiSettings.ratingLabel', 'Rating: {{rating}}+', { rating: config.minCustomerRating })}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -554,44 +554,44 @@ export default function WaiterPerformance() {
           {/* More Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold mb-4">Performance Metrics</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('waiterPerformance.details.performanceMetrics', 'Performance Metrics')}</h3>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Working Days</span>
+                  <span className="text-gray-600">{t('waiterPerformance.details.workingDays', 'Working Days')}</span>
                   <span className="font-medium">{waiterPerformance.workingDays || 0}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Avg Ticket Value</span>
+                  <span className="text-gray-600">{t('waiterPerformance.details.avgTicketValue', 'Avg Ticket Value')}</span>
                   <span className="font-medium">{formatCurrency(waiterPerformance.avgTicketValue)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Bonus Earned</span>
+                  <span className="text-gray-600">{t('waiterPerformance.details.totalBonusEarned', 'Total Bonus Earned')}</span>
                   <span className="font-medium text-green-600">{formatCurrency(waiterPerformance.totalBonusEarned)}</span>
                 </div>
               </div>
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold mb-4">Quality Metrics</h3>
+              <h3 className="text-lg font-semibold mb-4">{t('waiterPerformance.details.qualityMetrics', 'Quality Metrics')}</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 flex items-center gap-2">
                     <ThumbsUp className="w-4 h-4 text-green-500" />
-                    Compliments
+                    {t('waiterPerformance.details.compliments', 'Compliments')}
                   </span>
                   <span className="font-medium text-green-600">{waiterPerformance.complimentsCount || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 flex items-center gap-2">
                     <ThumbsDown className="w-4 h-4 text-red-500" />
-                    Complaints
+                    {t('waiterPerformance.details.complaints', 'Complaints')}
                   </span>
                   <span className="font-medium text-red-600">{waiterPerformance.complaintsCount || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 flex items-center gap-2">
                     <Star className="w-4 h-4 text-yellow-500" />
-                    Avg Rating
+                    {t('waiterPerformance.details.avgRating', 'Avg Rating')}
                   </span>
                   <span className="font-medium">{waiterPerformance.avgCustomerRating?.toFixed(1) || '-'}</span>
                 </div>
@@ -625,23 +625,23 @@ export default function WaiterPerformance() {
               {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Configuration Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('waiterPerformance.kpiSettings.configName', 'Configuration Name')}</label>
                   <input
                     type="text"
                     value={kpiForm.name}
                     onChange={(e) => setKpiForm({ ...kpiForm, name: e.target.value })}
-                    placeholder="e.g., Default KPI, Peak Hours"
+                    placeholder={t('waiterPerformance.kpiSettings.configNamePlaceholder', 'e.g., Default KPI, Peak Hours')}
                     className="w-full border rounded-lg px-3 py-2"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Apply To</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('waiterPerformance.kpiSettings.applyTo', 'Apply To')}</label>
                   <select
                     value={kpiForm.waiterId || ''}
                     onChange={(e) => setKpiForm({ ...kpiForm, waiterId: e.target.value ? Number(e.target.value) : null })}
                     className="w-full border rounded-lg px-3 py-2"
                   >
-                    <option value="">All Waiters (Restaurant Default)</option>
+                    <option value="">{t('waiterPerformance.kpiSettings.allWaiters', 'All Waiters (Restaurant Default)')}</option>
                     {waiters.map((w) => (
                       <option key={w.id} value={w.id}>{w.name}</option>
                     ))}
@@ -651,10 +651,10 @@ export default function WaiterPerformance() {
 
               {/* Daily Targets */}
               <div>
-                <h4 className="font-medium mb-3">Daily Targets</h4>
+                <h4 className="font-medium mb-3">{t('waiterPerformance.kpiSettings.dailyTargets', 'Daily Targets')}</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Orders/Day</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.ordersPerDay', 'Orders/Day')}</label>
                     <input
                       type="number"
                       value={kpiForm.targetOrdersPerDay}
@@ -663,7 +663,7 @@ export default function WaiterPerformance() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Revenue/Day ($)</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.revenuePerDay', 'Revenue/Day ($)')}</label>
                     <input
                       type="number"
                       value={kpiForm.targetRevenuePerDay}
@@ -672,7 +672,7 @@ export default function WaiterPerformance() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Avg Ticket ($)</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.avgTicket', 'Avg Ticket ($)')}</label>
                     <input
                       type="number"
                       value={kpiForm.targetAvgTicket}
@@ -681,7 +681,7 @@ export default function WaiterPerformance() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Tables/Shift</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.tablesPerShift', 'Tables/Shift')}</label>
                     <input
                       type="number"
                       value={kpiForm.targetTablesPerShift}
@@ -694,10 +694,10 @@ export default function WaiterPerformance() {
 
               {/* Quality Targets */}
               <div>
-                <h4 className="font-medium mb-3">Quality Targets</h4>
+                <h4 className="font-medium mb-3">{t('waiterPerformance.kpiSettings.qualityTargets', 'Quality Targets')}</h4>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Avg Service Time (min)</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.avgServiceTimeMin', 'Avg Service Time (min)')}</label>
                     <input
                       type="number"
                       value={kpiForm.targetAvgServiceTimeMinutes}
@@ -706,7 +706,7 @@ export default function WaiterPerformance() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Max Complaint Rate (%)</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.maxComplaintRate', 'Max Complaint Rate (%)')}</label>
                     <input
                       type="number"
                       step="0.1"
@@ -716,7 +716,7 @@ export default function WaiterPerformance() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Min Customer Rating</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.minCustomerRating', 'Min Customer Rating')}</label>
                     <input
                       type="number"
                       step="0.1"
@@ -732,27 +732,27 @@ export default function WaiterPerformance() {
 
               {/* Bonus Configuration */}
               <div>
-                <h4 className="font-medium mb-3">Bonus Configuration</h4>
+                <h4 className="font-medium mb-3">{t('waiterPerformance.kpiSettings.bonusConfig', 'Bonus Configuration')}</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Bonus Threshold (%)</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.bonusThreshold', 'Bonus Threshold (%)')}</label>
                     <input
                       type="number"
                       value={kpiForm.bonusThresholdPercent}
                       onChange={(e) => setKpiForm({ ...kpiForm, bonusThresholdPercent: Number(e.target.value) })}
                       className="w-full border rounded px-3 py-2"
                     />
-                    <p className="text-xs text-gray-500 mt-1">KPI score needed to earn bonus</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('waiterPerformance.kpiSettings.bonusThresholdHint', 'KPI score needed to earn bonus')}</p>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Bonus Amount ($)</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.bonusAmount', 'Bonus Amount ($)')}</label>
                     <input
                       type="number"
                       value={kpiForm.bonusAmountPerThreshold}
                       onChange={(e) => setKpiForm({ ...kpiForm, bonusAmountPerThreshold: Number(e.target.value) })}
                       className="w-full border rounded px-3 py-2"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Bonus per threshold achieved</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('waiterPerformance.kpiSettings.bonusAmountHint', 'Bonus per threshold achieved')}</p>
                   </div>
                 </div>
               </div>
@@ -765,7 +765,7 @@ export default function WaiterPerformance() {
                   onChange={(e) => setKpiForm({ ...kpiForm, active: e.target.checked })}
                   className="w-5 h-5 rounded"
                 />
-                <span>Active</span>
+                <span>{t('common.active', 'Active')}</span>
               </label>
             </div>
 
@@ -775,13 +775,13 @@ export default function WaiterPerformance() {
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Save className="w-4 h-4" />
-                Save Configuration
+                {t('waiterPerformance.kpiSettings.saveConfig', 'Save Configuration')}
               </button>
               <button
                 onClick={() => setShowKPIModal(false)}
                 className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </button>
             </div>
           </div>
