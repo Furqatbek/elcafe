@@ -3,6 +3,7 @@ package com.elcafe.modules.restaurant.repository;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,6 +13,9 @@ import java.util.Optional;
 public interface RestaurantTableRepository extends JpaRepository<RestaurantTable, Long> {
 
     List<RestaurantTable> findByRestaurant_Id(Long restaurantId);
+
+    @Query("SELECT t FROM RestaurantTable t WHERE t.restaurant.id = :restaurantId")
+    List<RestaurantTable> findByRestaurantId(@Param("restaurantId") Long restaurantId);
 
     List<RestaurantTable> findByRestaurant_IdAndActive(Long restaurantId, Boolean active);
 
