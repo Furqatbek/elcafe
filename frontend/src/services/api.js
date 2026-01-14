@@ -297,6 +297,40 @@ export const waiterAPI = {
   getMyTables: () => api.get('/waiters/me/tables'),
 };
 
+// Waiter Performance & KPI API
+export const waiterPerformanceAPI = {
+  // KPI Configuration
+  getKPIConfigs: (restaurantId) => api.get(`/waiter-performance/restaurant/${restaurantId}/kpi-configs`),
+  saveKPIConfig: (restaurantId, data) => api.post(`/waiter-performance/restaurant/${restaurantId}/kpi-config`, data),
+  deleteKPIConfig: (configId) => api.delete(`/waiter-performance/kpi-config/${configId}`),
+  getEffectiveKPI: (waiterId, restaurantId) =>
+    api.get(`/waiter-performance/waiter/${waiterId}/kpi-config`, { params: { restaurantId } }),
+
+  // Performance Data
+  getTodayPerformance: (waiterId) => api.get(`/waiter-performance/waiter/${waiterId}/today`),
+  getPerformanceByDate: (waiterId, date) => api.get(`/waiter-performance/waiter/${waiterId}/date/${date}`),
+  getPerformanceHistory: (waiterId, params = {}) =>
+    api.get(`/waiter-performance/waiter/${waiterId}/history`, { params }),
+  getPerformanceSummary: (waiterId, startDate, endDate) =>
+    api.get(`/waiter-performance/waiter/${waiterId}/summary`, { params: { startDate, endDate } }),
+  getLeaderboard: (restaurantId, startDate, endDate) =>
+    api.get(`/waiter-performance/restaurant/${restaurantId}/leaderboard`, { params: { startDate, endDate } }),
+
+  // Manual Recording
+  recordComplaint: (waiterId, restaurantId) =>
+    api.post(`/waiter-performance/waiter/${waiterId}/record-complaint`, null, { params: { restaurantId } }),
+  recordCompliment: (waiterId, restaurantId) =>
+    api.post(`/waiter-performance/waiter/${waiterId}/record-compliment`, null, { params: { restaurantId } }),
+  recordRating: (waiterId, restaurantId, rating) =>
+    api.post(`/waiter-performance/waiter/${waiterId}/record-rating`, null, { params: { restaurantId, rating } }),
+  recordTip: (waiterId, restaurantId, amount) =>
+    api.post(`/waiter-performance/waiter/${waiterId}/record-tip`, null, { params: { restaurantId, amount } }),
+  shiftStart: (waiterId, restaurantId) =>
+    api.post(`/waiter-performance/waiter/${waiterId}/shift-start`, null, { params: { restaurantId } }),
+  shiftEnd: (waiterId, restaurantId) =>
+    api.post(`/waiter-performance/waiter/${waiterId}/shift-end`, null, { params: { restaurantId } }),
+};
+
 export const posAPI = {
   createOrder: (orderData) => api.post('/pos/orders', orderData),
   getCategories: (restaurantId) => api.get(`/menu/restaurants/${restaurantId}/categories`),

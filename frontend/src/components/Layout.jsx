@@ -61,6 +61,7 @@ import {
   MessageSquare,
   Send,
   QrCode,
+  Trophy,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -140,6 +141,7 @@ export default function Layout() {
       subItems: [
         { label: t('nav.sub.operators'), icon: UserCog, path: '/operators' },
         { label: t('nav.sub.waiters'), icon: UserCheck, path: '/employees/waiters' },
+        { label: t('nav.sub.waiterPerformance', 'Waiter Performance'), icon: Trophy, path: '/employees/waiter-performance' },
         { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
         { label: t('nav.sub.courierMap'), icon: MapPin, path: '/courier-map' },
       ],
