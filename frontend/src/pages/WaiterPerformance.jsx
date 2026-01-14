@@ -663,7 +663,7 @@ export default function WaiterPerformance() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.revenuePerDay', 'Revenue/Day ($)')}</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.revenuePerDay', 'Revenue/Day')}</label>
                     <input
                       type="number"
                       value={kpiForm.targetRevenuePerDay}
@@ -672,7 +672,7 @@ export default function WaiterPerformance() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.avgTicket', 'Avg Ticket ($)')}</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.avgTicket', 'Avg Ticket')}</label>
                     <input
                       type="number"
                       value={kpiForm.targetAvgTicket}
@@ -745,7 +745,7 @@ export default function WaiterPerformance() {
                     <p className="text-xs text-gray-500 mt-1">{t('waiterPerformance.kpiSettings.bonusThresholdHint', 'KPI score needed to earn bonus')}</p>
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.bonusAmount', 'Bonus Amount ($)')}</label>
+                    <label className="block text-sm text-gray-600 mb-1">{t('waiterPerformance.kpiSettings.bonusAmount', 'Bonus Amount')}</label>
                     <input
                       type="number"
                       value={kpiForm.bonusAmountPerThreshold}
