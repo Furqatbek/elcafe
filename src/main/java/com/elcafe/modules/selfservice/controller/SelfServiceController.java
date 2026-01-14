@@ -167,9 +167,9 @@ public class SelfServiceController {
 
         List<Product> products;
         if (categoryId != null) {
-            products = productRepository.findByCategoryIdAndStatusOrderBySortOrder(categoryId, ProductStatus.ACTIVE);
+            products = productRepository.findByCategoryIdAndStatusOrderBySortOrder(categoryId, ProductStatus.LIVE);
         } else {
-            products = productRepository.findByRestaurantIdAndStatus(restaurantId, ProductStatus.ACTIVE);
+            products = productRepository.findByRestaurantIdAndStatus(restaurantId, ProductStatus.LIVE);
         }
 
         List<Map<String, Object>> response = products.stream()
