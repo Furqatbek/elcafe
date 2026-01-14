@@ -37,7 +37,7 @@ export default function CheckoutPage() {
         customerPhone: customerPhone || null,
         notes: notes || null,
       });
-      navigate(`/order/${result.orderId}/status`, { replace: true });
+      navigate(`/${result.orderId}/status`, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit order');
     } finally {

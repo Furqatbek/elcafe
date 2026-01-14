@@ -293,7 +293,7 @@ export default function MenuPage() {
       {cart.itemCount > 0 && (
         <div className="fixed bottom-4 left-4 right-4 max-w-lg mx-auto z-50">
           <button
-            onClick={() => navigate(`/order/cart`)}
+            onClick={() => navigate('/cart')}
             className="w-full bg-blue-600 text-white rounded-lg py-4 px-6 flex items-center justify-between shadow-lg hover:bg-blue-700 transition-colors"
           >
             <div className="flex items-center gap-3">
