@@ -3,6 +3,7 @@ package com.elcafe.modules.selfservice.entity;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.selfservice.enums.QRCodeType;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,10 +27,12 @@ public class QRCode {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Restaurant restaurant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private RestaurantTable table;
 
     @Column(nullable = false, unique = true, length = 50)
