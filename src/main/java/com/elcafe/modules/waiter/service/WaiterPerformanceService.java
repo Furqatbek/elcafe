@@ -140,16 +140,17 @@ public class WaiterPerformanceService {
 
         // Update order metrics
         performance.setTotalOrders(performance.getTotalOrders() + 1);
-        performance.setTotalRevenue(performance.getTotalRevenue().add(order.getTotalAmount()));
+        BigDecimal orderTotal = order.getGrandTotal() != null ? order.getGrandTotal() : order.getTotal();
+        performance.setTotalRevenue(performance.getTotalRevenue().add(orderTotal));
 
         // Update average ticket
         BigDecimal newAvgTicket = performance.getTotalRevenue()
                 .divide(BigDecimal.valueOf(performance.getTotalOrders()), 2, RoundingMode.HALF_UP);
         performance.setAvgTicketValue(newAvgTicket);
 
-        // Track service time if available
-        if (order.getCreatedAt() != null && order.getPaidAt() != null) {
-            long serviceTimeMinutes = ChronoUnit.MINUTES.between(order.getCreatedAt(), order.getPaidAt());
+        // Track service time if available (from creation to completion)
+        if (order.getCreatedAt() != null && order.getCompletedAt() != null) {
+            long serviceTimeMinutes = ChronoUnit.MINUTES.between(order.getCreatedAt(), order.getCompletedAt());
             updateServiceTime(performance, (int) serviceTimeMinutes);
         }
 
