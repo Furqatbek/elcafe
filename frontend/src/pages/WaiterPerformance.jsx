@@ -247,7 +247,7 @@ export default function WaiterPerformance() {
             {t('waiterPerformance.title', 'Waiter Performance')}
           </h1>
           <p className="text-gray-500">
-            {t('waiterPerformance.description', 'Track KPIs and performance metrics')}
+            {t('waiterPerformance.subtitle', 'Track KPIs and performance metrics')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -339,7 +339,7 @@ export default function WaiterPerformance() {
           >
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4" />
-              {t('waiterPerformance.leaderboard', 'Leaderboard')}
+              {t('waiterPerformance.tabs.leaderboard', 'Leaderboard')}
             </div>
           </button>
           <button
@@ -348,7 +348,7 @@ export default function WaiterPerformance() {
           >
             <div className="flex items-center gap-2">
               <Target className="w-4 h-4" />
-              {t('waiterPerformance.kpiSettings', 'KPI Settings')}
+              {t('waiterPerformance.tabs.kpiSettings', 'KPI Settings')}
             </div>
           </button>
           {selectedWaiter && (
@@ -358,7 +358,7 @@ export default function WaiterPerformance() {
             >
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
-                {t('waiterPerformance.details', 'Details')}
+                {t('waiterPerformance.tabs.details', 'Details')}
               </div>
             </button>
           )}
@@ -371,14 +371,14 @@ export default function WaiterPerformance() {
           <div className="p-4 border-b">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Trophy className="w-5 h-5 text-yellow-500" />
-              {t('waiterPerformance.leaderboardTitle', 'Performance Leaderboard')}
+              {t('waiterPerformance.leaderboard.title', 'Performance Leaderboard')}
             </h2>
           </div>
           {loading ? (
             <div className="p-8 text-center text-gray-500">{t('waiterPerformance.loading', 'Loading...')}</div>
           ) : leaderboard.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              {t('waiterPerformance.noData', 'No performance data for selected period')}
+              {t('waiterPerformance.leaderboard.noData', 'No performance data for selected period')}
             </div>
           ) : (
             <table className="w-full">
@@ -441,7 +441,7 @@ export default function WaiterPerformance() {
           <div className="p-4 border-b flex justify-between items-center">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Target className="w-5 h-5 text-blue-500" />
-              {t('waiterPerformance.kpiConfigurations', 'KPI Configurations')}
+              {t('waiterPerformance.kpiSettings.title', 'KPI Configurations')}
             </h2>
             <button
               onClick={() => { resetKPIForm(); setEditingKPI(null); setShowKPIModal(true); }}
@@ -452,7 +452,7 @@ export default function WaiterPerformance() {
           </div>
           {kpiConfigs.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
-              {t('waiterPerformance.noKPI', 'No KPI configurations. Create one to set performance targets.')}
+              {t('waiterPerformance.kpiSettings.noConfigs', 'No KPI configurations. Create one to set performance targets.')}
             </div>
           ) : (
             <div className="divide-y">
