@@ -24,7 +24,7 @@ const PurchaseOrders = () => {
   const [filterStatus, setFilterStatus] = useState('all');
 
   const [formData, setFormData] = useState({
-    restaurantId: '',
+    restaurantId: 1,
     supplierId: '',
     supplierName: '',
     supplierContact: '',
