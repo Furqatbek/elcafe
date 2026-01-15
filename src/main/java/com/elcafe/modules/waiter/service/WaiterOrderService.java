@@ -63,6 +63,7 @@ public class WaiterOrderService {
 
     /**
      * Create a new order for a table (with optional items)
+     * If an open order already exists for the table, adds items to that order instead
      */
     @Transactional
     public Order createOrder(CreateOrderRequest request, Long waiterId) {
@@ -72,6 +73,29 @@ public class WaiterOrderService {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
+        // Check for existing open order on this table
+        List<OrderStatus> openStatuses = List.of(
+                OrderStatus.NEW, OrderStatus.ACCEPTED, OrderStatus.PREPARING,
+                OrderStatus.READY, OrderStatus.PICKED_UP
+        );
+        List<Order> existingOrders = orderRepository.findByDiningTable_IdAndStatusIn(request.getTableId(), openStatuses);
+
+        // If there's an existing open order, add items to it instead of creating new order
+        if (!existingOrders.isEmpty()) {
+            Order existingOrder = existingOrders.get(0); // Get the most recent open order
+            log.info("Found existing open order {} for table {}, adding items to it",
+                    existingOrder.getOrderNumber(), table.getTableNumber());
+
+            // If items provided, add them to the existing order
+            if (request.getItems() != null && !request.getItems().isEmpty()) {
+                return addItems(existingOrder.getId(), request.getItems(), waiterId);
+            }
+
+            // No items to add, just return the existing order
+            return existingOrder;
+        }
+
+        // No existing order, create a new one
         // Customer is optional - can be added later
         Customer customer = null;
         if (request.getCustomerId() != null) {
