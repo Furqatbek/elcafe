@@ -1,6 +1,7 @@
 package com.elcafe.modules.inventory.service;
 
 import com.elcafe.modules.inventory.entity.*;
+import com.elcafe.modules.inventory.enums.TransactionType;
 import com.elcafe.modules.inventory.enums.ValuationMethod;
 import com.elcafe.modules.inventory.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class InventoryValuationService {
     private final InventoryIngredientRepository ingredientRepository;
     private final ValuationSettingsRepository valuationSettingsRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
+    private final InventoryTransactionRepository transactionRepository;
 
     /**
      * Get the current valuation method for a restaurant
@@ -410,7 +412,8 @@ public class InventoryValuationService {
 
     /**
      * Restore inventory for a cancelled order
-     * Reverses the consumption by adding quantities back to batches and ingredients
+     * Reverses the consumption by adding quantities back to batches and ingredients.
+     * Falls back to InventoryTransaction records if no BatchConsumption records exist.
      */
     @Transactional
     public void restoreInventoryForOrder(Long orderId) {
@@ -418,42 +421,66 @@ public class InventoryValuationService {
 
         List<BatchConsumption> consumptions = batchConsumptionRepository.findByOrderId(orderId);
 
-        if (consumptions.isEmpty()) {
-            log.debug("No consumption records found for order {}, nothing to restore", orderId);
-            return;
-        }
+        if (!consumptions.isEmpty()) {
+            // Restore from BatchConsumption records (batch-based tracking)
+            for (BatchConsumption consumption : consumptions) {
+                try {
+                    // Restore quantity to batch
+                    InventoryBatch batch = consumption.getBatch();
+                    if (batch != null) {
+                        BigDecimal currentQty = batch.getQuantity();
+                        batch.setQuantity(currentQty.add(consumption.getQuantity()));
 
-        for (BatchConsumption consumption : consumptions) {
-            try {
-                // Restore quantity to batch
-                InventoryBatch batch = consumption.getBatch();
-                if (batch != null) {
-                    BigDecimal currentQty = batch.getQuantity();
-                    batch.setQuantity(currentQty.add(consumption.getQuantity()));
-
-                    // Reactivate batch if it was depleted
-                    if (batch.getStatus() == InventoryBatch.Status.DEPLETED) {
-                        batch.setStatus(InventoryBatch.Status.ACTIVE);
+                        // Reactivate batch if it was depleted
+                        if (batch.getStatus() == InventoryBatch.Status.DEPLETED) {
+                            batch.setStatus(InventoryBatch.Status.ACTIVE);
+                        }
+                        batchRepository.save(batch);
+                        log.debug("Restored {} to batch {}", consumption.getQuantity(), batch.getBatchNumber());
                     }
-                    batchRepository.save(batch);
-                    log.debug("Restored {} to batch {}", consumption.getQuantity(), batch.getBatchNumber());
-                }
 
-                // Restore quantity to ingredient
-                Ingredient ingredient = consumption.getIngredient();
-                if (ingredient != null) {
-                    ingredient.addStock(consumption.getQuantity());
-                    ingredientRepository.save(ingredient);
-                    log.debug("Restored {} to ingredient {}", consumption.getQuantity(), ingredient.getName());
+                    // Restore quantity to ingredient
+                    Ingredient ingredient = consumption.getIngredient();
+                    if (ingredient != null) {
+                        ingredient.addStock(consumption.getQuantity());
+                        ingredientRepository.save(ingredient);
+                        log.debug("Restored {} to ingredient {}", consumption.getQuantity(), ingredient.getName());
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to restore consumption record {}: {}", consumption.getId(), e.getMessage());
                 }
-            } catch (Exception e) {
-                log.error("Failed to restore consumption record {}: {}", consumption.getId(), e.getMessage());
             }
-        }
 
-        // Delete consumption records
-        batchConsumptionRepository.deleteByOrderId(orderId);
-        log.info("Restored inventory and deleted {} consumption records for order {}", consumptions.size(), orderId);
+            // Delete consumption records
+            batchConsumptionRepository.deleteByOrderId(orderId);
+            log.info("Restored inventory and deleted {} consumption records for order {}", consumptions.size(), orderId);
+        } else {
+            // Fallback: restore from InventoryTransaction records
+            // This handles cases where no batches existed when order was placed
+            List<InventoryTransaction> transactions = transactionRepository.findByReferenceTypeAndReferenceId("ORDER", orderId);
+
+            if (transactions.isEmpty()) {
+                log.debug("No consumption or transaction records found for order {}, nothing to restore", orderId);
+                return;
+            }
+
+            for (InventoryTransaction transaction : transactions) {
+                if (transaction.getType() == TransactionType.ORDER_DEDUCTION) {
+                    try {
+                        Ingredient ingredient = transaction.getIngredient();
+                        if (ingredient != null) {
+                            ingredient.addStock(transaction.getQuantity());
+                            ingredientRepository.save(ingredient);
+                            log.debug("Restored {} to ingredient {} from transaction record",
+                                    transaction.getQuantity(), ingredient.getName());
+                        }
+                    } catch (Exception e) {
+                        log.error("Failed to restore from transaction {}: {}", transaction.getId(), e.getMessage());
+                    }
+                }
+            }
+            log.info("Restored inventory from {} transaction records for order {}", transactions.size(), orderId);
+        }
     }
 
     // Result classes
