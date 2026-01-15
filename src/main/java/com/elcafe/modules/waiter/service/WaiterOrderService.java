@@ -576,7 +576,7 @@ public class WaiterOrderService {
     }
 
     /**
-     * Get order history for a waiter (completed and cancelled orders)
+     * Get order history for a waiter (completed, delivered, and cancelled orders)
      */
     @Transactional(readOnly = true)
     public List<Order> getWaiterOrderHistory(Long waiterId) {
@@ -585,7 +585,7 @@ public class WaiterOrderService {
 
         return orderRepository.findByWaiterAndStatusInWithItemsOrderByCreatedAtDesc(
                 waiter,
-                List.of(OrderStatus.COMPLETED, OrderStatus.CANCELLED)
+                List.of(OrderStatus.COMPLETED, OrderStatus.DELIVERED, OrderStatus.CANCELLED)
         );
     }
 
