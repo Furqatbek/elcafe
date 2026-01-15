@@ -98,19 +98,15 @@ public class ShiftTimeService {
         LocalDateTime shiftStart = date.atTime(openTime);
         LocalDateTime shiftEnd;
 
-        // Check if shift crosses midnight (closeTime is before openTime)
-        if (closeTime.isBefore(openTime) || closeTime.equals(openTime)) {
-            // Shift crosses midnight - extend end time to next day's opening time
-            // This ensures no gap between shifts (e.g., 02:00 AM to 11:00 AM gap is covered)
-            shiftEnd = date.plusDays(1).atTime(openTime);
-            log.debug("Shift crosses midnight for restaurant {} on {}: {} to {} (extended to next opening)",
-                restaurantId, date, shiftStart, shiftEnd);
-        } else {
-            // Normal shift - ends same day at closing time
-            shiftEnd = date.atTime(closeTime);
-            log.debug("Normal shift for restaurant {} on {}: {} to {}",
-                restaurantId, date, shiftStart, shiftEnd);
-        }
+        // Always extend end time to next day's opening time
+        // This ensures ALL orders for this business day are included:
+        // - Orders during operating hours (09:00-22:00)
+        // - Orders after closing but before next day's opening (22:00-09:00)
+        // This prevents gaps where orders would be missed
+        shiftEnd = date.plusDays(1).atTime(openTime);
+
+        log.debug("Shift for restaurant {} on {}: {} to {} (business hours: {}-{})",
+            restaurantId, date, shiftStart, shiftEnd, openTime, closeTime);
 
         return new ShiftTimeRange(shiftStart, shiftEnd, openTime, closeTime);
     }
