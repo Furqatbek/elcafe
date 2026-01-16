@@ -6,6 +6,11 @@ import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
+import com.elcafe.modules.promotion.service.CouponValidationService;
+import com.elcafe.modules.promotion.service.DiscountCalculationService;
 import com.elcafe.modules.menu.entity.ProductVariant;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.menu.repository.ProductVariantRepository;
@@ -60,6 +65,8 @@ public class WaiterOrderService {
     private final ProductVariantRepository productVariantRepository;
     private final OrderEventService orderEventService;
     private final InventoryService inventoryService;
+    private final DiscountCalculationService discountCalculationService;
+    private final CouponValidationService couponValidationService;
 
     /**
      * Create a new order for a table (with optional items)
@@ -663,6 +670,117 @@ public class WaiterOrderService {
             case "monthly" -> 30;
             default -> 7; // weekly (default)
         };
+    }
+
+    // ==================== DISCOUNT METHODS ====================
+
+    /**
+     * Apply a discount to an order (coupon, promotion, manual, or happy hour)
+     */
+    @Transactional
+    public Order applyDiscount(Long orderId, ApplyDiscountRequest request, Long waiterId) {
+        log.info("Waiter {} applying discount to order {}: type={}", waiterId, orderId, request.getDiscountType());
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        Waiter waiter = waiterRepository.findById(waiterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
+
+        // Check order status allows modification
+        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Cannot modify completed or cancelled order");
+        }
+
+        // Apply discount using the discount calculation service
+        discountCalculationService.applyDiscount(order, request);
+
+        // Recalculate totals
+        recalculateOrderTotals(order);
+
+        // Save the order
+        Order savedOrder = orderRepository.save(order);
+
+        // Record event
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("discountType", request.getDiscountType().name());
+        metadata.put("discountAmount", savedOrder.getDiscount());
+        orderEventService.publishEvent(savedOrder, OrderEventType.ORDER_UPDATED, waiter.getName(), metadata);
+
+        log.info("Discount applied to order {} by waiter {}: discount={}, newTotal={}",
+                orderId, waiter.getName(), savedOrder.getDiscount(), savedOrder.getTotal());
+
+        return savedOrder;
+    }
+
+    /**
+     * Remove discount from an order
+     */
+    @Transactional
+    public Order removeDiscount(Long orderId, Long waiterId) {
+        log.info("Waiter {} removing discount from order {}", waiterId, orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        Waiter waiter = waiterRepository.findById(waiterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
+
+        // Check order status allows modification
+        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Cannot modify completed or cancelled order");
+        }
+
+        // Clear discount fields
+        order.setDiscount(BigDecimal.ZERO);
+        order.setDiscountType(null);
+        order.setCouponCode(null);
+        order.setPromotionId(null);
+        order.setPromotionName(null);
+
+        // Recalculate totals
+        recalculateOrderTotals(order);
+
+        // Save the order
+        Order savedOrder = orderRepository.save(order);
+
+        // Record event
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("action", "discount_removed");
+        orderEventService.publishEvent(savedOrder, OrderEventType.ORDER_UPDATED, waiter.getName(), metadata);
+
+        log.info("Discount removed from order {} by waiter {}", orderId, waiter.getName());
+
+        return savedOrder;
+    }
+
+    /**
+     * Validate a coupon code for an order without applying it
+     */
+    @Transactional(readOnly = true)
+    public ValidateCouponResponse validateCoupon(Long orderId, String couponCode) {
+        log.info("Validating coupon {} for waiter order {}", couponCode, orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        // Build validation request from order
+        ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
+                .code(couponCode)
+                .restaurantId(order.getRestaurant().getId())
+                .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
+                .orderTotal(order.getSubtotal())
+                .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
+                .items(order.getItems().stream()
+                        .map(item -> ValidateCouponRequest.OrderItemInfo.builder()
+                                .productId(item.getProductId())
+                                .quantity(item.getQuantity())
+                                .price(item.getUnitPrice())
+                                .build())
+                        .collect(Collectors.toList()))
+                .build();
+
+        return couponValidationService.validateCoupon(validateRequest);
     }
 
     /**

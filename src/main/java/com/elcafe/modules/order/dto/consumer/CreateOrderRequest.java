@@ -42,6 +42,9 @@ public class CreateOrderRequest {
     @NotNull(message = "Payment method is required")
     private String paymentMethod; // CASH, CARD, ONLINE
 
+    @Size(max = 50, message = "Coupon code must not exceed 50 characters")
+    private String couponCode;
+
     @Data
     @Builder
     @NoArgsConstructor

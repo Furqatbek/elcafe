@@ -1,6 +1,8 @@
 package com.elcafe.modules.waiter.controller;
 
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.elcafe.modules.waiter.dto.AddOrderItemRequest;
 import com.elcafe.modules.waiter.dto.CreateOrderRequest;
 import com.elcafe.modules.waiter.dto.OrderEventResponse;
@@ -173,5 +175,38 @@ public class WaiterOrderController {
             @RequestParam(defaultValue = "weekly") String period) {
         WaiterMetricsResponse metrics = waiterOrderService.getWaiterMetrics(waiterId, period);
         return ResponseEntity.ok(ApiResponse.success("Waiter metrics retrieved successfully", metrics));
+    }
+
+    // ==================== DISCOUNT ENDPOINTS ====================
+
+    @PostMapping("/{orderId}/discount")
+    @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR')")
+    @Operation(summary = "Apply discount", description = "Apply a discount to an order (coupon, promotion, manual, or happy hour)")
+    public ResponseEntity<ApiResponse<Order>> applyDiscount(
+            @PathVariable Long orderId,
+            @Valid @RequestBody ApplyDiscountRequest request,
+            @RequestHeader("X-Waiter-Id") Long waiterId) {
+        Order order = waiterOrderService.applyDiscount(orderId, request, waiterId);
+        return ResponseEntity.ok(ApiResponse.success("Discount applied successfully", order));
+    }
+
+    @DeleteMapping("/{orderId}/discount")
+    @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR')")
+    @Operation(summary = "Remove discount", description = "Remove the discount from an order")
+    public ResponseEntity<ApiResponse<Order>> removeDiscount(
+            @PathVariable Long orderId,
+            @RequestHeader("X-Waiter-Id") Long waiterId) {
+        Order order = waiterOrderService.removeDiscount(orderId, waiterId);
+        return ResponseEntity.ok(ApiResponse.success("Discount removed successfully", order));
+    }
+
+    @PostMapping("/{orderId}/validate-coupon")
+    @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR')")
+    @Operation(summary = "Validate coupon", description = "Validate a coupon code for an order without applying it")
+    public ResponseEntity<ApiResponse<ValidateCouponResponse>> validateCoupon(
+            @PathVariable Long orderId,
+            @RequestParam String couponCode) {
+        ValidateCouponResponse response = waiterOrderService.validateCoupon(orderId, couponCode);
+        return ResponseEntity.ok(ApiResponse.success("Coupon validation completed", response));
     }
 }

@@ -11,6 +11,9 @@ import {
   Clock,
   UtensilsCrossed,
   X,
+  Tag,
+  Sparkles,
+  Percent,
 } from 'lucide-react';
 
 export default function MenuPage() {
@@ -33,6 +36,8 @@ export default function MenuPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showProductModal, setShowProductModal] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [activePromotions, setActivePromotions] = useState([]);
+  const [activeHappyHour, setActiveHappyHour] = useState(null);
 
   // Initialize session on mount
   useEffect(() => {
@@ -62,6 +67,19 @@ export default function MenuPage() {
       // Load all products
       const productsRes = await selfServiceAPI.getProducts(restaurantId);
       setProducts(productsRes.data);
+
+      // Load active promotions and happy hours
+      try {
+        const [promotionsRes, happyHourRes] = await Promise.all([
+          selfServiceAPI.getActivePromotions(restaurantId),
+          selfServiceAPI.getActiveHappyHour(restaurantId),
+        ]);
+        setActivePromotions(promotionsRes.data?.data || promotionsRes.data || []);
+        setActiveHappyHour(happyHourRes.data?.data || happyHourRes.data || null);
+      } catch (promoErr) {
+        console.error('Failed to load promotions:', promoErr);
+        // Don't fail the menu load if promotions fail
+      }
     } catch (err) {
       setError('Failed to load menu');
     } finally {
@@ -199,6 +217,49 @@ export default function MenuPage() {
           </div>
         </div>
       </div>
+
+      {/* Active Promotions Banner */}
+      {(activePromotions.length > 0 || activeHappyHour) && (
+        <div className="max-w-lg mx-auto px-4 py-2 space-y-2">
+          {/* Happy Hour Banner */}
+          {activeHappyHour && (
+            <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-lg p-3 text-white">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                <div className="flex-1">
+                  <p className="font-bold text-sm">Happy Hour Active!</p>
+                  <p className="text-xs opacity-90">
+                    {activeHappyHour.discountPercent}% off selected items
+                  </p>
+                </div>
+                <Clock className="w-4 h-4 opacity-75" />
+              </div>
+            </div>
+          )}
+
+          {/* Promotions */}
+          {activePromotions.slice(0, 2).map((promo) => (
+            <div
+              key={promo.id}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg p-3 text-white"
+            >
+              <div className="flex items-center gap-2">
+                <Tag className="w-5 h-5" />
+                <div className="flex-1">
+                  <p className="font-bold text-sm">{promo.name}</p>
+                  <p className="text-xs opacity-90">
+                    {promo.type === 'PERCENTAGE' && `${promo.discountValue}% off`}
+                    {promo.type === 'FIXED_AMOUNT' && `Save ${formatPrice(promo.discountValue)}`}
+                    {promo.type === 'BUY_X_GET_Y' && 'Buy more, get more!'}
+                    {promo.minOrderAmount > 0 && ` - Min order: ${formatPrice(promo.minOrderAmount)}`}
+                  </p>
+                </div>
+                <Percent className="w-4 h-4 opacity-75" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Search */}
       <div className="max-w-lg mx-auto px-4 py-3">

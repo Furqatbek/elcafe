@@ -3,6 +3,7 @@ package com.elcafe.modules.order.controller;
 import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.service.ConsumerOrderService;
+import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 
 @Slf4j
 @RestController
@@ -50,5 +53,18 @@ public class ConsumerOrderController {
             @RequestParam(required = false) String reason) {
         OrderResponse response = consumerOrderService.cancelOrder(orderNumber, reason);
         return ResponseEntity.ok(ApiResponse.success("Order cancelled successfully", response));
+    }
+
+    @PostMapping("/validate-coupon")
+    @Operation(summary = "Validate coupon", description = "Validate a coupon code before checkout")
+    public ResponseEntity<ApiResponse<ValidateCouponResponse>> validateCoupon(
+            @RequestParam Long restaurantId,
+            @RequestParam String couponCode,
+            @RequestParam(required = false) BigDecimal orderTotal,
+            @RequestParam(required = false) Long customerId) {
+        log.info("Validating coupon {} for restaurant {}", couponCode, restaurantId);
+        ValidateCouponResponse response = consumerOrderService.validateCoupon(
+                restaurantId, couponCode, orderTotal != null ? orderTotal : BigDecimal.ZERO, customerId, null);
+        return ResponseEntity.ok(ApiResponse.success("Coupon validation completed", response));
     }
 }

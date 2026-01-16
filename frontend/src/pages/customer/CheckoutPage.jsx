@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomer } from './CustomerContext';
+import { selfServiceAPI } from '../../services/api';
 import {
   ChevronLeft,
   UtensilsCrossed,
@@ -10,6 +11,9 @@ import {
   Phone,
   MessageSquare,
   CheckCircle,
+  Tag,
+  X,
+  Loader2,
 } from 'lucide-react';
 
 export default function CheckoutPage() {
@@ -22,8 +26,57 @@ export default function CheckoutPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [couponValidating, setCouponValidating] = useState(false);
+  const [couponError, setCouponError] = useState(null);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat('uz-UZ').format(price) + ' UZS';
+  };
+
+  const handleValidateCoupon = async () => {
+    if (!couponCode.trim()) return;
+
+    setCouponValidating(true);
+    setCouponError(null);
+
+    try {
+      const response = await selfServiceAPI.validateCoupon(
+        session.restaurantId,
+        couponCode.trim(),
+        cart.total,
+        null
+      );
+
+      const data = response.data?.data || response.data;
+
+      if (data.valid) {
+        setAppliedCoupon({
+          code: couponCode.trim(),
+          promotionName: data.promotionName,
+          discount: data.calculatedDiscount || 0,
+        });
+        setCouponCode('');
+      } else {
+        setCouponError(data.errorMessage || 'Invalid coupon code');
+      }
+    } catch (err) {
+      setCouponError(err.response?.data?.message || 'Failed to validate coupon');
+    } finally {
+      setCouponValidating(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError(null);
+  };
+
+  const getFinalTotal = () => {
+    const discount = appliedCoupon?.discount || 0;
+    return Math.max(0, cart.total - discount);
   };
 
   const handleSubmit = async () => {
@@ -36,6 +89,7 @@ export default function CheckoutPage() {
         customerName: customerName || null,
         customerPhone: customerPhone || null,
         notes: notes || null,
+        couponCode: appliedCoupon?.code || null,
       });
       navigate(`/${result.orderId}/status`, { replace: true });
     } catch (err) {
@@ -194,6 +248,63 @@ export default function CheckoutPage() {
           </div>
         </div>
 
+        {/* Coupon Code */}
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h2 className="font-semibold text-gray-900 mb-3">Coupon Code</h2>
+          {appliedCoupon ? (
+            <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <Tag className="w-5 h-5 text-green-600" />
+                <div>
+                  <p className="font-medium text-green-800">{appliedCoupon.code}</p>
+                  <p className="text-sm text-green-600">
+                    {appliedCoupon.promotionName} - Save {formatPrice(appliedCoupon.discount)}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleRemoveCoupon}
+                className="p-1 hover:bg-green-100 rounded-full"
+              >
+                <X className="w-5 h-5 text-green-600" />
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Enter coupon code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => e.key === 'Enter' && handleValidateCoupon()}
+                    className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <button
+                  onClick={handleValidateCoupon}
+                  disabled={couponValidating || !couponCode.trim()}
+                  className="px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {couponValidating ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    'Apply'
+                  )}
+                </button>
+              </div>
+              {couponError && (
+                <p className="text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {couponError}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Order Summary */}
         <div className="bg-white rounded-lg shadow-sm p-4">
           <h2 className="font-semibold text-gray-900 mb-3">Order Summary</h2>
@@ -207,10 +318,20 @@ export default function CheckoutPage() {
                 <span className="font-medium">{formatPrice(item.totalPrice)}</span>
               </div>
             ))}
-            <div className="border-t pt-2 mt-2">
-              <div className="flex justify-between font-bold text-lg">
+            <div className="border-t pt-2 mt-2 space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Subtotal</span>
+                <span>{formatPrice(cart.total)}</span>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Discount ({appliedCoupon.code})</span>
+                  <span>-{formatPrice(appliedCoupon.discount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-lg pt-1">
                 <span>Total</span>
-                <span className="text-blue-600">{formatPrice(cart.total)}</span>
+                <span className="text-blue-600">{formatPrice(getFinalTotal())}</span>
               </div>
             </div>
           </div>
@@ -233,7 +354,7 @@ export default function CheckoutPage() {
             ) : (
               <>
                 <CheckCircle className="w-5 h-5" />
-                Place Order - {formatPrice(cart.total)}
+                Place Order - {formatPrice(getFinalTotal())}
               </>
             )}
           </button>

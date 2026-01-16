@@ -407,6 +407,15 @@ export const waiterOrderAPI = {
     headers: { 'X-Waiter-Id': waiterId }
   }),
   getOrderHistory: (orderId) => api.get(`/waiter/orders/${orderId}/history`),
+  // Discount/Promotion
+  applyDiscount: (orderId, discountData, waiterId) => api.post(`/waiter/orders/${orderId}/discount`, discountData, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  removeDiscount: (orderId, waiterId) => api.delete(`/waiter/orders/${orderId}/discount`, {
+    headers: { 'X-Waiter-Id': waiterId }
+  }),
+  validateCoupon: (orderId, couponCode) =>
+    api.post(`/waiter/orders/${orderId}/validate-coupon`, null, { params: { couponCode } }),
 };
 
 export const financialAPI = {
@@ -995,6 +1004,16 @@ export const selfServiceAPI = {
     headers: { 'X-Session-Token': token }
   }),
   getOrderStatus: (orderId) => api.get(`/self-service/order/${orderId}/status`),
+
+  // Coupons & Promotions
+  validateCoupon: (restaurantId, couponCode, orderTotal, customerId) =>
+    api.post('/consumer/orders/validate-coupon', null, {
+      params: { restaurantId, couponCode, orderTotal, customerId }
+    }),
+  getActivePromotions: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/promotions/active`),
+  getActiveHappyHour: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/happy-hours/active`),
 };
 
 export default api;
