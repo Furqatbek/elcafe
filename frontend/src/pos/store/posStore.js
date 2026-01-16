@@ -195,6 +195,66 @@ const usePOSStore = create(
         };
       }),
 
+      // Add free item from coupon/promotion
+      addFreeItem: async (freeItemData) => {
+        const state = get();
+
+        // Check if free item already exists
+        const existingFreeItem = state.currentOrder.items.find(
+          item => item.isFreeItem && item.productId === freeItemData.productId
+        );
+
+        if (existingFreeItem) {
+          return {
+            success: false,
+            error: 'Free item already added',
+          };
+        }
+
+        // Add free item with price 0
+        const freeItem = {
+          id: `free-${freeItemData.productId}-${Date.now()}`,
+          productId: freeItemData.productId,
+          name: `${freeItemData.productName} (FREE)`,
+          basePrice: 0,
+          originalPrice: freeItemData.price || 0,
+          modifiers: [],
+          quantity: 1,
+          itemTotal: 0,
+          notes: `Free item from coupon: ${freeItemData.couponCode}`,
+          isFreeItem: true,
+          couponCode: freeItemData.couponCode,
+          promotionId: freeItemData.promotionId,
+        };
+
+        const items = [...state.currentOrder.items, freeItem];
+        const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
+        const tax = 0;
+        const deliveryFee = state.currentOrder.deliveryFee;
+        const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
+        const serviceFee = subtotal * (serviceFeePercent / 100);
+        const entryFee = state.currentOrder.entryFee || 0;
+        const discount = state.currentOrder.discount || 0;
+        const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
+
+        set({
+          currentOrder: {
+            ...state.currentOrder,
+            items,
+            subtotal,
+            tax,
+            serviceFee,
+            total,
+            couponCode: freeItemData.couponCode,
+            promotionId: freeItemData.promotionId,
+            promotionName: freeItemData.promotionName,
+            discountType: 'FREE_ITEM',
+          },
+        });
+
+        return { success: true, freeItem };
+      },
+
       updateItemQuantity: (itemId, quantity) => set((state) => {
         const items = state.currentOrder.items.map(item => {
           if (item.id === itemId) {
@@ -437,14 +497,20 @@ const usePOSStore = create(
 
         // If order not yet submitted, remove discount locally
         if (!orderId || orderId.toString().startsWith('temp-')) {
-          const subtotal = state.currentOrder.subtotal;
-          const serviceFee = state.currentOrder.serviceFee || 0;
+          // Remove any free items that were added by coupon
+          const items = state.currentOrder.items.filter(item => !item.isFreeItem);
+          const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
+          const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
+          const serviceFee = subtotal * (serviceFeePercent / 100);
           const entryFee = state.currentOrder.entryFee || 0;
           const total = subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee;
 
           set({
             currentOrder: {
               ...state.currentOrder,
+              items,
+              subtotal,
+              serviceFee,
               discount: 0,
               discountType: null,
               couponCode: null,

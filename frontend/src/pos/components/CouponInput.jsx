@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Tag, X, Check, Loader2 } from 'lucide-react';
+import { Tag, X, Check, Loader2, Gift } from 'lucide-react';
 import TouchButton from './TouchButton';
 import usePOSStore from '../store/posStore';
 
@@ -11,7 +11,7 @@ import usePOSStore from '../store/posStore';
  */
 const CouponInput = ({ restaurantId = 1 }) => {
   const { t } = useTranslation();
-  const { currentOrder, validateCoupon, applyDiscount, removeDiscount } = usePOSStore();
+  const { currentOrder, validateCoupon, applyDiscount, removeDiscount, addFreeItem } = usePOSStore();
   const [couponInput, setCouponInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -36,20 +36,50 @@ const CouponInput = ({ restaurantId = 1 }) => {
         return;
       }
 
-      // Apply the coupon with discount data from validation
-      // Backend returns: discountValue (the percent or fixed value), calculatedDiscount (actual amount), promotionType
-      const isPercentage = validation.promotionType === 'PERCENTAGE' ||
-                           validation.promotionType === 'PERCENTAGE_DISCOUNT';
-      const result = await applyDiscount({
-        discountType: 'COUPON',
-        couponCode: code,
-        promotionId: validation.promotionId,
-        promotionName: validation.promotionName,
-        // If we have calculatedDiscount, use it directly as the amount
-        discountAmount: validation.calculatedDiscount || (!isPercentage ? validation.discountValue : null),
-        // If it's percentage type, use discountValue as percent
-        discountPercent: isPercentage ? validation.discountValue : null,
-      });
+      // Handle different promotion types
+      let result;
+
+      if (validation.promotionType === 'FREE_ITEM') {
+        // For FREE_ITEM, add the free product to the cart
+        if (validation.freeProductId) {
+          result = await addFreeItem({
+            productId: validation.freeProductId,
+            productName: validation.freeProductName,
+            price: validation.freeProductPrice || 0,
+            couponCode: code,
+            promotionId: validation.promotionId,
+            promotionName: validation.promotionName,
+          });
+        } else {
+          setError(t('pos.coupon.noFreeProduct', 'No free product configured for this coupon'));
+          setIsLoading(false);
+          return;
+        }
+      } else if (validation.promotionType === 'BUY_X_GET_Y') {
+        // For BUY_X_GET_Y, apply discount based on qualifying items
+        // The backend calculates the discount amount
+        result = await applyDiscount({
+          discountType: 'COUPON',
+          couponCode: code,
+          promotionId: validation.promotionId,
+          promotionName: `${validation.promotionName} (Buy ${validation.buyQuantity} Get ${validation.getQuantity})`,
+          discountAmount: validation.calculatedDiscount,
+        });
+      } else {
+        // For PERCENTAGE and FIXED_AMOUNT
+        const isPercentage = validation.promotionType === 'PERCENTAGE' ||
+                             validation.promotionType === 'PERCENTAGE_DISCOUNT';
+        result = await applyDiscount({
+          discountType: 'COUPON',
+          couponCode: code,
+          promotionId: validation.promotionId,
+          promotionName: validation.promotionName,
+          // If we have calculatedDiscount, use it directly as the amount
+          discountAmount: validation.calculatedDiscount || (!isPercentage ? validation.discountValue : null),
+          // If it's percentage type, use discountValue as percent
+          discountPercent: isPercentage ? validation.discountValue : null,
+        });
+      }
 
       if (result.success) {
         setCouponInput('');
@@ -68,6 +98,38 @@ const CouponInput = ({ restaurantId = 1 }) => {
     setError(null);
   };
 
+  // If a FREE_ITEM coupon is applied
+  if (couponCode && discountType === 'FREE_ITEM') {
+    const freeItem = currentOrder.items?.find(item => item.isFreeItem);
+    return (
+      <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-emerald-100 rounded-full">
+              <Gift className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-emerald-800">
+                {t('pos.coupon.freeItemAdded', 'Free Item Added')}
+              </p>
+              <p className="text-xs text-emerald-600">
+                <code className="bg-emerald-100 px-1 rounded">{couponCode}</code>
+                {freeItem && ` - ${freeItem.name}`}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleRemoveCoupon}
+            className="p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 rounded-full transition-colors"
+            title={t('pos.coupon.remove', 'Remove coupon')}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // If a coupon is already applied
   if (couponCode && discountType === 'COUPON') {
     return (
@@ -84,7 +146,7 @@ const CouponInput = ({ restaurantId = 1 }) => {
               <p className="text-xs text-green-600">
                 <code className="bg-green-100 px-1 rounded">{couponCode}</code>
                 {promotionName && ` - ${promotionName}`}
-                {' - '}{(discount || 0).toFixed(2)} {t('pos.coupon.off', 'off')}
+                {discount > 0 && ` - ${(discount || 0).toFixed(2)} ${t('pos.coupon.off', 'off')}`}
               </p>
             </div>
           </div>

@@ -711,6 +711,12 @@ const PaymentScreen = () => {
                       <span>-{discount.toFixed(2)}</span>
                     </div>
                   )}
+                  {currentOrder.discountType === 'FREE_ITEM' && currentOrder.couponCode && (
+                    <div className="flex justify-between text-sm text-emerald-600">
+                      <span>{t('pos.payment.freeItem', 'Free Item')}</span>
+                      <span className="text-xs">{currentOrder.couponCode}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>{t('pos.cart.total', 'Total')}</span>
                     <span>{grandTotal.toFixed(2)}</span>
@@ -903,6 +909,12 @@ const PaymentScreen = () => {
                   }
                 </span>
                 <span>-{discount.toFixed(2)}</span>
+              </div>
+            )}
+            {currentOrder.discountType === 'FREE_ITEM' && currentOrder.couponCode && (
+              <div className="flex justify-between text-emerald-600">
+                <span>{t('pos.payment.freeItem', 'Free Item Applied')}</span>
+                <span className="text-xs">{currentOrder.couponCode}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t-2 border-gray-200">

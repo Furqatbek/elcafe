@@ -117,6 +117,13 @@ public class CouponValidationService {
         if (promotion.getPromotionType() == PromotionType.FREE_ITEM && promotion.getFreeProduct() != null) {
             response.setFreeProductId(promotion.getFreeProduct().getId());
             response.setFreeProductName(promotion.getFreeProduct().getName());
+            response.setFreeProductPrice(promotion.getFreeProduct().getPrice());
+        }
+
+        // Add BUY_X_GET_Y info if applicable
+        if (promotion.getPromotionType() == PromotionType.BUY_X_GET_Y) {
+            response.setBuyQuantity(promotion.getBuyQuantity());
+            response.setGetQuantity(promotion.getGetQuantity());
         }
 
         return response;

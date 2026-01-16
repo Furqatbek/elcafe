@@ -22,8 +22,15 @@ public class ValidateCouponResponse {
     private BigDecimal discountValue;
     private BigDecimal calculatedDiscount;
     private String errorMessage;
+
+    // For FREE_ITEM promotions
     private String freeProductName;
     private Long freeProductId;
+    private BigDecimal freeProductPrice;
+
+    // For BUY_X_GET_Y promotions
+    private Integer buyQuantity;
+    private Integer getQuantity;
 
     public static ValidateCouponResponse invalid(String errorMessage) {
         return ValidateCouponResponse.builder()
