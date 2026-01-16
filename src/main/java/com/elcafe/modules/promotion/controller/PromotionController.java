@@ -3,6 +3,7 @@ package com.elcafe.modules.promotion.controller;
 import com.elcafe.modules.promotion.dto.*;
 import com.elcafe.modules.promotion.service.CouponService;
 import com.elcafe.modules.promotion.service.CouponValidationService;
+import com.elcafe.modules.promotion.service.PromotionAnalyticsService;
 import com.elcafe.modules.promotion.service.PromotionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class PromotionController {
     private final PromotionService promotionService;
     private final CouponService couponService;
     private final CouponValidationService couponValidationService;
+    private final PromotionAnalyticsService promotionAnalyticsService;
 
     // ==================== PROMOTION ENDPOINTS ====================
 
@@ -176,5 +178,59 @@ public class PromotionController {
         log.info("Deleting coupon {}", couponId);
         couponService.deleteCoupon(couponId);
         return ResponseEntity.noContent().build();
+    }
+
+    // ==================== ANALYTICS ENDPOINTS ====================
+
+    @GetMapping("/restaurants/{restaurantId}/promotions/analytics")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<PromotionAnalyticsService.DiscountAnalytics> getDiscountAnalytics(
+            @PathVariable Long restaurantId,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate) {
+        log.info("Getting discount analytics for restaurant {} from {} to {}", restaurantId, startDate, endDate);
+        PromotionAnalyticsService.DiscountAnalytics analytics = promotionAnalyticsService.getDiscountAnalytics(restaurantId, startDate, endDate);
+        return ResponseEntity.ok(analytics);
+    }
+
+    @GetMapping("/promotions/{promotionId}/analytics")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<PromotionAnalyticsService.PromotionPerformance> getPromotionPerformance(
+            @PathVariable Long promotionId) {
+        log.info("Getting performance for promotion {}", promotionId);
+        PromotionAnalyticsService.PromotionPerformance performance = promotionAnalyticsService.getPromotionPerformance(promotionId);
+        return ResponseEntity.ok(performance);
+    }
+
+    @GetMapping("/restaurants/{restaurantId}/promotions/analytics/all")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<PromotionAnalyticsService.PromotionPerformance>> getAllPromotionsPerformance(
+            @PathVariable Long restaurantId) {
+        log.info("Getting all promotions performance for restaurant {}", restaurantId);
+        List<PromotionAnalyticsService.PromotionPerformance> performances = promotionAnalyticsService.getAllPromotionsPerformance(restaurantId);
+        return ResponseEntity.ok(performances);
+    }
+
+    @GetMapping("/restaurants/{restaurantId}/promotions/analytics/trends")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<PromotionAnalyticsService.DailyDiscountTrend>> getDiscountTrends(
+            @PathVariable Long restaurantId,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate) {
+        log.info("Getting discount trends for restaurant {} from {} to {}", restaurantId, startDate, endDate);
+        List<PromotionAnalyticsService.DailyDiscountTrend> trends = promotionAnalyticsService.getDiscountTrends(restaurantId, startDate, endDate);
+        return ResponseEntity.ok(trends);
+    }
+
+    @GetMapping("/restaurants/{restaurantId}/promotions/analytics/top-coupons")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    public ResponseEntity<List<PromotionAnalyticsService.CouponPerformance>> getTopCoupons(
+            @PathVariable Long restaurantId,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate,
+            @RequestParam(defaultValue = "10") int limit) {
+        log.info("Getting top coupons for restaurant {} from {} to {}", restaurantId, startDate, endDate);
+        List<PromotionAnalyticsService.CouponPerformance> topCoupons = promotionAnalyticsService.getTopCoupons(restaurantId, startDate, endDate, limit);
+        return ResponseEntity.ok(topCoupons);
     }
 }

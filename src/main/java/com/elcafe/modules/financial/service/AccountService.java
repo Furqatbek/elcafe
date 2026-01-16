@@ -133,6 +133,12 @@ public class AccountService {
         createDefaultAccount(restaurant, "4900", "Other Revenue", Account.AccountType.REVENUE,
                 Account.AccountCategory.OTHER_REVENUE, Account.NormalBalance.CREDIT, true);
 
+        // Create contra-revenue accounts (reduces revenue - debit normal balance)
+        createDefaultAccount(restaurant, "4500", "Sales Discounts", Account.AccountType.REVENUE,
+                Account.AccountCategory.SALES_DISCOUNTS, Account.NormalBalance.DEBIT, true);
+        createDefaultAccount(restaurant, "4510", "Sales Returns", Account.AccountType.REVENUE,
+                Account.AccountCategory.SALES_RETURNS, Account.NormalBalance.DEBIT, true);
+
         // Create default expense accounts
         createDefaultAccount(restaurant, "5000", "Cost of Goods Sold", Account.AccountType.EXPENSE,
                 Account.AccountCategory.COGS, Account.NormalBalance.DEBIT, true);
@@ -176,6 +182,18 @@ public class AccountService {
         if (accountRepository.findByRestaurant_IdAndCategory(restaurantId, Account.AccountCategory.OTHER_REVENUE).isEmpty()) {
             createDefaultAccount(restaurant, "4900", "Other Revenue", Account.AccountType.REVENUE,
                     Account.AccountCategory.OTHER_REVENUE, Account.NormalBalance.CREDIT, true);
+            added++;
+        }
+
+        // Check and add missing contra-revenue accounts
+        if (accountRepository.findByRestaurant_IdAndCategory(restaurantId, Account.AccountCategory.SALES_DISCOUNTS).isEmpty()) {
+            createDefaultAccount(restaurant, "4500", "Sales Discounts", Account.AccountType.REVENUE,
+                    Account.AccountCategory.SALES_DISCOUNTS, Account.NormalBalance.DEBIT, true);
+            added++;
+        }
+        if (accountRepository.findByRestaurant_IdAndCategory(restaurantId, Account.AccountCategory.SALES_RETURNS).isEmpty()) {
+            createDefaultAccount(restaurant, "4510", "Sales Returns", Account.AccountType.REVENUE,
+                    Account.AccountCategory.SALES_RETURNS, Account.NormalBalance.DEBIT, true);
             added++;
         }
 

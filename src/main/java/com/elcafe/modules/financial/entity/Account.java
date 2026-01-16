@@ -118,6 +118,10 @@ public class Account {
         SERVICE_FEES,
         OTHER_REVENUE,
 
+        // Contra-Revenue (reduces revenue)
+        SALES_DISCOUNTS,      // Coupon, promotion, manual discounts
+        SALES_RETURNS,        // Returns and refunds
+
         // Expenses
         COGS,           // Cost of Goods Sold
         LABOR,          // Staff wages

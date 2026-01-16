@@ -76,6 +76,11 @@ public class RevenueService {
                         order.getId(), salesAccount != null, cashAccount != null, restaurantId);
             }
 
+            // Record discounts if applicable (contra-revenue)
+            if (order.getDiscount() != null && order.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
+                recordDiscount(order, orderDate);
+            }
+
             // Record service fees if applicable
             if (order.getServiceFee() != null && order.getServiceFee().compareTo(BigDecimal.ZERO) > 0) {
                 recordServiceFee(order, orderDate);
@@ -166,6 +171,56 @@ public class RevenueService {
             }
         } catch (Exception e) {
             log.error("Failed to record delivery fee for order {}: {}", order.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Record discount as contra-revenue
+     * Discounts reduce revenue, so we debit Sales Discounts (contra-revenue) and credit Cash
+     */
+    private void recordDiscount(Order order, LocalDate orderDate) {
+        try {
+            Long restaurantId = order.getRestaurant().getId();
+
+            Account discountAccount = accountRepository.findByRestaurant_IdAndCategory(
+                    restaurantId, Account.AccountCategory.SALES_DISCOUNTS
+            ).stream().findFirst().orElse(null);
+
+            Account salesAccount = accountRepository.findByRestaurant_IdAndCategory(
+                    restaurantId, Account.AccountCategory.SALES
+            ).stream().findFirst().orElse(null);
+
+            if (discountAccount != null && salesAccount != null) {
+                // Build description with discount type info
+                String discountType = order.getDiscountType() != null ? order.getDiscountType() : "UNKNOWN";
+                String description = "Discount (" + discountType + ") for Order #" + order.getId();
+                if (order.getCouponCode() != null) {
+                    description += " - Coupon: " + order.getCouponCode();
+                }
+
+                // Debit: Sales Discounts (contra-revenue), Credit: Sales Revenue
+                // This effectively reduces net revenue
+                journalService.createJournalEntry(
+                        restaurantId,
+                        orderDate,
+                        description,
+                        "DISCOUNT",
+                        order.getId(),
+                        discountAccount.getId(),
+                        salesAccount.getId(),
+                        order.getDiscount(),
+                        "SYSTEM"
+                );
+
+                log.info("Discount recorded for order {}: {} ({})",
+                        order.getId(), order.getDiscount(), discountType);
+            } else {
+                log.warn("Cannot record discount for order {}: discountAccount={}, salesAccount={}. " +
+                        "Please add SALES_DISCOUNTS account to chart of accounts.",
+                        order.getId(), discountAccount != null, salesAccount != null);
+            }
+        } catch (Exception e) {
+            log.error("Failed to record discount for order {}: {}", order.getId(), e.getMessage(), e);
         }
     }
 

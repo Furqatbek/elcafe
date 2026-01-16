@@ -85,13 +85,31 @@ public class FinancialReportsService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Calculate total discounts (contra-revenue)
+        BigDecimal totalDiscounts = completedOrders.stream()
+                .map(Order::getDiscount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Calculate discount breakdown by type
+        Map<String, BigDecimal> discountsByType = completedOrders.stream()
+                .filter(o -> o.getDiscount() != null && o.getDiscount().compareTo(BigDecimal.ZERO) > 0)
+                .collect(Collectors.groupingBy(
+                        o -> o.getDiscountType() != null ? o.getDiscountType() : "UNKNOWN",
+                        Collectors.reducing(BigDecimal.ZERO, Order::getDiscount, BigDecimal::add)
+                ));
+
+        // Gross revenue (before discounts) = sum of subtotals + fees
+        BigDecimal grossRevenue = salesRevenue.add(serviceFeeRevenue).add(deliveryFeeRevenue).add(tipRevenue);
+
+        // Net revenue = gross revenue - discounts (Order.getTotal() already accounts for discounts)
         BigDecimal totalRevenue = completedOrders.stream()
                 .map(Order::getTotal)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        log.info("P&L: Found {} orders, {} revenue-counted, sales: {}, serviceFee: {}, deliveryFee: {}, tips: {}, total: {}",
-                orders.size(), completedOrders.size(), salesRevenue, serviceFeeRevenue, deliveryFeeRevenue, tipRevenue, totalRevenue);
+        log.info("P&L: Found {} orders, {} revenue-counted, gross: {}, discounts: {}, net: {}",
+                orders.size(), completedOrders.size(), grossRevenue, totalDiscounts, totalRevenue);
 
         // Calculate expenses from expense records (with shift-extended date range)
         // For overnight shifts, extend end date to include expenses from early morning hours
@@ -121,6 +139,11 @@ public class FinancialReportsService {
 
         BigDecimal netIncome = totalRevenue.subtract(totalExpenses);
 
+        // Count orders with discounts
+        long discountedOrderCount = completedOrders.stream()
+                .filter(o -> o.getDiscount() != null && o.getDiscount().compareTo(BigDecimal.ZERO) > 0)
+                .count();
+
         return ProfitLossReport.builder()
                 .restaurantId(restaurantId)
                 .startDate(startDate)
@@ -130,6 +153,10 @@ public class FinancialReportsService {
                 .serviceFeeRevenue(serviceFeeRevenue)
                 .deliveryFeeRevenue(deliveryFeeRevenue)
                 .tipRevenue(tipRevenue)
+                .grossRevenue(grossRevenue)
+                .totalDiscounts(totalDiscounts)
+                .discountsByType(discountsByType)
+                .discountedOrderCount((int) discountedOrderCount)
                 .totalRevenue(totalRevenue)
                 .totalExpenses(totalExpenses)
                 .expensesByCategory(expensesByCategory)
@@ -356,11 +383,17 @@ public class FinancialReportsService {
         private LocalDate endDate;
         // Order count
         private int orderCount;
+        private int discountedOrderCount;
         // Revenue breakdown
         private BigDecimal salesRevenue;
         private BigDecimal serviceFeeRevenue;
         private BigDecimal deliveryFeeRevenue;
         private BigDecimal tipRevenue;
+        private BigDecimal grossRevenue;          // Revenue before discounts
+        // Discount breakdown (contra-revenue)
+        private BigDecimal totalDiscounts;
+        private Map<String, BigDecimal> discountsByType;  // COUPON, PROMOTION, MANUAL, HAPPY_HOUR
+        // Net revenue after discounts
         private BigDecimal totalRevenue;
         // Expenses
         private BigDecimal totalExpenses;
