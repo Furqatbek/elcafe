@@ -165,6 +165,65 @@ const generateReceiptHTML = (order) => {
       font-style: italic;
     }
 
+    .item-free {
+      font-size: 10px;
+      font-weight: bold;
+      color: #006400;
+    }
+
+    .item-promo {
+      font-size: 9px;
+      font-style: italic;
+    }
+
+    .promotions-section {
+      margin: 4px 0;
+      padding: 4px;
+      border: 1px dashed black;
+      background: #f9f9f9;
+    }
+
+    .promo-title {
+      font-weight: bold;
+      font-size: 11px;
+      text-align: center;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+    }
+
+    .promo-item {
+      font-size: 10px;
+      margin: 2px 0;
+      padding-left: 4px;
+    }
+
+    .promo-name {
+      font-weight: bold;
+    }
+
+    .discount-line {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+      font-size: 11px;
+      padding: 2px 0;
+    }
+
+    .discount-line.happy-hour {
+      background: #fffde7;
+      padding: 2px 4px;
+    }
+
+    .discount-line.coupon {
+      background: #e8f5e9;
+      padding: 2px 4px;
+    }
+
+    .discount-line.free-item {
+      background: #e3f2fd;
+      padding: 2px 4px;
+    }
+
     .totals {
       margin: 4px 0;
       padding-top: 4px;
@@ -278,14 +337,23 @@ const generateReceiptHTML = (order) => {
         </tr>
       </thead>
       <tbody>
-        ${(order.items || []).map(item => `
+        ${(order.items || []).map(item => {
+          const isFree = item.isFreeItem || (item.unitPrice === 0 && item.price === 0) || item.totalPrice === 0;
+          const promoSource = item.couponCode ? `Kupon: ${item.couponCode}` : (item.promotionName || item.notes?.includes('Free item') ? 'Aksiya' : '');
+          return `
         <tr>
-          <td>${item.productName}${item.variantName ? `<br><span class="item-variant">${item.variantName}</span>` : ''}</td>
-          <td class="unit-price">${Math.round(item.unitPrice || item.price || 0)}</td>
+          <td>
+            ${item.productName}
+            ${item.variantName ? `<br><span class="item-variant">${item.variantName}</span>` : ''}
+            ${isFree ? `<br><span class="item-free">*** BEPUL ***</span>` : ''}
+            ${isFree && promoSource ? `<br><span class="item-promo">${promoSource}</span>` : ''}
+          </td>
+          <td class="unit-price">${isFree ? '0' : Math.round(item.unitPrice || item.price || 0)}</td>
           <td class="qty">${item.quantity}</td>
-          <td class="price">${Math.round(item.totalPrice || item.total || 0)}</td>
+          <td class="price">${isFree ? 'BEPUL' : Math.round(item.totalPrice || item.total || 0)}</td>
         </tr>
-        `).join('')}
+        `;
+        }).join('')}
       </tbody>
     </table>
 
@@ -302,13 +370,39 @@ const generateReceiptHTML = (order) => {
         <span>${Math.round(order.serviceFee)}</span>
       </div>
       ` : ''}
-      ${Number(order.discount) > 0 ? `
-      <div class="total-line">
-        <span>${order.discountType === 'COUPON' && order.couponCode
-          ? `Kupon (${order.couponCode}):`
-          : order.discountType === 'HAPPY_HOUR'
-          ? `Happy Hour${order.promotionName ? ` (${order.promotionName})` : ''}:`
-          : 'Chegirma:'}</span>
+      ${Number(order.discount) > 0 && order.discountType === 'HAPPY_HOUR' ? `
+      <div class="discount-line happy-hour">
+        <span>🎉 HAPPY HOUR${order.promotionName ? `<br><small>${order.promotionName}</small>` : ''}:</span>
+        <span>-${Math.round(order.discount)}</span>
+      </div>
+      ` : ''}
+      ${Number(order.discount) > 0 && order.discountType === 'COUPON' ? `
+      <div class="discount-line coupon">
+        <span>🎫 KUPON${order.couponCode ? `<br><small>${order.couponCode}</small>` : ''}${order.promotionName ? ` - ${order.promotionName}` : ''}:</span>
+        <span>-${Math.round(order.discount)}</span>
+      </div>
+      ` : ''}
+      ${Number(order.discount) > 0 && order.discountType === 'PROMOTION' ? `
+      <div class="discount-line coupon">
+        <span>🏷️ AKSIYA${order.promotionName ? `<br><small>${order.promotionName}</small>` : ''}:</span>
+        <span>-${Math.round(order.discount)}</span>
+      </div>
+      ` : ''}
+      ${Number(order.discount) > 0 && order.discountType === 'FREE_ITEM' ? `
+      <div class="discount-line free-item">
+        <span>🎁 BEPUL MAHSULOT${order.promotionName ? `<br><small>${order.promotionName}</small>` : ''}:</span>
+        <span>-${Math.round(order.discount)}</span>
+      </div>
+      ` : ''}
+      ${Number(order.discount) > 0 && order.discountType === 'MANUAL' ? `
+      <div class="discount-line">
+        <span>Chegirma${order.discountReason ? `<br><small>${order.discountReason}</small>` : ''}:</span>
+        <span>-${Math.round(order.discount)}</span>
+      </div>
+      ` : ''}
+      ${Number(order.discount) > 0 && !order.discountType ? `
+      <div class="discount-line">
+        <span>Chegirma:</span>
         <span>-${Math.round(order.discount)}</span>
       </div>
       ` : ''}
@@ -324,6 +418,51 @@ const generateReceiptHTML = (order) => {
       <div>${order.customerNotes}</div>
     </div>
     ` : ''}
+
+    ${(() => {
+      const freeItems = (order.items || []).filter(item =>
+        item.isFreeItem || (item.unitPrice === 0 && item.price === 0) || item.totalPrice === 0
+      );
+      const hasPromotion = order.discountType || freeItems.length > 0;
+
+      if (!hasPromotion) return '';
+
+      return `
+    <div class="promotions-section">
+      <div class="promo-title">🎁 Qo'llanilgan aksiyalar</div>
+      ${order.discountType === 'HAPPY_HOUR' ? `
+      <div class="promo-item">
+        ✓ <span class="promo-name">Happy Hour</span>${order.promotionName ? `: ${order.promotionName}` : ''}
+        <br>&nbsp;&nbsp;Chegirma: ${Math.round(order.discount)} so'm
+      </div>
+      ` : ''}
+      ${order.discountType === 'COUPON' ? `
+      <div class="promo-item">
+        ✓ <span class="promo-name">Kupon</span>: ${order.couponCode || 'N/A'}
+        ${order.promotionName ? `<br>&nbsp;&nbsp;${order.promotionName}` : ''}
+        <br>&nbsp;&nbsp;Chegirma: ${Math.round(order.discount)} so'm
+      </div>
+      ` : ''}
+      ${order.discountType === 'PROMOTION' ? `
+      <div class="promo-item">
+        ✓ <span class="promo-name">Aksiya</span>${order.promotionName ? `: ${order.promotionName}` : ''}
+        <br>&nbsp;&nbsp;Chegirma: ${Math.round(order.discount)} so'm
+      </div>
+      ` : ''}
+      ${order.discountType === 'FREE_ITEM' ? `
+      <div class="promo-item">
+        ✓ <span class="promo-name">Bepul mahsulot</span>${order.promotionName ? `: ${order.promotionName}` : ''}
+      </div>
+      ` : ''}
+      ${freeItems.map(item => `
+      <div class="promo-item">
+        🎁 <span class="promo-name">${item.productName}</span> - BEPUL
+        ${item.couponCode ? `<br>&nbsp;&nbsp;Kupon: ${item.couponCode}` : ''}
+      </div>
+      `).join('')}
+    </div>
+      `;
+    })()}
 
     <div class="footer">
       <div class="contact-info">
