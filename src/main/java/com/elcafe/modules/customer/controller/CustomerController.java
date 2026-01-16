@@ -1,6 +1,7 @@
 package com.elcafe.modules.customer.controller;
 
 import com.elcafe.modules.customer.dto.CreateCustomerRequest;
+import com.elcafe.modules.customer.dto.CustomerResponse;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.service.CustomerService;
 import com.elcafe.modules.order.entity.Order;
@@ -52,16 +53,16 @@ public class CustomerController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Get customer", description = "Get customer by ID")
-    public ResponseEntity<ApiResponse<Customer>> getCustomer(@PathVariable Long id) {
-        Customer customer = customerService.getCustomerById(id);
+    @Operation(summary = "Get customer", description = "Get customer by ID with marketing data (bonus balance, referral code, etc.)")
+    public ResponseEntity<ApiResponse<CustomerResponse>> getCustomer(@PathVariable Long id) {
+        CustomerResponse customer = customerService.getCustomerWithMarketing(id);
         return ResponseEntity.ok(ApiResponse.success(customer));
     }
 
     @GetMapping
-    @Operation(summary = "List customers", description = "Get all customers with pagination")
-    public ResponseEntity<ApiResponse<Page<Customer>>> getAllCustomers(Pageable pageable) {
-        Page<Customer> customers = customerService.getAllCustomers(pageable);
+    @Operation(summary = "List customers", description = "Get all customers with pagination and marketing data (bonus balance, referral code, etc.)")
+    public ResponseEntity<ApiResponse<Page<CustomerResponse>>> getAllCustomers(Pageable pageable) {
+        Page<CustomerResponse> customers = customerService.getAllCustomersWithMarketing(pageable);
         return ResponseEntity.ok(ApiResponse.success(customers));
     }
 

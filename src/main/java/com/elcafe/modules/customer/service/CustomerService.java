@@ -2,10 +2,17 @@ package com.elcafe.modules.customer.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.dto.CreateCustomerRequest;
+import com.elcafe.modules.customer.dto.CustomerResponse;
 import com.elcafe.modules.customer.dto.UpdateConsumerProfileRequest;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.loyalty.entity.CustomerLoyalty;
+import com.elcafe.modules.loyalty.repository.CustomerLoyaltyRepository;
 import com.elcafe.modules.marketing.event.MarketingEventPublisher;
+import com.elcafe.modules.referral.entity.ReferralCode;
+import com.elcafe.modules.referral.enums.ReferralStatus;
+import com.elcafe.modules.referral.repository.ReferralCodeRepository;
+import com.elcafe.modules.referral.repository.ReferralRepository;
 import com.elcafe.modules.referral.service.ReferralService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -13,11 +20,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -27,6 +41,9 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final RestaurantRepository restaurantRepository;
     private final MarketingEventPublisher marketingEventPublisher;
+    private final CustomerLoyaltyRepository customerLoyaltyRepository;
+    private final ReferralCodeRepository referralCodeRepository;
+    private final ReferralRepository referralRepository;
     @Lazy private final ReferralService referralService;
 
     @Transactional
@@ -139,6 +156,147 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public Page<Customer> getAllCustomers(Pageable pageable) {
         return customerRepository.findAll(pageable);
+    }
+
+    /**
+     * Get all customers with marketing data (loyalty, referral info)
+     */
+    @Transactional(readOnly = true)
+    public Page<CustomerResponse> getAllCustomersWithMarketing(Pageable pageable) {
+        Page<Customer> customerPage = customerRepository.findAll(pageable);
+        List<Customer> customers = customerPage.getContent();
+
+        if (customers.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+
+        // Get customer IDs
+        Set<Long> customerIds = customers.stream()
+                .map(Customer::getId)
+                .collect(Collectors.toSet());
+
+        // Fetch loyalty data in bulk
+        Map<Long, CustomerLoyalty> loyaltyMap = customerLoyaltyRepository.findAll().stream()
+                .filter(cl -> customerIds.contains(cl.getCustomer().getId()))
+                .collect(Collectors.toMap(
+                        cl -> cl.getCustomer().getId(),
+                        Function.identity(),
+                        (a, b) -> a
+                ));
+
+        // Fetch referral codes in bulk
+        Map<Long, ReferralCode> referralCodeMap = referralCodeRepository.findAll().stream()
+                .filter(rc -> customerIds.contains(rc.getCustomer().getId()))
+                .collect(Collectors.toMap(
+                        rc -> rc.getCustomer().getId(),
+                        Function.identity(),
+                        (a, b) -> a // In case of duplicates, keep the first
+                ));
+
+        // Count successful referrals per customer
+        Map<Long, Long> referralSuccessMap = referralRepository.findAll().stream()
+                .filter(r -> r.getStatus() == ReferralStatus.COMPLETED &&
+                             r.getReferralCode() != null &&
+                             customerIds.contains(r.getReferralCode().getCustomer().getId()))
+                .collect(Collectors.groupingBy(
+                        r -> r.getReferralCode().getCustomer().getId(),
+                        Collectors.counting()
+                ));
+
+        // Build response list
+        List<CustomerResponse> responses = customers.stream()
+                .map(customer -> {
+                    CustomerResponse response = CustomerResponse.from(customer);
+
+                    // Add loyalty data
+                    CustomerLoyalty loyalty = loyaltyMap.get(customer.getId());
+                    if (loyalty != null) {
+                        response.setBonusBalance(loyalty.getCurrentBalance());
+                        response.setLifetimeEarned(loyalty.getLifetimeEarned());
+                        response.setLifetimeSpent(loyalty.getLifetimeSpent());
+                        response.setTotalSpent(loyalty.getTotalSpent());
+                        response.setOrderCount(loyalty.getOrderCount());
+                        response.setLastOrderDate(loyalty.getLastOrderDate());
+                        if (loyalty.getTier() != null) {
+                            response.setTierName(loyalty.getTier().getName());
+                        }
+                    } else {
+                        // Default values for customers without loyalty record
+                        response.setBonusBalance(BigDecimal.ZERO);
+                        response.setLifetimeEarned(BigDecimal.ZERO);
+                        response.setLifetimeSpent(BigDecimal.ZERO);
+                        response.setTotalSpent(BigDecimal.ZERO);
+                        response.setOrderCount(0);
+                    }
+
+                    // Add referral data
+                    ReferralCode referralCode = referralCodeMap.get(customer.getId());
+                    if (referralCode != null) {
+                        response.setReferralCode(referralCode.getCode());
+                        response.setReferralUsageCount(referralCode.getUsageCount());
+                    }
+
+                    // Add referral success count
+                    Long successCount = referralSuccessMap.get(customer.getId());
+                    response.setReferralSuccessCount(successCount != null ? successCount.intValue() : 0);
+
+                    return response;
+                })
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(responses, pageable, customerPage.getTotalElements());
+    }
+
+    /**
+     * Get a single customer with marketing data
+     */
+    @Transactional(readOnly = true)
+    public CustomerResponse getCustomerWithMarketing(Long id) {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer", "id", id));
+
+        CustomerResponse response = CustomerResponse.from(customer);
+
+        // Add loyalty data
+        customerLoyaltyRepository.findByCustomerId(id).ifPresent(loyalty -> {
+            response.setBonusBalance(loyalty.getCurrentBalance());
+            response.setLifetimeEarned(loyalty.getLifetimeEarned());
+            response.setLifetimeSpent(loyalty.getLifetimeSpent());
+            response.setTotalSpent(loyalty.getTotalSpent());
+            response.setOrderCount(loyalty.getOrderCount());
+            response.setLastOrderDate(loyalty.getLastOrderDate());
+            if (loyalty.getTier() != null) {
+                response.setTierName(loyalty.getTier().getName());
+            }
+        });
+
+        // Default values if no loyalty record
+        if (response.getBonusBalance() == null) {
+            response.setBonusBalance(BigDecimal.ZERO);
+            response.setLifetimeEarned(BigDecimal.ZERO);
+            response.setLifetimeSpent(BigDecimal.ZERO);
+            response.setTotalSpent(BigDecimal.ZERO);
+            response.setOrderCount(0);
+        }
+
+        // Add referral data
+        referralCodeRepository.findAll().stream()
+                .filter(rc -> rc.getCustomer().getId().equals(id))
+                .findFirst()
+                .ifPresent(referralCode -> {
+                    response.setReferralCode(referralCode.getCode());
+                    response.setReferralUsageCount(referralCode.getUsageCount());
+                });
+
+        // Count successful referrals
+        long successCount = referralRepository.findAll().stream()
+                .filter(r -> r.getStatus() == ReferralStatus.COMPLETED &&
+                             r.getReferralCode() != null &&
+                             r.getReferralCode().getCustomer().getId().equals(id))
+                .count();
+        response.setReferralSuccessCount((int) successCount);
+
+        return response;
     }
 
     @Transactional(readOnly = true)

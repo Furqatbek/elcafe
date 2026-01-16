@@ -23,6 +23,10 @@ import {
   Tag,
   FileText,
   Gift,
+  Coins,
+  ShoppingCart,
+  Users,
+  Copy,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -51,6 +55,19 @@ export default function Customers() {
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  const formatPrice = (price) => {
+    if (price === null || price === undefined) return '0.00';
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price);
+  };
+
+  const copyToClipboard = (text, e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+  };
 
   useEffect(() => {
     loadCustomers();
@@ -111,6 +128,11 @@ export default function Customers() {
       t('pages.customers.state', 'State'),
       t('pages.customers.zipCode', 'ZIP Code'),
       t('pages.customers.tags', 'Tags'),
+      t('customers.bonusBalance', 'Bonus Balance'),
+      t('customers.totalSpent', 'Total Spent'),
+      t('customers.orders', 'Orders'),
+      t('customers.referralCode', 'Referral Code'),
+      t('customers.referrals', 'Referrals'),
       t('pages.customers.status', 'Status'),
       t('pages.customers.createdAt', 'Created At'),
     ];
@@ -126,6 +148,11 @@ export default function Customers() {
       customer.state,
       customer.zipCode,
       customer.tags,
+      customer.bonusBalance || 0,
+      customer.totalSpent || 0,
+      customer.orderCount || 0,
+      customer.referralCode || '',
+      customer.referralSuccessCount || 0,
       customer.active ? 'Active' : 'Inactive',
       customer.createdAt ? format(new Date(customer.createdAt), 'yyyy-MM-dd HH:mm:ss') : '',
     ]);
@@ -461,16 +488,34 @@ export default function Customers() {
                   {t('customers.lastName')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('customers.email')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('customers.phone')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('customers.city')}
+                  <div className="flex items-center gap-1">
+                    <Coins className="h-3 w-3" />
+                    {t('customers.bonusBalance', 'Bonus')}
+                  </div>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {t('customers.tags')}
+                  <div className="flex items-center gap-1">
+                    <ShoppingCart className="h-3 w-3" />
+                    {t('customers.totalSpent', 'Total Spent')}
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {t('customers.orders', 'Orders')}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center gap-1">
+                    <Gift className="h-3 w-3" />
+                    {t('customers.referralCode', 'Promo Code')}
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {t('customers.referrals', 'Referrals')}
+                  </div>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('orders.status')}
@@ -483,7 +528,7 @@ export default function Customers() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                     {t('common.noData')}
                   </td>
                 </tr>
@@ -503,21 +548,52 @@ export default function Customers() {
                       {customer.lastName}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                      {customer.email}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {customer.phone}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                      {customer.city || '-'}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                      {customer.tags ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {customer.tags}
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {customer.bonusBalance > 0 ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <Coins className="h-3 w-3 mr-1" />
+                          {formatPrice(customer.bonusBalance)}
                         </span>
                       ) : (
-                        '-'
+                        <span className="text-gray-400">0.00</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                      {formatPrice(customer.totalSpent)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-medium">
+                        {customer.orderCount || 0}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {customer.referralCode ? (
+                        <div className="flex items-center gap-1">
+                          <code className="px-2 py-1 bg-gray-100 rounded text-xs font-mono">
+                            {customer.referralCode}
+                          </code>
+                          <button
+                            onClick={(e) => copyToClipboard(customer.referralCode, e)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                            title={t('common.copy', 'Copy')}
+                          >
+                            <Copy className="h-3 w-3 text-gray-400" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                      {(customer.referralSuccessCount || 0) > 0 ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          <Users className="h-3 w-3 mr-1" />
+                          {customer.referralSuccessCount}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">0</span>
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
