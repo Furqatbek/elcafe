@@ -60,17 +60,18 @@ public class CustomerService {
         log.info("Creating customer with referral support: {}", request.getEmail());
 
         // Build customer entity from request
+        // Convert empty strings to null for unique constraint fields (email)
         Customer customer = Customer.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
-                .email(request.getEmail())
+                .email(emptyToNull(request.getEmail()))
                 .phone(request.getPhone())
-                .defaultAddress(request.getDefaultAddress())
-                .city(request.getCity())
-                .state(request.getState())
-                .zipCode(request.getZipCode())
-                .notes(request.getNotes())
-                .tags(request.getTags())
+                .defaultAddress(emptyToNull(request.getDefaultAddress()))
+                .city(emptyToNull(request.getCity()))
+                .state(emptyToNull(request.getState()))
+                .zipCode(emptyToNull(request.getZipCode()))
+                .notes(emptyToNull(request.getNotes()))
+                .tags(emptyToNull(request.getTags()))
                 .birthDate(request.getBirthDate())
                 .language(request.getLanguage())
                 .registrationSource(request.getRegistrationSource())
@@ -134,14 +135,14 @@ public class CustomerService {
 
         customer.setFirstName(customerData.getFirstName());
         customer.setLastName(customerData.getLastName());
-        customer.setEmail(customerData.getEmail());
+        customer.setEmail(emptyToNull(customerData.getEmail()));
         customer.setPhone(customerData.getPhone());
-        customer.setDefaultAddress(customerData.getDefaultAddress());
-        customer.setCity(customerData.getCity());
-        customer.setState(customerData.getState());
-        customer.setZipCode(customerData.getZipCode());
-        customer.setNotes(customerData.getNotes());
-        customer.setTags(customerData.getTags());
+        customer.setDefaultAddress(emptyToNull(customerData.getDefaultAddress()));
+        customer.setCity(emptyToNull(customerData.getCity()));
+        customer.setState(emptyToNull(customerData.getState()));
+        customer.setZipCode(emptyToNull(customerData.getZipCode()));
+        customer.setNotes(emptyToNull(customerData.getNotes()));
+        customer.setTags(emptyToNull(customerData.getTags()));
         customer.setActive(customerData.getActive());
 
         return customerRepository.save(customer);
@@ -380,5 +381,12 @@ public class CustomerService {
     @Transactional(readOnly = true)
     public Optional<Customer> findByPhone(String phone) {
         return customerRepository.findByPhone(phone);
+    }
+
+    /**
+     * Convert empty string to null to avoid unique constraint violations
+     */
+    private String emptyToNull(String value) {
+        return (value == null || value.trim().isEmpty()) ? null : value.trim();
     }
 }
