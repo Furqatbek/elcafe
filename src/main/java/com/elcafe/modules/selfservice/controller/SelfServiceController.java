@@ -268,7 +268,7 @@ public class SelfServiceController {
             map.put("description", promo.getDescription());
             map.put("type", promo.getPromotionType() != null ? promo.getPromotionType().name() : null);
             map.put("discountValue", promo.getDiscountValue());
-            map.put("minOrderAmount", promo.getMinOrderAmount());
+            map.put("minOrderAmount", promo.getRule() != null ? promo.getRule().getMinOrderAmount() : null);
             return map;
         }).toList();
 
@@ -338,10 +338,8 @@ public class SelfServiceController {
     public ResponseEntity<List<Map<String, Object>>> getMenuBundles(
             @PathVariable Long restaurantId) {
 
-        LocalDateTime now = LocalDateTime.now();
         List<Bundle> bundles = bundleRepository.findByRestaurantIdAndActiveTrue(restaurantId).stream()
-                .filter(b -> (b.getStartDate() == null || !now.isBefore(b.getStartDate().atStartOfDay())) &&
-                             (b.getEndDate() == null || !now.isAfter(b.getEndDate().atTime(23, 59, 59))))
+                .filter(Bundle::isCurrentlyAvailable)
                 .toList();
 
         List<Map<String, Object>> response = bundles.stream().map(bundle -> {
@@ -351,7 +349,7 @@ public class SelfServiceController {
             map.put("description", bundle.getDescription());
             map.put("bundlePrice", bundle.getBundlePrice());
             map.put("originalPrice", bundle.getOriginalPrice());
-            map.put("savings", bundle.getSavings());
+            map.put("savings", bundle.getSavingsAmount());
             map.put("imageUrl", bundle.getImageUrl());
             return map;
         }).toList();

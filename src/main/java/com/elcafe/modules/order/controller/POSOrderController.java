@@ -433,11 +433,10 @@ public class POSOrderController {
                 "id", hh.getId(),
                 "name", hh.getName(),
                 "discountPercent", hh.getDiscountPercent(),
-                "startTime", hh.getStartTime() != null ? hh.getStartTime().toString() : "",
-                "endTime", hh.getEndTime() != null ? hh.getEndTime().toString() : "",
+                "endTime", hh.getEndsAt() != null ? hh.getEndsAt() : "",
                 "appliesToAll", hh.getAppliesToAll() != null ? hh.getAppliesToAll() : true,
-                "eligibleProductIds", hh.getEligibleProductIds() != null ? hh.getEligibleProductIds() : List.of(),
-                "eligibleCategoryIds", hh.getEligibleCategoryIds() != null ? hh.getEligibleCategoryIds() : List.of()
+                "applicableProductIds", hh.getApplicableProductIds() != null ? hh.getApplicableProductIds() : List.of(),
+                "applicableCategoryIds", hh.getApplicableCategoryIds() != null ? hh.getApplicableCategoryIds() : List.of()
         );
 
         return ResponseEntity.ok(ApiResponse.success("Active happy hour found", response));
@@ -475,8 +474,7 @@ public class POSOrderController {
                 "happyHourName", hh.getName(),
                 "discountPercent", hh.getDiscountPercent(),
                 "discountAmount", discount,
-                "startTime", hh.getStartTime() != null ? hh.getStartTime().toString() : "",
-                "endTime", hh.getEndTime() != null ? hh.getEndTime().toString() : ""
+                "endTime", hh.getEndsAt() != null ? hh.getEndsAt() : ""
         );
 
         return ResponseEntity.ok(ApiResponse.success("Happy hour discount preview", response));

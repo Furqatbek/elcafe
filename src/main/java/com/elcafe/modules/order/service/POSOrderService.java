@@ -342,6 +342,7 @@ public class POSOrderService {
 
         POSOrderResponse response = POSOrderResponse.builder()
                 .id(order.getId())
+                .restaurantId(order.getRestaurant() != null ? order.getRestaurant().getId() : null)
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus())
                 .orderType(orderType)

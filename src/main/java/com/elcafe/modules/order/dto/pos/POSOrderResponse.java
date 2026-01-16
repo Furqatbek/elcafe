@@ -17,6 +17,7 @@ import java.util.List;
 public class POSOrderResponse {
 
     private Long id;
+    private Long restaurantId;
     private String orderNumber;
     private OrderStatus status;
     private String orderType;
