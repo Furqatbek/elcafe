@@ -51,4 +51,16 @@ public class OrderItem {
 
     @Column(length = 500)
     private String specialInstructions;
+
+    // Bundle reference (if this item was part of a bundle/combo)
+    @Column(name = "bundle_id")
+    private Long bundleId;
+
+    @Column(name = "bundle_name", length = 200)
+    private String bundleName;
+
+    // Flag to indicate if this is a bundle item
+    @Column(name = "is_bundle")
+    @Builder.Default
+    private Boolean isBundle = false;
 }

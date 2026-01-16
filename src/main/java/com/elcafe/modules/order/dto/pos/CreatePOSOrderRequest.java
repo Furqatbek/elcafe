@@ -153,6 +153,16 @@ public class CreatePOSOrderRequest {
 
         // Promotion ID that granted this free item
         private Long promotionId;
+
+        // Bundle/Combo fields
+        private Long bundleId;
+
+        @Size(max = 200, message = "Bundle name must not exceed 200 characters")
+        private String bundleName;
+
+        // Flag to indicate this is a bundle item
+        @Builder.Default
+        private Boolean isBundle = false;
     }
 
     @Data

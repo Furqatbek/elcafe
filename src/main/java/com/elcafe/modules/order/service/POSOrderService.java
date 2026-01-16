@@ -13,6 +13,8 @@ import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.order.dto.pos.POSKitchenStatusDTO;
 import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.menu.repository.ProductRepository;
+import com.elcafe.modules.bundle.entity.Bundle;
+import com.elcafe.modules.bundle.repository.BundleRepository;
 import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.ModifyOrderItemRequest;
@@ -53,6 +55,7 @@ public class POSOrderService {
     private final RestaurantRepository restaurantRepository;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
+    private final BundleRepository bundleRepository;
     private final NotificationService notificationService;
     private final InventoryService inventoryService;
     private final InventoryProductIngredientRepository productIngredientRepository;
@@ -234,17 +237,34 @@ public class POSOrderService {
     }
 
     private OrderItem createOrderItem(CreatePOSOrderRequest.OrderItemRequest itemRequest, Order order) {
-        Product product = productRepository.findById(itemRequest.getProductId())
-                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + itemRequest.getProductId()));
-
         OrderItem orderItem = new OrderItem();
         orderItem.setOrder(order);
-        orderItem.setProductId(product.getId());
-        orderItem.setProductName(product.getName());
         orderItem.setQuantity(itemRequest.getQuantity());
         orderItem.setUnitPrice(itemRequest.getPrice());
         orderItem.setTotalPrice(itemRequest.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
         orderItem.setSpecialInstructions(itemRequest.getNotes());
+
+        // Handle bundle/combo items
+        if (Boolean.TRUE.equals(itemRequest.getIsBundle()) && itemRequest.getBundleId() != null) {
+            Bundle bundle = bundleRepository.findById(itemRequest.getBundleId())
+                    .orElseThrow(() -> new IllegalArgumentException("Bundle not found with ID: " + itemRequest.getBundleId()));
+
+            orderItem.setProductId(itemRequest.getBundleId()); // Use bundleId as productId for reference
+            orderItem.setProductName(bundle.getName());
+            orderItem.setBundleId(bundle.getId());
+            orderItem.setBundleName(bundle.getName());
+            orderItem.setIsBundle(true);
+
+            log.info("Added bundle to order: {} - {}", bundle.getId(), bundle.getName());
+        } else {
+            // Regular product
+            Product product = productRepository.findById(itemRequest.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + itemRequest.getProductId()));
+
+            orderItem.setProductId(product.getId());
+            orderItem.setProductName(product.getName());
+            orderItem.setIsBundle(false);
+        }
 
         // Add modifiers as add-ons JSON or text if present
         if (itemRequest.getModifiers() != null && !itemRequest.getModifiers().isEmpty()) {

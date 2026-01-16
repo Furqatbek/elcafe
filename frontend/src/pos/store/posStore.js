@@ -141,7 +141,11 @@ const usePOSStore = create(
         // Check if this exact product + modifier combination already exists
         const existingItemIndex = state.currentOrder.items.findIndex(item => {
           const existingModifierKey = item.modifiers.map(m => `${m.id || m.name}`).sort().join(',');
-          return item.productId === product.id && existingModifierKey === modifierKey;
+          // For bundles, compare bundleId; for regular products, compare productId
+          if (product.isBundle) {
+            return item.bundleId === product.bundleId && existingModifierKey === modifierKey;
+          }
+          return item.productId === product.id && !item.isBundle && existingModifierKey === modifierKey;
         });
 
         let items;
@@ -163,13 +167,17 @@ const usePOSStore = create(
           // Add new item
           const item = {
             id: `${product.id}-${Date.now()}`,
-            productId: product.id,
+            productId: product.isBundle ? product.bundleId : product.id,
             name: product.name,
             basePrice: product.price,
             modifiers,
             quantity,
             itemTotal: itemPrice * quantity,
             notes: '',
+            // Bundle fields
+            bundleId: product.bundleId || null,
+            bundleName: product.isBundle ? product.name : null,
+            isBundle: product.isBundle || false,
           };
           items = [...state.currentOrder.items, item];
         }
@@ -1182,6 +1190,10 @@ const usePOSStore = create(
               isFreeItem: item.isFreeItem || false,
               couponCode: item.couponCode || null,
               promotionId: item.promotionId || null,
+              // Bundle/Combo fields
+              bundleId: item.bundleId || null,
+              bundleName: item.bundleName || null,
+              isBundle: item.isBundle || false,
             })),
             deliveryInfo: state.currentOrder.type === 'DELIVERY' && state.customer.address ? {
               street: state.customer.address.street,
