@@ -1,11 +1,11 @@
 package com.elcafe.modules.reservation.entity;
 
+import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.reservation.enums.ReservationSource;
 import com.elcafe.modules.reservation.enums.ReservationStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.elcafe.modules.table.entity.Table;
-import com.elcafe.modules.user.entity.User;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -41,7 +41,7 @@ public class Reservation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id")
     @ToString.Exclude
-    private com.elcafe.modules.table.entity.Table table;
+    private RestaurantTable table;
 
     // Customer details (for walk-ins or guests without account)
     @Column(name = "customer_name", nullable = false, length = 100)

@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/public/orders")
+@RequestMapping("/api/v1/public/orders")
 @RequiredArgsConstructor
 @Tag(name = "Public Order Tracking", description = "Public endpoints for customers to track their orders")
 public class PublicOrderController {

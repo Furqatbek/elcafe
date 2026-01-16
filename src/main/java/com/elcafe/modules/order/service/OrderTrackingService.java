@@ -74,7 +74,7 @@ public class OrderTrackingService {
 
     private OrderTrackingResponse buildTrackingResponse(Order order) {
         // Build item summaries
-        List<OrderTrackingResponse.OrderItemSummary> items = order.getOrderItems().stream()
+        List<OrderTrackingResponse.OrderItemSummary> items = order.getItems().stream()
                 .map(this::buildItemSummary)
                 .collect(Collectors.toList());
 
@@ -96,8 +96,8 @@ public class OrderTrackingService {
                 .restaurantName(order.getRestaurant().getName())
                 .restaurantPhone(order.getRestaurant().getPhone())
                 .restaurantAddress(order.getRestaurant().getAddress())
-                .totalAmount(order.getTotalAmount())
-                .itemCount(order.getOrderItems().size())
+                .totalAmount(order.getGrandTotal() != null ? order.getGrandTotal() : order.getTotal())
+                .itemCount(order.getItems().size())
                 .items(items)
                 .createdAt(order.getCreatedAt())
                 .confirmedAt(findStatusTimestamp(order, OrderStatus.CONFIRMED))
@@ -113,17 +113,17 @@ public class OrderTrackingService {
 
     private OrderTrackingResponse.OrderItemSummary buildItemSummary(OrderItem item) {
         return OrderTrackingResponse.OrderItemSummary.builder()
-                .name(item.getProduct() != null ? item.getProduct().getName() : item.getProductName())
+                .name(item.getProductName())
                 .quantity(item.getQuantity())
-                .price(item.getPrice())
-                .notes(item.getNotes())
+                .price(item.getTotalPrice())
+                .notes(item.getSpecialInstructions())
                 .build();
     }
 
     private OrderTrackingResponse.StatusUpdate buildStatusUpdate(OrderStatusHistory history) {
         return OrderTrackingResponse.StatusUpdate.builder()
                 .status(history.getStatus())
-                .timestamp(history.getTimestamp())
+                .timestamp(history.getCreatedAt())
                 .message(getStatusMessage(history.getStatus()))
                 .build();
     }
@@ -133,12 +133,11 @@ public class OrderTrackingService {
 
         return OrderTrackingResponse.DeliveryInfo.builder()
                 .deliveryAddress(deliveryInfo.getAddress())
-                .courierName(deliveryInfo.getCourier() != null ? deliveryInfo.getCourier().getFullName() : null)
-                .courierPhone(deliveryInfo.getCourier() != null ? deliveryInfo.getCourier().getPhone() : null)
-                .courierLatitude(deliveryInfo.getCourierLatitude())
-                .courierLongitude(deliveryInfo.getCourierLongitude())
-                .deliveryStatus(deliveryInfo.getDeliveryStatus() != null ?
-                        deliveryInfo.getDeliveryStatus().name() : null)
+                .courierName(deliveryInfo.getCourierName())
+                .courierPhone(deliveryInfo.getCourierPhone())
+                .courierLatitude(deliveryInfo.getLatitude())
+                .courierLongitude(deliveryInfo.getLongitude())
+                .deliveryStatus(order.getStatus() != null ? order.getStatus().name() : null)
                 .build();
     }
 
@@ -227,7 +226,7 @@ public class OrderTrackingService {
     private LocalDateTime findStatusTimestamp(Order order, OrderStatus status) {
         return order.getStatusHistory().stream()
                 .filter(h -> h.getStatus() == status)
-                .map(OrderStatusHistory::getTimestamp)
+                .map(OrderStatusHistory::getCreatedAt)
                 .findFirst()
                 .orElse(null);
     }

@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS reservations (
     id BIGSERIAL PRIMARY KEY,
     restaurant_id BIGINT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
     customer_id BIGINT REFERENCES customers(id) ON DELETE SET NULL,
-    table_id BIGINT REFERENCES tables(id) ON DELETE SET NULL,
+    table_id BIGINT REFERENCES restaurant_tables(id) ON DELETE SET NULL,
 
     -- Customer details (in case no customer account)
     customer_name VARCHAR(100) NOT NULL,

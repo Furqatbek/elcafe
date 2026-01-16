@@ -66,7 +66,7 @@ public class ReservationResponse {
                 .restaurantName(reservation.getRestaurant().getName())
                 .customerId(reservation.getCustomer() != null ? reservation.getCustomer().getId() : null)
                 .tableId(reservation.getTable() != null ? reservation.getTable().getId() : null)
-                .tableName(reservation.getTable() != null ? reservation.getTable().getName() : null)
+                .tableName(reservation.getTable() != null ? reservation.getTable().getTableName() : null)
                 .customerName(reservation.getCustomerName())
                 .customerPhone(reservation.getCustomerPhone())
                 .customerEmail(reservation.getCustomerEmail())

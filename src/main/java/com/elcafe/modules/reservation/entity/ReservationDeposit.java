@@ -1,6 +1,6 @@
 package com.elcafe.modules.reservation.entity;
 
-import com.elcafe.modules.payment.entity.Payment;
+import com.elcafe.modules.order.entity.Payment;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

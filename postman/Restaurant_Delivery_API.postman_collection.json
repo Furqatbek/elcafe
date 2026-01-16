@@ -2727,6 +2727,245 @@
 				}
 			],
 			"description": "Web push notification subscription and management"
+		},
+		{
+			"name": "Reservations",
+			"item": [
+				{
+					"name": "Public - Create Reservation",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customerName\": \"John Doe\",\n  \"customerPhone\": \"+1234567890\",\n  \"customerEmail\": \"john@example.com\",\n  \"reservationDate\": \"2025-01-20\",\n  \"reservationTime\": \"19:00\",\n  \"partySize\": 4,\n  \"specialRequests\": \"Window seat preferred\",\n  \"occasion\": \"Birthday\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/restaurants/{{restaurant_id}}/reservations",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "restaurants", "{{restaurant_id}}", "reservations"]
+						},
+						"description": "Create a new reservation (public endpoint)"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Get Reservation by Code",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/reservations/{{confirmation_code}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "reservations", "{{confirmation_code}}"]
+						},
+						"description": "Get reservation details by confirmation code"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Check Availability",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/restaurants/{{restaurant_id}}/availability?date=2025-01-20&partySize=4",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "restaurants", "{{restaurant_id}}", "availability"],
+							"query": [
+								{"key": "date", "value": "2025-01-20"},
+								{"key": "partySize", "value": "4"}
+							]
+						},
+						"description": "Check available time slots for a date"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Cancel Reservation",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/reservations/{{confirmation_code}}/cancel?reason=Change of plans",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "reservations", "{{confirmation_code}}", "cancel"],
+							"query": [
+								{"key": "reason", "value": "Change of plans"}
+							]
+						},
+						"description": "Cancel a reservation using confirmation code"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - List Reservations",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/reservations?page=0&size=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "reservations"],
+							"query": [
+								{"key": "page", "value": "0"},
+								{"key": "size", "value": "20"}
+							]
+						},
+						"description": "Get all reservations for a restaurant (paginated)"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Get Reservations by Date",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/reservations/date/2025-01-20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "reservations", "date", "2025-01-20"]
+						},
+						"description": "Get reservations for a specific date"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Confirm Reservation",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/confirm",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "confirm"]
+						},
+						"description": "Confirm a pending reservation"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Check In",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/check-in",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "check-in"]
+						},
+						"description": "Check in a guest (mark as seated)"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Complete Reservation",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/complete",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "complete"]
+						},
+						"description": "Mark reservation as completed"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Mark No-Show",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/no-show",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "no-show"]
+						},
+						"description": "Mark customer as no-show"
+					},
+					"response": []
+				},
+				{
+					"name": "Admin - Assign Table",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/reservations/{{reservation_id}}/assign-table/{{table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "reservations", "{{reservation_id}}", "assign-table", "{{table_id}}"]
+						},
+						"description": "Assign a table to a reservation"
+					},
+					"response": []
+				}
+			],
+			"description": "Table reservation management endpoints"
+		},
+		{
+			"name": "Order Tracking",
+			"item": [
+				{
+					"name": "Public - Get Order Status",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/orders/{{order_number}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "orders", "{{order_number}}", "status"]
+						},
+						"description": "Get current order status and tracking information"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Get Order ETA",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/orders/{{order_number}}/eta",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "orders", "{{order_number}}", "eta"]
+						},
+						"description": "Get estimated time of arrival/completion"
+					},
+					"response": []
+				},
+				{
+					"name": "Public - Track by Phone",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/public/orders/track?phone=+1234567890",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "public", "orders", "track"],
+							"query": [
+								{"key": "phone", "value": "+1234567890"}
+							]
+						},
+						"description": "Get recent orders for a phone number"
+					},
+					"response": []
+				}
+			],
+			"description": "Public order tracking endpoints for customers"
 		}
 	],
 	"variable": [

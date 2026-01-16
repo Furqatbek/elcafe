@@ -13,9 +13,9 @@ import com.elcafe.modules.reservation.enums.ReservationStatus;
 import com.elcafe.modules.reservation.repository.ReservationRepository;
 import com.elcafe.modules.reservation.repository.ReservationSettingsRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
-import com.elcafe.modules.table.entity.Table;
-import com.elcafe.modules.table.repository.TableRepository;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,7 +39,7 @@ public class ReservationService {
     private final ReservationSettingsRepository settingsRepository;
     private final RestaurantRepository restaurantRepository;
     private final CustomerRepository customerRepository;
-    private final TableRepository tableRepository;
+    private final RestaurantTableRepository tableRepository;
     private final AvailabilityService availabilityService;
 
     private static final String CONFIRMATION_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -75,7 +75,7 @@ public class ReservationService {
         }
 
         // Find table if specified
-        Table table = null;
+        RestaurantTable table = null;
         if (request.getTableId() != null) {
             table = tableRepository.findById(request.getTableId())
                     .orElseThrow(() -> new ResourceNotFoundException("Table", "id", request.getTableId()));
@@ -282,7 +282,7 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation", "id", reservationId));
 
-        Table table = tableRepository.findById(tableId)
+        RestaurantTable table = tableRepository.findById(tableId)
                 .orElseThrow(() -> new ResourceNotFoundException("Table", "id", tableId));
 
         reservation.setTable(table);
