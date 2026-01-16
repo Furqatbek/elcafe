@@ -304,13 +304,9 @@ public class TelegramCampaignExecutor {
         String message = template.render(placeholders);
         List<List<Map<String, String>>> buttons = null;
 
-        if (template.getHasButtons() && template.getButtonsConfig() != null) {
-            try {
-                buttons = objectMapper.readValue(template.getButtonsConfig(),
-                        new TypeReference<List<List<Map<String, String>>>>() {});
-            } catch (Exception e) {
-                log.warn("Failed to parse template buttons: {}", e.getMessage());
-            }
+        if (template.getHasButtons() && template.getButtonsConfig() != null && !template.getButtonsConfig().isEmpty()) {
+            // buttonsConfig is already a List<Map<String, String>>, wrap it as a single row
+            buttons = List.of(template.getButtonsConfig());
         }
 
         String imageUrl = template.getHasImage() ? template.getImageUrl() : null;
