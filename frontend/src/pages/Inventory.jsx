@@ -2239,7 +2239,7 @@ export default function Inventory() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">
-                  ${wasteReport?.totalWasteCost?.toFixed(2) || '0.00'}
+                  {wasteReport?.totalWasteCost?.toFixed(2) || '0.00'}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {wasteReport?.recordCount || 0} {t('inventory.waste.records', 'records')}
@@ -2341,7 +2341,7 @@ export default function Inventory() {
                         </TableCell>
                         <TableCell>{getWasteReasonBadge(record.wasteReason)}</TableCell>
                         <TableCell className="text-red-600 font-medium">
-                          ${record.totalCost?.toFixed(2) || '0.00'}
+                          {record.totalCost?.toFixed(2) || '0.00'}
                         </TableCell>
                         <TableCell>{record.recordedBy || '-'}</TableCell>
                         <TableCell className="text-right">
@@ -2385,7 +2385,7 @@ export default function Inventory() {
                         <TableCell>{getWasteReasonBadge(item.reason)}</TableCell>
                         <TableCell className="text-right">{item.recordCount}</TableCell>
                         <TableCell className="text-right">{item.totalQuantity?.toFixed(2)}</TableCell>
-                        <TableCell className="text-right text-red-600">${item.totalCost?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-red-600">{item.totalCost?.toFixed(2)}</TableCell>
                         <TableCell className="text-right">{item.percentageOfTotal?.toFixed(1)}%</TableCell>
                       </TableRow>
                     ))}
@@ -2417,7 +2417,7 @@ export default function Inventory() {
                         <TableCell className="font-medium">{item.ingredientName}</TableCell>
                         <TableCell className="text-right">{item.recordCount}</TableCell>
                         <TableCell className="text-right">{item.totalQuantity?.toFixed(2)}</TableCell>
-                        <TableCell className="text-right text-red-600">${item.totalCost?.toFixed(2)}</TableCell>
+                        <TableCell className="text-right text-red-600">{item.totalCost?.toFixed(2)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

@@ -322,7 +322,7 @@ export default function Recipes() {
                       {product.category?.name || 'Uncategorized'}
                     </div>
                     {product.price && (
-                      <div className="text-sm font-semibold mt-1">${product.price}</div>
+                      <div className="text-sm font-semibold mt-1">{product.price}</div>
                     )}
                   </button>
                 ))}
