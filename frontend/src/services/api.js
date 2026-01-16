@@ -100,8 +100,11 @@ api.interceptors.response.use(
         localStorage.removeItem('refresh_token_expiry');
         localStorage.removeItem('token_set_time');
 
-        // Redirect to login
-        window.location.href = '/login';
+        // Only redirect to login if we're on the admin app (not customer/order pages)
+        const isCustomerApp = window.location.pathname.startsWith('/order');
+        if (!isCustomerApp) {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
     }
@@ -1005,19 +1008,19 @@ export const selfServiceAPI = {
   }),
   getOrderStatus: (orderId) => api.get(`/self-service/order/${orderId}/status`),
 
-  // Coupons & Promotions
+  // Coupons & Promotions (public self-service endpoints)
   validateCoupon: (restaurantId, couponCode, orderTotal, customerId) =>
     api.post('/consumer/orders/validate-coupon', null, {
       params: { restaurantId, couponCode, orderTotal, customerId }
     }),
   getActivePromotions: (restaurantId) =>
-    api.get(`/restaurants/${restaurantId}/promotions/active`),
+    api.get(`/self-service/promotions/${restaurantId}`),
   getActiveHappyHour: (restaurantId) =>
-    api.get(`/restaurants/${restaurantId}/happy-hours/active`),
+    api.get(`/self-service/happy-hour/${restaurantId}`),
 
-  // Bundles/Combos
+  // Bundles/Combos (public self-service endpoints)
   getMenuBundles: (restaurantId) =>
-    api.get(`/restaurants/${restaurantId}/bundles/menu`),
+    api.get(`/self-service/bundles/${restaurantId}`),
   getBundleDetails: (bundleId) => api.get(`/bundles/${bundleId}`),
 };
 

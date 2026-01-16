@@ -1,10 +1,16 @@
 package com.elcafe.modules.selfservice.controller;
 
+import com.elcafe.modules.bundle.entity.Bundle;
+import com.elcafe.modules.bundle.repository.BundleRepository;
 import com.elcafe.modules.menu.entity.Category;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.CategoryRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
+import com.elcafe.modules.promotion.entity.HappyHour;
+import com.elcafe.modules.promotion.entity.Promotion;
+import com.elcafe.modules.promotion.repository.HappyHourRepository;
+import com.elcafe.modules.promotion.repository.PromotionRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.selfservice.dto.AddToCartRequest;
@@ -26,6 +32,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +54,9 @@ public class SelfServiceController {
     private final RestaurantRepository restaurantRepository;
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final PromotionRepository promotionRepository;
+    private final HappyHourRepository happyHourRepository;
+    private final BundleRepository bundleRepository;
 
     // ==================== Session Management ====================
 
@@ -233,6 +244,93 @@ public class SelfServiceController {
                         return lmap;
                     }).toList());
         }
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ==================== Promotions & Offers ====================
+
+    /**
+     * Get active promotions for customer menu.
+     */
+    @GetMapping("/promotions/{restaurantId}")
+    @Operation(summary = "Get active promotions", description = "Get active promotions for the customer menu")
+    public ResponseEntity<List<Map<String, Object>>> getActivePromotions(
+            @PathVariable Long restaurantId) {
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Promotion> promotions = promotionRepository.findActivePromotions(restaurantId, now);
+
+        List<Map<String, Object>> response = promotions.stream().map(promo -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", promo.getId());
+            map.put("name", promo.getName());
+            map.put("description", promo.getDescription());
+            map.put("type", promo.getPromotionType() != null ? promo.getPromotionType().name() : null);
+            map.put("discountValue", promo.getDiscountValue());
+            map.put("minOrderAmount", promo.getMinOrderAmount());
+            return map;
+        }).toList();
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get active happy hour.
+     */
+    @GetMapping("/happy-hour/{restaurantId}")
+    @Operation(summary = "Get active happy hour", description = "Get currently active happy hour if any")
+    public ResponseEntity<Map<String, Object>> getActiveHappyHour(
+            @PathVariable Long restaurantId) {
+
+        LocalTime now = LocalTime.now();
+        List<HappyHour> happyHours = happyHourRepository.findByRestaurantIdAndActiveTrue(restaurantId);
+
+        // Find currently active happy hour
+        HappyHour active = happyHours.stream()
+                .filter(hh -> now.isAfter(hh.getStartTime()) && now.isBefore(hh.getEndTime()))
+                .findFirst()
+                .orElse(null);
+
+        if (active == null) {
+            return ResponseEntity.ok(null);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", active.getId());
+        response.put("name", active.getName());
+        response.put("discountPercent", active.getDiscountPercent());
+        response.put("startTime", active.getStartTime());
+        response.put("endTime", active.getEndTime());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get menu bundles/combos.
+     */
+    @GetMapping("/bundles/{restaurantId}")
+    @Operation(summary = "Get menu bundles", description = "Get active bundles/combos for the menu")
+    public ResponseEntity<List<Map<String, Object>>> getMenuBundles(
+            @PathVariable Long restaurantId) {
+
+        LocalDateTime now = LocalDateTime.now();
+        List<Bundle> bundles = bundleRepository.findByRestaurantIdAndActiveTrue(restaurantId).stream()
+                .filter(b -> (b.getStartDate() == null || !now.isBefore(b.getStartDate().atStartOfDay())) &&
+                             (b.getEndDate() == null || !now.isAfter(b.getEndDate().atTime(23, 59, 59))))
+                .toList();
+
+        List<Map<String, Object>> response = bundles.stream().map(bundle -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", bundle.getId());
+            map.put("name", bundle.getName());
+            map.put("description", bundle.getDescription());
+            map.put("bundlePrice", bundle.getBundlePrice());
+            map.put("originalPrice", bundle.getOriginalPrice());
+            map.put("savings", bundle.getSavings());
+            map.put("imageUrl", bundle.getImageUrl());
+            return map;
+        }).toList();
 
         return ResponseEntity.ok(response);
     }
