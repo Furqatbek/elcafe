@@ -19,6 +19,8 @@ public interface TelegramCampaignRepository extends JpaRepository<TelegramCampai
 
     List<TelegramCampaign> findByStatusAndScheduledAtBefore(CampaignStatus status, LocalDateTime before);
 
+    List<TelegramCampaign> findByStatusAndStartedAtBefore(CampaignStatus status, LocalDateTime before);
+
     @Query("SELECT c FROM TelegramCampaign c LEFT JOIN FETCH c.template WHERE c.id = :id")
     TelegramCampaign findByIdWithTemplate(@Param("id") Long id);
 

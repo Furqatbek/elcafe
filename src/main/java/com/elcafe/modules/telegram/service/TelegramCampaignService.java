@@ -31,6 +31,7 @@ public class TelegramCampaignService {
     private final TelegramTemplateRepository templateRepository;
     private final TelegramSubscriberRepository subscriberRepository;
     private final TelegramLogRepository logRepository;
+    private final TelegramCampaignExecutor campaignExecutor;
 
     @Transactional(readOnly = true)
     public Page<TelegramCampaignResponse> getAllCampaigns(Pageable pageable) {
@@ -134,13 +135,17 @@ public class TelegramCampaignService {
             throw new BadRequestException("Can only send campaigns in DRAFT or SCHEDULED status");
         }
 
+        if (campaign.getRecipientCount() == 0) {
+            throw new BadRequestException("Campaign has no recipients");
+        }
+
         campaign.setStatus(CampaignStatus.SENDING);
         campaign.setStartedAt(LocalDateTime.now());
         campaign = campaignRepository.save(campaign);
 
-        // Note: Actual sending would be done via Telegram Bot API
-        // This is a placeholder for the sending logic
-        log.info("Campaign {} marked as SENDING. Actual Telegram sending would be triggered here.", id);
+        // Trigger async campaign execution
+        campaignExecutor.executeCampaign(id);
+        log.info("Campaign {} execution started asynchronously", id);
 
         return TelegramCampaignResponse.from(campaign);
     }
