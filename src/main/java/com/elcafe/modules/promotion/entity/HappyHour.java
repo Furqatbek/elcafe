@@ -13,8 +13,8 @@ import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "happy_hours")
@@ -51,11 +51,11 @@ public class HappyHour {
 
     @OneToMany(mappedBy = "happyHour", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<HappyHourSchedule> schedules = new ArrayList<>();
+    private Set<HappyHourSchedule> schedules = new HashSet<>();
 
     @OneToMany(mappedBy = "happyHour", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<HappyHourProduct> products = new ArrayList<>();
+    private Set<HappyHourProduct> products = new HashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

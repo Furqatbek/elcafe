@@ -307,7 +307,7 @@ const generateReceiptHTML = (order) => {
         <span>${order.discountType === 'COUPON' && order.couponCode
           ? `Kupon (${order.couponCode}):`
           : order.discountType === 'HAPPY_HOUR'
-          ? 'Happy Hour:'
+          ? `Happy Hour${order.promotionName ? ` (${order.promotionName})` : ''}:`
           : 'Chegirma:'}</span>
         <span>-${Math.round(order.discount)}</span>
       </div>

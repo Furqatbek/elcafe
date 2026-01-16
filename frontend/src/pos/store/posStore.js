@@ -637,14 +637,94 @@ const usePOSStore = create(
       applyHappyHour: async () => {
         const state = get();
         const orderId = state.currentOrder.id;
+        const happyHourData = state.happyHour.active;
 
-        if (!orderId || orderId.toString().startsWith('temp-')) {
+        // Check if happy hour is active
+        if (!happyHourData) {
           return {
             success: false,
-            error: 'Order must be submitted before applying happy hour discount',
+            error: 'No active happy hour',
           };
         }
 
+        // For temp orders, calculate discount locally
+        if (!orderId || orderId.toString().startsWith('temp-')) {
+          const items = state.currentOrder.items || [];
+          const discountPercent = parseFloat(happyHourData.discountPercent) || 0;
+
+          if (discountPercent <= 0) {
+            return {
+              success: false,
+              error: 'Invalid discount percentage',
+            };
+          }
+
+          // Calculate applicable amount based on product/category eligibility
+          let applicableAmount = 0;
+
+          items.forEach(item => {
+            // Skip free items
+            if (item.isFreeItem) return;
+
+            let isEligible = false;
+
+            // If applies to all, everything is eligible
+            if (happyHourData.appliesToAll) {
+              isEligible = true;
+            } else {
+              // Check if product is in applicable products
+              if (happyHourData.applicableProductIds &&
+                  happyHourData.applicableProductIds.includes(item.productId)) {
+                isEligible = true;
+              }
+              // Check if product category is in applicable categories
+              if (!isEligible && happyHourData.applicableCategoryIds &&
+                  item.categoryId &&
+                  happyHourData.applicableCategoryIds.includes(item.categoryId)) {
+                isEligible = true;
+              }
+            }
+
+            if (isEligible) {
+              applicableAmount += item.itemTotal || 0;
+            }
+          });
+
+          // Calculate discount
+          const discountAmount = (applicableAmount * discountPercent) / 100;
+
+          if (discountAmount <= 0) {
+            return {
+              success: false,
+              error: 'No eligible items for happy hour discount',
+            };
+          }
+
+          // Update order with discount
+          const subtotal = state.currentOrder.subtotal || 0;
+          const tax = state.currentOrder.tax || 0;
+          const deliveryFee = state.currentOrder.deliveryFee || 0;
+          const serviceFee = state.currentOrder.serviceFee || 0;
+          const entryFee = state.currentOrder.entryFee || 0;
+          const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discountAmount);
+
+          set({
+            currentOrder: {
+              ...state.currentOrder,
+              discount: discountAmount,
+              discountType: 'HAPPY_HOUR',
+              couponCode: null,
+              promotionId: happyHourData.id,
+              promotionName: happyHourData.name,
+              discountReason: null,
+              total,
+            },
+          });
+
+          return { success: true, discount: discountAmount };
+        }
+
+        // For submitted orders, use API
         try {
           set((s) => ({ ui: { ...s.ui, isLoading: true } }));
           const response = await posAPI.applyHappyHourDiscount(orderId);
@@ -656,8 +736,8 @@ const usePOSStore = create(
               discount: updatedOrder.discount || 0,
               discountType: 'HAPPY_HOUR',
               couponCode: null,
-              promotionId: null,
-              promotionName: null,
+              promotionId: happyHourData.id,
+              promotionName: happyHourData.name,
               discountReason: null,
               total: updatedOrder.total,
             },
