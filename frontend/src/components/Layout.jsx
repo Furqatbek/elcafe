@@ -123,6 +123,7 @@ export default function Layout() {
         { label: t('nav.sub.branches'), icon: Grid, path: '/restaurants' },
         { label: t('nav.sub.tables'), icon: Table, path: '/restaurants/tables' },
         { label: t('nav.sub.workingHours'), icon: Clock, path: '/restaurants/working-hours' },
+        { label: t('nav.sub.reservations', 'Reservations'), icon: Calendar, path: '/restaurants/reservations' },
       ],
     },
     {

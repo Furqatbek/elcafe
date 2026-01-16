@@ -15,6 +15,7 @@ import {
   Sparkles,
   Percent,
   Package,
+  CalendarDays,
 } from 'lucide-react';
 
 const COMBOS_CATEGORY_ID = 'combos';
@@ -247,13 +248,22 @@ export default function MenuPage() {
                 <p className="text-sm text-gray-500">Table {session.tableNumber}</p>
               )}
             </div>
-            {restaurant?.logoUrl && (
-              <img
-                src={restaurant.logoUrl}
-                alt={restaurant.name}
-                className="w-10 h-10 rounded-full object-cover"
-              />
-            )}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate(`/reserve/${restaurantId}`)}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <CalendarDays className="w-4 h-4" />
+                Reserve
+              </button>
+              {restaurant?.logoUrl && (
+                <img
+                  src={restaurant.logoUrl}
+                  alt={restaurant.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              )}
+            </div>
           </div>
         </div>
       </div>
