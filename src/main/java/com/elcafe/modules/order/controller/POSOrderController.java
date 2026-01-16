@@ -11,6 +11,10 @@ import com.elcafe.modules.order.dto.pos.RefundRequestDTO;
 import com.elcafe.modules.order.dto.pos.SplitBillDTO;
 import com.elcafe.modules.order.service.PaymentService;
 import com.elcafe.modules.order.service.POSOrderService;
+import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
+import com.elcafe.modules.promotion.service.CouponValidationService;
 
 import java.util.List;
 import com.elcafe.utils.ApiResponse;
@@ -349,5 +353,54 @@ public class POSOrderController {
         POSOrderResponse response = posOrderService.changeTable(orderId, newTableId);
 
         return ResponseEntity.ok(ApiResponse.success("Order moved to new table successfully", response));
+    }
+
+    // ============== Discount/Promotion Endpoints ==============
+
+    @PostMapping("/{orderId}/discount")
+    @Operation(
+            summary = "Apply discount to order",
+            description = "Apply a coupon code, promotion, manual discount, or happy hour discount to an order"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> applyDiscount(
+            @PathVariable Long orderId,
+            @Valid @RequestBody ApplyDiscountRequest request) {
+
+        log.info("Applying discount to order {}: type={}", orderId, request.getDiscountType());
+
+        POSOrderResponse response = posOrderService.applyDiscount(orderId, request);
+
+        return ResponseEntity.ok(ApiResponse.success("Discount applied successfully", response));
+    }
+
+    @DeleteMapping("/{orderId}/discount")
+    @Operation(
+            summary = "Remove discount from order",
+            description = "Remove any applied discount from an order"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> removeDiscount(
+            @PathVariable Long orderId) {
+
+        log.info("Removing discount from order {}", orderId);
+
+        POSOrderResponse response = posOrderService.removeDiscount(orderId);
+
+        return ResponseEntity.ok(ApiResponse.success("Discount removed successfully", response));
+    }
+
+    @PostMapping("/{orderId}/validate-coupon")
+    @Operation(
+            summary = "Validate coupon code",
+            description = "Validate a coupon code for an order without applying it"
+    )
+    public ResponseEntity<ApiResponse<ValidateCouponResponse>> validateCoupon(
+            @PathVariable Long orderId,
+            @RequestParam String couponCode) {
+
+        log.info("Validating coupon {} for order {}", couponCode, orderId);
+
+        ValidateCouponResponse response = posOrderService.validateCoupon(orderId, couponCode);
+
+        return ResponseEntity.ok(ApiResponse.success("Coupon validated", response));
     }
 }

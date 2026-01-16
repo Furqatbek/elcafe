@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils';
 import { ChevronLeft, Plus, Trash2, CreditCard, AlertTriangle, X } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import CartItem from '../components/CartItem';
+import CouponInput from '../components/CouponInput';
 import usePOSStore from '../store/posStore';
 
 /**
@@ -22,7 +23,7 @@ const CartScreen = () => {
     checkProductAvailability,
   } = usePOSStore();
 
-  const { items, subtotal, tax, deliveryFee, total, type, notes } = currentOrder;
+  const { items, subtotal, tax, deliveryFee, serviceFee, entryFee, discount, total, type, notes } = currentOrder;
   const [availabilityWarnings, setAvailabilityWarnings] = useState([]);
   const [isValidating, setIsValidating] = useState(false);
 
@@ -247,6 +248,9 @@ const CartScreen = () => {
                 </button>
               </div>
               <div className="p-4 space-y-4">
+                {/* Coupon Input */}
+                <CouponInput restaurantId={restaurantId} />
+
                 {/* Price Breakdown */}
                 <div className="space-y-2 bg-gray-50 rounded-lg p-3">
                   <div className="flex justify-between">
@@ -261,6 +265,24 @@ const CartScreen = () => {
                     <div className="flex justify-between">
                       <span className="text-gray-700">{t('pos.cart.deliveryFee', 'Delivery')}</span>
                       <span className="font-semibold">{deliveryFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {serviceFee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">{t('pos.cart.serviceFee', 'Service Fee')}</span>
+                      <span className="font-semibold">{serviceFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {entryFee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">{t('pos.cart.entryFee', 'Entry Fee')}</span>
+                      <span className="font-semibold">{entryFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>{t('pos.cart.discount', 'Discount')}</span>
+                      <span className="font-semibold">-{discount.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="pt-2 border-t flex justify-between">
@@ -332,6 +354,14 @@ const CartScreen = () => {
                 />
               </div>
 
+              {/* Coupon Input */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">
+                  {t('pos.cart.discount', 'Discount')}
+                </h3>
+                <CouponInput restaurantId={restaurantId} />
+              </div>
+
               {/* Price Breakdown */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">
@@ -346,7 +376,7 @@ const CartScreen = () => {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-700">{t('pos.cart.tax', 'Tax (8%)')}</span>
+                    <span className="text-gray-700">{t('pos.cart.tax', 'Tax')}</span>
                     <span className="text-lg font-semibold text-gray-900">
                       {tax.toFixed(2)}
                     </span>
@@ -357,6 +387,33 @@ const CartScreen = () => {
                       <span className="text-gray-700">{t('pos.cart.deliveryFee', 'Delivery Fee')}</span>
                       <span className="text-lg font-semibold text-gray-900">
                         {deliveryFee.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  {serviceFee > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">{t('pos.cart.serviceFee', 'Service Fee')}</span>
+                      <span className="text-lg font-semibold text-gray-900">
+                        {serviceFee.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  {entryFee > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700">{t('pos.cart.entryFee', 'Entry Fee')}</span>
+                      <span className="text-lg font-semibold text-gray-900">
+                        {entryFee.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  {discount > 0 && (
+                    <div className="flex justify-between items-center text-green-600">
+                      <span>{t('pos.cart.discount', 'Discount')}</span>
+                      <span className="text-lg font-semibold">
+                        -{discount.toFixed(2)}
                       </span>
                     </div>
                   )}

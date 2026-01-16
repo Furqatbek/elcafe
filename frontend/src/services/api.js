@@ -369,6 +369,14 @@ export const posAPI = {
     api.post(`/pos/orders/${orderId}/service-fee-amount`, null, { params: { serviceFeeAmount } }),
   changeTable: (orderId, newTableId) =>
     api.patch(`/pos/orders/${orderId}/change-table`, null, { params: { newTableId } }),
+  // Entry Fee
+  applyEntryFee: (orderId, entryFee) =>
+    api.post(`/pos/orders/${orderId}/entry-fee`, null, { params: { entryFee } }),
+  // Discount/Promotion
+  applyDiscount: (orderId, discountData) => api.post(`/pos/orders/${orderId}/discount`, discountData),
+  removeDiscount: (orderId) => api.delete(`/pos/orders/${orderId}/discount`),
+  validateCoupon: (orderId, couponCode) =>
+    api.post(`/pos/orders/${orderId}/validate-coupon`, null, { params: { couponCode } }),
 };
 
 export const waiterOrderAPI = {

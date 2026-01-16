@@ -18,6 +18,11 @@ import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.ModifyOrderItemRequest;
 import com.elcafe.modules.order.dto.pos.POSOrderResponse;
 import com.elcafe.modules.order.dto.pos.SplitBillDTO;
+import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
+import com.elcafe.modules.promotion.service.CouponValidationService;
+import com.elcafe.modules.promotion.service.DiscountCalculationService;
 import com.elcafe.modules.order.entity.DeliveryInfo;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
@@ -54,6 +59,8 @@ public class POSOrderService {
     private final KitchenOrderRepository kitchenOrderRepository;
     private final RestaurantTableRepository restaurantTableRepository;
     private final DailyOrderSequenceService dailyOrderSequenceService;
+    private final DiscountCalculationService discountCalculationService;
+    private final CouponValidationService couponValidationService;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -1075,5 +1082,95 @@ public class POSOrderService {
         Order savedOrder = orderRepository.save(order);
 
         return mapToResponse(savedOrder, "DINE_IN");
+    }
+
+    // ==================== DISCOUNT METHODS ====================
+
+    /**
+     * Apply a discount to an order (coupon, promotion, manual, or happy hour)
+     */
+    @Transactional
+    public POSOrderResponse applyDiscount(Long orderId, ApplyDiscountRequest request) {
+        log.info("Applying discount to order {}: type={}", orderId, request.getDiscountType());
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Check order status allows modification
+        if (!canModifyOrder(order)) {
+            throw new IllegalStateException("Order cannot be modified in status: " + order.getStatus());
+        }
+
+        // Apply discount using the discount calculation service
+        discountCalculationService.applyDiscount(order, request);
+
+        // Save the order
+        Order savedOrder = orderRepository.save(order);
+
+        log.info("Discount applied to order {}: discount={}, newTotal={}",
+                orderId, savedOrder.getDiscount(), savedOrder.getTotal());
+
+        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
+                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
+
+    /**
+     * Remove discount from an order
+     */
+    @Transactional
+    public POSOrderResponse removeDiscount(Long orderId) {
+        log.info("Removing discount from order {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Check order status allows modification
+        if (!canModifyOrder(order)) {
+            throw new IllegalStateException("Order cannot be modified in status: " + order.getStatus());
+        }
+
+        // Remove discount using the discount calculation service
+        discountCalculationService.removeDiscount(order);
+
+        // Save the order
+        Order savedOrder = orderRepository.save(order);
+
+        log.info("Discount removed from order {}: newTotal={}", orderId, savedOrder.getTotal());
+
+        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
+                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+
+        return mapToResponse(savedOrder, orderType);
+    }
+
+    /**
+     * Validate a coupon code for an order without applying it
+     */
+    @Transactional(readOnly = true)
+    public ValidateCouponResponse validateCoupon(Long orderId, String couponCode) {
+        log.info("Validating coupon {} for order {}", couponCode, orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        // Build validation request from order
+        ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
+                .code(couponCode)
+                .restaurantId(order.getRestaurant().getId())
+                .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
+                .orderSubtotal(order.getSubtotal())
+                .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
+                .items(order.getItems().stream()
+                        .map(item -> ValidateCouponRequest.OrderItemInfo.builder()
+                                .productId(item.getProductId())
+                                .quantity(item.getQuantity())
+                                .price(item.getUnitPrice())
+                                .build())
+                        .collect(Collectors.toList()))
+                .build();
+
+        return couponValidationService.validateCoupon(validateRequest);
     }
 }

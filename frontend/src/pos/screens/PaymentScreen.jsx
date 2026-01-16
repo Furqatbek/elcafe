@@ -70,7 +70,9 @@ const PaymentScreen = () => {
   const tax = currentOrder.tax || 0;
   const deliveryFee = currentOrder.deliveryFee || 0;
   const serviceFee = currentOrder.serviceFee || 0;
-  const grandTotal = subtotal + tax + deliveryFee + serviceFee;
+  const entryFee = currentOrder.entryFee || 0;
+  const discount = currentOrder.discount || 0;
+  const grandTotal = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
 
   // For split payments
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -120,6 +122,8 @@ const PaymentScreen = () => {
       deliveryFee: deliveryFee,
       serviceFee: serviceFee,
       serviceFeePercent: currentOrder.serviceFeePercent,
+      entryFee: entryFee,
+      discount: discount,
       total: grandTotal,
       diningTable: customer.tableNumber ? { tableNumber: customer.tableNumber } : null,
       customerNotes: currentOrder.notes || null,
@@ -638,6 +642,18 @@ const PaymentScreen = () => {
                       <span>{serviceFee.toFixed(2)}</span>
                     </div>
                   )}
+                  {entryFee > 0 && (
+                    <div className="flex justify-between text-sm text-gray-700">
+                      <span>{t('pos.payment.entryFee', 'Entry Fee')}</span>
+                      <span>{entryFee.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {discount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>{t('pos.cart.discount', 'Discount')}</span>
+                      <span>-{discount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-lg pt-2 border-t">
                     <span>{t('pos.cart.total', 'Total')}</span>
                     <span>{grandTotal.toFixed(2)}</span>
@@ -811,6 +827,18 @@ const PaymentScreen = () => {
               <div className="flex justify-between text-purple-700">
                 <span>{t('pos.payment.serviceFee', 'Service Fee')} ({currentOrder.serviceFeePercent}%)</span>
                 <span>{serviceFee.toFixed(2)}</span>
+              </div>
+            )}
+            {entryFee > 0 && (
+              <div className="flex justify-between text-gray-700">
+                <span>{t('pos.payment.entryFee', 'Entry Fee')}</span>
+                <span>{entryFee.toFixed(2)}</span>
+              </div>
+            )}
+            {discount > 0 && (
+              <div className="flex justify-between text-green-600">
+                <span>{t('pos.cart.discount', 'Discount')}</span>
+                <span>-{discount.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t-2 border-gray-200">

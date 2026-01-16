@@ -11,12 +11,12 @@ import usePOSStore from '../store/posStore';
  */
 const CouponInput = ({ restaurantId = 1 }) => {
   const { t } = useTranslation();
-  const { currentOrder, applyCoupon, removeDiscount } = usePOSStore();
+  const { currentOrder, validateCoupon, applyDiscount, removeDiscount } = usePOSStore();
   const [couponInput, setCouponInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const { discount, couponCode, discountType } = currentOrder;
+  const { discount, couponCode, discountType, promotionName } = currentOrder;
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
@@ -25,8 +25,29 @@ const CouponInput = ({ restaurantId = 1 }) => {
     setError(null);
 
     try {
-      await applyCoupon(couponInput.trim().toUpperCase(), restaurantId);
-      setCouponInput('');
+      const code = couponInput.trim().toUpperCase();
+
+      // First validate the coupon
+      const validation = await validateCoupon(code);
+
+      if (!validation.valid) {
+        setError(validation.errorMessage || t('pos.coupon.invalidCoupon', 'Invalid coupon code'));
+        setIsLoading(false);
+        return;
+      }
+
+      // Apply the coupon
+      const result = await applyDiscount({
+        discountType: 'COUPON',
+        couponCode: code,
+        promotionId: validation.promotionId,
+      });
+
+      if (result.success) {
+        setCouponInput('');
+      } else {
+        setError(result.error || t('pos.coupon.applyFailed', 'Failed to apply coupon'));
+      }
     } catch (err) {
       setError(err.message || t('pos.coupon.invalidCoupon', 'Invalid coupon code'));
     } finally {
@@ -34,8 +55,8 @@ const CouponInput = ({ restaurantId = 1 }) => {
     }
   };
 
-  const handleRemoveCoupon = () => {
-    removeDiscount();
+  const handleRemoveCoupon = async () => {
+    await removeDiscount();
     setError(null);
   };
 
@@ -54,7 +75,8 @@ const CouponInput = ({ restaurantId = 1 }) => {
               </p>
               <p className="text-xs text-green-600">
                 <code className="bg-green-100 px-1 rounded">{couponCode}</code>
-                {' - '}{discount.toFixed(2)} {t('pos.coupon.off', 'off')}
+                {promotionName && ` - ${promotionName}`}
+                {' - '}{(discount || 0).toFixed(2)} {t('pos.coupon.off', 'off')}
               </p>
             </div>
           </div>
@@ -62,6 +84,67 @@ const CouponInput = ({ restaurantId = 1 }) => {
             onClick={handleRemoveCoupon}
             className="p-2 text-green-600 hover:text-green-800 hover:bg-green-100 rounded-full transition-colors"
             title={t('pos.coupon.remove', 'Remove coupon')}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If promotion is applied
+  if (discount > 0 && discountType === 'PROMOTION') {
+    return (
+      <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-purple-100 rounded-full">
+              <Tag className="w-4 h-4 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-purple-800">
+                {t('pos.coupon.promotionApplied', 'Promotion Applied')}
+              </p>
+              <p className="text-xs text-purple-600">
+                {promotionName || t('pos.coupon.promotion', 'Promotion')}
+                {' - '}{(discount || 0).toFixed(2)} {t('pos.coupon.off', 'off')}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleRemoveCoupon}
+            className="p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded-full transition-colors"
+            title={t('pos.coupon.remove', 'Remove promotion')}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If happy hour discount is applied
+  if (discount > 0 && discountType === 'HAPPY_HOUR') {
+    return (
+      <div className="bg-orange-50 border-2 border-orange-200 rounded-lg p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-orange-100 rounded-full">
+              <Tag className="w-4 h-4 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-orange-800">
+                {t('pos.coupon.happyHour', 'Happy Hour')}
+              </p>
+              <p className="text-xs text-orange-600">
+                {(discount || 0).toFixed(2)} {t('pos.coupon.off', 'off')}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleRemoveCoupon}
+            className="p-2 text-orange-600 hover:text-orange-800 hover:bg-orange-100 rounded-full transition-colors"
+            title={t('pos.coupon.remove', 'Remove discount')}
           >
             <X className="w-5 h-5" />
           </button>
@@ -84,7 +167,7 @@ const CouponInput = ({ restaurantId = 1 }) => {
                 {t('pos.coupon.manualDiscount', 'Manual Discount')}
               </p>
               <p className="text-xs text-blue-600">
-                {discount.toFixed(2)} {t('pos.coupon.off', 'off')}
+                {(discount || 0).toFixed(2)} {t('pos.coupon.off', 'off')}
               </p>
             </div>
           </div>

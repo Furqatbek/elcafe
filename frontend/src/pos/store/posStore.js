@@ -20,6 +20,13 @@ const usePOSStore = create(
         deliveryFee: 0,
         serviceFeePercent: 0,
         serviceFee: 0,
+        entryFee: 0,
+        discount: 0,
+        discountType: null, // 'COUPON' | 'PROMOTION' | 'MANUAL' | 'HAPPY_HOUR'
+        couponCode: null,
+        promotionId: null,
+        promotionName: null,
+        discountReason: null,
         total: 0,
         notes: '',
       },
@@ -100,6 +107,15 @@ const usePOSStore = create(
           subtotal: 0,
           tax: 0,
           deliveryFee: type === 'DELIVERY' ? 5.00 : 0,
+          serviceFeePercent: 0,
+          serviceFee: 0,
+          entryFee: 0,
+          discount: 0,
+          discountType: null,
+          couponCode: null,
+          promotionId: null,
+          promotionName: null,
+          discountReason: null,
           total: 0,
           notes: '',
         },
@@ -155,7 +171,9 @@ const usePOSStore = create(
         const deliveryFee = state.currentOrder.deliveryFee;
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const total = subtotal + tax + deliveryFee + serviceFee;
+        const entryFee = state.currentOrder.entryFee || 0;
+        const discount = state.currentOrder.discount || 0;
+        const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
 
         return {
           currentOrder: {
@@ -187,7 +205,9 @@ const usePOSStore = create(
         const deliveryFee = state.currentOrder.deliveryFee;
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const total = subtotal + tax + deliveryFee + serviceFee;
+        const entryFee = state.currentOrder.entryFee || 0;
+        const discount = state.currentOrder.discount || 0;
+        const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
 
         return {
           currentOrder: {
@@ -208,7 +228,9 @@ const usePOSStore = create(
         const deliveryFee = state.currentOrder.deliveryFee;
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const total = subtotal + tax + deliveryFee + serviceFee;
+        const entryFee = state.currentOrder.entryFee || 0;
+        const discount = state.currentOrder.discount || 0;
+        const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
 
         return {
           currentOrder: {
@@ -237,6 +259,13 @@ const usePOSStore = create(
           tax: 0,
           serviceFeePercent: 0,
           serviceFee: 0,
+          entryFee: 0,
+          discount: 0,
+          discountType: null,
+          couponCode: null,
+          promotionId: null,
+          promotionName: null,
+          discountReason: null,
           total: state.currentOrder.deliveryFee,
         },
       })),
@@ -245,12 +274,208 @@ const usePOSStore = create(
       setServiceFee: (serviceFeePercent) => set((state) => {
         const subtotal = state.currentOrder.subtotal;
         const serviceFee = subtotal * (serviceFeePercent / 100);
-        const total = subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee;
+        const entryFee = state.currentOrder.entryFee || 0;
+        const discount = state.currentOrder.discount || 0;
+        const total = Math.max(0, subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee - discount);
         return {
           currentOrder: {
             ...state.currentOrder,
             serviceFeePercent,
             serviceFee,
+            total,
+          },
+        };
+      }),
+
+      // Actions: Entry Fee
+      setEntryFee: (entryFee) => set((state) => {
+        const subtotal = state.currentOrder.subtotal;
+        const serviceFee = state.currentOrder.serviceFee || 0;
+        const discount = state.currentOrder.discount || 0;
+        const total = Math.max(0, subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee - discount);
+        return {
+          currentOrder: {
+            ...state.currentOrder,
+            entryFee,
+            total,
+          },
+        };
+      }),
+
+      // Actions: Discount Management
+      validateCoupon: async (couponCode) => {
+        const state = get();
+        const orderId = state.currentOrder.id;
+
+        if (!orderId || orderId.toString().startsWith('temp-')) {
+          // Order not yet submitted - do basic validation
+          try {
+            const response = await posAPI.validateCoupon(null, couponCode);
+            return response.data.data;
+          } catch (error) {
+            return {
+              valid: false,
+              errorMessage: error.response?.data?.message || 'Invalid coupon code',
+            };
+          }
+        }
+
+        try {
+          const response = await posAPI.validateCoupon(orderId, couponCode);
+          return response.data.data;
+        } catch (error) {
+          return {
+            valid: false,
+            errorMessage: error.response?.data?.message || 'Failed to validate coupon',
+          };
+        }
+      },
+
+      applyDiscount: async (discountData) => {
+        const state = get();
+        const orderId = state.currentOrder.id;
+
+        // If order not yet submitted, apply discount locally
+        if (!orderId || orderId.toString().startsWith('temp-')) {
+          const subtotal = state.currentOrder.subtotal;
+          let discountAmount = 0;
+
+          if (discountData.discountType === 'MANUAL') {
+            if (discountData.manualDiscountAmount) {
+              discountAmount = Math.min(discountData.manualDiscountAmount, subtotal);
+            } else if (discountData.manualDiscountPercent) {
+              discountAmount = subtotal * (discountData.manualDiscountPercent / 100);
+            }
+          }
+
+          const serviceFee = state.currentOrder.serviceFee || 0;
+          const entryFee = state.currentOrder.entryFee || 0;
+          const total = Math.max(0, subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee - discountAmount);
+
+          set({
+            currentOrder: {
+              ...state.currentOrder,
+              discount: discountAmount,
+              discountType: discountData.discountType,
+              couponCode: discountData.couponCode || null,
+              promotionId: discountData.promotionId || null,
+              discountReason: discountData.discountReason || null,
+              total,
+            },
+          });
+
+          return { success: true, discount: discountAmount };
+        }
+
+        // Order already submitted - apply via API
+        try {
+          set((s) => ({ ui: { ...s.ui, isLoading: true } }));
+          const response = await posAPI.applyDiscount(orderId, discountData);
+          const updatedOrder = response.data.data;
+
+          set({
+            currentOrder: {
+              ...state.currentOrder,
+              discount: updatedOrder.discount || 0,
+              discountType: discountData.discountType,
+              couponCode: updatedOrder.couponCode || discountData.couponCode || null,
+              promotionId: updatedOrder.promotionId || discountData.promotionId || null,
+              discountReason: discountData.discountReason || null,
+              total: updatedOrder.total,
+            },
+            ui: { ...get().ui, isLoading: false },
+          });
+
+          return { success: true, discount: updatedOrder.discount };
+        } catch (error) {
+          set((s) => ({ ui: { ...s.ui, isLoading: false } }));
+          return {
+            success: false,
+            error: error.response?.data?.message || 'Failed to apply discount',
+          };
+        }
+      },
+
+      removeDiscount: async () => {
+        const state = get();
+        const orderId = state.currentOrder.id;
+
+        // If order not yet submitted, remove discount locally
+        if (!orderId || orderId.toString().startsWith('temp-')) {
+          const subtotal = state.currentOrder.subtotal;
+          const serviceFee = state.currentOrder.serviceFee || 0;
+          const entryFee = state.currentOrder.entryFee || 0;
+          const total = subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee;
+
+          set({
+            currentOrder: {
+              ...state.currentOrder,
+              discount: 0,
+              discountType: null,
+              couponCode: null,
+              promotionId: null,
+              promotionName: null,
+              discountReason: null,
+              total,
+            },
+          });
+
+          return { success: true };
+        }
+
+        // Order already submitted - remove via API
+        try {
+          set((s) => ({ ui: { ...s.ui, isLoading: true } }));
+          const response = await posAPI.removeDiscount(orderId);
+          const updatedOrder = response.data.data;
+
+          set({
+            currentOrder: {
+              ...state.currentOrder,
+              discount: 0,
+              discountType: null,
+              couponCode: null,
+              promotionId: null,
+              promotionName: null,
+              discountReason: null,
+              total: updatedOrder.total,
+            },
+            ui: { ...get().ui, isLoading: false },
+          });
+
+          return { success: true };
+        } catch (error) {
+          set((s) => ({ ui: { ...s.ui, isLoading: false } }));
+          return {
+            success: false,
+            error: error.response?.data?.message || 'Failed to remove discount',
+          };
+        }
+      },
+
+      setManualDiscount: (amount, percent, reason) => set((state) => {
+        const subtotal = state.currentOrder.subtotal;
+        let discountAmount = 0;
+
+        if (amount && amount > 0) {
+          discountAmount = Math.min(amount, subtotal);
+        } else if (percent && percent > 0) {
+          discountAmount = subtotal * (percent / 100);
+        }
+
+        const serviceFee = state.currentOrder.serviceFee || 0;
+        const entryFee = state.currentOrder.entryFee || 0;
+        const total = Math.max(0, subtotal + state.currentOrder.tax + state.currentOrder.deliveryFee + serviceFee + entryFee - discountAmount);
+
+        return {
+          currentOrder: {
+            ...state.currentOrder,
+            discount: discountAmount,
+            discountType: discountAmount > 0 ? 'MANUAL' : null,
+            discountReason: reason || null,
+            couponCode: null,
+            promotionId: null,
+            promotionName: null,
             total,
           },
         };
@@ -690,6 +915,8 @@ const usePOSStore = create(
             deliveryFee: state.currentOrder.deliveryFee,
             serviceFeePercent: state.currentOrder.serviceFeePercent || 0,
             serviceFee: state.currentOrder.serviceFee || 0,
+            entryFee: state.currentOrder.entryFee || 0,
+            discount: state.currentOrder.discount || 0,
             total: state.currentOrder.total,
             amountTendered: state.payment.amountTendered || null,
             changeDue: state.payment.changeDue || null,
@@ -743,6 +970,13 @@ const usePOSStore = create(
             deliveryFee: 0,
             serviceFeePercent: 0,
             serviceFee: 0,
+            entryFee: 0,
+            discount: 0,
+            discountType: null,
+            couponCode: null,
+            promotionId: null,
+            promotionName: null,
+            discountReason: null,
             total: 0,
             notes: '',
           },
@@ -806,6 +1040,13 @@ const usePOSStore = create(
             deliveryFee: 0,
             serviceFeePercent: 0,
             serviceFee: 0,
+            entryFee: 0,
+            discount: 0,
+            discountType: null,
+            couponCode: null,
+            promotionId: null,
+            promotionName: null,
+            discountReason: null,
             total: 0,
             notes: '',
           },
