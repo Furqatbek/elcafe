@@ -43,6 +43,12 @@ const PrintReceipt = (order, onPrint) => {
 const generateReceiptHTML = (order) => {
     const currentDate = format(new Date(), 'dd/MM/yyyy HH:mm');
 
+    // Helper to truncate text for thermal printer width
+    const truncate = (text, maxLen) => {
+      if (!text) return '';
+      return text.length > maxLen ? text.substring(0, maxLen - 2) + '..' : text;
+    };
+
     return `
 <!DOCTYPE html>
 <html>
@@ -73,9 +79,9 @@ const generateReceiptHTML = (order) => {
 
     body {
       font-family: 'Courier New', monospace;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 500;
-      line-height: 1.3;
+      line-height: 1.2;
       width: 58mm;
       margin: 0 auto;
       padding: 0;
@@ -85,205 +91,147 @@ const generateReceiptHTML = (order) => {
 
     .receipt {
       width: 100%;
-      padding: 2mm;
+      padding: 1mm;
     }
 
     .header {
       text-align: center;
-      margin-bottom: 4px;
-      padding-bottom: 4px;
+      margin-bottom: 2px;
+      padding-bottom: 2px;
       border-bottom: 1px dashed black;
     }
 
     .brand-name {
-      font-size: 20px;
+      font-size: 16px;
       font-weight: bold;
-      letter-spacing: 2px;
+      letter-spacing: 1px;
+    }
+
+    .separator {
+      text-align: center;
+      font-size: 10px;
+      letter-spacing: -1px;
     }
 
     .info-section {
-      margin: 4px 0;
-      padding: 3px 0;
-      border-bottom: 1px dashed black;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .info-line {
-      display: flex;
-      justify-content: space-between;
       margin: 2px 0;
-    }
-
-    .items-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 4px 0;
-      font-size: 12px;
-    }
-
-    .items-table th {
-      border-bottom: 1px solid black;
-      padding: 3px 1px;
-      font-size: 11px;
-      font-weight: bold;
-      text-align: left;
-    }
-
-    .items-table th:nth-child(2),
-    .items-table th:nth-child(3),
-    .items-table th:nth-child(4) {
-      text-align: right;
-    }
-
-    .items-table td {
-      padding: 3px 1px;
-      font-size: 12px;
-      font-weight: 500;
-      vertical-align: top;
-    }
-
-    .items-table td.qty {
-      text-align: right;
-      width: 20px;
-      font-weight: 600;
-    }
-
-    .items-table td.unit-price {
-      text-align: right;
-      width: 45px;
-    }
-
-    .items-table td.price {
-      text-align: right;
-      font-weight: bold;
-      width: 50px;
-    }
-
-    .item-variant {
-      font-size: 10px;
-      font-style: italic;
-    }
-
-    .item-free {
-      font-size: 10px;
-      font-weight: bold;
-      color: #006400;
-    }
-
-    .item-promo {
-      font-size: 9px;
-      font-style: italic;
-    }
-
-    .promotions-section {
-      margin: 4px 0;
-      padding: 4px;
-      border: 1px dashed black;
-      background: #f9f9f9;
-    }
-
-    .promo-title {
-      font-weight: bold;
-      font-size: 11px;
-      text-align: center;
-      margin-bottom: 3px;
-      text-transform: uppercase;
-    }
-
-    .promo-item {
-      font-size: 10px;
-      margin: 2px 0;
-      padding-left: 4px;
-    }
-
-    .promo-name {
-      font-weight: bold;
-    }
-
-    .discount-line {
-      display: flex;
-      justify-content: space-between;
-      margin: 2px 0;
-      font-size: 11px;
       padding: 2px 0;
+      border-bottom: 1px dashed black;
+      font-size: 10px;
     }
 
-    .discount-line.happy-hour {
-      background: #fffde7;
-      padding: 2px 4px;
-    }
-
-    .discount-line.coupon {
-      background: #e8f5e9;
-      padding: 2px 4px;
-    }
-
-    .discount-line.free-item {
-      background: #e3f2fd;
-      padding: 2px 4px;
-    }
-
-    .totals {
-      margin: 4px 0;
-      padding-top: 4px;
-      border-top: 1px dashed black;
-    }
-
-    .total-line {
+    .info-row {
       display: flex;
       justify-content: space-between;
-      margin: 2px 0;
-      font-size: 12px;
-      font-weight: 600;
+      margin: 1px 0;
     }
 
-    .total-line.grand-total {
-      border-top: 2px solid black;
-      padding-top: 4px;
-      margin-top: 4px;
-      font-size: 16px;
+    .items-section {
+      margin: 2px 0;
+      font-size: 10px;
+    }
+
+    .item-row {
+      margin: 2px 0;
+      padding: 1px 0;
+      border-bottom: 1px dotted #ccc;
+    }
+
+    .item-name {
+      font-weight: bold;
+      word-wrap: break-word;
+    }
+
+    .item-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+    }
+
+    .item-free-tag {
+      font-weight: bold;
+      font-size: 9px;
+    }
+
+    .item-promo-info {
+      font-size: 8px;
+      font-style: italic;
+    }
+
+    .totals-section {
+      margin: 2px 0;
+      padding-top: 2px;
+      border-top: 1px dashed black;
+      font-size: 10px;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 1px 0;
+    }
+
+    .grand-total {
+      border-top: 1px solid black;
+      padding-top: 2px;
+      margin-top: 2px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .promo-section {
+      margin: 3px 0;
+      padding: 2px;
+      border: 1px dashed black;
+      font-size: 9px;
+    }
+
+    .promo-header {
+      font-weight: bold;
+      text-align: center;
+      border-bottom: 1px dotted black;
+      padding-bottom: 1px;
+      margin-bottom: 2px;
+      font-size: 10px;
+    }
+
+    .promo-row {
+      margin: 2px 0;
+      padding: 1px 0;
+    }
+
+    .promo-label {
+      font-weight: bold;
+    }
+
+    .promo-value {
+      font-size: 9px;
+    }
+
+    .promo-discount {
+      text-align: right;
       font-weight: bold;
     }
 
     .notes-section {
-      margin: 4px 0;
-      padding: 3px;
+      margin: 2px 0;
+      padding: 2px;
       border: 1px dashed black;
-      font-size: 11px;
-    }
-
-    .notes-title {
-      font-weight: bold;
-      font-size: 11px;
+      font-size: 9px;
     }
 
     .footer {
-      margin-top: 5px;
-      padding-top: 4px;
+      margin-top: 3px;
+      padding-top: 2px;
       border-top: 1px dashed black;
       text-align: center;
-      font-size: 11px;
-      font-weight: 500;
-    }
-
-    .contact-info {
-      margin: 3px 0;
-      line-height: 1.4;
-      font-weight: 600;
+      font-size: 10px;
     }
 
     .thank-you {
-      font-size: 14px;
+      font-size: 12px;
       font-weight: bold;
-      margin: 4px 0;
-    }
-
-    .timestamp {
-      margin-top: 4px;
-      font-size: 10px;
-      border-top: 1px dashed black;
-      padding-top: 3px;
+      margin: 2px 0;
     }
 
     .print-button {
@@ -309,168 +257,151 @@ const generateReceiptHTML = (order) => {
     </div>
 
     <div class="info-section">
-      <div class="info-line">
+      <div class="info-row">
         <span>Sana:</span>
         <span>${currentDate}</span>
       </div>
       ${getTableNumber(order) ? `
-      <div class="info-line">
+      <div class="info-row">
         <span>Stol:</span>
         <span>${getTableNumber(order)}</span>
       </div>
       ` : ''}
       ${order.waiter?.name ? `
-      <div class="info-line">
+      <div class="info-row">
         <span>Ofitsiant:</span>
-        <span>${order.waiter.name}</span>
+        <span>${truncate(order.waiter.name, 15)}</span>
       </div>
       ` : ''}
     </div>
 
-    <table class="items-table">
-      <thead>
-        <tr>
-          <th>Nomi</th>
-          <th>Narx</th>
-          <th>x</th>
-          <th>Jami</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${(order.items || []).map(item => {
-          const isFree = item.isFreeItem || (item.unitPrice === 0 && item.price === 0) || item.totalPrice === 0;
-          const promoSource = item.couponCode ? `Kupon: ${item.couponCode}` : (item.promotionName || item.notes?.includes('Free item') ? 'Aksiya' : '');
-          return `
-        <tr>
-          <td>
-            ${item.productName}
-            ${item.variantName ? `<br><span class="item-variant">${item.variantName}</span>` : ''}
-            ${isFree ? `<br><span class="item-free">*** BEPUL ***</span>` : ''}
-            ${isFree && promoSource ? `<br><span class="item-promo">${promoSource}</span>` : ''}
-          </td>
-          <td class="unit-price">${isFree ? '0' : Math.round(item.unitPrice || item.price || 0)}</td>
-          <td class="qty">${item.quantity}</td>
-          <td class="price">${isFree ? 'BEPUL' : Math.round(item.totalPrice || item.total || 0)}</td>
-        </tr>
-        `;
-        }).join('')}
-      </tbody>
-    </table>
+    <div class="separator">--------------------------------</div>
 
-    <div class="totals">
+    <div class="items-section">
+      ${(order.items || []).map(item => {
+        const isFree = item.isFreeItem || (item.unitPrice === 0 && item.price === 0) || item.totalPrice === 0;
+        const unitPrice = Math.round(item.unitPrice || item.price || 0);
+        const totalPrice = Math.round(item.totalPrice || item.total || 0);
+        return `
+      <div class="item-row">
+        <div class="item-name">${truncate(item.productName, 22)}</div>
+        ${item.variantName ? `<div class="item-promo-info">${truncate(item.variantName, 20)}</div>` : ''}
+        ${isFree ? `
+        <div class="item-free-tag">** BEPUL **</div>
+        ${item.couponCode ? `<div class="item-promo-info">Kupon: ${truncate(item.couponCode, 15)}</div>` : ''}
+        ${item.promotionName ? `<div class="item-promo-info">${truncate(item.promotionName, 20)}</div>` : ''}
+        ` : ''}
+        <div class="item-details">
+          <span>${item.quantity} x ${isFree ? '0' : unitPrice}</span>
+          <span>${isFree ? 'BEPUL' : totalPrice}</span>
+        </div>
+      </div>
+      `;
+      }).join('')}
+    </div>
+
+    <div class="totals-section">
       ${Number(order.deliveryFee) > 0 ? `
-      <div class="total-line">
+      <div class="total-row">
         <span>Yetkazish:</span>
         <span>${Math.round(order.deliveryFee)}</span>
       </div>
       ` : ''}
       ${Number(order.serviceFee) > 0 ? `
-      <div class="total-line">
-        <span>Xizmat haqi (${order.serviceFeePercent || 0}%):</span>
+      <div class="total-row">
+        <span>Xizmat (${order.serviceFeePercent || 0}%):</span>
         <span>${Math.round(order.serviceFee)}</span>
       </div>
       ` : ''}
-      ${Number(order.discount) > 0 && order.discountType === 'HAPPY_HOUR' ? `
-      <div class="discount-line happy-hour">
-        <span>🎉 HAPPY HOUR${order.promotionName ? `<br><small>${order.promotionName}</small>` : ''}:</span>
-        <span>-${Math.round(order.discount)}</span>
+      ${Number(order.entryFee) > 0 ? `
+      <div class="total-row">
+        <span>Kirish:</span>
+        <span>${Math.round(order.entryFee)}</span>
       </div>
       ` : ''}
-      ${Number(order.discount) > 0 && order.discountType === 'COUPON' ? `
-      <div class="discount-line coupon">
-        <span>🎫 KUPON${order.couponCode ? `<br><small>${order.couponCode}</small>` : ''}${order.promotionName ? ` - ${order.promotionName}` : ''}:</span>
-        <span>-${Math.round(order.discount)}</span>
-      </div>
-      ` : ''}
-      ${Number(order.discount) > 0 && order.discountType === 'PROMOTION' ? `
-      <div class="discount-line coupon">
-        <span>🏷️ AKSIYA${order.promotionName ? `<br><small>${order.promotionName}</small>` : ''}:</span>
-        <span>-${Math.round(order.discount)}</span>
-      </div>
-      ` : ''}
-      ${Number(order.discount) > 0 && order.discountType === 'FREE_ITEM' ? `
-      <div class="discount-line free-item">
-        <span>🎁 BEPUL MAHSULOT${order.promotionName ? `<br><small>${order.promotionName}</small>` : ''}:</span>
-        <span>-${Math.round(order.discount)}</span>
-      </div>
-      ` : ''}
-      ${Number(order.discount) > 0 && order.discountType === 'MANUAL' ? `
-      <div class="discount-line">
-        <span>Chegirma${order.discountReason ? `<br><small>${order.discountReason}</small>` : ''}:</span>
-        <span>-${Math.round(order.discount)}</span>
-      </div>
-      ` : ''}
-      ${Number(order.discount) > 0 && !order.discountType ? `
-      <div class="discount-line">
+      ${Number(order.discount) > 0 ? `
+      <div class="total-row">
         <span>Chegirma:</span>
         <span>-${Math.round(order.discount)}</span>
       </div>
       ` : ''}
-      <div class="total-line grand-total">
+      <div class="total-row grand-total">
         <span>JAMI:</span>
         <span>${Math.round(order.total || 0)}</span>
       </div>
     </div>
 
-    ${order.customerNotes ? `
-    <div class="notes-section">
-      <div class="notes-title">Eslatma:</div>
-      <div>${order.customerNotes}</div>
-    </div>
-    ` : ''}
-
     ${(() => {
       const freeItems = (order.items || []).filter(item =>
         item.isFreeItem || (item.unitPrice === 0 && item.price === 0) || item.totalPrice === 0
       );
-      const hasPromotion = order.discountType || freeItems.length > 0;
+      const hasPromotion = (Number(order.discount) > 0 && order.discountType) || freeItems.length > 0;
 
       if (!hasPromotion) return '';
 
       return `
-    <div class="promotions-section">
-      <div class="promo-title">🎁 Qo'llanilgan aksiyalar</div>
+    <div class="promo-section">
+      <div class="promo-header">AKSIYALAR</div>
       ${order.discountType === 'HAPPY_HOUR' ? `
-      <div class="promo-item">
-        ✓ <span class="promo-name">Happy Hour</span>${order.promotionName ? `: ${order.promotionName}` : ''}
-        <br>&nbsp;&nbsp;Chegirma: ${Math.round(order.discount)} so'm
+      <div class="promo-row">
+        <div class="promo-label">HAPPY HOUR</div>
+        ${order.promotionName ? `<div class="promo-value">${truncate(order.promotionName, 22)}</div>` : ''}
+        <div class="promo-discount">-${Math.round(order.discount)} so'm</div>
       </div>
       ` : ''}
       ${order.discountType === 'COUPON' ? `
-      <div class="promo-item">
-        ✓ <span class="promo-name">Kupon</span>: ${order.couponCode || 'N/A'}
-        ${order.promotionName ? `<br>&nbsp;&nbsp;${order.promotionName}` : ''}
-        <br>&nbsp;&nbsp;Chegirma: ${Math.round(order.discount)} so'm
+      <div class="promo-row">
+        <div class="promo-label">KUPON: ${truncate(order.couponCode, 12) || 'N/A'}</div>
+        ${order.promotionName ? `<div class="promo-value">${truncate(order.promotionName, 22)}</div>` : ''}
+        <div class="promo-discount">-${Math.round(order.discount)} so'm</div>
       </div>
       ` : ''}
       ${order.discountType === 'PROMOTION' ? `
-      <div class="promo-item">
-        ✓ <span class="promo-name">Aksiya</span>${order.promotionName ? `: ${order.promotionName}` : ''}
-        <br>&nbsp;&nbsp;Chegirma: ${Math.round(order.discount)} so'm
+      <div class="promo-row">
+        <div class="promo-label">AKSIYA</div>
+        ${order.promotionName ? `<div class="promo-value">${truncate(order.promotionName, 22)}</div>` : ''}
+        <div class="promo-discount">-${Math.round(order.discount)} so'm</div>
       </div>
       ` : ''}
       ${order.discountType === 'FREE_ITEM' ? `
-      <div class="promo-item">
-        ✓ <span class="promo-name">Bepul mahsulot</span>${order.promotionName ? `: ${order.promotionName}` : ''}
+      <div class="promo-row">
+        <div class="promo-label">BEPUL MAHSULOT</div>
+        ${order.promotionName ? `<div class="promo-value">${truncate(order.promotionName, 22)}</div>` : ''}
       </div>
       ` : ''}
+      ${order.discountType === 'MANUAL' ? `
+      <div class="promo-row">
+        <div class="promo-label">CHEGIRMA</div>
+        ${order.discountReason ? `<div class="promo-value">${truncate(order.discountReason, 22)}</div>` : ''}
+        <div class="promo-discount">-${Math.round(order.discount)} so'm</div>
+      </div>
+      ` : ''}
+      ${freeItems.length > 0 ? `
+      <div class="separator">- - - - - - - - - - - -</div>
+      <div class="promo-label">BEPUL MAHSULOTLAR:</div>
       ${freeItems.map(item => `
-      <div class="promo-item">
-        🎁 <span class="promo-name">${item.productName}</span> - BEPUL
-        ${item.couponCode ? `<br>&nbsp;&nbsp;Kupon: ${item.couponCode}` : ''}
+      <div class="promo-row">
+        <div class="promo-value">* ${truncate(item.productName, 18)}</div>
+        ${item.couponCode ? `<div class="promo-value">  Kupon: ${truncate(item.couponCode, 12)}</div>` : ''}
       </div>
       `).join('')}
+      ` : ''}
     </div>
       `;
     })()}
 
+    ${order.customerNotes ? `
+    <div class="notes-section">
+      <div style="font-weight:bold;">Eslatma:</div>
+      <div>${truncate(order.customerNotes, 50)}</div>
+    </div>
+    ` : ''}
+
     <div class="footer">
-      <div class="contact-info">
-        <div>+998 88 153 88 88</div>
-        <div>www.mayamicafe.uz</div>
-      </div>
+      <div>+998 88 153 88 88</div>
+      <div>www.mayamicafe.uz</div>
       <div class="thank-you">*** RAHMAT! ***</div>
-      <div class="timestamp">${currentDate}</div>
+      <div style="font-size:9px;">${currentDate}</div>
     </div>
   </div>
 </body>
