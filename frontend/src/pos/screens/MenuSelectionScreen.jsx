@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Search, ShoppingCart, X, Grid3x3, List } from 'lucide-react';
+import { Search, ShoppingCart, X, Grid3x3, List, Package } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
 import { posAPI } from '../../services/api';
+
+// Special category ID for combos/bundles
+const BUNDLES_CATEGORY_ID = 'bundles';
 
 /**
  * MenuSelectionScreen - Main menu browsing and product selection
@@ -23,6 +26,7 @@ const MenuSelectionScreen = () => {
     setSelectedCategory,
     productAvailability,
     checkAllProductsAvailability,
+    addItemToCart,
   } = usePOSStore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,8 +67,11 @@ const MenuSelectionScreen = () => {
     }
   }, []);
 
+  // Check if bundles category is selected
+  const isBundlesSelected = ui.selectedCategory === BUNDLES_CATEGORY_ID;
+
   // Filter products based on selected category and search
-  const filteredProducts = menu.products.filter(product => {
+  const filteredProducts = isBundlesSelected ? [] : menu.products.filter(product => {
     const matchesCategory = !ui.selectedCategory || product.categoryId === ui.selectedCategory;
     const matchesSearch = !searchQuery ||
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -73,6 +80,16 @@ const MenuSelectionScreen = () => {
     return matchesCategory && matchesSearch;
   });
 
+  // Filter bundles based on search
+  const filteredBundles = (menu.bundles || []).filter(bundle => {
+    if (!searchQuery) return true;
+    return bundle.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      bundle.description?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  // Show bundles when bundles category is selected or when no category selected
+  const showBundles = isBundlesSelected || (!ui.selectedCategory && filteredBundles.length > 0);
+
   const handleProductSelect = (product) => {
     // If product has modifiers, show modifier screen
     if (product.hasModifiers || product.variants?.length > 0) {
@@ -80,8 +97,22 @@ const MenuSelectionScreen = () => {
       setCurrentScreen('modifiers');
     } else {
       // Add directly to cart
-      usePOSStore.getState().addItemToCart(product, [], 1);
+      addItemToCart(product, [], 1);
     }
+  };
+
+  const handleBundleSelect = (bundle) => {
+    // TODO: If bundle has option groups, show bundle customization screen
+    // For now, add bundle directly to cart with bundle price
+    const bundleAsProduct = {
+      id: `bundle-${bundle.id}`,
+      bundleId: bundle.id,
+      name: bundle.name,
+      price: bundle.bundlePrice,
+      imageUrl: bundle.imageUrl,
+      isBundle: true,
+    };
+    addItemToCart(bundleAsProduct, [], 1);
   };
 
   const handleCategorySelect = (categoryId) => {
@@ -186,6 +217,26 @@ const MenuSelectionScreen = () => {
               </span>
             </button>
 
+            {/* Combos/Bundles Category */}
+            {(menu.bundles || []).length > 0 && (
+              <button
+                onClick={() => handleCategorySelect(BUNDLES_CATEGORY_ID)}
+                className={cn(
+                  'w-full text-left px-3 xl:px-4 py-3 xl:py-4 rounded-lg font-semibold transition-colors',
+                  'min-h-[48px] xl:min-h-[56px] text-sm xl:text-base flex items-center gap-2',
+                  ui.selectedCategory === BUNDLES_CATEGORY_ID
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-orange-50 text-orange-700 hover:bg-orange-100'
+                )}
+              >
+                <Package className="w-4 h-4" />
+                {t('pos.menu.combos', 'Combos')}
+                <span className="ml-auto text-xs xl:text-sm opacity-75">
+                  ({(menu.bundles || []).length})
+                </span>
+              </button>
+            )}
+
             {/* Categories */}
             {menu.categories.map(category => {
               const categoryProductCount = menu.products.filter(
@@ -240,6 +291,21 @@ const MenuSelectionScreen = () => {
                 >
                   {t('pos.menu.allCategories', 'All Items')} ({menu.products.length})
                 </button>
+                {/* Mobile Combos Button */}
+                {(menu.bundles || []).length > 0 && (
+                  <button
+                    onClick={() => { handleCategorySelect(BUNDLES_CATEGORY_ID); setShowMobileCategories(false); }}
+                    className={cn(
+                      'w-full text-left px-4 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2',
+                      ui.selectedCategory === BUNDLES_CATEGORY_ID
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-orange-50 text-orange-700'
+                    )}
+                  >
+                    <Package className="w-4 h-4" />
+                    {t('pos.menu.combos', 'Combos')} ({(menu.bundles || []).length})
+                  </button>
+                )}
                 {menu.categories.map(category => {
                   const count = menu.products.filter(p => p.categoryId === category.id).length;
                   return (
@@ -271,7 +337,7 @@ const MenuSelectionScreen = () => {
                 <p className="text-lg sm:text-xl text-gray-600">{t('pos.menu.loadingMenu', 'Loading menu...')}</p>
               </div>
             </div>
-          ) : filteredProducts.length === 0 ? (
+          ) : filteredProducts.length === 0 && (!showBundles || filteredBundles.length === 0) ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center px-4">
                 <p className="text-xl sm:text-2xl text-gray-500 mb-2">{t('pos.menu.noProducts', 'No products found')}</p>
@@ -279,27 +345,113 @@ const MenuSelectionScreen = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-4">
-              {filteredProducts.map(product => {
-                const availability = productAvailability[product.id];
-                // Calculate how many of this product are in the cart
-                const cartQuantity = currentOrder.items
-                  .filter(item => item.productId === product.id)
-                  .reduce((sum, item) => sum + item.quantity, 0);
-                return (
-                  <ProductCard
-                    key={product.id}
-                    product={{
-                      ...product,
-                      available: availability?.available !== false,
-                      stockStatus: availability?.stockStatus || 'UNKNOWN',
-                      maxQuantityAvailable: availability?.maxQuantityAvailable,
-                    }}
-                    cartQuantity={cartQuantity}
-                    onSelect={handleProductSelect}
-                  />
-                );
-              })}
+            <div className="space-y-6">
+              {/* Bundles Section */}
+              {showBundles && filteredBundles.length > 0 && (
+                <div>
+                  {!isBundlesSelected && (
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Package className="w-5 h-5 text-orange-500" />
+                      {t('pos.menu.combos', 'Combos')}
+                    </h2>
+                  )}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-4">
+                    {filteredBundles.map(bundle => {
+                      const cartQuantity = currentOrder.items
+                        .filter(item => item.bundleId === bundle.id)
+                        .reduce((sum, item) => sum + item.quantity, 0);
+                      return (
+                        <div
+                          key={`bundle-${bundle.id}`}
+                          onClick={() => handleBundleSelect(bundle)}
+                          className={cn(
+                            'relative bg-white rounded-xl border-2 overflow-hidden cursor-pointer transition-all',
+                            'hover:shadow-lg hover:border-orange-300',
+                            cartQuantity > 0 ? 'border-orange-500 ring-2 ring-orange-200' : 'border-gray-200'
+                          )}
+                        >
+                          {/* Bundle Badge */}
+                          <div className="absolute top-2 left-2 z-10 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                            <Package className="w-3 h-3" />
+                            {t('pos.menu.combo', 'Combo')}
+                          </div>
+                          {/* Savings Badge */}
+                          {bundle.savingsPercent > 0 && (
+                            <div className="absolute top-2 right-2 z-10 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                              {t('pos.menu.save', 'Save')} {Number(bundle.savingsPercent).toFixed(0)}%
+                            </div>
+                          )}
+                          {/* Cart Quantity Badge */}
+                          {cartQuantity > 0 && (
+                            <div className="absolute top-12 right-2 z-10 bg-blue-600 text-white w-6 h-6 rounded-full text-sm font-bold flex items-center justify-center">
+                              {cartQuantity}
+                            </div>
+                          )}
+                          {/* Image */}
+                          <div className="h-24 sm:h-32 bg-gray-100 flex items-center justify-center">
+                            {bundle.imageUrl ? (
+                              <img src={bundle.imageUrl} alt={bundle.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="w-12 h-12 text-gray-300" />
+                            )}
+                          </div>
+                          {/* Info */}
+                          <div className="p-3">
+                            <h3 className="font-semibold text-gray-900 text-sm sm:text-base line-clamp-2">{bundle.name}</h3>
+                            {bundle.description && (
+                              <p className="text-xs text-gray-500 mt-1 line-clamp-1">{bundle.description}</p>
+                            )}
+                            <div className="mt-2 flex items-center gap-2">
+                              <span className="text-lg font-bold text-orange-600">
+                                {Number(bundle.bundlePrice).toFixed(2)}
+                              </span>
+                              {bundle.originalPrice && Number(bundle.originalPrice) > Number(bundle.bundlePrice) && (
+                                <span className="text-sm text-gray-400 line-through">
+                                  {Number(bundle.originalPrice).toFixed(2)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Products Section */}
+              {filteredProducts.length > 0 && (
+                <div>
+                  {showBundles && filteredBundles.length > 0 && !isBundlesSelected && (
+                    <h2 className="text-lg font-semibold text-gray-900 mb-3">
+                      {ui.selectedCategory
+                        ? menu.categories.find(c => c.id === ui.selectedCategory)?.name || t('pos.menu.products', 'Products')
+                        : t('pos.menu.products', 'Products')}
+                    </h2>
+                  )}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2 sm:gap-4">
+                    {filteredProducts.map(product => {
+                      const availability = productAvailability[product.id];
+                      const cartQuantity = currentOrder.items
+                        .filter(item => item.productId === product.id)
+                        .reduce((sum, item) => sum + item.quantity, 0);
+                      return (
+                        <ProductCard
+                          key={product.id}
+                          product={{
+                            ...product,
+                            available: availability?.available !== false,
+                            stockStatus: availability?.stockStatus || 'UNKNOWN',
+                            maxQuantityAvailable: availability?.maxQuantityAvailable,
+                          }}
+                          cartQuantity={cartQuantity}
+                          onSelect={handleProductSelect}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

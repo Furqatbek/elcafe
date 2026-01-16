@@ -14,7 +14,10 @@ import {
   Tag,
   Sparkles,
   Percent,
+  Package,
 } from 'lucide-react';
+
+const COMBOS_CATEGORY_ID = 'combos';
 
 export default function MenuPage() {
   const { restaurantId, tableCode } = useParams();
@@ -38,6 +41,10 @@ export default function MenuPage() {
   const [addingToCart, setAddingToCart] = useState(false);
   const [activePromotions, setActivePromotions] = useState([]);
   const [activeHappyHour, setActiveHappyHour] = useState(null);
+  const [bundles, setBundles] = useState([]);
+  const [selectedBundle, setSelectedBundle] = useState(null);
+  const [showBundleModal, setShowBundleModal] = useState(false);
+  const [bundleQuantity, setBundleQuantity] = useState(1);
 
   // Initialize session on mount
   useEffect(() => {
@@ -68,14 +75,16 @@ export default function MenuPage() {
       const productsRes = await selfServiceAPI.getProducts(restaurantId);
       setProducts(productsRes.data);
 
-      // Load active promotions and happy hours
+      // Load active promotions, happy hours, and bundles
       try {
-        const [promotionsRes, happyHourRes] = await Promise.all([
+        const [promotionsRes, happyHourRes, bundlesRes] = await Promise.all([
           selfServiceAPI.getActivePromotions(restaurantId),
           selfServiceAPI.getActiveHappyHour(restaurantId),
+          selfServiceAPI.getMenuBundles(restaurantId).catch(() => ({ data: { data: [] } })),
         ]);
         setActivePromotions(promotionsRes.data?.data || promotionsRes.data || []);
         setActiveHappyHour(happyHourRes.data?.data || happyHourRes.data || null);
+        setBundles(bundlesRes.data?.data || bundlesRes.data || []);
       } catch (promoErr) {
         console.error('Failed to load promotions:', promoErr);
         // Don't fail the menu load if promotions fail
@@ -101,11 +110,42 @@ export default function MenuPage() {
   };
 
   const handleCategoryClick = (categoryId) => {
+    if (categoryId === COMBOS_CATEGORY_ID) {
+      setSelectedCategory(COMBOS_CATEGORY_ID);
+      return;
+    }
     if (categoryId === selectedCategory) {
       setSelectedCategory(null);
       loadRestaurantData();
     } else {
       loadProductsByCategory(categoryId);
+    }
+  };
+
+  const handleBundleClick = (bundle) => {
+    setSelectedBundle(bundle);
+    setBundleQuantity(1);
+    setShowBundleModal(true);
+  };
+
+  const handleAddBundleToCart = async () => {
+    if (!session) {
+      setError('Please scan the QR code to start ordering');
+      return;
+    }
+
+    setAddingToCart(true);
+    try {
+      await addToCart({
+        bundleId: selectedBundle.id,
+        quantity: bundleQuantity,
+        isBundle: true,
+      });
+      setShowBundleModal(false);
+    } catch (err) {
+      setError('Failed to add combo to cart');
+    } finally {
+      setAddingToCart(false);
     }
   };
 
@@ -286,6 +326,20 @@ export default function MenuPage() {
       {/* Categories */}
       <div className="max-w-lg mx-auto px-4 pb-3">
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {/* Combos Category */}
+          {bundles.length > 0 && (
+            <button
+              onClick={() => handleCategoryClick(COMBOS_CATEGORY_ID)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+                selectedCategory === COMBOS_CATEGORY_ID
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              Combos
+            </button>
+          )}
           {categories.map((category) => (
             <button
               key={category.id}
@@ -302,12 +356,71 @@ export default function MenuPage() {
         </div>
       </div>
 
-      {/* Products Grid */}
+      {/* Products/Bundles Grid */}
       <div className="max-w-lg mx-auto px-4">
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
+        ) : selectedCategory === COMBOS_CATEGORY_ID ? (
+          /* Bundles Grid */
+          bundles.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>No combos available</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {bundles.map((bundle) => (
+                <div
+                  key={bundle.id}
+                  onClick={() => handleBundleClick(bundle)}
+                  className="bg-white rounded-lg shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-shadow relative"
+                >
+                  {/* Combo Badge */}
+                  <div className="absolute top-2 left-2 z-10 bg-orange-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                    <Package className="w-3 h-3" />
+                    Combo
+                  </div>
+                  {/* Savings Badge */}
+                  {bundle.savingsPercent > 0 && (
+                    <div className="absolute top-2 right-2 z-10 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                      Save {bundle.savingsPercent}%
+                    </div>
+                  )}
+                  {bundle.imageUrl ? (
+                    <img
+                      src={bundle.imageUrl}
+                      alt={bundle.name}
+                      className="w-full h-28 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-28 bg-orange-50 flex items-center justify-center">
+                      <Package className="w-8 h-8 text-orange-300" />
+                    </div>
+                  )}
+                  <div className="p-3">
+                    <h3 className="font-medium text-gray-900 text-sm line-clamp-2">{bundle.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-orange-600 font-semibold text-sm">
+                        {formatPrice(bundle.bundlePrice)}
+                      </p>
+                      {bundle.originalPrice && bundle.originalPrice > bundle.bundlePrice && (
+                        <p className="text-gray-400 text-xs line-through">
+                          {formatPrice(bundle.originalPrice)}
+                        </p>
+                      )}
+                    </div>
+                    {bundle.items && bundle.items.length > 0 && (
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                        {bundle.items.map(item => item.product?.name || item.productName).join(' + ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <UtensilsCrossed className="w-12 h-12 mx-auto mb-3 text-gray-300" />
@@ -502,6 +615,140 @@ export default function MenuPage() {
                   <>
                     <ShoppingCart className="w-5 h-5" />
                     Add to Cart - {formatPrice(calculateItemPrice())}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bundle Modal */}
+      {showBundleModal && selectedBundle && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center">
+          <div className="bg-white w-full max-w-lg rounded-t-2xl max-h-[90vh] overflow-y-auto animate-slide-up">
+            {/* Bundle Image */}
+            {selectedBundle.imageUrl ? (
+              <div className="relative">
+                <img
+                  src={selectedBundle.imageUrl}
+                  alt={selectedBundle.name}
+                  className="w-full h-48 object-cover"
+                />
+                <button
+                  onClick={() => setShowBundleModal(false)}
+                  className="absolute top-4 right-4 bg-white/90 rounded-full p-2"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                {/* Combo Badge */}
+                <div className="absolute top-4 left-4 bg-orange-500 text-white text-sm px-3 py-1 rounded-full flex items-center gap-1">
+                  <Package className="w-4 h-4" />
+                  Combo Deal
+                </div>
+              </div>
+            ) : (
+              <div className="relative bg-orange-50 h-32 flex items-center justify-center">
+                <Package className="w-12 h-12 text-orange-300" />
+                <button
+                  onClick={() => setShowBundleModal(false)}
+                  className="absolute top-4 right-4 bg-white/90 rounded-full p-2"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
+            <div className="p-4">
+              {/* Bundle Info */}
+              <h2 className="text-xl font-bold text-gray-900">{selectedBundle.name}</h2>
+              {selectedBundle.description && (
+                <p className="text-gray-600 mt-2 text-sm">{selectedBundle.description}</p>
+              )}
+
+              {/* Pricing */}
+              <div className="flex items-center gap-3 mt-3">
+                <p className="text-orange-600 font-bold text-lg">
+                  {formatPrice(selectedBundle.bundlePrice)}
+                </p>
+                {selectedBundle.originalPrice && selectedBundle.originalPrice > selectedBundle.bundlePrice && (
+                  <>
+                    <p className="text-gray-400 line-through">
+                      {formatPrice(selectedBundle.originalPrice)}
+                    </p>
+                    {selectedBundle.savingsPercent > 0 && (
+                      <span className="bg-green-100 text-green-700 text-sm px-2 py-1 rounded">
+                        Save {selectedBundle.savingsPercent}%
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Bundle Items */}
+              {selectedBundle.items && selectedBundle.items.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="font-semibold text-gray-900 mb-2">What's Included</h3>
+                  <div className="space-y-2">
+                    {selectedBundle.items.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg"
+                      >
+                        {item.product?.imageUrl ? (
+                          <img
+                            src={item.product.imageUrl}
+                            alt={item.product?.name || item.productName}
+                            className="w-12 h-12 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                            <UtensilsCrossed className="w-5 h-5 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{item.product?.name || item.productName}</p>
+                          <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quantity */}
+              <div className="mt-4 flex items-center justify-between">
+                <span className="font-semibold text-gray-900">Quantity</span>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setBundleQuantity(Math.max(1, bundleQuantity - 1))}
+                    className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-100"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="text-xl font-semibold w-8 text-center">{bundleQuantity}</span>
+                  <button
+                    onClick={() => setBundleQuantity(bundleQuantity + 1)}
+                    disabled={selectedBundle.maxPerOrder && bundleQuantity >= selectedBundle.maxPerOrder}
+                    className="w-10 h-10 rounded-full border flex items-center justify-center hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Add to Cart Button */}
+              <button
+                onClick={handleAddBundleToCart}
+                disabled={addingToCart || !session}
+                className="w-full mt-6 bg-orange-500 text-white rounded-lg py-4 font-semibold hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {addingToCart ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-5 h-5" />
+                    Add Combo to Cart - {formatPrice(selectedBundle.bundlePrice * bundleQuantity)}
                   </>
                 )}
               </button>

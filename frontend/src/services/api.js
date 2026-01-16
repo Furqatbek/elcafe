@@ -1014,6 +1014,11 @@ export const selfServiceAPI = {
     api.get(`/restaurants/${restaurantId}/promotions/active`),
   getActiveHappyHour: (restaurantId) =>
     api.get(`/restaurants/${restaurantId}/happy-hours/active`),
+
+  // Bundles/Combos
+  getMenuBundles: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/bundles/menu`),
+  getBundleDetails: (bundleId) => api.get(`/bundles/${bundleId}`),
 };
 
 export default api;

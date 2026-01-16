@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { posAPI, tablesAPI } from '../../services/api';
+import { posAPI, tablesAPI, bundleAPI } from '../../services/api';
 
 /**
  * POS Store - Centralized state management for POS operations
@@ -78,6 +78,7 @@ const usePOSStore = create(
       menu: {
         categories: [],
         products: [],
+        bundles: [],
         lastFetched: null,
       },
 
@@ -565,25 +566,28 @@ const usePOSStore = create(
         set((s) => ({ ui: { ...s.ui, isLoading: true, error: null } }));
 
         try {
-          // Fetch categories and products in parallel
-          const [categoriesRes, productsRes] = await Promise.all([
+          // Fetch categories, products, and bundles in parallel
+          const [categoriesRes, productsRes, bundlesRes] = await Promise.all([
             posAPI.getCategories(restaurantId),
             posAPI.getProducts(restaurantId),
+            bundleAPI.getMenuBundles(restaurantId).catch(() => ({ data: { data: [] } })),
           ]);
 
           const categories = categoriesRes.data.data || categoriesRes.data || [];
           const products = productsRes.data.data || productsRes.data || [];
+          const bundles = bundlesRes.data.data || bundlesRes.data || [];
 
           set({
             menu: {
               categories,
               products,
+              bundles,
               lastFetched: new Date().toISOString(),
             },
             ui: { ...get().ui, isLoading: false },
           });
 
-          return { success: true, categories, products };
+          return { success: true, categories, products, bundles };
         } catch (error) {
           const errorMessage = error.response?.data?.message || error.message || 'Failed to load menu';
           set((s) => ({
