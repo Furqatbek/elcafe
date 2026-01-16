@@ -26,6 +26,7 @@ import FinancialAnalytics from './pages/FinancialAnalytics';
 import OperationalAnalytics from './pages/OperationalAnalytics';
 import CustomerAnalytics from './pages/CustomerAnalytics';
 import InventoryAnalytics from './pages/InventoryAnalytics';
+import PromotionAnalytics from './pages/PromotionAnalytics';
 import PurchaseOrders from './pages/PurchaseOrders';
 import POSuggestions from './pages/POSuggestions';
 import Expenses from './pages/Expenses';
@@ -137,6 +138,7 @@ function App() {
           <Route path="marketing/sms" element={<AdminRoute><SmsMarketing /></AdminRoute>} />
           <Route path="marketing/telegram" element={<AdminRoute><TelegramMarketing /></AdminRoute>} />
           <Route path="marketing/qr-codes" element={<AdminRoute><QRCodes /></AdminRoute>} />
+          <Route path="marketing/analytics" element={<AdminRoute><PromotionAnalytics /></AdminRoute>} />
           <Route path="promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
           <Route path="coupons" element={<AdminRoute><CouponCodes /></AdminRoute>} />
           <Route path="happy-hours" element={<AdminRoute><HappyHours /></AdminRoute>} />

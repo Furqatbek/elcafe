@@ -753,6 +753,18 @@ export const promotionAPI = {
 
   // Customer coupons
   getCustomerCoupons: (customerId) => api.get(`/customers/${customerId}/coupons`),
+
+  // Analytics
+  getDiscountAnalytics: (restaurantId, startDate, endDate) =>
+    api.get(`/restaurants/${restaurantId}/promotions/analytics`, { params: { startDate, endDate } }),
+  getPromotionPerformance: (promotionId) =>
+    api.get(`/promotions/${promotionId}/analytics`),
+  getAllPromotionsPerformance: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/promotions/analytics/all`),
+  getDiscountTrends: (restaurantId, startDate, endDate) =>
+    api.get(`/restaurants/${restaurantId}/promotions/analytics/trends`, { params: { startDate, endDate } }),
+  getTopCoupons: (restaurantId, startDate, endDate, limit = 10) =>
+    api.get(`/restaurants/${restaurantId}/promotions/analytics/top-coupons`, { params: { startDate, endDate, limit } }),
 };
 
 // Happy Hour API
