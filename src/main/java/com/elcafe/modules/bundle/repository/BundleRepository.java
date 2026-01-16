@@ -21,21 +21,29 @@ public interface BundleRepository extends JpaRepository<Bundle, Long> {
     @Query("SELECT b FROM Bundle b " +
            "LEFT JOIN FETCH b.items i " +
            "LEFT JOIN FETCH i.product " +
+           "WHERE b.id = :id")
+    Optional<Bundle> findByIdWithItems(@Param("id") Long id);
+
+    @Query("SELECT b FROM Bundle b " +
            "LEFT JOIN FETCH b.optionGroups og " +
            "LEFT JOIN FETCH og.options o " +
            "LEFT JOIN FETCH o.product " +
            "WHERE b.id = :id")
-    Optional<Bundle> findByIdWithDetails(@Param("id") Long id);
+    Optional<Bundle> findByIdWithOptionGroups(@Param("id") Long id);
 
     @Query("SELECT DISTINCT b FROM Bundle b " +
            "LEFT JOIN FETCH b.items i " +
            "LEFT JOIN FETCH i.product " +
+           "WHERE b.restaurant.id = :restaurantId AND b.active = true " +
+           "ORDER BY b.displayOrder")
+    List<Bundle> findActiveWithItemsByRestaurantId(@Param("restaurantId") Long restaurantId);
+
+    @Query("SELECT DISTINCT b FROM Bundle b " +
            "LEFT JOIN FETCH b.optionGroups og " +
            "LEFT JOIN FETCH og.options o " +
            "LEFT JOIN FETCH o.product " +
-           "WHERE b.restaurant.id = :restaurantId AND b.active = true " +
-           "ORDER BY b.displayOrder")
-    List<Bundle> findActiveWithDetailsByRestaurantId(@Param("restaurantId") Long restaurantId);
+           "WHERE b.restaurant.id = :restaurantId AND b.active = true")
+    List<Bundle> findActiveWithOptionGroupsByRestaurantId(@Param("restaurantId") Long restaurantId);
 
     @Query("SELECT b FROM Bundle b WHERE b.restaurant.id = :restaurantId AND LOWER(b.name) = LOWER(:name)")
     Optional<Bundle> findByRestaurantIdAndNameIgnoreCase(

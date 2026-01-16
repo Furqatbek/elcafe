@@ -51,7 +51,15 @@ public class BundleService {
      */
     @Transactional(readOnly = true)
     public List<BundleResponse> getActiveBundlesForMenu(Long restaurantId) {
-        return bundleRepository.findActiveWithDetailsByRestaurantId(restaurantId).stream()
+        // Fetch bundles with items first
+        List<Bundle> bundles = bundleRepository.findActiveWithItemsByRestaurantId(restaurantId);
+
+        // Then fetch option groups to populate the second-level cache
+        if (!bundles.isEmpty()) {
+            bundleRepository.findActiveWithOptionGroupsByRestaurantId(restaurantId);
+        }
+
+        return bundles.stream()
                 .filter(Bundle::isCurrentlyAvailable)
                 .map(BundleResponse::from)
                 .collect(Collectors.toList());
@@ -62,9 +70,22 @@ public class BundleService {
      */
     @Transactional(readOnly = true)
     public BundleResponse getBundle(Long id) {
-        Bundle bundle = bundleRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new EntityNotFoundException("Bundle not found with id: " + id));
+        Bundle bundle = findByIdWithAllDetails(id);
         return BundleResponse.from(bundle);
+    }
+
+    /**
+     * Fetch bundle with all details using split queries to avoid Cartesian product
+     */
+    private Bundle findByIdWithAllDetails(Long id) {
+        // Fetch with items first
+        Bundle bundle = bundleRepository.findByIdWithItems(id)
+                .orElseThrow(() -> new EntityNotFoundException("Bundle not found with id: " + id));
+
+        // Then fetch with option groups (Hibernate will merge into the same entity in persistence context)
+        bundleRepository.findByIdWithOptionGroups(id);
+
+        return bundle;
     }
 
     /**
@@ -129,8 +150,7 @@ public class BundleService {
     public BundleResponse updateBundle(Long id, BundleRequest request) {
         log.info("Updating bundle: {}", id);
 
-        Bundle bundle = bundleRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new EntityNotFoundException("Bundle not found with id: " + id));
+        Bundle bundle = findByIdWithAllDetails(id);
 
         // Check for duplicate name (excluding current bundle)
         bundleRepository.findByRestaurantIdAndNameIgnoreCase(bundle.getRestaurant().getId(), request.getName())
@@ -197,8 +217,7 @@ public class BundleService {
      */
     @Transactional
     public BundleResponse toggleBundle(Long id) {
-        Bundle bundle = bundleRepository.findByIdWithDetails(id)
-                .orElseThrow(() -> new EntityNotFoundException("Bundle not found with id: " + id));
+        Bundle bundle = findByIdWithAllDetails(id);
         bundle.setActive(!Boolean.TRUE.equals(bundle.getActive()));
         Bundle saved = bundleRepository.save(bundle);
         log.info("Bundle {} toggled to active={}", id, saved.getActive());
@@ -208,9 +227,9 @@ public class BundleService {
     /**
      * Calculate bundle price with selected options
      */
+    @Transactional(readOnly = true)
     public BigDecimal calculateBundlePrice(Long bundleId, List<Long> selectedOptionIds) {
-        Bundle bundle = bundleRepository.findByIdWithDetails(bundleId)
-                .orElseThrow(() -> new EntityNotFoundException("Bundle not found"));
+        Bundle bundle = findByIdWithAllDetails(bundleId);
 
         BigDecimal total = bundle.getBundlePrice();
 
@@ -232,9 +251,9 @@ public class BundleService {
     /**
      * Validate bundle order - check all required items and options are selected
      */
+    @Transactional(readOnly = true)
     public void validateBundleOrder(Long bundleId, List<Long> selectedOptionIds) {
-        Bundle bundle = bundleRepository.findByIdWithDetails(bundleId)
-                .orElseThrow(() -> new EntityNotFoundException("Bundle not found"));
+        Bundle bundle = findByIdWithAllDetails(bundleId);
 
         if (!bundle.isCurrentlyAvailable()) {
             throw new BadRequestException("This bundle is not currently available");
