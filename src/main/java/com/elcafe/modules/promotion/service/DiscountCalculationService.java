@@ -187,7 +187,7 @@ public class DiscountCalculationService {
         // If specific happy hour ID provided, validate it's currently active
         if (happyHourId != null) {
             var happyHour = happyHourService.getHappyHour(happyHourId);
-            if (!happyHour.getCurrentlyActive()) {
+            if (!Boolean.TRUE.equals(happyHour.getCurrentlyActive())) {
                 throw new BadRequestException("This happy hour is not currently active");
             }
             order.setHappyHourId(happyHourId);

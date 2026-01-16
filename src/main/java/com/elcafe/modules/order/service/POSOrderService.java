@@ -23,6 +23,7 @@ import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.elcafe.modules.promotion.service.CouponValidationService;
 import com.elcafe.modules.promotion.service.DiscountCalculationService;
+import com.elcafe.modules.promotion.service.HappyHourService;
 import com.elcafe.modules.order.entity.DeliveryInfo;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
@@ -61,6 +62,7 @@ public class POSOrderService {
     private final DailyOrderSequenceService dailyOrderSequenceService;
     private final DiscountCalculationService discountCalculationService;
     private final CouponValidationService couponValidationService;
+    private final HappyHourService happyHourService;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -1172,5 +1174,18 @@ public class POSOrderService {
                 .build();
 
         return couponValidationService.validateCoupon(validateRequest);
+    }
+
+    /**
+     * Calculate happy hour discount preview for an order without applying it
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal calculateHappyHourDiscountPreview(Long orderId) {
+        log.info("Calculating happy hour discount preview for order {}", orderId);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        return happyHourService.calculateHappyHourDiscount(order);
     }
 }

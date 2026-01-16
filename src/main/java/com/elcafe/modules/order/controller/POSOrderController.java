@@ -14,9 +14,14 @@ import com.elcafe.modules.order.service.POSOrderService;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
+import com.elcafe.modules.promotion.dto.ActiveHappyHourResponse;
 import com.elcafe.modules.promotion.service.CouponValidationService;
+import com.elcafe.modules.promotion.service.HappyHourService;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,6 +43,7 @@ public class POSOrderController {
 
     private final POSOrderService posOrderService;
     private final PaymentService paymentService;
+    private final HappyHourService happyHourService;
 
     @PostMapping
     @Operation(
@@ -402,5 +408,107 @@ public class POSOrderController {
         ValidateCouponResponse response = posOrderService.validateCoupon(orderId, couponCode);
 
         return ResponseEntity.ok(ApiResponse.success("Coupon validated", response));
+    }
+
+    // ============== Happy Hour Endpoints ==============
+
+    @GetMapping("/happy-hour/active")
+    @Operation(
+            summary = "Get active happy hour",
+            description = "Get currently active happy hour for a restaurant with discount preview"
+    )
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getActiveHappyHour(
+            @RequestParam Long restaurantId) {
+
+        log.info("Getting active happy hour for restaurant: {}", restaurantId);
+
+        Optional<ActiveHappyHourResponse> activeHappyHour = happyHourService.getActiveHappyHour(restaurantId);
+
+        if (activeHappyHour.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.success("No active happy hour", null));
+        }
+
+        ActiveHappyHourResponse hh = activeHappyHour.get();
+        Map<String, Object> response = Map.of(
+                "id", hh.getId(),
+                "name", hh.getName(),
+                "discountPercent", hh.getDiscountPercent(),
+                "startTime", hh.getStartTime() != null ? hh.getStartTime().toString() : "",
+                "endTime", hh.getEndTime() != null ? hh.getEndTime().toString() : "",
+                "appliesToAll", hh.getAppliesToAll() != null ? hh.getAppliesToAll() : true,
+                "eligibleProductIds", hh.getEligibleProductIds() != null ? hh.getEligibleProductIds() : List.of(),
+                "eligibleCategoryIds", hh.getEligibleCategoryIds() != null ? hh.getEligibleCategoryIds() : List.of()
+        );
+
+        return ResponseEntity.ok(ApiResponse.success("Active happy hour found", response));
+    }
+
+    @GetMapping("/{orderId}/happy-hour/preview")
+    @Operation(
+            summary = "Preview happy hour discount",
+            description = "Calculate and preview happy hour discount for an order without applying it"
+    )
+    public ResponseEntity<ApiResponse<Map<String, Object>>> previewHappyHourDiscount(
+            @PathVariable Long orderId) {
+
+        log.info("Previewing happy hour discount for order: {}", orderId);
+
+        POSOrderResponse order = posOrderService.getOrderById(orderId);
+        Long restaurantId = order.getRestaurantId();
+
+        Optional<ActiveHappyHourResponse> activeHappyHour = happyHourService.getActiveHappyHour(restaurantId);
+
+        if (activeHappyHour.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.success("No active happy hour", Map.of(
+                    "hasActiveHappyHour", false,
+                    "discountAmount", BigDecimal.ZERO
+            )));
+        }
+
+        // Calculate discount preview
+        BigDecimal discount = posOrderService.calculateHappyHourDiscountPreview(orderId);
+        ActiveHappyHourResponse hh = activeHappyHour.get();
+
+        Map<String, Object> response = Map.of(
+                "hasActiveHappyHour", true,
+                "happyHourId", hh.getId(),
+                "happyHourName", hh.getName(),
+                "discountPercent", hh.getDiscountPercent(),
+                "discountAmount", discount,
+                "startTime", hh.getStartTime() != null ? hh.getStartTime().toString() : "",
+                "endTime", hh.getEndTime() != null ? hh.getEndTime().toString() : ""
+        );
+
+        return ResponseEntity.ok(ApiResponse.success("Happy hour discount preview", response));
+    }
+
+    @PostMapping("/{orderId}/happy-hour/apply")
+    @Operation(
+            summary = "Apply happy hour discount",
+            description = "Apply the active happy hour discount to an order"
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> applyHappyHourDiscount(
+            @PathVariable Long orderId) {
+
+        log.info("Applying happy hour discount to order: {}", orderId);
+
+        POSOrderResponse order = posOrderService.getOrderById(orderId);
+        Long restaurantId = order.getRestaurantId();
+
+        Optional<ActiveHappyHourResponse> activeHappyHour = happyHourService.getActiveHappyHour(restaurantId);
+
+        if (activeHappyHour.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("No active happy hour available"));
+        }
+
+        // Apply the happy hour discount using the existing discount mechanism
+        ApplyDiscountRequest discountRequest = ApplyDiscountRequest.builder()
+                .discountType(com.elcafe.modules.promotion.enums.DiscountType.HAPPY_HOUR)
+                .happyHourId(activeHappyHour.get().getId())
+                .build();
+
+        POSOrderResponse response = posOrderService.applyDiscount(orderId, discountRequest);
+
+        return ResponseEntity.ok(ApiResponse.success("Happy hour discount applied successfully", response));
     }
 }

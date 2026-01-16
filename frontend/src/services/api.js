@@ -380,6 +380,13 @@ export const posAPI = {
   removeDiscount: (orderId) => api.delete(`/pos/orders/${orderId}/discount`),
   validateCoupon: (orderId, couponCode) =>
     api.post(`/pos/orders/${orderId}/validate-coupon`, null, { params: { couponCode } }),
+  // Happy Hour
+  getActiveHappyHour: (restaurantId) =>
+    api.get('/pos/orders/happy-hour/active', { params: { restaurantId } }),
+  previewHappyHourDiscount: (orderId) =>
+    api.get(`/pos/orders/${orderId}/happy-hour/preview`),
+  applyHappyHourDiscount: (orderId) =>
+    api.post(`/pos/orders/${orderId}/happy-hour/apply`),
 };
 
 export const waiterOrderAPI = {

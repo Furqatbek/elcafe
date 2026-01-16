@@ -283,13 +283,14 @@ public class SelfServiceController {
     public ResponseEntity<Map<String, Object>> getActiveHappyHour(
             @PathVariable Long restaurantId) {
 
-        LocalTime now = LocalTime.now();
         List<HappyHour> happyHours = happyHourRepository.findByRestaurantIdAndActiveTrue(restaurantId);
 
-        // Find currently active happy hour
+        // Find currently active happy hour using the entity's method
         HappyHour active = happyHours.stream()
-                .filter(hh -> now.isAfter(hh.getStartTime()) && now.isBefore(hh.getEndTime()))
-                .findFirst()
+                .filter(HappyHour::isCurrentlyActive)
+                .max((a, b) -> Integer.compare(
+                        a.getPriority() != null ? a.getPriority() : 0,
+                        b.getPriority() != null ? b.getPriority() : 0))
                 .orElse(null);
 
         if (active == null) {
@@ -300,10 +301,33 @@ public class SelfServiceController {
         response.put("id", active.getId());
         response.put("name", active.getName());
         response.put("discountPercent", active.getDiscountPercent());
-        response.put("startTime", active.getStartTime());
-        response.put("endTime", active.getEndTime());
+        response.put("description", active.getDescription());
+        response.put("priority", active.getPriority());
+        // Include schedule info for the current day
+        if (active.getSchedules() != null && !active.getSchedules().isEmpty()) {
+            var todaySchedule = active.getSchedules().stream()
+                    .filter(s -> s.getDayOfWeek().equals(getTodayDayString()))
+                    .findFirst()
+                    .orElse(null);
+            if (todaySchedule != null) {
+                response.put("startTime", todaySchedule.getStartTime());
+                response.put("endTime", todaySchedule.getEndTime());
+            }
+        }
 
         return ResponseEntity.ok(response);
+    }
+
+    private String getTodayDayString() {
+        return switch (java.time.LocalDate.now().getDayOfWeek()) {
+            case MONDAY -> "MON";
+            case TUESDAY -> "TUE";
+            case WEDNESDAY -> "WED";
+            case THURSDAY -> "THU";
+            case FRIDAY -> "FRI";
+            case SATURDAY -> "SAT";
+            case SUNDAY -> "SUN";
+        };
     }
 
     /**

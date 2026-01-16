@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { posAPI, tablesAPI, bundleAPI, couponAPI } from '../../services/api';
+import { posAPI, tablesAPI, bundleAPI, promotionAPI } from '../../services/api';
 
 /**
  * POS Store - Centralized state management for POS operations
@@ -97,6 +97,13 @@ const usePOSStore = create(
 
       // Active Order for modification/split (existing order from backend)
       activeOrder: null,
+
+      // Happy Hour State
+      happyHour: {
+        active: null, // Current active happy hour info
+        discountPreview: null, // Preview of discount for current order
+        lastFetched: null,
+      },
 
       // Actions: Order Management
       startNewOrder: (type) => set((state) => ({
@@ -311,7 +318,7 @@ const usePOSStore = create(
         if (!orderId || orderId.toString().startsWith('temp-')) {
           // Order not yet submitted - use coupon validation endpoint
           try {
-            const response = await couponAPI.validateCoupon({
+            const response = await promotionAPI.validateCoupon({
               code: couponCode,
               restaurantId: state.restaurantId || 1,
               orderSubtotal: state.currentOrder.subtotal || 0,
@@ -485,6 +492,106 @@ const usePOSStore = create(
             total,
           },
         };
+      }),
+
+      // Actions: Happy Hour Management
+      fetchActiveHappyHour: async (restaurantId) => {
+        try {
+          const response = await posAPI.getActiveHappyHour(restaurantId);
+          const happyHourData = response.data?.data || null;
+
+          set({
+            happyHour: {
+              active: happyHourData,
+              discountPreview: null,
+              lastFetched: new Date().toISOString(),
+            },
+          });
+
+          return happyHourData;
+        } catch (error) {
+          console.error('Failed to fetch active happy hour:', error);
+          set({
+            happyHour: {
+              active: null,
+              discountPreview: null,
+              lastFetched: new Date().toISOString(),
+            },
+          });
+          return null;
+        }
+      },
+
+      previewHappyHourDiscount: async (orderId) => {
+        if (!orderId || orderId.toString().startsWith('temp-')) {
+          // Can't preview for temp orders
+          return null;
+        }
+
+        try {
+          const response = await posAPI.previewHappyHourDiscount(orderId);
+          const preview = response.data?.data || null;
+
+          set((state) => ({
+            happyHour: {
+              ...state.happyHour,
+              discountPreview: preview,
+            },
+          }));
+
+          return preview;
+        } catch (error) {
+          console.error('Failed to preview happy hour discount:', error);
+          return null;
+        }
+      },
+
+      applyHappyHour: async () => {
+        const state = get();
+        const orderId = state.currentOrder.id;
+
+        if (!orderId || orderId.toString().startsWith('temp-')) {
+          return {
+            success: false,
+            error: 'Order must be submitted before applying happy hour discount',
+          };
+        }
+
+        try {
+          set((s) => ({ ui: { ...s.ui, isLoading: true } }));
+          const response = await posAPI.applyHappyHourDiscount(orderId);
+          const updatedOrder = response.data.data;
+
+          set({
+            currentOrder: {
+              ...state.currentOrder,
+              discount: updatedOrder.discount || 0,
+              discountType: 'HAPPY_HOUR',
+              couponCode: null,
+              promotionId: null,
+              promotionName: null,
+              discountReason: null,
+              total: updatedOrder.total,
+            },
+            ui: { ...get().ui, isLoading: false },
+          });
+
+          return { success: true, discount: updatedOrder.discount };
+        } catch (error) {
+          set((s) => ({ ui: { ...s.ui, isLoading: false } }));
+          return {
+            success: false,
+            error: error.response?.data?.message || 'Failed to apply happy hour discount',
+          };
+        }
+      },
+
+      clearHappyHour: () => set({
+        happyHour: {
+          active: null,
+          discountPreview: null,
+          lastFetched: null,
+        },
       }),
 
       // Actions: Customer Management

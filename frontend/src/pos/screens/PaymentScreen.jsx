@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -17,6 +17,7 @@ import CashPaymentDialog from '../components/CashPaymentDialog';
 import CardPaymentDialog from '../components/CardPaymentDialog';
 import VoidOrderDialog from '../components/VoidOrderDialog';
 import RefundDialog from '../components/RefundDialog';
+import HappyHourBanner from '../components/HappyHourBanner';
 import usePOSStore from '../store/posStore';
 import { posAPI } from '../../services/api';
 import PrintReceipt from '../../components/PrintReceipt';
@@ -32,6 +33,7 @@ const PaymentScreen = () => {
     currentOrder,
     customer,
     payment,
+    happyHour,
     setPaymentMethod,
     setAmountTendered,
     setPaymentStatus,
@@ -39,7 +41,12 @@ const PaymentScreen = () => {
     setCurrentScreen,
     fetchFloorPlan,
     setServiceFee,
+    fetchActiveHappyHour,
+    applyHappyHour,
   } = usePOSStore();
+
+  // Get restaurant ID
+  const restaurantId = parseInt(localStorage.getItem('selectedRestaurantId')) || 1;
 
   // State
   const [processingPayment, setProcessingPayment] = useState(false);
@@ -64,6 +71,17 @@ const PaymentScreen = () => {
     currentOrder.serviceFee || 0
   );
   const [serviceFeeMode, setServiceFeeMode] = useState('percent'); // 'percent' or 'amount'
+
+  // Happy hour banner state
+  const [happyHourDismissed, setHappyHourDismissed] = useState(false);
+  const [applyingHappyHour, setApplyingHappyHour] = useState(false);
+
+  // Fetch active happy hour on mount
+  useEffect(() => {
+    if (restaurantId) {
+      fetchActiveHappyHour(restaurantId);
+    }
+  }, [restaurantId, fetchActiveHappyHour]);
 
   // Calculate totals
   const subtotal = currentOrder.subtotal || 0;
@@ -326,6 +344,24 @@ const PaymentScreen = () => {
     setPayments([]);
   };
 
+  // Handle happy hour apply
+  const handleHappyHourApply = async () => {
+    setApplyingHappyHour(true);
+    setPaymentError(null);
+
+    try {
+      const result = await applyHappyHour();
+      if (!result.success) {
+        setPaymentError(result.error || 'Failed to apply happy hour discount');
+      }
+    } catch (error) {
+      console.error('Failed to apply happy hour:', error);
+      setPaymentError(error.message || 'Failed to apply happy hour discount');
+    } finally {
+      setApplyingHappyHour(false);
+    }
+  };
+
   const handleApplyServiceFee = async () => {
     if (serviceFeeMode === 'percent') {
       const percent = parseFloat(serviceFeePercentInput) || 0;
@@ -483,6 +519,17 @@ const PaymentScreen = () => {
         {/* Payment Method Selection */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-6 pb-32 lg:pb-6">
           <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+            {/* Happy Hour Banner */}
+            {happyHour.active && !happyHourDismissed && currentOrder.discountType !== 'HAPPY_HOUR' && (
+              <HappyHourBanner
+                restaurantId={restaurantId}
+                orderId={currentOrder.id && !String(currentOrder.id).startsWith('temp-') ? currentOrder.id : null}
+                onApply={handleHappyHourApply}
+                onDismiss={() => setHappyHourDismissed(true)}
+                currentDiscountType={currentOrder.discountType}
+              />
+            )}
+
             {/* Total Amount Due */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl sm:rounded-2xl p-4 sm:p-8 text-white">
               <p className="text-sm sm:text-xl mb-1 sm:mb-2 opacity-90">
@@ -650,7 +697,14 @@ const PaymentScreen = () => {
                   )}
                   {discount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
-                      <span>{t('pos.cart.discount', 'Discount')}</span>
+                      <span>
+                        {currentOrder.discountType === 'HAPPY_HOUR'
+                          ? t('pos.payment.happyHourDiscount', 'Happy Hour')
+                          : currentOrder.discountType === 'COUPON'
+                          ? t('pos.payment.couponDiscount', 'Coupon')
+                          : t('pos.cart.discount', 'Discount')
+                        }
+                      </span>
                       <span>-{discount.toFixed(2)}</span>
                     </div>
                   )}
@@ -837,7 +891,14 @@ const PaymentScreen = () => {
             )}
             {discount > 0 && (
               <div className="flex justify-between text-green-600">
-                <span>{t('pos.cart.discount', 'Discount')}</span>
+                <span>
+                  {currentOrder.discountType === 'HAPPY_HOUR'
+                    ? t('pos.payment.happyHourDiscount', 'Happy Hour Discount')
+                    : currentOrder.discountType === 'COUPON'
+                    ? t('pos.payment.couponDiscount', 'Coupon Discount')
+                    : t('pos.cart.discount', 'Discount')
+                  }
+                </span>
                 <span>-{discount.toFixed(2)}</span>
               </div>
             )}
