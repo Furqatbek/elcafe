@@ -304,7 +304,11 @@ const generateReceiptHTML = (order) => {
       ` : ''}
       ${Number(order.discount) > 0 ? `
       <div class="total-line">
-        <span>Chegirma:</span>
+        <span>${order.discountType === 'COUPON' && order.couponCode
+          ? `Kupon (${order.couponCode}):`
+          : order.discountType === 'HAPPY_HOUR'
+          ? 'Happy Hour:'
+          : 'Chegirma:'}</span>
         <span>-${Math.round(order.discount)}</span>
       </div>
       ` : ''}

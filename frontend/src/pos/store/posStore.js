@@ -318,11 +318,12 @@ const usePOSStore = create(
         if (!orderId || orderId.toString().startsWith('temp-')) {
           // Order not yet submitted - use coupon validation endpoint
           try {
+            const restaurantId = parseInt(localStorage.getItem('selectedRestaurantId')) || 1;
             const response = await promotionAPI.validateCoupon({
               code: couponCode,
-              restaurantId: state.restaurantId || 1,
+              restaurantId: restaurantId,
               orderSubtotal: state.currentOrder.subtotal || 0,
-              orderType: state.currentOrder.orderType || 'DINE_IN',
+              orderType: state.currentOrder.type || 'DINE_IN',
             });
             return response.data;
           } catch (error) {
