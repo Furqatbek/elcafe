@@ -150,7 +150,7 @@ app:
     max-request-size: 10MB
 
   selfservice:
-    base-url: ${SELFSERVICE_BASE_URL:http://localhost:5173}
+    base-url: ${SELFSERVICE_BASE_URL:http://localhost:5173/order}
 
 # Eskiz.uz SMS Broker Configuration
 eskiz:
