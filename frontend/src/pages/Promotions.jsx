@@ -401,7 +401,7 @@ export default function Promotions() {
           <Label htmlFor="scope">{t('promotions.form.scope')}</Label>
           <Select
             value={formData.promotionScope}
-            onValueChange={(value) => setFormData({ ...formData, promotionScope: value })}
+            onValueChange={(value) => setFormData({ ...formData, promotionScope: value, promotionProducts: [] })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -416,6 +416,113 @@ export default function Promotions() {
           </Select>
         </div>
       </div>
+
+      {/* Category Selection for CATEGORY scope */}
+      {formData.promotionScope === 'CATEGORY' && (
+        <div className="space-y-2">
+          <Label>{t('promotions.form.selectCategories')}</Label>
+          <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+            {categories.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('promotions.form.noCategories')}</p>
+            ) : (
+              categories.map(category => {
+                const isSelected = formData.promotionProducts?.some(
+                  pp => pp.categoryId === category.id && pp.included
+                );
+                return (
+                  <div key={category.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`category-${category.id}`}
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const existing = formData.promotionProducts || [];
+                        if (e.target.checked) {
+                          setFormData({
+                            ...formData,
+                            promotionProducts: [
+                              ...existing.filter(pp => pp.categoryId !== category.id),
+                              { categoryId: category.id, included: true }
+                            ]
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            promotionProducts: existing.filter(pp => pp.categoryId !== category.id)
+                          });
+                        }
+                      }}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor={`category-${category.id}`} className="text-sm font-normal cursor-pointer">
+                      {category.name}
+                    </Label>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {formData.promotionProducts?.filter(pp => pp.categoryId && pp.included).length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {t('promotions.form.selectedCount', { count: formData.promotionProducts.filter(pp => pp.categoryId && pp.included).length })}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Product Selection for PRODUCT scope */}
+      {formData.promotionScope === 'PRODUCT' && (
+        <div className="space-y-2">
+          <Label>{t('promotions.form.selectProducts')}</Label>
+          <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+            {products.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('promotions.form.noProducts')}</p>
+            ) : (
+              products.map(product => {
+                const isSelected = formData.promotionProducts?.some(
+                  pp => pp.productId === product.id && pp.included
+                );
+                return (
+                  <div key={product.id} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={`product-${product.id}`}
+                      checked={isSelected}
+                      onChange={(e) => {
+                        const existing = formData.promotionProducts || [];
+                        if (e.target.checked) {
+                          setFormData({
+                            ...formData,
+                            promotionProducts: [
+                              ...existing.filter(pp => pp.productId !== product.id),
+                              { productId: product.id, included: true }
+                            ]
+                          });
+                        } else {
+                          setFormData({
+                            ...formData,
+                            promotionProducts: existing.filter(pp => pp.productId !== product.id)
+                          });
+                        }
+                      }}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor={`product-${product.id}`} className="text-sm font-normal cursor-pointer">
+                      {product.name}
+                      {product.price && <span className="text-muted-foreground ml-2">({product.price})</span>}
+                    </Label>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {formData.promotionProducts?.filter(pp => pp.productId && pp.included).length > 0 && (
+            <p className="text-sm text-muted-foreground">
+              {t('promotions.form.selectedCount', { count: formData.promotionProducts.filter(pp => pp.productId && pp.included).length })}
+            </p>
+          )}
+        </div>
+      )}
 
       {formData.promotionType === 'BUY_X_GET_Y' && (
         <div className="grid grid-cols-2 gap-4">
