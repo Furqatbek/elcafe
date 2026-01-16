@@ -346,7 +346,10 @@ export default function Bundles() {
 
   const formatPrice = (price) => {
     if (!price) return '-';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price);
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price);
   };
 
   const renderFormFields = () => (
