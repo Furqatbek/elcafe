@@ -36,11 +36,19 @@ const CouponInput = ({ restaurantId = 1 }) => {
         return;
       }
 
-      // Apply the coupon
+      // Apply the coupon with discount data from validation
+      // Backend returns: discountValue (the percent or fixed value), calculatedDiscount (actual amount), promotionType
+      const isPercentage = validation.promotionType === 'PERCENTAGE' ||
+                           validation.promotionType === 'PERCENTAGE_DISCOUNT';
       const result = await applyDiscount({
         discountType: 'COUPON',
         couponCode: code,
         promotionId: validation.promotionId,
+        promotionName: validation.promotionName,
+        // If we have calculatedDiscount, use it directly as the amount
+        discountAmount: validation.calculatedDiscount || (!isPercentage ? validation.discountValue : null),
+        // If it's percentage type, use discountValue as percent
+        discountPercent: isPercentage ? validation.discountValue : null,
       });
 
       if (result.success) {

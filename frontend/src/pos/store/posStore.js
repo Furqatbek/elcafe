@@ -359,6 +359,26 @@ const usePOSStore = create(
             } else if (discountData.manualDiscountPercent) {
               discountAmount = subtotal * (discountData.manualDiscountPercent / 100);
             }
+          } else if (discountData.discountType === 'COUPON') {
+            // Handle coupon discounts
+            if (discountData.discountAmount) {
+              // Fixed amount discount
+              discountAmount = Math.min(discountData.discountAmount, subtotal);
+            } else if (discountData.discountPercent) {
+              // Percentage discount
+              discountAmount = subtotal * (discountData.discountPercent / 100);
+              // Apply max discount if specified
+              if (discountData.maxDiscount && discountAmount > discountData.maxDiscount) {
+                discountAmount = discountData.maxDiscount;
+              }
+            }
+          } else if (discountData.discountType === 'PROMOTION') {
+            // Handle promotion discounts
+            if (discountData.discountAmount) {
+              discountAmount = Math.min(discountData.discountAmount, subtotal);
+            } else if (discountData.discountPercent) {
+              discountAmount = subtotal * (discountData.discountPercent / 100);
+            }
           }
 
           const serviceFee = state.currentOrder.serviceFee || 0;
@@ -372,6 +392,7 @@ const usePOSStore = create(
               discountType: discountData.discountType,
               couponCode: discountData.couponCode || null,
               promotionId: discountData.promotionId || null,
+              promotionName: discountData.promotionName || null,
               discountReason: discountData.discountReason || null,
               total,
             },
