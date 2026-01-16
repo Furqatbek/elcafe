@@ -101,15 +101,15 @@ public class OrderTrackingResponse {
         if (status == null) return "Unknown status";
 
         return switch (status) {
-            case NEW -> "Order received";
-            case CONFIRMED -> "Order confirmed";
+            case NEW, PENDING, PLACED -> "Order received";
+            case ACCEPTED -> "Order confirmed";
             case PREPARING -> "Preparing your order";
             case READY -> orderType == OrderType.DELIVERY ? "Ready for pickup by driver" : "Ready for pickup";
-            case OUT_FOR_DELIVERY -> "On the way";
+            case ON_DELIVERY, COURIER_ASSIGNED -> "On the way";
+            case PICKED_UP -> "Picked up";
             case DELIVERED -> "Delivered";
             case COMPLETED -> "Completed";
-            case CANCELLED -> "Cancelled";
-            default -> status.name();
+            case CANCELLED, REJECTED -> "Cancelled";
         };
     }
 
@@ -120,14 +120,13 @@ public class OrderTrackingResponse {
         if (status == null) return 0;
 
         return switch (status) {
-            case NEW -> 10;
-            case CONFIRMED -> 25;
+            case NEW, PENDING, PLACED -> 10;
+            case ACCEPTED -> 25;
             case PREPARING -> 50;
             case READY -> 75;
-            case OUT_FOR_DELIVERY -> 85;
+            case ON_DELIVERY, COURIER_ASSIGNED, PICKED_UP -> 85;
             case DELIVERED, COMPLETED -> 100;
-            case CANCELLED -> 0;
-            default -> 0;
+            case CANCELLED, REJECTED -> 0;
         };
     }
 }

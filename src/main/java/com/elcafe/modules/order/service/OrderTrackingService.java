@@ -100,7 +100,7 @@ public class OrderTrackingService {
                 .itemCount(order.getItems().size())
                 .items(items)
                 .createdAt(order.getCreatedAt())
-                .confirmedAt(findStatusTimestamp(order, OrderStatus.CONFIRMED))
+                .confirmedAt(findStatusTimestamp(order, OrderStatus.ACCEPTED))
                 .preparingAt(findStatusTimestamp(order, OrderStatus.PREPARING))
                 .readyAt(findStatusTimestamp(order, OrderStatus.READY))
                 .deliveredAt(findStatusTimestamp(order, OrderStatus.DELIVERED))
@@ -186,8 +186,8 @@ public class OrderTrackingService {
                 baseTime = readyAt;
                 baseMinutes = order.getOrderType() == OrderType.DELIVERY ? AVG_DELIVERY_TIME : 5;
             }
-        } else if (order.getStatus() == OrderStatus.OUT_FOR_DELIVERY) {
-            LocalDateTime outAt = findStatusTimestamp(order, OrderStatus.OUT_FOR_DELIVERY);
+        } else if (order.getStatus() == OrderStatus.ON_DELIVERY) {
+            LocalDateTime outAt = findStatusTimestamp(order, OrderStatus.ON_DELIVERY);
             if (outAt != null) {
                 baseTime = outAt;
                 baseMinutes = AVG_DELIVERY_TIME / 2;
@@ -233,15 +233,15 @@ public class OrderTrackingService {
 
     private String getStatusMessage(OrderStatus status) {
         return switch (status) {
-            case NEW -> "Order placed";
-            case CONFIRMED -> "Order confirmed by restaurant";
+            case NEW, PENDING, PLACED -> "Order placed";
+            case ACCEPTED -> "Order confirmed by restaurant";
             case PREPARING -> "Kitchen started preparing your order";
             case READY -> "Order is ready";
-            case OUT_FOR_DELIVERY -> "Driver picked up your order";
+            case ON_DELIVERY, COURIER_ASSIGNED -> "Driver picked up your order";
+            case PICKED_UP -> "Order picked up";
             case DELIVERED -> "Order delivered";
             case COMPLETED -> "Order completed";
-            case CANCELLED -> "Order cancelled";
-            default -> status.name();
+            case CANCELLED, REJECTED -> "Order cancelled";
         };
     }
 }
