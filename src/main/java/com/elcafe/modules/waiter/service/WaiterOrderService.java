@@ -736,7 +736,6 @@ public class WaiterOrderService {
         order.setDiscountType(null);
         order.setCouponCode(null);
         order.setPromotionId(null);
-        order.setPromotionName(null);
 
         // Recalculate totals
         recalculateOrderTotals(order);

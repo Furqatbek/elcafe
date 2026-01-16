@@ -149,9 +149,9 @@ public class DailyFinancialReportService {
         try {
             String message = formatDailyReport(subscription, metrics);
 
-            boolean sent = telegramBotService.sendMessage(subscription.getTelegramChatId(), message);
+            Integer messageId = telegramBotService.sendMessage(subscription.getTelegramChatId(), message);
 
-            if (sent) {
+            if (messageId != null) {
                 subscription.setLastReportSentAt(LocalDateTime.now());
                 subscription.setLastReportDate(reportDate);
                 subscriptionRepository.save(subscription);

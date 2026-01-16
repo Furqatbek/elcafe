@@ -140,7 +140,7 @@ public class PromotionAnalyticsService {
                 .orElseThrow(() -> new IllegalArgumentException("Promotion not found: " + promotionId));
 
         // Get all usage records
-        List<PromotionUsage> usages = promotionUsageRepository.findByPromotionId(promotionId);
+        List<PromotionUsage> usages = promotionUsageRepository.findByPromotion_Id(promotionId);
 
         // Calculate metrics
         int totalRedemptions = usages.size();
@@ -210,7 +210,7 @@ public class PromotionAnalyticsService {
     public List<PromotionPerformance> getAllPromotionsPerformance(Long restaurantId) {
         log.info("Getting all promotions performance for restaurant {}", restaurantId);
 
-        List<Promotion> promotions = promotionRepository.findByRestaurant_Id(restaurantId);
+        List<Promotion> promotions = promotionRepository.findByRestaurant_IdOrderByPriorityDescCreatedAtDesc(restaurantId);
 
         return promotions.stream()
                 .map(p -> getPromotionPerformance(p.getId()))

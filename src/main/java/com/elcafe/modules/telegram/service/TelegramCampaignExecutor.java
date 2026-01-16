@@ -200,11 +200,10 @@ public class TelegramCampaignExecutor {
     }
 
     /**
-     * Parse buttons configuration from campaign
+     * Get buttons configuration from campaign (already parsed as List)
      */
-    @SuppressWarnings("unchecked")
     private List<List<Map<String, String>>> parseButtons(TelegramCampaign campaign) {
-        String buttonsConfig = campaign.getButtonsConfig();
+        List<Map<String, String>> buttonsConfig = campaign.getButtonsConfig();
         if (buttonsConfig == null || buttonsConfig.isEmpty()) {
             // Check template buttons
             if (campaign.getTemplate() != null && campaign.getTemplate().getButtonsConfig() != null) {
@@ -216,12 +215,8 @@ public class TelegramCampaignExecutor {
             return null;
         }
 
-        try {
-            return objectMapper.readValue(buttonsConfig, new TypeReference<List<List<Map<String, String>>>>() {});
-        } catch (Exception e) {
-            log.warn("Failed to parse buttons config: {}", e.getMessage());
-            return null;
-        }
+        // Wrap single row of buttons as a list of rows
+        return List.of(buttonsConfig);
     }
 
     /**
