@@ -145,7 +145,7 @@ public class DailyFinancialReportService {
     /**
      * Send daily report to a subscriber
      */
-    private void sendDailyReport(FinancialAlertSubscription subscription, DailyMetrics metrics, LocalDate reportDate) {
+    private void sendDailyReport(FinancialAlertSubscription subscription, DailyMetrics metrics, LocalDate businessDay) {
         try {
             String message = formatDailyReport(subscription, metrics);
 
@@ -153,7 +153,9 @@ public class DailyFinancialReportService {
 
             if (sent) {
                 subscription.setLastReportSentAt(LocalDateTime.now());
-                subscription.setLastReportDate(reportDate);
+                // Use calendar date (not business day) to prevent duplicate reports after midnight
+                // The query checks against LocalDate.now(), so we must store the same
+                subscription.setLastReportDate(LocalDate.now());
                 subscriptionRepository.save(subscription);
 
                 log.info("Daily financial report sent to chatId {} for restaurant {}",
