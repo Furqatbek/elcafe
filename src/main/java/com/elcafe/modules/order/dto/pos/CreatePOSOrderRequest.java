@@ -73,8 +73,24 @@ public class CreatePOSOrderRequest {
     @Builder.Default
     private BigDecimal entryFee = BigDecimal.ZERO;
 
+    @DecimalMin(value = "0.0", message = "Discount must be 0 or greater")
+    @Builder.Default
+    private BigDecimal discount = BigDecimal.ZERO;
+
+    // Discount type: MANUAL, COUPON, PROMOTION, HAPPY_HOUR, FREE_ITEM
+    private String discountType;
+
+    // Coupon code if discount is from coupon
+    private String couponCode;
+
+    // Promotion ID if discount is from promotion
+    private Long promotionId;
+
+    // Promotion name for display
+    private String promotionName;
+
     @NotNull(message = "Total is required")
-    @DecimalMin(value = "0.0", inclusive = false, message = "Total must be greater than 0")
+    @DecimalMin(value = "0.0", message = "Total must be 0 or greater")
     private BigDecimal total;
 
     // Cash payment fields
@@ -120,13 +136,23 @@ public class CreatePOSOrderRequest {
         private Integer quantity;
 
         @NotNull(message = "Price is required")
-        @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
+        @DecimalMin(value = "0.0", message = "Price must be 0 or greater")
         private BigDecimal price;
 
         private List<ModifierInfo> modifiers;
 
         @Size(max = 500, message = "Notes must not exceed 500 characters")
         private String notes;
+
+        // Flag for free items from promotions/coupons
+        @Builder.Default
+        private Boolean isFreeItem = false;
+
+        // Coupon code that granted this free item
+        private String couponCode;
+
+        // Promotion ID that granted this free item
+        private Long promotionId;
     }
 
     @Data

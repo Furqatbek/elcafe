@@ -91,8 +91,14 @@ public class POSOrderService {
         order.setServiceFeePercent(request.getServiceFeePercent() != null ? request.getServiceFeePercent() : BigDecimal.ZERO);
         order.setServiceFee(request.getServiceFee() != null ? request.getServiceFee() : BigDecimal.ZERO);
         order.setEntryFee(request.getEntryFee() != null ? request.getEntryFee() : BigDecimal.ZERO);
-        order.setDiscount(BigDecimal.ZERO); // Discount applied separately if needed
         order.setTotal(request.getTotal() != null ? request.getTotal() : BigDecimal.ZERO);
+
+        // Set discount information if provided (from coupon/promotion/happy hour)
+        order.setDiscount(request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO);
+        order.setDiscountType(request.getDiscountType());
+        order.setCouponCode(request.getCouponCode());
+        order.setPromotionId(request.getPromotionId());
+        order.setPromotionName(request.getPromotionName());
 
         // Add order items
         List<OrderItem> orderItems = request.getItems().stream()
