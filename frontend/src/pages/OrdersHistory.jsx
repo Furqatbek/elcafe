@@ -86,7 +86,7 @@ export default function OrdersHistory() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [shiftDate, setShiftDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Default to today's shift
+  const [shiftDate, setShiftDate] = useState('today'); // Default to today's business day (shift-aware)
   const [searchQuery, setSearchQuery] = useState('');
 
   // Pagination state
@@ -198,20 +198,20 @@ export default function OrdersHistory() {
     });
   };
 
-  // Quick date filters - all use shift-aware logic on backend
+  // Quick date filters - use shift-aware logic on backend
+  // "today" and "yesterday" are special values that the backend resolves to actual business days
   const applyQuickFilter = (filter) => {
     const today = new Date();
     switch (filter) {
       case 'today':
-        // Single day - use shiftDate
-        setShiftDate(format(today, 'yyyy-MM-dd'));
+        // Use "today" keyword - backend will resolve to current business day (shift-aware)
+        setShiftDate('today');
         setDateFrom('');
         setDateTo('');
         break;
       case 'yesterday':
-        // Single day - use shiftDate
-        const yesterday = subDays(today, 1);
-        setShiftDate(format(yesterday, 'yyyy-MM-dd'));
+        // Use "yesterday" keyword - backend will resolve to previous business day (shift-aware)
+        setShiftDate('yesterday');
         setDateFrom('');
         setDateTo('');
         break;
@@ -242,7 +242,7 @@ export default function OrdersHistory() {
     setSelectedStatus('all');
     setDateFrom('');
     setDateTo('');
-    setShiftDate(format(new Date(), 'yyyy-MM-dd'));
+    setShiftDate('today'); // Default to today's business day (shift-aware)
     setSearchQuery('');
     setCurrentPage(1);
   };

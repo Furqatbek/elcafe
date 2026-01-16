@@ -87,13 +87,13 @@ public class OrderController {
     }
 
     @GetMapping
-    @Operation(summary = "List orders", description = "Get all orders with pagination and filters. All date filtering uses shift-aware logic based on restaurant business hours.")
+    @Operation(summary = "List orders", description = "Get all orders with pagination and filters. All date filtering uses shift-aware logic based on restaurant business hours. shiftDate can be 'today', 'yesterday', or a date (YYYY-MM-DD).")
     public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(
             @RequestParam(required = false) Long restaurantId,
             @RequestParam(required = false) OrderStatus status,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
+            @RequestParam(required = false) String shiftDate,
             @RequestParam(required = false) String search,
             Pageable pageable
     ) {
@@ -101,8 +101,27 @@ public class OrderController {
         LocalDateTime effectiveToDate = toDate;
 
         // If shiftDate is provided (single day shift-aware filtering)
-        if (shiftDate != null && fromDate == null && toDate == null) {
-            ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, shiftDate);
+        if (shiftDate != null && !shiftDate.isBlank() && fromDate == null && toDate == null) {
+            LocalDate actualShiftDate;
+
+            // Handle special values "today" and "yesterday" using business day logic
+            if ("today".equalsIgnoreCase(shiftDate.trim())) {
+                // Use current business day (accounts for shifts crossing midnight)
+                actualShiftDate = shiftTimeService.getCurrentBusinessDay(restaurantId);
+            } else if ("yesterday".equalsIgnoreCase(shiftDate.trim())) {
+                // Use previous business day
+                actualShiftDate = shiftTimeService.getCurrentBusinessDay(restaurantId).minusDays(1);
+            } else {
+                // Parse as date (YYYY-MM-DD format)
+                try {
+                    actualShiftDate = LocalDate.parse(shiftDate.trim());
+                } catch (Exception e) {
+                    // Invalid date format, fall back to today's business day
+                    actualShiftDate = shiftTimeService.getCurrentBusinessDay(restaurantId);
+                }
+            }
+
+            ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, actualShiftDate);
             effectiveFromDate = shiftRange.start();
             effectiveToDate = shiftRange.end();
         }
