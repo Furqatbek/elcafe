@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { posAPI, tablesAPI, bundleAPI } from '../../services/api';
+import { posAPI, tablesAPI, bundleAPI, couponAPI } from '../../services/api';
 
 /**
  * POS Store - Centralized state management for POS operations
@@ -309,10 +309,15 @@ const usePOSStore = create(
         const orderId = state.currentOrder.id;
 
         if (!orderId || orderId.toString().startsWith('temp-')) {
-          // Order not yet submitted - do basic validation
+          // Order not yet submitted - use coupon validation endpoint
           try {
-            const response = await posAPI.validateCoupon(null, couponCode);
-            return response.data.data;
+            const response = await couponAPI.validateCoupon({
+              code: couponCode,
+              restaurantId: state.restaurantId || 1,
+              orderSubtotal: state.currentOrder.subtotal || 0,
+              orderType: state.currentOrder.orderType || 'DINE_IN',
+            });
+            return response.data;
           } catch (error) {
             return {
               valid: false,
