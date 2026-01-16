@@ -9,9 +9,12 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.financial.repository.JournalEntryRepository;
 import com.elcafe.utils.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -22,6 +25,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/financial/accounts")
 @RequiredArgsConstructor
+@Tag(name = "Financial Accounts", description = "Chart of Accounts management")
+@SecurityRequirement(name = "bearerAuth")
+@PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
 public class AccountController {
 
     private final AccountService accountService;
@@ -158,6 +164,7 @@ public class AccountController {
      * WARNING: This can be a heavy operation for large deployments.
      */
     @PostMapping("/sync-all")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<FinancialMigrationService.MigrationResult>>> syncAllFinancialData() {
         log.info("Starting full financial data sync for ALL restaurants");
 

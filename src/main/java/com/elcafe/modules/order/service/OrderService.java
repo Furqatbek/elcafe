@@ -17,7 +17,6 @@ import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,18 +42,9 @@ public class OrderService {
     private final RestaurantTableRepository restaurantTableRepository;
     private final BusinessDayService businessDayService;
     private final PaymentRepository paymentRepository;
-
-    @Autowired
-    @Lazy
-    private RevenueService revenueService;
-
-    @Autowired
-    @Lazy
-    private PrintService printService;
-
-    @Autowired
-    @Lazy
-    private InventoryValuationService inventoryValuationService;
+    @Lazy private final RevenueService revenueService;
+    @Lazy private final PrintService printService;
+    @Lazy private final InventoryValuationService inventoryValuationService;
 
     @Transactional
     public Order createOrder(Order order) {

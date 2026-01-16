@@ -769,7 +769,7 @@ public class WaiterOrderService {
                 .code(couponCode)
                 .restaurantId(order.getRestaurant().getId())
                 .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
-                .orderTotal(order.getSubtotal())
+                .orderSubtotal(order.getSubtotal())
                 .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
                 .items(order.getItems().stream()
                         .map(item -> ValidateCouponRequest.OrderItemInfo.builder()

@@ -24,7 +24,6 @@ import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -53,10 +52,7 @@ public class ReferralService {
     private final LoyaltyService loyaltyService;
     private final BonusService bonusService;
     private final CustomerLoyaltyRepository customerLoyaltyRepository;
-
-    @Autowired
-    @Lazy
-    private MarketingEventPublisher marketingEventPublisher;
+    @Lazy private final MarketingEventPublisher marketingEventPublisher;
 
     private static final String CODE_CHARACTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final int CODE_LENGTH = 8;

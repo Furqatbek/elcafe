@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.dto.pos;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +25,7 @@ public class RefundRequestDTO {
         ITEMS       // Refund specific items
     }
 
+    @NotNull(message = "Refund type is required")
     private RefundType type;
 
     // For PARTIAL refunds

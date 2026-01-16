@@ -186,6 +186,15 @@ public class Order {
     @Column(name = "cancellation_reason", length = 1000)
     private String cancellationReason;
 
+    @Column(name = "void_reason", length = 500)
+    private String voidReason;
+
+    @Column(name = "voided_at")
+    private LocalDateTime voidedAt;
+
+    @Column(name = "voided_by", length = 100)
+    private String voidedBy;
+
     @Column(name = "payment_intent_id", length = 255)
     private String paymentIntentId;
 

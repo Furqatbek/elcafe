@@ -85,18 +85,22 @@ public class SmsAutomationRule {
 
         // Check days_inactive condition
         if (conditions.containsKey("days_inactive")) {
-            Integer requiredDays = (Integer) conditions.get("days_inactive");
-            Integer actualDays = (Integer) context.get("days_inactive");
-            if (actualDays == null || actualDays < requiredDays) {
+            Object requiredObj = conditions.get("days_inactive");
+            Object actualObj = context.get("days_inactive");
+            int requiredDays = requiredObj instanceof Number ? ((Number) requiredObj).intValue() : 0;
+            int actualDays = actualObj instanceof Number ? ((Number) actualObj).intValue() : 0;
+            if (actualDays < requiredDays) {
                 return false;
             }
         }
 
         // Check min_orders condition
         if (conditions.containsKey("min_orders")) {
-            Integer requiredOrders = (Integer) conditions.get("min_orders");
-            Integer actualOrders = (Integer) context.get("order_count");
-            if (actualOrders == null || actualOrders < requiredOrders) {
+            Object requiredObj = conditions.get("min_orders");
+            Object actualObj = context.get("order_count");
+            int requiredOrders = requiredObj instanceof Number ? ((Number) requiredObj).intValue() : 0;
+            int actualOrders = actualObj instanceof Number ? ((Number) actualObj).intValue() : 0;
+            if (actualOrders < requiredOrders) {
                 return false;
             }
         }

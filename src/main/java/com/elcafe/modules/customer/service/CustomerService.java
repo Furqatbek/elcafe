@@ -11,7 +11,6 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,10 +27,7 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
     private final RestaurantRepository restaurantRepository;
     private final MarketingEventPublisher marketingEventPublisher;
-
-    @Autowired
-    @Lazy
-    private ReferralService referralService;
+    @Lazy private final ReferralService referralService;
 
     @Transactional
     public Customer createCustomer(Customer customer) {

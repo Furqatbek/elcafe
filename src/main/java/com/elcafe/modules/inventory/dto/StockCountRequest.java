@@ -1,11 +1,13 @@
 package com.elcafe.modules.inventory.dto;
 
 import com.elcafe.modules.inventory.entity.StockCount;
+import com.elcafe.modules.inventory.entity.StockCountItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -30,7 +32,7 @@ public class StockCountRequest {
     @AllArgsConstructor
     public static class RecordCountRequest {
         private Long itemId;
-        private java.math.BigDecimal countedQuantity;
+        private BigDecimal countedQuantity;
         private String countedBy;
         private String notes;
     }
@@ -41,7 +43,7 @@ public class StockCountRequest {
     @AllArgsConstructor
     public static class VarianceReasonRequest {
         private Long itemId;
-        private com.elcafe.modules.inventory.entity.StockCountItem.VarianceReason varianceReason;
+        private StockCountItem.VarianceReason varianceReason;
         private String notes;
     }
 

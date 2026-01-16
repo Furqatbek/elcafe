@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -74,7 +75,7 @@ public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, 
      */
     @Query("SELECT COALESCE(SUM(b.quantity), 0) FROM InventoryBatch b " +
            "WHERE b.ingredient.id = :ingredientId AND b.status = 'ACTIVE'")
-    java.math.BigDecimal getTotalActiveQuantity(@Param("ingredientId") Long ingredientId);
+    BigDecimal getTotalActiveQuantity(@Param("ingredientId") Long ingredientId);
 
     /**
      * Get total quantity across active, non-expired batches for an ingredient
@@ -82,7 +83,7 @@ public interface InventoryBatchRepository extends JpaRepository<InventoryBatch, 
     @Query("SELECT COALESCE(SUM(b.quantity), 0) FROM InventoryBatch b " +
            "WHERE b.ingredient.id = :ingredientId AND b.status = 'ACTIVE' " +
            "AND (b.expiryDate IS NULL OR b.expiryDate >= :today)")
-    java.math.BigDecimal getEffectiveQuantity(
+    BigDecimal getEffectiveQuantity(
             @Param("ingredientId") Long ingredientId,
             @Param("today") LocalDate today);
 

@@ -78,10 +78,14 @@ public class TelegramAutomationRule {
 
         // Check days_inactive condition
         if (conditions.containsKey("days_inactive") && context.containsKey("days_inactive")) {
-            Integer requiredDays = (Integer) conditions.get("days_inactive");
-            Integer actualDays = (Integer) context.get("days_inactive");
-            if (actualDays < requiredDays) {
-                return false;
+            Object requiredObj = conditions.get("days_inactive");
+            Object actualObj = context.get("days_inactive");
+            if (requiredObj != null && actualObj != null) {
+                int requiredDays = requiredObj instanceof Number ? ((Number) requiredObj).intValue() : 0;
+                int actualDays = actualObj instanceof Number ? ((Number) actualObj).intValue() : 0;
+                if (actualDays < requiredDays) {
+                    return false;
+                }
             }
         }
 
