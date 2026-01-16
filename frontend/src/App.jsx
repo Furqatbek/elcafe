@@ -42,6 +42,7 @@ import ReferralProgram from './pages/ReferralProgram';
 import SmsMarketing from './pages/SmsMarketing';
 import TelegramMarketing from './pages/TelegramMarketing';
 import QRCodes from './pages/QRCodes';
+import Reservations from './pages/Reservations';
 import {
   InventoryIngredients,
   InventoryRecipes,
@@ -102,6 +103,7 @@ function App() {
           <Route path="restaurants" element={<Restaurants />} />
           <Route path="restaurants/tables" element={<Tables />} />
           <Route path="restaurants/working-hours" element={<WorkingHours />} />
+          <Route path="restaurants/reservations" element={<AdminRoute><Reservations /></AdminRoute>} />
           <Route path="products" element={<Products />} />
           <Route path="products/:productId/linked-items" element={<LinkedItems />} />
           <Route path="menu" element={<Menu />} />

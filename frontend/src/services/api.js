@@ -1021,4 +1021,92 @@ export const selfServiceAPI = {
   getBundleDetails: (bundleId) => api.get(`/bundles/${bundleId}`),
 };
 
+// Reservation API (public endpoints for customers)
+export const reservationPublicAPI = {
+  // Create a reservation
+  createReservation: (restaurantId, data) =>
+    api.post(`/public/restaurants/${restaurantId}/reservations`, data),
+
+  // Get reservation by confirmation code
+  getByCode: (confirmationCode) =>
+    api.get(`/public/reservations/${confirmationCode}`),
+
+  // Check availability for a date
+  checkAvailability: (restaurantId, date, partySize = 2) =>
+    api.get(`/public/restaurants/${restaurantId}/availability`, {
+      params: { date, partySize }
+    }),
+
+  // Check availability for date range
+  checkAvailabilityRange: (restaurantId, startDate, endDate, partySize = 2) =>
+    api.get(`/public/restaurants/${restaurantId}/availability/range`, {
+      params: { startDate, endDate, partySize }
+    }),
+
+  // Cancel reservation by code
+  cancelByCode: (confirmationCode, reason) =>
+    api.post(`/public/reservations/${confirmationCode}/cancel`, null, {
+      params: { reason }
+    }),
+
+  // Get reservations by phone
+  getByPhone: (phone) =>
+    api.get(`/public/reservations/phone/${phone}`),
+};
+
+// Reservation API (admin endpoints)
+export const reservationAPI = {
+  // Get all reservations for a restaurant
+  getAll: (restaurantId, params = {}) =>
+    api.get(`/restaurants/${restaurantId}/reservations`, { params }),
+
+  // Get reservations by date
+  getByDate: (restaurantId, date) =>
+    api.get(`/restaurants/${restaurantId}/reservations/date/${date}`),
+
+  // Get reservations by date range (for calendar)
+  getByDateRange: (restaurantId, startDate, endDate) =>
+    api.get(`/restaurants/${restaurantId}/reservations/range`, {
+      params: { startDate, endDate }
+    }),
+
+  // Get single reservation
+  get: (id) => api.get(`/reservations/${id}`),
+
+  // Confirm reservation
+  confirm: (id) => api.post(`/reservations/${id}/confirm`),
+
+  // Cancel reservation
+  cancel: (id, reason) =>
+    api.post(`/reservations/${id}/cancel`, null, { params: { reason } }),
+
+  // Check in guest
+  checkIn: (id) => api.post(`/reservations/${id}/check-in`),
+
+  // Complete reservation
+  complete: (id) => api.post(`/reservations/${id}/complete`),
+
+  // Mark as no-show
+  markNoShow: (id) => api.post(`/reservations/${id}/no-show`),
+
+  // Assign table
+  assignTable: (reservationId, tableId) =>
+    api.post(`/reservations/${reservationId}/assign-table/${tableId}`),
+};
+
+// Order Tracking API (public endpoints)
+export const orderTrackingAPI = {
+  // Get order status by order number
+  getStatus: (orderNumber) =>
+    api.get(`/public/orders/${orderNumber}/status`),
+
+  // Get ETA
+  getETA: (orderNumber) =>
+    api.get(`/public/orders/${orderNumber}/eta`),
+
+  // Track orders by phone
+  trackByPhone: (phone) =>
+    api.get(`/public/orders/track`, { params: { phone } }),
+};
+
 export default api;
