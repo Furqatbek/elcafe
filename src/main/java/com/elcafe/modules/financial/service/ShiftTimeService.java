@@ -150,11 +150,13 @@ public class ShiftTimeService {
      * Get the current business day for a restaurant based on business hours.
      *
      * For shifts that cross midnight (e.g., 21:00-03:00):
-     * - If current time is BEFORE opening time (e.g., 04:00 AM), we're still in yesterday's business day
-     * - If current time is AFTER opening time (e.g., 22:00), we're in today's business day
+     * - If current time is in the "after midnight" portion of yesterday's shift, return yesterday
+     * - Otherwise, return today
      *
-     * Example: For 21:00-03:00 shift at 04:00 AM on Jan 7:
-     * - Returns Jan 6 (because Jan 6's shift runs from 21:00 Jan 6 to 21:00 Jan 7)
+     * Example: For 21:00-03:00 shift at 01:00 AM on Jan 7:
+     * - Yesterday (Jan 6) had shift 21:00-03:00
+     * - Current time 01:00 is before close time 03:00
+     * - Returns Jan 6 (because we're still in Jan 6's shift)
      *
      * @param restaurantId The restaurant ID
      * @return The current business day date
@@ -167,25 +169,49 @@ public class ShiftTimeService {
             return today;
         }
 
-        var businessHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
-            restaurantId, today.getDayOfWeek());
+        // First, check if we're in the "after midnight" portion of YESTERDAY's shift
+        // This is the key fix: we must check yesterday's business hours, not today's
+        LocalDate yesterday = today.minusDays(1);
+        var yesterdayHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
+            restaurantId, yesterday.getDayOfWeek());
 
-        if (businessHours.isEmpty() || businessHours.get().getClosed()) {
-            // No business hours, use calendar day
-            return today;
+        if (yesterdayHours.isPresent() && !yesterdayHours.get().getClosed()) {
+            LocalTime yesterdayOpen = yesterdayHours.get().getOpenTime();
+            LocalTime yesterdayClose = yesterdayHours.get().getCloseTime();
+
+            // Check if yesterday's shift crosses midnight
+            boolean yesterdayCrossesMidnight = yesterdayClose.isBefore(yesterdayOpen)
+                || yesterdayClose.equals(yesterdayOpen);
+
+            if (yesterdayCrossesMidnight && now.isBefore(yesterdayClose)) {
+                // We're in the early morning hours, still part of yesterday's shift
+                // (e.g., at 01:00 AM and yesterday's shift ends at 03:00 AM)
+                log.debug("Current time {} is before yesterday's close time {}, using yesterday as business day",
+                    now, yesterdayClose);
+                return yesterday;
+            }
         }
 
-        LocalTime openTime = businessHours.get().getOpenTime();
-        LocalTime closeTime = businessHours.get().getCloseTime();
+        // Check today's business hours for the case where today's shift hasn't started yet
+        // but yesterday's shift didn't cross midnight (gap between shifts)
+        var todayHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
+            restaurantId, today.getDayOfWeek());
 
-        // Check if shift crosses midnight
-        boolean crossesMidnight = closeTime.isBefore(openTime) || closeTime.equals(openTime);
+        if (todayHours.isPresent() && !todayHours.get().getClosed()) {
+            LocalTime todayOpen = todayHours.get().getOpenTime();
+            LocalTime todayClose = todayHours.get().getCloseTime();
 
-        if (crossesMidnight && now.isBefore(openTime)) {
-            // We're in the early morning hours before today's shift starts
-            // This means we're still in yesterday's business day
-            log.debug("Current time {} is before opening {}, using yesterday as business day", now, openTime);
-            return today.minusDays(1);
+            // Check if today's shift crosses midnight and we're before opening
+            boolean todayCrossesMidnight = todayClose.isBefore(todayOpen)
+                || todayClose.equals(todayOpen);
+
+            if (todayCrossesMidnight && now.isBefore(todayOpen)) {
+                // Today's shift hasn't started yet and crosses midnight
+                // We're in a gap period - attribute to yesterday for continuity
+                log.debug("Current time {} is before today's opening {}, using yesterday as business day",
+                    now, todayOpen);
+                return yesterday;
+            }
         }
 
         return today;
