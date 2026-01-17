@@ -50,9 +50,6 @@ public class Reservation {
     @Column(name = "customer_phone", nullable = false, length = 20)
     private String customerPhone;
 
-    @Column(name = "customer_email", length = 100)
-    private String customerEmail;
-
     // Reservation details
     @Column(name = "reservation_date", nullable = false)
     private LocalDate reservationDate;

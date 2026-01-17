@@ -23,10 +23,6 @@ public class CreateReservationRequest {
     @Size(max = 20)
     private String customerPhone;
 
-    @Email(message = "Invalid email format")
-    @Size(max = 100)
-    private String customerEmail;
-
     @NotNull(message = "Reservation date is required")
     @Future(message = "Reservation date must be in the future")
     private LocalDate reservationDate;

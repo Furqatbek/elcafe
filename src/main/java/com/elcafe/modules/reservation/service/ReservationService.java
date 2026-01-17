@@ -401,7 +401,6 @@ public class ReservationService {
                     .firstName(names[0])
                     .lastName(names.length > 1 ? names[1] : "")
                     .phone(normalizedPhone)
-                    .email(request.getCustomerEmail())
                     .registrationSource(com.elcafe.modules.customer.enums.RegistrationSource.RESERVATION)
                     .active(true)
                     .build();

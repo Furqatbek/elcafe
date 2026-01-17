@@ -7,7 +7,6 @@ import {
   Users,
   User,
   Phone,
-  Mail,
   MessageSquare,
   CheckCircle,
   AlertCircle,
@@ -40,7 +39,6 @@ export default function ReservationPage() {
   const [formData, setFormData] = useState({
     customerName: '',
     customerPhone: '',
-    customerEmail: '',
     specialRequests: '',
   });
 
@@ -117,7 +115,6 @@ export default function ReservationPage() {
         tableId: selectedTable?.id || null,
         customerName: formData.customerName,
         customerPhone: formData.customerPhone,
-        customerEmail: formData.customerEmail || null,
         specialRequests: formData.specialRequests || null,
         source: 'ONLINE',
       });
@@ -624,20 +621,6 @@ export default function ReservationPage() {
                   onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Your phone number"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <Mail className="inline h-4 w-4 mr-1" />
-                  Email (optional)
-                </label>
-                <input
-                  type="email"
-                  value={formData.customerEmail}
-                  onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="your@email.com"
                 />
               </div>
 
