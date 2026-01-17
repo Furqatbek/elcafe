@@ -1,5 +1,6 @@
 package com.elcafe.modules.reservation.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +26,7 @@ public class AvailabilityResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class TimeSlot {
+        @JsonFormat(pattern = "HH:mm")
         private LocalTime time;
         private boolean available;
         private int availableSpots;
