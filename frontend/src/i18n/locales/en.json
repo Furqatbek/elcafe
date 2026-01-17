@@ -3609,7 +3609,14 @@
     "table": "Table",
     "restaurant": "Restaurant",
     "reserve": "Reserve",
-    "items": "items"
+    "items": "items",
+    "error": "Error",
+    "invalidQrCode": "Invalid QR code or session expired",
+    "failedToLoadMenu": "Failed to load menu",
+    "scanToOrder": "Please scan the QR code to start ordering",
+    "failedToAddCombo": "Failed to add combo to cart",
+    "failedToAddItem": "Failed to add item to cart",
+    "prepTime": "min"
   },
   "customerReservation": {
     "title": "Reserve a Table",

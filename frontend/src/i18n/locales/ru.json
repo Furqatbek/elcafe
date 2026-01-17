@@ -3155,7 +3155,14 @@
     "table": "Столик",
     "restaurant": "Ресторан",
     "reserve": "Бронь",
-    "items": "позиций"
+    "items": "позиций",
+    "error": "Ошибка",
+    "invalidQrCode": "Недействительный QR-код или сессия истекла",
+    "failedToLoadMenu": "Не удалось загрузить меню",
+    "scanToOrder": "Пожалуйста, отсканируйте QR-код для заказа",
+    "failedToAddCombo": "Не удалось добавить комбо в корзину",
+    "failedToAddItem": "Не удалось добавить товар в корзину",
+    "prepTime": "мин"
   },
   "customerReservation": {
     "title": "Забронировать столик",

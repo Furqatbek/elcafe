@@ -3201,7 +3201,14 @@
     "table": "Stol",
     "restaurant": "Restoran",
     "reserve": "Band qilish",
-    "items": "ta"
+    "items": "ta",
+    "error": "Xatolik",
+    "invalidQrCode": "Noto'g'ri QR kod yoki seans tugadi",
+    "failedToLoadMenu": "Menyuni yuklash imkonsiz",
+    "scanToOrder": "Buyurtma berish uchun QR kodni skanerlang",
+    "failedToAddCombo": "Komboni savatga qo'shib bo'lmadi",
+    "failedToAddItem": "Mahsulotni savatga qo'shib bo'lmadi",
+    "prepTime": "daq"
   },
   "customerReservation": {
     "title": "Stol band qilish",

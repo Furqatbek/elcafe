@@ -59,7 +59,7 @@ export default function MenuPage() {
         try {
           await startSession(tableCode);
         } catch (err) {
-          setError('Invalid QR code or session expired');
+          setError(t('selfService.invalidQrCode'));
         }
       }
       loadRestaurantData();
@@ -96,7 +96,7 @@ export default function MenuPage() {
         // Don't fail the menu load if promotions fail
       }
     } catch (err) {
-      setError('Failed to load menu');
+      setError(t('selfService.failedToLoadMenu'));
     } finally {
       setLoading(false);
     }
@@ -136,7 +136,7 @@ export default function MenuPage() {
 
   const handleAddBundleToCart = async () => {
     if (!session) {
-      setError('Please scan the QR code to start ordering');
+      setError(t('selfService.scanToOrder'));
       return;
     }
 
@@ -149,7 +149,7 @@ export default function MenuPage() {
       });
       setShowBundleModal(false);
     } catch (err) {
-      setError('Failed to add combo to cart');
+      setError(t('selfService.failedToAddCombo'));
     } finally {
       setAddingToCart(false);
     }
@@ -171,7 +171,7 @@ export default function MenuPage() {
 
   const handleAddToCart = async () => {
     if (!session) {
-      setError('Please scan the QR code to start ordering');
+      setError(t('selfService.scanToOrder'));
       return;
     }
 
@@ -186,7 +186,7 @@ export default function MenuPage() {
       });
       setShowProductModal(false);
     } catch (err) {
-      setError('Failed to add item to cart');
+      setError(t('selfService.failedToAddItem'));
     } finally {
       setAddingToCart(false);
     }
@@ -234,7 +234,7 @@ export default function MenuPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
           <div className="text-red-500 text-6xl mb-4">!</div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('selfService.error')}</h2>
           <p className="text-gray-600">{error}</p>
         </div>
       </div>
@@ -518,7 +518,7 @@ export default function MenuPage() {
                   {product.preparationTime && (
                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
                       <Clock className="w-3 h-3" />
-                      {product.preparationTime} min
+                      {product.preparationTime} {t('selfService.prepTime')}
                     </div>
                   )}
                 </div>
