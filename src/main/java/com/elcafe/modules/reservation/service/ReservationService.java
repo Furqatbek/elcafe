@@ -89,7 +89,6 @@ public class ReservationService {
                 .table(table)
                 .customerName(request.getCustomerName())
                 .customerPhone(request.getCustomerPhone())
-                .customerEmail(request.getCustomerEmail())
                 .reservationDate(request.getReservationDate())
                 .reservationTime(request.getReservationTime())
                 .partySize(request.getPartySize())

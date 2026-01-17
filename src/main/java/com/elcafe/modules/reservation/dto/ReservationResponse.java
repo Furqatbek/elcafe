@@ -28,7 +28,6 @@ public class ReservationResponse {
 
     private String customerName;
     private String customerPhone;
-    private String customerEmail;
 
     private LocalDate reservationDate;
     private LocalTime reservationTime;
@@ -69,7 +68,6 @@ public class ReservationResponse {
                 .tableName(reservation.getTable() != null ? reservation.getTable().getTableName() : null)
                 .customerName(reservation.getCustomerName())
                 .customerPhone(reservation.getCustomerPhone())
-                .customerEmail(reservation.getCustomerEmail())
                 .reservationDate(reservation.getReservationDate())
                 .reservationTime(reservation.getReservationTime())
                 .endTime(reservation.getEndTime())
