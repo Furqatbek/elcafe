@@ -133,6 +133,8 @@ public class BundleResponse {
 
     public static BundleResponse from(Bundle bundle) {
         BigDecimal originalPrice = calculateOriginalPrice(bundle);
+        BigDecimal savingsAmount = calculateSavingsAmount(bundle, originalPrice);
+        BigDecimal savingsPercent = calculateSavingsPercent(bundle, originalPrice, savingsAmount);
 
         return BundleResponse.builder()
                 .id(bundle.getId())
@@ -143,9 +145,8 @@ public class BundleResponse {
                 .imageUrl(bundle.getImageUrl())
                 .bundlePrice(bundle.getBundlePrice())
                 .originalPrice(originalPrice)
-                .savingsAmount(bundle.getSavingsAmount() != null ? bundle.getSavingsAmount() :
-                        (originalPrice != null ? originalPrice.subtract(bundle.getBundlePrice()) : null))
-                .savingsPercent(bundle.getSavingsPercent())
+                .savingsAmount(savingsAmount)
+                .savingsPercent(savingsPercent)
                 .active(bundle.getActive())
                 .currentlyAvailable(bundle.isCurrentlyAvailable())
                 .availableFrom(bundle.getAvailableFrom() != null ? bundle.getAvailableFrom().toString() : null)
@@ -164,6 +165,35 @@ public class BundleResponse {
                 .createdAt(bundle.getCreatedAt())
                 .updatedAt(bundle.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * Calculate savings amount
+     */
+    private static BigDecimal calculateSavingsAmount(Bundle bundle, BigDecimal originalPrice) {
+        if (bundle.getSavingsAmount() != null) {
+            return bundle.getSavingsAmount();
+        }
+        if (originalPrice != null && bundle.getBundlePrice() != null) {
+            BigDecimal savings = originalPrice.subtract(bundle.getBundlePrice());
+            return savings.compareTo(BigDecimal.ZERO) > 0 ? savings : null;
+        }
+        return null;
+    }
+
+    /**
+     * Calculate savings percent
+     */
+    private static BigDecimal calculateSavingsPercent(Bundle bundle, BigDecimal originalPrice, BigDecimal savingsAmount) {
+        if (bundle.getSavingsPercent() != null) {
+            return bundle.getSavingsPercent();
+        }
+        if (savingsAmount != null && originalPrice != null && originalPrice.compareTo(BigDecimal.ZERO) > 0) {
+            return savingsAmount
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(originalPrice, 0, java.math.RoundingMode.HALF_UP);
+        }
+        return null;
     }
 
     /**
