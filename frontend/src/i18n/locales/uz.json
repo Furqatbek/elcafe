@@ -742,6 +742,37 @@
     "totalSegments": "Jami segmentlar",
     "description": "RFM tahlili va mijozlarni so'nggi faollik, chastota va xarid summasi bo'yicha segmentatsiya"
   },
+  "menuCollections": {
+    "title": "Menyu to'plamlari",
+    "subtitle": "Menyu to'plamlari va katalog elementlarini boshqarish",
+    "createNew": "To'plam yaratish",
+    "createDescription": "Mahsulotlarni tartibga solish uchun yangi menyu to'plami yaratish",
+    "noCollections": "Menyu to'plamlari topilmadi",
+    "name": "To'plam nomi",
+    "namePlaceholder": "masalan, Yozgi takliflar, Nonushta menyusi",
+    "description": "Tavsif",
+    "descriptionPlaceholder": "Bu to'plam haqida tasvirlang",
+    "imageUrl": "Rasm URL",
+    "startDate": "Boshlanish sanasi",
+    "endDate": "Tugash sanasi",
+    "sortOrder": "Tartiblash tartibi",
+    "products": "Mahsulotlar",
+    "productsInCollection": "To'plamdagi mahsulotlar",
+    "noProducts": "Bu to'plamda mahsulotlar yo'q",
+    "addProducts": "Mahsulot qo'shish",
+    "addProductsTo": "Mahsulot qo'shish",
+    "addProductsDescription": "Bu to'plamga qo'shish uchun mahsulotlarni tanlang",
+    "addProductsFailed": "Mahsulotlarni qo'shib bo'lmadi",
+    "productsSelected": "ta mahsulot tanlandi",
+    "addSelected": "Tanlanganlarni qo'shish",
+    "noAvailableProducts": "Mavjud mahsulotlar yo'q",
+    "start": "Boshi",
+    "end": "Oxiri",
+    "confirmDelete": "Bu to'plamni o'chirishni xohlaysizmi?",
+    "createFailed": "To'plamni yaratib bo'lmadi",
+    "deleteFailed": "To'plamni o'chirib bo'lmadi",
+    "featured": "Tanlangan"
+  },
   "couriers": {
     "title": "Kuryerlar",
     "description": "Yetkazib berish kuryerlarini va ularning hamyonlarini boshqarish",
@@ -979,6 +1010,36 @@
     "maxLength": "Maksimal uzunlik {{max}} belgi",
     "passwordMatch": "Parollar mos kelmaydi"
   },
+  "courier": {
+    "status": {
+      "online": "Onlayn",
+      "offline": "Oflayn",
+      "onDelivery": "Yetkazib berishda",
+      "busy": "Band"
+    },
+    "map": {
+      "title": "Kuryerlar xaritasi",
+      "subtitle": "Real vaqtda kuryerlarni kuzatish va holat monitoringi",
+      "lastUpdate": "So'nggi yangilanish",
+      "lastSeen": "So'nggi faollik",
+      "couriersList": "Barcha kuryerlar",
+      "noCouriers": "Kuryerlar topilmadi",
+      "neverSeen": "Hech qachon",
+      "justNow": "Hozirgina",
+      "minutesAgo": "{{minutes}} daq. oldin",
+      "hoursAgo": "{{hours}} soat oldin",
+      "stats": {
+        "online": "Onlayn",
+        "offline": "Oflayn",
+        "onDelivery": "Yetkazib berishda",
+        "busy": "Band"
+      },
+      "mapPlaceholder": {
+        "title": "Interaktiv xarita",
+        "description": "Kuryerlarni interaktiv xaritada ko'rish uchun react-leaflet o'rnating"
+      }
+    }
+  },
   "operators": {
     "title": "Operatorlar",
     "description": "Tizim operatorlarini va ularning kirishini boshqarish",
@@ -1032,6 +1093,74 @@
     "generatePasswordTitle": "Xavfsiz parol yaratish",
     "generate": "Yaratish",
     "passwordCopied": "Parol nusxalandi"
+  },
+  "kitchen": {
+    "title": "Oshxona paneli",
+    "subtitle": "Ovqat tayyorlash va buyurtmalarni bajarishni boshqarish",
+    "stats": {
+      "pending": "Kutilmoqda",
+      "preparing": "Tayyorlanmoqda",
+      "ready": "Tayyor",
+      "total": "Jami buyurtmalar"
+    },
+    "sections": {
+      "pending": "Kutilayotgan buyurtmalar",
+      "preparing": "Tayyorlanayotgan buyurtmalar",
+      "ready": "Olib ketishga tayyor"
+    },
+    "fields": {
+      "orderNumber": "Buyurtma №",
+      "items": "Mahsulotlar",
+      "priority": "Ustuvorlik",
+      "createdAt": "Yaratilgan",
+      "chefName": "Oshpaz ismi",
+      "startedAt": "Boshlangan",
+      "elapsed": "O'tgan vaqt",
+      "estimatedTime": "Taxminiy vaqt",
+      "preparedBy": "Tayyorlagan",
+      "prepTime": "Tayyorlash vaqti"
+    },
+    "actions": {
+      "start": "Tayyorlashni boshlash",
+      "markReady": "Tayyor deb belgilash",
+      "markPickedUp": "Berilgan deb belgilash",
+      "changePriority": "Ustuvorlikni o'zgartirish",
+      "startPreparation": "Tayyorlashni boshlash"
+    },
+    "status": {
+      "PENDING": "Kutilmoqda",
+      "PREPARING": "Tayyorlanmoqda",
+      "READY": "Tayyor",
+      "PICKED_UP": "Berildi"
+    },
+    "priority": {
+      "URGENT": "Shoshilinch",
+      "HIGH": "Yuqori",
+      "NORMAL": "Oddiy",
+      "LOW": "Past"
+    },
+    "modals": {
+      "startPreparation": {
+        "title": "Tayyorlashni boshlash",
+        "description": "Bu buyurtmani tayyorlaydigan oshpaz ismini kiriting",
+        "chefNameLabel": "Oshpaz ismi",
+        "chefNamePlaceholder": "masalan, Alisher Karimov"
+      },
+      "changePriority": {
+        "title": "Ustuvorlikni o'zgartirish",
+        "description": "Bu buyurtma uchun yangi ustuvorlik darajasini tanlang"
+      }
+    },
+    "errors": {
+      "loadFailed": "Oshxona buyurtmalarini yuklab bo'lmadi",
+      "startFailed": "Tayyorlashni boshlab bo'lmadi",
+      "markReadyFailed": "Buyurtmani tayyor deb belgilab bo'lmadi",
+      "markPickedUpFailed": "Buyurtmani berilgan deb belgilab bo'lmadi",
+      "changePriorityFailed": "Ustuvorlikni o'zgartirib bo'lmadi"
+    },
+    "empty": {
+      "noOrders": "Bu bo'limda buyurtmalar yo'q"
+    }
   },
   "waiters": {
     "permissions": {
@@ -2960,6 +3089,82 @@
     "termsPlaceholder": "Referal dasturi shartlarini kiriting...",
     "optional": "Ixtiyoriy",
     "unlimited": "Cheklanmagan"
+  },
+  "sms": {
+    "title": "SMS Marketing",
+    "description": "SMS kampaniyalar, shablonlar va avtomatlashtirish boshqaruvi",
+    "tabs": {
+      "campaigns": "Kampaniyalar",
+      "templates": "Shablonlar",
+      "automation": "Avtomatlashtirish",
+      "statistics": "Statistika"
+    },
+    "campaigns": {
+      "title": "SMS Kampaniyalar",
+      "description": "Ommaviy SMS kampaniyalarini yaratish va boshqarish",
+      "create": "Yangi kampaniya",
+      "edit": "Kampaniyani tahrirlash",
+      "name": "Kampaniya nomi",
+      "namePlaceholder": "Kampaniya nomini kiriting",
+      "descriptionPlaceholder": "Kampaniya tavsifini kiriting",
+      "audience": "Maqsadli auditoriya",
+      "recipients": "Qabul qiluvchilar",
+      "status": "Holat",
+      "sent": "Yuborilgan",
+      "message": "Xabar",
+      "messagePlaceholder": "Xabaringizni kiriting. Shaxsiylashtirish uchun {name} dan foydalaning",
+      "placeholderHint": "Shaxsiylashtirish uchun {name}, {phone} dan foydalaning",
+      "modalDescription": "Mijozlaringizga yuborish uchun yangi SMS kampaniyasini yarating",
+      "empty": "Hali kampaniyalar yo'q. Boshlash uchun birinchi kampaniyani yarating.",
+      "confirmDelete": "Bu kampaniyani o'chirishni xohlaysizmi?",
+      "created": "Kampaniya muvaffaqiyatli yaratildi",
+      "updated": "Kampaniya muvaffaqiyatli yangilandi",
+      "deleted": "Kampaniya muvaffaqiyatli o'chirildi",
+      "sending": "Kampaniya yuborilmoqda",
+      "cancelled": "Kampaniya bekor qilindi"
+    },
+    "templates": {
+      "title": "SMS Shablonlar",
+      "description": "Qayta foydalanish mumkin bo'lgan SMS xabar shablonlarini yaratish",
+      "create": "Yangi shablon",
+      "edit": "Shablonni tahrirlash",
+      "name": "Shablon nomi",
+      "namePlaceholder": "Shablon nomini kiriting",
+      "type": "Shablon turi",
+      "content": "Xabar matni",
+      "contentPlaceholder": "Shablon matnini kiriting",
+      "descriptionPlaceholder": "Shablon tavsifini kiriting",
+      "usage": "Foydalanish soni",
+      "status": "Holat",
+      "placeholderHint": "O'rinbosar uchun {name}, {phone}, {amount}, {code} dan foydalaning",
+      "modalDescription": "Qayta foydalanish mumkin bo'lgan SMS shablonini yarating",
+      "empty": "Hali shablonlar yo'q. Boshlash uchun birinchi shablonni yarating.",
+      "confirmDelete": "Bu shablonni o'chirishni xohlaysizmi?",
+      "created": "Shablon muvaffaqiyatli yaratildi",
+      "updated": "Shablon muvaffaqiyatli yangilandi",
+      "deleted": "Shablon muvaffaqiyatli o'chirildi",
+      "toggled": "Shablon holati yangilandi"
+    },
+    "stats": {
+      "totalSent": "Jami yuborilgan",
+      "delivered": "Yetkazilgan",
+      "pending": "Kutilmoqda",
+      "failed": "Muvaffaqiyatsiz",
+      "deliveryRate": "Yetkazish foizi",
+      "deliveryRateDescription": "Muvaffaqiyatli yetkazilgan xabarlar foizi"
+    },
+    "errors": {
+      "loadCampaigns": "Kampaniyalarni yuklab bo'lmadi",
+      "loadTemplates": "Shablonlarni yuklab bo'lmadi",
+      "loadStats": "Statistikani yuklab bo'lmadi",
+      "saveCampaign": "Kampaniyani saqlab bo'lmadi",
+      "sendCampaign": "Kampaniyani yuborib bo'lmadi",
+      "cancelCampaign": "Kampaniyani bekor qilib bo'lmadi",
+      "deleteCampaign": "Kampaniyani o'chirib bo'lmadi",
+      "saveTemplate": "Shablonni saqlab bo'lmadi",
+      "toggleTemplate": "Shablonni almashtira bo'lmadi",
+      "deleteTemplate": "Shablonni o'chirib bo'lmadi"
+    }
   },
   "telegram": {
     "title": "Telegram Marketing",
