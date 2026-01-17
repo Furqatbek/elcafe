@@ -181,6 +181,10 @@ telegram:
     enabled: ${TELEGRAM_BOT_ENABLED:true}
     token: ${TELEGRAM_BOT_TOKEN:}
     username: ${TELEGRAM_BOT_USERNAME:}
+  owner-bot:
+    enabled: ${TELEGRAM_OWNER_BOT_ENABLED:true}
+    token: ${TELEGRAM_OWNER_BOT_TOKEN:}
+    username: ${TELEGRAM_OWNER_BOT_USERNAME:}
 
 # Stock Alert Configuration
 stock-alert:
