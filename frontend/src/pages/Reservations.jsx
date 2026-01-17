@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { reservationAPI, tablesAPI } from '../services/api';
+import { useNotificationStore } from '../store/notificationStore';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
@@ -61,6 +62,12 @@ export default function Reservations() {
   const [loading, setLoading] = useState(true);
   const [newReservationAlert, setNewReservationAlert] = useState(null);
   const previousReservationIds = useRef(new Set());
+  const { clearUnreadReservations, addUnreadReservation } = useNotificationStore();
+
+  // Clear unread count when user visits this page
+  useEffect(() => {
+    clearUnreadReservations();
+  }, [clearUnreadReservations]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedReservation, setSelectedReservation] = useState(null);
@@ -117,11 +124,15 @@ export default function Reservations() {
         // Show alert for new reservation
         const newest = newOnes[0];
         setNewReservationAlert({
+          id: newest.id,
           customerName: newest.customerName,
           reservationDate: newest.reservationDate,
           reservationTime: newest.reservationTime,
           partySize: newest.partySize,
         });
+
+        // Add to unread count (for nav badge)
+        addUnreadReservation();
 
         // Play notification sound
         try {

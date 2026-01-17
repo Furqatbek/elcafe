@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
+import { useNotificationStore } from '../store/notificationStore';
 import { Button } from './ui/button';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import PushPermissionPrompt from './PushPermissionPrompt';
@@ -69,6 +70,7 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuthStore();
+  const { unreadReservations } = useNotificationStore();
   const [expandedMenus, setExpandedMenus] = useState({});
 
   const handleLogout = () => {
@@ -119,11 +121,12 @@ export default function Layout() {
       label: t('nav.restaurant'),
       icon: Store,
       path: '/restaurants/tables',
+      badge: unreadReservations,
       subItems: [
         { label: t('nav.sub.branches'), icon: Grid, path: '/restaurants' },
         { label: t('nav.sub.tables'), icon: Table, path: '/restaurants/tables' },
         { label: t('nav.sub.workingHours'), icon: Clock, path: '/restaurants/working-hours' },
-        { label: t('nav.sub.reservations', 'Reservations'), icon: Calendar, path: '/restaurants/reservations' },
+        { label: t('nav.sub.reservations', 'Reservations'), icon: Calendar, path: '/restaurants/reservations', badge: unreadReservations },
       ],
     },
     {
@@ -283,14 +286,28 @@ export default function Layout() {
                         }`}
                       >
                         <div className="flex items-center space-x-3">
-                          <item.icon className="h-5 w-5" />
+                          <div className="relative">
+                            <item.icon className="h-5 w-5" />
+                            {item.badge > 0 && !expandedMenus[item.id] && (
+                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                                {item.badge > 9 ? '!' : item.badge}
+                              </span>
+                            )}
+                          </div>
                           <span>{item.label}</span>
                         </div>
-                        {expandedMenus[item.id] ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
+                        <div className="flex items-center space-x-2">
+                          {item.badge > 0 && expandedMenus[item.id] && (
+                            <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
+                          {expandedMenus[item.id] ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </div>
                       </button>
 
                       {/* Sub-menu */}
@@ -300,14 +317,21 @@ export default function Layout() {
                             <li key={idx}>
                               <Link
                                 to={subItem.path}
-                                className={`flex items-center space-x-3 px-3 py-2 text-sm rounded-lg transition-colors ${
+                                className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors ${
                                   isActive(subItem.path)
                                     ? 'bg-blue-50 text-blue-700'
                                     : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                               >
-                                <subItem.icon className="h-4 w-4" />
-                                <span>{subItem.label}</span>
+                                <div className="flex items-center space-x-3">
+                                  <subItem.icon className="h-4 w-4" />
+                                  <span>{subItem.label}</span>
+                                </div>
+                                {subItem.badge > 0 && (
+                                  <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center animate-pulse">
+                                    {subItem.badge > 99 ? '99+' : subItem.badge}
+                                  </span>
+                                )}
                               </Link>
                             </li>
                           ))}
