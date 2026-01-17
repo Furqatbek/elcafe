@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCustomer } from './CustomerContext';
 import { selfServiceAPI } from '../../services/api';
 import {
@@ -18,6 +19,7 @@ import {
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { session, cart, submitOrder } = useCustomer();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -60,10 +62,10 @@ export default function CheckoutPage() {
         });
         setCouponCode('');
       } else {
-        setCouponError(data.errorMessage || 'Invalid coupon code');
+        setCouponError(data.errorMessage || t('selfService.invalidCoupon'));
       }
     } catch (err) {
-      setCouponError(err.response?.data?.message || 'Failed to validate coupon');
+      setCouponError(err.response?.data?.message || t('selfService.failedToValidateCoupon'));
     } finally {
       setCouponValidating(false);
     }
@@ -93,7 +95,7 @@ export default function CheckoutPage() {
       });
       navigate(`/${result.orderId}/status`, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit order');
+      setError(err.response?.data?.message || t('selfService.failedToSubmitOrder'));
     } finally {
       setSubmitting(false);
     }
@@ -104,8 +106,8 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-orange-500" />
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">No Active Session</h2>
-          <p className="text-gray-600 mb-4">Please scan the QR code at your table to start ordering.</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('selfService.noActiveSession')}</h2>
+          <p className="text-gray-600 mb-4">{t('selfService.scanQrCodeMessage')}</p>
         </div>
       </div>
     );
@@ -116,13 +118,13 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
           <ShoppingBag className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Cart is Empty</h2>
-          <p className="text-gray-600 mb-4">Add some items to your cart before checkout.</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('selfService.cartIsEmpty')}</h2>
+          <p className="text-gray-600 mb-4">{t('selfService.addItemsBeforeCheckout')}</p>
           <button
             onClick={() => navigate(-1)}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700"
           >
-            Browse Menu
+            {t('selfService.browseMenu')}
           </button>
         </div>
       </div>
@@ -141,7 +143,7 @@ export default function CheckoutPage() {
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-lg font-bold text-gray-900">Checkout</h1>
+            <h1 className="text-lg font-bold text-gray-900">{t('selfService.checkout')}</h1>
           </div>
         </div>
       </div>
@@ -163,15 +165,15 @@ export default function CheckoutPage() {
           <div className="bg-blue-50 rounded-lg p-4 flex items-center gap-3">
             <UtensilsCrossed className="w-6 h-6 text-blue-600" />
             <div>
-              <p className="text-sm text-blue-600">Your Table</p>
-              <p className="font-bold text-blue-800">Table {session.tableNumber}</p>
+              <p className="text-sm text-blue-600">{t('selfService.yourTable')}</p>
+              <p className="font-bold text-blue-800">{t('selfService.table')} {session.tableNumber}</p>
             </div>
           </div>
         )}
 
         {/* Order Type */}
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">Order Type</h2>
+          <h2 className="font-semibold text-gray-900 mb-3">{t('selfService.orderType')}</h2>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setOrderType('DINE_IN')}
@@ -186,7 +188,7 @@ export default function CheckoutPage() {
               }`} />
               <span className={`font-medium ${
                 orderType === 'DINE_IN' ? 'text-blue-600' : 'text-gray-700'
-              }`}>Dine In</span>
+              }`}>{t('selfService.dineIn')}</span>
             </button>
             <button
               onClick={() => setOrderType('TAKEAWAY')}
@@ -201,20 +203,20 @@ export default function CheckoutPage() {
               }`} />
               <span className={`font-medium ${
                 orderType === 'TAKEAWAY' ? 'text-blue-600' : 'text-gray-700'
-              }`}>Takeaway</span>
+              }`}>{t('selfService.takeaway')}</span>
             </button>
           </div>
         </div>
 
         {/* Customer Info (Optional) */}
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">Your Details (Optional)</h2>
+          <h2 className="font-semibold text-gray-900 mb-3">{t('selfService.yourDetailsOptional')}</h2>
           <div className="space-y-3">
             <div className="relative">
               <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Your name"
+                placeholder={t('selfService.yourName')}
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -224,7 +226,7 @@ export default function CheckoutPage() {
               <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="tel"
-                placeholder="Phone number"
+                placeholder={t('selfService.phoneNumber')}
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -235,11 +237,11 @@ export default function CheckoutPage() {
 
         {/* Special Instructions */}
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">Order Notes (Optional)</h2>
+          <h2 className="font-semibold text-gray-900 mb-3">{t('selfService.orderNotesOptional')}</h2>
           <div className="relative">
             <MessageSquare className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
             <textarea
-              placeholder="Any special requests for your order?"
+              placeholder={t('selfService.orderNotesPlaceholder')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
@@ -250,7 +252,7 @@ export default function CheckoutPage() {
 
         {/* Coupon Code */}
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">Coupon Code</h2>
+          <h2 className="font-semibold text-gray-900 mb-3">{t('selfService.couponCode')}</h2>
           {appliedCoupon ? (
             <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3">
               <div className="flex items-center gap-2">
@@ -258,7 +260,7 @@ export default function CheckoutPage() {
                 <div>
                   <p className="font-medium text-green-800">{appliedCoupon.code}</p>
                   <p className="text-sm text-green-600">
-                    {appliedCoupon.promotionName} - Save {formatPrice(appliedCoupon.discount)}
+                    {appliedCoupon.promotionName} - {t('selfService.save')} {formatPrice(appliedCoupon.discount)}
                   </p>
                 </div>
               </div>
@@ -276,7 +278,7 @@ export default function CheckoutPage() {
                   <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="text"
-                    placeholder="Enter coupon code"
+                    placeholder={t('selfService.enterCouponCode')}
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                     onKeyDown={(e) => e.key === 'Enter' && handleValidateCoupon()}
@@ -291,7 +293,7 @@ export default function CheckoutPage() {
                   {couponValidating ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    'Apply'
+                    t('selfService.apply')
                   )}
                 </button>
               </div>
@@ -307,7 +309,7 @@ export default function CheckoutPage() {
 
         {/* Order Summary */}
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">Order Summary</h2>
+          <h2 className="font-semibold text-gray-900 mb-3">{t('selfService.orderSummary')}</h2>
           <div className="space-y-2">
             {cart.items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
@@ -320,17 +322,17 @@ export default function CheckoutPage() {
             ))}
             <div className="border-t pt-2 mt-2 space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal</span>
+                <span className="text-gray-600">{t('selfService.subtotal')}</span>
                 <span>{formatPrice(cart.total)}</span>
               </div>
               {appliedCoupon && (
                 <div className="flex justify-between text-sm text-green-600">
-                  <span>Discount ({appliedCoupon.code})</span>
+                  <span>{t('selfService.discount')} ({appliedCoupon.code})</span>
                   <span>-{formatPrice(appliedCoupon.discount)}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-lg pt-1">
-                <span>Total</span>
+                <span>{t('selfService.total')}</span>
                 <span className="text-blue-600">{formatPrice(getFinalTotal())}</span>
               </div>
             </div>
@@ -349,12 +351,12 @@ export default function CheckoutPage() {
             {submitting ? (
               <>
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                Placing Order...
+                {t('selfService.placingOrder')}
               </>
             ) : (
               <>
                 <CheckCircle className="w-5 h-5" />
-                Place Order - {formatPrice(getFinalTotal())}
+                {t('selfService.placeOrder')} - {formatPrice(getFinalTotal())}
               </>
             )}
           </button>

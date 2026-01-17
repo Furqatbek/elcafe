@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCustomer } from './CustomerContext';
 import {
   ChevronLeft,
@@ -12,6 +13,7 @@ import {
 
 export default function CartPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { session, cart, updateCartItem, removeFromCart, clearCart, loading } = useCustomer();
   const [updating, setUpdating] = useState(null);
   const [error, setError] = useState(null);
@@ -29,7 +31,7 @@ export default function CartPage() {
     try {
       await updateCartItem(itemId, newQuantity);
     } catch (err) {
-      setError('Failed to update quantity');
+      setError(t('selfService.failedToUpdateQty'));
     } finally {
       setUpdating(null);
     }
@@ -40,18 +42,18 @@ export default function CartPage() {
     try {
       await removeFromCart(itemId);
     } catch (err) {
-      setError('Failed to remove item');
+      setError(t('selfService.failedToRemoveItem'));
     } finally {
       setUpdating(null);
     }
   };
 
   const handleClearCart = async () => {
-    if (!window.confirm('Remove all items from cart?')) return;
+    if (!window.confirm(t('selfService.confirmClearCart'))) return;
     try {
       await clearCart();
     } catch (err) {
-      setError('Failed to clear cart');
+      setError(t('selfService.failedToClearCart'));
     }
   };
 
@@ -60,8 +62,8 @@ export default function CartPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-orange-500" />
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">No Active Session</h2>
-          <p className="text-gray-600 mb-4">Please scan the QR code at your table to start ordering.</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('selfService.noActiveSession')}</h2>
+          <p className="text-gray-600 mb-4">{t('selfService.scanQrCodeMessage')}</p>
         </div>
       </div>
     );
@@ -78,15 +80,15 @@ export default function CartPage() {
               className="flex items-center gap-2 text-gray-600"
             >
               <ChevronLeft className="w-5 h-5" />
-              <span>Back</span>
+              <span>{t('selfService.back')}</span>
             </button>
-            <h1 className="text-lg font-bold text-gray-900">Your Cart</h1>
+            <h1 className="text-lg font-bold text-gray-900">{t('selfService.yourCart')}</h1>
             {cart.items.length > 0 && (
               <button
                 onClick={handleClearCart}
                 className="text-red-600 text-sm"
               >
-                Clear
+                {t('selfService.clear')}
               </button>
             )}
           </div>
@@ -111,13 +113,13 @@ export default function CartPage() {
         {cart.items.length === 0 ? (
           <div className="text-center py-12">
             <ShoppingBag className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Your cart is empty</h2>
-            <p className="text-gray-600 mb-6">Add some delicious items from the menu</p>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('selfService.emptyCartTitle')}</h2>
+            <p className="text-gray-600 mb-6">{t('selfService.emptyCartMessage')}</p>
             <button
               onClick={() => navigate(-1)}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700"
             >
-              Browse Menu
+              {t('selfService.browseMenu')}
             </button>
           </div>
         ) : (
@@ -195,11 +197,11 @@ export default function CartPage() {
             {/* Summary */}
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-gray-600">
-                <span>Subtotal ({cart.itemCount} items)</span>
+                <span>{t('selfService.subtotal')} ({cart.itemCount} {t('selfService.items')})</span>
                 <span>{formatPrice(cart.total)}</span>
               </div>
               <div className="flex justify-between font-bold text-lg text-gray-900">
-                <span>Total</span>
+                <span>{t('selfService.total')}</span>
                 <span>{formatPrice(cart.total)}</span>
               </div>
             </div>
@@ -209,7 +211,7 @@ export default function CartPage() {
               onClick={() => navigate('/checkout')}
               className="w-full bg-blue-600 text-white rounded-lg py-4 font-semibold hover:bg-blue-700 transition-colors"
             >
-              Proceed to Checkout
+              {t('selfService.proceedToCheckout')}
             </button>
           </div>
         </div>
