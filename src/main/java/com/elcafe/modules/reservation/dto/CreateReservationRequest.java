@@ -24,7 +24,7 @@ public class CreateReservationRequest {
     private String customerPhone;
 
     @NotNull(message = "Reservation date is required")
-    @Future(message = "Reservation date must be in the future")
+    @FutureOrPresent(message = "Reservation date cannot be in the past")
     private LocalDate reservationDate;
 
     @NotNull(message = "Reservation time is required")
