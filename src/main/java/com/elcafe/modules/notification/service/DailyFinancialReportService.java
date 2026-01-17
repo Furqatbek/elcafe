@@ -143,9 +143,25 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Send daily report to a subscriber
+     * Send daily report to a subscriber (scheduled - updates lastReportDate)
      */
     private void sendDailyReport(FinancialAlertSubscription subscription, DailyMetrics metrics, LocalDate reportDate) {
+        sendReport(subscription, metrics, reportDate, true);
+    }
+
+    /**
+     * Send daily report to a subscriber (manual - does NOT update lastReportDate)
+     */
+    private void sendManualReport(FinancialAlertSubscription subscription, DailyMetrics metrics, LocalDate reportDate) {
+        sendReport(subscription, metrics, reportDate, false);
+    }
+
+    /**
+     * Send report to a subscriber
+     * @param updateLastReportDate if true, updates lastReportDate to prevent duplicate scheduled sends
+     */
+    private void sendReport(FinancialAlertSubscription subscription, DailyMetrics metrics,
+                           LocalDate reportDate, boolean updateLastReportDate) {
         try {
             String message = formatDailyReport(subscription, metrics);
 
@@ -153,17 +169,20 @@ public class DailyFinancialReportService {
 
             if (messageId != null) {
                 subscription.setLastReportSentAt(LocalDateTime.now());
-                // Use CALENDAR date (not business day) to prevent duplicate sends
-                // For shifts crossing midnight, business day might be yesterday,
-                // but we should only send one report per calendar day
-                subscription.setLastReportDate(LocalDate.now());
+                if (updateLastReportDate) {
+                    // Use CALENDAR date (not business day) to prevent duplicate sends
+                    // For shifts crossing midnight, business day might be yesterday,
+                    // but we should only send one report per calendar day
+                    subscription.setLastReportDate(LocalDate.now());
+                }
                 subscriptionRepository.save(subscription);
 
-                log.info("Daily financial report sent to chatId {} for restaurant {} (business day: {})",
-                    subscription.getTelegramChatId(), metrics.restaurantName(), reportDate);
+                String reportType = updateLastReportDate ? "Scheduled" : "Manual";
+                log.info("{} financial report sent to chatId {} for restaurant {} (business day: {})",
+                    reportType, subscription.getTelegramChatId(), metrics.restaurantName(), reportDate);
             }
         } catch (Exception e) {
-            log.error("Failed to send daily report to chatId {}: {}",
+            log.error("Failed to send report to chatId {}: {}",
                 subscription.getTelegramChatId(), e.getMessage());
         }
     }
@@ -235,7 +254,8 @@ public class DailyFinancialReportService {
     }
 
     /**
-     * Manually trigger daily report for a specific restaurant
+     * Manually trigger daily report for a specific restaurant.
+     * Does NOT update lastReportDate, so scheduled reports will still be sent at the configured time.
      */
     @Transactional
     public void triggerReportForRestaurant(Long restaurantId) {
@@ -252,7 +272,7 @@ public class DailyFinancialReportService {
         }
 
         for (FinancialAlertSubscription subscription : subscriptions) {
-            sendDailyReport(subscription, metrics, businessDay);
+            sendManualReport(subscription, metrics, businessDay);
         }
 
         log.info("Manual financial report triggered for restaurant: {}", metrics.restaurantName());
