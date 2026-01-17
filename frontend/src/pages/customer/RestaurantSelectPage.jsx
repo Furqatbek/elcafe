@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { reservationPublicAPI } from '../../services/api';
+import LanguageSelector from './LanguageSelector';
 import {
   MapPin,
   Phone,
@@ -11,6 +13,7 @@ import {
 
 export default function RestaurantSelectPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [restaurants, setRestaurants] = useState([]);
@@ -48,12 +51,12 @@ export default function RestaurantSelectPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
-          <p className="text-red-600">{error}</p>
+          <p className="text-red-600">{t('customerReservation.loadError')}</p>
           <button
             onClick={fetchRestaurants}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            Try Again
+            {t('customerReservation.tryAgain')}
           </button>
         </div>
       </div>
@@ -63,23 +66,26 @@ export default function RestaurantSelectPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-sm sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Calendar className="h-6 w-6 text-blue-600" />
-            <h1 className="text-xl font-semibold text-gray-800">Reserve a Table</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Calendar className="h-6 w-6" />
+              <h1 className="text-xl font-semibold">{t('customerReservation.title')}</h1>
+            </div>
+            <LanguageSelector />
           </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-6">
-        <p className="text-gray-600 mb-6">Select a restaurant to make a reservation</p>
+        <p className="text-gray-600 mb-6">{t('customerReservation.selectRestaurant')}</p>
 
         {restaurants.length === 0 ? (
           <div className="bg-white rounded-lg shadow-lg p-6 text-center">
             <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-gray-600">No restaurants available for reservations at the moment.</p>
+            <p className="text-gray-600">{t('customerReservation.noRestaurants')}</p>
           </div>
         ) : (
           <div className="space-y-4">

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { selfServiceAPI } from '../../services/api';
 import { useCustomer } from './CustomerContext';
+import LanguageSelector from './LanguageSelector';
 import {
   ShoppingCart,
   Plus,
@@ -26,6 +28,7 @@ export default function MenuPage() {
   const { restaurantId, tableCode } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { session, cart, startSession, addToCart, loading: sessionLoading } = useCustomer();
 
   const [restaurant, setRestaurant] = useState(null);
@@ -241,30 +244,33 @@ export default function MenuPage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-40">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-sm sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">{restaurant?.name}</h1>
-              {session?.tableNumber && (
-                <p className="text-sm text-gray-500">Table {session.tableNumber}</p>
-              )}
-            </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate(`/reserve/${restaurantId}`)}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-              >
-                <CalendarDays className="w-4 h-4" />
-                Reserve
-              </button>
               {restaurant?.logoUrl && (
                 <img
                   src={restaurant.logoUrl}
                   alt={restaurant.name}
-                  className="w-10 h-10 rounded-full object-cover"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white/30"
                 />
               )}
+              <div>
+                <h1 className="text-lg font-bold">{restaurant?.name}</h1>
+                {session?.tableNumber && (
+                  <p className="text-sm opacity-80">{t('selfService.table')} {session.tableNumber}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate(`/reserve/${restaurantId}`)}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
+              >
+                <CalendarDays className="w-4 h-4" />
+                {t('selfService.reserve')}
+              </button>
+              <LanguageSelector />
             </div>
           </div>
         </div>
@@ -280,19 +286,19 @@ export default function MenuPage() {
                 <Sparkles className="w-5 h-5 flex-shrink-0" />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-sm">Happy Hour Active!</p>
+                    <p className="font-bold text-sm">{t('selfService.happyHourActive')}</p>
                     {activeHappyHour.remainingMinutes && (
                       <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Timer className="w-3 h-3" />
-                        {activeHappyHour.remainingMinutes} min left
+                        {activeHappyHour.remainingMinutes} {t('selfService.minLeft')}
                       </span>
                     )}
                   </div>
                   <p className="text-xs opacity-90">
-                    {activeHappyHour.discountPercent}% off
+                    {activeHappyHour.discountPercent}% {t('selfService.off')}
                     {activeHappyHour.applicableProducts?.length > 0
-                      ? ` on ${activeHappyHour.applicableProducts.length} items`
-                      : ' on selected items'}
+                      ? ` ${t('selfService.onItems', { count: activeHappyHour.applicableProducts.length })}`
+                      : ` ${t('selfService.onSelectedItems')}`}
                   </p>
                 </div>
                 <Clock className="w-4 h-4 opacity-75 flex-shrink-0" />
@@ -321,11 +327,11 @@ export default function MenuPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm">{promo.name}</p>
                   <p className="text-xs opacity-90">
-                    {promo.type === 'PERCENTAGE' && `${promo.discountValue}% off`}
-                    {promo.type === 'FIXED_AMOUNT' && `Save ${formatPrice(promo.discountValue)}`}
-                    {promo.type === 'BUY_X_GET_Y' && `Buy ${promo.buyQuantity || 'X'}, get ${promo.getQuantity || 'Y'} free!`}
-                    {promo.type === 'FREE_ITEM' && 'Get a free item!'}
-                    {promo.minOrderAmount > 0 && ` • Min: ${formatPrice(promo.minOrderAmount)}`}
+                    {promo.type === 'PERCENTAGE' && `${promo.discountValue}% ${t('selfService.off')}`}
+                    {promo.type === 'FIXED_AMOUNT' && `${t('selfService.save')} ${formatPrice(promo.discountValue)}`}
+                    {promo.type === 'BUY_X_GET_Y' && t('selfService.buyXGetY', { buyQty: promo.buyQuantity || 'X', getQty: promo.getQuantity || 'Y' })}
+                    {promo.type === 'FREE_ITEM' && t('selfService.getFreeItem')}
+                    {promo.minOrderAmount > 0 && ` • ${t('selfService.minOrder')}: ${formatPrice(promo.minOrderAmount)}`}
                   </p>
                   {promo.description && (
                     <p className="text-xs opacity-75 truncate">{promo.description}</p>
@@ -346,7 +352,7 @@ export default function MenuPage() {
                       </div>
                     )}
                     <div className="text-right">
-                      <p className="text-xs font-medium">FREE</p>
+                      <p className="text-xs font-medium">{t('selfService.free')}</p>
                       <p className="text-xs opacity-75 max-w-[80px] truncate">{promo.freeProduct.name}</p>
                     </div>
                   </div>
@@ -366,7 +372,7 @@ export default function MenuPage() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            placeholder="Search menu..."
+            placeholder={t('selfService.searchMenu')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -396,7 +402,7 @@ export default function MenuPage() {
               }`}
             >
               <Package className="w-4 h-4" />
-              Combos
+              {t('selfService.combos')}
             </button>
           )}
           {categories.map((category) => (
@@ -426,7 +432,7 @@ export default function MenuPage() {
           bundles.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>No combos available</p>
+              <p>{t('selfService.noCombos')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -439,12 +445,12 @@ export default function MenuPage() {
                   {/* Combo Badge */}
                   <div className="absolute top-2 left-2 z-10 bg-orange-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
                     <Package className="w-3 h-3" />
-                    Combo
+                    {t('selfService.combo')}
                   </div>
                   {/* Savings Badge */}
                   {bundle.savingsPercent > 0 && (
                     <div className="absolute top-2 right-2 z-10 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                      Save {bundle.savingsPercent}%
+                      {t('selfService.save')} {bundle.savingsPercent}%
                     </div>
                   )}
                   {bundle.imageUrl ? (
@@ -483,7 +489,7 @@ export default function MenuPage() {
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <UtensilsCrossed className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>No items found</p>
+            <p>{t('selfService.noItems')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -533,7 +539,7 @@ export default function MenuPage() {
               <div className="bg-white/20 rounded-full p-2">
                 <ShoppingCart className="w-5 h-5" />
               </div>
-              <span className="font-medium">{cart.itemCount} items</span>
+              <span className="font-medium">{cart.itemCount} {t('selfService.items')}</span>
             </div>
             <span className="font-bold">{formatPrice(cart.total)}</span>
           </button>
@@ -584,7 +590,7 @@ export default function MenuPage() {
               {/* Variants */}
               {selectedProduct.variants && selectedProduct.variants.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Choose Option</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">{t('selfService.chooseOption')}</h3>
                   <div className="space-y-2">
                     {selectedProduct.variants.map((variant) => (
                       <button
@@ -608,7 +614,7 @@ export default function MenuPage() {
               {/* Modifiers */}
               {selectedProduct.modifiers && selectedProduct.modifiers.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Add-ons (Optional)</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">{t('selfService.addons')}</h3>
                   <div className="space-y-2">
                     {selectedProduct.modifiers.map((modifier) => (
                       <button
@@ -631,11 +637,11 @@ export default function MenuPage() {
               {/* Special Instructions */}
               {restaurant?.allowSpecialInstructions && (
                 <div className="mt-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">Special Instructions</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">{t('selfService.specialInstructions')}</h3>
                   <textarea
                     value={specialInstructions}
                     onChange={(e) => setSpecialInstructions(e.target.value)}
-                    placeholder="Any special requests?"
+                    placeholder={t('selfService.specialRequestsPlaceholder')}
                     className="w-full p-3 border rounded-lg resize-none"
                     rows={2}
                   />
@@ -644,7 +650,7 @@ export default function MenuPage() {
 
               {/* Quantity */}
               <div className="mt-4 flex items-center justify-between">
-                <span className="font-semibold text-gray-900">Quantity</span>
+                <span className="font-semibold text-gray-900">{t('selfService.quantity')}</span>
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -673,7 +679,7 @@ export default function MenuPage() {
                 ) : (
                   <>
                     <ShoppingCart className="w-5 h-5" />
-                    Add to Cart - {formatPrice(calculateItemPrice())}
+                    {t('selfService.addToCart')} - {formatPrice(calculateItemPrice())}
                   </>
                 )}
               </button>
@@ -703,7 +709,7 @@ export default function MenuPage() {
                 {/* Combo Badge */}
                 <div className="absolute top-4 left-4 bg-orange-500 text-white text-sm px-3 py-1 rounded-full flex items-center gap-1">
                   <Package className="w-4 h-4" />
-                  Combo Deal
+                  {t('selfService.comboDeal')}
                 </div>
               </div>
             ) : (
@@ -737,7 +743,7 @@ export default function MenuPage() {
                     </p>
                     {selectedBundle.savingsPercent > 0 && (
                       <span className="bg-green-100 text-green-700 text-sm px-2 py-1 rounded">
-                        Save {selectedBundle.savingsPercent}%
+                        {t('selfService.save')} {selectedBundle.savingsPercent}%
                       </span>
                     )}
                   </>
@@ -747,7 +753,7 @@ export default function MenuPage() {
               {/* Bundle Items */}
               {selectedBundle.items && selectedBundle.items.length > 0 && (
                 <div className="mt-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">What's Included</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">{t('selfService.whatsIncluded')}</h3>
                   <div className="space-y-2">
                     {selectedBundle.items.map((item, index) => (
                       <div
@@ -767,7 +773,7 @@ export default function MenuPage() {
                         )}
                         <div className="flex-1">
                           <p className="font-medium text-sm">{item.product?.name || item.productName}</p>
-                          <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                          <p className="text-xs text-gray-500">{t('selfService.qty')}: {item.quantity}</p>
                         </div>
                       </div>
                     ))}
@@ -777,7 +783,7 @@ export default function MenuPage() {
 
               {/* Quantity */}
               <div className="mt-4 flex items-center justify-between">
-                <span className="font-semibold text-gray-900">Quantity</span>
+                <span className="font-semibold text-gray-900">{t('selfService.quantity')}</span>
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => setBundleQuantity(Math.max(1, bundleQuantity - 1))}
@@ -807,7 +813,7 @@ export default function MenuPage() {
                 ) : (
                   <>
                     <ShoppingCart className="w-5 h-5" />
-                    Add Combo to Cart - {formatPrice(selectedBundle.bundlePrice * bundleQuantity)}
+                    {t('selfService.addComboToCart')} - {formatPrice(selectedBundle.bundlePrice * bundleQuantity)}
                   </>
                 )}
               </button>

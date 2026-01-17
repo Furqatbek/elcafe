@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { reservationPublicAPI } from '../../services/api';
+import LanguageSelector from './LanguageSelector';
 import {
   Calendar,
   Clock,
@@ -21,6 +23,7 @@ export default function ReservationPage() {
   const { restaurantId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [step, setStep] = useState(1); // 1: Date/Time, 2: Table Selection, 3: Details, 4: Confirmation
   const [loading, setLoading] = useState(false);
@@ -238,10 +241,14 @@ export default function ReservationPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-blue-600 shadow-sm">
         <div className="max-w-lg mx-auto px-4 py-4">
-          <h1 className="text-xl font-bold text-gray-900">Reserve a Table</h1>
-          <p className="text-sm text-gray-500">Book your dining experience</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-white">{t('customerReservation.title')}</h1>
+            </div>
+            <LanguageSelector />
+          </div>
         </div>
       </div>
 
@@ -253,7 +260,7 @@ export default function ReservationPage() {
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
                 step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'
               }`}>1</div>
-              <span className="text-xs font-medium hidden sm:inline">Date & Time</span>
+              <span className="text-xs font-medium hidden sm:inline">{t('customerReservation.step1')}</span>
             </div>
             <div className="flex-1 h-0.5 mx-1 bg-gray-200">
               <div className={`h-full bg-blue-600 transition-all ${step >= 2 ? 'w-full' : 'w-0'}`} />
@@ -262,7 +269,7 @@ export default function ReservationPage() {
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
                 step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'
               }`}>2</div>
-              <span className="text-xs font-medium hidden sm:inline">Table</span>
+              <span className="text-xs font-medium hidden sm:inline">{t('customerReservation.step2')}</span>
             </div>
             <div className="flex-1 h-0.5 mx-1 bg-gray-200">
               <div className={`h-full bg-blue-600 transition-all ${step >= 3 ? 'w-full' : 'w-0'}`} />
@@ -271,7 +278,7 @@ export default function ReservationPage() {
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
                 step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200'
               }`}>3</div>
-              <span className="text-xs font-medium hidden sm:inline">Details</span>
+              <span className="text-xs font-medium hidden sm:inline">{t('customerReservation.step3')}</span>
             </div>
           </div>
         </div>
