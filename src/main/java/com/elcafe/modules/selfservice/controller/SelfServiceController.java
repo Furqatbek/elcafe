@@ -269,8 +269,46 @@ public class SelfServiceController {
             map.put("name", promo.getName());
             map.put("description", promo.getDescription());
             map.put("type", promo.getPromotionType() != null ? promo.getPromotionType().name() : null);
+            map.put("scope", promo.getPromotionScope() != null ? promo.getPromotionScope().name() : null);
             map.put("discountValue", promo.getDiscountValue());
-            map.put("minOrderAmount", promo.getRule() != null ? promo.getRule().getMinOrderAmount() : null);
+            map.put("startDate", promo.getStartDate());
+            map.put("endDate", promo.getEndDate());
+
+            // Rule details
+            if (promo.getRule() != null) {
+                map.put("minOrderAmount", promo.getRule().getMinOrderAmount());
+                map.put("maxDiscountAmount", promo.getRule().getMaxDiscountAmount());
+            }
+
+            // For BUY_X_GET_Y promotions
+            if (promo.getBuyQuantity() != null) {
+                map.put("buyQuantity", promo.getBuyQuantity());
+                map.put("getQuantity", promo.getGetQuantity());
+            }
+
+            // For FREE_ITEM promotions
+            if (promo.getFreeProduct() != null) {
+                Map<String, Object> freeProductInfo = new HashMap<>();
+                freeProductInfo.put("id", promo.getFreeProduct().getId());
+                freeProductInfo.put("name", promo.getFreeProduct().getName());
+                freeProductInfo.put("imageUrl", promo.getFreeProduct().getImageUrl());
+                map.put("freeProduct", freeProductInfo);
+            }
+
+            // Applicable products (for SPECIFIC_PRODUCTS scope)
+            if (promo.getPromotionProducts() != null && !promo.getPromotionProducts().isEmpty()) {
+                List<Map<String, Object>> applicableProducts = promo.getPromotionProducts().stream()
+                        .filter(pp -> pp.getProduct() != null)
+                        .map(pp -> {
+                            Map<String, Object> pMap = new HashMap<>();
+                            pMap.put("id", pp.getProduct().getId());
+                            pMap.put("name", pp.getProduct().getName());
+                            pMap.put("imageUrl", pp.getProduct().getImageUrl());
+                            return pMap;
+                        }).toList();
+                map.put("applicableProducts", applicableProducts);
+            }
+
             return map;
         }).toList();
 
@@ -296,16 +334,45 @@ public class SelfServiceController {
                 .orElse(null);
 
         if (active == null) {
-            return ResponseEntity.ok(null);
+            // Return info about upcoming happy hours if none currently active
+            Map<String, Object> noActiveResponse = new HashMap<>();
+            noActiveResponse.put("isActive", false);
+
+            // Find next upcoming happy hour
+            var upcomingHappyHours = happyHours.stream()
+                    .filter(hh -> hh.getSchedules() != null && !hh.getSchedules().isEmpty())
+                    .toList();
+
+            if (!upcomingHappyHours.isEmpty()) {
+                List<Map<String, Object>> upcoming = upcomingHappyHours.stream().map(hh -> {
+                    Map<String, Object> hhMap = new HashMap<>();
+                    hhMap.put("id", hh.getId());
+                    hhMap.put("name", hh.getName());
+                    hhMap.put("discountPercent", hh.getDiscountPercent());
+                    hhMap.put("schedules", hh.getSchedules().stream().map(s -> {
+                        Map<String, Object> sMap = new HashMap<>();
+                        sMap.put("dayOfWeek", s.getDayOfWeek());
+                        sMap.put("startTime", s.getStartTime());
+                        sMap.put("endTime", s.getEndTime());
+                        return sMap;
+                    }).toList());
+                    return hhMap;
+                }).toList();
+                noActiveResponse.put("upcoming", upcoming);
+            }
+
+            return ResponseEntity.ok(noActiveResponse);
         }
 
         Map<String, Object> response = new HashMap<>();
+        response.put("isActive", true);
         response.put("id", active.getId());
         response.put("name", active.getName());
         response.put("discountPercent", active.getDiscountPercent());
         response.put("description", active.getDescription());
         response.put("priority", active.getPriority());
-        // Include schedule info for the current day
+
+        // Include today's schedule with remaining time
         if (active.getSchedules() != null && !active.getSchedules().isEmpty()) {
             var todaySchedule = active.getSchedules().stream()
                     .filter(s -> s.getDayOfWeek().equals(getTodayDayString()))
@@ -314,7 +381,48 @@ public class SelfServiceController {
             if (todaySchedule != null) {
                 response.put("startTime", todaySchedule.getStartTime());
                 response.put("endTime", todaySchedule.getEndTime());
+
+                // Calculate remaining time in minutes
+                LocalTime now = LocalTime.now();
+                LocalTime endTime = todaySchedule.getEndTime();
+                if (endTime.isAfter(now)) {
+                    long remainingMinutes = java.time.Duration.between(now, endTime).toMinutes();
+                    response.put("remainingMinutes", remainingMinutes);
+                }
             }
+
+            // Include all schedules for display
+            List<Map<String, Object>> allSchedules = active.getSchedules().stream().map(s -> {
+                Map<String, Object> sMap = new HashMap<>();
+                sMap.put("dayOfWeek", s.getDayOfWeek());
+                sMap.put("startTime", s.getStartTime());
+                sMap.put("endTime", s.getEndTime());
+                return sMap;
+            }).toList();
+            response.put("schedules", allSchedules);
+        }
+
+        // Include applicable products
+        if (active.getProducts() != null && !active.getProducts().isEmpty()) {
+            List<Map<String, Object>> applicableProducts = active.getProducts().stream()
+                    .filter(hp -> hp.getProduct() != null)
+                    .map(hp -> {
+                        Map<String, Object> pMap = new HashMap<>();
+                        pMap.put("id", hp.getProduct().getId());
+                        pMap.put("name", hp.getProduct().getName());
+                        pMap.put("imageUrl", hp.getProduct().getImageUrl());
+                        pMap.put("originalPrice", hp.getProduct().getPrice());
+                        // Calculate discounted price
+                        BigDecimal discount = hp.getProduct().getPrice()
+                                .multiply(active.getDiscountPercent())
+                                .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+                        pMap.put("discountedPrice", hp.getProduct().getPrice().subtract(discount));
+                        return pMap;
+                    }).toList();
+            response.put("applicableProducts", applicableProducts);
+            response.put("appliesToAllProducts", false);
+        } else {
+            response.put("appliesToAllProducts", true);
         }
 
         return ResponseEntity.ok(response);
@@ -351,8 +459,80 @@ public class SelfServiceController {
             map.put("description", bundle.getDescription());
             map.put("bundlePrice", bundle.getBundlePrice());
             map.put("originalPrice", bundle.getOriginalPrice());
-            map.put("savings", bundle.getSavingsAmount());
+            map.put("savingsAmount", bundle.getSavingsAmount());
+            map.put("savingsPercent", bundle.getSavingsPercent());
             map.put("imageUrl", bundle.getImageUrl());
+            map.put("maxPerOrder", bundle.getMaxPerOrder());
+
+            // Availability info
+            map.put("availableFrom", bundle.getAvailableFrom());
+            map.put("availableUntil", bundle.getAvailableUntil());
+            map.put("availableDays", bundle.getAvailableDays());
+
+            // Bundle items (products included)
+            if (bundle.getItems() != null && !bundle.getItems().isEmpty()) {
+                List<Map<String, Object>> items = bundle.getItems().stream()
+                        .sorted((a, b) -> Integer.compare(
+                                a.getDisplayOrder() != null ? a.getDisplayOrder() : 0,
+                                b.getDisplayOrder() != null ? b.getDisplayOrder() : 0))
+                        .map(item -> {
+                            Map<String, Object> itemMap = new HashMap<>();
+                            itemMap.put("id", item.getId());
+                            itemMap.put("quantity", item.getQuantity());
+                            itemMap.put("isRequired", item.getIsRequired());
+                            itemMap.put("isDefault", item.getIsDefault());
+                            if (item.getProduct() != null) {
+                                itemMap.put("productId", item.getProduct().getId());
+                                itemMap.put("productName", item.getProduct().getName());
+                                itemMap.put("productImageUrl", item.getProduct().getImageUrl());
+                                itemMap.put("productPrice", item.getProduct().getPrice());
+                            }
+                            return itemMap;
+                        }).toList();
+                map.put("items", items);
+            }
+
+            // Option groups (customizable selections)
+            if (bundle.getOptionGroups() != null && !bundle.getOptionGroups().isEmpty()) {
+                List<Map<String, Object>> optionGroups = bundle.getOptionGroups().stream()
+                        .sorted((a, b) -> Integer.compare(
+                                a.getDisplayOrder() != null ? a.getDisplayOrder() : 0,
+                                b.getDisplayOrder() != null ? b.getDisplayOrder() : 0))
+                        .map(group -> {
+                            Map<String, Object> groupMap = new HashMap<>();
+                            groupMap.put("id", group.getId());
+                            groupMap.put("name", group.getName());
+                            groupMap.put("description", group.getDescription());
+                            groupMap.put("isRequired", group.getIsRequired());
+                            groupMap.put("minSelections", group.getMinSelections());
+                            groupMap.put("maxSelections", group.getMaxSelections());
+
+                            // Options within this group
+                            if (group.getOptions() != null && !group.getOptions().isEmpty()) {
+                                List<Map<String, Object>> options = group.getOptions().stream()
+                                        .sorted((a, b) -> Integer.compare(
+                                                a.getDisplayOrder() != null ? a.getDisplayOrder() : 0,
+                                                b.getDisplayOrder() != null ? b.getDisplayOrder() : 0))
+                                        .map(option -> {
+                                            Map<String, Object> optMap = new HashMap<>();
+                                            optMap.put("id", option.getId());
+                                            optMap.put("isDefault", option.getIsDefault());
+                                            optMap.put("priceAdjustment", option.getPriceAdjustment());
+                                            if (option.getProduct() != null) {
+                                                optMap.put("productId", option.getProduct().getId());
+                                                optMap.put("productName", option.getProduct().getName());
+                                                optMap.put("productImageUrl", option.getProduct().getImageUrl());
+                                            }
+                                            return optMap;
+                                        }).toList();
+                                groupMap.put("options", options);
+                            }
+
+                            return groupMap;
+                        }).toList();
+                map.put("optionGroups", optionGroups);
+            }
+
             return map;
         }).toList();
 
