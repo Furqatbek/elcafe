@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { reservationAPI, tablesAPI } from '../services/api';
 import { Button } from '../components/ui/button';
@@ -30,6 +30,7 @@ import {
   Settings,
   ToggleLeft,
   ToggleRight,
+  Bell,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday, parseISO } from 'date-fns';
 
@@ -58,6 +59,8 @@ export default function Reservations() {
   const [reservations, setReservations] = useState([]);
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [newReservationAlert, setNewReservationAlert] = useState(null);
+  const previousReservationIds = useRef(new Set());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedReservation, setSelectedReservation] = useState(null);
@@ -89,13 +92,80 @@ export default function Reservations() {
     loadTables();
   }, [currentMonth]);
 
+  // Auto-refresh reservations every 30 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadReservationsQuietly();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [currentMonth]);
+
+  // Silent reload without loading state (for polling)
+  const loadReservationsQuietly = useCallback(async () => {
+    try {
+      const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+      const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+      const response = await reservationAPI.getByDateRange(restaurantId, startDate, endDate);
+      const newReservations = response.data.data || [];
+
+      // Detect new reservations
+      const currentIds = new Set(newReservations.map(r => r.id));
+      const newOnes = newReservations.filter(r => !previousReservationIds.current.has(r.id));
+
+      if (newOnes.length > 0 && previousReservationIds.current.size > 0) {
+        // Show alert for new reservation
+        const newest = newOnes[0];
+        setNewReservationAlert({
+          customerName: newest.customerName,
+          reservationDate: newest.reservationDate,
+          reservationTime: newest.reservationTime,
+          partySize: newest.partySize,
+        });
+
+        // Play notification sound
+        try {
+          const audio = new Audio('/notification.mp3');
+          audio.volume = 0.5;
+          audio.play().catch(() => {});
+        } catch (e) {}
+
+        // Show browser notification if permitted
+        if (Notification.permission === 'granted') {
+          new Notification(t('reservations.newReservation', 'New Reservation'), {
+            body: `${newest.customerName} - ${newest.reservationDate} ${newest.reservationTime?.slice(0, 5)} (${newest.partySize} guests)`,
+            icon: '/favicon.ico',
+          });
+        }
+
+        // Auto-dismiss alert after 10 seconds
+        setTimeout(() => setNewReservationAlert(null), 10000);
+      }
+
+      previousReservationIds.current = currentIds;
+      setReservations(newReservations);
+    } catch (error) {
+      console.error('Failed to refresh reservations:', error);
+    }
+  }, [currentMonth, t]);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   const loadReservations = async () => {
     setLoading(true);
     try {
       const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
       const response = await reservationAPI.getByDateRange(restaurantId, startDate, endDate);
-      setReservations(response.data.data || []);
+      const data = response.data.data || [];
+      setReservations(data);
+      // Initialize the set with existing IDs to avoid false alerts on first load
+      previousReservationIds.current = new Set(data.map(r => r.id));
     } catch (error) {
       console.error('Failed to load reservations:', error);
     } finally {
@@ -310,6 +380,35 @@ export default function Reservations() {
           </Button>
         </div>
       </div>
+
+      {/* New Reservation Alert */}
+      {newReservationAlert && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 animate-pulse">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-green-100 rounded-full p-2">
+                <Bell className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <div className="font-medium text-green-800">
+                  {t('reservations.newReservationReceived', 'New Reservation Received!')}
+                </div>
+                <div className="text-sm text-green-600">
+                  {newReservationAlert.customerName} - {newReservationAlert.reservationDate} {newReservationAlert.reservationTime?.slice(0, 5)} ({newReservationAlert.partySize} {t('reservations.guests', 'guests')})
+                </div>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setNewReservationAlert(null)}
+              className="text-green-600 hover:text-green-800"
+            >
+              <XCircle className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Calendar */}
