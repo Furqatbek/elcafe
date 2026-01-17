@@ -1,5 +1,6 @@
 package com.elcafe.modules.reservation.service;
 
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.reservation.dto.AvailabilityResponse;
 import com.elcafe.modules.reservation.entity.ReservationSettings;
 import com.elcafe.modules.reservation.enums.ReservationStatus;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +32,7 @@ public class AvailabilityService {
     private final ReservationSettingsRepository settingsRepository;
     private final RestaurantRepository restaurantRepository;
     private final BusinessHoursRepository businessHoursRepository;
+    private final ShiftTimeService shiftTimeService;
 
     /**
      * Check if a specific time slot is available
@@ -126,64 +129,81 @@ public class AvailabilityService {
                     .build();
         }
 
-        // Get business hours for the selected day
+        // Use ShiftTimeService to get shift time range (handles midnight-crossing shifts)
+        ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, date);
+
+        // Check if restaurant is closed (full day range means no business hours or closed)
         DayOfWeek dayOfWeek = date.getDayOfWeek();
         Optional<BusinessHours> businessHoursOpt = businessHoursRepository
                 .findByRestaurant_IdAndDayOfWeek(restaurantId, dayOfWeek);
 
-        LocalTime openTime;
-        LocalTime closeTime;
-
-        if (businessHoursOpt.isPresent() && !businessHoursOpt.get().getClosed()) {
-            BusinessHours hours = businessHoursOpt.get();
-            openTime = hours.getOpenTime();
-            closeTime = hours.getCloseTime();
-        } else if (businessHoursOpt.isPresent() && businessHoursOpt.get().getClosed()) {
-            // Restaurant is closed on this day
+        if (businessHoursOpt.isPresent() && businessHoursOpt.get().getClosed()) {
             return AvailabilityResponse.builder()
                     .date(date)
                     .available(false)
                     .message("Restaurant is closed on " + dayOfWeek.toString().toLowerCase())
                     .build();
-        } else {
-            // No business hours configured, use default 10:00-22:00
-            openTime = LocalTime.of(10, 0);
-            closeTime = LocalTime.of(22, 0);
         }
 
+        LocalTime openTime = shiftRange.openTime();
+        LocalTime closeTime = shiftRange.closeTime();
+        LocalDateTime shiftStart = shiftRange.start();
+        LocalDateTime shiftEnd = shiftRange.end();
+
+        // Check if shift crosses midnight
+        boolean crossesMidnight = closeTime.isBefore(openTime) || closeTime.equals(openTime);
+
         int slotDuration = settings.getSlotDurationMinutes();
-
         List<AvailabilityResponse.TimeSlot> timeSlots = new ArrayList<>();
-        LocalTime currentTime = openTime;
 
-        while (currentTime.plusMinutes(slotDuration).isBefore(closeTime) ||
-               currentTime.plusMinutes(slotDuration).equals(closeTime)) {
+        // Use LocalDateTime for proper handling of midnight-crossing shifts
+        LocalDateTime currentSlotTime = shiftStart;
+        LocalDateTime minAdvanceTime = LocalDateTime.now().plusHours(settings.getMinAdvanceHours());
 
-            // Skip past times for today
-            if (date.equals(today)) {
-                LocalTime minTime = LocalTime.now().plusHours(settings.getMinAdvanceHours());
-                if (currentTime.isBefore(minTime)) {
-                    currentTime = currentTime.plusMinutes(slotDuration);
-                    continue;
-                }
+        // For reservation purposes, don't extend to next day's opening time
+        // Instead, use actual closing time (either same day or next day if crosses midnight)
+        LocalDateTime reservationEndTime;
+        if (crossesMidnight) {
+            // Closing time is on the next day
+            reservationEndTime = date.plusDays(1).atTime(closeTime);
+        } else {
+            reservationEndTime = date.atTime(closeTime);
+        }
+
+        log.debug("Generating time slots for restaurant {} on {}: {} to {} (crosses midnight: {})",
+                restaurantId, date, shiftStart, reservationEndTime, crossesMidnight);
+
+        while (currentSlotTime.plusMinutes(slotDuration).isBefore(reservationEndTime) ||
+               currentSlotTime.plusMinutes(slotDuration).equals(reservationEndTime)) {
+
+            LocalTime slotTime = currentSlotTime.toLocalTime();
+
+            // Skip past times (slots that are before minimum advance time)
+            if (currentSlotTime.isBefore(minAdvanceTime)) {
+                currentSlotTime = currentSlotTime.plusMinutes(slotDuration);
+                continue;
             }
 
             int maxSpots = settings.getMaxReservationsPerSlot() != null ?
                     settings.getMaxReservationsPerSlot() : 10;
 
-            long currentCount = reservationRepository.countReservationsAtSlot(restaurantId, date, currentTime);
+            // For reservations, use the slot's actual date (may be next day for late slots)
+            LocalDate slotDate = currentSlotTime.toLocalDate();
+            long currentCount = reservationRepository.countReservationsAtSlot(restaurantId, slotDate, slotTime);
             int availableSpots = maxSpots - (int) currentCount;
             boolean slotAvailable = availableSpots > 0;
 
             timeSlots.add(AvailabilityResponse.TimeSlot.builder()
-                    .time(currentTime)
+                    .time(slotTime)
                     .available(slotAvailable)
                     .availableSpots(Math.max(0, availableSpots))
                     .maxSpots(maxSpots)
                     .build());
 
-            currentTime = currentTime.plusMinutes(slotDuration);
+            currentSlotTime = currentSlotTime.plusMinutes(slotDuration);
         }
+
+        log.debug("Generated {} time slots for restaurant {} on {}", timeSlots.size(), restaurantId, date);
 
         boolean anyAvailable = timeSlots.stream().anyMatch(AvailabilityResponse.TimeSlot::isAvailable);
 
