@@ -159,11 +159,13 @@ public class QRCodeController {
                 .map(qrCode -> {
                     try {
                         String imageBase64 = qrCodeService.generateQRCodeImage(qrCode.getCode(), width, height);
+                        // Use dynamic URL based on current SELFSERVICE_BASE_URL config
+                        String currentUrl = qrCodeService.getCurrentUrl(qrCode);
 
                         Map<String, Object> response = new HashMap<>();
                         response.put("success", true);
                         response.put("code", qrCode.getCode());
-                        response.put("url", qrCode.getShortUrl());
+                        response.put("url", currentUrl);
                         response.put("image", "data:image/png;base64," + imageBase64);
 
                         return ResponseEntity.ok(response);

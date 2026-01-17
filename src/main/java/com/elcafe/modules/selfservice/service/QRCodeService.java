@@ -227,6 +227,14 @@ public class QRCodeService {
         return selfServiceBaseUrl + "/menu/" + restaurantId + "/" + code;
     }
 
+    /**
+     * Get the current URL for a QR code (using current SELFSERVICE_BASE_URL config).
+     * This generates the URL dynamically instead of using the stored shortUrl.
+     */
+    public String getCurrentUrl(QRCode qrCode) {
+        return buildMenuUrl(qrCode.getRestaurant().getId(), qrCode.getCode());
+    }
+
     @lombok.Builder
     @lombok.Data
     public static class QRCodeStats {

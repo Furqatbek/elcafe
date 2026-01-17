@@ -63,6 +63,9 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-default_jwt_secret_change_in_production}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      # QR Code URL - used for generating QR code links
+      SELFSERVICE_BASE_URL: ${SELFSERVICE_BASE_URL:-https://mayamicafe.uz/order}
+      FILE_BASE_URL: ${FILE_BASE_URL:-https://mayamicafe.uz/uploads}
     ports:
       - "8080:8080"
     networks:
