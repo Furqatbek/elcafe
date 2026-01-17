@@ -13,6 +13,9 @@ public class CartItemResponse {
     private Long productId;
     private String productName;
     private String imageUrl;
+    private Long bundleId;
+    private String bundleName;
+    private Boolean isBundle;
     private Long variantId;
     private String variantName;
     private Integer quantity;

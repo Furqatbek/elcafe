@@ -531,6 +531,7 @@ public class SelfServiceOrderService {
      */
     private CartItemResponse toCartItemResponse(SelfServiceCartItem item) {
         Product product = item.getProduct();
+        boolean isBundle = Boolean.TRUE.equals(item.getIsBundle());
 
         List<CartItemResponse.ModifierResponse> modifiers = item.getModifiers().stream()
                 .map(m -> CartItemResponse.ModifierResponse.builder()
@@ -544,9 +545,12 @@ public class SelfServiceOrderService {
 
         return CartItemResponse.builder()
                 .id(item.getId())
-                .productId(product.getId())
-                .productName(product.getName())
-                .imageUrl(product.getImageUrl())
+                .productId(product != null ? product.getId() : null)
+                .productName(product != null ? product.getName() : null)
+                .imageUrl(product != null ? product.getImageUrl() : null)
+                .bundleId(item.getBundleId())
+                .bundleName(item.getBundleName())
+                .isBundle(isBundle)
                 .variantId(item.getVariant() != null ? item.getVariant().getId() : null)
                 .variantName(item.getVariant() != null ? item.getVariant().getName() : null)
                 .quantity(item.getQuantity())
