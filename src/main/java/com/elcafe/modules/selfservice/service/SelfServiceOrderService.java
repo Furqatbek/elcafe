@@ -16,6 +16,7 @@ import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.service.DailyOrderSequenceService;
 import com.elcafe.modules.order.service.OrderEventBroadcaster;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
+import com.elcafe.modules.waiter.event.OrderEventPublisher;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
@@ -67,6 +68,7 @@ public class SelfServiceOrderService {
     private final DiscountCalculationService discountCalculationService;
     @Lazy private final OwnerNotificationService ownerNotificationService;
     @Lazy private final OrderEventBroadcaster orderEventBroadcaster;
+    @Lazy private final OrderEventPublisher orderEventPublisher;
 
     private static final int SESSION_EXPIRY_HOURS = 4;
 
@@ -430,6 +432,13 @@ public class SelfServiceOrderService {
             ownerNotificationService.notifyNewOrder(order);
         } catch (Exception e) {
             log.error("Failed to send owner notification for order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
+
+        // Send notification to waiters via WebSocket event system
+        try {
+            orderEventPublisher.publishOrderCreated(order, "SELF_SERVICE");
+        } catch (Exception e) {
+            log.error("Failed to publish order created event for order {}: {}", order.getOrderNumber(), e.getMessage());
         }
 
         // Create self-service order metadata
