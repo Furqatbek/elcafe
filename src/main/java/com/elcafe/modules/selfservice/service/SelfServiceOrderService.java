@@ -14,6 +14,12 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.service.DailyOrderSequenceService;
+import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
+import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
+import com.elcafe.modules.promotion.enums.DiscountType;
+import com.elcafe.modules.promotion.service.CouponValidationService;
+import com.elcafe.modules.promotion.service.DiscountCalculationService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.selfservice.dto.AddToCartRequest;
@@ -54,6 +60,8 @@ public class SelfServiceOrderService {
     private final CustomerRepository customerRepository;
     private final DailyOrderSequenceService dailyOrderSequenceService;
     private final com.elcafe.modules.bundle.repository.BundleRepository bundleRepository;
+    private final CouponValidationService couponValidationService;
+    private final DiscountCalculationService discountCalculationService;
 
     private static final int SESSION_EXPIRY_HOURS = 4;
 
@@ -324,6 +332,9 @@ public class SelfServiceOrderService {
             customer = customerRepository.findByPhone(request.getCustomerPhone()).orElse(null);
         }
 
+        // Get customer notes (frontend sends "notes", DTO also supports "specialInstructions")
+        String customerNotes = request.getNotes() != null ? request.getNotes() : request.getSpecialInstructions();
+
         // Create main order
         Order order = Order.builder()
                 .orderNumber(dailyOrderSequenceService.generateNextOrderNumber())
@@ -337,7 +348,7 @@ public class SelfServiceOrderService {
                 .discount(BigDecimal.ZERO)
                 .deliveryFee(BigDecimal.ZERO)
                 .total(subtotal)
-                .customerNotes(request.getSpecialInstructions())
+                .customerNotes(customerNotes)
                 .build();
 
         // Convert cart items to order items
@@ -357,6 +368,48 @@ public class SelfServiceOrderService {
             orderItems.add(orderItem);
         }
         order.setItems(orderItems);
+
+        // Apply coupon if provided
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            try {
+                // Build validation request from order
+                ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
+                        .code(request.getCouponCode())
+                        .restaurantId(session.getRestaurant().getId())
+                        .customerId(customer != null ? customer.getId() : null)
+                        .orderSubtotal(subtotal)
+                        .orderType(OrderType.DINE_IN.name())
+                        .items(orderItems.stream()
+                                .map(item -> ValidateCouponRequest.OrderItemInfo.builder()
+                                        .productId(item.getProductId())
+                                        .quantity(item.getQuantity())
+                                        .price(item.getUnitPrice())
+                                        .build())
+                                .toList())
+                        .build();
+
+                ValidateCouponResponse couponResponse = couponValidationService.validateCoupon(validateRequest);
+
+                if (couponResponse.getValid()) {
+                    // Apply the discount using DiscountCalculationService
+                    ApplyDiscountRequest discountRequest = ApplyDiscountRequest.builder()
+                            .couponCode(request.getCouponCode())
+                            .discountType(DiscountType.COUPON)
+                            .build();
+                    discountCalculationService.applyDiscount(order, discountRequest);
+                    log.info("Coupon {} applied to self-service order: discount={}", request.getCouponCode(), order.getDiscount());
+                } else {
+                    log.warn("Invalid coupon code {} for self-service order: {}", request.getCouponCode(), couponResponse.getErrorMessage());
+                }
+            } catch (Exception e) {
+                log.warn("Failed to apply coupon {} for self-service order: {}", request.getCouponCode(), e.getMessage());
+                // Continue without discount - don't fail the order
+            }
+        }
+
+        // Recalculate total after discount
+        BigDecimal discount = order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO;
+        order.setTotal(subtotal.subtract(discount));
 
         order = orderRepository.save(order);
 
