@@ -153,11 +153,14 @@ public class DailyFinancialReportService {
 
             if (messageId != null) {
                 subscription.setLastReportSentAt(LocalDateTime.now());
-                subscription.setLastReportDate(reportDate);
+                // Use CALENDAR date (not business day) to prevent duplicate sends
+                // For shifts crossing midnight, business day might be yesterday,
+                // but we should only send one report per calendar day
+                subscription.setLastReportDate(LocalDate.now());
                 subscriptionRepository.save(subscription);
 
-                log.info("Daily financial report sent to chatId {} for restaurant {}",
-                    subscription.getTelegramChatId(), metrics.restaurantName());
+                log.info("Daily financial report sent to chatId {} for restaurant {} (business day: {})",
+                    subscription.getTelegramChatId(), metrics.restaurantName(), reportDate);
             }
         } catch (Exception e) {
             log.error("Failed to send daily report to chatId {}: {}",
