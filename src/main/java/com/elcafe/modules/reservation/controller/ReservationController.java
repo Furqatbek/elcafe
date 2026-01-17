@@ -190,6 +190,39 @@ public class ReservationController {
         return ResponseEntity.ok(ApiResponse.success(reservation));
     }
 
+    @PostMapping("/restaurants/{restaurantId}/reservations")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @SecurityRequirement(name = "Bearer Authentication")
+    @Operation(summary = "Create reservation (admin)", description = "Create a new table reservation by admin/staff")
+    public ResponseEntity<ApiResponse<ReservationResponse>> createReservationAdmin(
+            @PathVariable Long restaurantId,
+            @RequestBody AdminCreateReservationRequest request) {
+        // Convert admin request to standard request (without @Future validation)
+        CreateReservationRequest createRequest = CreateReservationRequest.builder()
+                .customerName(request.customerName())
+                .customerPhone(request.customerPhone())
+                .reservationDate(request.reservationDate())
+                .reservationTime(request.reservationTime())
+                .partySize(request.partySize())
+                .tableId(request.tableId())
+                .specialRequests(request.specialRequests())
+                .source("ADMIN")
+                .build();
+        ReservationResponse reservation = reservationService.createReservation(restaurantId, createRequest);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Reservation created successfully", reservation));
+    }
+
+    public record AdminCreateReservationRequest(
+            String customerName,
+            String customerPhone,
+            LocalDate reservationDate,
+            LocalTime reservationTime,
+            Integer partySize,
+            Long tableId,
+            String specialRequests
+    ) {}
+
     @PostMapping("/reservations/{id}/confirm")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @SecurityRequirement(name = "Bearer Authentication")

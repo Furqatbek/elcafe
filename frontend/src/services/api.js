@@ -1097,6 +1097,10 @@ export const reservationAPI = {
   // Get single reservation
   get: (id) => api.get(`/reservations/${id}`),
 
+  // Create reservation (admin)
+  create: (restaurantId, data) =>
+    api.post(`/restaurants/${restaurantId}/reservations`, data),
+
   // Confirm reservation
   confirm: (id) => api.post(`/reservations/${id}/confirm`),
 

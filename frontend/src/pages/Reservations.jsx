@@ -25,6 +25,8 @@ import {
   Filter,
   MoreVertical,
   Table2,
+  Plus,
+  MessageSquare,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday, parseISO } from 'date-fns';
 
@@ -58,8 +60,19 @@ export default function Reservations() {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showAssignTableModal, setShowAssignTableModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [creating, setCreating] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    customerName: '',
+    customerPhone: '',
+    reservationDate: format(new Date(), 'yyyy-MM-dd'),
+    reservationTime: '12:00',
+    partySize: 2,
+    tableId: null,
+    specialRequests: '',
+  });
 
   // For now, hardcode restaurant ID (should come from auth context)
   const restaurantId = 1;
@@ -173,6 +186,53 @@ export default function Reservations() {
     }
   };
 
+  const handleCreateReservation = async (e) => {
+    e.preventDefault();
+    if (!createForm.customerName || !createForm.customerPhone) {
+      alert('Please fill in required fields');
+      return;
+    }
+    setCreating(true);
+    try {
+      await reservationAPI.create(restaurantId, {
+        customerName: createForm.customerName,
+        customerPhone: createForm.customerPhone,
+        reservationDate: createForm.reservationDate,
+        reservationTime: createForm.reservationTime,
+        partySize: parseInt(createForm.partySize),
+        tableId: createForm.tableId || null,
+        specialRequests: createForm.specialRequests || null,
+      });
+      loadReservations();
+      setShowCreateModal(false);
+      // Reset form
+      setCreateForm({
+        customerName: '',
+        customerPhone: '',
+        reservationDate: format(new Date(), 'yyyy-MM-dd'),
+        reservationTime: '12:00',
+        partySize: 2,
+        tableId: null,
+        specialRequests: '',
+      });
+      // Select the date of the new reservation
+      setSelectedDate(parseISO(createForm.reservationDate));
+    } catch (error) {
+      console.error('Failed to create reservation:', error);
+      alert(error.response?.data?.message || 'Failed to create reservation');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setCreateForm(prev => ({
+      ...prev,
+      reservationDate: format(selectedDate, 'yyyy-MM-dd'),
+    }));
+    setShowCreateModal(true);
+  };
+
   const daysInMonth = eachDayOfInterval({
     start: startOfMonth(currentMonth),
     end: endOfMonth(currentMonth),
@@ -197,6 +257,10 @@ export default function Reservations() {
             {t('reservations.subtitle', 'Manage table reservations and bookings')}
           </p>
         </div>
+        <Button onClick={openCreateModal}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t('reservations.newReservation', 'New Reservation')}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -514,6 +578,134 @@ export default function Reservations() {
               </Button>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Reservation Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('reservations.newReservation', 'New Reservation')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateReservation} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('reservations.customerName', 'Customer Name')} *
+                </label>
+                <Input
+                  required
+                  value={createForm.customerName}
+                  onChange={(e) => setCreateForm({ ...createForm, customerName: e.target.value })}
+                  placeholder="John Doe"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Phone className="inline h-4 w-4 mr-1" />
+                  {t('reservations.phone', 'Phone')} *
+                </label>
+                <Input
+                  required
+                  type="tel"
+                  value={createForm.customerPhone}
+                  onChange={(e) => setCreateForm({ ...createForm, customerPhone: e.target.value })}
+                  placeholder="+998 90 123 45 67"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Calendar className="inline h-4 w-4 mr-1" />
+                  {t('reservations.date', 'Date')} *
+                </label>
+                <Input
+                  required
+                  type="date"
+                  value={createForm.reservationDate}
+                  onChange={(e) => setCreateForm({ ...createForm, reservationDate: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Clock className="inline h-4 w-4 mr-1" />
+                  {t('reservations.time', 'Time')} *
+                </label>
+                <Input
+                  required
+                  type="time"
+                  value={createForm.reservationTime}
+                  onChange={(e) => setCreateForm({ ...createForm, reservationTime: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Users className="inline h-4 w-4 mr-1" />
+                  {t('reservations.partySize', 'Party Size')} *
+                </label>
+                <Input
+                  required
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={createForm.partySize}
+                  onChange={(e) => setCreateForm({ ...createForm, partySize: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Table2 className="inline h-4 w-4 mr-1" />
+                  {t('reservations.table', 'Table')}
+                </label>
+                <select
+                  value={createForm.tableId || ''}
+                  onChange={(e) => setCreateForm({ ...createForm, tableId: e.target.value ? parseInt(e.target.value) : null })}
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                >
+                  <option value="">{t('reservations.noTable', 'No table assigned')}</option>
+                  {tables.map(table => (
+                    <option key={table.id} value={table.id}>
+                      #{table.tableNumber} - {table.name} ({table.capacity} seats)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <MessageSquare className="inline h-4 w-4 mr-1" />
+                  {t('reservations.specialRequests', 'Special Requests')}
+                </label>
+                <textarea
+                  value={createForm.specialRequests}
+                  onChange={(e) => setCreateForm({ ...createForm, specialRequests: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  placeholder="Any special requests or notes..."
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t">
+              <Button type="button" variant="outline" className="flex-1" onClick={() => setShowCreateModal(false)}>
+                {t('common.cancel', 'Cancel')}
+              </Button>
+              <Button type="submit" className="flex-1" disabled={creating}>
+                {creating ? (
+                  <>{t('common.creating', 'Creating...')}</>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('reservations.create', 'Create')}
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
