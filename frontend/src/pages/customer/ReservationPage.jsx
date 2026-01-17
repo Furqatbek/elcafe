@@ -23,7 +23,17 @@ export default function ReservationPage() {
   const { restaurantId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  // Map language codes to locale codes for date formatting
+  const getDateLocale = () => {
+    const localeMap = {
+      en: 'en-US',
+      ru: 'ru-RU',
+      uz: 'uz-UZ',
+    };
+    return localeMap[i18n.language] || 'en-US';
+  };
 
   const [step, setStep] = useState(1); // 1: Date/Time, 2: Table Selection, 3: Details, 4: Confirmation
   const [loading, setLoading] = useState(false);
@@ -92,7 +102,7 @@ export default function ReservationPage() {
       );
       setAvailability(response.data.data);
     } catch (err) {
-      setError('Failed to load availability');
+      setError(t('customerReservation.errorLoading'));
       console.error('Failed to load availability:', err);
     } finally {
       setLoading(false);
@@ -103,7 +113,7 @@ export default function ReservationPage() {
     e.preventDefault();
 
     if (!selectedDate || !selectedTime) {
-      setError('Please select a date and time');
+      setError(t('customerReservation.selectDateAndTime'));
       return;
     }
 
@@ -125,7 +135,7 @@ export default function ReservationPage() {
       setSuccess(response.data.data);
       setStep(4);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create reservation');
+      setError(err.response?.data?.message || t('customerReservation.errorCreating'));
       console.error('Failed to create reservation:', err);
     } finally {
       setSubmitting(false);
@@ -197,7 +207,7 @@ export default function ReservationPage() {
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-gray-400" />
                 <span>
-                  {new Date(success.reservationDate).toLocaleDateString('en-US', {
+                  {new Date(success.reservationDate).toLocaleDateString(getDateLocale(), {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
@@ -337,7 +347,7 @@ export default function ReservationPage() {
                   <ChevronLeft className="h-5 w-5" />
                 </button>
                 <span className="font-medium">
-                  {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  {currentMonth.toLocaleDateString(getDateLocale(), { month: 'long', year: 'numeric' })}
                 </span>
                 <button
                   type="button"
@@ -444,7 +454,7 @@ export default function ReservationPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium text-blue-900">
-                    {selectedDate?.toLocaleDateString('en-US', {
+                    {selectedDate?.toLocaleDateString(getDateLocale(), {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric',
@@ -579,7 +589,7 @@ export default function ReservationPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium text-blue-900">
-                    {selectedDate?.toLocaleDateString('en-US', {
+                    {selectedDate?.toLocaleDateString(getDateLocale(), {
                       weekday: 'long',
                       month: 'long',
                       day: 'numeric',

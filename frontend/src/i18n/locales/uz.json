@@ -3310,6 +3310,7 @@
     "errorLoading": "Ma'lumotlarni yuklashda xatolik",
     "loadError": "Restoranlarni yuklashda xatolik",
     "errorCreating": "Band qilishda xatolik",
+    "selectDateAndTime": "Iltimos, sana va vaqtni tanlang",
     "tryAgain": "Qayta urinish",
     "sun": "Yak",
     "mon": "Dush",

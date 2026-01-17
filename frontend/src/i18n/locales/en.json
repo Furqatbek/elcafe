@@ -3718,6 +3718,7 @@
     "errorLoading": "Failed to load availability",
     "loadError": "Failed to load restaurants",
     "errorCreating": "Failed to create reservation",
+    "selectDateAndTime": "Please select a date and time",
     "tryAgain": "Try Again",
     "sun": "Sun",
     "mon": "Mon",
