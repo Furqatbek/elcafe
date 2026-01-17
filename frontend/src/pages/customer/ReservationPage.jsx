@@ -181,13 +181,13 @@ export default function ReservationPage() {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Reservation Confirmed!</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('customerReservation.success')}</h2>
             <p className="text-gray-600 mb-6">
-              Your table has been reserved. We've sent a confirmation to your phone.
+              {t('customerReservation.successMessage')}
             </p>
 
             <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-              <div className="text-sm text-gray-500 mb-1">Confirmation Code</div>
+              <div className="text-sm text-gray-500 mb-1">{t('customerReservation.confirmationCode')}</div>
               <div className="text-2xl font-bold text-blue-600 tracking-wider">
                 {success.confirmationCode}
               </div>
@@ -211,7 +211,7 @@ export default function ReservationPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-gray-400" />
-                <span>{success.partySize} guests</span>
+                <span>{success.partySize} {t('customerReservation.guests')}</span>
               </div>
             </div>
 
@@ -220,9 +220,9 @@ export default function ReservationPage() {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
                   <div className="text-left">
-                    <div className="font-medium text-yellow-800">Deposit Required</div>
+                    <div className="font-medium text-yellow-800">{t('customerReservation.depositRequired')}</div>
                     <div className="text-sm text-yellow-600">
-                      Please pay the deposit to confirm your reservation.
+                      {t('customerReservation.depositPendingMessage')}
                     </div>
                   </div>
                 </div>
@@ -230,7 +230,7 @@ export default function ReservationPage() {
             )}
 
             <p className="text-sm text-gray-500">
-              Save your confirmation code. You can use it to check or modify your reservation.
+              {t('customerReservation.saveConfirmationCode')}
             </p>
           </div>
         </div>
@@ -300,7 +300,7 @@ export default function ReservationPage() {
             <div className="bg-white rounded-lg shadow-sm p-4">
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <Users className="inline h-4 w-4 mr-2" />
-                Party Size
+                {t('customerReservation.partySize')}
               </label>
               <div className="flex flex-wrap gap-2">
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((size) => (
@@ -314,7 +314,7 @@ export default function ReservationPage() {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {size} {size === 1 ? 'guest' : 'guests'}
+                    {size} {size === 1 ? t('customerReservation.guest') : t('customerReservation.guests')}
                   </button>
                 ))}
               </div>
@@ -324,7 +324,7 @@ export default function ReservationPage() {
             <div className="bg-white rounded-lg shadow-sm p-4">
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <Calendar className="inline h-4 w-4 mr-2" />
-                Select Date
+                {t('customerReservation.selectDate')}
               </label>
 
               {/* Month Navigation */}
@@ -350,7 +350,15 @@ export default function ReservationPage() {
 
               {/* Calendar Grid */}
               <div className="grid grid-cols-7 gap-1">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                {[
+                  t('customerReservation.sun'),
+                  t('customerReservation.mon'),
+                  t('customerReservation.tue'),
+                  t('customerReservation.wed'),
+                  t('customerReservation.thu'),
+                  t('customerReservation.fri'),
+                  t('customerReservation.sat')
+                ].map((day) => (
                   <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
                     {day}
                   </div>
@@ -382,7 +390,7 @@ export default function ReservationPage() {
               <div className="bg-white rounded-lg shadow-sm p-4">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   <Clock className="inline h-4 w-4 mr-2" />
-                  Select Time
+                  {t('customerReservation.selectTime')}
                 </label>
 
                 {loading ? (
@@ -411,7 +419,7 @@ export default function ReservationPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
-                    No available time slots for this date
+                    {t('customerReservation.noSlots')}
                   </div>
                 )}
               </div>
@@ -424,7 +432,7 @@ export default function ReservationPage() {
               onClick={() => setStep(2)}
               className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors"
             >
-              Continue
+              {t('customerReservation.continue')}
             </button>
           </div>
         )}
@@ -443,7 +451,7 @@ export default function ReservationPage() {
                     })}
                   </div>
                   <div className="text-sm text-blue-700">
-                    {formatTime(selectedTime)} - {partySize} guests
+                    {formatTime(selectedTime)} - {partySize} {t('customerReservation.guests')}
                   </div>
                 </div>
                 <button
@@ -451,7 +459,7 @@ export default function ReservationPage() {
                   onClick={() => setStep(1)}
                   className="text-blue-600 text-sm font-medium hover:underline"
                 >
-                  Change
+                  {t('customerReservation.change')}
                 </button>
               </div>
             </div>
@@ -460,7 +468,7 @@ export default function ReservationPage() {
             <div className="bg-white rounded-lg shadow-sm p-4">
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <MapPin className="inline h-4 w-4 mr-2" />
-                Select Your Table (Optional)
+                {t('customerReservation.selectTableOptional')}
               </label>
 
               {loadingTables ? (
@@ -473,15 +481,15 @@ export default function ReservationPage() {
                   <div className="flex flex-wrap gap-3 text-xs">
                     <span className="flex items-center gap-1">
                       <div className="w-3 h-3 rounded bg-green-500"></div>
-                      Available
+                      {t('customerReservation.available')}
                     </span>
                     <span className="flex items-center gap-1">
                       <div className="w-3 h-3 rounded bg-red-500"></div>
-                      Reserved
+                      {t('customerReservation.reserved')}
                     </span>
                     <span className="flex items-center gap-1">
                       <div className="w-3 h-3 rounded bg-gray-300"></div>
-                      Unavailable
+                      {t('customerReservation.unavailable')}
                     </span>
                   </div>
 
@@ -514,14 +522,14 @@ export default function ReservationPage() {
                             </span>
                           </div>
                           <div className="text-xs text-gray-500">
-                            {table.capacity} seats
+                            {table.capacity} {t('customerReservation.seatsLabel')}
                             {table.section && ` • ${table.section}`}
                           </div>
                           {!isAvailable && (
                             <div className="text-xs text-red-600 mt-1">
-                              {table.statusReason === 'TOO_SMALL' ? 'Too small' :
-                               table.statusReason === 'RESERVED' ? 'Reserved' :
-                               table.statusReason === 'OCCUPIED' ? 'Occupied' : 'Unavailable'}
+                              {table.statusReason === 'TOO_SMALL' ? t('customerReservation.tooSmall') :
+                               table.statusReason === 'RESERVED' ? t('customerReservation.reserved') :
+                               table.statusReason === 'OCCUPIED' ? t('customerReservation.occupied') : t('customerReservation.unavailable')}
                             </div>
                           )}
                         </button>
@@ -531,15 +539,15 @@ export default function ReservationPage() {
 
                   {selectedTable && (
                     <div className="bg-green-50 rounded-lg p-3 text-sm text-green-800">
-                      Selected: #{selectedTable.tableNumber}{selectedTable.tableName && ` - ${selectedTable.tableName}`} ({selectedTable.capacity} seats)
+                      {t('customerReservation.selectedTableInfo', { number: selectedTable.tableNumber, name: selectedTable.tableName || '', seats: selectedTable.capacity })}
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <MapPin className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                  <p>No tables available for selection</p>
-                  <p className="text-sm">A table will be assigned for you</p>
+                  <p>{t('customerReservation.noTables')}</p>
+                  <p className="text-sm">{t('customerReservation.tableWillBeAssigned')}</p>
                 </div>
               )}
             </div>
@@ -551,14 +559,14 @@ export default function ReservationPage() {
                 onClick={() => setStep(1)}
                 className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
               >
-                Back
+                {t('customerReservation.back')}
               </button>
               <button
                 type="button"
                 onClick={() => setStep(3)}
                 className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               >
-                Continue
+                {t('customerReservation.continue')}
               </button>
             </div>
           </div>
@@ -578,7 +586,7 @@ export default function ReservationPage() {
                     })}
                   </div>
                   <div className="text-sm text-blue-700">
-                    {formatTime(selectedTime)} - {partySize} guests
+                    {formatTime(selectedTime)} - {partySize} {t('customerReservation.guests')}
                   </div>
                   {selectedTable && (
                     <div className="text-sm text-blue-700 mt-1">
@@ -592,19 +600,19 @@ export default function ReservationPage() {
                   onClick={() => setStep(1)}
                   className="text-blue-600 text-sm font-medium hover:underline"
                 >
-                  Change
+                  {t('customerReservation.change')}
                 </button>
               </div>
             </div>
 
             {/* Contact Information */}
             <div className="bg-white rounded-lg shadow-sm p-4 space-y-4">
-              <h3 className="font-medium text-gray-900">Contact Information</h3>
+              <h3 className="font-medium text-gray-900">{t('customerReservation.contactInfo')}</h3>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   <User className="inline h-4 w-4 mr-1" />
-                  Name *
+                  {t('customerReservation.name')} *
                 </label>
                 <input
                   type="text"
@@ -612,14 +620,14 @@ export default function ReservationPage() {
                   value={formData.customerName}
                   onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Your name"
+                  placeholder={t('customerReservation.namePlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   <Phone className="inline h-4 w-4 mr-1" />
-                  Phone *
+                  {t('customerReservation.phone')} *
                 </label>
                 <input
                   type="tel"
@@ -627,21 +635,21 @@ export default function ReservationPage() {
                   value={formData.customerPhone}
                   onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Your phone number"
+                  placeholder={t('customerReservation.phonePlaceholder')}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   <MessageSquare className="inline h-4 w-4 mr-1" />
-                  Special Requests (optional)
+                  {t('customerReservation.specialRequests')} ({t('customerReservation.optional')})
                 </label>
                 <textarea
                   value={formData.specialRequests}
                   onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Allergies, seating preferences, special occasions..."
+                  placeholder={t('customerReservation.specialRequestsPlaceholder')}
                 />
               </div>
             </div>
@@ -652,9 +660,9 @@ export default function ReservationPage() {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
                   <div>
-                    <div className="font-medium text-yellow-800">Deposit Required</div>
+                    <div className="font-medium text-yellow-800">{t('customerReservation.depositRequired')}</div>
                     <div className="text-sm text-yellow-600">
-                      A deposit of {availability.depositAmount?.toFixed(2)} is required to confirm your reservation.
+                      {t('customerReservation.depositAmount', { amount: availability.depositAmount?.toFixed(2) })}
                     </div>
                   </div>
                 </div>
@@ -668,7 +676,7 @@ export default function ReservationPage() {
                 onClick={() => setStep(2)}
                 className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
               >
-                Back
+                {t('customerReservation.back')}
               </button>
               <button
                 type="submit"
@@ -678,10 +686,10 @@ export default function ReservationPage() {
                 {submitting ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    Reserving...
+                    {t('customerReservation.reserving')}
                   </>
                 ) : (
-                  'Complete Reservation'
+                  t('customerReservation.confirmReservation')
                 )}
               </button>
             </div>
