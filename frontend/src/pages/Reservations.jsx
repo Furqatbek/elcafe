@@ -27,6 +27,9 @@ import {
   Table2,
   Plus,
   MessageSquare,
+  Settings,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday, parseISO } from 'date-fns';
 
@@ -73,6 +76,10 @@ export default function Reservations() {
     tableId: null,
     specialRequests: '',
   });
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settings, setSettings] = useState(null);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // For now, hardcode restaurant ID (should come from auth context)
   const restaurantId = 1;
@@ -233,6 +240,41 @@ export default function Reservations() {
     setShowCreateModal(true);
   };
 
+  const loadSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const response = await reservationAPI.getSettings(restaurantId);
+      setSettings(response.data.data);
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const openSettingsModal = () => {
+    loadSettings();
+    setShowSettingsModal(true);
+  };
+
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const response = await reservationAPI.updateSettings(restaurantId, settings);
+      setSettings(response.data.data);
+      setShowSettingsModal(false);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert(error.response?.data?.message || 'Failed to save settings');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const updateSetting = (key, value) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
   const daysInMonth = eachDayOfInterval({
     start: startOfMonth(currentMonth),
     end: endOfMonth(currentMonth),
@@ -257,10 +299,16 @@ export default function Reservations() {
             {t('reservations.subtitle', 'Manage table reservations and bookings')}
           </p>
         </div>
-        <Button onClick={openCreateModal}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('reservations.newReservation', 'New Reservation')}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={openSettingsModal}>
+            <Settings className="h-4 w-4 mr-2" />
+            {t('reservations.settings', 'Settings')}
+          </Button>
+          <Button onClick={openCreateModal}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('reservations.newReservation', 'New Reservation')}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -706,6 +754,298 @@ export default function Reservations() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settings Modal */}
+      <Dialog open={showSettingsModal} onOpenChange={setShowSettingsModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              {t('reservations.settingsTitle', 'Reservation Settings')}
+            </DialogTitle>
+          </DialogHeader>
+
+          {settingsLoading ? (
+            <div className="py-8 text-center text-gray-500">
+              {t('common.loading', 'Loading...')}
+            </div>
+          ) : settings ? (
+            <div className="space-y-6">
+              {/* Enable/Disable Reservations */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <div className="font-medium">{t('reservations.enableOnlineReservations', 'Online Reservations')}</div>
+                  <div className="text-sm text-gray-500">
+                    {t('reservations.enableDescription', 'Allow customers to make reservations online')}
+                  </div>
+                </div>
+                <button
+                  onClick={() => updateSetting('enabled', !settings.enabled)}
+                  className={`p-1 rounded-full transition-colors ${settings.enabled ? 'text-green-600' : 'text-gray-400'}`}
+                >
+                  {settings.enabled ? (
+                    <ToggleRight className="h-8 w-8" />
+                  ) : (
+                    <ToggleLeft className="h-8 w-8" />
+                  )}
+                </button>
+              </div>
+
+              {/* Booking Window */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-medium text-gray-900">{t('reservations.bookingWindow', 'Booking Window')}</h4>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('reservations.advanceDays', 'Advance Days')}
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={settings.advanceDays || ''}
+                      onChange={(e) => updateSetting('advanceDays', parseInt(e.target.value) || null)}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('reservations.advanceDaysDesc', 'How many days in advance customers can book')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('reservations.minAdvanceHours', 'Min Advance Hours')}
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="72"
+                      value={settings.minAdvanceHours || ''}
+                      onChange={(e) => updateSetting('minAdvanceHours', parseInt(e.target.value) || null)}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('reservations.minAdvanceHoursDesc', 'Minimum hours before reservation time')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Time Slots */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-medium text-gray-900">{t('reservations.timeSlots', 'Time Slots')}</h4>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('reservations.slotDuration', 'Slot Duration (minutes)')}
+                    </label>
+                    <select
+                      value={settings.slotDurationMinutes || 60}
+                      onChange={(e) => updateSetting('slotDurationMinutes', parseInt(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-md text-sm"
+                    >
+                      <option value={15}>15 {t('common.minutes', 'minutes')}</option>
+                      <option value={30}>30 {t('common.minutes', 'minutes')}</option>
+                      <option value={45}>45 {t('common.minutes', 'minutes')}</option>
+                      <option value={60}>60 {t('common.minutes', 'minutes')}</option>
+                      <option value={90}>90 {t('common.minutes', 'minutes')}</option>
+                      <option value={120}>120 {t('common.minutes', 'minutes')}</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('reservations.maxPerSlot', 'Max Reservations Per Slot')}
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={settings.maxReservationsPerSlot || ''}
+                      onChange={(e) => updateSetting('maxReservationsPerSlot', parseInt(e.target.value) || null)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Party Size */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-medium text-gray-900">{t('reservations.partySizeTitle', 'Party Size Limits')}</h4>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('reservations.minPartySize', 'Minimum Party Size')}
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={settings.minPartySize || ''}
+                      onChange={(e) => updateSetting('minPartySize', parseInt(e.target.value) || null)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('reservations.maxPartySize', 'Maximum Party Size')}
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={settings.maxPartySize || ''}
+                      onChange={(e) => updateSetting('maxPartySize', parseInt(e.target.value) || null)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirmation & Reminders */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-medium text-gray-900">{t('reservations.confirmationTitle', 'Confirmation & Reminders')}</h4>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-sm">{t('reservations.autoConfirm', 'Auto-Confirm Reservations')}</div>
+                      <div className="text-xs text-gray-500">
+                        {t('reservations.autoConfirmDesc', 'Automatically confirm reservations without manual approval')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => updateSetting('autoConfirm', !settings.autoConfirm)}
+                      className={`p-1 rounded-full transition-colors ${settings.autoConfirm ? 'text-green-600' : 'text-gray-400'}`}
+                    >
+                      {settings.autoConfirm ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-sm">{t('reservations.sendReminders', 'Send Reminders')}</div>
+                      <div className="text-xs text-gray-500">
+                        {t('reservations.sendRemindersDesc', 'Send reminder notifications to customers')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => updateSetting('sendReminders', !settings.sendReminders)}
+                      className={`p-1 rounded-full transition-colors ${settings.sendReminders ? 'text-green-600' : 'text-gray-400'}`}
+                    >
+                      {settings.sendReminders ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
+                    </button>
+                  </div>
+
+                  {settings.sendReminders && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('reservations.reminderHours', 'Reminder Hours Before')}
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="72"
+                        value={settings.reminderHoursBefore || ''}
+                        onChange={(e) => updateSetting('reminderHoursBefore', parseInt(e.target.value) || null)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Cancellation */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-medium text-gray-900">{t('reservations.cancellationTitle', 'Cancellation Policy')}</h4>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('reservations.cancellationHours', 'Cancellation Deadline (hours before)')}
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="72"
+                    value={settings.cancellationHours || ''}
+                    onChange={(e) => updateSetting('cancellationHours', parseInt(e.target.value) || null)}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t('reservations.cancellationHoursDesc', 'Hours before reservation when cancellation is still allowed')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Deposit */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-900">{t('reservations.depositTitle', 'Deposit')}</h4>
+                  <button
+                    onClick={() => updateSetting('depositRequired', !settings.depositRequired)}
+                    className={`p-1 rounded-full transition-colors ${settings.depositRequired ? 'text-green-600' : 'text-gray-400'}`}
+                  >
+                    {settings.depositRequired ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
+                  </button>
+                </div>
+
+                {settings.depositRequired && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('reservations.depositAmount', 'Fixed Amount')}
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={settings.depositAmount || ''}
+                        onChange={(e) => updateSetting('depositAmount', parseFloat(e.target.value) || null)}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('reservations.depositPercent', 'Or Percentage (%)')}
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={settings.depositPercent || ''}
+                        onChange={(e) => updateSetting('depositPercent', parseFloat(e.target.value) || null)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Notes for Customers */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h4 className="font-medium text-gray-900">{t('reservations.notesTitle', 'Notes for Customers')}</h4>
+                <textarea
+                  value={settings.notesForCustomers || ''}
+                  onChange={(e) => updateSetting('notesForCustomers', e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border rounded-md text-sm"
+                  placeholder={t('reservations.notesPlaceholder', 'Special instructions or policies to display to customers...')}
+                />
+              </div>
+
+              {/* Save Button */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button variant="outline" className="flex-1" onClick={() => setShowSettingsModal(false)}>
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button className="flex-1" onClick={handleSaveSettings} disabled={savingSettings}>
+                  {savingSettings ? t('common.saving', 'Saving...') : t('common.save', 'Save Settings')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-gray-500">
+              {t('reservations.noSettings', 'Failed to load settings')}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

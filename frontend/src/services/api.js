@@ -1120,6 +1120,14 @@ export const reservationAPI = {
   // Assign table
   assignTable: (reservationId, tableId) =>
     api.post(`/reservations/${reservationId}/assign-table/${tableId}`),
+
+  // Get reservation settings
+  getSettings: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/reservation-settings`),
+
+  // Update reservation settings
+  updateSettings: (restaurantId, data) =>
+    api.put(`/restaurants/${restaurantId}/reservation-settings`, data),
 };
 
 // Order Tracking API (public endpoints)
