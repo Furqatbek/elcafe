@@ -178,7 +178,8 @@ public class SelfServiceController {
 
         List<Product> products;
         if (categoryId != null) {
-            products = productRepository.findByCategoryIdAndStatusOrderBySortOrder(categoryId, ProductStatus.LIVE);
+            // Filter by both categoryId AND restaurantId to ensure category belongs to the restaurant
+            products = productRepository.findByCategoryIdAndRestaurantIdAndStatus(categoryId, restaurantId, ProductStatus.LIVE);
         } else {
             products = productRepository.findByRestaurantIdAndStatus(restaurantId, ProductStatus.LIVE);
         }
@@ -193,6 +194,7 @@ public class SelfServiceController {
             map.put("price", p.getPrice());
             map.put("imageUrl", p.getImageUrl());
             map.put("categoryId", p.getCategory().getId());
+            map.put("categoryName", p.getCategory().getName());
             map.put("inStock", p.getInStock());
             return map;
         }).toList();

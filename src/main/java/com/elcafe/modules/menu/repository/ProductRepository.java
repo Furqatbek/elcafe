@@ -16,6 +16,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     List<Product> findByCategoryIdAndStatusOrderBySortOrder(Long categoryId, ProductStatus status);
 
+    @Query("SELECT p FROM Product p JOIN p.category c WHERE c.id = :categoryId AND c.restaurant.id = :restaurantId AND p.status = :status ORDER BY p.sortOrder")
+    List<Product> findByCategoryIdAndRestaurantIdAndStatus(
+            @Param("categoryId") Long categoryId,
+            @Param("restaurantId") Long restaurantId,
+            @Param("status") ProductStatus status);
+
     @Query("SELECT p FROM Product p JOIN p.category c WHERE c.restaurant.id = :restaurantId AND p.status = :status ORDER BY c.sortOrder, p.sortOrder")
     List<Product> findByRestaurant_IdAndStatus(@Param("restaurantId") Long restaurantId, @Param("status") ProductStatus status);
 
