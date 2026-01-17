@@ -281,12 +281,20 @@ export default function MenuPage() {
         <div className="max-w-lg mx-auto px-4 py-2 space-y-2">
           {/* Happy Hour Banner */}
           {activeHappyHour && (
-            <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-lg p-3 text-white">
+            <div className={`rounded-lg p-3 text-white ${
+              activeHappyHour.type === 'FREE_ITEM'
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                : 'bg-gradient-to-r from-orange-500 to-yellow-500'
+            }`}>
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 flex-shrink-0" />
+                {activeHappyHour.type === 'FREE_ITEM' ? (
+                  <Gift className="w-5 h-5 flex-shrink-0" />
+                ) : (
+                  <Sparkles className="w-5 h-5 flex-shrink-0" />
+                )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-bold text-sm">{t('selfService.happyHourActive')}</p>
+                    <p className="font-bold text-sm">{activeHappyHour.name || t('selfService.happyHourActive')}</p>
                     {activeHappyHour.remainingMinutes && (
                       <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
                         <Timer className="w-3 h-3" />
@@ -295,13 +303,38 @@ export default function MenuPage() {
                     )}
                   </div>
                   <p className="text-xs opacity-90">
-                    {activeHappyHour.discountPercent}% {t('selfService.off')}
+                    {activeHappyHour.type === 'PERCENTAGE' && `${activeHappyHour.discountValue || activeHappyHour.discountPercent}% ${t('selfService.off')}`}
+                    {activeHappyHour.type === 'FIXED_AMOUNT' && `${t('selfService.save')} ${formatPrice(activeHappyHour.discountValue)}`}
+                    {activeHappyHour.type === 'FREE_ITEM' && t('selfService.getFreeItem')}
+                    {activeHappyHour.type === 'BUY_X_GET_Y' && t('selfService.buyXGetY', { buyQty: activeHappyHour.buyQuantity || 'X', getQty: activeHappyHour.getQuantity || 'Y' })}
+                    {!activeHappyHour.type && (activeHappyHour.discountValue || activeHappyHour.discountPercent) && `${activeHappyHour.discountValue || activeHappyHour.discountPercent}% ${t('selfService.off')}`}
                     {activeHappyHour.applicableProducts?.length > 0
                       ? ` ${t('selfService.onItems', { count: activeHappyHour.applicableProducts.length })}`
-                      : ` ${t('selfService.onSelectedItems')}`}
+                      : activeHappyHour.scope === 'ALL' ? ` ${t('selfService.onSelectedItems')}` : ''}
                   </p>
                 </div>
-                <Clock className="w-4 h-4 opacity-75 flex-shrink-0" />
+                {activeHappyHour.type === 'FREE_ITEM' && activeHappyHour.freeProduct && (
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {activeHappyHour.freeProduct.imageUrl ? (
+                      <img
+                        src={activeHappyHour.freeProduct.imageUrl}
+                        alt={activeHappyHour.freeProduct.name}
+                        className="w-10 h-10 rounded-lg object-cover border-2 border-white/30"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                        <Gift className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div className="text-right">
+                      <p className="text-xs font-medium">{t('selfService.free')}</p>
+                      <p className="text-xs opacity-75 max-w-[80px] truncate">{activeHappyHour.freeProduct.name}</p>
+                    </div>
+                  </div>
+                )}
+                {activeHappyHour.type !== 'FREE_ITEM' && (
+                  <Clock className="w-4 h-4 opacity-75 flex-shrink-0" />
+                )}
               </div>
             </div>
           )}
