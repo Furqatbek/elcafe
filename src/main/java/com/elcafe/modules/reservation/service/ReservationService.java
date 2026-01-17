@@ -68,11 +68,8 @@ public class ReservationService {
             throw new BadRequestException("The selected time slot is not available");
         }
 
-        // Find or use provided customer
-        Customer customer = null;
-        if (request.getCustomerId() != null) {
-            customer = customerRepository.findById(request.getCustomerId()).orElse(null);
-        }
+        // Find or create customer
+        Customer customer = findOrCreateCustomer(restaurantId, request);
 
         // Find table if specified
         RestaurantTable table = null;
@@ -362,5 +359,64 @@ public class ReservationService {
                 .enabled(true)
                 .build();
         return settingsRepository.save(settings);
+    }
+
+    /**
+     * Find existing customer by phone or create a new one
+     */
+    private Customer findOrCreateCustomer(Long restaurantId, CreateReservationRequest request) {
+        // If customerId is provided, use that
+        if (request.getCustomerId() != null) {
+            return customerRepository.findById(request.getCustomerId()).orElse(null);
+        }
+
+        // If phone is provided, try to find existing customer
+        if (request.getCustomerPhone() != null && !request.getCustomerPhone().isBlank()) {
+            String normalizedPhone = normalizePhone(request.getCustomerPhone());
+
+            // Try to find existing customer by phone
+            Customer existingCustomer = customerRepository.findByPhone(normalizedPhone).orElse(null);
+
+            if (existingCustomer != null) {
+                log.info("Found existing customer by phone: {}", existingCustomer.getId());
+                // Update name if provided and different
+                if (request.getCustomerName() != null && !request.getCustomerName().isBlank()) {
+                    String[] names = request.getCustomerName().trim().split("\\s+", 2);
+                    if (!names[0].equals(existingCustomer.getFirstName())) {
+                        existingCustomer.setFirstName(names[0]);
+                        existingCustomer.setLastName(names.length > 1 ? names[1] : "");
+                        existingCustomer = customerRepository.save(existingCustomer);
+                    }
+                }
+                return existingCustomer;
+            }
+
+            // Create new customer
+            log.info("Creating new customer for phone: {}", normalizedPhone);
+            String[] names = (request.getCustomerName() != null && !request.getCustomerName().isBlank())
+                    ? request.getCustomerName().trim().split("\\s+", 2)
+                    : new String[]{"Guest", ""};
+
+            Customer newCustomer = Customer.builder()
+                    .firstName(names[0])
+                    .lastName(names.length > 1 ? names[1] : "")
+                    .phone(normalizedPhone)
+                    .email(request.getCustomerEmail())
+                    .registrationSource(com.elcafe.modules.customer.enums.RegistrationSource.RESERVATION)
+                    .active(true)
+                    .build();
+
+            return customerRepository.save(newCustomer);
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize phone number (remove spaces, dashes, etc.)
+     */
+    private String normalizePhone(String phone) {
+        if (phone == null) return null;
+        return phone.replaceAll("[\\s\\-()]+", "").trim();
     }
 }

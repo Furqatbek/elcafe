@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  MapPin,
+  Square,
 } from 'lucide-react';
 
 export default function ReservationPage() {
@@ -21,7 +23,7 @@ export default function ReservationPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(1); // 1: Date/Time, 2: Details, 3: Confirmation
+  const [step, setStep] = useState(1); // 1: Date/Time, 2: Table Selection, 3: Details, 4: Confirmation
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -32,6 +34,9 @@ export default function ReservationPage() {
   const [selectedTime, setSelectedTime] = useState(null);
   const [partySize, setPartySize] = useState(2);
   const [availability, setAvailability] = useState(null);
+  const [tables, setTables] = useState([]);
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [loadingTables, setLoadingTables] = useState(false);
   const [formData, setFormData] = useState({
     customerName: '',
     customerPhone: '',
@@ -47,6 +52,31 @@ export default function ReservationPage() {
       loadAvailability();
     }
   }, [selectedDate, partySize]);
+
+  useEffect(() => {
+    if (selectedDate && selectedTime) {
+      loadTables();
+    }
+  }, [selectedDate, selectedTime, partySize]);
+
+  const loadTables = async () => {
+    if (!restaurantId || !selectedDate || !selectedTime) return;
+
+    try {
+      setLoadingTables(true);
+      const response = await reservationPublicAPI.getTables(
+        restaurantId,
+        selectedDate.toISOString().split('T')[0],
+        selectedTime,
+        partySize
+      );
+      setTables(response.data.data || []);
+    } catch (err) {
+      console.error('Failed to load tables:', err);
+    } finally {
+      setLoadingTables(false);
+    }
+  };
 
   const loadAvailability = async () => {
     if (!restaurantId || !selectedDate) return;
@@ -84,6 +114,7 @@ export default function ReservationPage() {
         reservationDate: selectedDate.toISOString().split('T')[0],
         reservationTime: selectedTime,
         partySize,
+        tableId: selectedTable?.id || null,
         customerName: formData.customerName,
         customerPhone: formData.customerPhone,
         customerEmail: formData.customerEmail || null,
@@ -92,7 +123,7 @@ export default function ReservationPage() {
       });
 
       setSuccess(response.data.data);
-      setStep(3);
+      setStep(4);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create reservation');
       console.error('Failed to create reservation:', err);
@@ -142,7 +173,7 @@ export default function ReservationPage() {
   };
 
   // Confirmation step
-  if (step === 3 && success) {
+  if (step === 4 && success) {
     return (
       <div className="min-h-screen bg-gray-50 py-8 px-4">
         <div className="max-w-md mx-auto">
@@ -222,19 +253,28 @@ export default function ReservationPage() {
         <div className="max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div className={`flex items-center gap-2 ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
                 step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'
               }`}>1</div>
-              <span className="text-sm font-medium hidden sm:inline">Date & Time</span>
+              <span className="text-xs font-medium hidden sm:inline">Date & Time</span>
             </div>
-            <div className="flex-1 h-0.5 mx-2 bg-gray-200">
+            <div className="flex-1 h-0.5 mx-1 bg-gray-200">
               <div className={`h-full bg-blue-600 transition-all ${step >= 2 ? 'w-full' : 'w-0'}`} />
             </div>
             <div className={`flex items-center gap-2 ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
                 step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'
               }`}>2</div>
-              <span className="text-sm font-medium hidden sm:inline">Details</span>
+              <span className="text-xs font-medium hidden sm:inline">Table</span>
+            </div>
+            <div className="flex-1 h-0.5 mx-1 bg-gray-200">
+              <div className={`h-full bg-blue-600 transition-all ${step >= 3 ? 'w-full' : 'w-0'}`} />
+            </div>
+            <div className={`flex items-center gap-2 ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
+                step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200'
+              }`}>3</div>
+              <span className="text-xs font-medium hidden sm:inline">Details</span>
             </div>
           </div>
         </div>
@@ -386,7 +426,7 @@ export default function ReservationPage() {
         )}
 
         {step === 2 && (
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-6">
             {/* Selected Date/Time Summary */}
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="flex items-center justify-between">
@@ -401,6 +441,147 @@ export default function ReservationPage() {
                   <div className="text-sm text-blue-700">
                     {formatTime(selectedTime)} - {partySize} guests
                   </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-blue-600 text-sm font-medium hover:underline"
+                >
+                  Change
+                </button>
+              </div>
+            </div>
+
+            {/* Table Selection */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                <MapPin className="inline h-4 w-4 mr-2" />
+                Select Your Table (Optional)
+              </label>
+
+              {loadingTables ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                </div>
+              ) : tables.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Table Legend */}
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <span className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-green-500"></div>
+                      Available
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-red-500"></div>
+                      Reserved
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-gray-300"></div>
+                      Unavailable
+                    </span>
+                  </div>
+
+                  {/* Tables Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {tables.map((table) => {
+                      const isAvailable = table.availableForReservation;
+                      const isSelected = selectedTable?.id === table.id;
+
+                      return (
+                        <button
+                          key={table.id}
+                          type="button"
+                          disabled={!isAvailable}
+                          onClick={() => setSelectedTable(isSelected ? null : table)}
+                          className={`p-3 rounded-lg border-2 text-left transition-all ${
+                            isSelected
+                              ? 'border-blue-600 bg-blue-50'
+                              : isAvailable
+                              ? 'border-gray-200 hover:border-blue-300 bg-white'
+                              : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className={`w-3 h-3 rounded ${
+                              isAvailable ? 'bg-green-500' : 'bg-red-500'
+                            }`}></div>
+                            <span className="font-medium text-sm">
+                              {table.tableName || `Table ${table.tableNumber}`}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {table.capacity} seats
+                            {table.section && ` • ${table.section}`}
+                          </div>
+                          {!isAvailable && (
+                            <div className="text-xs text-red-600 mt-1">
+                              {table.statusReason === 'TOO_SMALL' ? 'Too small' :
+                               table.statusReason === 'RESERVED' ? 'Reserved' :
+                               table.statusReason === 'OCCUPIED' ? 'Occupied' : 'Unavailable'}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {selectedTable && (
+                    <div className="bg-green-50 rounded-lg p-3 text-sm text-green-800">
+                      Selected: {selectedTable.tableName || `Table ${selectedTable.tableNumber}`} ({selectedTable.capacity} seats)
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <MapPin className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <p>No tables available for selection</p>
+                  <p className="text-sm">A table will be assigned for you</p>
+                </div>
+              )}
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => setStep(3)}
+                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Selected Date/Time/Table Summary */}
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-blue-900">
+                    {selectedDate?.toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </div>
+                  <div className="text-sm text-blue-700">
+                    {formatTime(selectedTime)} - {partySize} guests
+                  </div>
+                  {selectedTable && (
+                    <div className="text-sm text-blue-700 mt-1">
+                      <MapPin className="inline h-3 w-3 mr-1" />
+                      {selectedTable.tableName || `Table ${selectedTable.tableNumber}`}
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -494,14 +675,14 @@ export default function ReservationPage() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setStep(1)}
+                onClick={() => setStep(2)}
                 className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors"
               >
                 Back
               </button>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !formData.customerName || !formData.customerPhone}
                 className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium disabled:bg-gray-300 hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
               >
                 {submitting ? (

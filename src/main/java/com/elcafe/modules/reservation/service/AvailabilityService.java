@@ -5,17 +5,21 @@ import com.elcafe.modules.reservation.entity.ReservationSettings;
 import com.elcafe.modules.reservation.enums.ReservationStatus;
 import com.elcafe.modules.reservation.repository.ReservationRepository;
 import com.elcafe.modules.reservation.repository.ReservationSettingsRepository;
+import com.elcafe.modules.restaurant.entity.BusinessHours;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.repository.BusinessHoursRepository;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -25,6 +29,7 @@ public class AvailabilityService {
     private final ReservationRepository reservationRepository;
     private final ReservationSettingsRepository settingsRepository;
     private final RestaurantRepository restaurantRepository;
+    private final BusinessHoursRepository businessHoursRepository;
 
     /**
      * Check if a specific time slot is available
@@ -121,11 +126,31 @@ public class AvailabilityService {
                     .build();
         }
 
-        // Generate time slots based on restaurant hours
-        // Using default hours 10:00-22:00 for simplicity
-        // In production, this should be based on restaurant operating hours
-        LocalTime openTime = LocalTime.of(10, 0);
-        LocalTime closeTime = LocalTime.of(22, 0);
+        // Get business hours for the selected day
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+        Optional<BusinessHours> businessHoursOpt = businessHoursRepository
+                .findByRestaurant_IdAndDayOfWeek(restaurantId, dayOfWeek);
+
+        LocalTime openTime;
+        LocalTime closeTime;
+
+        if (businessHoursOpt.isPresent() && !businessHoursOpt.get().getClosed()) {
+            BusinessHours hours = businessHoursOpt.get();
+            openTime = hours.getOpenTime();
+            closeTime = hours.getCloseTime();
+        } else if (businessHoursOpt.isPresent() && businessHoursOpt.get().getClosed()) {
+            // Restaurant is closed on this day
+            return AvailabilityResponse.builder()
+                    .date(date)
+                    .available(false)
+                    .message("Restaurant is closed on " + dayOfWeek.toString().toLowerCase())
+                    .build();
+        } else {
+            // No business hours configured, use default 10:00-22:00
+            openTime = LocalTime.of(10, 0);
+            closeTime = LocalTime.of(22, 0);
+        }
+
         int slotDuration = settings.getSlotDurationMinutes();
 
         List<AvailabilityResponse.TimeSlot> timeSlots = new ArrayList<>();

@@ -3,8 +3,10 @@ package com.elcafe.modules.reservation.controller;
 import com.elcafe.modules.reservation.dto.AvailabilityResponse;
 import com.elcafe.modules.reservation.dto.CreateReservationRequest;
 import com.elcafe.modules.reservation.dto.ReservationResponse;
+import com.elcafe.modules.reservation.dto.TableAvailabilityResponse;
 import com.elcafe.modules.reservation.service.AvailabilityService;
 import com.elcafe.modules.reservation.service.ReservationService;
+import com.elcafe.modules.reservation.service.TableAvailabilityService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -20,6 +22,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 @RestController
@@ -30,8 +33,29 @@ public class ReservationController {
 
     private final ReservationService reservationService;
     private final AvailabilityService availabilityService;
+    private final TableAvailabilityService tableAvailabilityService;
 
     // ========== Public Endpoints (for customers) ==========
+
+    @GetMapping("/public/restaurants/{restaurantId}/tables")
+    @Operation(summary = "Get tables for reservation", description = "Get all tables with availability for reservation")
+    public ResponseEntity<ApiResponse<List<TableAvailabilityResponse>>> getTablesForReservation(
+            @PathVariable Long restaurantId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime time,
+            @RequestParam(defaultValue = "2") int partySize) {
+        List<TableAvailabilityResponse> tables = tableAvailabilityService
+                .getTablesWithAvailability(restaurantId, date, time, partySize);
+        return ResponseEntity.ok(ApiResponse.success(tables));
+    }
+
+    @GetMapping("/public/restaurants/{restaurantId}/tables/sections")
+    @Operation(summary = "Get table sections", description = "Get distinct table sections/areas")
+    public ResponseEntity<ApiResponse<List<String>>> getTableSections(
+            @PathVariable Long restaurantId) {
+        List<String> sections = tableAvailabilityService.getTableSections(restaurantId);
+        return ResponseEntity.ok(ApiResponse.success(sections));
+    }
 
     @PostMapping("/public/restaurants/{restaurantId}/reservations")
     @Operation(summary = "Create reservation", description = "Create a new table reservation (public)")

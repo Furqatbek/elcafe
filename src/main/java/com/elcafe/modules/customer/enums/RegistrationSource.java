@@ -7,5 +7,7 @@ public enum RegistrationSource {
     MOBILE_APP,
     PHONE_CALL,
     WALK_IN,
+    RESERVATION,
+    QR_ORDER,
     OTHER
 }

@@ -1062,6 +1062,16 @@ export const reservationPublicAPI = {
   // Get reservations by phone
   getByPhone: (phone) =>
     api.get(`/public/reservations/phone/${phone}`),
+
+  // Get tables with availability for reservation
+  getTables: (restaurantId, date, time, partySize = 2) =>
+    api.get(`/public/restaurants/${restaurantId}/tables`, {
+      params: { date, time, partySize }
+    }),
+
+  // Get table sections
+  getTableSections: (restaurantId) =>
+    api.get(`/public/restaurants/${restaurantId}/tables/sections`),
 };
 
 // Reservation API (admin endpoints)
