@@ -74,11 +74,13 @@ public class Bundle {
     @OneToMany(mappedBy = "bundle", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<BundleItem> items = new HashSet<>();
 
     @OneToMany(mappedBy = "bundle", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<BundleOptionGroup> optionGroups = new HashSet<>();
 
     @CreatedDate

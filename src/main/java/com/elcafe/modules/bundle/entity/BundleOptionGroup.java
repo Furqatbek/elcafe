@@ -21,6 +21,7 @@ public class BundleOptionGroup {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bundle_id", nullable = false)
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Bundle bundle;
 
     @Column(nullable = false, length = 100)
@@ -48,6 +49,7 @@ public class BundleOptionGroup {
     @OneToMany(mappedBy = "optionGroup", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<BundleOption> options = new HashSet<>();
 
     // Helper methods

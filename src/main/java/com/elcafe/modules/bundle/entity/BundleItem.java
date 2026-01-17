@@ -21,6 +21,7 @@ public class BundleItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bundle_id", nullable = false)
     @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Bundle bundle;
 
     @ManyToOne(fetch = FetchType.LAZY)
