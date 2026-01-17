@@ -4,9 +4,13 @@ import com.elcafe.modules.reservation.dto.AvailabilityResponse;
 import com.elcafe.modules.reservation.dto.CreateReservationRequest;
 import com.elcafe.modules.reservation.dto.ReservationResponse;
 import com.elcafe.modules.reservation.dto.TableAvailabilityResponse;
+import com.elcafe.modules.reservation.entity.ReservationSettings;
+import com.elcafe.modules.reservation.repository.ReservationSettingsRepository;
 import com.elcafe.modules.reservation.service.AvailabilityService;
 import com.elcafe.modules.reservation.service.ReservationService;
 import com.elcafe.modules.reservation.service.TableAvailabilityService;
+import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,8 +38,33 @@ public class ReservationController {
     private final ReservationService reservationService;
     private final AvailabilityService availabilityService;
     private final TableAvailabilityService tableAvailabilityService;
+    private final RestaurantRepository restaurantRepository;
+    private final ReservationSettingsRepository reservationSettingsRepository;
 
     // ========== Public Endpoints (for customers) ==========
+
+    @GetMapping("/public/restaurants/reservable")
+    @Operation(summary = "Get restaurants accepting reservations", description = "Get list of restaurants that accept online reservations")
+    public ResponseEntity<ApiResponse<List<RestaurantBasicInfo>>> getReservableRestaurants() {
+        List<Restaurant> restaurants = restaurantRepository.findByActiveTrue();
+        List<RestaurantBasicInfo> result = restaurants.stream()
+                .filter(r -> {
+                    return reservationSettingsRepository.findByRestaurantId(r.getId())
+                            .map(ReservationSettings::getEnabled)
+                            .orElse(true); // Default to true if no settings
+                })
+                .map(r -> new RestaurantBasicInfo(
+                        r.getId(),
+                        r.getName(),
+                        r.getAddress(),
+                        r.getPhone(),
+                        r.getLogoUrl()
+                ))
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    public record RestaurantBasicInfo(Long id, String name, String address, String phone, String logoUrl) {}
 
     @GetMapping("/public/restaurants/{restaurantId}/tables")
     @Operation(summary = "Get tables for reservation", description = "Get all tables with availability for reservation")

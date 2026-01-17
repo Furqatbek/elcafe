@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { CustomerProvider, MenuPage, CartPage, CheckoutPage, OrderStatusPage, OrderTrackingPage, ReservationPage } from './pages/customer';
+import { CustomerProvider, MenuPage, CartPage, CheckoutPage, OrderStatusPage, OrderTrackingPage, ReservationPage, RestaurantSelectPage } from './pages/customer';
 
 function CustomerApp() {
   return (
@@ -21,7 +21,10 @@ function CustomerApp() {
           {/* Order Tracking - public tracking page */}
           <Route path="/track/:orderNumber" element={<OrderTrackingPage />} />
 
-          {/* Reservations - public reservation page */}
+          {/* Reservations - restaurant selection page */}
+          <Route path="/reserve" element={<RestaurantSelectPage />} />
+
+          {/* Reservations - specific restaurant */}
           <Route path="/reserve/:restaurantId" element={<ReservationPage />} />
 
           {/* Fallback */}

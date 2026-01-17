@@ -503,7 +503,7 @@ export default function ReservationPage() {
                               isAvailable ? 'bg-green-500' : 'bg-red-500'
                             }`}></div>
                             <span className="font-medium text-sm">
-                              {table.tableName || `Table ${table.tableNumber}`}
+                              #{table.tableNumber}{table.tableName && ` - ${table.tableName}`}
                             </span>
                           </div>
                           <div className="text-xs text-gray-500">
@@ -524,7 +524,7 @@ export default function ReservationPage() {
 
                   {selectedTable && (
                     <div className="bg-green-50 rounded-lg p-3 text-sm text-green-800">
-                      Selected: {selectedTable.tableName || `Table ${selectedTable.tableNumber}`} ({selectedTable.capacity} seats)
+                      Selected: #{selectedTable.tableNumber}{selectedTable.tableName && ` - ${selectedTable.tableName}`} ({selectedTable.capacity} seats)
                     </div>
                   )}
                 </div>
@@ -576,7 +576,7 @@ export default function ReservationPage() {
                   {selectedTable && (
                     <div className="text-sm text-blue-700 mt-1">
                       <MapPin className="inline h-3 w-3 mr-1" />
-                      {selectedTable.tableName || `Table ${selectedTable.tableNumber}`}
+                      #{selectedTable.tableNumber}{selectedTable.tableName && ` - ${selectedTable.tableName}`}
                     </div>
                   )}
                 </div>

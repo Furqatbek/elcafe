@@ -1033,6 +1033,10 @@ export const selfServiceAPI = {
 
 // Reservation API (public endpoints for customers)
 export const reservationPublicAPI = {
+  // Get restaurants accepting reservations
+  getReservableRestaurants: () =>
+    api.get('/public/restaurants/reservable'),
+
   // Create a reservation
   createReservation: (restaurantId, data) =>
     api.post(`/public/restaurants/${restaurantId}/reservations`, data),
