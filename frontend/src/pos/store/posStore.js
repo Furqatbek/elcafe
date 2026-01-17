@@ -858,7 +858,7 @@ const usePOSStore = create(
           const [categoriesRes, productsRes, bundlesRes] = await Promise.all([
             posAPI.getCategories(restaurantId),
             posAPI.getProducts(restaurantId),
-            bundleAPI.getMenuBundles(restaurantId).catch(() => ({ data: { data: [] } })),
+            bundleAPI.getMenuBundles(restaurantId, true).catch(() => ({ data: { data: [] } })), // includeAll=true for POS
           ]);
 
           const categories = categoriesRes.data.data || categoriesRes.data || [];

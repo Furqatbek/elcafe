@@ -810,8 +810,8 @@ export const bundleAPI = {
   // Bundles CRUD
   getBundles: (restaurantId, params = {}) =>
     api.get(`/restaurants/${restaurantId}/bundles`, { params }),
-  getMenuBundles: (restaurantId) =>
-    api.get(`/restaurants/${restaurantId}/bundles/menu`),
+  getMenuBundles: (restaurantId, includeAll = false) =>
+    api.get(`/restaurants/${restaurantId}/bundles/menu`, { params: { includeAll } }),
   getBundle: (id) => api.get(`/bundles/${id}`),
   createBundle: (restaurantId, data) =>
     api.post(`/restaurants/${restaurantId}/bundles`, data),

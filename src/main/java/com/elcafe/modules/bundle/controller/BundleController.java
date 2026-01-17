@@ -41,12 +41,14 @@ public class BundleController {
 
     /**
      * Get active bundles for menu display (public)
+     * @param includeAll if true, returns all active bundles regardless of time/day restrictions (for POS)
      */
     @GetMapping("/restaurants/{restaurantId}/bundles/menu")
     public ResponseEntity<ApiResponse<List<BundleResponse>>> getMenuBundles(
-            @PathVariable Long restaurantId) {
-        log.debug("Getting active bundles for restaurant menu: {}", restaurantId);
-        List<BundleResponse> bundles = bundleService.getActiveBundlesForMenu(restaurantId);
+            @PathVariable Long restaurantId,
+            @RequestParam(required = false, defaultValue = "false") boolean includeAll) {
+        log.debug("Getting active bundles for restaurant menu: {}, includeAll: {}", restaurantId, includeAll);
+        List<BundleResponse> bundles = bundleService.getActiveBundlesForMenu(restaurantId, includeAll);
         return ResponseEntity.ok(ApiResponse.success(bundles));
     }
 

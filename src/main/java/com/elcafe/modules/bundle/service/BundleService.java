@@ -48,15 +48,24 @@ public class BundleService {
 
     /**
      * Get active bundles with full details for menu display
+     * @param includeAll if true, returns all active bundles regardless of time/day restrictions (for POS)
      */
     @Transactional(readOnly = true)
-    public List<BundleResponse> getActiveBundlesForMenu(Long restaurantId) {
+    public List<BundleResponse> getActiveBundlesForMenu(Long restaurantId, boolean includeAll) {
         // Fetch bundles with items first
         List<Bundle> bundles = bundleRepository.findActiveWithItemsByRestaurantId(restaurantId);
 
         // Then fetch option groups to populate the second-level cache
         if (!bundles.isEmpty()) {
             bundleRepository.findActiveWithOptionGroupsByRestaurantId(restaurantId);
+        }
+
+        // For POS (includeAll=true), return all active bundles without availability filtering
+        // For customer menu, filter by time/day availability
+        if (includeAll) {
+            return bundles.stream()
+                    .map(BundleResponse::from)
+                    .collect(Collectors.toList());
         }
 
         return bundles.stream()
