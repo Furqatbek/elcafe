@@ -311,6 +311,10 @@ public class OwnerTelegramBotService {
                     .build();
                 settingsRepository.save(settings);
 
+                String fullName = user.getFirstName();
+                if (user.getLastName() != null && !user.getLastName().isEmpty()) {
+                    fullName += " " + user.getLastName();
+                }
                 String successMessage = String.format(
                     "✅ <b>Успешно подключено!</b>\n\n" +
                     "👤 Аккаунт: %s\n" +
@@ -320,7 +324,7 @@ public class OwnerTelegramBotService {
                     "Команды:\n" +
                     "/settings - Настройки уведомлений\n" +
                     "/status - Статус подключения",
-                    user.getFullName(),
+                    fullName,
                     restaurant.getName(),
                     verification.role
                 );

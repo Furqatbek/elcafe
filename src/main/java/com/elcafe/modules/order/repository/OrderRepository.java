@@ -132,4 +132,11 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             @Param("restaurantId") Long restaurantId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
+
+    // Daily statistics for restaurant
+    @Query("SELECT COUNT(o), COALESCE(SUM(o.total), 0) FROM Order o WHERE o.restaurant.id = :restaurantId AND o.createdAt BETWEEN :startDate AND :endDate AND o.status NOT IN ('CANCELLED', 'REJECTED')")
+    Object[] getDailyStatsForRestaurant(
+            @Param("restaurantId") Long restaurantId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 }

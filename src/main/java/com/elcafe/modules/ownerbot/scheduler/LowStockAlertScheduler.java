@@ -32,7 +32,7 @@ public class LowStockAlertScheduler {
     public void checkLowStockAlerts() {
         log.info("Checking for low stock alerts...");
 
-        List<Restaurant> restaurants = restaurantRepository.findAllActiveRestaurants();
+        List<Restaurant> restaurants = restaurantRepository.findByActiveTrue();
 
         for (Restaurant restaurant : restaurants) {
             try {

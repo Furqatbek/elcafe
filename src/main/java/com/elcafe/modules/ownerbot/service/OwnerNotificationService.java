@@ -58,7 +58,7 @@ public class OwnerNotificationService {
 
             // Check minimum order amount threshold
             if (settings != null && settings.getMinOrderAmountNotify() != null) {
-                if (order.getTotalAmount().compareTo(settings.getMinOrderAmountNotify()) < 0) {
+                if (order.getTotal().compareTo(settings.getMinOrderAmountNotify()) < 0) {
                     continue;
                 }
             }
@@ -319,14 +319,18 @@ public class OwnerNotificationService {
             sb.append(String.format("Тип: %s\n", orderTypeText));
         }
 
-        if (order.getTableNumber() != null) {
-            sb.append(String.format("🪑 Столик: %s\n", order.getTableNumber()));
+        if (order.getDiningTable() != null) {
+            sb.append(String.format("🪑 Столик: %s\n", order.getDiningTable().getTableNumber()));
         }
 
-        sb.append(String.format("💰 Сумма: <b>%s UZS</b>\n", CURRENCY_FORMAT.format(order.getTotalAmount())));
+        sb.append(String.format("💰 Сумма: <b>%s UZS</b>\n", CURRENCY_FORMAT.format(order.getTotal())));
 
-        if (order.getCustomerName() != null) {
-            sb.append(String.format("👤 Клиент: %s\n", order.getCustomerName()));
+        if (order.getCustomer() != null) {
+            String customerName = order.getCustomer().getFirstName();
+            if (order.getCustomer().getLastName() != null) {
+                customerName += " " + order.getCustomer().getLastName();
+            }
+            sb.append(String.format("👤 Клиент: %s\n", customerName));
         }
 
         sb.append(String.format("\n⏰ %s", LocalDateTime.now().format(TIME_FORMAT)));
@@ -343,7 +347,7 @@ public class OwnerNotificationService {
         sb.append(String.format("👥 Гостей: %d\n", reservation.getPartySize()));
 
         if (reservation.getTable() != null) {
-            sb.append(String.format("🪑 Столик: #%d\n", reservation.getTable().getTableNumber()));
+            sb.append(String.format("🪑 Столик: #%s\n", reservation.getTable().getTableNumber()));
         }
 
         sb.append(String.format("👤 Имя: %s\n", reservation.getCustomerName()));
@@ -364,7 +368,7 @@ public class OwnerNotificationService {
             "📝 Причина: %s\n\n" +
             "⏰ %s",
             order.getOrderNumber(),
-            CURRENCY_FORMAT.format(order.getTotalAmount()),
+            CURRENCY_FORMAT.format(order.getTotal()),
             reason != null ? reason : "Не указана",
             LocalDateTime.now().format(TIME_FORMAT)
         );

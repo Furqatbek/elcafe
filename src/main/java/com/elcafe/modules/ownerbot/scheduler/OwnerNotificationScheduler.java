@@ -37,7 +37,7 @@ public class OwnerNotificationScheduler {
     public void sendDailySalesReports() {
         log.info("Starting daily sales report generation...");
 
-        List<Restaurant> restaurants = restaurantRepository.findAllActiveRestaurants();
+        List<Restaurant> restaurants = restaurantRepository.findByActiveTrue();
 
         for (Restaurant restaurant : restaurants) {
             try {
@@ -57,16 +57,15 @@ public class OwnerNotificationScheduler {
         LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
 
         // Get order statistics
-        List<Object[]> orderStats = orderRepository.getDailyStats(
+        Object[] orderStats = orderRepository.getDailyStatsForRestaurant(
                 restaurant.getId(), startOfDay, endOfDay);
 
         int totalOrders = 0;
         BigDecimal totalRevenue = BigDecimal.ZERO;
 
-        if (!orderStats.isEmpty() && orderStats.get(0) != null) {
-            Object[] stats = orderStats.get(0);
-            totalOrders = ((Number) stats[0]).intValue();
-            totalRevenue = stats[1] != null ? (BigDecimal) stats[1] : BigDecimal.ZERO;
+        if (orderStats != null && orderStats.length >= 2) {
+            totalOrders = ((Number) orderStats[0]).intValue();
+            totalRevenue = orderStats[1] != null ? (BigDecimal) orderStats[1] : BigDecimal.ZERO;
         }
 
         // Get reservation count
