@@ -3,8 +3,8 @@ package com.elcafe.modules.bundle.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @Builder
@@ -48,7 +48,7 @@ public class BundleOptionGroup {
     @OneToMany(mappedBy = "optionGroup", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
-    private List<BundleOption> options = new ArrayList<>();
+    private Set<BundleOption> options = new HashSet<>();
 
     // Helper methods
     public void addOption(BundleOption option) {

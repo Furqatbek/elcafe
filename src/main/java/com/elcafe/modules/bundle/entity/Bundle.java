@@ -10,8 +10,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @Builder
@@ -74,12 +74,12 @@ public class Bundle {
     @OneToMany(mappedBy = "bundle", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
-    private List<BundleItem> items = new ArrayList<>();
+    private Set<BundleItem> items = new HashSet<>();
 
     @OneToMany(mappedBy = "bundle", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
-    private List<BundleOptionGroup> optionGroups = new ArrayList<>();
+    private Set<BundleOptionGroup> optionGroups = new HashSet<>();
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
