@@ -82,4 +82,10 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
            "AND r.status = 'NO_SHOW' " +
            "AND r.customerPhone = :phone")
     long countNoShowsByPhone(@Param("restaurantId") Long restaurantId, @Param("phone") String phone);
+
+    List<Reservation> findByReservationDateAndStatus(LocalDate date, ReservationStatus status);
+
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
+           "AND r.reservationDate = :date")
+    int countByRestaurantIdAndDate(@Param("restaurantId") Long restaurantId, @Param("date") LocalDate date);
 }

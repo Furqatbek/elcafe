@@ -10,6 +10,7 @@ import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
+import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -33,6 +34,8 @@ public class InventoryService {
     private final InventoryTransactionRepository transactionRepository;
     @Lazy
     private final InventoryValuationService valuationService;
+    @Lazy
+    private final OwnerNotificationService ownerNotificationService;
 
     /**
      * Check if all ingredients are available for an order
@@ -125,6 +128,31 @@ public class InventoryService {
             log.info("Deducted {} {} of {} for order {}{}",
                     quantityRequired, ingredient.getUnit(), ingredient.getName(), order.getOrderNumber(),
                     consumptionResult != null ? " (cost: " + consumptionResult.totalCost() + ")" : "");
+
+            // Check for low stock and send alert
+            checkAndNotifyLowStock(ingredient, order.getRestaurant().getId());
+        }
+    }
+
+    /**
+     * Check if ingredient is below minimum stock and send notification
+     */
+    private void checkAndNotifyLowStock(Ingredient ingredient, Long restaurantId) {
+        try {
+            if (ownerNotificationService != null && ingredient.isLowStock()) {
+                BigDecimal threshold = ingredient.getMinimumStock() != null
+                        ? ingredient.getMinimumStock()
+                        : BigDecimal.TEN;
+                ownerNotificationService.notifyLowStock(
+                        restaurantId,
+                        ingredient.getName(),
+                        ingredient.getCurrentStock().intValue(),
+                        threshold.intValue()
+                );
+                log.info("Low stock alert sent for ingredient: {}", ingredient.getName());
+            }
+        } catch (Exception e) {
+            log.error("Failed to send low stock notification for {}: {}", ingredient.getName(), e.getMessage());
         }
     }
 

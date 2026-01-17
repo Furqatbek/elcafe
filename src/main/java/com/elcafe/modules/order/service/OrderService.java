@@ -15,6 +15,8 @@ import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.settings.service.PrintService;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.PaymentRepository;
+import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
+import com.elcafe.modules.notification.service.CustomerNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -45,6 +47,8 @@ public class OrderService {
     @Lazy private final RevenueService revenueService;
     @Lazy private final PrintService printService;
     @Lazy private final InventoryValuationService inventoryValuationService;
+    @Lazy private final OwnerNotificationService ownerNotificationService;
+    @Lazy private final CustomerNotificationService customerNotificationService;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -69,6 +73,16 @@ public class OrderService {
         } catch (Exception e) {
             log.error("Failed to print kitchen order, but order was created successfully", e);
             // Don't fail order creation if printing fails
+        }
+
+        // Notify owners/staff via Telegram
+        try {
+            if (ownerNotificationService != null) {
+                ownerNotificationService.notifyNewOrder(order);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send owner notification for order, but order was created successfully", e);
+            // Don't fail order creation if notification fails
         }
 
         return order;
@@ -161,7 +175,35 @@ public class OrderService {
             }
         }
 
+        // Notify owners/staff about cancelled order
+        if (newStatus == OrderStatus.CANCELLED && ownerNotificationService != null) {
+            try {
+                ownerNotificationService.notifyOrderCancelled(order, notes);
+            } catch (Exception e) {
+                log.error("Failed to send cancellation notification for order {}: {}", order.getOrderNumber(), e.getMessage());
+            }
+        }
+
+        // Notify customer about order status change via Telegram
+        if (customerNotificationService != null && shouldNotifyCustomer(newStatus)) {
+            try {
+                customerNotificationService.notifyOrderStatusUpdate(order, newStatus);
+            } catch (Exception e) {
+                log.error("Failed to send customer notification for order {}: {}", order.getOrderNumber(), e.getMessage());
+            }
+        }
+
         return order;
+    }
+
+    /**
+     * Determine if customer should be notified for this status change
+     */
+    private boolean shouldNotifyCustomer(OrderStatus status) {
+        return switch (status) {
+            case ACCEPTED, PREPARING, READY, ON_DELIVERY, DELIVERED, COMPLETED, CANCELLED -> true;
+            default -> false;
+        };
     }
 
     @Transactional(readOnly = true)

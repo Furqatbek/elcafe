@@ -16,8 +16,11 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
+import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
+import com.elcafe.modules.notification.service.CustomerNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -41,6 +44,8 @@ public class ReservationService {
     private final CustomerRepository customerRepository;
     private final RestaurantTableRepository tableRepository;
     private final AvailabilityService availabilityService;
+    @Lazy private final OwnerNotificationService ownerNotificationService;
+    @Lazy private final CustomerNotificationService customerNotificationService;
 
     private static final String CONFIRMATION_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     private static final SecureRandom random = new SecureRandom();
@@ -114,6 +119,15 @@ public class ReservationService {
 
         Reservation saved = reservationRepository.save(reservation);
         log.info("Reservation created with ID: {} and code: {}", saved.getId(), saved.getConfirmationCode());
+
+        // Notify owners/staff via Telegram
+        try {
+            if (ownerNotificationService != null) {
+                ownerNotificationService.notifyNewReservation(saved);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send owner notification for reservation, but reservation was created successfully", e);
+        }
 
         return ReservationResponse.from(saved);
     }
@@ -190,6 +204,15 @@ public class ReservationService {
         Reservation saved = reservationRepository.save(reservation);
         log.info("Reservation {} confirmed", id);
 
+        // Notify customer via Telegram
+        try {
+            if (customerNotificationService != null) {
+                customerNotificationService.notifyReservationConfirmed(saved);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send customer confirmation for reservation {}: {}", id, e.getMessage());
+        }
+
         return ReservationResponse.from(saved);
     }
 
@@ -211,6 +234,24 @@ public class ReservationService {
 
         Reservation saved = reservationRepository.save(reservation);
         log.info("Reservation {} cancelled", id);
+
+        // Notify owners/staff about cancellation
+        try {
+            if (ownerNotificationService != null) {
+                ownerNotificationService.notifyReservationCancelled(saved, reason);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send owner cancellation notification for reservation {}: {}", id, e.getMessage());
+        }
+
+        // Notify customer via Telegram
+        try {
+            if (customerNotificationService != null) {
+                customerNotificationService.notifyReservationCancelled(saved, reason);
+            }
+        } catch (Exception e) {
+            log.error("Failed to send customer cancellation notification for reservation {}: {}", id, e.getMessage());
+        }
 
         return ReservationResponse.from(saved);
     }
