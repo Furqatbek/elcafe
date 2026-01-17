@@ -2,6 +2,7 @@ package com.elcafe.modules.reservation.service;
 
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.reservation.dto.AvailabilityResponse;
+import com.elcafe.modules.reservation.entity.Reservation;
 import com.elcafe.modules.reservation.entity.ReservationSettings;
 import com.elcafe.modules.reservation.enums.ReservationStatus;
 import com.elcafe.modules.reservation.repository.ReservationRepository;
@@ -62,9 +63,14 @@ public class AvailabilityService {
             return false;
         }
 
-        // Check max reservations per slot
+        // Check max reservations per slot (using overlap logic)
         if (settings.getMaxReservationsPerSlot() != null) {
-            long currentCount = reservationRepository.countReservationsAtSlot(restaurantId, date, time);
+            List<Reservation> activeReservations = reservationRepository.findByRestaurantIdAndReservationDate(restaurantId, date)
+                    .stream()
+                    .filter(r -> r.getStatus() != ReservationStatus.CANCELLED && r.getStatus() != ReservationStatus.NO_SHOW)
+                    .toList();
+
+            long currentCount = countOverlappingReservations(activeReservations, time, settings.getSlotDurationMinutes());
             if (currentCount >= settings.getMaxReservationsPerSlot()) {
                 return false;
             }
@@ -173,6 +179,12 @@ public class AvailabilityService {
         log.debug("Generating time slots for restaurant {} on {}: {} to {} (crosses midnight: {})",
                 restaurantId, date, shiftStart, reservationEndTime, crossesMidnight);
 
+        // Fetch all active reservations for the date once (more efficient than querying per slot)
+        List<Reservation> activeReservations = reservationRepository.findByRestaurantIdAndReservationDate(restaurantId, date)
+                .stream()
+                .filter(r -> r.getStatus() != ReservationStatus.CANCELLED && r.getStatus() != ReservationStatus.NO_SHOW)
+                .toList();
+
         while (currentSlotTime.plusMinutes(slotDuration).isBefore(reservationEndTime) ||
                currentSlotTime.plusMinutes(slotDuration).equals(reservationEndTime)) {
 
@@ -187,9 +199,8 @@ public class AvailabilityService {
             int maxSpots = settings.getMaxReservationsPerSlot() != null ?
                     settings.getMaxReservationsPerSlot() : 10;
 
-            // For reservations, use the slot's actual date (may be next day for late slots)
-            LocalDate slotDate = currentSlotTime.toLocalDate();
-            long currentCount = reservationRepository.countReservationsAtSlot(restaurantId, slotDate, slotTime);
+            // Count overlapping reservations (not just exact time matches)
+            long currentCount = countOverlappingReservations(activeReservations, slotTime, slotDuration);
             int availableSpots = maxSpots - (int) currentCount;
             boolean slotAvailable = availableSpots > 0;
 
@@ -268,5 +279,23 @@ public class AvailabilityService {
                             .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
                     return createDefaultSettings(restaurant);
                 });
+    }
+
+    /**
+     * Count reservations that overlap with a given time slot.
+     * Two time intervals overlap if: start1 < end2 AND start2 < end1
+     */
+    private long countOverlappingReservations(List<Reservation> reservations, LocalTime slotStart, int slotDurationMinutes) {
+        LocalTime slotEnd = slotStart.plusMinutes(slotDurationMinutes);
+
+        return reservations.stream()
+                .filter(r -> {
+                    LocalTime resStart = r.getReservationTime();
+                    LocalTime resEnd = resStart.plusMinutes(r.getDurationMinutes());
+
+                    // Check for overlap: slotStart < resEnd AND resStart < slotEnd
+                    return slotStart.isBefore(resEnd) && resStart.isBefore(slotEnd);
+                })
+                .count();
     }
 }
