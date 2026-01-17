@@ -447,11 +447,11 @@ export default function Reservations() {
                           <div className="text-sm text-gray-500 flex items-center gap-2">
                             <Users className="h-3 w-3" />
                             {reservation.partySize} {t('reservations.guests', 'guests')}
-                            {reservation.tableName && (
+                            {(reservation.tableNumber || reservation.tableName) && (
                               <>
                                 <span>•</span>
                                 <Table2 className="h-3 w-3" />
-                                {reservation.tableName}
+                                #{reservation.tableNumber}{reservation.tableName && ` - ${reservation.tableName}`}
                               </>
                             )}
                           </div>
@@ -535,10 +535,13 @@ export default function Reservations() {
                   </div>
                 )}
 
-                {selectedReservation.tableName ? (
+                {(selectedReservation.tableNumber || selectedReservation.tableName) ? (
                   <div className="flex items-center gap-3">
                     <Table2 className="h-5 w-5 text-gray-400" />
-                    <span>{selectedReservation.tableName}</span>
+                    <span>
+                      #{selectedReservation.tableNumber}
+                      {selectedReservation.tableName && ` - ${selectedReservation.tableName}`}
+                    </span>
                   </div>
                 ) : (
                   <Button
