@@ -5,6 +5,9 @@ services:
   backend:
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      # Local QR code URL - override production default
+      SELFSERVICE_BASE_URL: http://localhost/order
+      FILE_BASE_URL: http://localhost/uploads
 
   nginx-proxy:
     ports:
