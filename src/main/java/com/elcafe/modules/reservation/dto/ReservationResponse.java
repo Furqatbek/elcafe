@@ -24,6 +24,7 @@ public class ReservationResponse {
     private String restaurantName;
     private Long customerId;
     private Long tableId;
+    private String tableNumber;
     private String tableName;
 
     private String customerName;
@@ -65,6 +66,7 @@ public class ReservationResponse {
                 .restaurantName(reservation.getRestaurant().getName())
                 .customerId(reservation.getCustomer() != null ? reservation.getCustomer().getId() : null)
                 .tableId(reservation.getTable() != null ? reservation.getTable().getId() : null)
+                .tableNumber(reservation.getTable() != null ? reservation.getTable().getTableNumber() : null)
                 .tableName(reservation.getTable() != null ? reservation.getTable().getTableName() : null)
                 .customerName(reservation.getCustomerName())
                 .customerPhone(reservation.getCustomerPhone())

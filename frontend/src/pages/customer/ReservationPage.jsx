@@ -220,6 +220,15 @@ export default function ReservationPage() {
                 <Users className="h-5 w-5 text-gray-400" />
                 <span>{success.partySize} {t('customerReservation.guests')}</span>
               </div>
+              {(success.tableNumber || success.tableName) && (
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-gray-400" />
+                  <span>
+                    {t('customerReservation.table')} #{success.tableNumber}
+                    {success.tableName && ` - ${success.tableName}`}
+                  </span>
+                </div>
+              )}
             </div>
 
             {success.status === 'DEPOSIT_PENDING' && (
