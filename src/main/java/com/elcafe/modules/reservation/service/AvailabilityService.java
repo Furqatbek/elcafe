@@ -29,11 +29,17 @@ public class AvailabilityService {
     /**
      * Check if a specific time slot is available
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public boolean isSlotAvailable(Long restaurantId, LocalDate date, LocalTime time, int partySize) {
-        ReservationSettings settings = settingsRepository.findByRestaurantId(restaurantId).orElse(null);
+        Restaurant restaurant = restaurantRepository.findById(restaurantId).orElse(null);
+        if (restaurant == null) {
+            return false;
+        }
 
-        if (settings == null || !settings.getEnabled()) {
+        ReservationSettings settings = settingsRepository.findByRestaurantId(restaurantId)
+                .orElseGet(() -> createDefaultSettings(restaurant));
+
+        if (!settings.getEnabled()) {
             return false;
         }
 
@@ -62,7 +68,7 @@ public class AvailabilityService {
     /**
      * Get available time slots for a date
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public AvailabilityResponse getAvailability(Long restaurantId, LocalDate date, int partySize) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId).orElse(null);
         if (restaurant == null) {
@@ -73,8 +79,11 @@ public class AvailabilityService {
                     .build();
         }
 
-        ReservationSettings settings = settingsRepository.findByRestaurantId(restaurantId).orElse(null);
-        if (settings == null || !settings.getEnabled()) {
+        // Get or create default reservation settings
+        ReservationSettings settings = settingsRepository.findByRestaurantId(restaurantId)
+                .orElseGet(() -> createDefaultSettings(restaurant));
+
+        if (!settings.getEnabled()) {
             return AvailabilityResponse.builder()
                     .date(date)
                     .available(false)
@@ -176,5 +185,43 @@ public class AvailabilityService {
         }
 
         return availabilities;
+    }
+
+    /**
+     * Create default reservation settings for a restaurant
+     */
+    private ReservationSettings createDefaultSettings(Restaurant restaurant) {
+        log.info("Creating default reservation settings for restaurant: {}", restaurant.getId());
+
+        ReservationSettings settings = ReservationSettings.builder()
+                .restaurant(restaurant)
+                .enabled(true)
+                .advanceDays(30)
+                .minAdvanceHours(2)
+                .slotDurationMinutes(60)
+                .minPartySize(1)
+                .maxPartySize(12)
+                .depositRequired(false)
+                .autoConfirm(true)
+                .sendReminders(true)
+                .reminderHoursBefore(24)
+                .cancellationHours(24)
+                .maxReservationsPerSlot(10)
+                .build();
+
+        return settingsRepository.save(settings);
+    }
+
+    /**
+     * Get or create settings for a restaurant
+     */
+    @Transactional
+    public ReservationSettings getOrCreateSettings(Long restaurantId) {
+        return settingsRepository.findByRestaurantId(restaurantId)
+                .orElseGet(() -> {
+                    Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+                    return createDefaultSettings(restaurant);
+                });
     }
 }
