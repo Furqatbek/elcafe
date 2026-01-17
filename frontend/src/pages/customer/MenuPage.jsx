@@ -16,6 +16,8 @@ import {
   Percent,
   Package,
   CalendarDays,
+  Gift,
+  Timer,
 } from 'lucide-react';
 
 const COMBOS_CATEGORY_ID = 'combos';
@@ -275,36 +277,83 @@ export default function MenuPage() {
           {activeHappyHour && (
             <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-lg p-3 text-white">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
+                <Sparkles className="w-5 h-5 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="font-bold text-sm">Happy Hour Active!</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold text-sm">Happy Hour Active!</p>
+                    {activeHappyHour.remainingMinutes && (
+                      <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Timer className="w-3 h-3" />
+                        {activeHappyHour.remainingMinutes} min left
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs opacity-90">
-                    {activeHappyHour.discountPercent}% off selected items
+                    {activeHappyHour.discountPercent}% off
+                    {activeHappyHour.applicableProducts?.length > 0
+                      ? ` on ${activeHappyHour.applicableProducts.length} items`
+                      : ' on selected items'}
                   </p>
                 </div>
-                <Clock className="w-4 h-4 opacity-75" />
+                <Clock className="w-4 h-4 opacity-75 flex-shrink-0" />
               </div>
             </div>
           )}
 
           {/* Promotions */}
-          {activePromotions.slice(0, 2).map((promo) => (
+          {activePromotions.map((promo) => (
             <div
               key={promo.id}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg p-3 text-white"
+              className={`rounded-lg p-3 text-white ${
+                promo.type === 'FREE_ITEM'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                  : promo.type === 'BUY_X_GET_Y'
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500'
+                  : 'bg-gradient-to-r from-blue-500 to-purple-500'
+              }`}
             >
-              <div className="flex items-center gap-2">
-                <Tag className="w-5 h-5" />
-                <div className="flex-1">
+              <div className="flex items-center gap-3">
+                {promo.type === 'FREE_ITEM' ? (
+                  <Gift className="w-5 h-5 flex-shrink-0" />
+                ) : (
+                  <Tag className="w-5 h-5 flex-shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm">{promo.name}</p>
                   <p className="text-xs opacity-90">
                     {promo.type === 'PERCENTAGE' && `${promo.discountValue}% off`}
                     {promo.type === 'FIXED_AMOUNT' && `Save ${formatPrice(promo.discountValue)}`}
-                    {promo.type === 'BUY_X_GET_Y' && 'Buy more, get more!'}
-                    {promo.minOrderAmount > 0 && ` - Min order: ${formatPrice(promo.minOrderAmount)}`}
+                    {promo.type === 'BUY_X_GET_Y' && `Buy ${promo.buyQuantity || 'X'}, get ${promo.getQuantity || 'Y'} free!`}
+                    {promo.type === 'FREE_ITEM' && 'Get a free item!'}
+                    {promo.minOrderAmount > 0 && ` • Min: ${formatPrice(promo.minOrderAmount)}`}
                   </p>
+                  {promo.description && (
+                    <p className="text-xs opacity-75 truncate">{promo.description}</p>
+                  )}
                 </div>
-                <Percent className="w-4 h-4 opacity-75" />
+                {/* Free Product Image for FREE_ITEM promotions */}
+                {promo.type === 'FREE_ITEM' && promo.freeProduct && (
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {promo.freeProduct.imageUrl ? (
+                      <img
+                        src={promo.freeProduct.imageUrl}
+                        alt={promo.freeProduct.name}
+                        className="w-10 h-10 rounded-lg object-cover border-2 border-white/30"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                        <Gift className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div className="text-right">
+                      <p className="text-xs font-medium">FREE</p>
+                      <p className="text-xs opacity-75 max-w-[80px] truncate">{promo.freeProduct.name}</p>
+                    </div>
+                  </div>
+                )}
+                {promo.type !== 'FREE_ITEM' && (
+                  <Percent className="w-4 h-4 opacity-75 flex-shrink-0" />
+                )}
               </div>
             </div>
           ))}
