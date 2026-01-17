@@ -40,6 +40,11 @@ public class OrderEventBroadcaster {
         if (order.getDeliveryInfo() != null) {
             eventData.put("deliveryAddress", buildDeliveryInfo(order));
         }
+        // Include table info for dine-in / self-service orders
+        if (order.getDiningTable() != null) {
+            eventData.put("tableNumber", order.getDiningTable().getTableNumber());
+            eventData.put("tableId", order.getDiningTable().getId());
+        }
         eventData.put("placedAt", order.getPlacedAt());
 
         OrderEventMessage message = OrderEventMessage.builder()
@@ -255,10 +260,18 @@ public class OrderEventBroadcaster {
      */
     private Map<String, Object> buildConsumerInfo(Order order) {
         Map<String, Object> consumer = new HashMap<>();
-        consumer.put("id", order.getCustomer().getId());
-        consumer.put("phoneNumber", order.getCustomer().getPhone());
-        consumer.put("firstName", order.getCustomer().getFirstName());
-        consumer.put("lastName", order.getCustomer().getLastName());
+        if (order.getCustomer() != null) {
+            consumer.put("id", order.getCustomer().getId());
+            consumer.put("phoneNumber", order.getCustomer().getPhone());
+            consumer.put("firstName", order.getCustomer().getFirstName());
+            consumer.put("lastName", order.getCustomer().getLastName());
+        } else {
+            // Self-service orders may not have linked customer
+            consumer.put("id", null);
+            consumer.put("phoneNumber", null);
+            consumer.put("firstName", "Guest");
+            consumer.put("lastName", null);
+        }
         return consumer;
     }
 

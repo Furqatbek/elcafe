@@ -14,6 +14,8 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.service.DailyOrderSequenceService;
+import com.elcafe.modules.order.service.OrderEventBroadcaster;
+import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
@@ -29,6 +31,7 @@ import com.elcafe.modules.selfservice.entity.*;
 import com.elcafe.modules.selfservice.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,6 +65,8 @@ public class SelfServiceOrderService {
     private final com.elcafe.modules.bundle.repository.BundleRepository bundleRepository;
     private final CouponValidationService couponValidationService;
     private final DiscountCalculationService discountCalculationService;
+    @Lazy private final OwnerNotificationService ownerNotificationService;
+    @Lazy private final OrderEventBroadcaster orderEventBroadcaster;
 
     private static final int SESSION_EXPIRY_HOURS = 4;
 
@@ -412,6 +417,20 @@ public class SelfServiceOrderService {
         order.setTotal(subtotal.subtract(discount));
 
         order = orderRepository.save(order);
+
+        // Send notifications to admin panel via WebSocket
+        try {
+            orderEventBroadcaster.broadcastOrderPlaced(order);
+        } catch (Exception e) {
+            log.error("Failed to broadcast order placed event for order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
+
+        // Send notification to owner via Telegram
+        try {
+            ownerNotificationService.notifyNewOrder(order);
+        } catch (Exception e) {
+            log.error("Failed to send owner notification for order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
 
         // Create self-service order metadata
         SelfServiceOrder ssOrder = SelfServiceOrder.builder()
