@@ -18,6 +18,8 @@ public interface SelfServiceCartItemRepository extends JpaRepository<SelfService
     Optional<SelfServiceCartItem> findBySessionIdAndProductIdAndVariantId(
             Long sessionId, Long productId, Long variantId);
 
+    Optional<SelfServiceCartItem> findBySessionIdAndBundleId(Long sessionId, Long bundleId);
+
     @Query("SELECT SUM(c.quantity) FROM SelfServiceCartItem c WHERE c.session.id = :sessionId")
     Integer countItemsInCart(@Param("sessionId") Long sessionId);
 

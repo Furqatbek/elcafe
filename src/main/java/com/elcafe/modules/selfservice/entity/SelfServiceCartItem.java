@@ -31,8 +31,18 @@ public class SelfServiceCartItem {
     private SelfServiceSession session;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id")
     private Product product;
+
+    @Column(name = "bundle_id")
+    private Long bundleId;
+
+    @Column(name = "bundle_name")
+    private String bundleName;
+
+    @Column(name = "is_bundle")
+    @Builder.Default
+    private Boolean isBundle = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "variant_id")

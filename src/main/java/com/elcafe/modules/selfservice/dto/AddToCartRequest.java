@@ -12,6 +12,11 @@ public class AddToCartRequest {
     private String specialInstructions;
     private List<ModifierRequest> modifiers;
 
+    // Bundle support
+    private Long bundleId;
+    private Boolean isBundle = false;
+    private List<Long> selectedOptionIds;
+
     @Data
     public static class ModifierRequest {
         private Long linkedItemId;

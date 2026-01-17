@@ -53,6 +53,7 @@ public class SelfServiceOrderService {
     private final RestaurantRepository restaurantRepository;
     private final CustomerRepository customerRepository;
     private final DailyOrderSequenceService dailyOrderSequenceService;
+    private final com.elcafe.modules.bundle.repository.BundleRepository bundleRepository;
 
     private static final int SESSION_EXPIRY_HOURS = 4;
 
@@ -107,6 +108,11 @@ public class SelfServiceOrderService {
     public SelfServiceCartItem addToCart(String sessionToken, AddToCartRequest request) {
         SelfServiceSession session = getValidSession(sessionToken);
 
+        // Handle bundle
+        if (Boolean.TRUE.equals(request.getIsBundle()) && request.getBundleId() != null) {
+            return addBundleToCart(session, request);
+        }
+
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
@@ -143,6 +149,7 @@ public class SelfServiceOrderService {
                 .quantity(request.getQuantity())
                 .unitPrice(unitPrice)
                 .specialInstructions(request.getSpecialInstructions())
+                .isBundle(false)
                 .build();
 
         cartItem = cartItemRepository.save(cartItem);
@@ -167,6 +174,52 @@ public class SelfServiceOrderService {
             }
             cartItem = cartItemRepository.save(cartItem);
         }
+
+        session.touch();
+        sessionRepository.save(session);
+
+        return cartItem;
+    }
+
+    /**
+     * Add bundle to cart.
+     */
+    private SelfServiceCartItem addBundleToCart(SelfServiceSession session, AddToCartRequest request) {
+        var bundle = bundleRepository.findById(request.getBundleId())
+                .orElseThrow(() -> new RuntimeException("Bundle not found"));
+
+        // Check if bundle belongs to session's restaurant
+        if (!bundle.getRestaurant().getId().equals(session.getRestaurant().getId())) {
+            throw new RuntimeException("Bundle not available at this restaurant");
+        }
+
+        // Check if bundle is active and currently available
+        if (!bundle.isCurrentlyAvailable()) {
+            throw new RuntimeException("Bundle is not currently available");
+        }
+
+        // Check if same bundle already in cart (update quantity)
+        Optional<SelfServiceCartItem> existingItem = cartItemRepository
+                .findBySessionIdAndBundleId(session.getId(), bundle.getId());
+
+        if (existingItem.isPresent()) {
+            SelfServiceCartItem item = existingItem.get();
+            item.setQuantity(item.getQuantity() + request.getQuantity());
+            return cartItemRepository.save(item);
+        }
+
+        // Create new cart item for bundle
+        SelfServiceCartItem cartItem = SelfServiceCartItem.builder()
+                .session(session)
+                .bundleId(bundle.getId())
+                .bundleName(bundle.getName())
+                .isBundle(true)
+                .quantity(request.getQuantity())
+                .unitPrice(bundle.getBundlePrice())
+                .specialInstructions(request.getSpecialInstructions())
+                .build();
+
+        cartItem = cartItemRepository.save(cartItem);
 
         session.touch();
         sessionRepository.save(session);
