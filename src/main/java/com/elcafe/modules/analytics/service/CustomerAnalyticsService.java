@@ -44,19 +44,19 @@ public class CustomerAnalyticsService {
                 restaurantId, startDate, endDate);
         log.debug("Customer retention using shift range: {} to {}", shift.start(), shift.end());
 
-        // Get all customers that existed at the start of the period
+        // Get all customers that existed at the start of the period (strictly before start)
         List<Customer> customersAtStart = customerRepository.findAll().stream()
                 .filter(c -> c.getCreatedAt().isBefore(shift.start()))
                 .collect(Collectors.toList());
 
-        // Get new customers during the period
+        // Get new customers during the period (inclusive boundaries for shift-aware consistency)
         List<Customer> newCustomers = customerRepository.findAll().stream()
-                .filter(c -> c.getCreatedAt().isAfter(shift.start()) && c.getCreatedAt().isBefore(shift.end()))
+                .filter(c -> !c.getCreatedAt().isBefore(shift.start()) && !c.getCreatedAt().isAfter(shift.end()))
                 .collect(Collectors.toList());
 
-        // Get all customers at the end of the period
+        // Get all customers at the end of the period (up to and including end)
         List<Customer> customersAtEnd = customerRepository.findAll().stream()
-                .filter(c -> c.getCreatedAt().isBefore(shift.end()))
+                .filter(c -> !c.getCreatedAt().isAfter(shift.end()))
                 .collect(Collectors.toList());
 
         // Get returning customers (customers who made orders during the period)
@@ -250,8 +250,9 @@ public class CustomerAnalyticsService {
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
         } else {
+            // Use inclusive boundary matching (same as repository "Between" behavior)
             return orderRepository.findAll().stream()
-                    .filter(order -> order.getCreatedAt().isAfter(startDateTime) && order.getCreatedAt().isBefore(endDateTime))
+                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
                     .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());

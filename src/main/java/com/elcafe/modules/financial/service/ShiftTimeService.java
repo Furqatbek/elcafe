@@ -218,6 +218,67 @@ public class ShiftTimeService {
     }
 
     /**
+     * Determine the business day that a given timestamp belongs to.
+     *
+     * For shifts that cross midnight (e.g., 10PM-3AM):
+     * - A timestamp at 11PM Jan 5 belongs to Jan 5's business day
+     * - A timestamp at 1AM Jan 6 belongs to Jan 5's business day (still in Jan 5's shift)
+     *
+     * For normal shifts (e.g., 9AM-10PM):
+     * - A timestamp at any hour on Jan 5 belongs to Jan 5's business day
+     *
+     * This method is essential for correctly grouping orders by business day
+     * in daily analytics reports for restaurants with midnight-crossing shifts.
+     *
+     * @param restaurantId The restaurant ID (can be null, will use calendar date)
+     * @param timestamp The timestamp to determine the business day for
+     * @return The business day (LocalDate) that the timestamp belongs to
+     */
+    public LocalDate getBusinessDay(Long restaurantId, LocalDateTime timestamp) {
+        if (restaurantId == null) {
+            return timestamp.toLocalDate();
+        }
+
+        LocalDate timestampDate = timestamp.toLocalDate();
+        LocalTime timestampTime = timestamp.toLocalTime();
+
+        // Check if the timestamp falls in the "after midnight" portion of yesterday's shift
+        LocalDate yesterday = timestampDate.minusDays(1);
+        var yesterdayHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
+            restaurantId, yesterday.getDayOfWeek());
+
+        if (yesterdayHours.isPresent() && !yesterdayHours.get().getClosed()) {
+            LocalTime yesterdayOpen = yesterdayHours.get().getOpenTime();
+            LocalTime yesterdayClose = yesterdayHours.get().getCloseTime();
+
+            // Check if yesterday's shift crosses midnight
+            boolean yesterdayCrossesMidnight = yesterdayClose.isBefore(yesterdayOpen)
+                || yesterdayClose.equals(yesterdayOpen);
+
+            if (yesterdayCrossesMidnight) {
+                // Yesterday's shift crosses midnight - check if timestamp is in the "after midnight" portion
+                // The shift from yesterday extends until today's opening time
+                var todayHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
+                    restaurantId, timestampDate.getDayOfWeek());
+
+                LocalTime todayOpen = todayHours.isPresent() && !todayHours.get().getClosed()
+                    ? todayHours.get().getOpenTime()
+                    : yesterdayOpen; // fallback to same opening time
+
+                // If timestamp is before today's opening time, it belongs to yesterday's business day
+                if (timestampTime.isBefore(todayOpen)) {
+                    log.trace("Timestamp {} belongs to yesterday's business day {} (before today's opening {})",
+                        timestamp, yesterday, todayOpen);
+                    return yesterday;
+                }
+            }
+        }
+
+        // Default: timestamp belongs to its calendar date
+        return timestampDate;
+    }
+
+    /**
      * Check if an order status counts as revenue/income.
      *
      * @param status The order status to check
