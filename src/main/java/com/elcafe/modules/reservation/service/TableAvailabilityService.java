@@ -1,5 +1,6 @@
 package com.elcafe.modules.reservation.service;
 
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.reservation.dto.TableAvailabilityResponse;
 import com.elcafe.modules.reservation.entity.Reservation;
 import com.elcafe.modules.reservation.enums.ReservationStatus;
@@ -24,6 +25,7 @@ public class TableAvailabilityService {
 
     private final RestaurantTableRepository tableRepository;
     private final ReservationRepository reservationRepository;
+    private final ShiftTimeService shiftTimeService;
 
     private static final Set<ReservationStatus> BLOCKING_STATUSES = Set.of(
             ReservationStatus.PENDING,
@@ -33,7 +35,8 @@ public class TableAvailabilityService {
     );
 
     /**
-     * Get all tables with their availability for a specific date/time
+     * Get all tables with their availability for a specific date/time.
+     * Uses shift-aware time range to correctly handle midnight-crossing shifts.
      */
     @Transactional(readOnly = true)
     public List<TableAvailabilityResponse> getTablesWithAvailability(
@@ -42,9 +45,17 @@ public class TableAvailabilityService {
         // Get all active tables
         List<RestaurantTable> tables = tableRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
 
-        // Get reservations for this date that could conflict
+        // Get shift time range for this date
+        ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, date);
+
+        // Get reservations for this shift time range that could conflict (shift-aware query)
         List<Reservation> reservations = reservationRepository
-                .findByRestaurantIdAndReservationDate(restaurantId, date)
+                .findByRestaurantIdAndShiftTimeRange(
+                        restaurantId,
+                        shiftRange.start().toLocalDate(),
+                        shiftRange.start().toLocalTime(),
+                        shiftRange.end().toLocalDate(),
+                        shiftRange.end().toLocalTime())
                 .stream()
                 .filter(r -> BLOCKING_STATUSES.contains(r.getStatus()))
                 .filter(r -> isTimeOverlapping(r.getReservationTime(), r.getDurationMinutes(), time))
@@ -97,7 +108,8 @@ public class TableAvailabilityService {
     }
 
     /**
-     * Check if a specific table is available at a given date/time
+     * Check if a specific table is available at a given date/time.
+     * Uses shift-aware time range to correctly handle midnight-crossing shifts.
      */
     @Transactional(readOnly = true)
     public boolean isTableAvailable(Long tableId, LocalDate date, LocalTime time, int duration) {
@@ -107,9 +119,19 @@ public class TableAvailabilityService {
             return false;
         }
 
-        // Check for conflicting reservations
+        Long restaurantId = table.getRestaurant().getId();
+
+        // Get shift time range for this date
+        ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, date);
+
+        // Check for conflicting reservations using shift-aware query
         List<Reservation> conflictingReservations = reservationRepository
-                .findByRestaurantIdAndReservationDate(table.getRestaurant().getId(), date)
+                .findByRestaurantIdAndShiftTimeRange(
+                        restaurantId,
+                        shiftRange.start().toLocalDate(),
+                        shiftRange.start().toLocalTime(),
+                        shiftRange.end().toLocalDate(),
+                        shiftRange.end().toLocalTime())
                 .stream()
                 .filter(r -> r.getTable() != null && r.getTable().getId().equals(tableId))
                 .filter(r -> BLOCKING_STATUSES.contains(r.getStatus()))

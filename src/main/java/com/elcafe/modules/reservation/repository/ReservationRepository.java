@@ -27,11 +27,62 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByRestaurantIdAndReservationDateBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
 
+    /**
+     * Find reservations within a shift time range (supports midnight-crossing shifts).
+     * This query combines reservationDate and reservationTime to filter by datetime range.
+     *
+     * For shifts that cross midnight (e.g., 10 AM - 2 AM), this query will correctly include
+     * reservations that fall in the early morning hours of the next calendar day.
+     */
+    @Query("SELECT r FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
+           "AND ((r.reservationDate > :startDate) " +
+           "  OR (r.reservationDate = :startDate AND r.reservationTime >= :startTime)) " +
+           "AND ((r.reservationDate < :endDate) " +
+           "  OR (r.reservationDate = :endDate AND r.reservationTime < :endTime))")
+    List<Reservation> findByRestaurantIdAndShiftTimeRange(
+            @Param("restaurantId") Long restaurantId,
+            @Param("startDate") LocalDate startDate,
+            @Param("startTime") LocalTime startTime,
+            @Param("endDate") LocalDate endDate,
+            @Param("endTime") LocalTime endTime);
+
+    /**
+     * Count reservations within a shift time range (supports midnight-crossing shifts).
+     */
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
+           "AND ((r.reservationDate > :startDate) " +
+           "  OR (r.reservationDate = :startDate AND r.reservationTime >= :startTime)) " +
+           "AND ((r.reservationDate < :endDate) " +
+           "  OR (r.reservationDate = :endDate AND r.reservationTime < :endTime))")
+    int countByRestaurantIdAndShiftTimeRange(
+            @Param("restaurantId") Long restaurantId,
+            @Param("startDate") LocalDate startDate,
+            @Param("startTime") LocalTime startTime,
+            @Param("endDate") LocalDate endDate,
+            @Param("endTime") LocalTime endTime);
+
     @Query("SELECT r FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
            "AND r.reservationDate = :date AND r.status IN :statuses")
     List<Reservation> findByRestaurantIdAndDateAndStatusIn(
             @Param("restaurantId") Long restaurantId,
             @Param("date") LocalDate date,
+            @Param("statuses") List<ReservationStatus> statuses);
+
+    /**
+     * Shift-aware version: Find reservations within a shift time range with specific statuses.
+     */
+    @Query("SELECT r FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
+           "AND r.status IN :statuses " +
+           "AND ((r.reservationDate > :startDate) " +
+           "  OR (r.reservationDate = :startDate AND r.reservationTime >= :startTime)) " +
+           "AND ((r.reservationDate < :endDate) " +
+           "  OR (r.reservationDate = :endDate AND r.reservationTime < :endTime))")
+    List<Reservation> findByRestaurantIdAndShiftTimeRangeAndStatusIn(
+            @Param("restaurantId") Long restaurantId,
+            @Param("startDate") LocalDate startDate,
+            @Param("startTime") LocalTime startTime,
+            @Param("endDate") LocalDate endDate,
+            @Param("endTime") LocalTime endTime,
             @Param("statuses") List<ReservationStatus> statuses);
 
     @Query("SELECT r FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
@@ -78,12 +129,48 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             @Param("tableId") Long tableId,
             @Param("date") LocalDate date);
 
+    /**
+     * Shift-aware version: Find active reservations for a specific table within a shift time range.
+     */
+    @Query("SELECT r FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
+           "AND r.table.id = :tableId " +
+           "AND r.status NOT IN ('CANCELLED', 'NO_SHOW', 'COMPLETED') " +
+           "AND ((r.reservationDate > :startDate) " +
+           "  OR (r.reservationDate = :startDate AND r.reservationTime >= :startTime)) " +
+           "AND ((r.reservationDate < :endDate) " +
+           "  OR (r.reservationDate = :endDate AND r.reservationTime < :endTime))")
+    List<Reservation> findActiveReservationsForTableInShiftTimeRange(
+            @Param("restaurantId") Long restaurantId,
+            @Param("tableId") Long tableId,
+            @Param("startDate") LocalDate startDate,
+            @Param("startTime") LocalTime startTime,
+            @Param("endDate") LocalDate endDate,
+            @Param("endTime") LocalTime endTime);
+
     @Query("SELECT COUNT(r) FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
            "AND r.status = 'NO_SHOW' " +
            "AND r.customerPhone = :phone")
     long countNoShowsByPhone(@Param("restaurantId") Long restaurantId, @Param("phone") String phone);
 
     List<Reservation> findByReservationDateAndStatus(LocalDate date, ReservationStatus status);
+
+    /**
+     * Shift-aware version: Find reservations within a shift time range with a specific status.
+     * Useful for finding all reservations in a shift's time range filtered by status.
+     */
+    @Query("SELECT r FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
+           "AND r.status = :status " +
+           "AND ((r.reservationDate > :startDate) " +
+           "  OR (r.reservationDate = :startDate AND r.reservationTime >= :startTime)) " +
+           "AND ((r.reservationDate < :endDate) " +
+           "  OR (r.reservationDate = :endDate AND r.reservationTime < :endTime))")
+    List<Reservation> findByRestaurantIdAndShiftTimeRangeAndStatus(
+            @Param("restaurantId") Long restaurantId,
+            @Param("startDate") LocalDate startDate,
+            @Param("startTime") LocalTime startTime,
+            @Param("endDate") LocalDate endDate,
+            @Param("endTime") LocalTime endTime,
+            @Param("status") ReservationStatus status);
 
     @Query("SELECT COUNT(r) FROM Reservation r WHERE r.restaurant.id = :restaurantId " +
            "AND r.reservationDate = :date")

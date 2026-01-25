@@ -1,5 +1,6 @@
 package com.elcafe.modules.ownerbot.scheduler;
 
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
 import com.elcafe.modules.reservation.repository.ReservationRepository;
@@ -29,6 +30,7 @@ public class OwnerNotificationScheduler {
     private final RestaurantRepository restaurantRepository;
     private final OrderRepository orderRepository;
     private final ReservationRepository reservationRepository;
+    private final ShiftTimeService shiftTimeService;
 
     /**
      * Send daily sales reports at 22:00 every day
@@ -52,13 +54,14 @@ public class OwnerNotificationScheduler {
     }
 
     private void sendDailyReportForRestaurant(Restaurant restaurant) {
-        LocalDate today = LocalDate.now();
-        LocalDateTime startOfDay = today.atStartOfDay();
-        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+        // Use shift-aware time range for the current business day
+        LocalDate currentBusinessDay = shiftTimeService.getCurrentBusinessDay(restaurant.getId());
+        ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
+                restaurant.getId(), currentBusinessDay);
 
-        // Get order statistics
+        // Get order statistics using shift time range
         Object[] orderStats = orderRepository.getDailyStatsForRestaurant(
-                restaurant.getId(), startOfDay, endOfDay);
+                restaurant.getId(), shiftRange.start(), shiftRange.end());
 
         int totalOrders = 0;
         BigDecimal totalRevenue = BigDecimal.ZERO;
@@ -68,9 +71,13 @@ public class OwnerNotificationScheduler {
             totalRevenue = orderStats[1] != null ? (BigDecimal) orderStats[1] : BigDecimal.ZERO;
         }
 
-        // Get reservation count
-        int reservations = reservationRepository.countByRestaurantIdAndDate(
-                restaurant.getId(), today);
+        // Get reservation count using shift-aware query
+        int reservations = reservationRepository.countByRestaurantIdAndShiftTimeRange(
+                restaurant.getId(),
+                shiftRange.start().toLocalDate(),
+                shiftRange.start().toLocalTime(),
+                shiftRange.end().toLocalDate(),
+                shiftRange.end().toLocalTime());
 
         // Calculate average order value
         BigDecimal avgOrderValue = totalOrders > 0

@@ -36,7 +36,8 @@ public class AvailabilityService {
     private final ShiftTimeService shiftTimeService;
 
     /**
-     * Check if a specific time slot is available
+     * Check if a specific time slot is available.
+     * Uses shift-aware time range to correctly handle midnight-crossing shifts.
      */
     @Transactional
     public boolean isSlotAvailable(Long restaurantId, LocalDate date, LocalTime time, int partySize) {
@@ -52,8 +53,9 @@ public class AvailabilityService {
             return false;
         }
 
-        // Check if date is too far in advance
-        LocalDate maxDate = LocalDate.now().plusDays(settings.getAdvanceDays());
+        // Check if date is too far in advance using current business day
+        LocalDate currentBusinessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
+        LocalDate maxDate = currentBusinessDay.plusDays(settings.getAdvanceDays());
         if (date.isAfter(maxDate)) {
             return false;
         }
@@ -63,9 +65,17 @@ public class AvailabilityService {
             return false;
         }
 
-        // Check max reservations per slot (using overlap logic)
+        // Check max reservations per slot (using overlap logic with shift-aware query)
         if (settings.getMaxReservationsPerSlot() != null) {
-            List<Reservation> activeReservations = reservationRepository.findByRestaurantIdAndReservationDate(restaurantId, date)
+            // Use ShiftTimeService to get the shift time range for this date
+            ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, date);
+
+            List<Reservation> activeReservations = reservationRepository.findByRestaurantIdAndShiftTimeRange(
+                    restaurantId,
+                    shiftRange.start().toLocalDate(),
+                    shiftRange.start().toLocalTime(),
+                    shiftRange.end().toLocalDate(),
+                    shiftRange.end().toLocalTime())
                     .stream()
                     .filter(r -> r.getStatus() != ReservationStatus.CANCELLED && r.getStatus() != ReservationStatus.NO_SHOW)
                     .toList();
@@ -179,8 +189,14 @@ public class AvailabilityService {
         log.debug("Generating time slots for restaurant {} on {}: {} to {} (crosses midnight: {})",
                 restaurantId, date, shiftStart, reservationEndTime, crossesMidnight);
 
-        // Fetch all active reservations for the date once (more efficient than querying per slot)
-        List<Reservation> activeReservations = reservationRepository.findByRestaurantIdAndReservationDate(restaurantId, date)
+        // Fetch all active reservations for the shift time range (shift-aware query)
+        // This correctly handles midnight-crossing shifts by including early morning reservations
+        List<Reservation> activeReservations = reservationRepository.findByRestaurantIdAndShiftTimeRange(
+                restaurantId,
+                shiftStart.toLocalDate(),
+                shiftStart.toLocalTime(),
+                reservationEndTime.toLocalDate(),
+                reservationEndTime.toLocalTime())
                 .stream()
                 .filter(r -> r.getStatus() != ReservationStatus.CANCELLED && r.getStatus() != ReservationStatus.NO_SHOW)
                 .toList();

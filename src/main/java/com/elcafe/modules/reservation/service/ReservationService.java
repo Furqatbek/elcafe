@@ -4,6 +4,7 @@ import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.reservation.dto.CreateReservationRequest;
 import com.elcafe.modules.reservation.dto.ReservationResponse;
 import com.elcafe.modules.reservation.entity.Reservation;
@@ -44,6 +45,7 @@ public class ReservationService {
     private final CustomerRepository customerRepository;
     private final RestaurantTableRepository tableRepository;
     private final AvailabilityService availabilityService;
+    private final ShiftTimeService shiftTimeService;
     @Lazy private final OwnerNotificationService ownerNotificationService;
     @Lazy private final CustomerNotificationService customerNotificationService;
 
@@ -162,23 +164,45 @@ public class ReservationService {
     }
 
     /**
-     * Get reservations for a specific date
+     * Get reservations for a specific shift/business day.
+     * Uses shift-aware time range to correctly handle midnight-crossing shifts.
+     * For shifts that cross midnight (e.g., 10 AM - 2 AM), this will include
+     * reservations in the early morning hours of the next calendar day.
      */
     @Transactional(readOnly = true)
     public List<ReservationResponse> getReservationsByDate(Long restaurantId, LocalDate date) {
-        return reservationRepository.findByRestaurantIdAndReservationDate(restaurantId, date)
+        // Get shift time range for this date
+        ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, date);
+
+        return reservationRepository.findByRestaurantIdAndShiftTimeRange(
+                restaurantId,
+                shiftRange.start().toLocalDate(),
+                shiftRange.start().toLocalTime(),
+                shiftRange.end().toLocalDate(),
+                shiftRange.end().toLocalTime())
                 .stream()
                 .map(ReservationResponse::from)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Get reservations for a date range (for calendar view)
+     * Get reservations for a date range (for calendar view).
+     * Uses shift-aware time range to correctly handle midnight-crossing shifts.
+     * The range covers from the start of the first day's shift to the end of the last day's shift.
      */
     @Transactional(readOnly = true)
     public List<ReservationResponse> getReservationsByDateRange(
             Long restaurantId, LocalDate startDate, LocalDate endDate) {
-        return reservationRepository.findByRestaurantIdAndReservationDateBetween(restaurantId, startDate, endDate)
+        // Get shift time range for the period
+        ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+
+        return reservationRepository.findByRestaurantIdAndShiftTimeRange(
+                restaurantId,
+                shiftRange.start().toLocalDate(),
+                shiftRange.start().toLocalTime(),
+                shiftRange.end().toLocalDate(),
+                shiftRange.end().toLocalTime())
                 .stream()
                 .map(ReservationResponse::from)
                 .collect(Collectors.toList());
@@ -356,16 +380,16 @@ public class ReservationService {
             throw new BadRequestException("Party size cannot exceed " + settings.getMaxPartySize());
         }
 
-        // Check advance booking
-        LocalDate today = LocalDate.now();
-        LocalDate maxDate = today.plusDays(settings.getAdvanceDays());
+        // Check advance booking using current business day (shift-aware)
+        LocalDate currentBusinessDay = shiftTimeService.getCurrentBusinessDay(settings.getRestaurant().getId());
+        LocalDate maxDate = currentBusinessDay.plusDays(settings.getAdvanceDays());
 
         if (request.getReservationDate().isAfter(maxDate)) {
             throw new BadRequestException("Cannot book more than " + settings.getAdvanceDays() + " days in advance");
         }
 
         // Check minimum advance time
-        if (request.getReservationDate().equals(today)) {
+        if (request.getReservationDate().equals(currentBusinessDay)) {
             LocalTime minTime = LocalTime.now().plusHours(settings.getMinAdvanceHours());
             if (request.getReservationTime().isBefore(minTime)) {
                 throw new BadRequestException("Reservations must be made at least " +
