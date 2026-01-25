@@ -57,20 +57,21 @@ public class PromotionAnalyticsService {
                 .collect(Collectors.toList());
 
         // Calculate totals
+        // Net revenue = sum of order totals (final paid amount after discounts)
         BigDecimal totalRevenue = completedOrders.stream()
                 .map(Order::getTotal)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal grossRevenue = completedOrders.stream()
-                .map(Order::getSubtotal)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal totalDiscounts = discountedOrders.stream()
+        // Total discounts from all orders with discounts
+        BigDecimal totalDiscounts = completedOrders.stream()
                 .map(Order::getDiscount)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Gross revenue = net revenue + discounts (what we would have made without discounts)
+        // This is consistent with frontend trends calculation
+        BigDecimal grossRevenue = totalRevenue.add(totalDiscounts);
 
         // Discount breakdown by type
         Map<String, BigDecimal> discountByType = discountedOrders.stream()
