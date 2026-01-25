@@ -242,7 +242,8 @@ const usePOSStore = create(
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
         const entryFee = state.currentOrder.entryFee || 0;
-        const discount = state.currentOrder.discount || 0;
+        // For FREE_ITEM promotions, the discount is the value of the free item
+        const discount = freeItemData.price || 0;
         const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
 
         set({
@@ -252,6 +253,7 @@ const usePOSStore = create(
             subtotal,
             tax,
             serviceFee,
+            discount,
             total,
             couponCode: freeItemData.couponCode,
             promotionId: freeItemData.promotionId,
@@ -298,6 +300,10 @@ const usePOSStore = create(
       }),
 
       removeItemFromCart: (itemId) => set((state) => {
+        // Check if the item being removed is a free item
+        const removedItem = state.currentOrder.items.find(item => item.id === itemId);
+        const isRemovingFreeItem = removedItem?.isFreeItem;
+
         const items = state.currentOrder.items.filter(item => item.id !== itemId);
         const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
         const tax = 0; // No tax
@@ -305,8 +311,18 @@ const usePOSStore = create(
         const serviceFeePercent = state.currentOrder.serviceFeePercent || 0;
         const serviceFee = subtotal * (serviceFeePercent / 100);
         const entryFee = state.currentOrder.entryFee || 0;
-        const discount = state.currentOrder.discount || 0;
+        // If removing a free item, reset the discount; otherwise keep existing discount
+        const discount = isRemovingFreeItem ? 0 : (state.currentOrder.discount || 0);
         const total = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
+
+        // If removing free item, also clear the promotion info
+        const promotionUpdates = isRemovingFreeItem ? {
+          discount: 0,
+          discountType: null,
+          couponCode: null,
+          promotionId: null,
+          promotionName: null,
+        } : {};
 
         return {
           currentOrder: {
@@ -316,6 +332,7 @@ const usePOSStore = create(
             tax,
             serviceFee,
             total,
+            ...promotionUpdates,
           },
         };
       }),
