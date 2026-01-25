@@ -20,24 +20,39 @@ public class OpenApiConfig {
     @Value("${server.port:8080}")
     private String serverPort;
 
+    @Value("${branding.name:El Cafe}")
+    private String brandName;
+
+    @Value("${branding.description:Restaurant Delivery Control Service}")
+    private String brandDescription;
+
+    @Value("${branding.team-name:ElCafe Team}")
+    private String teamName;
+
+    @Value("${branding.support-email:support@elcafe.com}")
+    private String supportEmail;
+
+    @Value("${branding.api-url:https://api.elcafe.com}")
+    private String apiUrl;
+
     @Bean
     public OpenAPI customOpenAPI() {
         final String securitySchemeName = "Bearer Authentication";
 
         return new OpenAPI()
                 .info(new Info()
-                        .title("Restaurant Delivery Control Service API")
+                        .title(brandDescription + " API")
                         .version("1.0.0")
-                        .description("Complete API documentation for Restaurant Delivery Management System")
+                        .description("Complete API documentation for " + brandName + " Management System")
                         .contact(new Contact()
-                                .name("ElCafe Team")
-                                .email("support@elcafe.com"))
+                                .name(teamName)
+                                .email(supportEmail))
                         .license(new License()
                                 .name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0.html")))
                 .servers(List.of(
                         new Server().url("http://localhost:" + serverPort).description("Local Server"),
-                        new Server().url("https://api.elcafe.com").description("Production Server")
+                        new Server().url(apiUrl).description("Production Server")
                 ))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
