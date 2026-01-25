@@ -7,6 +7,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.settings.entity.PrintJob;
 import com.elcafe.modules.settings.entity.PrinterSettings;
 import com.elcafe.modules.settings.repository.PrintJobRepository;
+import com.elcafe.modules.settings.websocket.PrintAgentWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
