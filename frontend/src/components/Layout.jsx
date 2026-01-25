@@ -219,6 +219,7 @@ export default function Layout() {
       path: '/settings/printers',
       subItems: [
         { label: t('nav.sub.printers'), icon: Printer, path: '/settings/printers' },
+        { label: t('nav.sub.kitchenStations', 'Kitchen Stations'), icon: ChefHat, path: '/settings/kitchen-stations' },
       ],
     },
   ];
