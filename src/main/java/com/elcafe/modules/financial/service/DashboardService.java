@@ -131,7 +131,7 @@ public class DashboardService {
                 .incomeByOrderType(calculateIncomeByOrderType(completedOrders))
                 .incomeByPaymentMethod(calculateIncomeByPaymentMethod(completedOrders))
                 .expensesByCategory(calculateExpensesByCategory(expenses, totalPayroll))
-                .dailyStats(calculateDailyStats(completedOrders, expenses, startDate, endDate))
+                .dailyStats(calculateDailyStats(restaurantId, completedOrders, expenses, startDate, endDate))
                 .soldItems(calculateSoldItems(completedOrders))
                 .comparison(calculatePeriodComparison(restaurantId, startDate, endDate, totalIncome, totalExpenses, allOrders.size()))
                 .inventoryAlerts(calculateInventoryAlerts(restaurantId))
@@ -243,13 +243,14 @@ public class DashboardService {
     }
 
     private List<DashboardResponse.DailyStats> calculateDailyStats(
-            List<Order> orders, List<Expense> expenses, LocalDate startDate, LocalDate endDate) {
+            Long restaurantId, List<Order> orders, List<Expense> expenses, LocalDate startDate, LocalDate endDate) {
 
         List<DashboardResponse.DailyStats> dailyStats = new ArrayList<>();
 
-        // Group orders by date
+        // Group orders by business day (not calendar date) for shift-aware reporting
+        // This ensures orders after midnight but before the next shift are attributed to the previous business day
         Map<LocalDate, List<Order>> ordersByDate = orders.stream()
-                .collect(Collectors.groupingBy(o -> o.getCreatedAt().toLocalDate()));
+                .collect(Collectors.groupingBy(o -> shiftTimeService.getBusinessDay(restaurantId, o.getCreatedAt())));
 
         // Group expenses by date
         Map<LocalDate, List<Expense>> expensesByDate = expenses.stream()
