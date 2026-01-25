@@ -2,6 +2,9 @@ package com.elcafe.modules.telegram.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.financial.service.ShiftTimeService;
+import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.sms.enums.MessageStatus;
 import com.elcafe.modules.telegram.dto.TelegramCampaignRequest;
@@ -15,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,6 +36,8 @@ public class TelegramCampaignService {
     private final TelegramSubscriberRepository subscriberRepository;
     private final TelegramLogRepository logRepository;
     private final TelegramCampaignExecutor campaignExecutor;
+    private final ShiftTimeService shiftTimeService;
+    private final RestaurantRepository restaurantRepository;
 
     @Transactional(readOnly = true)
     public Page<TelegramCampaignResponse> getAllCampaigns(Pageable pageable) {
@@ -216,6 +222,9 @@ public class TelegramCampaignService {
     // ========== Helper Methods ==========
 
     private List<TelegramSubscriber> buildRecipientList(TelegramCampaign campaign) {
+        Long restaurantId = getPrimaryRestaurantId();
+        LocalDate currentBusinessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
+
         switch (campaign.getTargetAudience()) {
             case ALL:
                 return subscriberRepository.findByIsActiveTrueAndIsBlockedFalse();
@@ -225,16 +234,22 @@ public class TelegramCampaignService {
                     // JSON numbers may be Long, use Number to handle both Integer and Long
                     activeDays = ((Number) campaign.getFilterCriteria().get("active_days")).intValue();
                 }
-                LocalDateTime activeSince = LocalDateTime.now().minusDays(activeDays);
-                return subscriberRepository.findActiveSubscribers(activeSince);
+                // Use shift-aware date calculation
+                LocalDate activeSinceDate = currentBusinessDay.minusDays(activeDays);
+                ShiftTimeService.ShiftTimeRange activeRange = shiftTimeService.getShiftTimeRange(
+                        restaurantId, activeSinceDate);
+                return subscriberRepository.findActiveSubscribers(activeRange.start());
             case INACTIVE:
                 int inactiveDays = 14;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("days_inactive")) {
                     // JSON numbers may be Long, use Number to handle both Integer and Long
                     inactiveDays = ((Number) campaign.getFilterCriteria().get("days_inactive")).intValue();
                 }
-                LocalDateTime inactiveBefore = LocalDateTime.now().minusDays(inactiveDays);
-                return subscriberRepository.findInactiveSubscribers(inactiveBefore);
+                // Use shift-aware date calculation
+                LocalDate inactiveBeforeDate = currentBusinessDay.minusDays(inactiveDays);
+                ShiftTimeService.ShiftTimeRange inactiveRange = shiftTimeService.getShiftTimeRange(
+                        restaurantId, inactiveBeforeDate);
+                return subscriberRepository.findInactiveSubscribers(inactiveRange.start());
             case LINKED_CUSTOMERS:
                 return subscriberRepository.findByCustomerIdIsNotNull();
             case CUSTOM:
@@ -255,5 +270,19 @@ public class TelegramCampaignService {
                 .toList();
 
         recipientRepository.saveAll(recipients);
+    }
+
+    /**
+     * Get the primary restaurant ID for shift-aware calculations.
+     * Uses the first active restaurant's business hours.
+     * Returns null if no active restaurants exist (will use calendar dates as fallback).
+     */
+    private Long getPrimaryRestaurantId() {
+        List<Restaurant> activeRestaurants = restaurantRepository.findByActiveTrue();
+        if (activeRestaurants.isEmpty()) {
+            log.debug("No active restaurants found, using calendar dates for campaign targeting");
+            return null;
+        }
+        return activeRestaurants.get(0).getId();
     }
 }

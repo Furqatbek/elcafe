@@ -2,6 +2,9 @@ package com.elcafe.modules.telegram.scheduler;
 
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.financial.service.ShiftTimeService;
+import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.telegram.entity.TelegramAutomationRule;
 import com.elcafe.modules.telegram.entity.TelegramCampaign;
@@ -42,6 +45,8 @@ public class TelegramScheduler {
     private final TelegramSubscriberRepository subscriberRepository;
     private final TelegramTemplateRepository templateRepository;
     private final CustomerRepository customerRepository;
+    private final ShiftTimeService shiftTimeService;
+    private final RestaurantRepository restaurantRepository;
 
     /**
      * Check for scheduled campaigns every minute.
@@ -152,6 +157,10 @@ public class TelegramScheduler {
                 return;
             }
 
+            // Get primary restaurant for shift-aware calculations
+            Long restaurantId = getPrimaryRestaurantId();
+            LocalDate currentBusinessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
+
             for (TelegramAutomationRule rule : rules) {
                 if (rule.getTemplate() == null) continue;
 
@@ -161,10 +170,13 @@ public class TelegramScheduler {
                     daysInactive = ((Number) rule.getConditions().get("days_inactive")).intValue();
                 }
 
-                LocalDateTime cutoff = LocalDateTime.now().minusDays(daysInactive);
-                List<TelegramSubscriber> inactiveSubscribers = subscriberRepository.findInactiveSubscribers(cutoff);
+                // Use shift-aware date calculation
+                LocalDate cutoffDate = currentBusinessDay.minusDays(daysInactive);
+                ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
+                        restaurantId, cutoffDate);
+                List<TelegramSubscriber> inactiveSubscribers = subscriberRepository.findInactiveSubscribers(shiftRange.start());
 
-                log.info("Found {} inactive subscribers ({}+ days)", inactiveSubscribers.size(), daysInactive);
+                log.info("Found {} inactive subscribers ({}+ business days)", inactiveSubscribers.size(), daysInactive);
 
                 int sentCount = 0;
                 for (TelegramSubscriber subscriber : inactiveSubscribers) {
@@ -221,5 +233,19 @@ public class TelegramScheduler {
         } catch (Exception e) {
             log.error("Error cleaning up stuck campaigns: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Get the primary restaurant ID for shift-aware calculations.
+     * Uses the first active restaurant's business hours.
+     * Returns null if no active restaurants exist (will use calendar dates as fallback).
+     */
+    private Long getPrimaryRestaurantId() {
+        List<Restaurant> activeRestaurants = restaurantRepository.findByActiveTrue();
+        if (activeRestaurants.isEmpty()) {
+            log.debug("No active restaurants found, using calendar dates for automation");
+            return null;
+        }
+        return activeRestaurants.get(0).getId();
     }
 }

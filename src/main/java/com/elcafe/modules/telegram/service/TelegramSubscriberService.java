@@ -1,6 +1,9 @@
 package com.elcafe.modules.telegram.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.financial.service.ShiftTimeService;
+import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.telegram.dto.TelegramSubscriberResponse;
 import com.elcafe.modules.telegram.entity.TelegramSubscriber;
 import com.elcafe.modules.telegram.repository.TelegramSubscriberRepository;
@@ -11,6 +14,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +27,8 @@ import java.util.stream.Collectors;
 public class TelegramSubscriberService {
 
     private final TelegramSubscriberRepository subscriberRepository;
+    private final ShiftTimeService shiftTimeService;
+    private final RestaurantRepository restaurantRepository;
 
     @Transactional(readOnly = true)
     public Page<TelegramSubscriberResponse> getAllSubscribers(Pageable pageable) {
@@ -103,8 +109,12 @@ public class TelegramSubscriberService {
 
     @Transactional(readOnly = true)
     public List<TelegramSubscriber> getInactiveSubscribers(int daysInactive) {
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(daysInactive);
-        return subscriberRepository.findInactiveSubscribers(cutoff);
+        Long restaurantId = getPrimaryRestaurantId();
+        LocalDate currentBusinessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
+        LocalDate cutoffDate = currentBusinessDay.minusDays(daysInactive);
+        ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
+                restaurantId, cutoffDate);
+        return subscriberRepository.findInactiveSubscribers(shiftRange.start());
     }
 
     @Transactional(readOnly = true)
@@ -114,11 +124,39 @@ public class TelegramSubscriberService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> getStatistics() {
+        // Get primary restaurant ID for shift-aware calculations
+        Long restaurantId = getPrimaryRestaurantId();
+        LocalDate currentBusinessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
+
+        // Calculate shift-aware date ranges
+        LocalDate weekAgo = currentBusinessDay.minusWeeks(1);
+        LocalDate monthAgo = currentBusinessDay.minusMonths(1);
+
+        ShiftTimeService.ShiftTimeRange weekRange = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, weekAgo, currentBusinessDay);
+        ShiftTimeService.ShiftTimeRange monthRange = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, monthAgo, currentBusinessDay);
+
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalSubscribers", subscriberRepository.count());
         stats.put("activeSubscribers", subscriberRepository.countActiveSubscribers());
-        stats.put("newThisWeek", subscriberRepository.countNewSubscribersSince(LocalDateTime.now().minusWeeks(1)));
-        stats.put("newThisMonth", subscriberRepository.countNewSubscribersSince(LocalDateTime.now().minusMonths(1)));
+        stats.put("newThisWeek", subscriberRepository.countNewSubscribersSince(weekRange.start()));
+        stats.put("newThisMonth", subscriberRepository.countNewSubscribersSince(monthRange.start()));
+        stats.put("currentBusinessDay", currentBusinessDay);
         return stats;
+    }
+
+    /**
+     * Get the primary restaurant ID for shift-aware calculations.
+     * Uses the first active restaurant's business hours.
+     * Returns null if no active restaurants exist (will use calendar dates as fallback).
+     */
+    private Long getPrimaryRestaurantId() {
+        List<Restaurant> activeRestaurants = restaurantRepository.findByActiveTrue();
+        if (activeRestaurants.isEmpty()) {
+            log.debug("No active restaurants found, using calendar dates for statistics");
+            return null;
+        }
+        return activeRestaurants.get(0).getId();
     }
 }
