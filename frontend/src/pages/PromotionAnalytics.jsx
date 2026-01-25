@@ -145,9 +145,9 @@ export default function PromotionAnalytics() {
               <Tag className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{formatCurrency(analytics.totalDiscountAmount)}</div>
+              <div className="text-2xl font-bold text-orange-600">{formatCurrency(analytics.totalDiscounts)}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {t('analytics.promotion.fromOrders', '{{count}} discounted orders', { count: analytics.totalDiscountedOrders || 0 })}
+                {t('analytics.promotion.fromOrders', '{{count}} discounted orders', { count: analytics.discountedOrders || 0 })}
               </p>
             </CardContent>
           </Card>
@@ -160,7 +160,7 @@ export default function PromotionAnalytics() {
               <Percent className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(analytics.averageDiscountPerOrder)}</div>
+              <div className="text-2xl font-bold">{formatCurrency(analytics.avgDiscountAmount)}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 {t('analytics.promotion.perOrder', 'Per order')}
               </p>
@@ -200,7 +200,7 @@ export default function PromotionAnalytics() {
       )}
 
       {/* Discount Breakdown by Type */}
-      {analytics?.discountsByType && Object.keys(analytics.discountsByType).length > 0 && (
+      {analytics?.discountByType && Object.keys(analytics.discountByType).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -213,12 +213,12 @@ export default function PromotionAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(analytics.discountsByType).map(([type, amount]) => (
+              {Object.entries(analytics.discountByType).map(([type, amount]) => (
                 <div key={type} className="p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">{type}</p>
                   <p className="text-xl font-bold text-orange-600">{formatCurrency(amount)}</p>
                   <p className="text-xs text-gray-500 mt-1">
-                    {formatPercent((amount / analytics.totalDiscountAmount) * 100)} {t('common.ofTotal', 'of total')}
+                    {formatPercent((amount / analytics.totalDiscounts) * 100)} {t('common.ofTotal', 'of total')}
                   </p>
                 </div>
               ))}
@@ -253,25 +253,28 @@ export default function PromotionAnalytics() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.discountTrends.map((day, idx) => (
-                    <tr key={idx} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">{day.date}</td>
-                      <td className="py-3 px-4 text-right">{day.totalOrders}</td>
-                      <td className="py-3 px-4 text-right">
-                        <span className="text-orange-600">{day.discountedOrders}</span>
-                        <span className="text-gray-400 text-xs ml-1">
-                          ({day.totalOrders > 0 ? formatPercent((day.discountedOrders / day.totalOrders) * 100) : '0%'})
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right text-orange-600 font-medium">
-                        {formatCurrency(day.totalDiscountAmount)}
-                      </td>
-                      <td className="py-3 px-4 text-right">{formatCurrency(day.grossRevenue)}</td>
-                      <td className="py-3 px-4 text-right text-green-600 font-medium">
-                        {formatCurrency(day.netRevenue)}
-                      </td>
-                    </tr>
-                  ))}
+                  {data.discountTrends.map((day, idx) => {
+                    const grossRevenue = (day.totalRevenue || 0) + (day.totalDiscounts || 0);
+                    return (
+                      <tr key={idx} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4">{day.date}</td>
+                        <td className="py-3 px-4 text-right">{day.totalOrders}</td>
+                        <td className="py-3 px-4 text-right">
+                          <span className="text-orange-600">{day.discountedOrders}</span>
+                          <span className="text-gray-400 text-xs ml-1">
+                            ({day.totalOrders > 0 ? formatPercent((day.discountedOrders / day.totalOrders) * 100) : '0%'})
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right text-orange-600 font-medium">
+                          {formatCurrency(day.totalDiscounts)}
+                        </td>
+                        <td className="py-3 px-4 text-right">{formatCurrency(grossRevenue)}</td>
+                        <td className="py-3 px-4 text-right text-green-600 font-medium">
+                          {formatCurrency(day.totalRevenue)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -306,8 +309,8 @@ export default function PromotionAnalytics() {
                 </thead>
                 <tbody>
                   {data.topCoupons.map((coupon, idx) => {
-                    const roi = coupon.totalDiscountGiven > 0
-                      ? ((coupon.revenueGenerated - coupon.totalDiscountGiven) / coupon.totalDiscountGiven) * 100
+                    const roi = coupon.totalDiscount > 0
+                      ? ((coupon.totalRevenue - coupon.totalDiscount) / coupon.totalDiscount) * 100
                       : 0;
                     return (
                       <tr key={idx} className="border-b hover:bg-gray-50">
@@ -322,12 +325,12 @@ export default function PromotionAnalytics() {
                           </span>
                         </td>
                         <td className="py-3 px-4 font-mono font-medium">{coupon.couponCode}</td>
-                        <td className="py-3 px-4 text-right">{coupon.usageCount}</td>
+                        <td className="py-3 px-4 text-right">{coupon.redemptionCount}</td>
                         <td className="py-3 px-4 text-right text-orange-600">
-                          {formatCurrency(coupon.totalDiscountGiven)}
+                          {formatCurrency(coupon.totalDiscount)}
                         </td>
                         <td className="py-3 px-4 text-right text-green-600 font-medium">
-                          {formatCurrency(coupon.revenueGenerated)}
+                          {formatCurrency(coupon.totalRevenue)}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <span className={`font-medium ${roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -379,12 +382,12 @@ export default function PromotionAnalytics() {
                           {promo.promotionType}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right">{promo.ordersWithPromotion}</td>
+                      <td className="py-3 px-4 text-right">{promo.totalRedemptions}</td>
                       <td className="py-3 px-4 text-right text-orange-600">
                         {formatCurrency(promo.totalDiscountGiven)}
                       </td>
                       <td className="py-3 px-4 text-right text-green-600 font-medium">
-                        {formatCurrency(promo.revenueGenerated)}
+                        {formatCurrency(promo.totalRevenueGenerated)}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <span className={`font-medium ${promo.roi > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -393,9 +396,9 @@ export default function PromotionAnalytics() {
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          promo.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          promo.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {promo.active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
+                          {promo.isActive ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
                         </span>
                       </td>
                     </tr>
