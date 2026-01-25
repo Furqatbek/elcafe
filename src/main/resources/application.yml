@@ -152,6 +152,11 @@ app:
   selfservice:
     base-url: ${SELFSERVICE_BASE_URL:http://localhost:5173/order}
 
+  printing:
+    # Set to true to use print agent queue (for cloud deployments)
+    # Set to false for direct printing (backend on same network as printers)
+    use-agent: ${PRINTING_USE_AGENT:true}
+
 # Eskiz.uz SMS Broker Configuration
 eskiz:
   sms:

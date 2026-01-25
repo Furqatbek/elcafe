@@ -10,6 +10,7 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.settings.entity.PrinterSettings;
 import com.elcafe.modules.settings.repository.PrinterSettingsRepository;
+import com.elcafe.modules.settings.websocket.PrintAgentWebSocketHandler;
 import com.github.anastaciocintra.escpos.EscPos;
 import com.github.anastaciocintra.escpos.EscPosConst;
 import com.github.anastaciocintra.escpos.Style;
@@ -17,6 +18,8 @@ import com.github.anastaciocintra.output.PrinterOutputStream;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.print.PrintServiceLookup;
@@ -39,6 +42,15 @@ public class PrintService {
     private final KitchenStationRepository kitchenStationRepository;
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    @Lazy
+    private final PrintJobService printJobService;
+    @Lazy
+    private final PrintAgentWebSocketHandler printAgentHandler;
+
+    // Set to true to use print agent queue, false for direct printing
+    @Value("${app.printing.use-agent:true}")
+    private boolean usePrintAgent;
+
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     /**
@@ -151,6 +163,7 @@ public class PrintService {
 
     /**
      * Print station-specific ticket
+     * Uses print agent queue if enabled, otherwise prints directly
      */
     private void printStationTicket(Order order, KitchenStation station, List<OrderItem> items) {
         try {
@@ -158,6 +171,13 @@ public class PrintService {
             log.info("Printing {} items to station: {} (printer: {})",
                     items.size(), station.getName(), settings.getPrinterName());
 
+            // Use print agent queue if enabled
+            if (usePrintAgent) {
+                printJobService.createStationPrintJob(order, station, items, settings);
+                return;
+            }
+
+            // Direct printing (backend on same network as printer)
             if ("NETWORK".equalsIgnoreCase(settings.getConnectionType())) {
                 printStationToNetworkPrinter(order, station, items, settings);
             } else {
@@ -170,6 +190,7 @@ public class PrintService {
 
     /**
      * Print items to default kitchen printer (for items without station assignment)
+     * Uses print agent queue if enabled, otherwise prints directly
      */
     private void printItemsToDefaultPrinter(Order order, List<OrderItem> items) {
         try {
@@ -189,6 +210,13 @@ public class PrintService {
             log.info("Printing {} unassigned items to default printer: {}",
                     items.size(), settings.getPrinterName());
 
+            // Use print agent queue if enabled
+            if (usePrintAgent) {
+                printJobService.createStationPrintJob(order, null, items, settings);
+                return;
+            }
+
+            // Direct printing
             if ("NETWORK".equalsIgnoreCase(settings.getConnectionType())) {
                 printStationToNetworkPrinter(order, null, items, settings);
             } else {
@@ -346,6 +374,7 @@ public class PrintService {
 
     /**
      * Legacy method: Print kitchen order to single thermal printer (no station routing)
+     * Uses print agent queue if enabled, otherwise prints directly
      */
     private void printKitchenOrderLegacy(Order order) {
         try {
@@ -363,6 +392,13 @@ public class PrintService {
 
             PrinterSettings settings = printerSettings.get();
 
+            // Use print agent queue if enabled
+            if (usePrintAgent) {
+                printJobService.createLegacyPrintJob(order, settings);
+                return;
+            }
+
+            // Direct printing
             if ("NETWORK".equalsIgnoreCase(settings.getConnectionType())) {
                 printToNetworkPrinter(order, settings);
             } else {

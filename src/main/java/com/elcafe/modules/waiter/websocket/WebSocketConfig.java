@@ -36,6 +36,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     /**
      * Register STOMP endpoints
      * - /ws-waiter: Main WebSocket endpoint for waiter operations
+     * - /ws-print-agent: WebSocket endpoint for print agent connections
      * - SockJS fallback enabled for browsers that don't support WebSocket
      */
     @Override
@@ -43,5 +44,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws-waiter")
                 .setAllowedOriginPatterns("*") // Configure based on your CORS policy
                 .withSockJS(); // Enable SockJS fallback options
+
+        // Print agent endpoint - no SockJS needed as agent is a dedicated application
+        registry.addEndpoint("/ws-print-agent")
+                .setAllowedOriginPatterns("*");
     }
 }
