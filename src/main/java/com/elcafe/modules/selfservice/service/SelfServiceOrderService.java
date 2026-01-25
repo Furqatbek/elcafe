@@ -365,15 +365,29 @@ public class SelfServiceOrderService {
         for (SelfServiceCartItem cartItem : cartItems) {
             OrderItem orderItem = OrderItem.builder()
                     .order(order)
-                    .productId(cartItem.getProduct().getId())
-                    .productName(cartItem.getProduct().getName())
-                    .variantId(cartItem.getVariant() != null ? cartItem.getVariant().getId() : null)
-                    .variantName(cartItem.getVariant() != null ? cartItem.getVariant().getName() : null)
                     .quantity(cartItem.getQuantity())
                     .unitPrice(cartItem.getUnitPrice())
                     .totalPrice(cartItem.getTotalPrice())
                     .specialInstructions(cartItem.getSpecialInstructions())
                     .build();
+
+            // Handle bundle vs regular product
+            if (Boolean.TRUE.equals(cartItem.getIsBundle()) && cartItem.getBundleId() != null) {
+                // Bundle item - set bundle fields for analytics tracking
+                orderItem.setProductId(cartItem.getBundleId()); // Use bundleId as productId for reference
+                orderItem.setProductName(cartItem.getBundleName());
+                orderItem.setBundleId(cartItem.getBundleId());
+                orderItem.setBundleName(cartItem.getBundleName());
+                orderItem.setIsBundle(true);
+            } else {
+                // Regular product
+                orderItem.setProductId(cartItem.getProduct().getId());
+                orderItem.setProductName(cartItem.getProduct().getName());
+                orderItem.setVariantId(cartItem.getVariant() != null ? cartItem.getVariant().getId() : null);
+                orderItem.setVariantName(cartItem.getVariant() != null ? cartItem.getVariant().getName() : null);
+                orderItem.setIsBundle(false);
+            }
+
             orderItems.add(orderItem);
         }
         order.setItems(orderItems);
