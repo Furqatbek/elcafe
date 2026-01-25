@@ -23,6 +23,12 @@ import com.elcafe.modules.order.dto.pos.SplitBillDTO;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
+import com.elcafe.modules.promotion.entity.CouponCode;
+import com.elcafe.modules.promotion.entity.Promotion;
+import com.elcafe.modules.promotion.entity.PromotionUsage;
+import com.elcafe.modules.promotion.repository.CouponCodeRepository;
+import com.elcafe.modules.promotion.repository.PromotionRepository;
+import com.elcafe.modules.promotion.repository.PromotionUsageRepository;
 import com.elcafe.modules.promotion.service.CouponValidationService;
 import com.elcafe.modules.promotion.service.DiscountCalculationService;
 import com.elcafe.modules.promotion.service.HappyHourService;
@@ -66,6 +72,9 @@ public class POSOrderService {
     private final DiscountCalculationService discountCalculationService;
     private final CouponValidationService couponValidationService;
     private final HappyHourService happyHourService;
+    private final PromotionRepository promotionRepository;
+    private final PromotionUsageRepository promotionUsageRepository;
+    private final CouponCodeRepository couponCodeRepository;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -180,6 +189,9 @@ public class POSOrderService {
             log.error("Failed to deduct inventory for order {}: {}", savedOrder.getOrderNumber(), e.getMessage());
             throw new IllegalStateException("Failed to deduct inventory: " + e.getMessage(), e);
         }
+
+        // Record promotion usage for analytics if a promotion/coupon was applied
+        recordPromotionUsageIfApplicable(savedOrder, request);
 
         // Kitchen order creation is skipped - orders go directly to payment flow
         // Kitchen can manually create orders if needed via the kitchen module
@@ -1111,6 +1123,81 @@ public class POSOrderService {
         Order savedOrder = orderRepository.save(order);
 
         return mapToResponse(savedOrder, "DINE_IN");
+    }
+
+    // ==================== PROMOTION USAGE TRACKING ====================
+
+    /**
+     * Record promotion usage for analytics when order is created with discount info.
+     * This ensures that promotions applied during POS order creation are tracked
+     * in the analytics system.
+     */
+    private void recordPromotionUsageIfApplicable(Order order, CreatePOSOrderRequest request) {
+        // Only record if there's a discount applied
+        if (order.getDiscount() == null || order.getDiscount().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+
+        // Skip manual discounts and happy hour (happy hour has its own tracking)
+        String discountType = order.getDiscountType();
+        if (discountType == null || "MANUAL".equals(discountType) || "HAPPY_HOUR".equals(discountType)) {
+            return;
+        }
+
+        try {
+            Promotion promotion = null;
+            CouponCode couponCode = null;
+
+            // Try to find promotion by ID first
+            if (request.getPromotionId() != null) {
+                promotion = promotionRepository.findById(request.getPromotionId()).orElse(null);
+            }
+
+            // If coupon code is provided, find it and its associated promotion
+            if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+                couponCode = couponCodeRepository.findByCodeIgnoreCase(request.getCouponCode()).orElse(null);
+                if (couponCode != null && promotion == null) {
+                    promotion = couponCode.getPromotion();
+                }
+            }
+
+            // Cannot record usage without a promotion
+            if (promotion == null) {
+                log.warn("Cannot record promotion usage - no promotion found for order {} (promotionId={}, couponCode={})",
+                        order.getOrderNumber(), request.getPromotionId(), request.getCouponCode());
+                return;
+            }
+
+            // Check if usage was already recorded (avoid duplicates)
+            if (promotionUsageRepository.findByOrder_Id(order.getId()).isPresent()) {
+                log.debug("Promotion usage already recorded for order {}", order.getOrderNumber());
+                return;
+            }
+
+            // Record the promotion usage
+            PromotionUsage usage = PromotionUsage.builder()
+                    .promotion(promotion)
+                    .couponCode(couponCode)
+                    .customer(order.getCustomer())
+                    .order(order)
+                    .discountAmount(order.getDiscount())
+                    .usedAt(LocalDateTime.now())
+                    .build();
+
+            promotionUsageRepository.save(usage);
+            log.info("Promotion usage recorded for POS order: promotion={}, order={}, discount={}",
+                    promotion.getId(), order.getOrderNumber(), order.getDiscount());
+
+            // Increment coupon usage count if applicable
+            if (couponCode != null) {
+                couponCode.incrementUsage();
+                couponCodeRepository.save(couponCode);
+            }
+        } catch (Exception e) {
+            // Log but don't fail the order creation if usage recording fails
+            log.error("Failed to record promotion usage for order {}: {}",
+                    order.getOrderNumber(), e.getMessage(), e);
+        }
     }
 
     // ==================== DISCOUNT METHODS ====================
