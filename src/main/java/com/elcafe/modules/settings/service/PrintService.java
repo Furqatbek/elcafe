@@ -23,6 +23,9 @@ import javax.print.PrintServiceLookup;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -225,8 +228,32 @@ public class PrintService {
      * Print station ticket to network printer
      */
     private void printStationToNetworkPrinter(Order order, KitchenStation station, List<OrderItem> items, PrinterSettings settings) {
-        log.warn("Network printer support not yet implemented. Use USB printer instead.");
-        // TODO: Implement network printer support
+        String ipAddress = settings.getIpAddress();
+        Integer port = settings.getPort() != null ? settings.getPort() : 9100;
+
+        if (ipAddress == null || ipAddress.trim().isEmpty()) {
+            log.error("Network printer IP address not configured for printer: {}", settings.getPrinterName());
+            return;
+        }
+
+        try (Socket socket = new Socket()) {
+            // Connect with timeout
+            socket.connect(new InetSocketAddress(ipAddress, port), 5000);
+            socket.setSoTimeout(10000);
+
+            OutputStream outputStream = socket.getOutputStream();
+            EscPos escpos = new EscPos(outputStream);
+
+            printStationTicketContent(escpos, order, station, items, settings);
+
+            escpos.feed(3);
+            escpos.cut(EscPos.CutMode.FULL);
+            escpos.close();
+
+            log.info("Successfully printed to network printer: {}:{}", ipAddress, port);
+        } catch (Exception e) {
+            log.error("Failed to print to network printer {}:{} - {}", ipAddress, port, e.getMessage(), e);
+        }
     }
 
     /**
@@ -412,8 +439,32 @@ public class PrintService {
      * Print to network thermal printer (legacy)
      */
     private void printToNetworkPrinter(Order order, PrinterSettings settings) {
-        log.warn("Network printer support not yet implemented. Use USB printer instead.");
-        // TODO: Implement network printer support
+        String ipAddress = settings.getIpAddress();
+        Integer port = settings.getPort() != null ? settings.getPort() : 9100;
+
+        if (ipAddress == null || ipAddress.trim().isEmpty()) {
+            log.error("Network printer IP address not configured for printer: {}", settings.getPrinterName());
+            return;
+        }
+
+        try (Socket socket = new Socket()) {
+            // Connect with timeout
+            socket.connect(new InetSocketAddress(ipAddress, port), 5000);
+            socket.setSoTimeout(10000);
+
+            OutputStream outputStream = socket.getOutputStream();
+            EscPos escpos = new EscPos(outputStream);
+
+            printKitchenOrderContent(escpos, order, settings);
+
+            escpos.feed(3);
+            escpos.cut(EscPos.CutMode.FULL);
+            escpos.close();
+
+            log.info("Successfully printed to network printer: {}:{}", ipAddress, port);
+        } catch (Exception e) {
+            log.error("Failed to print to network printer {}:{} - {}", ipAddress, port, e.getMessage(), e);
+        }
     }
 
     /**
@@ -652,10 +703,36 @@ public class PrintService {
             PrinterSettings settings = printerSettingsRepository.findById(printerSettingsId)
                     .orElseThrow(() -> new RuntimeException("Printer settings not found"));
 
-            javax.print.PrintService printService = findPrintService(settings.getPrinterName());
-            return printService != null;
+            if ("NETWORK".equalsIgnoreCase(settings.getConnectionType())) {
+                return testNetworkPrinter(settings);
+            } else {
+                javax.print.PrintService printService = findPrintService(settings.getPrinterName());
+                return printService != null;
+            }
         } catch (Exception e) {
             log.error("Failed to test printer", e);
+            return false;
+        }
+    }
+
+    /**
+     * Test network printer connection by attempting to connect to the socket
+     */
+    private boolean testNetworkPrinter(PrinterSettings settings) {
+        String ipAddress = settings.getIpAddress();
+        Integer port = settings.getPort() != null ? settings.getPort() : 9100;
+
+        if (ipAddress == null || ipAddress.trim().isEmpty()) {
+            log.error("Network printer IP address not configured");
+            return false;
+        }
+
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(ipAddress, port), 3000);
+            log.info("Network printer test successful: {}:{}", ipAddress, port);
+            return true;
+        } catch (Exception e) {
+            log.error("Network printer test failed for {}:{} - {}", ipAddress, port, e.getMessage());
             return false;
         }
     }
