@@ -8,6 +8,7 @@ import com.elcafe.modules.menu.entity.ProductVariant;
 import com.elcafe.modules.menu.repository.LinkedItemRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.menu.repository.ProductVariantRepository;
+import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -69,6 +70,7 @@ public class SelfServiceOrderService {
     @Lazy private final OwnerNotificationService ownerNotificationService;
     @Lazy private final OrderEventBroadcaster orderEventBroadcaster;
     @Lazy private final OrderEventPublisher orderEventPublisher;
+    @Lazy private final NotificationService notificationService;
 
     private static final int SESSION_EXPIRY_HOURS = 4;
 
@@ -419,6 +421,13 @@ public class SelfServiceOrderService {
         order.setTotal(subtotal.subtract(discount));
 
         order = orderRepository.save(order);
+
+        // Send database notifications (for admin panel, kitchen, restaurant, customer)
+        try {
+            notificationService.notifyNewOrder(order);
+        } catch (Exception e) {
+            log.error("Failed to create database notifications for order {}: {}", order.getOrderNumber(), e.getMessage());
+        }
 
         // Send notifications to admin panel via WebSocket
         try {
