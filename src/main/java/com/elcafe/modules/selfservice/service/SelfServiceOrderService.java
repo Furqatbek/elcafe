@@ -30,6 +30,7 @@ import com.elcafe.modules.selfservice.dto.AddToCartRequest;
 import com.elcafe.modules.selfservice.dto.CartItemResponse;
 import com.elcafe.modules.selfservice.dto.SubmitOrderRequest;
 import com.elcafe.modules.selfservice.entity.*;
+import com.elcafe.modules.selfservice.enums.SelfServiceOrderType;
 import com.elcafe.modules.selfservice.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -316,6 +317,16 @@ public class SelfServiceOrderService {
     @Transactional
     public SelfServiceOrder submitOrder(String sessionToken, SubmitOrderRequest request) {
         SelfServiceSession session = getValidSession(sessionToken);
+
+        // Validate customer details for takeaway orders
+        if (request.getOrderType() == SelfServiceOrderType.TAKEAWAY) {
+            if (request.getCustomerName() == null || request.getCustomerName().trim().isEmpty()) {
+                throw new RuntimeException("Customer name is required for takeaway orders");
+            }
+            if (request.getCustomerPhone() == null || request.getCustomerPhone().trim().isEmpty()) {
+                throw new RuntimeException("Customer phone is required for takeaway orders");
+            }
+        }
 
         List<SelfServiceCartItem> cartItems = cartItemRepository.findBySessionIdOrderByAddedAtAsc(session.getId());
         if (cartItems.isEmpty()) {

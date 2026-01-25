@@ -3405,7 +3405,12 @@
     "discount": "Скидка",
     "placingOrder": "Оформляем заказ...",
     "placeOrder": "Оформить заказ",
-    "failedToSubmitOrder": "Не удалось оформить заказ"
+    "failedToSubmitOrder": "Не удалось оформить заказ",
+    "yourDetailsRequired": "Ваши данные (обязательно)",
+    "takeawayRequiresDetails": "Для заказа на вынос требуется указать имя и телефон",
+    "nameRequired": "Пожалуйста, введите ваше имя",
+    "phoneRequired": "Пожалуйста, введите номер телефона",
+    "fillRequiredFields": "Пожалуйста, заполните все обязательные поля"
   },
   "customerReservation": {
     "title": "Забронировать столик",

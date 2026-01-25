@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCustomer } from './CustomerContext';
@@ -28,11 +28,39 @@ export default function CheckoutPage() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Validation state
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [touched, setTouched] = useState({});
+
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
   const [couponValidating, setCouponValidating] = useState(false);
   const [couponError, setCouponError] = useState(null);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+
+  // Check if customer details are required (for takeaway orders)
+  const isCustomerDetailsRequired = orderType === 'TAKEAWAY';
+
+  // Validate form fields
+  useEffect(() => {
+    const errors = {};
+    if (isCustomerDetailsRequired) {
+      if (!customerName.trim()) {
+        errors.customerName = t('selfService.nameRequired');
+      }
+      if (!customerPhone.trim()) {
+        errors.customerPhone = t('selfService.phoneRequired');
+      }
+    }
+    setFieldErrors(errors);
+  }, [orderType, customerName, customerPhone, isCustomerDetailsRequired, t]);
+
+  // Check if form is valid for submission
+  const isFormValid = !isCustomerDetailsRequired || (customerName.trim() && customerPhone.trim());
+
+  const handleFieldBlur = (fieldName) => {
+    setTouched(prev => ({ ...prev, [fieldName]: true }));
+  };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('uz-UZ').format(price) + ' UZS';
@@ -82,6 +110,17 @@ export default function CheckoutPage() {
   };
 
   const handleSubmit = async () => {
+    // Mark all fields as touched to show validation errors
+    setTouched({ customerName: true, customerPhone: true });
+
+    // Validate required fields for takeaway
+    if (isCustomerDetailsRequired) {
+      if (!customerName.trim() || !customerPhone.trim()) {
+        setError(t('selfService.fillRequiredFields'));
+        return;
+      }
+    }
+
     setError(null);
     setSubmitting(true);
 
@@ -208,29 +247,67 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Customer Info (Optional) */}
+        {/* Customer Info */}
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">{t('selfService.yourDetailsOptional')}</h2>
+          <h2 className="font-semibold text-gray-900 mb-3">
+            {isCustomerDetailsRequired
+              ? t('selfService.yourDetailsRequired')
+              : t('selfService.yourDetailsOptional')}
+          </h2>
+          {isCustomerDetailsRequired && (
+            <p className="text-sm text-amber-600 mb-3 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {t('selfService.takeawayRequiresDetails')}
+            </p>
+          )}
           <div className="space-y-3">
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder={t('selfService.yourName')}
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+            <div>
+              <div className="relative">
+                <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${
+                  touched.customerName && fieldErrors.customerName ? 'text-red-400' : 'text-gray-400'
+                }`} />
+                <input
+                  type="text"
+                  placeholder={isCustomerDetailsRequired
+                    ? `${t('selfService.yourName')} *`
+                    : t('selfService.yourName')}
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  onBlur={() => handleFieldBlur('customerName')}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    touched.customerName && fieldErrors.customerName
+                      ? 'border-red-300 bg-red-50'
+                      : ''
+                  }`}
+                />
+              </div>
+              {touched.customerName && fieldErrors.customerName && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.customerName}</p>
+              )}
             </div>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="tel"
-                placeholder={t('selfService.phoneNumber')}
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+            <div>
+              <div className="relative">
+                <Phone className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${
+                  touched.customerPhone && fieldErrors.customerPhone ? 'text-red-400' : 'text-gray-400'
+                }`} />
+                <input
+                  type="tel"
+                  placeholder={isCustomerDetailsRequired
+                    ? `${t('selfService.phoneNumber')} *`
+                    : t('selfService.phoneNumber')}
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  onBlur={() => handleFieldBlur('customerPhone')}
+                  className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    touched.customerPhone && fieldErrors.customerPhone
+                      ? 'border-red-300 bg-red-50'
+                      : ''
+                  }`}
+                />
+              </div>
+              {touched.customerPhone && fieldErrors.customerPhone && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.customerPhone}</p>
+              )}
             </div>
           </div>
         </div>
@@ -345,7 +422,7 @@ export default function CheckoutPage() {
         <div className="max-w-lg mx-auto px-4 py-4">
           <button
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || !isFormValid}
             className="w-full bg-blue-600 text-white rounded-lg py-4 font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {submitting ? (

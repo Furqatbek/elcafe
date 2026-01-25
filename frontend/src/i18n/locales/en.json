@@ -3654,7 +3654,12 @@
     "discount": "Discount",
     "placingOrder": "Placing Order...",
     "placeOrder": "Place Order",
-    "failedToSubmitOrder": "Failed to submit order"
+    "failedToSubmitOrder": "Failed to submit order",
+    "yourDetailsRequired": "Your Details (Required)",
+    "takeawayRequiresDetails": "Name and phone number are required for takeaway orders",
+    "nameRequired": "Please enter your name",
+    "phoneRequired": "Please enter your phone number",
+    "fillRequiredFields": "Please fill in all required fields"
   },
   "customerReservation": {
     "title": "Reserve a Table",

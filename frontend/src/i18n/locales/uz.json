@@ -3451,7 +3451,12 @@
     "discount": "Chegirma",
     "placingOrder": "Buyurtma berilmoqda...",
     "placeOrder": "Buyurtma berish",
-    "failedToSubmitOrder": "Buyurtmani yuborib bo'lmadi"
+    "failedToSubmitOrder": "Buyurtmani yuborib bo'lmadi",
+    "yourDetailsRequired": "Ma'lumotlaringiz (majburiy)",
+    "takeawayRequiresDetails": "Olib ketish buyurtmasi uchun ism va telefon raqami talab qilinadi",
+    "nameRequired": "Iltimos, ismingizni kiriting",
+    "phoneRequired": "Iltimos, telefon raqamingizni kiriting",
+    "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring"
   },
   "customerReservation": {
     "title": "Stol band qilish",
