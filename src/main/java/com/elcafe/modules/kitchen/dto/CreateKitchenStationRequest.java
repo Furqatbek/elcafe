@@ -1,4 +1,4 @@
-package com.elcafe.modules.menu.dto;
+package com.elcafe.modules.kitchen.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,26 +12,27 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CreateCategoryRequest {
+public class CreateKitchenStationRequest {
 
     @NotNull(message = "Restaurant ID is required")
     private Long restaurantId;
 
-    @NotBlank(message = "Category name is required")
-    @Size(max = 200, message = "Category name must not exceed 200 characters")
+    @NotBlank(message = "Station name is required")
+    @Size(max = 100, message = "Station name must not exceed 100 characters")
     private String name;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
+    @Size(max = 500, message = "Description must not exceed 500 characters")
     private String description;
 
-    @Size(max = 500, message = "Image URL must not exceed 500 characters")
-    private String imageUrl;
+    private Long printerId;
+
+    @Size(max = 20, message = "Color must not exceed 20 characters")
+    @Builder.Default
+    private String color = "#3B82F6";
 
     @Builder.Default
     private Integer sortOrder = 0;
 
     @Builder.Default
     private Boolean active = true;
-
-    private Long kitchenStationId;
 }

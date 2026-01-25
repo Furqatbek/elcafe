@@ -102,6 +102,7 @@ public class MenuService {
         category.setImageUrl(categoryData.getImageUrl());
         category.setSortOrder(categoryData.getSortOrder());
         category.setActive(categoryData.getActive());
+        category.setKitchenStation(categoryData.getKitchenStation());
 
         return categoryRepository.save(category);
     }

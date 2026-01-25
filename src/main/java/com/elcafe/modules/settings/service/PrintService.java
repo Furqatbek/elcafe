@@ -1,6 +1,13 @@
 package com.elcafe.modules.settings.service;
 
+import com.elcafe.modules.kitchen.entity.KitchenStation;
+import com.elcafe.modules.kitchen.repository.KitchenStationRepository;
+import com.elcafe.modules.menu.entity.Category;
+import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.repository.CategoryRepository;
+import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.settings.entity.PrinterSettings;
 import com.elcafe.modules.settings.repository.PrinterSettingsRepository;
 import com.github.anastaciocintra.escpos.EscPos;
@@ -16,9 +23,9 @@ import javax.print.PrintServiceLookup;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -26,15 +33,295 @@ import java.util.Optional;
 public class PrintService {
 
     private final PrinterSettingsRepository printerSettingsRepository;
+    private final KitchenStationRepository kitchenStationRepository;
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     /**
-     * Print kitchen order to thermal printer
+     * Print kitchen order to thermal printer(s)
+     * Routes items to appropriate station printers based on category assignments
      */
     public void printKitchenOrder(Order order) {
         try {
             log.info("Printing kitchen order: {}", order.getOrderNumber());
 
+            Long restaurantId = order.getRestaurant().getId();
+
+            // Get active kitchen stations with printers
+            List<KitchenStation> stations = kitchenStationRepository.findActiveStationsWithPrinters(restaurantId);
+
+            if (stations.isEmpty()) {
+                // No stations configured - use legacy single printer method
+                printKitchenOrderLegacy(order);
+                return;
+            }
+
+            // Group items by station
+            Map<KitchenStation, List<OrderItem>> itemsByStation = groupItemsByStation(order.getItems(), stations);
+
+            // Print to each station's printer
+            for (Map.Entry<KitchenStation, List<OrderItem>> entry : itemsByStation.entrySet()) {
+                KitchenStation station = entry.getKey();
+                List<OrderItem> stationItems = entry.getValue();
+
+                if (stationItems.isEmpty()) {
+                    continue;
+                }
+
+                if (station == null) {
+                    // Items without station assignment - print to default kitchen printer
+                    printItemsToDefaultPrinter(order, stationItems);
+                } else if (station.getPrinter() != null && station.getPrinter().getEnabled()) {
+                    // Print station-specific ticket
+                    printStationTicket(order, station, stationItems);
+                } else {
+                    log.warn("Station {} has no enabled printer configured, printing to default", station.getName());
+                    printItemsToDefaultPrinter(order, stationItems);
+                }
+            }
+
+            log.info("Kitchen order printed successfully: {}", order.getOrderNumber());
+        } catch (Exception e) {
+            log.error("Failed to print kitchen order: {}", order.getOrderNumber(), e);
+            // Don't throw exception - printing failure shouldn't block order creation
+        }
+    }
+
+    /**
+     * Group order items by their kitchen station based on product category
+     */
+    private Map<KitchenStation, List<OrderItem>> groupItemsByStation(List<OrderItem> items, List<KitchenStation> stations) {
+        Map<KitchenStation, List<OrderItem>> result = new LinkedHashMap<>();
+
+        // Initialize with null key for items without station
+        result.put(null, new ArrayList<>());
+
+        // Initialize for each station
+        for (KitchenStation station : stations) {
+            result.put(station, new ArrayList<>());
+        }
+
+        // Get all product IDs
+        Set<Long> productIds = items.stream()
+                .map(OrderItem::getProductId)
+                .collect(Collectors.toSet());
+
+        // Load products with categories
+        Map<Long, Product> productMap = productRepository.findAllById(productIds)
+                .stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
+        // Get category IDs
+        Set<Long> categoryIds = productMap.values().stream()
+                .filter(p -> p.getCategory() != null)
+                .map(p -> p.getCategory().getId())
+                .collect(Collectors.toSet());
+
+        // Load categories with kitchen stations
+        Map<Long, Category> categoryMap = categoryRepository.findAllById(categoryIds)
+                .stream()
+                .collect(Collectors.toMap(Category::getId, c -> c));
+
+        // Group items
+        for (OrderItem item : items) {
+            Product product = productMap.get(item.getProductId());
+            KitchenStation itemStation = null;
+
+            if (product != null && product.getCategory() != null) {
+                Category category = categoryMap.get(product.getCategory().getId());
+                if (category != null && category.getKitchenStation() != null) {
+                    // Find matching station from our loaded stations
+                    Long stationId = category.getKitchenStation().getId();
+                    itemStation = stations.stream()
+                            .filter(s -> s.getId().equals(stationId))
+                            .findFirst()
+                            .orElse(null);
+                }
+            }
+
+            result.get(itemStation).add(item);
+        }
+
+        return result;
+    }
+
+    /**
+     * Print station-specific ticket
+     */
+    private void printStationTicket(Order order, KitchenStation station, List<OrderItem> items) {
+        try {
+            PrinterSettings settings = station.getPrinter();
+            log.info("Printing {} items to station: {} (printer: {})",
+                    items.size(), station.getName(), settings.getPrinterName());
+
+            if ("NETWORK".equalsIgnoreCase(settings.getConnectionType())) {
+                printStationToNetworkPrinter(order, station, items, settings);
+            } else {
+                printStationToUSBPrinter(order, station, items, settings);
+            }
+        } catch (Exception e) {
+            log.error("Failed to print to station: {}", station.getName(), e);
+        }
+    }
+
+    /**
+     * Print items to default kitchen printer (for items without station assignment)
+     */
+    private void printItemsToDefaultPrinter(Order order, List<OrderItem> items) {
+        try {
+            Optional<PrinterSettings> printerSettings = printerSettingsRepository
+                    .findByRestaurant_IdAndPrinterTypeAndEnabled(
+                            order.getRestaurant().getId(),
+                            PrinterSettings.PrinterType.KITCHEN,
+                            true
+                    );
+
+            if (printerSettings.isEmpty()) {
+                log.warn("No default kitchen printer found for unassigned items");
+                return;
+            }
+
+            PrinterSettings settings = printerSettings.get();
+            log.info("Printing {} unassigned items to default printer: {}",
+                    items.size(), settings.getPrinterName());
+
+            if ("NETWORK".equalsIgnoreCase(settings.getConnectionType())) {
+                printStationToNetworkPrinter(order, null, items, settings);
+            } else {
+                printStationToUSBPrinter(order, null, items, settings);
+            }
+        } catch (Exception e) {
+            log.error("Failed to print to default printer", e);
+        }
+    }
+
+    /**
+     * Print station ticket to USB printer
+     */
+    private void printStationToUSBPrinter(Order order, KitchenStation station, List<OrderItem> items, PrinterSettings settings) {
+        try {
+            javax.print.PrintService printService = findPrintService(settings.getPrinterName());
+            if (printService == null) {
+                log.error("Printer not found: {}", settings.getPrinterName());
+                return;
+            }
+
+            PrinterOutputStream printerOutputStream = new PrinterOutputStream(printService);
+            EscPos escpos = new EscPos(printerOutputStream);
+
+            printStationTicketContent(escpos, order, station, items, settings);
+
+            escpos.feed(3);
+            escpos.cut(EscPos.CutMode.FULL);
+            escpos.close();
+
+        } catch (Exception e) {
+            log.error("Failed to print station ticket to USB printer", e);
+        }
+    }
+
+    /**
+     * Print station ticket to network printer
+     */
+    private void printStationToNetworkPrinter(Order order, KitchenStation station, List<OrderItem> items, PrinterSettings settings) {
+        log.warn("Network printer support not yet implemented. Use USB printer instead.");
+        // TODO: Implement network printer support
+    }
+
+    /**
+     * Print station ticket content
+     */
+    private void printStationTicketContent(EscPos escpos, Order order, KitchenStation station, List<OrderItem> items, PrinterSettings settings) throws IOException {
+        Style titleStyle = new Style()
+                .setFontSize(Style.FontSize._2, Style.FontSize._2)
+                .setBold(true)
+                .setJustification(EscPosConst.Justification.Center);
+
+        Style stationStyle = new Style()
+                .setFontSize(Style.FontSize._2, Style.FontSize._2)
+                .setBold(true)
+                .setJustification(EscPosConst.Justification.Center);
+
+        Style headerStyle = new Style()
+                .setFontSize(Style.FontSize._1, Style.FontSize._1)
+                .setBold(true);
+
+        Style normalStyle = new Style()
+                .setFontSize(Style.FontSize._1, Style.FontSize._1);
+
+        // Station Header
+        if (station != null) {
+            escpos.writeLF(stationStyle, "*** " + station.getName().toUpperCase() + " ***");
+        } else {
+            escpos.writeLF(titleStyle, "*** OSHXONA BUYURTMASI ***");
+        }
+        escpos.feed(1);
+
+        // Order details
+        escpos.writeLF(headerStyle, "BUYURTMA #" + order.getOrderNumber());
+        escpos.writeLF(normalStyle, DATE_TIME_FORMATTER.format(order.getCreatedAt()));
+        escpos.feed(1);
+
+        // Order type and table
+        if (order.getOrderType() != null) {
+            escpos.writeLF(normalStyle, "Turi: " + order.getOrderType().toString().replace("_", " "));
+        }
+
+        String tableInfo = getTableNumberFromOrder(order);
+        if (tableInfo != null && !tableInfo.isEmpty()) {
+            escpos.writeLF(headerStyle, "STOL: " + tableInfo);
+        }
+
+        escpos.feed(1);
+        escpos.writeLF("================================");
+
+        // Items for this station
+        escpos.writeLF(headerStyle, "MAHSULOTLAR (" + items.size() + "):");
+        escpos.feed(1);
+
+        for (OrderItem item : items) {
+            Style itemStyle = new Style()
+                    .setFontSize(Style.FontSize._1, Style.FontSize._1)
+                    .setBold(true);
+
+            String itemLine = String.format("%dx %s",
+                    item.getQuantity(),
+                    item.getProductName()
+            );
+            escpos.writeLF(itemStyle, itemLine);
+
+            if (item.getVariantName() != null && !item.getVariantName().isEmpty()) {
+                escpos.writeLF(normalStyle, "  (" + item.getVariantName() + ")");
+            }
+
+            if (item.getSpecialInstructions() != null && !item.getSpecialInstructions().isEmpty()) {
+                escpos.writeLF(normalStyle, "  Maxsus: " + item.getSpecialInstructions());
+            }
+
+            escpos.feed(1);
+        }
+
+        escpos.writeLF("================================");
+
+        // Customer notes (only on first ticket or if relevant)
+        if (order.getCustomerNotes() != null && !order.getCustomerNotes().isEmpty()) {
+            escpos.feed(1);
+            escpos.writeLF(headerStyle, "ESLATMALAR:");
+            escpos.writeLF(normalStyle, order.getCustomerNotes());
+            escpos.writeLF("================================");
+        }
+
+        escpos.feed(1);
+        escpos.writeLF(titleStyle, "HOZIR TAYYORLANG!");
+        escpos.feed(1);
+    }
+
+    /**
+     * Legacy method: Print kitchen order to single thermal printer (no station routing)
+     */
+    private void printKitchenOrderLegacy(Order order) {
+        try {
             Optional<PrinterSettings> printerSettings = printerSettingsRepository
                     .findByRestaurant_IdAndPrinterTypeAndEnabled(
                             order.getRestaurant().getId(),
@@ -54,11 +341,8 @@ public class PrintService {
             } else {
                 printToUSBPrinter(order, settings);
             }
-
-            log.info("Kitchen order printed successfully: {}", order.getOrderNumber());
         } catch (Exception e) {
-            log.error("Failed to print kitchen order: {}", order.getOrderNumber(), e);
-            // Don't throw exception - printing failure shouldn't block order creation
+            log.error("Failed to print kitchen order (legacy): {}", order.getOrderNumber(), e);
         }
     }
 
@@ -100,7 +384,7 @@ public class PrintService {
     }
 
     /**
-     * Print to USB thermal printer
+     * Print to USB thermal printer (legacy)
      */
     private void printToUSBPrinter(Order order, PrinterSettings settings) {
         try {
@@ -125,17 +409,15 @@ public class PrintService {
     }
 
     /**
-     * Print to network thermal printer
+     * Print to network thermal printer (legacy)
      */
     private void printToNetworkPrinter(Order order, PrinterSettings settings) {
         log.warn("Network printer support not yet implemented. Use USB printer instead.");
         // TODO: Implement network printer support
-        // Socket socket = new Socket(settings.getIpAddress(), settings.getPort());
-        // EscPos escpos = new EscPos(socket.getOutputStream());
     }
 
     /**
-     * Print kitchen order content to thermal printer
+     * Print kitchen order content to thermal printer (legacy)
      */
     private void printKitchenOrderContent(EscPos escpos, Order order, PrinterSettings settings) throws IOException {
         Style titleStyle = new Style()

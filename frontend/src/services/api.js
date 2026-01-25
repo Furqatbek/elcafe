@@ -741,6 +741,17 @@ export const printerAPI = {
   testPrinter: (id) => api.post(`/settings/printers/${id}/test`),
 };
 
+export const kitchenStationAPI = {
+  // Kitchen Station CRUD
+  getStations: (restaurantId) => api.get('/kitchen/stations', { params: { restaurantId } }),
+  getActiveStations: (restaurantId) => api.get('/kitchen/stations/active', { params: { restaurantId } }),
+  getStation: (id) => api.get(`/kitchen/stations/${id}`),
+  createStation: (data) => api.post('/kitchen/stations', data),
+  updateStation: (id, data) => api.put(`/kitchen/stations/${id}`, data),
+  deleteStation: (id) => api.delete(`/kitchen/stations/${id}`),
+  toggleStation: (id) => api.patch(`/kitchen/stations/${id}/toggle`),
+};
+
 export const promotionAPI = {
   // Promotions CRUD
   getPromotions: (restaurantId, params = {}) =>

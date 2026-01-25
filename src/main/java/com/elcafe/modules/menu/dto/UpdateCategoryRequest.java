@@ -26,4 +26,6 @@ public class UpdateCategoryRequest {
     private Integer sortOrder;
 
     private Boolean active;
+
+    private Long kitchenStationId;
 }

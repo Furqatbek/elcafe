@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { menuAPI, restaurantAPI, uploadAPI } from '../services/api';
+import { menuAPI, restaurantAPI, uploadAPI, kitchenStationAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -29,7 +29,8 @@ import {
   Edit,
   Trash2,
   Search,
-  ImageIcon
+  ImageIcon,
+  Printer
 } from 'lucide-react';
 
 export default function Categories() {
@@ -48,10 +49,12 @@ export default function Categories() {
     description: '',
     imageUrl: '',
     sortOrder: 0,
-    active: true
+    active: true,
+    kitchenStationId: null
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [kitchenStations, setKitchenStations] = useState([]);
 
   useEffect(() => {
     loadRestaurants();
@@ -60,6 +63,7 @@ export default function Categories() {
   useEffect(() => {
     if (selectedRestaurant) {
       loadCategories();
+      loadKitchenStations();
     }
   }, [selectedRestaurant]);
 
@@ -91,6 +95,18 @@ export default function Categories() {
       console.error('Failed to load categories:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadKitchenStations = async () => {
+    if (!selectedRestaurant) return;
+
+    try {
+      const response = await kitchenStationAPI.getActiveStations(selectedRestaurant);
+      setKitchenStations(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load kitchen stations:', error);
+      setKitchenStations([]);
     }
   };
 
@@ -192,7 +208,8 @@ export default function Categories() {
       description: category.description || '',
       imageUrl: category.imageUrl || '',
       sortOrder: category.sortOrder || 0,
-      active: category.active !== undefined ? category.active : true
+      active: category.active !== undefined ? category.active : true,
+      kitchenStationId: category.kitchenStationId || null
     });
     setImagePreview(category.imageUrl || '');
     setEditModalOpen(true);
@@ -204,7 +221,8 @@ export default function Categories() {
       description: '',
       imageUrl: '',
       sortOrder: 0,
-      active: true
+      active: true,
+      kitchenStationId: null
     });
     setImageFile(null);
     setImagePreview('');
@@ -345,6 +363,12 @@ export default function Categories() {
                     {t('menu.sortOrder')}: {category.sortOrder || 0}
                   </div>
                 </div>
+                {category.kitchenStationName && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Printer className="h-4 w-4 text-blue-500" />
+                    <span className="text-blue-600 font-medium">{category.kitchenStationName}</span>
+                  </div>
+                )}
 
                 <div className="pt-2 flex gap-2">
                   <Button
@@ -447,6 +471,35 @@ export default function Categories() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="kitchenStation">{t('menu.kitchenStation', 'Kitchen Station')}</Label>
+                <Select
+                  value={formData.kitchenStationId?.toString() || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, kitchenStationId: value === 'none' ? null : parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('menu.selectKitchenStation', 'Select kitchen station...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('menu.noStation', 'No station (default printer)')}</SelectItem>
+                    {kitchenStations.map((station) => (
+                      <SelectItem key={station.id} value={station.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: station.color || '#3B82F6' }}
+                          />
+                          {station.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {t('menu.kitchenStationHelp', 'Items in this category will print to the selected station\'s printer')}
+                </p>
+              </div>
+
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -545,6 +598,35 @@ export default function Categories() {
                   onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
                   min={0}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-kitchenStation">{t('menu.kitchenStation', 'Kitchen Station')}</Label>
+                <Select
+                  value={formData.kitchenStationId?.toString() || 'none'}
+                  onValueChange={(value) => setFormData({ ...formData, kitchenStationId: value === 'none' ? null : parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('menu.selectKitchenStation', 'Select kitchen station...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('menu.noStation', 'No station (default printer)')}</SelectItem>
+                    {kitchenStations.map((station) => (
+                      <SelectItem key={station.id} value={station.id.toString()}>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: station.color || '#3B82F6' }}
+                          />
+                          {station.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  {t('menu.kitchenStationHelp', 'Items in this category will print to the selected station\'s printer')}
+                </p>
               </div>
 
               <div className="flex items-center space-x-2">
