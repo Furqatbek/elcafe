@@ -404,11 +404,21 @@ const usePOSStore = create(
           // Order not yet submitted - use coupon validation endpoint
           try {
             const restaurantId = parseInt(localStorage.getItem('selectedRestaurantId')) || 1;
+            // Build order items for accurate discount calculation (product/category-specific promotions)
+            const items = (state.currentOrder.items || [])
+              .filter(item => !item.isFreeItem)
+              .map(item => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.basePrice || item.unitPrice || 0,
+                categoryId: item.categoryId || null,
+              }));
             const response = await promotionAPI.validateCoupon({
               code: couponCode,
               restaurantId: restaurantId,
               orderSubtotal: state.currentOrder.subtotal || 0,
               orderType: state.currentOrder.type || 'DINE_IN',
+              items: items,
             });
             return response.data;
           } catch (error) {

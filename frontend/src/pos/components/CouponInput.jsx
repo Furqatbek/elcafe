@@ -69,15 +69,18 @@ const CouponInput = ({ restaurantId = 1 }) => {
         // For PERCENTAGE and FIXED_AMOUNT
         const isPercentage = validation.promotionType === 'PERCENTAGE' ||
                              validation.promotionType === 'PERCENTAGE_DISCOUNT';
+        // Prefer calculatedDiscount from backend (handles 0 correctly with != null check)
+        // Fall back to discountValue for fixed amount, or percentage calculation
+        const hasCalculatedDiscount = validation.calculatedDiscount != null && validation.calculatedDiscount !== undefined;
         result = await applyDiscount({
           discountType: 'COUPON',
           couponCode: code,
           promotionId: validation.promotionId,
           promotionName: validation.promotionName,
-          // If we have calculatedDiscount, use it directly as the amount
-          discountAmount: validation.calculatedDiscount || (!isPercentage ? validation.discountValue : null),
-          // If it's percentage type, use discountValue as percent
-          discountPercent: isPercentage ? validation.discountValue : null,
+          // Use calculatedDiscount if available, otherwise use discountValue for fixed amount
+          discountAmount: hasCalculatedDiscount ? validation.calculatedDiscount : (!isPercentage ? validation.discountValue : null),
+          // If percentage type and no calculated discount, use discountValue as percent
+          discountPercent: isPercentage && !hasCalculatedDiscount ? validation.discountValue : null,
         });
       }
 
