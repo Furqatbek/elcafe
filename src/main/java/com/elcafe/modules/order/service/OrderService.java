@@ -3,6 +3,7 @@ package com.elcafe.modules.order.service;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.financial.service.RevenueService;
+import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.inventory.service.InventoryValuationService;
 import com.elcafe.modules.order.entity.Order;
@@ -28,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.elcafe.modules.order.specification.OrderSpecification;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +44,7 @@ public class OrderService {
     private final InventoryService inventoryService;
     private final DailyOrderSequenceService dailyOrderSequenceService;
     private final RestaurantTableRepository restaurantTableRepository;
-    private final BusinessDayService businessDayService;
+    private final ShiftTimeService shiftTimeService;
     private final PaymentRepository paymentRepository;
     @Lazy private final RevenueService revenueService;
     @Lazy private final PrintService printService;
@@ -226,7 +228,7 @@ public class OrderService {
     /**
      * Get orders with filters for order history page.
      * Supports filtering by restaurant, status, date range, and search term.
-     * Date ranges are adjusted to business day boundaries based on restaurant working hours,
+     * Date ranges are adjusted to shift boundaries based on restaurant business hours,
      * unless isShiftAware is true (dates already calculated by ShiftTimeService).
      */
     @Transactional(readOnly = true)
@@ -242,18 +244,31 @@ public class OrderService {
         log.info("Fetching orders with filters: restaurantId={}, status={}, fromDate={}, toDate={}, search={}, isShiftAware={}",
                 restaurantId, status, fromDate, toDate, search, isShiftAware);
 
-        // Adjust date range to business day boundaries (only if not already shift-aware)
+        // Adjust date range to shift boundaries (only if not already shift-aware)
         LocalDateTime adjustedFromDate = fromDate;
         LocalDateTime adjustedToDate = toDate;
 
-        if (!isShiftAware && (fromDate != null || toDate != null)) {
-            BusinessDayService.DateRange adjustedRange = businessDayService.adjustToBusinessDayBoundaries(
-                    restaurantId, fromDate, toDate
-            );
-            adjustedFromDate = adjustedRange.from();
-            adjustedToDate = adjustedRange.to();
+        if (!isShiftAware && restaurantId != null && (fromDate != null || toDate != null)) {
+            // Use ShiftTimeService to get proper shift boundaries
+            if (fromDate != null && toDate != null) {
+                ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRangeForPeriod(
+                        restaurantId, fromDate.toLocalDate(), toDate.toLocalDate()
+                );
+                adjustedFromDate = shiftRange.start();
+                adjustedToDate = shiftRange.end();
+            } else if (fromDate != null) {
+                ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
+                        restaurantId, fromDate.toLocalDate()
+                );
+                adjustedFromDate = shiftRange.start();
+            } else if (toDate != null) {
+                ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
+                        restaurantId, toDate.toLocalDate()
+                );
+                adjustedToDate = shiftRange.end();
+            }
 
-            log.info("Adjusted to business day boundaries: {} to {} -> {} to {}",
+            log.info("Adjusted to shift boundaries: {} to {} -> {} to {}",
                     fromDate, toDate, adjustedFromDate, adjustedToDate);
         }
 
@@ -268,18 +283,23 @@ public class OrderService {
         return orderRepository.findAll(spec, pageable);
     }
 
+    /**
+     * Get orders for a restaurant from the last 7 days using shift-aware boundaries.
+     */
     @Transactional(readOnly = true)
     public List<Order> getOrdersByRestaurant(Long restaurantId) {
-        // Get business day boundaries for 7 days ago to now
-        LocalDateTime sevenDaysAgo = LocalDateTime.now().minusDays(7);
-        BusinessDayService.DateRange adjustedRange = businessDayService.adjustToBusinessDayBoundaries(
-                restaurantId, sevenDaysAgo, LocalDateTime.now()
+        // Get shift-aware boundaries for 7 days ago to now
+        LocalDate today = shiftTimeService.getCurrentBusinessDay(restaurantId);
+        LocalDate sevenDaysAgo = today.minusDays(7);
+
+        ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, sevenDaysAgo, today
         );
 
         return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId,
-                adjustedRange.from(),
-                adjustedRange.to()
+                shiftRange.start(),
+                shiftRange.end()
         );
     }
 
