@@ -8,7 +8,7 @@ VALUES ('operator@jangirovs.uz', '$2b$10$ROuAr99Uk52NYdO5J/JyCe0C/8axTGDCvROewQg
 
 -- Insert sample restaurant
 INSERT INTO restaurants (name, description, address, city, state, zip_code, country, phone, email, active, accepting_orders, delivery_fee, estimated_delivery_time_minutes)
-VALUES ('Jangirovs', 'Best coffee and food in town', 'Hazorasp, Chitlik koprik', 'Xorazm', 'UZB', '10001', 'UZB', '+998 88 153 88 88', 'info@jangirovs.uz', TRUE, TRUE, 5.00, 30);
+VALUES ('Jangirovs', 'Best coffee and food in town', 'Hazorasp, Chitlik koprik', 'Xorazm', 'UZB', '10001', 'UZB', '+998770049909', 'info@jangirovs.uz', TRUE, TRUE, 5.00, 30);
 
 -- Insert business hours for the sample restaurant
 INSERT INTO business_hours (restaurant_id, day_of_week, open_time, close_time, closed)
