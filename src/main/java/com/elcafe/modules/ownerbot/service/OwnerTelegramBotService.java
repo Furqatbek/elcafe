@@ -246,7 +246,7 @@ public class OwnerTelegramBotService {
                 subscriberRepository.save(subscriber);
 
                 String welcomeMessage =
-                    "👋 <b>Добро пожаловать в ElCafe Owner Bot!</b>\n\n" +
+                    "👋 <b>Добро пожаловать в Jangirovs Owner Bot!</b>\n\n" +
                     "Этот бот предназначен для владельцев и менеджеров ресторанов.\n\n" +
                     "📱 <b>Вы будете получать уведомления о:</b>\n" +
                     "• Новых заказах\n" +
@@ -255,7 +255,7 @@ public class OwnerTelegramBotService {
                     "• Отзывах клиентов\n" +
                     "• Ежедневных отчётах\n\n" +
                     "🔐 <b>Для подключения:</b>\n" +
-                    "1. Войдите в админ-панель ElCafe\n" +
+                    "1. Войдите в админ-панель Jangirovs\n" +
                     "2. Перейдите в Настройки → Telegram\n" +
                     "3. Получите код подключения\n" +
                     "4. Отправьте код сюда\n\n" +
@@ -409,7 +409,7 @@ public class OwnerTelegramBotService {
             updateLastInteraction(chatId);
 
             String helpMessage =
-                "📚 <b>ElCafe Owner Bot - Справка</b>\n\n" +
+                "📚 <b>Jangirovs Owner Bot - Справка</b>\n\n" +
                 "Этот бот отправляет уведомления владельцам и менеджерам ресторанов.\n\n" +
                 "<b>Команды:</b>\n" +
                 "/start - Начать/перезапустить бот\n" +

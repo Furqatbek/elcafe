@@ -160,12 +160,12 @@ CREATE INDEX idx_telegram_logs_type ON telegram_logs(message_type);
 
 -- Insert default Telegram templates
 INSERT INTO telegram_templates (name, content, type, description, has_buttons, buttons_config) VALUES
-('Welcome Message', '👋 Assalomu alaykum {name}!\n\nEl Cafe botiga xush kelibsiz! 🍽️\n\nBu yerda siz:\n✅ Menuni ko''rishingiz\n✅ Buyurtma berishingiz\n✅ Aksiyalar haqida bilib turishingiz mumkin', 'WELCOME', 'Sent when user starts the bot', true, '[{"text": "📋 Menuni ko''rish", "callback_data": "menu"}, {"text": "🛒 Buyurtma berish", "url": "https://elcafe.uz/order"}]'),
-('Birthday Greeting', '🎂 Tug''ilgan kuningiz bilan {name}!\n\nEl Cafe sizga 20% chegirma taqdim etadi! 🎁\n\nPromo kod: BDAY{year}\nAmal qilish muddati: bugun!', 'BIRTHDAY', 'Sent on subscriber birthday', true, '[{"text": "🛒 Buyurtma berish", "url": "https://elcafe.uz/order"}]'),
-('Inactive User', '👋 {name}, sizni sog''indik!\n\nEl Cafe''da yangi taomlar kutmoqda! 🍕🍔\n\n15% chegirma: COMEBACK15', 'REMINDER', 'Sent to inactive users', true, '[{"text": "📋 Yangi menuni ko''rish", "callback_data": "menu"}]'),
+('Welcome Message', '👋 Assalomu alaykum {name}!\n\nJangirovs botiga xush kelibsiz! 🍽️\n\nBu yerda siz:\n✅ Menuni ko''rishingiz\n✅ Buyurtma berishingiz\n✅ Aksiyalar haqida bilib turishingiz mumkin', 'WELCOME', 'Sent when user starts the bot', true, '[{"text": "📋 Menuni ko''rish", "callback_data": "menu"}, {"text": "🛒 Buyurtma berish", "url": "https://jangirovs.uz/order"}]'),
+('Birthday Greeting', '🎂 Tug''ilgan kuningiz bilan {name}!\n\nJangirovs sizga 20% chegirma taqdim etadi! 🎁\n\nPromo kod: BDAY{year}\nAmal qilish muddati: bugun!', 'BIRTHDAY', 'Sent on subscriber birthday', true, '[{"text": "🛒 Buyurtma berish", "url": "https://jangirovs.uz/order"}]'),
+('Inactive User', '👋 {name}, sizni sog''indik!\n\nJangirovs''da yangi taomlar kutmoqda! 🍕🍔\n\n15% chegirma: COMEBACK15', 'REMINDER', 'Sent to inactive users', true, '[{"text": "📋 Yangi menuni ko''rish", "callback_data": "menu"}]'),
 ('Order Status', '📦 {name}, buyurtmangiz #{order_number}\n\nHolati: {status}\n{message}', 'ORDER_STATUS', 'Order status notifications', false, null),
 ('Referral Reward', '🎉 Tabriklaymiz {name}!\n\nDo''stingiz birinchi buyurtma berdi.\n{amount} bonus ball hisobingizga qo''shildi! 💰', 'REFERRAL', 'Sent when referral completes', false, null),
-('Promotion', '🔥 {name}, maxsus taklif!\n\n{promo_text}\n\nPromo kod: {promo_code}\nAmal qilish: {expiry_date} gacha', 'PROMOTION', 'General promotion template', true, '[{"text": "🛒 Hoziroq buyurtma bering", "url": "https://elcafe.uz/order"}]');
+('Promotion', '🔥 {name}, maxsus taklif!\n\n{promo_text}\n\nPromo kod: {promo_code}\nAmal qilish: {expiry_date} gacha', 'PROMOTION', 'General promotion template', true, '[{"text": "🛒 Hoziroq buyurtma bering", "url": "https://jangirovs.uz/order"}]');
 
 -- Insert default automation rules
 INSERT INTO telegram_automation_rules (name, description, trigger_type, template_id, delay_minutes, conditions) VALUES
@@ -176,7 +176,7 @@ INSERT INTO telegram_automation_rules (name, description, trigger_type, template
 -- Insert default bot commands
 INSERT INTO telegram_bot_commands (command, description, custom_response) VALUES
 ('/start', 'Start the bot', NULL),
-('/menu', 'View the menu', '📋 Bizning menuni ko''ring: https://elcafe.uz/menu'),
-('/order', 'Place an order', '🛒 Buyurtma berish: https://elcafe.uz/order'),
-('/help', 'Get help', '❓ Yordam kerakmi?\n\n📞 Telefon: +998 XX XXX XX XX\n📍 Manzil: Toshkent shahar\n⏰ Ish vaqti: 09:00 - 23:00'),
-('/promo', 'View current promotions', '🔥 Joriy aksiyalarni saytimizda ko''ring: https://elcafe.uz/promotions');
+('/menu', 'View the menu', '📋 Bizning menuni ko''ring: https://jangirovs.uz/menu'),
+('/order', 'Place an order', '🛒 Buyurtma berish: https://jangirovs.uz/order'),
+('/help', 'Get help', '❓ Yordam kerakmi?\n\n📞 Telefon: +998770049909\n📍 Manzil: Hazorasp, Xorazm\n⏰ Ish vaqti: 09:00 - 23:00'),
+('/promo', 'View current promotions', '🔥 Joriy aksiyalarni saytimizda ko''ring: https://jangirovs.uz/promotions');
