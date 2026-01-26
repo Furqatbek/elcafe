@@ -13,23 +13,23 @@ const env = (key, fallback) => import.meta.env[key] || fallback;
 
 const branding = {
   // ===== COMPANY/PLATFORM IDENTITY =====
-  name: env('VITE_BRAND_NAME', 'El Cafe'),
-  shortName: env('VITE_BRAND_SHORT_NAME', 'ElCafe'),
+  name: env('VITE_BRAND_NAME', 'Jangirovs'),
+  shortName: env('VITE_BRAND_SHORT_NAME', 'Jangirovs'),
   tagline: env('VITE_BRAND_TAGLINE', 'Restaurant Delivery'),
   description: env('VITE_BRAND_DESCRIPTION', 'Restaurant Delivery Control Service'),
 
   // ===== CONTACT INFORMATION =====
-  supportEmail: env('VITE_BRAND_SUPPORT_EMAIL', 'support@elcafe.com'),
-  adminEmail: env('VITE_BRAND_ADMIN_EMAIL', 'admin@elcafe.com'),
+  supportEmail: env('VITE_BRAND_SUPPORT_EMAIL', 'islombek.j@jangirovs.uz'),
+  adminEmail: env('VITE_BRAND_ADMIN_EMAIL', 'islombek.j@jangirovs.uz'),
 
   // ===== DOMAIN & URLs =====
-  domain: env('VITE_BRAND_DOMAIN', 'elcafe.com'),
-  apiUrl: env('VITE_BRAND_API_URL', 'https://api.elcafe.com'),
-  websiteUrl: env('VITE_BRAND_WEBSITE_URL', 'https://elcafe.com'),
+  domain: env('VITE_BRAND_DOMAIN', 'jangirovs.uz'),
+  apiUrl: env('VITE_BRAND_API_URL', 'https://www.jangirovs.uz'),
+  websiteUrl: env('VITE_BRAND_WEBSITE_URL', 'https://www.jangirovs.uz'),
 
   // ===== DEMO CREDENTIALS (for login page hint) =====
   demo: {
-    email: env('VITE_BRAND_DEMO_EMAIL', 'admin@elcafe.com'),
+    email: env('VITE_BRAND_DEMO_EMAIL', 'admin@jangirovs.uz'),
     password: env('VITE_BRAND_DEMO_PASSWORD', 'Admin123!'),
   },
 
@@ -59,7 +59,7 @@ const branding = {
 
   // ===== LEGAL =====
   legal: {
-    companyName: env('VITE_BRAND_COMPANY_NAME', 'ElCafe Inc.'),
+    companyName: env('VITE_BRAND_COMPANY_NAME', 'Jangirovs Inc.'),
     copyrightYear: new Date().getFullYear(),
   },
 };
