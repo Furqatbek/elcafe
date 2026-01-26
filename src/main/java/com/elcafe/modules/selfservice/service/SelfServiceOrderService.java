@@ -1,6 +1,7 @@
 package com.elcafe.modules.selfservice.service;
 
 import com.elcafe.modules.customer.entity.Customer;
+import com.elcafe.modules.customer.enums.RegistrationSource;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.menu.entity.LinkedItem;
 import com.elcafe.modules.menu.entity.Product;
@@ -346,10 +347,35 @@ public class SelfServiceOrderService {
             throw new RuntimeException("Minimum order amount not met");
         }
 
-        // Link to existing customer if phone provided
+        // Find or create customer by phone (phone is the unique key for customers)
         Customer customer = null;
         if (request.getCustomerPhone() != null && !request.getCustomerPhone().isEmpty()) {
-            customer = customerRepository.findByPhone(request.getCustomerPhone()).orElse(null);
+            String phone = request.getCustomerPhone().trim();
+            String customerName = request.getCustomerName() != null ? request.getCustomerName().trim() : "";
+
+            customer = customerRepository.findByPhone(phone)
+                    .map(existingCustomer -> {
+                        // Update name if provided and customer has no name set
+                        if (!customerName.isEmpty() &&
+                            (existingCustomer.getFirstName() == null || existingCustomer.getFirstName().isEmpty()
+                             || "Customer".equals(existingCustomer.getFirstName()))) {
+                            existingCustomer.setFirstName(customerName);
+                            return customerRepository.save(existingCustomer);
+                        }
+                        return existingCustomer;
+                    })
+                    .orElseGet(() -> {
+                        // Create new customer with phone as unique key
+                        Customer newCustomer = Customer.builder()
+                                .phone(phone)
+                                .firstName(customerName.isEmpty() ? "Customer" : customerName)
+                                .lastName("")
+                                .registrationSource(RegistrationSource.QR_ORDER)
+                                .active(true)
+                                .build();
+                        log.info("Creating new customer from self-service order: phone={}", phone);
+                        return customerRepository.save(newCustomer);
+                    });
         }
 
         // Get customer notes (frontend sends "notes", DTO also supports "specialInstructions")
