@@ -220,6 +220,30 @@ const generateReceiptHTML = (order) => {
       font-size: 9px;
     }
 
+    .qr-section {
+      margin: 4px 0;
+      padding: 3px;
+      text-align: center;
+      border: 1px dashed black;
+    }
+
+    .qr-title {
+      font-weight: bold;
+      font-size: 10px;
+      margin-bottom: 2px;
+    }
+
+    .qr-code {
+      width: 80px;
+      height: 80px;
+      margin: 2px auto;
+    }
+
+    .qr-subtitle {
+      font-size: 8px;
+      margin-top: 2px;
+    }
+
     .footer {
       margin-top: 3px;
       padding-top: 2px;
@@ -396,6 +420,12 @@ const generateReceiptHTML = (order) => {
       <div>${truncate(order.customerNotes, 50)}</div>
     </div>
     ` : ''}
+
+    <div class="qr-section">
+      <div class="qr-title">ONLINE BUYURTMA</div>
+      <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent('https://jangirovs.uz/order/menu/1/TAKEAWAY')}" alt="QR Code" />
+      <div class="qr-subtitle">Skanerlang va buyurtma bering</div>
+    </div>
 
     <div class="footer">
       <div>+998770049909</div>
