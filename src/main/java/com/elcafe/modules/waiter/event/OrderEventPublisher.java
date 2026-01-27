@@ -6,7 +6,6 @@ import com.elcafe.modules.restaurant.entity.RestaurantTable.TableStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -24,8 +23,9 @@ public class OrderEventPublisher {
 
     /**
      * Publish event when a new order is created
+     * Note: Not async - event must be published within the caller's transaction
+     * so that @TransactionalEventListener(phase = AFTER_COMMIT) works correctly
      */
-    @Async
     public void publishOrderCreated(Order order, String triggeredBy) {
         log.info("Publishing order created event for order: {}", order.getOrderNumber());
 
@@ -45,7 +45,6 @@ public class OrderEventPublisher {
     /**
      * Publish event when an order is submitted to the kitchen
      */
-    @Async
     public void publishOrderSubmitted(Order order, String triggeredBy) {
         log.info("Publishing order submitted event for order: {}", order.getOrderNumber());
 
@@ -66,7 +65,6 @@ public class OrderEventPublisher {
     /**
      * Publish event when an order is ready for pickup
      */
-    @Async
     public void publishOrderReady(Order order, Long kitchenOrderId, String triggeredBy) {
         log.info("Publishing order ready event for order: {}", order.getOrderNumber());
 
@@ -86,7 +84,6 @@ public class OrderEventPublisher {
     /**
      * Publish event when bill is requested
      */
-    @Async
     public void publishBillRequested(Order order, String paymentMethod, String triggeredBy) {
         log.info("Publishing bill requested event for order: {}", order.getOrderNumber());
 
@@ -107,7 +104,6 @@ public class OrderEventPublisher {
     /**
      * Publish event when payment is completed
      */
-    @Async
     public void publishOrderPaid(
             Order order,
             BigDecimal amount,
@@ -134,7 +130,6 @@ public class OrderEventPublisher {
     /**
      * Publish event when an item is added to an order
      */
-    @Async
     public void publishItemAdded(
             Order order,
             String itemName,
@@ -161,7 +156,6 @@ public class OrderEventPublisher {
     /**
      * Publish event when an item is removed from an order
      */
-    @Async
     public void publishItemRemoved(
             Order order,
             String itemName,
@@ -186,7 +180,6 @@ public class OrderEventPublisher {
     /**
      * Publish event when table status changes
      */
-    @Async
     public void publishTableStatusChanged(
             RestaurantTable table,
             TableStatus oldStatus,

@@ -9,11 +9,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.math.BigDecimal;
 
@@ -36,9 +37,12 @@ public class OrderEventListener {
      * - Log the event
      * - Create audit trail
      * - Notify kitchen module (if needed)
+     *
+     * Uses AFTER_COMMIT phase to ensure the order exists in the database
+     * before trying to create audit trail records with foreign key references.
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleOrderCreated(OrderCreatedEvent event) {
         log.info("Handling OrderCreatedEvent: {}", event.getEventDescription());
@@ -60,7 +64,7 @@ public class OrderEventListener {
      * - Send notification to kitchen display system
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleOrderSubmitted(OrderSubmittedEvent event) {
         log.info("Handling OrderSubmittedEvent: {}", event.getEventDescription());
@@ -86,7 +90,7 @@ public class OrderEventListener {
      * - Update order status
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleOrderReady(OrderReadyEvent event) {
         log.info("Handling OrderReadyEvent: {}", event.getEventDescription());
@@ -112,7 +116,7 @@ public class OrderEventListener {
      * - Notify payment module
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleBillRequested(BillRequestedEvent event) {
         log.info("Handling BillRequestedEvent: {}", event.getEventDescription());
@@ -139,7 +143,7 @@ public class OrderEventListener {
      * - Update waiter performance metrics
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleOrderPaid(OrderPaidEvent event) {
         log.info("Handling OrderPaidEvent: {}", event.getEventDescription());
@@ -173,7 +177,7 @@ public class OrderEventListener {
      * - Create audit trail
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleItemAdded(OrderItemAddedEvent event) {
         log.info("Handling OrderItemAddedEvent: {}", event.getEventDescription());
@@ -192,7 +196,7 @@ public class OrderEventListener {
      * - Track waste/void items
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleItemRemoved(OrderItemRemovedEvent event) {
         log.info("Handling OrderItemRemovedEvent: {}", event.getEventDescription());
@@ -230,7 +234,7 @@ public class OrderEventListener {
      * - Update table availability
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleTableStatusChanged(TableStatusChangedEvent event) {
         log.info("Handling TableStatusChangedEvent: {}", event.getEventDescription());
