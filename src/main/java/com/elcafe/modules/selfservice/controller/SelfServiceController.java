@@ -62,19 +62,32 @@ public class SelfServiceController {
 
     /**
      * Start a session by scanning QR code.
+     * Also supports takeaway sessions when code=takeaway and restaurantId is provided.
      */
     @PostMapping("/session/start")
-    @Operation(summary = "Start session", description = "Start a self-service session by scanning a QR code")
+    @Operation(summary = "Start session", description = "Start a self-service session by scanning a QR code or for takeaway with code=takeaway")
     public ResponseEntity<Map<String, Object>> startSession(
             @RequestParam String code,
+            @RequestParam(required = false) Long restaurantId,
             HttpServletRequest request) {
 
         String deviceInfo = request.getHeader("User-Agent");
         String ipAddress = getClientIp(request);
 
-        SelfServiceSession session = orderService.startSession(code, deviceInfo, ipAddress);
-
+        SelfServiceSession session;
         Map<String, Object> response = new HashMap<>();
+
+        // Handle special "takeaway" code for direct takeaway session
+        if ("takeaway".equalsIgnoreCase(code)) {
+            if (restaurantId == null) {
+                throw new RuntimeException("restaurantId is required for takeaway sessions");
+            }
+            session = orderService.startTakeawaySession(restaurantId, deviceInfo, ipAddress);
+            response.put("orderType", "TAKEAWAY");
+        } else {
+            session = orderService.startSession(code, deviceInfo, ipAddress);
+        }
+
         response.put("sessionToken", session.getSessionToken());
         response.put("restaurantId", session.getRestaurant().getId());
         response.put("restaurantName", session.getRestaurant().getName());
