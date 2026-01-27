@@ -28,6 +28,13 @@ const POSApp = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
 
+  // Set default restaurantId on mount if not already set
+  useEffect(() => {
+    if (!localStorage.getItem('selectedRestaurantId')) {
+      localStorage.setItem('selectedRestaurantId', '1');
+    }
+  }, []);
+
   // Check for pending payment order on mount
   useEffect(() => {
     const screen = searchParams.get('screen');

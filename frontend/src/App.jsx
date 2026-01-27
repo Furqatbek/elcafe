@@ -80,6 +80,13 @@ function InventoryWrapper({ children }) {
 }
 
 function App() {
+  // Set default restaurantId on app load if not already set
+  React.useEffect(() => {
+    if (!localStorage.getItem('selectedRestaurantId')) {
+      localStorage.setItem('selectedRestaurantId', '1');
+    }
+  }, []);
+
   return (
     <BrowserRouter basename="/admin">
       <SessionManager />
