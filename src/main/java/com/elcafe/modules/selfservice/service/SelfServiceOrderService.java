@@ -26,7 +26,9 @@ import com.elcafe.modules.promotion.enums.DiscountType;
 import com.elcafe.modules.promotion.service.CouponValidationService;
 import com.elcafe.modules.promotion.service.DiscountCalculationService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.selfservice.dto.AddToCartRequest;
 import com.elcafe.modules.selfservice.dto.CartItemResponse;
 import com.elcafe.modules.selfservice.dto.SubmitOrderRequest;
@@ -64,6 +66,7 @@ public class SelfServiceOrderService {
     private final LinkedItemRepository linkedItemRepository;
     private final OrderRepository orderRepository;
     private final RestaurantRepository restaurantRepository;
+    private final RestaurantTableRepository restaurantTableRepository;
     private final CustomerRepository customerRepository;
     private final DailyOrderSequenceService dailyOrderSequenceService;
     private final com.elcafe.modules.bundle.repository.BundleRepository bundleRepository;
@@ -509,6 +512,17 @@ public class SelfServiceOrderService {
         order.setTotal(subtotal.subtract(discount));
 
         order = orderRepository.save(order);
+
+        // Update table status to OCCUPIED for dine-in orders
+        if (orderType == OrderType.DINE_IN && session.getTable() != null) {
+            RestaurantTable table = session.getTable();
+            if (table.getStatus() == RestaurantTable.TableStatus.AVAILABLE) {
+                table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+                restaurantTableRepository.save(table);
+                log.info("Table {} marked as OCCUPIED for self-service dine-in order {}",
+                        table.getTableNumber(), order.getOrderNumber());
+            }
+        }
 
         // Send database notifications (for admin panel, kitchen, restaurant, customer)
         try {
