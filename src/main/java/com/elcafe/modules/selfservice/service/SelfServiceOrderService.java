@@ -413,13 +413,18 @@ public class SelfServiceOrderService {
         // Get customer notes (frontend sends "notes", DTO also supports "specialInstructions")
         String customerNotes = request.getNotes() != null ? request.getNotes() : request.getSpecialInstructions();
 
+        // Map SelfServiceOrderType to OrderType
+        OrderType orderType = request.getOrderType() == SelfServiceOrderType.TAKEAWAY
+                ? OrderType.TAKEAWAY
+                : OrderType.DINE_IN;
+
         // Create main order
         Order order = Order.builder()
                 .orderNumber(dailyOrderSequenceService.generateNextOrderNumber())
                 .restaurant(session.getRestaurant())
                 .customer(customer)
                 .diningTable(session.getTable())
-                .orderType(OrderType.DINE_IN)
+                .orderType(orderType)
                 .status(settings.getAutoAcceptOrders() ? OrderStatus.ACCEPTED : OrderStatus.PENDING)
                 .subtotal(subtotal)
                 .tax(BigDecimal.ZERO)
@@ -470,7 +475,7 @@ public class SelfServiceOrderService {
                         .restaurantId(session.getRestaurant().getId())
                         .customerId(customer != null ? customer.getId() : null)
                         .orderSubtotal(subtotal)
-                        .orderType(OrderType.DINE_IN.name())
+                        .orderType(orderType.name())
                         .items(orderItems.stream()
                                 .map(item -> ValidateCouponRequest.OrderItemInfo.builder()
                                         .productId(item.getProductId())
