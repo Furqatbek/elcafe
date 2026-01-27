@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWebSocketNotifications, requestNotificationPermission } from '../hooks/useWebSocketNotifications';
 import { useNotificationStore } from '../store/notificationStore';
-import { Bell, Wifi, WifiOff, X, ShoppingCart, Clock, Check } from 'lucide-react';
+import { Bell, Wifi, WifiOff, X, ShoppingCart, Clock, GripHorizontal } from 'lucide-react';
 import { Button } from './ui/button';
 import { formatDistanceToNow } from 'date-fns';
 
-// Notification bell with dropdown panel
+// Notification bell with draggable centered panel
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const panelRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
   const {
@@ -82,6 +86,59 @@ export function NotificationBell() {
     }
   }, [location.pathname, clearUnreadOrders]);
 
+  // Reset position to center when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      setPosition({ x: 0, y: 0 });
+    }
+  }, [isOpen]);
+
+  // Handle drag start
+  const handleDragStart = useCallback((e) => {
+    if (panelRef.current) {
+      const rect = panelRef.current.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+      setIsDragging(true);
+    }
+  }, []);
+
+  // Handle drag move
+  const handleDragMove = useCallback((e) => {
+    if (isDragging && panelRef.current) {
+      const panelWidth = panelRef.current.offsetWidth;
+      const panelHeight = panelRef.current.offsetHeight;
+
+      // Calculate new position relative to center
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+
+      const newX = e.clientX - dragOffset.x + panelWidth / 2 - centerX;
+      const newY = e.clientY - dragOffset.y + panelHeight / 2 - centerY;
+
+      setPosition({ x: newX, y: newY });
+    }
+  }, [isDragging, dragOffset]);
+
+  // Handle drag end
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Add/remove global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      return () => {
+        window.removeEventListener('mousemove', handleDragMove);
+        window.removeEventListener('mouseup', handleDragEnd);
+      };
+    }
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
   // Handle clicking a notification
   const handleNotificationClick = (notification) => {
     setIsOpen(false);
@@ -127,17 +184,33 @@ export function NotificationBell() {
         />
       </Button>
 
-      {/* Dropdown Panel */}
+      {/* Centered Draggable Panel */}
       {isOpen && (
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 bg-black/20"
             onClick={() => setIsOpen(false)}
           />
 
-          {/* Panel */}
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-50 overflow-hidden">
+          {/* Panel - Centered and Draggable */}
+          <div
+            ref={panelRef}
+            className="fixed w-80 bg-white rounded-lg shadow-xl border z-50 overflow-hidden"
+            style={{
+              left: `calc(50% - 160px + ${position.x}px)`,
+              top: `calc(50% - 200px + ${position.y}px)`,
+              cursor: isDragging ? 'grabbing' : 'default',
+            }}
+          >
+            {/* Drag Handle */}
+            <div
+              className="flex items-center justify-center py-1 bg-gray-100 border-b cursor-grab active:cursor-grabbing hover:bg-gray-200 transition-colors"
+              onMouseDown={handleDragStart}
+            >
+              <GripHorizontal className="h-4 w-4 text-gray-400" />
+            </div>
+
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
               <div className="flex items-center gap-2">
