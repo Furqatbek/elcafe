@@ -79,10 +79,9 @@ public class SelfServiceController {
 
         // Handle special "takeaway" code for direct takeaway session
         if ("takeaway".equalsIgnoreCase(code)) {
-            if (restaurantId == null) {
-                throw new RuntimeException("restaurantId is required for takeaway sessions");
-            }
-            session = orderService.startTakeawaySession(restaurantId, deviceInfo, ipAddress);
+            // Default to restaurantId=1 if not provided
+            Long effectiveRestaurantId = (restaurantId != null) ? restaurantId : 1L;
+            session = orderService.startTakeawaySession(effectiveRestaurantId, deviceInfo, ipAddress);
             response.put("orderType", "TAKEAWAY");
         } else {
             session = orderService.startSession(code, deviceInfo, ipAddress);
@@ -104,7 +103,7 @@ public class SelfServiceController {
     @PostMapping("/session/start/takeaway")
     @Operation(summary = "Start takeaway session", description = "Start a self-service session for takeaway orders without QR code")
     public ResponseEntity<Map<String, Object>> startTakeawaySession(
-            @RequestParam Long restaurantId,
+            @RequestParam(required = false, defaultValue = "1") Long restaurantId,
             HttpServletRequest request) {
 
         String deviceInfo = request.getHeader("User-Agent");
