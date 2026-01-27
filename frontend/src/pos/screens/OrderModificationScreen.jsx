@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -13,7 +13,6 @@ import {
   Check
 } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
-import ProductCard from '../components/ProductCard';
 import usePOSStore from '../store/posStore';
 import { posAPI } from '../../services/api';
 
@@ -30,10 +29,9 @@ const OrderModificationScreen = () => {
     productAvailability,
     checkAllProductsAvailability,
     setCurrentScreen,
-    ui,
   } = usePOSStore();
 
-  const [order, setOrder] = useState(activeOrder);
+  const [order, _setOrder] = useState(activeOrder);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(false);

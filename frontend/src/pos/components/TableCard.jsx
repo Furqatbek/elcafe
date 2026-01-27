@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { Users, Clock, Utensils, AlertCircle, CheckCircle, Check, Link2 } from 'lucide-react';
@@ -19,18 +18,14 @@ const TableCard = ({
   const { t } = useTranslation();
 
   const {
-    id,
     tableNumber,
     tableName,
     status,
     capacity,
-    section,
     currentOrderNumber,
     width = 100,
     height = 100,
     mergedTable = false,
-    mergedWithTableId,
-    originalCapacity,
   } = table;
 
   const getStatusConfig = (tableStatus) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { poSuggestionAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';

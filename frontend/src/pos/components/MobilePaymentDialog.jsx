@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Smartphone, CheckCircle, Loader2, Wallet } from 'lucide-react';
+import { Smartphone, CheckCircle, Wallet } from 'lucide-react';
 import POSModal from './POSModal';
 import TouchButton from './TouchButton';
 

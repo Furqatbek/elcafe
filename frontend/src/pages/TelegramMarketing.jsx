@@ -45,8 +45,6 @@ import {
   Users,
   CheckCircle,
   Clock,
-  AlertCircle,
-  BarChart3,
   UserX,
   UserCheck
 } from 'lucide-react';
@@ -63,7 +61,7 @@ const statusColors = {
 export default function TelegramMarketing() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('subscribers');
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
 
   // Subscribers state
   const [subscribers, setSubscribers] = useState([]);

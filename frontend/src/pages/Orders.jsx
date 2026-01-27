@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { orderAPI, restaurantAPI, menuAPI, tablesAPI, posAPI } from '../services/api';
 import { useOrderNotifications, requestNotificationPermission } from '../hooks/useOrderNotifications';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import {
@@ -25,7 +25,6 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
   Plus,
-  Search,
   X,
   Utensils,
   Printer,
@@ -39,11 +38,9 @@ import {
   Users,
   Clock,
   RefreshCw,
-  ChevronRight,
   AlertCircle,
   XCircle,
   Coffee,
-  Ban,
   Percent,
   Check,
   ArrowRightLeft
@@ -290,7 +287,7 @@ export default function Orders() {
   };
 
   // Open add item modal
-  const handleOpenAddItem = async () => {
+  const _handleOpenAddItem = async () => {
     await loadProducts();
     setNewItemProductId('');
     setNewItemQuantity(1);
@@ -354,7 +351,7 @@ export default function Orders() {
     // Check if order already has service fee
     const existingServiceFeePercent = order.serviceFeePercent || 0;
     const existingServiceFee = order.serviceFee || 0;
-    const subtotal = order.subtotal || 0;
+    const _subtotal = order.subtotal || 0;
 
     if (existingServiceFee > 0 || existingServiceFeePercent > 0) {
       // Use existing service fee

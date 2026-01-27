@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Percent, Gift, X } from 'lucide-react';
+import { Clock, Gift, X } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { posAPI } from '../../services/api';
 

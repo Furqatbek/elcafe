@@ -12,9 +12,7 @@ import {
 } from '../components/ui/select';
 import {
   Package,
-  Users,
   ShoppingCart,
-  Store,
   TrendingUp,
   TrendingDown,
   DollarSign,

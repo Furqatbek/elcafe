@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { CustomerProvider, MenuPage, CartPage, CheckoutPage, OrderStatusPage, OrderTrackingPage, ReservationPage, RestaurantSelectPage } from './pages/customer';
 
 function CustomerApp() {

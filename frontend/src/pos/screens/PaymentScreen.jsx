@@ -32,10 +32,7 @@ const PaymentScreen = () => {
   const {
     currentOrder,
     customer,
-    payment,
     happyHour,
-    setPaymentMethod,
-    setAmountTendered,
     setPaymentStatus,
     completeOrder,
     setCurrentScreen,
@@ -74,7 +71,7 @@ const PaymentScreen = () => {
 
   // Happy hour banner state
   const [happyHourDismissed, setHappyHourDismissed] = useState(false);
-  const [applyingHappyHour, setApplyingHappyHour] = useState(false);
+  const [_applyingHappyHour, setApplyingHappyHour] = useState(false);
 
   // Fetch active happy hour on mount
   useEffect(() => {

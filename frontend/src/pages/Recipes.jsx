@@ -30,7 +30,6 @@ import {
   TableRow,
 } from '../components/ui/table';
 import {
-  Soup,
   Plus,
   Edit,
   Trash2,

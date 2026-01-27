@@ -5,15 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
-  Users,
   TrendingUp,
-  TrendingDown,
   Heart,
   Star,
-  UserPlus,
   UserCheck,
   Calendar,
-  Percent,
 } from 'lucide-react';
 
 export default function CustomerAnalytics() {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
-import { MapPin, Navigation, Clock, User, RefreshCw, Circle as CircleIcon } from 'lucide-react';
+import { Navigation, Clock, User, RefreshCw, Circle as CircleIcon } from 'lucide-react';
 import { courierAPI } from '../services/api';
 import { formatDate, formatTime } from '../utils/dateUtils';
 import { Button } from '../components/ui/button';

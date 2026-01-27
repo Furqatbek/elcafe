@@ -174,7 +174,7 @@ export default function KitchenDashboard() {
     }
   };
 
-  const getStatusColor = (status) => {
+  const _getStatusColor = (status) => {
     switch (status) {
       case 'PENDING': return 'bg-yellow-100 text-yellow-800';
       case 'PREPARING': return 'bg-blue-100 text-blue-800';

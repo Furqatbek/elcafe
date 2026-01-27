@@ -22,28 +22,19 @@ import {
   LogOut,
   BarChart3,
   TrendingUp,
-  PieChart,
   Package,
   Clock,
-  CheckCircle,
-  UserPlus,
   UserCheck,
   History,
-  Briefcase,
   Calendar,
-  Award,
   Grid,
   List,
   Tag,
   Target,
-  Mail,
   Bell,
   Utensils,
   Soup,
   Cookie,
-  Wrench,
-  Shield,
-  CreditCard,
   Truck,
   MapPin,
   Store,
@@ -67,7 +58,7 @@ import {
 } from 'lucide-react';
 
 export default function Layout() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuthStore();

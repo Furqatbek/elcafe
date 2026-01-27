@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { ChevronLeft, Plus, Trash2, CreditCard, AlertTriangle, X } from 'lucide-react';
@@ -19,7 +19,6 @@ const CartScreen = () => {
     removeItemFromCart,
     clearCart,
     setCurrentScreen,
-    productAvailability,
     checkProductAvailability,
   } = usePOSStore();
 

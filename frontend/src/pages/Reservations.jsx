@@ -23,8 +23,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Filter,
-  MoreVertical,
   Table2,
   Plus,
   MessageSquare,

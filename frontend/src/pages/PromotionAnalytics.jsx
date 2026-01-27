@@ -6,15 +6,12 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import {
   TrendingUp,
-  TrendingDown,
   Ticket,
   Percent,
   Calendar,
   Tag,
   BarChart3,
   DollarSign,
-  ShoppingCart,
-  Award,
   Target,
 } from 'lucide-react';
 

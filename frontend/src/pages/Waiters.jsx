@@ -18,11 +18,11 @@ export default function Waiters() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, _setPageSize] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [sortBy, setSortBy] = useState('id');
-  const [sortDir, setSortDir] = useState('asc');
+  const [sortBy, _setSortBy] = useState('id');
+  const [sortDir, _setSortDir] = useState('asc');
 
   // Form state
   const [formData, setFormData] = useState({

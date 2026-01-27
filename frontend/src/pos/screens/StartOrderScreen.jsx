@@ -1,7 +1,6 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Truck, ShoppingBag, UtensilsCrossed, Clock, ClipboardList } from 'lucide-react';
+import { Truck, ShoppingBag, UtensilsCrossed, ClipboardList } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
 

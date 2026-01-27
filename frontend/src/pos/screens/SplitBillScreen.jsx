@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -14,7 +14,6 @@ import {
   X
 } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
-import NumericKeypad from '../components/NumericKeypad';
 import usePOSStore from '../store/posStore';
 import { posAPI } from '../../services/api';
 
@@ -30,11 +29,11 @@ const SplitBillScreen = () => {
   const [numPeople, setNumPeople] = useState(2);
   const [itemAssignments, setItemAssignments] = useState({});
   const [customAmounts, setCustomAmounts] = useState([]);
-  const [selectedPerson, setSelectedPerson] = useState(1);
+  const [_selectedPerson, _setSelectedPerson] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [splitResult, setSplitResult] = useState(null);
-  const [editingAmountIndex, setEditingAmountIndex] = useState(null);
+  const [_editingAmountIndex, _setEditingAmountIndex] = useState(null);
 
   const order = activeOrder;
 

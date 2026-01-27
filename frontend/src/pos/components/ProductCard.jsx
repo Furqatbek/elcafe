@@ -1,4 +1,3 @@
-import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { Plus } from 'lucide-react';
@@ -14,7 +13,7 @@ const ProductCard = ({
   className = '',
 }) => {
   const { t } = useTranslation();
-  const { name, price, description, imageUrl, available = true, category, stockStatus, maxQuantityAvailable } = product;
+  const { name, price, description, imageUrl, available = true, stockStatus, maxQuantityAvailable } = product;
 
   const handleSelect = () => {
     if (!available) return;

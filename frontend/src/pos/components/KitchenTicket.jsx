@@ -1,4 +1,3 @@
-import React from 'react';
 import usePOSStore from '../store/posStore';
 import { formatDateTime } from '../../utils/dateUtils';
 
@@ -53,7 +52,7 @@ const KitchenTicket = () => {
       <div className="border-t-2 border-b-2 border-gray-800 py-3 mb-4">
         <h2 className="font-bold text-base mb-3">ITEMS:</h2>
         <div className="space-y-4">
-          {currentOrder.items?.map((item, index) => (
+          {currentOrder.items?.map((item, _index) => (
             <div key={item.id} className="border-b border-dashed border-gray-400 pb-3 last:border-0">
               {/* Quantity and Name */}
               <div className="flex gap-2 font-bold text-base mb-1">

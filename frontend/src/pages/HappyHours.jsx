@@ -41,7 +41,6 @@ import {
   Percent,
   ChevronLeft,
   ChevronRight,
-  Calendar,
   Wine,
   X
 } from 'lucide-react';

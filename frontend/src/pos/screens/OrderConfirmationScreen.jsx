@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle, Printer, Home, ChefHat, Clock, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -14,7 +14,7 @@ import { posAPI } from '../../services/api';
 const OrderConfirmationScreen = () => {
   const { t } = useTranslation();
   const { currentOrder, customer, kitchenStatus, fetchKitchenStatus, clearKitchenStatus, resetPOS } = usePOSStore();
-  const [isPolling, setIsPolling] = useState(true);
+  const [isPolling, _setIsPolling] = useState(true);
   const [fullOrderData, setFullOrderData] = useState(null);
 
   // Fetch full order data for printing

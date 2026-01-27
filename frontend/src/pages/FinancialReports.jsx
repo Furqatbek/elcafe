@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar, AlertCircle, RefreshCw, Settings, Building2 } from 'lucide-react';

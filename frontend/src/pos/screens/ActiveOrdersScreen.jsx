@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -22,7 +22,7 @@ import { posAPI } from '../../services/api';
  */
 const ActiveOrdersScreen = () => {
   const { t } = useTranslation();
-  const { setCurrentScreen, setActiveOrder, ui } = usePOSStore();
+  const { setCurrentScreen, ui } = usePOSStore();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);

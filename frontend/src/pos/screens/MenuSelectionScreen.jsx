@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Search, ShoppingCart, X, Grid3x3, List, Package } from 'lucide-react';
+import { Search, ShoppingCart, X, Grid3x3, Package } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
-import { posAPI } from '../../services/api';
 
 // Special category ID for combos/bundles
 const BUNDLES_CATEGORY_ID = 'bundles';
@@ -30,7 +29,7 @@ const MenuSelectionScreen = () => {
   } = usePOSStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [_viewMode, _setViewMode] = useState('grid'); // 'grid' | 'list'
   const [loading, setLoading] = useState(true);
 
   const restaurantId = 1; // TODO: Add restaurant selector if multiple restaurants

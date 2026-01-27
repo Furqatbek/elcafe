@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { tablesAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Users, Grid, CheckCircle, XCircle, GitMerge, GitBranch } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Grid, GitMerge, GitBranch } from 'lucide-react';
 
 const Tables = () => {
   const { t } = useTranslation();

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Check, Calendar, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Check, Link as LinkIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Expenses = () => {

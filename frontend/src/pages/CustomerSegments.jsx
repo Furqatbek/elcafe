@@ -22,11 +22,8 @@ import {
   MapPin,
   Tag,
   FileText,
-  Calendar,
   ShoppingCart,
   Clock,
-  TrendingUp,
-  Users,
 } from 'lucide-react';
 import { format } from 'date-fns';
 

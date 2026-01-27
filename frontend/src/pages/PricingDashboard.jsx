@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,9 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  DollarSign, TrendingUp, TrendingDown, AlertTriangle, Star, Target,
-  ArrowUp, ArrowDown, Minus, RefreshCw, Calculator, BarChart3,
-  Lightbulb, CheckCircle, XCircle, Clock
+  DollarSign, TrendingUp, AlertTriangle, Star, Target,
+  ArrowUp, ArrowDown, Minus, RefreshCw, BarChart3,
+  Lightbulb, Clock
 } from 'lucide-react';
 import { pricingAPI, restaurantAPI } from '@/services/api';
 

@@ -32,10 +32,8 @@ import {
 } from '../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
-  MessageSquare,
   Send,
   FileText,
-  Zap,
   Plus,
   Edit,
   Trash2,
@@ -44,12 +42,10 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
-  Users,
   CheckCircle,
   Clock,
   AlertCircle,
   BarChart3,
-  RefreshCw
 } from 'lucide-react';
 
 const targetAudienceOptions = [
@@ -71,7 +67,7 @@ const statusColors = {
 export default function SmsMarketing() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('campaigns');
-  const [loading, setLoading] = useState(false);
+  const [_loading, setLoading] = useState(false);
 
   // Campaigns state
   const [campaigns, setCampaigns] = useState([]);

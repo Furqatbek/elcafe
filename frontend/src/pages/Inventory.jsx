@@ -53,7 +53,6 @@ import {
   Star,
   Phone,
   Mail,
-  MapPin,
   Calendar,
   Clock,
   XCircle,

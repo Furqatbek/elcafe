@@ -33,7 +33,6 @@ import {
   DollarSign,
   TrendingUp,
   Clock,
-  Calendar,
   Filter,
   RefreshCw,
   ChevronLeft,
@@ -45,7 +44,7 @@ import {
   Printer,
   RotateCcw,
 } from 'lucide-react';
-import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
 
 const orderStatusColors = {

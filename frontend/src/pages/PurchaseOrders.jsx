@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { financialAPI, inventoryAPI, restaurantAPI, supplierAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { Plus, Edit, Trash2, Check, X, Package, Link as LinkIcon } from 'lucide-react';
+import { Plus, Trash2, Check, Package, Link as LinkIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 

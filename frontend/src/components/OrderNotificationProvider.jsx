@@ -18,7 +18,6 @@ export function NotificationBell() {
   const {
     unreadOrders,
     recentOrderNotifications,
-    wsConnected,
     clearUnreadOrders,
     clearOrderNotifications,
   } = useNotificationStore();
@@ -140,7 +139,7 @@ export function NotificationBell() {
   }, [isDragging, handleDragMove, handleDragEnd]);
 
   // Handle clicking a notification
-  const handleNotificationClick = (notification) => {
+  const handleNotificationClick = (_notification) => {
     setIsOpen(false);
     clearUnreadOrders();
     navigate('/orders');

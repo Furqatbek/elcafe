@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { printerAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Printer, CheckCircle, XCircle } from 'lucide-react';

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { kitchenStationAPI, printerAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { Plus, Edit, Trash2, Printer, CheckCircle, XCircle, ChefHat } from 'lucide-react';
+import { Plus, Edit, Trash2, Printer, ChefHat } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const KitchenStations = () => {

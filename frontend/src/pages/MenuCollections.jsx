@@ -29,7 +29,6 @@ import {
   Package,
   Trash2,
   ImageIcon,
-  Edit,
   Eye,
   ShoppingBag
 } from 'lucide-react';
