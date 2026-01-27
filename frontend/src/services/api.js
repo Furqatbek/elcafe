@@ -341,6 +341,28 @@ export const waiterPerformanceAPI = {
     api.post(`/waiter-performance/waiter/${waiterId}/shift-end`, null, { params: { restaurantId } }),
 };
 
+// Waiter Commission API
+export const waiterCommissionAPI = {
+  // Configuration
+  configureCommission: (waiterId, data) => api.put(`/waiter-commissions/waiter/${waiterId}/config`, data),
+
+  // Summary & History
+  getCommissionSummary: (waiterId, startDate, endDate) =>
+    api.get(`/waiter-commissions/waiter/${waiterId}/summary`, { params: { startDate, endDate } }),
+  getCommissionHistory: (waiterId, params = {}) =>
+    api.get(`/waiter-commissions/waiter/${waiterId}/history`, { params }),
+  getQuickStats: (waiterId) => api.get(`/waiter-commissions/waiter/${waiterId}/quick-stats`),
+
+  // Restaurant-level
+  getRestaurantCommissions: (restaurantId, params = {}) =>
+    api.get(`/waiter-commissions/restaurant/${restaurantId}`, { params }),
+  getRestaurantReport: (restaurantId, startDate, endDate) =>
+    api.get(`/waiter-commissions/restaurant/${restaurantId}/report`, { params: { startDate, endDate } }),
+
+  // Actions
+  approveCommissions: (commissionIds) => api.post('/waiter-commissions/approve', commissionIds),
+};
+
 export const posAPI = {
   createOrder: (orderData) => api.post('/pos/orders', orderData),
   getCategories: (restaurantId) => api.get('/categories', { params: { restaurantId } }),

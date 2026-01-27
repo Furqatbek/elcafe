@@ -11,6 +11,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +60,21 @@ public class Waiter {
      */
     @Column(columnDefinition = "TEXT")
     private String permissions;
+
+    /**
+     * Commission percentage for this waiter (0-100)
+     * Example: 5.00 means 5% commission on order total
+     */
+    @Column(precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal commissionPercent = BigDecimal.ZERO;
+
+    /**
+     * Whether commission tracking is enabled for this waiter
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean commissionEnabled = false;
 
     @OneToMany(mappedBy = "waiter", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

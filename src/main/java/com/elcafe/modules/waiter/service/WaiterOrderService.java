@@ -67,6 +67,7 @@ public class WaiterOrderService {
     private final InventoryService inventoryService;
     private final DiscountCalculationService discountCalculationService;
     private final CouponValidationService couponValidationService;
+    private final WaiterCommissionService waiterCommissionService;
 
     /**
      * Create a new order for a table (with optional items)
@@ -530,6 +531,11 @@ public class WaiterOrderService {
 
         // Record event
         orderEventService.recordEvent(updatedOrder, OrderEventType.ORDER_CLOSED, waiter.getName());
+
+        // Calculate commission for the waiter
+        waiterCommissionService.calculateCommissionForOrder(updatedOrder)
+                .ifPresent(commission -> log.info("Commission calculated for order {}: {} ({}%)",
+                        order.getOrderNumber(), commission.getCommissionAmount(), commission.getCommissionPercent()));
 
         log.info("Closed order {} by waiter {}", order.getOrderNumber(), waiter.getName());
 

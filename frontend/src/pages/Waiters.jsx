@@ -33,6 +33,8 @@ export default function Waiters() {
     role: 'WAITER',
     permissions: [],
     active: true,
+    commissionPercent: 0,
+    commissionEnabled: false,
   });
 
   const [errors, setErrors] = useState({});
@@ -131,6 +133,8 @@ export default function Waiters() {
         role: waiter.role || 'WAITER',
         permissions: permissionsList,
         active: waiter.active !== undefined ? waiter.active : true,
+        commissionPercent: waiter.commissionPercent || 0,
+        commissionEnabled: waiter.commissionEnabled || false,
       });
     } else {
       setEditingWaiter(null);
@@ -142,6 +146,8 @@ export default function Waiters() {
         role: 'WAITER',
         permissions: [],
         active: true,
+        commissionPercent: 0,
+        commissionEnabled: false,
       });
       generatePinCode();
     }
@@ -326,6 +332,9 @@ export default function Waiters() {
                       {t('pages.waiters.permissions', 'Permissions')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('pages.waiters.commission', 'Commission')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       {t('pages.waiters.status', 'Status')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -336,7 +345,7 @@ export default function Waiters() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan="7" className="px-6 py-12 text-center">
+                      <td colSpan="8" className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                           <p className="mt-2 text-gray-500">{t('pages.waiters.loadingWaiters', 'Loading waiters...')}</p>
@@ -345,7 +354,7 @@ export default function Waiters() {
                     </tr>
                   ) : filteredWaiters.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                         {searchTerm || statusFilter !== 'all'
                           ? t('pages.waiters.noWaitersFound', 'No waiters found matching your filters')
                           : t('pages.waiters.noWaitersYet', 'No waiters yet. Click "Add Waiter" to create one.')}
@@ -415,6 +424,22 @@ export default function Waiters() {
                               );
                             })()}
                           </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {waiter.commissionEnabled ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-green-600">
+                                {waiter.commissionPercent || 0}%
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {t('pages.waiters.commissionEnabled', 'Enabled')}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-400">
+                              {t('pages.waiters.commissionDisabled', 'Disabled')}
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
@@ -630,6 +655,53 @@ export default function Waiters() {
                       </label>
                     ))}
                   </div>
+                </div>
+
+                {/* Commission Configuration */}
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                    {t('pages.waiters.commissionSettings', 'Commission Settings')}
+                  </h3>
+
+                  {/* Commission Enabled Toggle */}
+                  <div className="flex items-center space-x-2 mb-3">
+                    <input
+                      type="checkbox"
+                      name="commissionEnabled"
+                      id="commissionEnabled"
+                      checked={formData.commissionEnabled}
+                      onChange={handleInputChange}
+                      className="rounded text-green-600 focus:ring-green-500"
+                    />
+                    <label htmlFor="commissionEnabled" className="text-sm font-medium text-gray-700">
+                      {t('pages.waiters.enableCommission', 'Enable Commission Tracking')}
+                    </label>
+                  </div>
+
+                  {/* Commission Percentage */}
+                  {formData.commissionEnabled && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {t('pages.waiters.commissionPercent', 'Commission Percentage')}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          name="commissionPercent"
+                          value={formData.commissionPercent}
+                          onChange={handleInputChange}
+                          min="0"
+                          max="100"
+                          step="0.5"
+                          className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="text-gray-500">%</span>
+                        <span className="text-xs text-gray-400">
+                          {t('pages.waiters.commissionHint', '(e.g., 5% of order total)')}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Active Status */}

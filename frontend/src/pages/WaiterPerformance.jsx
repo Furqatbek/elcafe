@@ -14,8 +14,12 @@ import {
   Save,
   Award,
   BarChart3,
+  Percent,
+  Clock,
+  CheckCircle,
+  Banknote,
 } from 'lucide-react';
-import { waiterAPI, waiterPerformanceAPI, restaurantAPI } from '../services/api';
+import { waiterAPI, waiterPerformanceAPI, restaurantAPI, waiterCommissionAPI } from '../services/api';
 
 export default function WaiterPerformance() {
   const { t } = useTranslation();
@@ -27,6 +31,11 @@ export default function WaiterPerformance() {
   const [waiterPerformance, setWaiterPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('leaderboard');
+
+  // Commission state
+  const [commissionSummary, setCommissionSummary] = useState(null);
+  const [commissionHistory, setCommissionHistory] = useState([]);
+  const [commissionLoading, setCommissionLoading] = useState(false);
 
   // Date range
   const [dateRange, setDateRange] = useState({
@@ -73,6 +82,12 @@ export default function WaiterPerformance() {
       loadWaiterPerformance();
     }
   }, [selectedWaiter, dateRange]);
+
+  useEffect(() => {
+    if (selectedWaiter && activeTab === 'commission') {
+      loadCommissionData();
+    }
+  }, [selectedWaiter, dateRange, activeTab]);
 
   const loadRestaurants = async () => {
     try {
@@ -139,6 +154,26 @@ export default function WaiterPerformance() {
     } catch (error) {
       console.error('Failed to load KPI configs:', error);
       setKpiConfigs([]);
+    }
+  };
+
+  const loadCommissionData = async () => {
+    if (!selectedWaiter) return;
+    setCommissionLoading(true);
+    try {
+      const [summaryRes, historyRes] = await Promise.all([
+        waiterCommissionAPI.getWaiterSummary(selectedWaiter, dateRange.startDate, dateRange.endDate),
+        waiterCommissionAPI.getWaiterHistory(selectedWaiter, { page: 0, size: 20 }),
+      ]);
+      setCommissionSummary(summaryRes.data?.data || summaryRes.data);
+      const historyData = historyRes.data?.data || historyRes.data;
+      setCommissionHistory(historyData?.content || []);
+    } catch (error) {
+      console.error('Failed to load commission data:', error);
+      setCommissionSummary(null);
+      setCommissionHistory([]);
+    } finally {
+      setCommissionLoading(false);
     }
   };
 
@@ -355,6 +390,17 @@ export default function WaiterPerformance() {
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
                 {t('waiterPerformance.tabs.details', 'Details')}
+              </div>
+            </button>
+          )}
+          {selectedWaiter && (
+            <button
+              onClick={() => setActiveTab('commission')}
+              className={`pb-2 px-1 border-b-2 ${activeTab === 'commission' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Percent className="w-4 h-4" />
+                {t('waiterPerformance.tabs.commission', 'Commission')}
               </div>
             </button>
           )}
@@ -594,6 +640,174 @@ export default function WaiterPerformance() {
               </div>
             </div>
           </div>
+
+          <button
+            onClick={() => { setSelectedWaiter(null); setActiveTab('leaderboard'); }}
+            className="text-gray-600 hover:text-gray-800"
+          >
+            &larr; {t('waiterPerformance.backToLeaderboard', 'Back to Leaderboard')}
+          </button>
+        </div>
+      )}
+
+      {/* Commission Tab */}
+      {activeTab === 'commission' && selectedWaiter && (
+        <div className="space-y-6">
+          {commissionLoading ? (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+              {t('waiterPerformance.loading', 'Loading...')}
+            </div>
+          ) : commissionSummary ? (
+            <>
+              {/* Commission Summary Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <DollarSign className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">{t('waiterPerformance.commission.totalEarned', 'Total Earned')}</p>
+                      <p className="text-2xl font-bold text-green-600">{formatCurrency(commissionSummary.totalCommissionEarned)}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <Clock className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">{t('waiterPerformance.commission.pending', 'Pending')}</p>
+                      <p className="text-2xl font-bold text-yellow-600">{formatCurrency(commissionSummary.pendingCommission)}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <CheckCircle className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">{t('waiterPerformance.commission.approved', 'Approved')}</p>
+                      <p className="text-2xl font-bold text-blue-600">{formatCurrency(commissionSummary.approvedCommission)}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Banknote className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">{t('waiterPerformance.commission.paid', 'Paid')}</p>
+                      <p className="text-2xl font-bold text-purple-600">{formatCurrency(commissionSummary.paidCommission)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Commission Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Commission Info */}
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="text-lg font-semibold mb-4">{t('waiterPerformance.commission.summary', 'Commission Summary')}</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">{t('waiterPerformance.commission.commissionRate', 'Commission Rate')}</span>
+                      <span className="font-medium">{commissionSummary.currentCommissionPercent || 0}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">{t('waiterPerformance.commission.status', 'Commission Status')}</span>
+                      <span className={`font-medium ${commissionSummary.commissionEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+                        {commissionSummary.commissionEnabled ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">{t('waiterPerformance.commission.totalOrderValue', 'Total Order Value')}</span>
+                      <span className="font-medium">{formatCurrency(commissionSummary.totalOrderValue)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">{t('waiterPerformance.commission.totalCommissions', 'Total Commissions')}</span>
+                      <span className="font-medium">{commissionSummary.totalCommissions || 0}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Daily Breakdown */}
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h3 className="text-lg font-semibold mb-4">{t('waiterPerformance.commission.dailyBreakdown', 'Daily Breakdown')}</h3>
+                  {commissionSummary.dailyCommissions && commissionSummary.dailyCommissions.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {commissionSummary.dailyCommissions.map((day, idx) => (
+                        <div key={idx} className="flex justify-between items-center py-2 border-b last:border-0">
+                          <span className="text-gray-600">{new Date(day.date).toLocaleDateString()}</span>
+                          <div className="text-right">
+                            <span className="font-medium text-green-600">{formatCurrency(day.commissionEarned)}</span>
+                            <span className="text-xs text-gray-500 ml-2">({day.orderCount} orders)</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">{t('waiterPerformance.commission.noDailyData', 'No daily data available')}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Commission History Table */}
+              <div className="bg-white rounded-lg shadow overflow-hidden">
+                <div className="p-4 border-b">
+                  <h3 className="text-lg font-semibold">{t('waiterPerformance.commission.history', 'Commission History')}</h3>
+                </div>
+                {commissionHistory.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    {t('waiterPerformance.commission.noHistory', 'No commission history found')}
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.commission.orderNumber', 'Order #')}</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.commission.date', 'Date')}</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.commission.orderTotal', 'Order Total')}</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.commission.rate', 'Rate')}</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.commission.amount', 'Amount')}</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.commission.status', 'Status')}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {commissionHistory.map((commission) => (
+                        <tr key={commission.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium">{commission.orderNumber}</td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {commission.createdAt ? new Date(commission.createdAt).toLocaleDateString() : '-'}
+                          </td>
+                          <td className="px-4 py-3">{formatCurrency(commission.orderTotal)}</td>
+                          <td className="px-4 py-3">{commission.commissionPercent}%</td>
+                          <td className="px-4 py-3 font-medium text-green-600">{formatCurrency(commission.commissionAmount)}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              commission.status === 'PAID' ? 'bg-green-100 text-green-800' :
+                              commission.status === 'APPROVED' || commission.status === 'PROCESSED' ? 'bg-blue-100 text-blue-800' :
+                              commission.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {commission.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+              {t('waiterPerformance.commission.noData', 'No commission data available')}
+            </div>
+          )}
 
           <button
             onClick={() => { setSelectedWaiter(null); setActiveTab('leaderboard'); }}

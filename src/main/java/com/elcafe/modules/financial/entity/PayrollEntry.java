@@ -2,6 +2,7 @@ package com.elcafe.modules.financial.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.auth.entity.User;
+import com.elcafe.modules.waiter.entity.Waiter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -36,6 +37,13 @@ public class PayrollEntry {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private User employee;
+
+    /**
+     * Optional waiter reference for waiter-specific payroll entries
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "waiter_id")
+    private Waiter waiter;
 
     @Column(nullable = false, length = 50)
     private String payrollNumber; // e.g., "PAY-2025-001"
