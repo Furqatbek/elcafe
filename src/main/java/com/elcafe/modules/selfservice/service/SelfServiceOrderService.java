@@ -421,12 +421,21 @@ public class SelfServiceOrderService {
                 ? OrderType.TAKEAWAY
                 : OrderType.DINE_IN;
 
+        // Fetch fresh table reference for dine-in orders to ensure proper linking
+        RestaurantTable diningTable = null;
+        if (orderType == OrderType.DINE_IN && session.getTable() != null) {
+            diningTable = restaurantTableRepository.findById(session.getTable().getId()).orElse(null);
+            log.info("Setting dining table for self-service dine-in order: tableId={}, tableNumber={}",
+                    diningTable != null ? diningTable.getId() : null,
+                    diningTable != null ? diningTable.getTableNumber() : null);
+        }
+
         // Create main order
         Order order = Order.builder()
                 .orderNumber(dailyOrderSequenceService.generateNextOrderNumber())
                 .restaurant(session.getRestaurant())
                 .customer(customer)
-                .diningTable(session.getTable())
+                .diningTable(diningTable)
                 .orderType(orderType)
                 .status(settings.getAutoAcceptOrders() ? OrderStatus.ACCEPTED : OrderStatus.PENDING)
                 .subtotal(subtotal)
@@ -435,6 +444,7 @@ public class SelfServiceOrderService {
                 .deliveryFee(BigDecimal.ZERO)
                 .total(subtotal)
                 .customerNotes(customerNotes)
+                .placedAt(LocalDateTime.now())
                 .build();
 
         // Convert cart items to order items
@@ -514,14 +524,15 @@ public class SelfServiceOrderService {
         order = orderRepository.save(order);
 
         // Update table status to OCCUPIED for dine-in orders
-        if (orderType == OrderType.DINE_IN && session.getTable() != null) {
-            RestaurantTable table = session.getTable();
-            if (table.getStatus() == RestaurantTable.TableStatus.AVAILABLE) {
-                table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
-                restaurantTableRepository.save(table);
-                log.info("Table {} marked as OCCUPIED for self-service dine-in order {}",
-                        table.getTableNumber(), order.getOrderNumber());
-            }
+        // The diningTable variable was already fetched fresh above when creating the order
+        if (orderType == OrderType.DINE_IN && diningTable != null) {
+            // Update table status regardless of current status (AVAILABLE, RESERVED, etc.)
+            // This ensures the table is marked as OCCUPIED when an order is placed
+            RestaurantTable.TableStatus previousStatus = diningTable.getStatus();
+            diningTable.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+            restaurantTableRepository.save(diningTable);
+            log.info("Table {} marked as OCCUPIED for self-service dine-in order {} (previous status: {})",
+                    diningTable.getTableNumber(), order.getOrderNumber(), previousStatus);
         }
 
         // Send database notifications (for admin panel, kitchen, restaurant, customer)
