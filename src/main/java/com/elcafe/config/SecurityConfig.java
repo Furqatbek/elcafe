@@ -70,7 +70,9 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/actuator/health",
                                 "/actuator/info",
-                                "/uploads/**"
+                                "/uploads/**",
+                                "/ws-waiter/**",            // WebSocket endpoint for waiter updates
+                                "/ws-print-agent/**"        // WebSocket endpoint for print agent
                         ).permitAll()
                         // Allow public read access to menu/categories/products for POS
                         .requestMatchers(HttpMethod.GET, "/api/v1/menu/**").permitAll()
