@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import Layout from './components/Layout';
@@ -81,7 +82,7 @@ function InventoryWrapper({ children }) {
 
 function App() {
   // Set default restaurantId on app load if not already set
-  React.useEffect(() => {
+  useEffect(() => {
     if (!localStorage.getItem('selectedRestaurantId')) {
       localStorage.setItem('selectedRestaurantId', '1');
     }
