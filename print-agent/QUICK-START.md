@@ -77,11 +77,20 @@ npm start
 
 ---
 
-## Step 5: Enable Print Agent in ElCafe
+## Step 5: Configure Printers in ElCafe
 
 1. Go to **Settings** > **Printer Settings** in ElCafe admin
-2. Enable **"Use Print Agent"**
-3. Configure your printers with their IP addresses
+2. Click **"Add Printer"**
+3. Fill in:
+   - **Printer Name**: Any name (e.g., "Kitchen Printer")
+   - **Type**: KITCHEN (for order tickets) or CUSTOMER (for receipts)
+   - **Connection Type**: NETWORK
+   - **IP Address**: Your printer's IP (e.g., `192.168.1.100`)
+   - **Port**: `9100`
+4. Enable **"Auto Print"** if you want orders to print automatically
+5. Click **Save**
+
+> **Note:** Print Agent is enabled by default on the server. No checkbox needed!
 
 ---
 
