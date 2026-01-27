@@ -6,6 +6,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { Button } from './ui/button';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import PushPermissionPrompt from './PushPermissionPrompt';
+import NotificationBell from './OrderNotificationProvider';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -247,6 +248,8 @@ export default function Layout() {
               </p>
               <p className="text-xs text-gray-500 truncate">{user?.role || 'Admin'}</p>
             </div>
+            {/* Notification Bell */}
+            <NotificationBell />
           </div>
           <LanguageSwitcher />
         </div>

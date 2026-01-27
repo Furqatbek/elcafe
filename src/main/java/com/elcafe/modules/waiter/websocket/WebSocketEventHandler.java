@@ -1,5 +1,7 @@
 package com.elcafe.modules.waiter.websocket;
 
+import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.waiter.event.*;
 import com.elcafe.modules.waiter.websocket.dto.ItemReadyMessage;
 import com.elcafe.modules.waiter.websocket.dto.NotificationMessage;
@@ -13,6 +15,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Handles conversion of application events to WebSocket messages
@@ -24,6 +28,7 @@ import java.time.LocalDateTime;
 public class WebSocketEventHandler {
 
     private final SimpMessagingTemplate messagingTemplate;
+    private final OrderRepository orderRepository;
 
     /**
      * Handle order created events and broadcast via WebSocket
@@ -55,8 +60,64 @@ public class WebSocketEventHandler {
                         new NotificationMessage("INFO", "Order created successfully", LocalDateTime.now())
                 );
             }
+
+            // Also broadcast to admin panel for real-time dashboard notifications
+            broadcastToAdminPanel(event.getOrderId(), "order.placed");
+
         } catch (Exception e) {
             log.error("Error broadcasting order created event: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Broadcast order event to admin panel
+     * Topic: /topic/restaurant/{restaurantId}/orders
+     */
+    private void broadcastToAdminPanel(Long orderId, String eventType) {
+        try {
+            Order order = orderRepository.findById(orderId).orElse(null);
+            if (order == null || order.getRestaurant() == null) {
+                log.warn("Cannot broadcast to admin panel - order or restaurant not found for orderId: {}", orderId);
+                return;
+            }
+
+            Map<String, Object> eventData = new HashMap<>();
+            eventData.put("orderId", order.getId());
+            eventData.put("orderNumber", order.getOrderNumber());
+            eventData.put("orderType", order.getOrderType() != null ? order.getOrderType().name() : null);
+            eventData.put("totalAmount", order.getTotal());
+            eventData.put("itemCount", order.getItems() != null ? order.getItems().size() : 0);
+            eventData.put("placedAt", order.getPlacedAt());
+
+            if (order.getDiningTable() != null) {
+                eventData.put("tableNumber", order.getDiningTable().getTableNumber());
+                eventData.put("tableId", order.getDiningTable().getId());
+            }
+
+            if (order.getCustomer() != null) {
+                Map<String, Object> consumer = new HashMap<>();
+                consumer.put("id", order.getCustomer().getId());
+                consumer.put("firstName", order.getCustomer().getFirstName());
+                consumer.put("lastName", order.getCustomer().getLastName());
+                consumer.put("phoneNumber", order.getCustomer().getPhone());
+                eventData.put("consumer", consumer);
+            } else {
+                Map<String, Object> consumer = new HashMap<>();
+                consumer.put("firstName", "Guest");
+                eventData.put("consumer", consumer);
+            }
+
+            Map<String, Object> message = new HashMap<>();
+            message.put("eventType", eventType);
+            message.put("timestamp", LocalDateTime.now());
+            message.put("data", eventData);
+
+            String destination = "/topic/restaurant/" + order.getRestaurant().getId() + "/orders";
+            messagingTemplate.convertAndSend(destination, message);
+
+            log.info("Order event '{}' broadcast to admin panel: {}", eventType, destination);
+        } catch (Exception e) {
+            log.error("Error broadcasting to admin panel: {}", e.getMessage(), e);
         }
     }
 
