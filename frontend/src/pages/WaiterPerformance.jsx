@@ -430,6 +430,7 @@ export default function WaiterPerformance() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.waiter', 'Waiter')}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.orders', 'Orders')}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.revenue', 'Revenue')}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.revenueShare', 'Revenue Share')}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.avgRating', 'Avg Rating')}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('waiterPerformance.leaderboard.kpiScore', 'KPI Score')}</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">{t('common.actions', 'Actions')}</th>
@@ -446,6 +447,16 @@ export default function WaiterPerformance() {
                     <td className="px-4 py-3 font-medium">{entry.waiterName}</td>
                     <td className="px-4 py-3">{entry.totalOrders || 0}</td>
                     <td className="px-4 py-3">{formatCurrency(entry.totalRevenue)}</td>
+                    <td className="px-4 py-3">
+                      {entry.commissionEnabled ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-green-600">{formatCurrency(entry.totalCommission)}</span>
+                          <span className="text-xs text-gray-500">{entry.commissionPercent || 0}%</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">{t('waiterPerformance.leaderboard.noCommission', 'N/A')}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {entry.avgRating ? (
                         <div className="flex items-center gap-1">
@@ -544,7 +555,7 @@ export default function WaiterPerformance() {
       {activeTab === 'details' && selectedWaiter && waiterPerformance && (
         <div className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="bg-white p-4 rounded-lg shadow">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -588,6 +599,24 @@ export default function WaiterPerformance() {
                   <p className={`text-2xl font-bold ${waiterPerformance.avgKpiScore >= 100 ? 'text-green-600' : waiterPerformance.avgKpiScore >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
                     {formatPercent(waiterPerformance.avgKpiScore)}
                   </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 rounded-lg">
+                  <Percent className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">{t('waiterPerformance.details.revenueShare', 'Revenue Share')}</p>
+                  {waiterPerformance.commissionEnabled ? (
+                    <div>
+                      <p className="text-2xl font-bold text-emerald-600">{formatCurrency(waiterPerformance.totalCommission)}</p>
+                      <p className="text-xs text-gray-500">{waiterPerformance.commissionPercent || 0}% {t('waiterPerformance.details.ofRevenue', 'of revenue')}</p>
+                    </div>
+                  ) : (
+                    <p className="text-lg text-gray-400">{t('waiterPerformance.details.notEnabled', 'Not enabled')}</p>
+                  )}
                 </div>
               </div>
             </div>

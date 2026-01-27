@@ -21,4 +21,8 @@ public class WaiterLeaderboardEntry {
     private BigDecimal avgKpiScore;
     private BigDecimal totalTips;
     private BigDecimal bonusEarned;
+    // Commission / Revenue Share fields
+    private BigDecimal totalCommission;
+    private BigDecimal commissionPercent;
+    private Boolean commissionEnabled;
 }

@@ -7,6 +7,7 @@ import com.elcafe.modules.waiter.dto.*;
 import com.elcafe.modules.waiter.entity.Waiter;
 import com.elcafe.modules.waiter.entity.WaiterKPIConfig;
 import com.elcafe.modules.waiter.entity.WaiterPerformance;
+import com.elcafe.modules.waiter.repository.WaiterCommissionRepository;
 import com.elcafe.modules.waiter.repository.WaiterKPIConfigRepository;
 import com.elcafe.modules.waiter.repository.WaiterPerformanceRepository;
 import com.elcafe.modules.waiter.repository.WaiterRepository;
@@ -21,6 +22,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +37,7 @@ public class WaiterPerformanceService {
     private final WaiterKPIConfigRepository kpiConfigRepository;
     private final WaiterRepository waiterRepository;
     private final RestaurantRepository restaurantRepository;
+    private final WaiterCommissionRepository commissionRepository;
 
     // ==================== KPI Configuration ====================
 
@@ -321,6 +324,17 @@ public class WaiterPerformanceService {
         List<WaiterPerformance> performances = performanceRepository
                 .findByWaiterIdAndPerformanceDateBetweenOrderByPerformanceDateDesc(waiterId, startDate, endDate);
 
+        // Fetch waiter's commission config
+        Waiter waiter = waiterRepository.findById(waiterId).orElse(null);
+        BigDecimal commissionPercent = waiter != null ? waiter.getCommissionPercent() : null;
+        Boolean commissionEnabled = waiter != null ? waiter.getCommissionEnabled() : false;
+
+        // Fetch commission data for the date range
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        BigDecimal totalCommission = commissionRepository.getTotalCommissionByWaiterAndDateRange(
+                waiterId, startDateTime, endDateTime);
+
         if (performances.isEmpty()) {
             return WaiterPerformanceSummary.builder()
                     .waiterId(waiterId)
@@ -333,6 +347,9 @@ public class WaiterPerformanceService {
                     .avgKpiScore(BigDecimal.ZERO)
                     .totalBonusEarned(BigDecimal.ZERO)
                     .workingDays(0)
+                    .totalCommission(totalCommission)
+                    .commissionPercent(commissionPercent)
+                    .commissionEnabled(commissionEnabled)
                     .build();
         }
 
@@ -366,6 +383,9 @@ public class WaiterPerformanceService {
                 .avgKpiScore(avgKpi)
                 .totalBonusEarned(totalBonus)
                 .workingDays(performances.size())
+                .totalCommission(totalCommission)
+                .commissionPercent(commissionPercent)
+                .commissionEnabled(commissionEnabled)
                 .dailyPerformances(performances)
                 .build();
     }
@@ -376,15 +396,34 @@ public class WaiterPerformanceService {
     public List<WaiterLeaderboardEntry> getLeaderboard(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         List<Object[]> results = performanceRepository.getLeaderboard(restaurantId, startDate, endDate);
 
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
         return results.stream()
-                .map(row -> WaiterLeaderboardEntry.builder()
-                        .waiterId((Long) row[0])
-                        .waiterName((String) row[1])
-                        .totalRevenue((BigDecimal) row[2])
-                        .totalOrders(((Number) row[3]).intValue())
-                        .avgRating(row[4] != null ? (BigDecimal) row[4] : null)
-                        .avgKpiScore(row[5] != null ? (BigDecimal) row[5] : null)
-                        .build())
+                .map(row -> {
+                    Long waiterId = (Long) row[0];
+
+                    // Fetch commission data for this waiter
+                    BigDecimal totalCommission = commissionRepository.getTotalCommissionByWaiterAndDateRange(
+                            waiterId, startDateTime, endDateTime);
+
+                    // Fetch waiter's commission config
+                    Waiter waiter = waiterRepository.findById(waiterId).orElse(null);
+                    BigDecimal commissionPercent = waiter != null ? waiter.getCommissionPercent() : null;
+                    Boolean commissionEnabled = waiter != null ? waiter.getCommissionEnabled() : false;
+
+                    return WaiterLeaderboardEntry.builder()
+                            .waiterId(waiterId)
+                            .waiterName((String) row[1])
+                            .totalRevenue((BigDecimal) row[2])
+                            .totalOrders(((Number) row[3]).intValue())
+                            .avgRating(row[4] != null ? (BigDecimal) row[4] : null)
+                            .avgKpiScore(row[5] != null ? (BigDecimal) row[5] : null)
+                            .totalCommission(totalCommission)
+                            .commissionPercent(commissionPercent)
+                            .commissionEnabled(commissionEnabled)
+                            .build();
+                })
                 .sorted((a, b) -> {
                     if (b.getAvgKpiScore() == null) return -1;
                     if (a.getAvgKpiScore() == null) return 1;

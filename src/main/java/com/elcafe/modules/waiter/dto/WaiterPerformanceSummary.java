@@ -39,6 +39,11 @@ public class WaiterPerformanceSummary {
     private BigDecimal totalBonusEarned;
     private Integer workingDays;
 
+    // Commission / Revenue Share
+    private BigDecimal totalCommission;
+    private BigDecimal commissionPercent;
+    private Boolean commissionEnabled;
+
     // Daily breakdown
     private List<WaiterPerformance> dailyPerformances;
 }
