@@ -182,7 +182,7 @@ export default function MenuPage() {
         variantId: selectedVariant?.id || null,
         quantity,
         specialInstructions: specialInstructions || null,
-        modifierIds: selectedModifiers.map(m => m.id),
+        modifiers: selectedModifiers.map(m => ({ linkedItemId: m.id, quantity: 1 })),
       });
       setShowProductModal(false);
     } catch (err) {
