@@ -277,7 +277,7 @@ const generateReceiptHTML = (order) => {
 
   <div class="receipt">
     <div class="header">
-      <div class="brand-name">Jangirovs</div>
+      <div class="brand-name">Jangirov's</div>
     </div>
 
     <div class="info-section">
