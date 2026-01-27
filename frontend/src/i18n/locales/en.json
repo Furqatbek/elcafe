@@ -1600,6 +1600,7 @@
     "noPrinters": "No printers configured",
     "printerName": "Printer Name",
     "selectPrinter": "Select Printer",
+    "enterPrinterName": "Enter printer name",
     "type": "Printer Type",
     "connection": "Connection",
     "connectionType": "Connection Type",

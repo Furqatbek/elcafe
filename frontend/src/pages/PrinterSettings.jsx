@@ -362,18 +362,19 @@ const PrinterSettings = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {t('printers.printerName')} *
                 </label>
-                <select
+                <input
+                  type="text"
+                  list="available-printers"
                   value={formData.printerName}
                   onChange={(e) => setFormData({ ...formData, printerName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                >
-                  <option value="">{t('printers.selectPrinter')}</option>
+                  placeholder={t('printers.enterPrinterName')}
+                />
+                <datalist id="available-printers">
                   {availablePrinters.map((printer, index) => (
-                    <option key={index} value={printer}>
-                      {printer}
-                    </option>
+                    <option key={index} value={printer} />
                   ))}
-                </select>
+                </datalist>
               </div>
 
               <div>

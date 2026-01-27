@@ -1589,6 +1589,7 @@
     "noPrinters": "Принтеры не настроены",
     "printerName": "Название принтера",
     "selectPrinter": "Выберите принтер",
+    "enterPrinterName": "Введите название принтера",
     "type": "Тип принтера",
     "connection": "Подключение",
     "connectionType": "Тип подключения",
