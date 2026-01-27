@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { orderAPI, restaurantAPI, menuAPI, tablesAPI, posAPI } from '../services/api';
+import { useOrderNotifications, requestNotificationPermission } from '../hooks/useOrderNotifications';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -142,15 +143,35 @@ export default function Orders() {
   const [splitPayments, setSplitPayments] = useState([]);
   const [currentSplitIndex, setCurrentSplitIndex] = useState(0);
 
+  // Flatten tableOrders for notification tracking
+  const allOrders = useMemo(() => {
+    return Object.values(tableOrders).flat();
+  }, [tableOrders]);
+
+  // Enable notifications for new orders
+  useOrderNotifications(allOrders, {
+    enabled: true,
+    soundEnabled: true,
+    toastEnabled: true,
+    browserNotificationEnabled: true,
+  });
+
   // Load restaurants on mount
   useEffect(() => {
     loadRestaurants();
+    // Request browser notification permission
+    requestNotificationPermission();
   }, []);
 
-  // Load tables when restaurant changes
+  // Load tables when restaurant changes, with auto-refresh
   useEffect(() => {
     if (selectedRestaurantId) {
       loadTablesAndOrders();
+      // Auto-refresh every 5 seconds for real-time order updates
+      const interval = setInterval(() => {
+        loadTablesAndOrders();
+      }, 5000);
+      return () => clearInterval(interval);
     }
   }, [selectedRestaurantId]);
 

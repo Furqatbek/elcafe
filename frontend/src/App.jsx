@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import Layout from './components/Layout';
 import SessionManager from './components/SessionManager';
+import { Toaster } from './components/ui/toaster';
 import { InventoryProvider } from './context/InventoryContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -91,6 +92,7 @@ function App() {
   return (
     <BrowserRouter basename="/admin">
       <SessionManager />
+      <Toaster />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route

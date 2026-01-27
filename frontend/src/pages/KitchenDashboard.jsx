@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { kitchenAPI, restaurantAPI } from '../services/api';
 import { formatTime } from '../utils/dateUtils';
+import { useOrderNotifications, requestNotificationPermission } from '../hooks/useOrderNotifications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -48,8 +49,18 @@ export default function KitchenDashboard() {
   const [priorityModalOpen, setPriorityModalOpen] = useState(false);
   const [selectedPriority, setSelectedPriority] = useState('NORMAL');
 
+  // Enable notifications for new orders
+  useOrderNotifications(activeOrders, {
+    enabled: true,
+    soundEnabled: true,
+    toastEnabled: true,
+    browserNotificationEnabled: true,
+  });
+
   useEffect(() => {
     loadRestaurants();
+    // Request browser notification permission
+    requestNotificationPermission();
   }, []);
 
   useEffect(() => {
