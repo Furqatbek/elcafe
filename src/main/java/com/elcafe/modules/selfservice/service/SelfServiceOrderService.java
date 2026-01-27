@@ -114,6 +114,38 @@ public class SelfServiceOrderService {
     }
 
     /**
+     * Start a new self-service session for takeaway orders (no QR code required).
+     */
+    @Transactional
+    public SelfServiceSession startTakeawaySession(Long restaurantId, String deviceInfo, String ipAddress) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        // Check if self-service is enabled and takeaway is allowed
+        SelfServiceSettings settings = settingsRepository.findByRestaurantId(restaurantId)
+                .orElse(null);
+        if (settings == null || !settings.getEnabled()) {
+            throw new RuntimeException("Self-service ordering is not enabled for this restaurant");
+        }
+        if (!Boolean.TRUE.equals(settings.getAllowTakeaway())) {
+            throw new RuntimeException("Takeaway orders are not enabled for this restaurant");
+        }
+
+        // Create new session without table (takeaway)
+        SelfServiceSession session = SelfServiceSession.builder()
+                .sessionToken(UUID.randomUUID().toString())
+                .restaurant(restaurant)
+                .table(null) // No table for takeaway
+                .qrCode(null) // No QR code for direct takeaway access
+                .deviceInfo(deviceInfo)
+                .ipAddress(ipAddress)
+                .expiresAt(LocalDateTime.now().plusHours(SESSION_EXPIRY_HOURS))
+                .build();
+
+        return sessionRepository.save(session);
+    }
+
+    /**
      * Get session by token.
      */
     public Optional<SelfServiceSession> getSession(String sessionToken) {
