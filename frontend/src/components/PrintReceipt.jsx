@@ -79,7 +79,7 @@ const generateReceiptHTML = (order) => {
 
     body {
       font-family: 'Courier New', monospace;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 500;
       line-height: 1.3;
       width: 58mm;
@@ -102,14 +102,14 @@ const generateReceiptHTML = (order) => {
     }
 
     .brand-name {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: bold;
       letter-spacing: 1px;
     }
 
     .separator {
       text-align: center;
-      font-size: 12px;
+      font-size: 14px;
       letter-spacing: -1px;
     }
 
@@ -117,7 +117,7 @@ const generateReceiptHTML = (order) => {
       margin: 2px 0;
       padding: 2px 0;
       border-bottom: 1px dashed black;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .info-row {
@@ -128,7 +128,7 @@ const generateReceiptHTML = (order) => {
 
     .items-section {
       margin: 2px 0;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .item-row {
@@ -145,16 +145,16 @@ const generateReceiptHTML = (order) => {
     .item-details {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .item-free-tag {
       font-weight: bold;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     .item-promo-info {
-      font-size: 10px;
+      font-size: 12px;
       font-style: italic;
     }
 
@@ -162,7 +162,7 @@ const generateReceiptHTML = (order) => {
       margin: 2px 0;
       padding-top: 2px;
       border-top: 1px dashed black;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .total-row {
@@ -175,7 +175,7 @@ const generateReceiptHTML = (order) => {
       border-top: 1px solid black;
       padding-top: 2px;
       margin-top: 2px;
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
     }
 
@@ -183,7 +183,7 @@ const generateReceiptHTML = (order) => {
       margin: 3px 0;
       padding: 2px;
       border: 1px dashed black;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     .promo-header {
@@ -192,7 +192,7 @@ const generateReceiptHTML = (order) => {
       border-bottom: 1px dotted black;
       padding-bottom: 1px;
       margin-bottom: 2px;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .promo-row {
@@ -205,7 +205,7 @@ const generateReceiptHTML = (order) => {
     }
 
     .promo-value {
-      font-size: 11px;
+      font-size: 13px;
     }
 
     .promo-discount {
@@ -217,7 +217,7 @@ const generateReceiptHTML = (order) => {
       margin: 2px 0;
       padding: 2px;
       border: 1px dashed black;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     .qr-section {
@@ -229,7 +229,7 @@ const generateReceiptHTML = (order) => {
 
     .qr-title {
       font-weight: bold;
-      font-size: 12px;
+      font-size: 14px;
       margin-bottom: 2px;
     }
 
@@ -240,7 +240,7 @@ const generateReceiptHTML = (order) => {
     }
 
     .qr-subtitle {
-      font-size: 10px;
+      font-size: 12px;
       margin-top: 2px;
     }
 
@@ -249,11 +249,11 @@ const generateReceiptHTML = (order) => {
       padding-top: 2px;
       border-top: 1px dashed black;
       text-align: center;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .thank-you {
-      font-size: 14px;
+      font-size: 16px;
       font-weight: bold;
       margin: 2px 0;
     }
@@ -431,7 +431,7 @@ const generateReceiptHTML = (order) => {
       <div>+998770049909</div>
       <div>www.jangirovs.uz</div>
       <div class="thank-you">*** RAHMAT! ***</div>
-      <div style="font-size:11px;">${currentDate}</div>
+      <div style="font-size:13px;">${currentDate}</div>
     </div>
   </div>
 </body>
