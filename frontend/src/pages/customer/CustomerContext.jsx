@@ -26,8 +26,13 @@ export function CustomerProvider({ children }) {
       await loadCart(token);
     } catch (err) {
       console.error('Session validation failed:', err);
-      localStorage.removeItem('self_service_token');
-      setSession(null);
+      // Only clear the session if the token we tried to validate is still the one in localStorage
+      // This prevents a race condition where a new session was already created
+      const currentToken = localStorage.getItem('self_service_token');
+      if (currentToken === token) {
+        localStorage.removeItem('self_service_token');
+        setSession(null);
+      }
     } finally {
       setLoading(false);
     }

@@ -52,9 +52,14 @@ export default function MenuPage() {
   const [showBundleModal, setShowBundleModal] = useState(false);
   const [bundleQuantity, setBundleQuantity] = useState(1);
 
-  // Initialize session on mount
+  // Initialize session on mount - wait for context loading to complete first
   useEffect(() => {
     const initSession = async () => {
+      // Wait for CustomerContext to finish loading/validating any saved session
+      if (sessionLoading) {
+        return;
+      }
+      // Only start a new session if there's no valid session and we have a table code
       if (!session && tableCode) {
         try {
           await startSession(tableCode);
@@ -62,10 +67,14 @@ export default function MenuPage() {
           setError(t('selfService.invalidQrCode'));
         }
       }
-      loadRestaurantData();
     };
     initSession();
-  }, [tableCode]);
+  }, [tableCode, sessionLoading, session]);
+
+  // Load restaurant data separately (doesn't depend on session)
+  useEffect(() => {
+    loadRestaurantData();
+  }, [restaurantId]);
 
   const loadRestaurantData = async () => {
     setLoading(true);
