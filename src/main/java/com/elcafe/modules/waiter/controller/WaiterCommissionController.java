@@ -39,8 +39,8 @@ public class WaiterCommissionController {
             @PathVariable Long waiterId,
             @Valid @RequestBody CommissionConfigRequest request) {
         Waiter waiter = commissionService.updateCommissionConfig(waiterId, request);
-        return ResponseEntity.ok(ApiResponse.success(waiter,
-                "Commission configuration updated successfully"));
+        return ResponseEntity.ok(ApiResponse.success(
+                "Commission configuration updated successfully", waiter));
     }
 
     /**
@@ -102,8 +102,8 @@ public class WaiterCommissionController {
     public ResponseEntity<ApiResponse<List<WaiterCommission>>> approveCommissions(
             @RequestBody List<Long> commissionIds) {
         List<WaiterCommission> approved = commissionService.approveCommissions(commissionIds);
-        return ResponseEntity.ok(ApiResponse.success(approved,
-                "Approved " + approved.size() + " commissions"));
+        return ResponseEntity.ok(ApiResponse.success(
+                "Approved " + approved.size() + " commissions", approved));
     }
 
     /**
