@@ -44,8 +44,8 @@ cp .env.example .env
 Edit the `.env` file:
 
 ```env
-# Your ElCafe server URL
-SERVER_URL=wss://your-domain.com/api/ws-print-agent
+# ElCafe server WebSocket URL
+SERVER_URL=wss://api.elcafe.uz/ws-print-agent
 
 # Your restaurant ID (from admin panel)
 RESTAURANT_ID=1
@@ -55,6 +55,8 @@ PRINTER_TYPE=network
 PRINTER_IP=192.168.1.100
 PRINTER_PORT=9100
 ```
+
+> **Important:** Use `wss://` (secure WebSocket) for HTTPS servers. The endpoint is `/ws-print-agent`.
 
 ---
 
@@ -119,8 +121,9 @@ npm start
 
 ### "Agent starts but nothing prints"
 
-- Check "Use Print Agent" is enabled in ElCafe settings
+- Make sure you have a printer configured in **Settings** > **Printer Settings**
 - Verify the printer IP in ElCafe matches your actual printer
+- Check that **"Auto Print"** is enabled for the printer
 - Try creating a new order
 
 ---
@@ -187,7 +190,7 @@ If you have multiple printers (e.g., one for drinks, one for food):
 
 | Setting | Example | Description |
 |---------|---------|-------------|
-| `SERVER_URL` | `wss://elcafe.com/api/ws-print-agent` | Your ElCafe server |
+| `SERVER_URL` | `wss://api.elcafe.uz/ws-print-agent` | ElCafe WebSocket server |
 | `RESTAURANT_ID` | `1` | Your restaurant ID |
 | `PRINTER_TYPE` | `network` | Use `network` or `usb` |
 | `PRINTER_IP` | `192.168.1.100` | Your printer's IP |
