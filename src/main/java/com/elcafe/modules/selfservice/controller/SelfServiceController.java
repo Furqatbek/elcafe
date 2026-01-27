@@ -92,6 +92,7 @@ public class SelfServiceController {
         response.put("restaurantName", session.getRestaurant().getName());
         response.put("tableId", session.getTable() != null ? session.getTable().getId() : null);
         response.put("tableNumber", session.getTable() != null ? session.getTable().getTableNumber() : null);
+        response.put("tableCode", session.getQrCode() != null ? session.getQrCode().getCode() : null);
         response.put("expiresAt", session.getExpiresAt());
 
         return ResponseEntity.ok(response);
@@ -139,6 +140,7 @@ public class SelfServiceController {
         response.put("restaurantId", session.getRestaurant().getId());
         response.put("tableId", session.getTable() != null ? session.getTable().getId() : null);
         response.put("tableNumber", session.getTable() != null ? session.getTable().getTableNumber() : null);
+        response.put("tableCode", session.getQrCode() != null ? session.getQrCode().getCode() : null);
         response.put("customerName", session.getCustomerName());
         response.put("expiresAt", session.getExpiresAt());
         response.put("isActive", session.getIsActive());

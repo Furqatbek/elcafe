@@ -59,8 +59,14 @@ export default function MenuPage() {
       if (sessionLoading) {
         return;
       }
-      // Only start a new session if there's no valid session and we have a table code
-      if (!session && tableCode) {
+
+      // Check if we need to start a new session:
+      // 1. No existing session and we have a table code
+      // 2. Existing session but for a different QR code (user scanned a different table)
+      // 3. Existing session has no tableCode (old session or takeaway) but URL has tableCode
+      const needsNewSession = tableCode && (!session || session.tableCode !== tableCode);
+
+      if (needsNewSession) {
         try {
           await startSession(tableCode);
         } catch (err) {
