@@ -122,7 +122,7 @@ const KitchenTicket = () => {
       </div>
 
       {/* Print Styles */}
-      <style jsx>{`
+      <style>{`
         @media print {
           .kitchen-ticket {
             max-width: 80mm;

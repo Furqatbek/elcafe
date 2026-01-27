@@ -101,20 +101,22 @@ export default function Dashboard() {
         startDate = startOfWeek(today, { weekStartsOn: 1 });
         endDate = today;
         break;
-      case 'lastWeek':
+      case 'lastWeek': {
         const lastWeekStart = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
         startDate = lastWeekStart;
         endDate = endOfWeek(lastWeekStart, { weekStartsOn: 1 });
         break;
+      }
       case 'month':
         startDate = startOfMonth(today);
         endDate = today;
         break;
-      case 'lastMonth':
+      case 'lastMonth': {
         const lastMonthStart = startOfMonth(subMonths(today, 1));
         startDate = lastMonthStart;
         endDate = endOfMonth(lastMonthStart);
         break;
+      }
       case 'custom':
         if (customStartDate && customEndDate) {
           startDate = new Date(customStartDate);
@@ -159,7 +161,7 @@ export default function Dashboard() {
         case 'month':
           response = await financialAPI.getMonthSummary(selectedRestaurant);
           break;
-        default:
+        default: {
           // For yesterday, lastWeek, lastMonth, custom - use date range endpoint
           const dateRange = getDateRangeForPeriod(period);
           if (!dateRange) {
@@ -171,6 +173,7 @@ export default function Dashboard() {
             dateRange.startDate,
             dateRange.endDate
           );
+        }
       }
 
       setDashboardData(response.data.data);

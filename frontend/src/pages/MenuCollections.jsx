@@ -523,7 +523,7 @@ export default function MenuCollections() {
       <Dialog open={addProductsModalOpen} onOpenChange={setAddProductsModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{t('menuCollections.addProductsTo')} "{selectedCollection?.name}"</DialogTitle>
+            <DialogTitle>{t('menuCollections.addProductsTo')} &quot;{selectedCollection?.name}&quot;</DialogTitle>
             <DialogDescription>
               {t('menuCollections.addProductsDescription')}
             </DialogDescription>

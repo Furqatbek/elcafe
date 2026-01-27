@@ -68,53 +68,33 @@ export function CustomerProvider({ children }) {
 
   const addToCart = async (data) => {
     if (!session?.sessionToken) throw new Error('No active session');
-    try {
-      await selfServiceAPI.addToCart(session.sessionToken, data);
-      await loadCart();
-    } catch (err) {
-      throw err;
-    }
+    await selfServiceAPI.addToCart(session.sessionToken, data);
+    await loadCart();
   };
 
   const updateCartItem = async (itemId, quantity) => {
     if (!session?.sessionToken) throw new Error('No active session');
-    try {
-      await selfServiceAPI.updateCartItem(session.sessionToken, itemId, quantity);
-      await loadCart();
-    } catch (err) {
-      throw err;
-    }
+    await selfServiceAPI.updateCartItem(session.sessionToken, itemId, quantity);
+    await loadCart();
   };
 
   const removeFromCart = async (itemId) => {
     if (!session?.sessionToken) throw new Error('No active session');
-    try {
-      await selfServiceAPI.removeFromCart(session.sessionToken, itemId);
-      await loadCart();
-    } catch (err) {
-      throw err;
-    }
+    await selfServiceAPI.removeFromCart(session.sessionToken, itemId);
+    await loadCart();
   };
 
   const clearCart = async () => {
     if (!session?.sessionToken) throw new Error('No active session');
-    try {
-      await selfServiceAPI.clearCart(session.sessionToken);
-      setCart({ items: [], itemCount: 0, total: 0 });
-    } catch (err) {
-      throw err;
-    }
+    await selfServiceAPI.clearCart(session.sessionToken);
+    setCart({ items: [], itemCount: 0, total: 0 });
   };
 
   const submitOrder = async (orderData) => {
     if (!session?.sessionToken) throw new Error('No active session');
-    try {
-      const response = await selfServiceAPI.submitOrder(session.sessionToken, orderData);
-      setCart({ items: [], itemCount: 0, total: 0 });
-      return response.data;
-    } catch (err) {
-      throw err;
-    }
+    const response = await selfServiceAPI.submitOrder(session.sessionToken, orderData);
+    setCart({ items: [], itemCount: 0, total: 0 });
+    return response.data;
   };
 
   const endSession = () => {

@@ -139,7 +139,7 @@ export default function Reservations() {
           const audio = new Audio('/notification.mp3');
           audio.volume = 0.5;
           audio.play().catch(() => {});
-        } catch (e) {}
+        } catch (_e) { /* audio not supported */ }
 
         // Show browser notification if permitted
         if (Notification.permission === 'granted') {

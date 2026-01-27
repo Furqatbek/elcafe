@@ -146,7 +146,7 @@ export default function CartPage() {
                     )}
                     {item.specialInstructions && (
                       <p className="text-sm text-gray-500 italic mt-1">
-                        "{item.specialInstructions}"
+                        &quot;{item.specialInstructions}&quot;
                       </p>
                     )}
                     <p className="text-blue-600 font-semibold mt-1">
