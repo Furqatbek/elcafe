@@ -35,6 +35,8 @@ export default function Waiters() {
     active: true,
     commissionPercent: 0,
     commissionEnabled: false,
+    commissionType: 'PERCENTAGE',
+    fixedCommissionAmount: 0,
   });
 
   const [errors, setErrors] = useState({});
@@ -135,6 +137,8 @@ export default function Waiters() {
         active: waiter.active !== undefined ? waiter.active : true,
         commissionPercent: waiter.commissionPercent || 0,
         commissionEnabled: waiter.commissionEnabled || false,
+        commissionType: waiter.commissionType || 'PERCENTAGE',
+        fixedCommissionAmount: waiter.fixedCommissionAmount || 0,
       });
     } else {
       setEditingWaiter(null);
@@ -148,6 +152,8 @@ export default function Waiters() {
         active: true,
         commissionPercent: 0,
         commissionEnabled: false,
+        commissionType: 'PERCENTAGE',
+        fixedCommissionAmount: 0,
       });
       generatePinCode();
     }
@@ -429,10 +435,14 @@ export default function Waiters() {
                           {waiter.commissionEnabled ? (
                             <div className="flex flex-col">
                               <span className="text-sm font-medium text-green-600">
-                                {waiter.commissionPercent || 0}%
+                                {waiter.commissionType === 'FIXED_AMOUNT'
+                                  ? `${waiter.fixedCommissionAmount || 0}`
+                                  : `${waiter.commissionPercent || 0}%`}
                               </span>
                               <span className="text-xs text-gray-500">
-                                {t('pages.waiters.commissionEnabled', 'Enabled')}
+                                {waiter.commissionType === 'FIXED_AMOUNT'
+                                  ? t('pages.waiters.commissionFixed', 'Fixed/order')
+                                  : t('pages.waiters.commissionPercentage', 'Percentage')}
                               </span>
                             </div>
                           ) : (
@@ -678,28 +688,91 @@ export default function Waiters() {
                     </label>
                   </div>
 
-                  {/* Commission Percentage */}
+                  {/* Commission Type and Amount */}
                   {formData.commissionEnabled && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {t('pages.waiters.commissionPercent', 'Commission Percentage')}
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          name="commissionPercent"
-                          value={formData.commissionPercent}
-                          onChange={handleInputChange}
-                          min="0"
-                          max="100"
-                          step="0.5"
-                          className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="text-gray-500">%</span>
-                        <span className="text-xs text-gray-400">
-                          {t('pages.waiters.commissionHint', '(e.g., 5% of order total)')}
-                        </span>
+                    <div className="space-y-3">
+                      {/* Commission Type Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {t('pages.waiters.commissionType', 'Commission Type')}
+                        </label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="commissionType"
+                              value="PERCENTAGE"
+                              checked={formData.commissionType === 'PERCENTAGE'}
+                              onChange={handleInputChange}
+                              className="mr-2 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700">
+                              {t('pages.waiters.commissionTypePercentage', 'Percentage')}
+                            </span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="commissionType"
+                              value="FIXED_AMOUNT"
+                              checked={formData.commissionType === 'FIXED_AMOUNT'}
+                              onChange={handleInputChange}
+                              className="mr-2 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700">
+                              {t('pages.waiters.commissionTypeFixed', 'Fixed Amount')}
+                            </span>
+                          </label>
+                        </div>
                       </div>
+
+                      {/* Commission Percentage (for PERCENTAGE type) */}
+                      {formData.commissionType === 'PERCENTAGE' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {t('pages.waiters.commissionPercent', 'Commission Percentage')}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              name="commissionPercent"
+                              value={formData.commissionPercent}
+                              onChange={handleInputChange}
+                              min="0"
+                              max="100"
+                              step="0.5"
+                              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="text-gray-500">%</span>
+                            <span className="text-xs text-gray-400">
+                              {t('pages.waiters.commissionHint', '(e.g., 5% of order total)')}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Fixed Commission Amount (for FIXED_AMOUNT type) */}
+                      {formData.commissionType === 'FIXED_AMOUNT' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {t('pages.waiters.fixedCommissionAmount', 'Fixed Amount per Order')}
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              name="fixedCommissionAmount"
+                              value={formData.fixedCommissionAmount}
+                              onChange={handleInputChange}
+                              min="0"
+                              step="0.01"
+                              className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="text-xs text-gray-400">
+                              {t('pages.waiters.fixedCommissionHint', '(fixed amount per completed order)')}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

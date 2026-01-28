@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.dto;
 
+import com.elcafe.modules.waiter.enums.CommissionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,8 @@ public class WaiterCommissionSummaryDTO {
     private String waiterName;
     private BigDecimal currentCommissionPercent;
     private Boolean commissionEnabled;
+    private CommissionType commissionType;
+    private BigDecimal fixedCommissionAmount;
 
     // Totals
     private Long totalCommissions;

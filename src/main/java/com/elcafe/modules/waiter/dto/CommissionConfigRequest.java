@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.dto;
 
+import com.elcafe.modules.waiter.enums.CommissionType;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
@@ -23,4 +24,18 @@ public class CommissionConfigRequest {
 
     @NotNull(message = "Commission enabled flag is required")
     private Boolean commissionEnabled;
+
+    /**
+     * Type of commission calculation (PERCENTAGE or FIXED_AMOUNT)
+     * Defaults to PERCENTAGE if not specified
+     */
+    @Builder.Default
+    private CommissionType commissionType = CommissionType.PERCENTAGE;
+
+    /**
+     * Fixed commission amount per order (used when commissionType is FIXED_AMOUNT)
+     */
+    @DecimalMin(value = "0.00", message = "Fixed commission amount must be at least 0")
+    @Builder.Default
+    private BigDecimal fixedCommissionAmount = BigDecimal.ZERO;
 }

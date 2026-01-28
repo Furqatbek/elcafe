@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.entity;
 
+import com.elcafe.modules.waiter.enums.CommissionType;
 import com.elcafe.modules.waiter.enums.WaiterRole;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -75,6 +76,22 @@ public class Waiter {
     @Column(nullable = false)
     @Builder.Default
     private Boolean commissionEnabled = false;
+
+    /**
+     * Type of commission calculation (PERCENTAGE or FIXED_AMOUNT)
+     * Default is PERCENTAGE for backward compatibility
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    @Builder.Default
+    private CommissionType commissionType = CommissionType.PERCENTAGE;
+
+    /**
+     * Fixed commission amount per order (used when commissionType is FIXED_AMOUNT)
+     */
+    @Column(precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal fixedCommissionAmount = BigDecimal.ZERO;
 
     @OneToMany(mappedBy = "waiter", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

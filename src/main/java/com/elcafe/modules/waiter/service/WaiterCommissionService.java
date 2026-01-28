@@ -11,6 +11,7 @@ import com.elcafe.modules.waiter.dto.WaiterCommissionSummaryDTO;
 import com.elcafe.modules.waiter.entity.Waiter;
 import com.elcafe.modules.waiter.entity.WaiterCommission;
 import com.elcafe.modules.waiter.enums.CommissionStatus;
+import com.elcafe.modules.waiter.enums.CommissionType;
 import com.elcafe.modules.waiter.repository.WaiterCommissionRepository;
 import com.elcafe.modules.waiter.repository.WaiterRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -60,10 +61,21 @@ public class WaiterCommissionService {
             return Optional.empty();
         }
 
-        // Check if commission percent is set
-        if (waiter.getCommissionPercent() == null || waiter.getCommissionPercent().compareTo(BigDecimal.ZERO) <= 0) {
-            log.debug("Commission percent not set for waiter {}", waiter.getId());
-            return Optional.empty();
+        // Check if commission is properly configured based on type
+        CommissionType commissionType = waiter.getCommissionType() != null
+                ? waiter.getCommissionType()
+                : CommissionType.PERCENTAGE;
+
+        if (commissionType == CommissionType.PERCENTAGE) {
+            if (waiter.getCommissionPercent() == null || waiter.getCommissionPercent().compareTo(BigDecimal.ZERO) <= 0) {
+                log.debug("Commission percent not set for waiter {}", waiter.getId());
+                return Optional.empty();
+            }
+        } else {
+            if (waiter.getFixedCommissionAmount() == null || waiter.getFixedCommissionAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                log.debug("Fixed commission amount not set for waiter {}", waiter.getId());
+                return Optional.empty();
+            }
         }
 
         // Check if commission already exists for this order
@@ -72,12 +84,22 @@ public class WaiterCommissionService {
             return commissionRepository.findByWaiterIdAndOrderId(waiter.getId(), order.getId());
         }
 
-        // Calculate commission based on order total (excluding tips)
+        // Calculate commission based on commission type
         BigDecimal orderTotal = order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO;
-        BigDecimal commissionPercent = waiter.getCommissionPercent();
-        BigDecimal commissionAmount = orderTotal
-                .multiply(commissionPercent)
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        BigDecimal commissionPercent = waiter.getCommissionPercent() != null
+                ? waiter.getCommissionPercent()
+                : BigDecimal.ZERO;
+        BigDecimal commissionAmount;
+
+        if (commissionType == CommissionType.FIXED_AMOUNT) {
+            // Fixed amount per order
+            commissionAmount = waiter.getFixedCommissionAmount();
+        } else {
+            // Percentage of order total
+            commissionAmount = orderTotal
+                    .multiply(commissionPercent)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        }
 
         // Create commission record
         WaiterCommission commission = WaiterCommission.builder()
@@ -108,10 +130,17 @@ public class WaiterCommissionService {
 
         waiter.setCommissionPercent(request.getCommissionPercent());
         waiter.setCommissionEnabled(request.getCommissionEnabled());
+        waiter.setCommissionType(request.getCommissionType() != null
+                ? request.getCommissionType()
+                : CommissionType.PERCENTAGE);
+        waiter.setFixedCommissionAmount(request.getFixedCommissionAmount() != null
+                ? request.getFixedCommissionAmount()
+                : BigDecimal.ZERO);
 
         waiter = waiterRepository.save(waiter);
-        log.info("Updated commission config for waiter {}: {}% enabled={}",
-                waiterId, request.getCommissionPercent(), request.getCommissionEnabled());
+        log.info("Updated commission config for waiter {}: type={} percent={} fixedAmount={} enabled={}",
+                waiterId, waiter.getCommissionType(), request.getCommissionPercent(),
+                waiter.getFixedCommissionAmount(), request.getCommissionEnabled());
 
         return waiter;
     }
@@ -179,6 +208,8 @@ public class WaiterCommissionService {
                 .waiterName(waiter.getName())
                 .currentCommissionPercent(waiter.getCommissionPercent())
                 .commissionEnabled(waiter.getCommissionEnabled())
+                .commissionType(waiter.getCommissionType())
+                .fixedCommissionAmount(waiter.getFixedCommissionAmount())
                 .totalCommissions((long) commissions.size())
                 .totalOrderValue(totalOrderValue)
                 .totalCommissionEarned(totalCommissionEarned)

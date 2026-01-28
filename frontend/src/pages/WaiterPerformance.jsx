@@ -612,7 +612,11 @@ export default function WaiterPerformance() {
                   {waiterPerformance.commissionEnabled ? (
                     <div>
                       <p className="text-2xl font-bold text-emerald-600">{formatCurrency(waiterPerformance.totalCommission)}</p>
-                      <p className="text-xs text-gray-500">{waiterPerformance.commissionPercent || 0}% {t('waiterPerformance.details.ofRevenue', 'of revenue')}</p>
+                      <p className="text-xs text-gray-500">
+                        {waiterPerformance.commissionType === 'FIXED_AMOUNT'
+                          ? formatCurrency(waiterPerformance.fixedCommissionAmount || 0) + ' ' + t('waiterPerformance.details.perOrder', '/order')
+                          : (waiterPerformance.commissionPercent || 0) + '% ' + t('waiterPerformance.details.ofRevenue', 'of revenue')}
+                      </p>
                     </div>
                   ) : (
                     <p className="text-lg text-gray-400">{t('waiterPerformance.details.notEnabled', 'Not enabled')}</p>
@@ -743,8 +747,20 @@ export default function WaiterPerformance() {
                   <h3 className="text-lg font-semibold mb-4">{t('waiterPerformance.commission.summary', 'Commission Summary')}</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between">
+                      <span className="text-gray-600">{t('waiterPerformance.commission.commissionType', 'Commission Type')}</span>
+                      <span className="font-medium">
+                        {commissionSummary.commissionType === 'FIXED_AMOUNT'
+                          ? t('waiterPerformance.commission.fixedAmount', 'Fixed Amount')
+                          : t('waiterPerformance.commission.percentage', 'Percentage')}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
                       <span className="text-gray-600">{t('waiterPerformance.commission.commissionRate', 'Commission Rate')}</span>
-                      <span className="font-medium">{commissionSummary.currentCommissionPercent || 0}%</span>
+                      <span className="font-medium">
+                        {commissionSummary.commissionType === 'FIXED_AMOUNT'
+                          ? formatCurrency(commissionSummary.fixedCommissionAmount || 0) + ' ' + t('waiterPerformance.commission.perOrder', '/order')
+                          : (commissionSummary.currentCommissionPercent || 0) + '%'}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">{t('waiterPerformance.commission.status', 'Commission Status')}</span>
