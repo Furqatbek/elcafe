@@ -37,6 +37,9 @@ export default function WaiterPerformance() {
   const [commissionHistory, setCommissionHistory] = useState([]);
   const [commissionLoading, setCommissionLoading] = useState(false);
 
+  // Feedback recording state
+  const [recordingFeedback, setRecordingFeedback] = useState(false);
+
   // Date range
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().setDate(new Date().getDate() - 7)).toISOString().split('T')[0],
@@ -221,6 +224,39 @@ export default function WaiterPerformance() {
       bonusAmountPerThreshold: 50,
       active: true,
     });
+  };
+
+  const handleRecordComplaint = async () => {
+    if (!selectedWaiter || !selectedRestaurant) return;
+    if (!confirm(t('waiterPerformance.confirmRecordComplaint', 'Are you sure you want to record a complaint against this waiter?'))) {
+      return;
+    }
+    setRecordingFeedback(true);
+    try {
+      await waiterPerformanceAPI.recordComplaint(selectedWaiter, selectedRestaurant);
+      await loadWaiterPerformance();
+      await loadLeaderboard();
+    } catch (error) {
+      console.error('Failed to record complaint:', error);
+      alert(t('waiterPerformance.failedToRecordComplaint', 'Failed to record complaint'));
+    } finally {
+      setRecordingFeedback(false);
+    }
+  };
+
+  const handleRecordCompliment = async () => {
+    if (!selectedWaiter || !selectedRestaurant) return;
+    setRecordingFeedback(true);
+    try {
+      await waiterPerformanceAPI.recordCompliment(selectedWaiter, selectedRestaurant);
+      await loadWaiterPerformance();
+      await loadLeaderboard();
+    } catch (error) {
+      console.error('Failed to record compliment:', error);
+      alert(t('waiterPerformance.failedToRecordCompliment', 'Failed to record compliment'));
+    } finally {
+      setRecordingFeedback(false);
+    }
   };
 
   const openEditKPI = (config) => {
@@ -654,14 +690,34 @@ export default function WaiterPerformance() {
                     <ThumbsUp className="w-4 h-4 text-green-500" />
                     {t('waiterPerformance.details.compliments', 'Compliments')}
                   </span>
-                  <span className="font-medium text-green-600">{waiterPerformance.complimentsCount || 0}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-green-600">{waiterPerformance.complimentsCount || 0}</span>
+                    <button
+                      onClick={handleRecordCompliment}
+                      disabled={recordingFeedback}
+                      className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={t('waiterPerformance.recordCompliment', 'Record Compliment')}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 flex items-center gap-2">
                     <ThumbsDown className="w-4 h-4 text-red-500" />
                     {t('waiterPerformance.details.complaints', 'Complaints')}
                   </span>
-                  <span className="font-medium text-red-600">{waiterPerformance.complaintsCount || 0}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-red-600">{waiterPerformance.complaintsCount || 0}</span>
+                    <button
+                      onClick={handleRecordComplaint}
+                      disabled={recordingFeedback}
+                      className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={t('waiterPerformance.recordComplaint', 'Record Complaint')}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 flex items-center gap-2">
