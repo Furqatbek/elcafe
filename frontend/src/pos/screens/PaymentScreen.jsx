@@ -125,6 +125,7 @@ const PaymentScreen = () => {
   const printOrderReceipt = (orderNumber) => {
     const receiptData = {
       orderNumber: orderNumber || currentOrder.orderNumber,
+      orderType: currentOrder.type,
       items: currentOrder.items.map(item => ({
         productName: item.name,
         unitPrice: item.basePrice + (item.modifiers?.reduce((sum, mod) => sum + mod.price, 0) || 0),
@@ -145,6 +146,17 @@ const PaymentScreen = () => {
       total: grandTotal,
       diningTable: customer.tableNumber ? { tableNumber: customer.tableNumber } : null,
       customerNotes: currentOrder.notes || null,
+      // Customer info for delivery/takeaway orders
+      customerName: customer.name || null,
+      customerPhone: customer.phone || null,
+      // Delivery address for delivery orders
+      deliveryAddress: currentOrder.type === 'DELIVERY' && customer.address ? {
+        street: customer.address.street,
+        city: customer.address.city,
+        state: customer.address.state,
+        zipCode: customer.address.zipCode,
+        deliveryInstructions: customer.deliveryInstructions,
+      } : null,
     };
 
     PrintReceipt(receiptData);
