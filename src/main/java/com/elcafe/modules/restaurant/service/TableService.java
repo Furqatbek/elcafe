@@ -342,9 +342,10 @@ public class TableService {
         List<RestaurantTable> tables = tableRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
         List<String> sections = tableRepository.findDistinctSectionsByRestaurantId(restaurantId);
 
-        // Get active order statuses (orders that are still open)
+        // Get active order statuses (orders that are still open and can be modified)
         List<OrderStatus> activeStatuses = List.of(
-                OrderStatus.NEW, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.ON_DELIVERY
+                OrderStatus.NEW, OrderStatus.PENDING, OrderStatus.ACCEPTED,
+                OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.ON_DELIVERY
         );
 
         List<FloorPlanDTO.FloorPlanTableDTO> tableDTOs = tables.stream()
