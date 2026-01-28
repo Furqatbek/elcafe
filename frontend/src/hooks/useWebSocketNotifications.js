@@ -192,38 +192,53 @@ export function useWebSocketNotifications(options = {}) {
       return;
     }
 
-    // Update current restaurant ID
+    // Capture restaurant ID for this effect instance (for cleanup)
+    const effectRestaurantId = restaurantId;
     currentRestaurantIdRef.current = restaurantId;
+
+    let mounted = true;
 
     const connectAndSubscribe = async () => {
       try {
         await websocketService.connect();
+
+        // Check if still mounted and restaurant ID hasn't changed
+        if (!mounted || effectRestaurantId !== currentRestaurantIdRef.current) {
+          return;
+        }
+
         setConnected(true);
 
         // Subscribe to restaurant-specific order events
-        const destination = `/topic/restaurant/${restaurantId}/orders`;
-        console.log('[WebSocket] Subscribing to:', destination);
+        const destination = `/topic/restaurant/${effectRestaurantId}/orders`;
         websocketService.subscribe(destination, handleOrderEvent);
         subscribedRef.current = true;
       } catch (error) {
         console.error('[WebSocket] Connection failed:', error);
-        setConnected(false);
+        if (mounted) {
+          setConnected(false);
+        }
       }
     };
 
     connectAndSubscribe();
 
     // Connection status listener
-    const handleConnect = () => setConnected(true);
-    const handleDisconnect = () => setConnected(false);
+    const handleConnect = () => {
+      if (mounted) setConnected(true);
+    };
+    const handleDisconnect = () => {
+      if (mounted) setConnected(false);
+    };
 
     websocketService.addListener('connect', handleConnect);
     websocketService.addListener('disconnect', handleDisconnect);
 
     return () => {
-      // Unsubscribe when restaurant changes or component unmounts
+      mounted = false;
+      // Unsubscribe using the captured restaurant ID from this effect
       if (subscribedRef.current) {
-        websocketService.unsubscribe(`/topic/restaurant/${currentRestaurantIdRef.current}/orders`);
+        websocketService.unsubscribe(`/topic/restaurant/${effectRestaurantId}/orders`);
         subscribedRef.current = false;
       }
       websocketService.removeListener('connect', handleConnect);

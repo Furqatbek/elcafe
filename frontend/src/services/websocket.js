@@ -18,6 +18,7 @@ class WebSocketService {
     this.maxReconnectAttempts = 10;
     this.reconnectDelay = 3000;
     this.listeners = new Map();
+    this.connectPromise = null; // Track ongoing connection attempt
   }
 
   connect() {
@@ -25,7 +26,12 @@ class WebSocketService {
       return Promise.resolve();
     }
 
-    return new Promise((resolve, reject) => {
+    // If a connection attempt is already in progress, return that promise
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
+
+    this.connectPromise = new Promise((resolve, reject) => {
       const wsUrl = getWebSocketUrl();
       console.log('[WebSocket] Connecting to:', wsUrl);
 
@@ -43,6 +49,7 @@ class WebSocketService {
           console.log('[WebSocket] Connected successfully');
           this.connected = true;
           this.reconnectAttempts = 0;
+          this.connectPromise = null;
 
           // Re-subscribe to any existing subscriptions after reconnect
           this.resubscribeAll();
@@ -58,6 +65,7 @@ class WebSocketService {
         },
         onStompError: (frame) => {
           console.error('[WebSocket] STOMP error:', frame);
+          this.connectPromise = null;
           this.notifyListeners('error', { error: frame });
           reject(frame);
         },
@@ -82,26 +90,40 @@ class WebSocketService {
   }
 
   subscribe(destination, callback) {
+    // Check if already subscribed to this destination
+    const existing = this.subscriptions.get(destination);
+    if (existing && existing.subscription) {
+      console.log('[WebSocket] Already subscribed to:', destination);
+      return existing.subscription;
+    }
+
     if (!this.client || !this.connected) {
       console.warn('[WebSocket] Not connected, queuing subscription:', destination);
-      // Store the subscription for later
+      // Store the subscription for later (will be subscribed in resubscribeAll)
       this.subscriptions.set(destination, { callback, subscription: null });
       return;
     }
 
     console.log('[WebSocket] Subscribing to:', destination);
-    const subscription = this.client.subscribe(destination, (message) => {
-      try {
-        const body = JSON.parse(message.body);
-        callback(body);
-      } catch (e) {
-        console.error('[WebSocket] Error parsing message:', e);
-        callback(message.body);
-      }
-    });
+    try {
+      const subscription = this.client.subscribe(destination, (message) => {
+        try {
+          const body = JSON.parse(message.body);
+          callback(body);
+        } catch (e) {
+          console.error('[WebSocket] Error parsing message:', e);
+          callback(message.body);
+        }
+      });
 
-    this.subscriptions.set(destination, { callback, subscription });
-    return subscription;
+      this.subscriptions.set(destination, { callback, subscription });
+      return subscription;
+    } catch (error) {
+      console.error('[WebSocket] Failed to subscribe:', error);
+      // Queue for later
+      this.subscriptions.set(destination, { callback, subscription: null });
+      return;
+    }
   }
 
   unsubscribe(destination) {

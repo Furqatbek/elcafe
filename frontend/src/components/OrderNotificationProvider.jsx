@@ -31,7 +31,8 @@ export function NotificationBell() {
   useEffect(() => {
     const handleStorageChange = () => {
       const newId = Number(localStorage.getItem('selectedRestaurantId')) || 1;
-      setRestaurantId(newId);
+      // Only update if actually changed to prevent unnecessary re-renders
+      setRestaurantId((prevId) => (prevId !== newId ? newId : prevId));
     };
 
     window.addEventListener('storage', handleStorageChange);
@@ -44,8 +45,8 @@ export function NotificationBell() {
     };
   }, []);
 
-  // Handle order event for notification store
-  const handleOrderEvent = (event) => {
+  // Handle order event for notification store - memoized to prevent effect re-runs
+  const handleOrderEvent = useCallback((event) => {
     const { eventType, data } = event;
     if (eventType === 'order.placed') {
       useNotificationStore.getState().addOrderNotification({
@@ -56,7 +57,7 @@ export function NotificationBell() {
         tableNumber: data?.tableNumber,
       });
     }
-  };
+  }, []);
 
   // Initialize WebSocket connection
   const { connected } = useWebSocketNotifications({

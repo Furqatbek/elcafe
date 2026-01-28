@@ -165,8 +165,8 @@ export default function WaiterPerformance() {
     setCommissionLoading(true);
     try {
       const [summaryRes, historyRes] = await Promise.all([
-        waiterCommissionAPI.getWaiterSummary(selectedWaiter, dateRange.startDate, dateRange.endDate),
-        waiterCommissionAPI.getWaiterHistory(selectedWaiter, { page: 0, size: 20 }),
+        waiterCommissionAPI.getCommissionSummary(selectedWaiter, dateRange.startDate, dateRange.endDate),
+        waiterCommissionAPI.getCommissionHistory(selectedWaiter, { page: 0, size: 20 }),
       ]);
       setCommissionSummary(summaryRes.data?.data || summaryRes.data);
       const historyData = historyRes.data?.data || historyRes.data;
