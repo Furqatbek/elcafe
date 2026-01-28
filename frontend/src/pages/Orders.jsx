@@ -966,6 +966,11 @@ export default function Orders() {
                           <span>{table.capacity}</span>
                         )}
                       </p>
+                      {table.section && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          {table.section}
+                        </p>
+                      )}
                     </div>
 
                     {/* Orders Badge */}
