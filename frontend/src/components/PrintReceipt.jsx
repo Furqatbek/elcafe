@@ -23,6 +23,79 @@ const getTableNumber = (order) => {
   return null;
 };
 
+/**
+ * Get customer name from order data
+ * Handles different data structures from various sources
+ */
+const getCustomerName = (order) => {
+  // Direct customerName field (POSOrderResponse)
+  if (order.customerName) {
+    return order.customerName;
+  }
+  // Customer object with firstName/lastName (Consumer OrderResponse)
+  if (order.customer?.firstName || order.customer?.lastName) {
+    return `${order.customer.firstName || ''} ${order.customer.lastName || ''}`.trim();
+  }
+  // Customer object with name
+  if (order.customer?.name) {
+    return order.customer.name;
+  }
+  return null;
+};
+
+/**
+ * Get customer phone from order data
+ */
+const getCustomerPhone = (order) => {
+  if (order.customerPhone) {
+    return order.customerPhone;
+  }
+  if (order.customer?.phone) {
+    return order.customer.phone;
+  }
+  return null;
+};
+
+/**
+ * Get delivery address from order data
+ * Handles different data structures
+ */
+const getDeliveryAddress = (order) => {
+  // POSOrderResponse structure
+  if (order.deliveryAddress) {
+    const addr = order.deliveryAddress;
+    const parts = [addr.street, addr.city, addr.state, addr.zipCode].filter(Boolean);
+    return {
+      address: parts.join(', '),
+      instructions: addr.deliveryInstructions
+    };
+  }
+  // Consumer OrderResponse structure
+  if (order.deliveryInfo) {
+    const addr = order.deliveryInfo;
+    const parts = [addr.address || addr.deliveryAddress, addr.city, addr.state, addr.zipCode].filter(Boolean);
+    return {
+      address: parts.join(', '),
+      instructions: addr.deliveryInstructions,
+      courierName: addr.courierName,
+      courierPhone: addr.courierPhone
+    };
+  }
+  return null;
+};
+
+/**
+ * Get order type label in Uzbek
+ */
+const getOrderTypeLabel = (orderType) => {
+  const labels = {
+    'DELIVERY': 'YETKAZIB BERISH',
+    'TAKEAWAY': 'OLIB KETISH',
+    'DINE_IN': 'JOYIDA'
+  };
+  return labels[orderType] || orderType;
+};
+
 const PrintReceipt = (order, onPrint) => {
   const printWindow = window.open('', '_blank');
   const receiptHTML = generateReceiptHTML(order);
@@ -285,6 +358,12 @@ const generateReceiptHTML = (order) => {
         <span>Sana:</span>
         <span>${currentDate}</span>
       </div>
+      ${order.orderType && order.orderType !== 'DINE_IN' ? `
+      <div class="info-row">
+        <span>Turi:</span>
+        <span style="font-weight:bold;">${getOrderTypeLabel(order.orderType)}</span>
+      </div>
+      ` : ''}
       ${getTableNumber(order) ? `
       <div class="info-row">
         <span>Stol:</span>
@@ -298,6 +377,56 @@ const generateReceiptHTML = (order) => {
       </div>
       ` : ''}
     </div>
+
+    ${(() => {
+      const customerName = getCustomerName(order);
+      const customerPhone = getCustomerPhone(order);
+      const deliveryAddr = getDeliveryAddress(order);
+      const hasCustomerInfo = customerName || customerPhone || deliveryAddr;
+
+      if (!hasCustomerInfo) return '';
+
+      return `
+    <div class="info-section">
+      ${customerName ? `
+      <div class="info-row">
+        <span>Mijoz:</span>
+        <span>${truncate(customerName, 18)}</span>
+      </div>
+      ` : ''}
+      ${customerPhone ? `
+      <div class="info-row">
+        <span>Tel:</span>
+        <span>${customerPhone}</span>
+      </div>
+      ` : ''}
+      ${deliveryAddr?.address ? `
+      <div style="margin-top:2px;">
+        <div style="font-weight:bold;">Manzil:</div>
+        <div style="font-size:13px;">${truncate(deliveryAddr.address, 40)}</div>
+      </div>
+      ` : ''}
+      ${deliveryAddr?.instructions ? `
+      <div style="margin-top:2px;">
+        <div style="font-weight:bold;font-size:12px;">Izoh:</div>
+        <div style="font-size:12px;">${truncate(deliveryAddr.instructions, 35)}</div>
+      </div>
+      ` : ''}
+      ${deliveryAddr?.courierName ? `
+      <div class="info-row" style="margin-top:2px;">
+        <span>Kuryer:</span>
+        <span>${truncate(deliveryAddr.courierName, 15)}</span>
+      </div>
+      ` : ''}
+      ${deliveryAddr?.courierPhone ? `
+      <div class="info-row">
+        <span>Kuryer tel:</span>
+        <span>${deliveryAddr.courierPhone}</span>
+      </div>
+      ` : ''}
+    </div>
+      `;
+    })()}
 
     <div class="separator">--------------------------------</div>
 
