@@ -598,8 +598,8 @@ export default function WaiterPerformance() {
                 className="border rounded-lg px-3 py-2 min-w-[200px]"
               >
                 <option value="">{t('waiterPerformance.details.chooseWaiter', '-- Choose a waiter --')}</option>
-                {leaderboard.map((entry) => (
-                  <option key={entry.waiterId} value={entry.waiterId}>{entry.waiterName}</option>
+                {waiters.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
                 ))}
               </select>
             </div>
@@ -785,8 +785,8 @@ export default function WaiterPerformance() {
                 className="border rounded-lg px-3 py-2 min-w-[200px]"
               >
                 <option value="">{t('waiterPerformance.details.chooseWaiter', '-- Choose a waiter --')}</option>
-                {leaderboard.map((entry) => (
-                  <option key={entry.waiterId} value={entry.waiterId}>{entry.waiterName}</option>
+                {waiters.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
                 ))}
               </select>
             </div>
