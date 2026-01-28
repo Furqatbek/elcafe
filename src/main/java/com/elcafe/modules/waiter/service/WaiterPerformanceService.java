@@ -435,10 +435,10 @@ public class WaiterPerformanceService {
                     return WaiterLeaderboardEntry.builder()
                             .waiterId(waiterId)
                             .waiterName((String) row[1])
-                            .totalRevenue((BigDecimal) row[2])
+                            .totalRevenue(toBigDecimal(row[2]))
                             .totalOrders(((Number) row[3]).intValue())
-                            .avgRating(row[4] != null ? (BigDecimal) row[4] : null)
-                            .avgKpiScore(row[5] != null ? (BigDecimal) row[5] : null)
+                            .avgRating(row[4] != null ? toBigDecimal(row[4]) : null)
+                            .avgKpiScore(row[5] != null ? toBigDecimal(row[5]) : null)
                             .totalCommission(totalCommission)
                             .commissionPercent(commissionPercent)
                             .commissionEnabled(commissionEnabled)
@@ -555,5 +555,25 @@ public class WaiterPerformanceService {
                 performance.setBonusEarned(kpi.getBonusAmountPerThreshold().multiply(bonusMultiplier));
             }
         }
+    }
+
+    /**
+     * Helper method to safely convert database results to BigDecimal.
+     * Some databases return Double for aggregate functions like SUM/AVG.
+     */
+    private BigDecimal toBigDecimal(Object value) {
+        if (value == null) {
+            return BigDecimal.ZERO;
+        }
+        if (value instanceof BigDecimal) {
+            return (BigDecimal) value;
+        }
+        if (value instanceof Double) {
+            return BigDecimal.valueOf((Double) value);
+        }
+        if (value instanceof Number) {
+            return BigDecimal.valueOf(((Number) value).doubleValue());
+        }
+        return BigDecimal.ZERO;
     }
 }
