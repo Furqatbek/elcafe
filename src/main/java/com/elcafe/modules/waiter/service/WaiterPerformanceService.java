@@ -214,6 +214,7 @@ public class WaiterPerformanceService {
         WaiterPerformance performance = getOrCreateTodayPerformance(waiterId, restaurantId, today);
 
         performance.setComplimentsCount(performance.getComplimentsCount() + 1);
+        calculateAndUpdateKPIScore(performance, waiterId, restaurantId);
 
         performanceRepository.save(performance);
     }
@@ -347,6 +348,8 @@ public class WaiterPerformanceService {
                     .avgKpiScore(BigDecimal.ZERO)
                     .totalBonusEarned(BigDecimal.ZERO)
                     .workingDays(0)
+                    .complaintsCount(0)
+                    .complimentsCount(0)
                     .totalCommission(totalCommission)
                     .commissionPercent(commissionPercent)
                     .commissionEnabled(commissionEnabled)
@@ -372,6 +375,20 @@ public class WaiterPerformanceService {
                 .map(WaiterPerformance::getBonusEarned)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Aggregate complaints and compliments
+        int totalComplaints = performances.stream().mapToInt(WaiterPerformance::getComplaintsCount).sum();
+        int totalCompliments = performances.stream().mapToInt(WaiterPerformance::getComplimentsCount).sum();
+
+        // Calculate average customer rating
+        BigDecimal avgCustomerRating = performances.stream()
+                .filter(p -> p.getAvgCustomerRating() != null)
+                .map(WaiterPerformance::getAvgCustomerRating)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long ratedDays = performances.stream().filter(p -> p.getAvgCustomerRating() != null).count();
+        if (ratedDays > 0) {
+            avgCustomerRating = avgCustomerRating.divide(BigDecimal.valueOf(ratedDays), 2, RoundingMode.HALF_UP);
+        }
+
         return WaiterPerformanceSummary.builder()
                 .waiterId(waiterId)
                 .startDate(startDate)
@@ -383,6 +400,9 @@ public class WaiterPerformanceService {
                 .avgKpiScore(avgKpi)
                 .totalBonusEarned(totalBonus)
                 .workingDays(performances.size())
+                .complaintsCount(totalComplaints)
+                .complimentsCount(totalCompliments)
+                .avgCustomerRating(ratedDays > 0 ? avgCustomerRating : null)
                 .totalCommission(totalCommission)
                 .commissionPercent(commissionPercent)
                 .commissionEnabled(commissionEnabled)
