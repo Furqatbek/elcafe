@@ -228,10 +228,16 @@ public class WaiterService {
                 .orElseThrow(() -> new ResourceNotFoundException("Table not found with id: " + tableId));
 
         // Check if table already has an active assignment
-        waiterTableRepository.findByTableIdAndActiveTrue(tableId)
-                .ifPresent(wt -> {
-                    throw new BadRequestException("Table is already assigned to another waiter");
-                });
+        var existingAssignment = waiterTableRepository.findByTableIdAndActiveTrue(tableId);
+        if (existingAssignment.isPresent()) {
+            WaiterTable wt = existingAssignment.get();
+            if (wt.getWaiter().getId().equals(waiterId)) {
+                // Same waiter is already assigned to this table - no action needed
+                log.info("Waiter {} is already assigned to table {}", waiter.getName(), table.getTableNumber());
+                return;
+            }
+            throw new BadRequestException("Table is already assigned to another waiter");
+        }
 
         // Create new assignment
         WaiterTable assignment = WaiterTable.builder()
