@@ -140,10 +140,29 @@ export default function Orders() {
   const [splitPayments, setSplitPayments] = useState([]);
   const [currentSplitIndex, setCurrentSplitIndex] = useState(0);
 
+  // Section filter state
+  const [selectedSection, setSelectedSection] = useState('all');
+
   // Flatten tableOrders for notification tracking
   const allOrders = useMemo(() => {
     return Object.values(tableOrders).flat();
   }, [tableOrders]);
+
+  // Extract unique sections from tables
+  const availableSections = useMemo(() => {
+    const sections = tables
+      .map(t => t.section)
+      .filter(Boolean);
+    return [...new Set(sections)].sort();
+  }, [tables]);
+
+  // Filter tables by selected section
+  const filteredTables = useMemo(() => {
+    if (selectedSection === 'all') {
+      return tables;
+    }
+    return tables.filter(t => t.section === selectedSection);
+  }, [tables, selectedSection]);
 
   // Enable notifications for new orders
   useOrderNotifications(allOrders, {
@@ -822,13 +841,13 @@ export default function Orders() {
     return Math.max(0, tendered - totalWithFees);
   };
 
-  // Get table statistics
+  // Get table statistics (based on filtered tables)
   const getTableStats = () => {
     const stats = {
-      total: tables.length,
-      available: tables.filter(t => t.status === 'AVAILABLE').length,
-      occupied: tables.filter(t => t.status === 'OCCUPIED').length,
-      reserved: tables.filter(t => t.status === 'RESERVED').length,
+      total: filteredTables.length,
+      available: filteredTables.filter(t => t.status === 'AVAILABLE').length,
+      occupied: filteredTables.filter(t => t.status === 'OCCUPIED').length,
+      reserved: filteredTables.filter(t => t.status === 'RESERVED').length,
     };
     return stats;
   };
@@ -873,6 +892,23 @@ export default function Orders() {
             </SelectContent>
           </Select>
 
+          {/* Section Filter */}
+          {availableSections.length > 0 && (
+            <Select value={selectedSection} onValueChange={setSelectedSection}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder={t('orders.selectSection', 'Select Section')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('orders.allSections', 'All Sections')}</SelectItem>
+                {availableSections.map((section) => (
+                  <SelectItem key={section} value={section}>
+                    {section}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {/* Refresh Button */}
           <Button
             variant="outline"
@@ -910,23 +946,27 @@ export default function Orders() {
       <div className="flex-1 flex gap-4 overflow-hidden">
         {/* Tables Grid */}
         <div className={`${selectedTable ? 'w-2/3' : 'w-full'} overflow-auto transition-all duration-300`}>
-          {tables.length === 0 ? (
+          {filteredTables.length === 0 ? (
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center py-8">
                   <Utensils className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                   <p className="text-lg font-medium text-gray-900 mb-2">
-                    {t('orders.noTables', 'No Tables Found')}
+                    {selectedSection !== 'all'
+                      ? t('orders.noTablesInSection', 'No Tables in This Section')
+                      : t('orders.noTables', 'No Tables Found')}
                   </p>
                   <p className="text-muted-foreground">
-                    {t('orders.noTablesDesc', 'Add tables in the Restaurant settings')}
+                    {selectedSection !== 'all'
+                      ? t('orders.tryAnotherSection', 'Try selecting a different section')
+                      : t('orders.noTablesDesc', 'Add tables in the Restaurant settings')}
                   </p>
                 </div>
               </CardContent>
             </Card>
           ) : (
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              {tables.map((table) => {
+              {filteredTables.map((table) => {
                 const orders = tableOrders[table.id] || [];
                 const activeOrders = orders.filter(o => o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && o.status !== 'COMPLETED');
                 const hasOrders = activeOrders.length > 0;
