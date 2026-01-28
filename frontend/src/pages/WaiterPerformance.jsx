@@ -418,28 +418,24 @@ export default function WaiterPerformance() {
               {t('waiterPerformance.tabs.kpiSettings', 'KPI Settings')}
             </div>
           </button>
-          {selectedWaiter && (
-            <button
-              onClick={() => setActiveTab('details')}
-              className={`pb-2 px-1 border-b-2 ${activeTab === 'details' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
-            >
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                {t('waiterPerformance.tabs.details', 'Details')}
-              </div>
-            </button>
-          )}
-          {selectedWaiter && (
-            <button
-              onClick={() => setActiveTab('commission')}
-              className={`pb-2 px-1 border-b-2 ${activeTab === 'commission' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
-            >
-              <div className="flex items-center gap-2">
-                <Percent className="w-4 h-4" />
-                {t('waiterPerformance.tabs.commission', 'Commission')}
-              </div>
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab('details')}
+            className={`pb-2 px-1 border-b-2 ${activeTab === 'details' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
+          >
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              {t('waiterPerformance.tabs.details', 'Details')}
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab('commission')}
+            className={`pb-2 px-1 border-b-2 ${activeTab === 'commission' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
+          >
+            <div className="flex items-center gap-2">
+              <Percent className="w-4 h-4" />
+              {t('waiterPerformance.tabs.commission', 'Commission')}
+            </div>
+          </button>
         </div>
       </div>
 
@@ -588,9 +584,42 @@ export default function WaiterPerformance() {
       )}
 
       {/* Waiter Details Tab */}
-      {activeTab === 'details' && selectedWaiter && waiterPerformance && (
+      {activeTab === 'details' && (
         <div className="space-y-6">
+          {/* Waiter Selector */}
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">
+                {t('waiterPerformance.details.selectWaiter', 'Select Waiter')}:
+              </label>
+              <select
+                value={selectedWaiter || ''}
+                onChange={(e) => setSelectedWaiter(e.target.value ? Number(e.target.value) : null)}
+                className="border rounded-lg px-3 py-2 min-w-[200px]"
+              >
+                <option value="">{t('waiterPerformance.details.chooseWaiter', '-- Choose a waiter --')}</option>
+                {leaderboard.map((entry) => (
+                  <option key={entry.waiterId} value={entry.waiterId}>{entry.waiterName}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {!selectedWaiter && (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+              {t('waiterPerformance.details.pleaseSelectWaiter', 'Please select a waiter to view their performance details')}
+            </div>
+          )}
+
+          {selectedWaiter && !waiterPerformance && (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+              {t('waiterPerformance.loading', 'Loading...')}
+            </div>
+          )}
+
           {/* Summary Cards */}
+          {selectedWaiter && waiterPerformance && (
+          <>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="bg-white p-4 rounded-lg shadow">
               <div className="flex items-center gap-3">
@@ -736,17 +765,46 @@ export default function WaiterPerformance() {
           >
             &larr; {t('waiterPerformance.backToLeaderboard', 'Back to Leaderboard')}
           </button>
+          </>
+          )}
         </div>
       )}
 
       {/* Commission Tab */}
-      {activeTab === 'commission' && selectedWaiter && (
+      {activeTab === 'commission' && (
         <div className="space-y-6">
-          {commissionLoading ? (
+          {/* Waiter Selector */}
+          <div className="bg-white p-4 rounded-lg shadow">
+            <div className="flex items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">
+                {t('waiterPerformance.details.selectWaiter', 'Select Waiter')}:
+              </label>
+              <select
+                value={selectedWaiter || ''}
+                onChange={(e) => setSelectedWaiter(e.target.value ? Number(e.target.value) : null)}
+                className="border rounded-lg px-3 py-2 min-w-[200px]"
+              >
+                <option value="">{t('waiterPerformance.details.chooseWaiter', '-- Choose a waiter --')}</option>
+                {leaderboard.map((entry) => (
+                  <option key={entry.waiterId} value={entry.waiterId}>{entry.waiterName}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {!selectedWaiter && (
+            <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+              {t('waiterPerformance.commission.pleaseSelectWaiter', 'Please select a waiter to view their commission details')}
+            </div>
+          )}
+
+          {selectedWaiter && commissionLoading && (
             <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
               {t('waiterPerformance.loading', 'Loading...')}
             </div>
-          ) : commissionSummary ? (
+          )}
+
+          {selectedWaiter && !commissionLoading && commissionSummary && (
             <>
               {/* Commission Summary Cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -904,7 +962,9 @@ export default function WaiterPerformance() {
                 )}
               </div>
             </>
-          ) : (
+          )}
+
+          {selectedWaiter && !commissionLoading && !commissionSummary && (
             <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
               {t('waiterPerformance.commission.noData', 'No commission data available')}
             </div>
