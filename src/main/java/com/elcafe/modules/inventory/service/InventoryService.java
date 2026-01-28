@@ -129,8 +129,8 @@ public class InventoryService {
                     quantityRequired, ingredient.getUnit(), ingredient.getName(), order.getOrderNumber(),
                     consumptionResult != null ? " (cost: " + consumptionResult.totalCost() + ")" : "");
 
-            // Check for low stock and send alert
-            checkAndNotifyLowStock(ingredient, order.getRestaurant().getId());
+            // Check for low stock and send alert - use ingredient's restaurant ID since order.getRestaurant() may be null due to lazy loading
+            checkAndNotifyLowStock(ingredient, ingredient.getRestaurant().getId());
         }
     }
 
