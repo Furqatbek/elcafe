@@ -90,9 +90,20 @@ const PaymentScreen = () => {
   const serviceFee = currentOrder.serviceFee || 0;
   const entryFee = currentOrder.entryFee || 0;
   const discount = currentOrder.discount || 0;
-  const grandTotal = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
+  const calculatedTotal = Math.max(0, subtotal + tax + deliveryFee + serviceFee + entryFee - discount);
 
-  // For split payments
+  // Check if we're in split bill mode from SplitBillScreen
+  const isFromSplitBillScreen = splitBill.active && splitBill.currentSplitIndex !== null;
+
+  // Get the current split amount when in split bill mode
+  const currentSplitAmount = isFromSplitBillScreen
+    ? splitBill.result?.splits?.[splitBill.currentSplitIndex]?.amount || 0
+    : 0;
+
+  // Use split amount directly when in split bill mode, otherwise use calculated total
+  const grandTotal = isFromSplitBillScreen ? currentSplitAmount : calculatedTotal;
+
+  // For split payments (PaymentScreen's own split mode)
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
   const remainingBalance = grandTotal - totalPaid;
   const isFullyPaid = remainingBalance <= 0.01;
@@ -173,8 +184,7 @@ const PaymentScreen = () => {
       // Get restaurant ID from localStorage
       const restaurantId = parseInt(localStorage.getItem('selectedRestaurantId')) || 1;
 
-      // Check if we're paying a split from SplitBillScreen
-      const isFromSplitBillScreen = splitBill.active && splitBill.currentSplitIndex !== null;
+      // Note: isFromSplitBillScreen is defined at component level
 
       // If we have an existing order ID, update items and process payment
       if (currentOrder.id && !String(currentOrder.id).startsWith('temp-')) {
