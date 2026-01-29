@@ -565,17 +565,14 @@ public class WaiterOrderService {
     }
 
     /**
-     * Get order history for a waiter (completed and cancelled orders)
+     * Get order history for a waiter (all orders)
      */
     @Transactional(readOnly = true)
     public List<Order> getWaiterOrderHistory(Long waiterId) {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
-        return orderRepository.findByWaiterAndStatusInWithItemsOrderByCreatedAtDesc(
-                waiter,
-                List.of(OrderStatus.COMPLETED, OrderStatus.CANCELLED)
-        );
+        return orderRepository.findByWaiterWithItemsOrderByCreatedAtDesc(waiter);
     }
 
     /**

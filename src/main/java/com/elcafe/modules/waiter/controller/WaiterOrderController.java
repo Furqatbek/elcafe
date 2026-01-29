@@ -150,7 +150,7 @@ public class WaiterOrderController {
 
     @GetMapping("/waiter/{waiterId}/history")
     @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR', 'ADMIN', 'OPERATOR')")
-    @Operation(summary = "Get waiter order history", description = "Get all completed and cancelled orders for a waiter")
+    @Operation(summary = "Get waiter order history", description = "Get all orders for a waiter")
     public ResponseEntity<ApiResponse<List<Order>>> getWaiterOrderHistory(
             @PathVariable Long waiterId) {
         List<Order> orders = waiterOrderService.getWaiterOrderHistory(waiterId);

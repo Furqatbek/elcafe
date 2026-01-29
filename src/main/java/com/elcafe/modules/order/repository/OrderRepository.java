@@ -66,6 +66,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.waiter = :waiter AND o.status IN :statuses ORDER BY o.createdAt DESC")
     List<Order> findByWaiterAndStatusInWithItemsOrderByCreatedAtDesc(@Param("waiter") Waiter waiter, @Param("statuses") List<OrderStatus> statuses);
 
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.waiter = :waiter ORDER BY o.createdAt DESC")
+    List<Order> findByWaiterWithItemsOrderByCreatedAtDesc(@Param("waiter") Waiter waiter);
+
     List<Order> findByRestaurant_IdAndStatus(Long restaurantId, OrderStatus status);
 
     // Find active orders by table
