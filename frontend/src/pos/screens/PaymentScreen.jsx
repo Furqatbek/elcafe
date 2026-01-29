@@ -40,6 +40,9 @@ const PaymentScreen = () => {
     setServiceFee,
     fetchActiveHappyHour,
     applyHappyHour,
+    splitBill,
+    markSplitAsPaid,
+    clearSplitBill,
   } = usePOSStore();
 
   // Get restaurant ID
@@ -170,34 +173,38 @@ const PaymentScreen = () => {
       // Get restaurant ID from localStorage
       const restaurantId = parseInt(localStorage.getItem('selectedRestaurantId')) || 1;
 
+      // Check if we're paying a split from SplitBillScreen
+      const isFromSplitBillScreen = splitBill.active && splitBill.currentSplitIndex !== null;
+
       // If we have an existing order ID, update items and process payment
       if (currentOrder.id && !String(currentOrder.id).startsWith('temp-')) {
-        // First, sync any item changes to the backend
-        // Get the current items from the backend to compare
-        try {
-          const orderResponse = await posAPI.getOrderById(currentOrder.id);
-          const backendItems = orderResponse.data.data?.items || [];
-          const backendItemIds = new Set(backendItems.map(item => item.id));
+        // First, sync any item changes to the backend (skip for split bill mode)
+        if (!isFromSplitBillScreen) {
+          try {
+            const orderResponse = await posAPI.getOrderById(currentOrder.id);
+            const backendItems = orderResponse.data.data?.items || [];
+            const backendItemIds = new Set(backendItems.map(item => item.id));
 
-          // Add new items that don't exist in the backend
-          for (const item of currentOrder.items) {
-            if (!backendItemIds.has(item.id) && !String(item.id).includes('-')) {
-              // This is a new item, add it to the order
-              await posAPI.addItemToOrder(currentOrder.id, {
-                productId: item.productId,
-                quantity: item.quantity,
-                price: item.basePrice,
-                modifiers: item.modifiers?.map(mod => ({
-                  name: mod.name,
-                  price: mod.price,
-                })) || [],
-                notes: item.notes || '',
-              });
+            // Add new items that don't exist in the backend
+            for (const item of currentOrder.items) {
+              if (!backendItemIds.has(item.id) && !String(item.id).includes('-')) {
+                // This is a new item, add it to the order
+                await posAPI.addItemToOrder(currentOrder.id, {
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  price: item.basePrice,
+                  modifiers: item.modifiers?.map(mod => ({
+                    name: mod.name,
+                    price: mod.price,
+                  })) || [],
+                  notes: item.notes || '',
+                });
+              }
             }
+          } catch (syncError) {
+            console.error('Failed to sync items:', syncError);
+            // Continue with payment even if sync fails
           }
-        } catch (syncError) {
-          console.error('Failed to sync items:', syncError);
-          // Continue with payment even if sync fails
         }
 
         // Process payment via API
@@ -209,8 +216,46 @@ const PaymentScreen = () => {
           transactionId: paymentData.transactionId,
         });
 
+        // Handle split bill payment from SplitBillScreen
+        if (isFromSplitBillScreen) {
+          // Mark this split as paid in the store
+          markSplitAsPaid(splitBill.currentSplitIndex, paymentData.method);
+
+          // Check if all splits are now paid
+          const updatedSplits = splitBill.result?.splits?.map((split, idx) =>
+            idx === splitBill.currentSplitIndex ? { ...split, paid: true } : split
+          );
+          const allPaid = updatedSplits?.every(split => split.paid);
+
+          if (allPaid) {
+            // All splits paid - close order and release table
+            await posAPI.closeOrder(currentOrder.id);
+            setPaymentStatus('COMPLETED');
+            printOrderReceipt(response.data.data?.orderNumber || currentOrder.orderNumber);
+            clearSplitBill();
+            completeOrder();
+          } else {
+            // More splits to pay - go back to split bill screen
+            setCurrentScreen('split-bill');
+          }
+
+          // Close dialogs
+          setShowCashDialog(false);
+          setShowCardDialog(false);
+
+          // Refresh floor plan
+          if (currentOrder.type === 'DINE_IN') {
+            try {
+              await fetchFloorPlan(restaurantId);
+            } catch (e) {
+              console.error('Failed to refresh floor plan:', e);
+            }
+          }
+          return;
+        }
+
         if (splitPaymentMode) {
-          // Add to payments list
+          // Add to payments list (PaymentScreen's own split mode)
           setPayments(prev => [...prev, {
             ...paymentData,
             id: response.data.data?.paymentId || Date.now(),
@@ -480,7 +525,14 @@ const PaymentScreen = () => {
           <TouchButton
             variant="ghost"
             size="medium"
-            onClick={() => setCurrentScreen('details')}
+            onClick={() => {
+              // If in split bill mode, go back to split bill screen
+              if (splitBill.active) {
+                setCurrentScreen('split-bill');
+              } else {
+                setCurrentScreen('details');
+              }
+            }}
             icon={<ChevronLeft className="w-5 sm:w-6 h-5 sm:h-6" />}
             disabled={processingPayment}
             className="!px-2 sm:!px-4"
@@ -491,9 +543,11 @@ const PaymentScreen = () => {
           <div className="text-center flex-1">
             <h1 className="text-lg sm:text-2xl font-bold text-gray-900">{t('pos.payment.title', 'Payment')}</h1>
             <p className="text-xs sm:text-sm text-gray-600">
-              {splitPaymentMode
-                ? t('pos.payment.splitPaymentMode', 'Split Payment Mode')
-                : t('pos.payment.selectMethod', 'Select payment method')
+              {splitBill.active && splitBill.currentSplitIndex !== null
+                ? t('pos.payment.splitBillPayment', 'Split Bill - Person {{num}}', { num: splitBill.currentSplitIndex + 1 })
+                : splitPaymentMode
+                  ? t('pos.payment.splitPaymentMode', 'Split Payment Mode')
+                  : t('pos.payment.selectMethod', 'Select payment method')
               }
             </p>
           </div>

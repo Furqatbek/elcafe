@@ -98,6 +98,15 @@ const usePOSStore = create(
       // Active Order for modification/split (existing order from backend)
       activeOrder: null,
 
+      // Split Bill State (for split bill flow from SplitBillScreen)
+      splitBill: {
+        active: false,           // Whether we're in split bill mode
+        result: null,            // The split result from backend (SplitBillResponse)
+        currentSplitIndex: null, // Index of the split currently being paid
+        originalOrderTotal: 0,   // Original order total before splitting
+        paidSplits: [],          // Array of split indices that have been paid
+      },
+
       // Happy Hour State
       happyHour: {
         active: null, // Current active happy hour info
@@ -797,6 +806,87 @@ const usePOSStore = create(
         },
       }),
 
+      // Actions: Split Bill Management
+      setSplitBillResult: (result, originalTotal) => set({
+        splitBill: {
+          active: true,
+          result,
+          currentSplitIndex: null,
+          originalOrderTotal: originalTotal,
+          paidSplits: [],
+        },
+      }),
+
+      startPayingSplit: (splitIndex) => set((state) => {
+        const split = state.splitBill.result?.splits?.[splitIndex];
+        if (!split) return state;
+
+        return {
+          splitBill: {
+            ...state.splitBill,
+            currentSplitIndex: splitIndex,
+          },
+          // Update currentOrder with split amount for payment
+          currentOrder: {
+            ...state.currentOrder,
+            // Keep the original order ID
+            id: state.splitBill.result?.orderId || state.currentOrder.id,
+            orderNumber: state.splitBill.result?.orderNumber || state.currentOrder.orderNumber,
+            // Set total to split amount
+            total: split.amount,
+            subtotal: split.amount,
+            // Reset fees for split payment (they're included in split amount)
+            tax: 0,
+            deliveryFee: 0,
+            serviceFee: 0,
+            entryFee: 0,
+            discount: 0,
+          },
+          payment: {
+            method: null,
+            amountTendered: 0,
+            changeDue: 0,
+            status: 'PENDING',
+          },
+          ui: { ...state.ui, currentScreen: 'payment' },
+        };
+      }),
+
+      markSplitAsPaid: (splitIndex, paymentMethod) => set((state) => {
+        const newPaidSplits = [...state.splitBill.paidSplits, splitIndex];
+        const updatedSplits = state.splitBill.result?.splits?.map((split, idx) =>
+          idx === splitIndex ? { ...split, paid: true, paymentMethod } : split
+        );
+
+        return {
+          splitBill: {
+            ...state.splitBill,
+            result: {
+              ...state.splitBill.result,
+              splits: updatedSplits,
+            },
+            currentSplitIndex: null,
+            paidSplits: newPaidSplits,
+          },
+        };
+      }),
+
+      isAllSplitsPaid: () => {
+        const state = get();
+        if (!state.splitBill.active || !state.splitBill.result?.splits) return false;
+        return state.splitBill.result.splits.every(split => split.paid);
+      },
+
+      clearSplitBill: () => set({
+        splitBill: {
+          active: false,
+          result: null,
+          currentSplitIndex: null,
+          originalOrderTotal: 0,
+          paidSplits: [],
+        },
+      }),
+
       // Actions: Customer Management
       setCustomerInfo: (customer) => set({ customer: { ...get().customer, ...customer } }),
 
@@ -1338,6 +1428,13 @@ const usePOSStore = create(
           },
           selectedTables: [],
           activeOrder: null,
+          splitBill: {
+            active: false,
+            result: null,
+            currentSplitIndex: null,
+            originalOrderTotal: 0,
+            paidSplits: [],
+          },
           // Preserve menu data
           menu: state.menu,
           floorPlan: state.floorPlan,
@@ -1408,6 +1505,13 @@ const usePOSStore = create(
           },
           selectedTables: [],
           activeOrder: null,
+          splitBill: {
+            active: false,
+            result: null,
+            currentSplitIndex: null,
+            originalOrderTotal: 0,
+            paidSplits: [],
+          },
           // Preserve menu data
           menu: state.menu,
           floorPlan: state.floorPlan,

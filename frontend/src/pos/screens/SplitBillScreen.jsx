@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -23,7 +23,14 @@ import { posAPI } from '../../services/api';
  */
 const SplitBillScreen = () => {
   const { t } = useTranslation();
-  const { activeOrder, setCurrentScreen, ui } = usePOSStore();
+  const {
+    activeOrder,
+    setCurrentScreen,
+    splitBill,
+    setSplitBillResult,
+    startPayingSplit,
+    clearSplitBill,
+  } = usePOSStore();
 
   const [mode, setMode] = useState(null); // 'ITEMS' | 'EVEN' | 'AMOUNT'
   const [numPeople, setNumPeople] = useState(2);
@@ -32,8 +39,17 @@ const SplitBillScreen = () => {
   const [_selectedPerson, _setSelectedPerson] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [splitResult, setSplitResult] = useState(null);
+  // Use split result from store if available (returning from payment), otherwise local state
+  const [splitResult, setSplitResult] = useState(splitBill.result || null);
   const [_editingAmountIndex, _setEditingAmountIndex] = useState(null);
+
+  // Sync local splitResult with store's splitBill.result when it changes
+  // This handles the case when user returns from payment screen with updated paid status
+  useEffect(() => {
+    if (splitBill.result) {
+      setSplitResult(splitBill.result);
+    }
+  }, [splitBill.result]);
 
   const order = activeOrder;
 
@@ -132,7 +148,10 @@ const SplitBillScreen = () => {
       }
 
       const response = await posAPI.splitBill(order.id, splitData);
-      setSplitResult(response.data.data);
+      const result = response.data.data;
+      setSplitResult(result);
+      // Store in POS store for PaymentScreen to access
+      setSplitBillResult(result, order.total);
     } catch (err) {
       console.error('Failed to split bill:', err);
       setError(err.response?.data?.message || t('pos.split.error', 'Failed to split bill'));
@@ -141,24 +160,9 @@ const SplitBillScreen = () => {
     }
   };
 
-  const handlePaySplit = (split) => {
-    // Navigate to payment with the split amount
-    usePOSStore.setState({
-      currentOrder: {
-        ...usePOSStore.getState().currentOrder,
-        id: order.id,
-        orderNumber: order.orderNumber,
-        total: split.amount,
-        subtotal: split.amount,
-      },
-      payment: {
-        method: null,
-        amountTendered: 0,
-        changeDue: 0,
-        status: 'PENDING',
-      },
-      ui: { ...ui, currentScreen: 'payment' },
-    });
+  const handlePaySplit = (split, splitIndex) => {
+    // Use store action to properly set up split payment
+    startPayingSplit(splitIndex);
   };
 
   if (!order) {
@@ -247,7 +251,7 @@ const SplitBillScreen = () => {
                       <TouchButton
                         variant="success"
                         size="medium"
-                        onClick={() => handlePaySplit(split)}
+                        onClick={() => handlePaySplit(split, idx)}
                       >
                         <CreditCard className="w-5 h-5 mr-2" />
                         {t('pos.split.payNow', 'Pay Now')}
@@ -265,14 +269,33 @@ const SplitBillScreen = () => {
               </div>
             </div>
 
-            <TouchButton
-              variant="secondary"
-              size="large"
-              className="w-full mt-6"
-              onClick={() => setCurrentScreen('active-orders')}
-            >
-              {t('pos.orders.backToOrders', 'Back to Orders')}
-            </TouchButton>
+            {/* Check if all splits are paid */}
+            {splitResult.splits?.every(s => s.paid) ? (
+              <TouchButton
+                variant="success"
+                size="large"
+                className="w-full mt-6"
+                onClick={() => {
+                  clearSplitBill();
+                  setCurrentScreen('active-orders');
+                }}
+              >
+                <Check className="w-5 h-5 mr-2" />
+                {t('pos.split.allPaid', 'All Paid - Done')}
+              </TouchButton>
+            ) : (
+              <TouchButton
+                variant="secondary"
+                size="large"
+                className="w-full mt-6"
+                onClick={() => {
+                  clearSplitBill();
+                  setCurrentScreen('active-orders');
+                }}
+              >
+                {t('pos.orders.backToOrders', 'Back to Orders')}
+              </TouchButton>
+            )}
           </div>
         </div>
       </div>
