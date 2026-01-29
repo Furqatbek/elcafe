@@ -22,7 +22,10 @@ export function CustomerProvider({ children }) {
   const validateSession = async (token) => {
     try {
       const response = await selfServiceAPI.getSession(token);
-      setSession({ ...response.data, sessionToken: token });
+      // Derive originalCode for restored sessions to prevent infinite loops on page refresh
+      // TAKEAWAY orders have tableCode: null but we need to track them as "TAKEAWAY"
+      const originalCode = response.data.tableCode || (response.data.orderType === 'TAKEAWAY' ? 'TAKEAWAY' : null);
+      setSession({ ...response.data, sessionToken: token, originalCode });
       await loadCart(token);
     } catch (err) {
       console.error('Session validation failed:', err);
@@ -45,7 +48,9 @@ export function CustomerProvider({ children }) {
       const response = await selfServiceAPI.startSession(code);
       const { sessionToken } = response.data;
       localStorage.setItem('self_service_token', sessionToken);
-      setSession(response.data);
+      // Store the original code used to start the session to prevent infinite loops
+      // (e.g., TAKEAWAY returns tableCode: null but we need to remember we started with "TAKEAWAY")
+      setSession({ ...response.data, originalCode: code });
       setCart({ items: [], itemCount: 0, total: 0 });
       return response.data;
     } catch (err) {

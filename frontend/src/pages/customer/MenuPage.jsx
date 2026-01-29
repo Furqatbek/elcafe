@@ -63,8 +63,8 @@ export default function MenuPage() {
       // Check if we need to start a new session:
       // 1. No existing session and we have a table code
       // 2. Existing session but for a different QR code (user scanned a different table)
-      // 3. Existing session has no tableCode (old session or takeaway) but URL has tableCode
-      const needsNewSession = tableCode && (!session || session.tableCode !== tableCode);
+      // Use originalCode for comparison since TAKEAWAY orders return tableCode: null
+      const needsNewSession = tableCode && (!session || session.originalCode !== tableCode);
 
       if (needsNewSession) {
         try {
