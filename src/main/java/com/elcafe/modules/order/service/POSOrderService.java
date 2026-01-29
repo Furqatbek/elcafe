@@ -367,6 +367,19 @@ public class POSOrderService {
                 .build();
     }
 
+    /**
+     * Get the order type string from an order.
+     * Uses the actual orderType field if available, with fallback to inference for backward compatibility.
+     */
+    private String getOrderTypeString(Order order) {
+        if (order.getOrderType() != null) {
+            return order.getOrderType().name();
+        }
+        // Fallback: infer from related entities for orders that may not have orderType set
+        return order.getDiningTable() != null ? "DINE_IN" :
+                (order.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
+    }
+
     private POSOrderResponse mapToResponse(Order order, String orderType) {
         // Handle null customer
         String customerName = null;
@@ -535,10 +548,7 @@ public class POSOrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
 
-        String orderType = order.getDiningTable() != null ? "DINE_IN" :
-                (order.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(order, orderType);
+        return mapToResponse(order, getOrderTypeString(order));
     }
 
     /**
@@ -607,10 +617,7 @@ public class POSOrderService {
         // The full order deduction happens via deductIngredientsForOrder()
         log.info("Item added to order: {}", orderId);
 
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     /**
@@ -646,10 +653,7 @@ public class POSOrderService {
         // Note: Inventory adjustment for removed items would need to be handled separately
         log.info("Item {} removed from order: {}", itemId, orderId);
 
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     /**
@@ -701,10 +705,7 @@ public class POSOrderService {
         // Note: Inventory adjustment for quantity changes would need to be handled separately
         log.info("Item {} quantity updated to {} in order: {}", itemId, newQuantity, orderId);
 
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     private boolean canModifyOrder(Order order) {
@@ -909,10 +910,7 @@ public class POSOrderService {
 
         log.info("Service fee applied to order {}: fee={}, newTotal={}", orderId, serviceFee, total);
 
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     /**
@@ -959,10 +957,7 @@ public class POSOrderService {
 
         log.info("Service fee amount applied to order {}: fee={}, newTotal={}", orderId, serviceFeeAmount, total);
 
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     // ==================== ENTRY FEE METHODS ====================
@@ -1003,10 +998,7 @@ public class POSOrderService {
 
         log.info("Entry fee applied to order {}: fee={}, newTotal={}", orderId, entryFeeAmount, total);
 
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     // ==================== CLOSE ORDER / TABLE METHODS ====================
@@ -1053,11 +1045,7 @@ public class POSOrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        // Determine order type for response
-        String orderType = order.getDiningTable() != null ? "DINE_IN" :
-                (order.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     @Transactional
@@ -1226,10 +1214,7 @@ public class POSOrderService {
         log.info("Discount applied to order {}: discount={}, newTotal={}",
                 orderId, savedOrder.getDiscount(), savedOrder.getTotal());
 
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     /**
@@ -1255,10 +1240,7 @@ public class POSOrderService {
 
         log.info("Discount removed from order {}: newTotal={}", orderId, savedOrder.getTotal());
 
-        String orderType = savedOrder.getDiningTable() != null ? "DINE_IN" :
-                (savedOrder.getDeliveryInfo() != null ? "DELIVERY" : "TAKEAWAY");
-
-        return mapToResponse(savedOrder, orderType);
+        return mapToResponse(savedOrder, getOrderTypeString(savedOrder));
     }
 
     /**
