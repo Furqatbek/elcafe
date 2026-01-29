@@ -85,6 +85,26 @@ const getDeliveryAddress = (order) => {
 };
 
 /**
+ * Get waiter name from order data
+ * Handles different data structures:
+ * - order.waiter.name (legacy format)
+ * - order.waiter.firstName/lastName (current backend format)
+ */
+const getWaiterName = (order) => {
+  if (!order.waiter) return null;
+
+  // Try firstName/lastName (current backend format)
+  if (order.waiter.firstName || order.waiter.lastName) {
+    return `${order.waiter.firstName || ''} ${order.waiter.lastName || ''}`.trim();
+  }
+  // Fallback to name field
+  if (order.waiter.name) {
+    return order.waiter.name;
+  }
+  return null;
+};
+
+/**
  * Get order type label in Uzbek
  */
 const getOrderTypeLabel = (orderType) => {
@@ -370,10 +390,10 @@ const generateReceiptHTML = (order) => {
         <span>${getTableNumber(order)}</span>
       </div>
       ` : ''}
-      ${order.waiter?.name ? `
+      ${getWaiterName(order) ? `
       <div class="info-row">
         <span>Ofitsiant:</span>
-        <span>${truncate(order.waiter.name, 15)}</span>
+        <span>${truncate(getWaiterName(order), 15)}</span>
       </div>
       ` : ''}
     </div>
