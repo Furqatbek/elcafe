@@ -103,7 +103,8 @@ api.interceptors.response.use(
         // Only redirect to login if we're on the admin app (not customer/order pages)
         const isCustomerApp = window.location.pathname.startsWith('/order');
         if (!isCustomerApp) {
-          window.location.href = '/login';
+          // Use /admin/login since the admin app uses basename="/admin"
+          window.location.href = '/admin/login';
         }
         return Promise.reject(refreshError);
       }
