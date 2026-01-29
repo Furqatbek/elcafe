@@ -228,8 +228,73 @@ public class Order {
     private LocalDateTime updatedAt;
 
     public void addItem(OrderItem item) {
-        items.add(item);
-        item.setOrder(this);
+        // Check if an identical item already exists (same product, variant, addOns, specialInstructions)
+        OrderItem existingItem = findMatchingItem(item);
+
+        if (existingItem != null) {
+            // Consolidate: update quantity and total price
+            existingItem.setQuantity(existingItem.getQuantity() + item.getQuantity());
+            existingItem.setTotalPrice(existingItem.getUnitPrice().multiply(
+                    java.math.BigDecimal.valueOf(existingItem.getQuantity())));
+        } else {
+            // Add as new item
+            items.add(item);
+            item.setOrder(this);
+        }
+    }
+
+    /**
+     * Find an existing item that matches the given item's product, variant, addOns, and special instructions.
+     * Returns null if no matching item is found.
+     */
+    private OrderItem findMatchingItem(OrderItem newItem) {
+        for (OrderItem existing : items) {
+            if (itemsMatch(existing, newItem)) {
+                return existing;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check if two order items match (same product, variant, addOns, special instructions, and bundle).
+     */
+    private boolean itemsMatch(OrderItem existing, OrderItem newItem) {
+        // Must have same productId
+        if (!existing.getProductId().equals(newItem.getProductId())) {
+            return false;
+        }
+
+        // Must have same variantId (both null or same value)
+        if (!java.util.Objects.equals(existing.getVariantId(), newItem.getVariantId())) {
+            return false;
+        }
+
+        // Must have same addOns (both null/empty or same value)
+        String existingAddOns = existing.getAddOns() != null ? existing.getAddOns().trim() : "";
+        String newAddOns = newItem.getAddOns() != null ? newItem.getAddOns().trim() : "";
+        if (!existingAddOns.equals(newAddOns)) {
+            return false;
+        }
+
+        // Must have same specialInstructions (both null/empty or same value)
+        String existingInstructions = existing.getSpecialInstructions() != null ? existing.getSpecialInstructions().trim() : "";
+        String newInstructions = newItem.getSpecialInstructions() != null ? newItem.getSpecialInstructions().trim() : "";
+        if (!existingInstructions.equals(newInstructions)) {
+            return false;
+        }
+
+        // Must have same bundleId (both null or same value)
+        if (!java.util.Objects.equals(existing.getBundleId(), newItem.getBundleId())) {
+            return false;
+        }
+
+        // Must have same unit price
+        if (existing.getUnitPrice().compareTo(newItem.getUnitPrice()) != 0) {
+            return false;
+        }
+
+        return true;
     }
 
     public void addStatusHistory(OrderStatusHistory history) {
