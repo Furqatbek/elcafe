@@ -996,7 +996,7 @@ export default function Orders() {
                     {/* Table Info */}
                     <div className="text-center">
                       <p className="font-medium text-sm truncate">
-                        {table.tableName || `Table ${table.tableNumber}`}
+                        {table.tableName || table.tableNumber}
                       </p>
                       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                         <Users className="h-3 w-3" />
