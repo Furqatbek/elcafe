@@ -37,7 +37,7 @@ public class Waiter {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, unique = true, length = 6)
+    @Column(nullable = false, unique = true, length = 10)
     private String pinCode;
 
     @Column(unique = true, length = 100)

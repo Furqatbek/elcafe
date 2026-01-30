@@ -107,7 +107,7 @@ public class Order {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal discount;
 
-    @Column(name = "coupon_code", length = 100)
+    @Column(name = "coupon_code", length = 50)
     private String couponCode;
 
     @Column(name = "discount_type", length = 50)
