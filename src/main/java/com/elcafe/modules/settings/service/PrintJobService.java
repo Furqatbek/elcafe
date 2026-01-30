@@ -256,13 +256,16 @@ public class PrintJobService {
 
     /**
      * Get table number from order
+     * Uses the new getTables() helper method from Order entity
      */
     private String getTableNumberFromOrder(Order order) {
-        if (order.getDiningTable() != null && order.getDiningTable().getTableNumber() != null) {
-            return order.getDiningTable().getTableNumber();
-        }
-        if (order.getTableIds() != null && !order.getTableIds().isEmpty()) {
-            return order.getTableIds();
+        // Use the new helper method to get all tables
+        java.util.List<com.elcafe.modules.restaurant.entity.RestaurantTable> tables = order.getTables();
+        if (tables != null && !tables.isEmpty()) {
+            return tables.stream()
+                    .map(com.elcafe.modules.restaurant.entity.RestaurantTable::getTableNumber)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.joining(", "));
         }
         return null;
     }

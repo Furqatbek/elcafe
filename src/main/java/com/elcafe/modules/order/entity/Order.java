@@ -38,7 +38,14 @@ import java.util.List;
     attributeNodes = {
         @NamedAttributeNode("items"),
         @NamedAttributeNode("diningTable"),
-        @NamedAttributeNode("waiter")
+        @NamedAttributeNode("waiter"),
+        @NamedAttributeNode(value = "orderTables", subgraph = "orderTables-subgraph")
+    },
+    subgraphs = {
+        @NamedSubgraph(
+            name = "orderTables-subgraph",
+            attributeNodes = @NamedAttributeNode("table")
+        )
     }
 )
 public class Order {
@@ -65,9 +72,21 @@ public class Order {
     @JsonIgnoreProperties({"orders", "restaurant", "waiterTables", "hibernateLazyInitializer", "handler"})
     private RestaurantTable diningTable;
 
-    // For multi-table orders: comma-separated table IDs (e.g., "1,2,3")
+    /**
+     * @deprecated Use {@link #orderTables} instead. This field is kept for backward compatibility
+     * during migration and will be removed in a future version.
+     */
+    @Deprecated
     @Column(name = "table_ids", length = 255)
     private String tableIds;
+
+    /**
+     * Tables associated with this order (for multi-table dine-in orders).
+     * This replaces the deprecated tableIds comma-separated string field.
+     */
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<OrderTable> orderTables = new ArrayList<>();
 
     // Guest count for dine-in orders
     @Column(name = "guest_count")
@@ -407,5 +426,122 @@ public class Order {
         if (grandTotal == null || grandTotal.compareTo(BigDecimal.ZERO) == 0) {
             grandTotal = total.add(tipAmount != null ? tipAmount : BigDecimal.ZERO);
         }
+    }
+
+    // ==================== ORDER TABLES HELPER METHODS ====================
+
+    /**
+     * Add a table to this order.
+     * @param table the restaurant table to add
+     * @param isPrimary whether this is the primary table for the order
+     */
+    public void addTable(com.elcafe.modules.restaurant.entity.RestaurantTable table, boolean isPrimary) {
+        if (orderTables == null) {
+            orderTables = new ArrayList<>();
+        }
+        OrderTable orderTable = OrderTable.builder()
+                .order(this)
+                .table(table)
+                .isPrimary(isPrimary)
+                .build();
+        orderTables.add(orderTable);
+
+        // Maintain backward compatibility with diningTable field
+        if (isPrimary) {
+            this.diningTable = table;
+        }
+    }
+
+    /**
+     * Add a table to this order (non-primary).
+     */
+    public void addTable(com.elcafe.modules.restaurant.entity.RestaurantTable table) {
+        addTable(table, false);
+    }
+
+    /**
+     * Remove a table from this order.
+     */
+    public void removeTable(com.elcafe.modules.restaurant.entity.RestaurantTable table) {
+        if (orderTables != null) {
+            orderTables.removeIf(ot -> ot.getTable().getId().equals(table.getId()));
+        }
+        if (diningTable != null && diningTable.getId().equals(table.getId())) {
+            this.diningTable = null;
+        }
+    }
+
+    /**
+     * Clear all tables from this order.
+     */
+    public void clearTables() {
+        if (orderTables != null) {
+            orderTables.clear();
+        }
+        this.diningTable = null;
+    }
+
+    /**
+     * Get all table IDs associated with this order.
+     * Uses the new orderTables relationship, with fallback to deprecated tableIds field.
+     */
+    public List<Long> getTableIdList() {
+        // Prefer the new relationship
+        if (orderTables != null && !orderTables.isEmpty()) {
+            return orderTables.stream()
+                    .map(ot -> ot.getTable().getId())
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        // Fallback to deprecated tableIds field for backward compatibility
+        if (tableIds != null && !tableIds.isBlank()) {
+            return java.util.Arrays.stream(tableIds.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(Long::parseLong)
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        // Fallback to diningTable field
+        if (diningTable != null) {
+            return List.of(diningTable.getId());
+        }
+        return java.util.Collections.emptyList();
+    }
+
+    /**
+     * Get all tables associated with this order.
+     */
+    public List<com.elcafe.modules.restaurant.entity.RestaurantTable> getTables() {
+        if (orderTables != null && !orderTables.isEmpty()) {
+            return orderTables.stream()
+                    .map(OrderTable::getTable)
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        if (diningTable != null) {
+            return List.of(diningTable);
+        }
+        return java.util.Collections.emptyList();
+    }
+
+    /**
+     * Get the primary table for this order.
+     */
+    public com.elcafe.modules.restaurant.entity.RestaurantTable getPrimaryTable() {
+        if (orderTables != null && !orderTables.isEmpty()) {
+            return orderTables.stream()
+                    .filter(ot -> Boolean.TRUE.equals(ot.getIsPrimary()))
+                    .map(OrderTable::getTable)
+                    .findFirst()
+                    .orElse(orderTables.get(0).getTable());
+        }
+        return diningTable;
+    }
+
+    /**
+     * Check if this order has any tables assigned.
+     */
+    public boolean hasTables() {
+        return (orderTables != null && !orderTables.isEmpty())
+                || (tableIds != null && !tableIds.isBlank())
+                || diningTable != null;
     }
 }

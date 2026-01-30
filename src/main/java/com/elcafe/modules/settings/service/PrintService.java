@@ -692,16 +692,16 @@ public class PrintService {
 
     /**
      * Get table number from order
-     * Handles both diningTable and tableIds for multi-table orders
+     * Uses the new getTables() helper method from Order entity
      */
     private String getTableNumberFromOrder(Order order) {
-        // First, try to get from diningTable (single table)
-        if (order.getDiningTable() != null && order.getDiningTable().getTableNumber() != null) {
-            return order.getDiningTable().getTableNumber();
-        }
-        // Fallback to tableIds (multi-table orders, comma-separated)
-        if (order.getTableIds() != null && !order.getTableIds().isEmpty()) {
-            return order.getTableIds();
+        // Use the new helper method to get all tables
+        java.util.List<com.elcafe.modules.restaurant.entity.RestaurantTable> tables = order.getTables();
+        if (tables != null && !tables.isEmpty()) {
+            return tables.stream()
+                    .map(com.elcafe.modules.restaurant.entity.RestaurantTable::getTableNumber)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.joining(", "));
         }
         return null;
     }

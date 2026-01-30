@@ -157,10 +157,8 @@ public class OrderService {
         }
 
         // Release tables when dine-in order is completed, delivered, or cancelled
-        // Also check for tableIds/diningTable as fallback for orders without orderType set
-        boolean isDineInOrder = order.getOrderType() == OrderType.DINE_IN ||
-                (order.getTableIds() != null && !order.getTableIds().isBlank()) ||
-                order.getDiningTable() != null;
+        // Use the new hasTables() helper method
+        boolean isDineInOrder = order.getOrderType() == OrderType.DINE_IN || order.hasTables();
         if (isDineInOrder &&
                 (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.CANCELLED)) {
             releaseOrderTables(order);
@@ -356,24 +354,14 @@ public class OrderService {
      */
     private void releaseOrderTables(Order order) {
         try {
-            // Release tables from tableIds field (for multi-table orders)
-            if (order.getTableIds() != null && !order.getTableIds().isBlank()) {
-                String[] tableIdStrings = order.getTableIds().split(",");
-                for (String tableIdStr : tableIdStrings) {
-                    Long tableId = Long.parseLong(tableIdStr.trim());
-                    restaurantTableRepository.findById(tableId).ifPresent(table -> {
-                        table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
-                        restaurantTableRepository.save(table);
-                        log.info("Table {} released (set to AVAILABLE) for order {}", table.getTableNumber(), order.getOrderNumber());
-                    });
-                }
-            }
-            // Also check the diningTable field for backwards compatibility
-            else if (order.getDiningTable() != null) {
-                RestaurantTable table = order.getDiningTable();
-                table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
-                restaurantTableRepository.save(table);
-                log.info("Table {} released (set to AVAILABLE) for order {}", table.getTableNumber(), order.getOrderNumber());
+            // Use the new getTableIdList() helper method which handles all cases
+            List<Long> tableIds = order.getTableIdList();
+            for (Long tableId : tableIds) {
+                restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                    table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                    restaurantTableRepository.save(table);
+                    log.info("Table {} released (set to AVAILABLE) for order {}", table.getTableNumber(), order.getOrderNumber());
+                });
             }
         } catch (Exception e) {
             log.error("Failed to release tables for order {}: {}", order.getOrderNumber(), e.getMessage());
@@ -452,9 +440,7 @@ public class OrderService {
         order.addStatusHistory(history);
 
         // Re-occupy tables for dine-in orders
-        boolean isDineInOrder = order.getOrderType() == OrderType.DINE_IN ||
-                (order.getTableIds() != null && !order.getTableIds().isBlank()) ||
-                order.getDiningTable() != null;
+        boolean isDineInOrder = order.getOrderType() == OrderType.DINE_IN || order.hasTables();
         if (isDineInOrder) {
             reoccupyOrderTables(order);
         }
@@ -470,21 +456,14 @@ public class OrderService {
      */
     private void reoccupyOrderTables(Order order) {
         try {
-            if (order.getTableIds() != null && !order.getTableIds().isBlank()) {
-                String[] tableIdStrings = order.getTableIds().split(",");
-                for (String tableIdStr : tableIdStrings) {
-                    Long tableId = Long.parseLong(tableIdStr.trim());
-                    restaurantTableRepository.findById(tableId).ifPresent(table -> {
-                        table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
-                        restaurantTableRepository.save(table);
-                        log.info("Table {} re-occupied for reverted order {}", table.getTableNumber(), order.getOrderNumber());
-                    });
-                }
-            } else if (order.getDiningTable() != null) {
-                RestaurantTable table = order.getDiningTable();
-                table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
-                restaurantTableRepository.save(table);
-                log.info("Table {} re-occupied for reverted order {}", table.getTableNumber(), order.getOrderNumber());
+            // Use the new getTableIdList() helper method which handles all cases
+            List<Long> tableIds = order.getTableIdList();
+            for (Long tableId : tableIds) {
+                restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                    table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+                    restaurantTableRepository.save(table);
+                    log.info("Table {} re-occupied for reverted order {}", table.getTableNumber(), order.getOrderNumber());
+                });
             }
         } catch (Exception e) {
             log.error("Failed to re-occupy tables for reverted order {}: {}", order.getOrderNumber(), e.getMessage());

@@ -140,25 +140,20 @@ public class POSOrderService {
                 // Handle multi-table selection
                 List<Long> tableIds = request.getDineInInfo().getTableIds();
                 if (tableIds != null && !tableIds.isEmpty()) {
-                    // Store comma-separated table IDs
-                    order.setTableIds(tableIds.stream()
-                            .map(String::valueOf)
-                            .collect(Collectors.joining(",")));
-
-                    // Set first table as the primary dining table (for backwards compatibility)
-                    RestaurantTable firstTable = restaurantTableRepository.findById(tableIds.get(0))
-                            .orElse(null);
-                    if (firstTable != null) {
-                        order.setDiningTable(firstTable);
-                    }
-
-                    // Mark all selected tables as OCCUPIED
+                    // Use the new OrderTable relationship
+                    boolean isFirst = true;
                     for (Long tableId : tableIds) {
-                        restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                        RestaurantTable table = restaurantTableRepository.findById(tableId).orElse(null);
+                        if (table != null) {
+                            // First table is marked as primary
+                            order.addTable(table, isFirst);
+                            isFirst = false;
+
+                            // Mark table as OCCUPIED
                             table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
                             restaurantTableRepository.save(table);
                             log.info("Table {} marked as OCCUPIED for order", table.getTableNumber());
-                        });
+                        }
                     }
                 }
             }
@@ -449,30 +444,24 @@ public class POSOrderService {
         }
 
         // Add dine-in info if applicable
-        if ("DINE_IN".equals(orderType) && (order.getTableIds() != null || order.getDiningTable() != null)) {
+        if ("DINE_IN".equals(orderType) && order.hasTables()) {
+            // Use the new helper methods from Order entity
+            List<Long> tableIdList = order.getTableIdList();
             String tableNumber = "";
-            List<Long> tableIdList = null;
 
-            if (order.getTableIds() != null && !order.getTableIds().isBlank()) {
-                tableIdList = java.util.Arrays.stream(order.getTableIds().split(","))
-                        .map(String::trim)
-                        .map(Long::parseLong)
-                        .collect(Collectors.toList());
-
-                // Get table numbers for all tables in the list
-                if (!tableIdList.isEmpty()) {
-                    List<RestaurantTable> tables = restaurantTableRepository.findAllById(tableIdList);
+            if (!tableIdList.isEmpty()) {
+                // Get table numbers for all tables
+                List<RestaurantTable> tables = order.getTables();
+                if (!tables.isEmpty()) {
                     tableNumber = tables.stream()
                             .map(RestaurantTable::getTableNumber)
                             .collect(Collectors.joining(", "));
-                }
-            }
-
-            // Fallback to diningTable if tableIds didn't provide table number
-            if (tableNumber.isEmpty() && order.getDiningTable() != null) {
-                tableNumber = order.getDiningTable().getTableNumber();
-                if (tableIdList == null) {
-                    tableIdList = List.of(order.getDiningTable().getId());
+                } else {
+                    // Fallback: fetch tables from repository if not loaded
+                    tables = restaurantTableRepository.findAllById(tableIdList);
+                    tableNumber = tables.stream()
+                            .map(RestaurantTable::getTableNumber)
+                            .collect(Collectors.joining(", "));
                 }
             }
 
@@ -1019,28 +1008,14 @@ public class POSOrderService {
             order.setCompletedAt(java.time.LocalDateTime.now());
         }
 
-        // Release the primary dining table
-        if (order.getDiningTable() != null) {
-            RestaurantTable table = order.getDiningTable();
-            table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
-            restaurantTableRepository.save(table);
-            log.info("Table {} marked as AVAILABLE", table.getTableNumber());
-        }
-
-        // Release any additional tables (from tableIds field)
-        if (order.getTableIds() != null && !order.getTableIds().isEmpty()) {
-            List<Long> tableIdList = java.util.Arrays.stream(order.getTableIds().split(","))
-                    .map(String::trim)
-                    .map(Long::parseLong)
-                    .collect(Collectors.toList());
-
-            for (Long tableId : tableIdList) {
-                restaurantTableRepository.findById(tableId).ifPresent(table -> {
-                    table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
-                    restaurantTableRepository.save(table);
-                    log.info("Table {} marked as AVAILABLE", table.getTableNumber());
-                });
-            }
+        // Release all tables associated with this order using the new helper method
+        List<Long> tableIdList = order.getTableIdList();
+        for (Long tableId : tableIdList) {
+            restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                restaurantTableRepository.save(table);
+                log.info("Table {} marked as AVAILABLE", table.getTableNumber());
+            });
         }
 
         Order savedOrder = orderRepository.save(order);
@@ -1075,37 +1050,23 @@ public class POSOrderService {
             throw new IllegalArgumentException("Table " + newTable.getTableNumber() + " is already occupied");
         }
 
-        // Release the current table(s)
-        if (order.getDiningTable() != null) {
-            RestaurantTable oldTable = order.getDiningTable();
-            oldTable.setStatus(RestaurantTable.TableStatus.AVAILABLE);
-            restaurantTableRepository.save(oldTable);
-            log.info("Released old table {}", oldTable.getTableNumber());
-        }
-
-        // Release any additional tables from tableIds
-        if (order.getTableIds() != null && !order.getTableIds().isEmpty()) {
-            List<Long> tableIdList = java.util.Arrays.stream(order.getTableIds().split(","))
-                    .map(String::trim)
-                    .map(Long::parseLong)
-                    .collect(Collectors.toList());
-
-            for (Long tableId : tableIdList) {
-                if (!tableId.equals(newTableId)) {
-                    restaurantTableRepository.findById(tableId).ifPresent(table -> {
-                        table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
-                        restaurantTableRepository.save(table);
-                        log.info("Released additional table {}", table.getTableNumber());
-                    });
-                }
+        // Release all current tables using the helper method
+        List<Long> currentTableIds = order.getTableIdList();
+        for (Long tableId : currentTableIds) {
+            if (!tableId.equals(newTableId)) {
+                restaurantTableRepository.findById(tableId).ifPresent(table -> {
+                    table.setStatus(RestaurantTable.TableStatus.AVAILABLE);
+                    restaurantTableRepository.save(table);
+                    log.info("Released table {}", table.getTableNumber());
+                });
             }
         }
 
-        // Assign new table
+        // Clear existing tables and assign new table
+        order.clearTables();
         newTable.setStatus(RestaurantTable.TableStatus.OCCUPIED);
         restaurantTableRepository.save(newTable);
-        order.setDiningTable(newTable);
-        order.setTableIds(String.valueOf(newTableId));
+        order.addTable(newTable, true);
         log.info("Assigned new table {} to order {}", newTable.getTableNumber(), orderId);
 
         Order savedOrder = orderRepository.save(order);
