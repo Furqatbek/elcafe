@@ -218,12 +218,18 @@ const PaymentScreen = () => {
         }
 
         // Process payment via API
+        // Include splitNumber (personNumber) when in split bill mode
+        const currentSplitPersonNumber = isFromSplitBillScreen
+          ? splitBill.result?.splits?.[splitBill.currentSplitIndex]?.personNumber
+          : null;
+
         const response = await posAPI.processPayment(currentOrder.id, {
           method: paymentData.method,
           amount: paymentData.amount,
           tipAmount: paymentData.tipAmount || 0,
           amountTendered: paymentData.amountTendered,
           transactionId: paymentData.transactionId,
+          splitNumber: currentSplitPersonNumber,
         });
 
         // Handle split bill payment from SplitBillScreen

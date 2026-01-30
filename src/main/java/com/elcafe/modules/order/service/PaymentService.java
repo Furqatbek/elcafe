@@ -242,6 +242,7 @@ public class PaymentService {
                 .paymentGateway(request.getPaymentGateway())
                 .paymentDetails(request.getPaymentDetails())
                 .processedBy(request.getProcessedBy())
+                .splitNumber(request.getSplitNumber())
                 .paidAt(LocalDateTime.now())
                 .completedAt(LocalDateTime.now())
                 .build();
@@ -510,6 +511,7 @@ public class PaymentService {
                 .changeDue(payment.getChangeDue())
                 .transactionId(payment.getTransactionId())
                 .processedBy(payment.getProcessedBy())
+                .splitNumber(payment.getSplitNumber())
                 .paidAt(payment.getPaidAt())
                 .orderTotal(order.getTotal())
                 .orderGrandTotal(grandTotal)
@@ -528,6 +530,7 @@ public class PaymentService {
                 .amount(payment.getAmount())
                 .tipAmount(payment.getTipAmount())
                 .refundedAmount(payment.getRefundedAmount())
+                .splitNumber(payment.getSplitNumber())
                 .paidAt(payment.getPaidAt())
                 .build();
     }

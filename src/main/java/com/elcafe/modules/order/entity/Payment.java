@@ -74,6 +74,9 @@ public class Payment {
     @Column(name = "processed_by", length = 100)
     private String processedBy;
 
+    @Column(name = "split_number")
+    private Integer splitNumber;
+
     private LocalDateTime paidAt;
 
     private LocalDateTime completedAt;

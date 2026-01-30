@@ -32,6 +32,7 @@ public class PaymentResponseDTO {
     private BigDecimal changeDue;
     private String transactionId;
     private String processedBy;
+    private Integer splitNumber;
     private LocalDateTime paidAt;
 
     // Order payment summary
@@ -58,6 +59,7 @@ public class PaymentResponseDTO {
         private BigDecimal amount;
         private BigDecimal tipAmount;
         private BigDecimal refundedAmount;
+        private Integer splitNumber;
         private LocalDateTime paidAt;
     }
 }

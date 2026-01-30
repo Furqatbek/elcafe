@@ -40,4 +40,7 @@ public class PaymentRequestDTO {
 
     // Who processed the payment
     private String processedBy;
+
+    // For split bill payments - which split (person number) this payment is for
+    private Integer splitNumber;
 }
