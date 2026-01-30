@@ -2,6 +2,7 @@ package com.elcafe.modules.order.specification;
 
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -14,6 +15,7 @@ public class OrderSpecification {
     public static Specification<Order> withFilters(
             Long restaurantId,
             OrderStatus status,
+            OrderType orderType,
             LocalDateTime fromDate,
             LocalDateTime toDate,
             String search
@@ -29,6 +31,11 @@ public class OrderSpecification {
             // Status filter
             if (status != null) {
                 predicates.add(criteriaBuilder.equal(root.get("status"), status));
+            }
+
+            // Order type filter
+            if (orderType != null) {
+                predicates.add(criteriaBuilder.equal(root.get("orderType"), orderType));
             }
 
             // Date range filter

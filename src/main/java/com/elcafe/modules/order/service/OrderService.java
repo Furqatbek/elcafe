@@ -227,7 +227,7 @@ public class OrderService {
 
     /**
      * Get orders with filters for order history page.
-     * Supports filtering by restaurant, status, date range, and search term.
+     * Supports filtering by restaurant, status, order type, date range, and search term.
      * Date ranges are adjusted to shift boundaries based on restaurant business hours,
      * unless isShiftAware is true (dates already calculated by ShiftTimeService).
      */
@@ -235,14 +235,15 @@ public class OrderService {
     public Page<Order> getOrdersWithFilters(
             Long restaurantId,
             OrderStatus status,
+            OrderType orderType,
             LocalDateTime fromDate,
             LocalDateTime toDate,
             String search,
             boolean isShiftAware,
             Pageable pageable
     ) {
-        log.info("Fetching orders with filters: restaurantId={}, status={}, fromDate={}, toDate={}, search={}, isShiftAware={}",
-                restaurantId, status, fromDate, toDate, search, isShiftAware);
+        log.info("Fetching orders with filters: restaurantId={}, status={}, orderType={}, fromDate={}, toDate={}, search={}, isShiftAware={}",
+                restaurantId, status, orderType, fromDate, toDate, search, isShiftAware);
 
         // Adjust date range to shift boundaries (only if not already shift-aware)
         LocalDateTime adjustedFromDate = fromDate;
@@ -275,6 +276,7 @@ public class OrderService {
         Specification<Order> spec = OrderSpecification.withFilters(
                 restaurantId,
                 status,
+                orderType,
                 adjustedFromDate,
                 adjustedToDate,
                 search
