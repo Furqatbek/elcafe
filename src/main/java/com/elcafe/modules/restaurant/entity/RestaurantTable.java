@@ -87,6 +87,14 @@ public class RestaurantTable {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    /**
+     * Version field for optimistic locking.
+     * Prevents race conditions during concurrent table status updates
+     * (e.g., table merging/unmerging, status changes from multiple waiters).
+     */
+    @Version
+    private Long version;
+
     public enum TableStatus {
         AVAILABLE,
         OCCUPIED,

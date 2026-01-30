@@ -92,6 +92,14 @@ public class Payment {
     private LocalDateTime updatedAt;
 
     /**
+     * Version field for optimistic locking.
+     * Prevents race conditions during concurrent payment operations
+     * (e.g., split payments, refunds, status updates).
+     */
+    @Version
+    private Long version;
+
+    /**
      * Get total payment including tip
      */
     public BigDecimal getTotalWithTip() {

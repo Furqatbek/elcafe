@@ -273,12 +273,21 @@ public class POSOrderService {
             orderItem.setIsBundle(false);
         }
 
-        // Add modifiers as add-ons JSON or text if present
+        // Add modifiers using the new structured relationship
         if (itemRequest.getModifiers() != null && !itemRequest.getModifiers().isEmpty()) {
-            String modifiers = itemRequest.getModifiers().stream()
+            for (CreatePOSOrderRequest.ModifierInfo modifier : itemRequest.getModifiers()) {
+                orderItem.addAddOn(
+                        modifier.getAddOnId(),
+                        modifier.getName(),
+                        modifier.getPrice(),
+                        modifier.getQuantity() != null ? modifier.getQuantity() : 1
+                );
+            }
+            // Also set deprecated field for backward compatibility during transition
+            String modifiersString = itemRequest.getModifiers().stream()
                     .map(m -> m.getName() + (m.getPrice().compareTo(BigDecimal.ZERO) > 0 ? " (+$" + m.getPrice() + ")" : ""))
                     .collect(Collectors.joining(", "));
-            orderItem.setAddOns(modifiers);
+            orderItem.setAddOns(modifiersString);
         }
 
         return orderItem;
@@ -418,9 +427,10 @@ public class POSOrderService {
                     itemResponse.setTotalPrice(item.getTotalPrice());
                     itemResponse.setNotes(item.getSpecialInstructions());
 
-                    // Parse modifiers from addOns field
-                    if (item.getAddOns() != null && !item.getAddOns().isEmpty()) {
-                        List<String> modifiers = List.of(item.getAddOns().split(", "));
+                    // Get modifiers using the new helper method (handles both new and legacy data)
+                    String addOnsDisplay = item.getAddOnsDisplay();
+                    if (addOnsDisplay != null && !addOnsDisplay.isEmpty()) {
+                        List<String> modifiers = List.of(addOnsDisplay.split(", "));
                         itemResponse.setModifiers(modifiers);
                     }
 
@@ -578,13 +588,22 @@ public class POSOrderService {
         newItem.setTotalPrice(price.multiply(BigDecimal.valueOf(request.getQuantity())));
         newItem.setSpecialInstructions(request.getNotes());
 
-        // Add modifiers
+        // Add modifiers using the new structured relationship
         if (request.getModifiers() != null && !request.getModifiers().isEmpty()) {
-            String modifiers = request.getModifiers().stream()
+            for (ModifyOrderItemRequest.ModifierInfo modifier : request.getModifiers()) {
+                newItem.addAddOn(
+                        modifier.getAddOnId(),
+                        modifier.getName(),
+                        modifier.getPrice() != null ? modifier.getPrice() : BigDecimal.ZERO,
+                        modifier.getQuantity() != null ? modifier.getQuantity() : 1
+                );
+            }
+            // Also set deprecated field for backward compatibility during transition
+            String modifiersString = request.getModifiers().stream()
                     .map(m -> m.getName() + (m.getPrice() != null && m.getPrice().compareTo(BigDecimal.ZERO) > 0 ?
                             " (+$" + m.getPrice() + ")" : ""))
                     .collect(Collectors.joining(", "));
-            newItem.setAddOns(modifiers);
+            newItem.setAddOns(modifiersString);
 
             // Add modifier prices to item total
             BigDecimal modifierTotal = request.getModifiers().stream()

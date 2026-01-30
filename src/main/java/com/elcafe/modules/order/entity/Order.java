@@ -246,6 +246,14 @@ public class Order {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    /**
+     * Version field for optimistic locking.
+     * Prevents race conditions when multiple users/processes update the same order concurrently
+     * (e.g., simultaneous payment processing, status changes, item modifications).
+     */
+    @Version
+    private Long version;
+
     public void addItem(OrderItem item) {
         // Check if an identical item already exists (same product, variant, addOns, specialInstructions)
         OrderItem existingItem = findMatchingItem(item);
@@ -290,8 +298,9 @@ public class Order {
         }
 
         // Must have same addOns (both null/empty or same value)
-        String existingAddOns = existing.getAddOns() != null ? existing.getAddOns().trim() : "";
-        String newAddOns = newItem.getAddOns() != null ? newItem.getAddOns().trim() : "";
+        // Use getAddOnsDisplay() which handles both new itemAddOns and deprecated addOns field
+        String existingAddOns = existing.getAddOnsDisplay() != null ? existing.getAddOnsDisplay().trim() : "";
+        String newAddOns = newItem.getAddOnsDisplay() != null ? newItem.getAddOnsDisplay().trim() : "";
         if (!existingAddOns.equals(newAddOns)) {
             return false;
         }

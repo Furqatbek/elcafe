@@ -34,7 +34,19 @@ public class ModifyOrderItemRequest {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ModifierInfo {
+        /**
+         * Reference to the AddOn entity for tracking and reporting.
+         * Optional - can be null for custom modifiers.
+         */
+        private Long addOnId;
+
         private String name;
         private BigDecimal price;
+
+        /**
+         * Quantity of this modifier (default 1).
+         */
+        @Builder.Default
+        private Integer quantity = 1;
     }
 }

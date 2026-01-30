@@ -171,12 +171,24 @@ public class CreatePOSOrderRequest {
     @AllArgsConstructor
     public static class ModifierInfo {
 
+        /**
+         * Reference to the AddOn entity for tracking and reporting.
+         * Optional - can be null for custom modifiers.
+         */
+        private Long addOnId;
+
         @NotBlank(message = "Modifier name is required")
         private String name;
 
         @NotNull(message = "Modifier price is required")
         @DecimalMin(value = "0.0", message = "Price must be 0 or greater")
         private BigDecimal price;
+
+        /**
+         * Quantity of this modifier (default 1).
+         */
+        @Builder.Default
+        private Integer quantity = 1;
     }
 
     @Data

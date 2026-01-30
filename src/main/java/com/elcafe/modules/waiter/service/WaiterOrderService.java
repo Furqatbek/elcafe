@@ -142,9 +142,21 @@ public class WaiterOrderService {
                         .quantity(itemRequest.getQuantity())
                         .unitPrice(unitPrice)
                         .totalPrice(totalPrice)
-                        .addOns(itemRequest.getAddOns())
+                        .addOns(itemRequest.getAddOns()) // Keep for backward compatibility
                         .specialInstructions(itemRequest.getSpecialInstructions())
                         .build();
+
+                // Add structured modifiers if provided
+                if (itemRequest.getModifiers() != null && !itemRequest.getModifiers().isEmpty()) {
+                    for (AddOrderItemRequest.AddOnInfo modifier : itemRequest.getModifiers()) {
+                        orderItem.addAddOn(
+                                modifier.getAddOnId(),
+                                modifier.getName(),
+                                modifier.getPrice() != null ? modifier.getPrice() : java.math.BigDecimal.ZERO,
+                                modifier.getQuantity() != null ? modifier.getQuantity() : 1
+                        );
+                    }
+                }
 
                 savedOrder.addItem(orderItem);
             }
@@ -243,9 +255,21 @@ public class WaiterOrderService {
                     .quantity(itemRequest.getQuantity())
                     .unitPrice(unitPrice)
                     .totalPrice(totalPrice)
-                    .addOns(itemRequest.getAddOns())
+                    .addOns(itemRequest.getAddOns()) // Keep for backward compatibility
                     .specialInstructions(itemRequest.getSpecialInstructions())
                     .build();
+
+            // Add structured modifiers if provided
+            if (itemRequest.getModifiers() != null && !itemRequest.getModifiers().isEmpty()) {
+                for (AddOrderItemRequest.AddOnInfo modifier : itemRequest.getModifiers()) {
+                    orderItem.addAddOn(
+                            modifier.getAddOnId(),
+                            modifier.getName(),
+                            modifier.getPrice() != null ? modifier.getPrice() : java.math.BigDecimal.ZERO,
+                            modifier.getQuantity() != null ? modifier.getQuantity() : 1
+                    );
+                }
+            }
 
             newItems.add(orderItem);
         }
@@ -326,6 +350,19 @@ public class WaiterOrderService {
 
         if (request.getAddOns() != null) {
             item.setAddOns(request.getAddOns());
+        }
+
+        // Update structured modifiers if provided
+        if (request.getModifiers() != null) {
+            item.clearAddOns();
+            for (UpdateOrderItemRequest.AddOnInfo modifier : request.getModifiers()) {
+                item.addAddOn(
+                        modifier.getAddOnId(),
+                        modifier.getName(),
+                        modifier.getPrice() != null ? modifier.getPrice() : java.math.BigDecimal.ZERO,
+                        modifier.getQuantity() != null ? modifier.getQuantity() : 1
+                );
+            }
         }
 
         if (request.getSpecialInstructions() != null) {
