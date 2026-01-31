@@ -753,7 +753,7 @@ INSERT INTO inventory_ingredients (restaurant_id, name, unit, minimum_stock, reo
 (1, 'Aralash mevalar (Konserva)', 'dona', 15, 25, TRUE),
 -- Canned Legumes
 (1, 'Loviya bilan pomidor (Konserva)', 'dona', 15, 25, TRUE),
-(1, 'Hummus (Tayyor)', 'dona', 10, 15, TRUE),
+(1, 'Hummus (Konserva)', 'dona', 10, 15, TRUE),
 (1, 'No''xat (Kabuli, konserva)', 'dona', 15, 25, TRUE),
 -- Canned Soups & Broths
 (1, 'Bulyon (Tovuq, konserva)', 'litr', 10, 15, TRUE),
@@ -1132,8 +1132,6 @@ INSERT INTO inventory_ingredients (restaurant_id, name, unit, minimum_stock, reo
 (1, 'Mayonez bazasi (Tuxumli)', 'kg', 3, 5, TRUE),
 -- Honey Varieties
 (1, 'Asal (Gul)', 'kg', 5, 8, TRUE),
-(1, 'Asal (Akatsiya)', 'kg', 3, 5, TRUE),
-(1, 'Asal (Grechka)', 'kg', 2, 3, TRUE),
 (1, 'Asal (Soxta yong''oqli)', 'kg', 2, 3, TRUE),
 (1, 'Asal (Manuka)', 'kg', 1, 2, TRUE),
 -- Bee Products
