@@ -13,7 +13,7 @@
 --   - Reporting accuracy (can aggregate modifier usage and revenue)
 
 CREATE TABLE order_item_add_ons (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     order_item_id BIGINT NOT NULL,
     add_on_id BIGINT NULL,
     add_on_name VARCHAR(200) NOT NULL,
