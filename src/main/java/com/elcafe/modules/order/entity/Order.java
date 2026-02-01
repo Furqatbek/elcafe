@@ -240,6 +240,34 @@ public class Order {
     @Column(name = "payment_intent_id", length = 255)
     private String paymentIntentId;
 
+    // Tax exemption fields
+    @Column(name = "is_tax_exempt")
+    @Builder.Default
+    private Boolean isTaxExempt = false;
+
+    @Column(name = "tax_exemption_type_id")
+    private Long taxExemptionTypeId;
+
+    @Column(name = "tax_exemption_number", length = 100)
+    private String taxExemptionNumber;
+
+    @Column(name = "tax_exemption_reason", length = 500)
+    private String taxExemptionReason;
+
+    // Offline mode fields
+    @Column(name = "device_id", length = 100)
+    private String deviceId;
+
+    @Column(name = "client_order_id", length = 100)
+    private String clientOrderId;
+
+    @Column(name = "is_offline_order")
+    @Builder.Default
+    private Boolean isOfflineOrder = false;
+
+    @Column(name = "synced_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime syncedAt;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();

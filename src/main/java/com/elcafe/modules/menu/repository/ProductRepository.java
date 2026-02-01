@@ -32,4 +32,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p FROM Product p JOIN p.category c WHERE c.restaurant.id = :restaurantId ORDER BY c.sortOrder, p.sortOrder")
     List<Product> findByRestaurant_Id(@Param("restaurantId") Long restaurantId);
+
+    // Barcode/SKU lookup methods
+    @Query("SELECT p FROM Product p JOIN p.category c WHERE c.restaurant.id = :restaurantId AND p.barcode = :barcode")
+    java.util.Optional<Product> findByRestaurantIdAndBarcode(@Param("restaurantId") Long restaurantId, @Param("barcode") String barcode);
+
+    @Query("SELECT p FROM Product p JOIN p.category c WHERE c.restaurant.id = :restaurantId AND p.sku = :sku")
+    java.util.Optional<Product> findByRestaurantIdAndSku(@Param("restaurantId") Long restaurantId, @Param("sku") String sku);
+
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Product p JOIN p.category c " +
+           "WHERE c.restaurant.id = :restaurantId AND (p.barcode = :code OR p.sku = :code)")
+    boolean existsByRestaurantIdAndBarcodeOrSku(@Param("restaurantId") Long restaurantId, @Param("code") String code);
 }

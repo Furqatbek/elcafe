@@ -38,4 +38,17 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
     boolean existsByProductIdAndName(Long productId, String name);
 
     long countByProductId(Long productId);
+
+    // Barcode/SKU lookup methods
+    @Query("SELECT pv FROM ProductVariant pv JOIN pv.product p JOIN p.category c " +
+           "WHERE c.restaurant.id = :restaurantId AND pv.barcode = :barcode")
+    Optional<ProductVariant> findByProductRestaurantIdAndBarcode(@Param("restaurantId") Long restaurantId, @Param("barcode") String barcode);
+
+    @Query("SELECT pv FROM ProductVariant pv JOIN pv.product p JOIN p.category c " +
+           "WHERE c.restaurant.id = :restaurantId AND pv.sku = :sku")
+    Optional<ProductVariant> findByProductRestaurantIdAndSku(@Param("restaurantId") Long restaurantId, @Param("sku") String sku);
+
+    @Query("SELECT CASE WHEN COUNT(pv) > 0 THEN true ELSE false END FROM ProductVariant pv JOIN pv.product p JOIN p.category c " +
+           "WHERE c.restaurant.id = :restaurantId AND (pv.barcode = :code OR pv.sku = :code)")
+    boolean existsByProductRestaurantIdAndBarcodeOrSku(@Param("restaurantId") Long restaurantId, @Param("code") String code);
 }

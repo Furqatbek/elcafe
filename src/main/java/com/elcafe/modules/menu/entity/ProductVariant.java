@@ -40,4 +40,15 @@ public class ProductVariant {
     @Column(nullable = false)
     @Builder.Default
     private Integer sortOrder = 0;
+
+    // Barcode/SKU fields
+    @Column(length = 100)
+    private String sku;
+
+    @Column(length = 100)
+    private String barcode;
+
+    @Column(name = "is_available")
+    @Builder.Default
+    private Boolean isAvailable = true;
 }

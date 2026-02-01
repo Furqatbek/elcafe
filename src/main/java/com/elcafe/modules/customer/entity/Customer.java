@@ -71,6 +71,20 @@ public class Customer {
     @Builder.Default
     private Boolean active = true;
 
+    // Tax exemption fields
+    @Column(name = "is_tax_exempt")
+    @Builder.Default
+    private Boolean isTaxExempt = false;
+
+    @Column(name = "tax_exemption_type_id")
+    private Long taxExemptionTypeId;
+
+    @Column(name = "tax_exemption_number", length = 100)
+    private String taxExemptionNumber;
+
+    @Column(name = "tax_exemption_expires_at")
+    private LocalDate taxExemptionExpiresAt;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -78,4 +92,8 @@ public class Customer {
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    public String getFullName() {
+        return firstName + " " + lastName;
+    }
 }
