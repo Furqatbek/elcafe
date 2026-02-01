@@ -42,10 +42,12 @@ public class JournalService {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
-        Account debitAccount = accountRepository.findById(debitAccountId)
+        // Use pessimistic locking to prevent race conditions when updating account balances
+        // This ensures that concurrent journal entries don't read stale balance values
+        Account debitAccount = accountRepository.findByIdWithLock(debitAccountId)
                 .orElseThrow(() -> new RuntimeException("Debit account not found"));
 
-        Account creditAccount = accountRepository.findById(creditAccountId)
+        Account creditAccount = accountRepository.findByIdWithLock(creditAccountId)
                 .orElseThrow(() -> new RuntimeException("Credit account not found"));
 
         // Generate entry number
@@ -182,7 +184,9 @@ public class JournalService {
 
         // Create opposite transactions
         for (Transaction originalTx : originalTransactions) {
-            Account account = originalTx.getAccount();
+            // Use pessimistic locking to prevent race conditions when updating account balances
+            Account account = accountRepository.findByIdWithLock(originalTx.getAccount().getId())
+                    .orElseThrow(() -> new RuntimeException("Account not found: " + originalTx.getAccount().getId()));
             BigDecimal balanceBefore = account.getBalance();
 
             // Reverse the transaction type
