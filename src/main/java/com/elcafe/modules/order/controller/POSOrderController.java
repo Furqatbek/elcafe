@@ -9,13 +9,17 @@ import com.elcafe.modules.order.dto.pos.POSOrderResponse;
 import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.order.dto.pos.RefundRequestDTO;
 import com.elcafe.modules.order.dto.pos.SplitBillDTO;
+import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.service.PaymentService;
 import com.elcafe.modules.order.service.POSOrderService;
+import com.elcafe.modules.order.service.POSOrderItemService;
+import com.elcafe.modules.order.service.POSOrderDiscountService;
+import com.elcafe.modules.order.service.POSOrderFeeService;
+import com.elcafe.modules.order.service.POSSplitBillService;
+import com.elcafe.modules.order.service.POSTableService;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
-import com.elcafe.modules.promotion.dto.ValidateCouponRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.elcafe.modules.promotion.dto.ActiveHappyHourResponse;
-import com.elcafe.modules.promotion.service.CouponValidationService;
 import com.elcafe.modules.promotion.service.HappyHourService;
 
 import java.math.BigDecimal;
@@ -33,6 +37,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * REST Controller for POS Order operations.
+ * Delegates to focused services for specific responsibilities:
+ * - POSOrderService: Core order creation and retrieval
+ * - POSOrderItemService: Item management
+ * - POSOrderDiscountService: Discount operations
+ * - POSOrderFeeService: Fee management
+ * - POSSplitBillService: Bill splitting
+ * - POSTableService: Table management
+ */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/pos/orders")
@@ -42,6 +56,11 @@ import org.springframework.web.bind.annotation.*;
 public class POSOrderController {
 
     private final POSOrderService posOrderService;
+    private final POSOrderItemService posOrderItemService;
+    private final POSOrderDiscountService posOrderDiscountService;
+    private final POSOrderFeeService posOrderFeeService;
+    private final POSSplitBillService posSplitBillService;
+    private final POSTableService posTableService;
     private final PaymentService paymentService;
     private final HappyHourService happyHourService;
 
@@ -128,6 +147,8 @@ public class POSOrderController {
         return ResponseEntity.ok(ApiResponse.success("Order retrieved", order));
     }
 
+    // ============== Item Management Endpoints ==============
+
     @PostMapping("/{orderId}/items")
     @Operation(
             summary = "Add item to order",
@@ -140,9 +161,10 @@ public class POSOrderController {
         log.info("Adding item to order {}: productId={}, quantity={}",
                 orderId, request.getProductId(), request.getQuantity());
 
-        POSOrderResponse order = posOrderService.addItemToOrder(orderId, request);
+        Order order = posOrderItemService.addItemToOrder(orderId, request);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
-        return ResponseEntity.ok(ApiResponse.success("Item added to order", order));
+        return ResponseEntity.ok(ApiResponse.success("Item added to order", response));
     }
 
     @DeleteMapping("/{orderId}/items/{itemId}")
@@ -156,9 +178,10 @@ public class POSOrderController {
 
         log.info("Removing item {} from order {}", itemId, orderId);
 
-        POSOrderResponse order = posOrderService.removeItemFromOrder(orderId, itemId);
+        Order order = posOrderItemService.removeItemFromOrder(orderId, itemId);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
-        return ResponseEntity.ok(ApiResponse.success("Item removed from order", order));
+        return ResponseEntity.ok(ApiResponse.success("Item removed from order", response));
     }
 
     @PatchMapping("/{orderId}/items/{itemId}/quantity")
@@ -173,9 +196,10 @@ public class POSOrderController {
 
         log.info("Updating quantity for item {} in order {} to {}", itemId, orderId, quantity);
 
-        POSOrderResponse order = posOrderService.updateItemQuantity(orderId, itemId, quantity);
+        Order order = posOrderItemService.updateItemQuantity(orderId, itemId, quantity);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
-        return ResponseEntity.ok(ApiResponse.success("Item quantity updated", order));
+        return ResponseEntity.ok(ApiResponse.success("Item quantity updated", response));
     }
 
     // ============== Split Bill Endpoints ==============
@@ -191,7 +215,7 @@ public class POSOrderController {
 
         log.info("Splitting bill for order {}: mode={}", orderId, request.getMode());
 
-        SplitBillDTO.SplitBillResponse response = posOrderService.splitBill(orderId, request);
+        SplitBillDTO.SplitBillResponse response = posSplitBillService.splitBill(orderId, request);
 
         return ResponseEntity.ok(ApiResponse.success("Bill split successfully", response));
     }
@@ -282,6 +306,8 @@ public class POSOrderController {
         return ResponseEntity.ok(ApiResponse.success("Tip added successfully", summary));
     }
 
+    // ============== Fee Management Endpoints ==============
+
     @PostMapping("/{orderId}/service-fee")
     @Operation(
             summary = "Apply service fee",
@@ -293,7 +319,8 @@ public class POSOrderController {
 
         log.info("Applying service fee to order {}: percent={}", orderId, serviceFeePercent);
 
-        POSOrderResponse response = posOrderService.applyServiceFee(orderId, serviceFeePercent);
+        Order order = posOrderFeeService.applyServiceFee(orderId, serviceFeePercent);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
         return ResponseEntity.ok(ApiResponse.success("Service fee applied successfully", response));
     }
@@ -309,7 +336,8 @@ public class POSOrderController {
 
         log.info("Applying service fee amount to order {}: amount={}", orderId, serviceFeeAmount);
 
-        POSOrderResponse response = posOrderService.applyServiceFeeAmount(orderId, serviceFeeAmount);
+        Order order = posOrderFeeService.applyServiceFeeAmount(orderId, serviceFeeAmount);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
         return ResponseEntity.ok(ApiResponse.success("Service fee applied successfully", response));
     }
@@ -325,10 +353,13 @@ public class POSOrderController {
 
         log.info("Applying entry fee to order {}: amount={}", orderId, entryFee);
 
-        POSOrderResponse response = posOrderService.applyEntryFee(orderId, entryFee);
+        Order order = posOrderFeeService.applyEntryFee(orderId, entryFee);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
         return ResponseEntity.ok(ApiResponse.success("Entry fee applied successfully", response));
     }
+
+    // ============== Table Management Endpoints ==============
 
     @PostMapping("/{orderId}/close")
     @Operation(
@@ -340,7 +371,8 @@ public class POSOrderController {
 
         log.info("Closing order and releasing table: orderId={}", orderId);
 
-        POSOrderResponse response = posOrderService.closeOrderAndReleaseTable(orderId);
+        Order order = posTableService.closeOrderAndReleaseTable(orderId);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
         return ResponseEntity.ok(ApiResponse.success("Order closed and table released", response));
     }
@@ -356,7 +388,8 @@ public class POSOrderController {
 
         log.info("Changing table for order {}: newTableId={}", orderId, newTableId);
 
-        POSOrderResponse response = posOrderService.changeTable(orderId, newTableId);
+        Order order = posTableService.changeTable(orderId, newTableId);
+        POSOrderResponse response = posOrderService.mapToResponse(order, "DINE_IN");
 
         return ResponseEntity.ok(ApiResponse.success("Order moved to new table successfully", response));
     }
@@ -374,7 +407,8 @@ public class POSOrderController {
 
         log.info("Applying discount to order {}: type={}", orderId, request.getDiscountType());
 
-        POSOrderResponse response = posOrderService.applyDiscount(orderId, request);
+        Order order = posOrderDiscountService.applyDiscount(orderId, request);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
         return ResponseEntity.ok(ApiResponse.success("Discount applied successfully", response));
     }
@@ -389,7 +423,8 @@ public class POSOrderController {
 
         log.info("Removing discount from order {}", orderId);
 
-        POSOrderResponse response = posOrderService.removeDiscount(orderId);
+        Order order = posOrderDiscountService.removeDiscount(orderId);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
         return ResponseEntity.ok(ApiResponse.success("Discount removed successfully", response));
     }
@@ -405,7 +440,7 @@ public class POSOrderController {
 
         log.info("Validating coupon {} for order {}", couponCode, orderId);
 
-        ValidateCouponResponse response = posOrderService.validateCoupon(orderId, couponCode);
+        ValidateCouponResponse response = posOrderDiscountService.validateCoupon(orderId, couponCode);
 
         return ResponseEntity.ok(ApiResponse.success("Coupon validated", response));
     }
@@ -465,7 +500,7 @@ public class POSOrderController {
         }
 
         // Calculate discount preview
-        BigDecimal discount = posOrderService.calculateHappyHourDiscountPreview(orderId);
+        BigDecimal discount = posOrderDiscountService.calculateHappyHourDiscountPreview(orderId);
         ActiveHappyHourResponse hh = activeHappyHour.get();
 
         Map<String, Object> response = Map.of(
@@ -490,8 +525,8 @@ public class POSOrderController {
 
         log.info("Applying happy hour discount to order: {}", orderId);
 
-        POSOrderResponse order = posOrderService.getOrderById(orderId);
-        Long restaurantId = order.getRestaurantId();
+        POSOrderResponse orderResponse = posOrderService.getOrderById(orderId);
+        Long restaurantId = orderResponse.getRestaurantId();
 
         Optional<ActiveHappyHourResponse> activeHappyHour = happyHourService.getActiveHappyHour(restaurantId);
 
@@ -505,7 +540,8 @@ public class POSOrderController {
                 .happyHourId(activeHappyHour.get().getId())
                 .build();
 
-        POSOrderResponse response = posOrderService.applyDiscount(orderId, discountRequest);
+        Order order = posOrderDiscountService.applyDiscount(orderId, discountRequest);
+        POSOrderResponse response = posOrderService.mapToResponse(order, posOrderService.getOrderTypeString(order));
 
         return ResponseEntity.ok(ApiResponse.success("Happy hour discount applied successfully", response));
     }
