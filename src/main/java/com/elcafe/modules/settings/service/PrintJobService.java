@@ -117,22 +117,129 @@ public class PrintJobService {
     }
 
     /**
-     * Mark job as failed
+     * Mark job as failed with exponential backoff retry.
      */
     @Transactional
     public void markJobFailed(Long jobId, String errorMessage) {
         printJobRepository.findById(jobId).ifPresent(job -> {
             job.incrementRetry();
-            if (job.canRetry()) {
-                job.setStatus(PrintJob.PrintJobStatus.PENDING);
-                log.info("Print job {} failed, will retry ({}/{})", jobId, job.getRetryCount(), job.getMaxRetries());
-            } else {
-                job.setStatus(PrintJob.PrintJobStatus.FAILED);
-                log.error("Print job {} failed permanently after {} retries", jobId, job.getRetryCount());
-            }
             job.setErrorMessage(errorMessage);
+
+            if (job.canRetry()) {
+                job.setStatus(PrintJob.PrintJobStatus.RETRYING);
+                log.info("Print job {} failed, scheduling retry {}/{} at {}",
+                        jobId, job.getRetryCount(), job.getMaxRetries(), job.getNextRetryAt());
+            } else {
+                // Move to dead-letter queue
+                job.moveToDlq("Max retries exceeded: " + errorMessage);
+                log.error("Print job {} moved to DLQ after {} retries: {}",
+                        jobId, job.getRetryCount(), errorMessage);
+
+                // Notify admin of DLQ item
+                notifyAdminOfDlqJob(job);
+            }
+
             printJobRepository.save(job);
         });
+    }
+
+    /**
+     * Get jobs ready for retry (past their backoff time).
+     */
+    public List<PrintJob> getJobsReadyForRetry(Long restaurantId) {
+        return printJobRepository.findJobsReadyForRetry(restaurantId, LocalDateTime.now());
+    }
+
+    /**
+     * Get jobs in dead-letter queue.
+     */
+    public List<PrintJob> getDeadLetterJobs(Long restaurantId) {
+        return printJobRepository.findByRestaurant_IdAndStatus(restaurantId, PrintJob.PrintJobStatus.DEAD_LETTER);
+    }
+
+    /**
+     * Retry a job from the dead-letter queue manually.
+     */
+    @Transactional
+    public PrintJob retryDlqJob(Long jobId) {
+        PrintJob job = printJobRepository.findById(jobId)
+                .orElseThrow(() -> new IllegalArgumentException("Print job not found: " + jobId));
+
+        if (!job.isInDlq()) {
+            throw new IllegalStateException("Job is not in dead-letter queue");
+        }
+
+        // Reset and retry
+        job.setStatus(PrintJob.PrintJobStatus.PENDING);
+        job.setRetryCount(0);
+        job.setMaxRetries(3);
+        job.setNextRetryAt(null);
+        job.setMovedToDlqAt(null);
+        job.setDlqReason(null);
+        job.setErrorMessage(null);
+
+        PrintJob savedJob = printJobRepository.save(job);
+        log.info("Print job {} moved from DLQ back to pending", jobId);
+
+        notifyPrintAgents(job.getRestaurant().getId());
+
+        return savedJob;
+    }
+
+    /**
+     * Permanently dismiss a job from the dead-letter queue.
+     */
+    @Transactional
+    public void dismissDlqJob(Long jobId, String reason) {
+        printJobRepository.findById(jobId).ifPresent(job -> {
+            job.setStatus(PrintJob.PrintJobStatus.CANCELLED);
+            job.setErrorMessage("Dismissed from DLQ: " + reason);
+            printJobRepository.save(job);
+            log.info("Print job {} dismissed from DLQ: {}", jobId, reason);
+        });
+    }
+
+    /**
+     * Create a high-priority reprint job.
+     */
+    @Transactional
+    public PrintJob createReprintJob(Long originalJobId) {
+        PrintJob originalJob = printJobRepository.findById(originalJobId)
+                .orElseThrow(() -> new IllegalArgumentException("Print job not found: " + originalJobId));
+
+        PrintJob reprintJob = PrintJob.builder()
+                .restaurant(originalJob.getRestaurant())
+                .printer(originalJob.getPrinter())
+                .jobType(originalJob.getJobType())
+                .orderId(originalJob.getOrderId())
+                .orderNumber(originalJob.getOrderNumber())
+                .stationName(originalJob.getStationName())
+                .printData(originalJob.getPrintData())
+                .status(PrintJob.PrintJobStatus.PENDING)
+                .priority(PrintJob.Priority.HIGH)
+                .build();
+
+        reprintJob = printJobRepository.save(reprintJob);
+        log.info("Created reprint job {} from original {}", reprintJob.getId(), originalJobId);
+
+        notifyPrintAgents(originalJob.getRestaurant().getId());
+
+        return reprintJob;
+    }
+
+    /**
+     * Notify admin of a job moved to DLQ.
+     */
+    private void notifyAdminOfDlqJob(PrintJob job) {
+        try {
+            // Log as critical - in production, this would send to monitoring/alerting
+            log.error("CRITICAL: Print job {} for order {} moved to dead-letter queue. " +
+                            "Printer: {}, Station: {}, Error: {}",
+                    job.getId(), job.getOrderNumber(),
+                    job.getPrinter().getPrinterName(), job.getStationName(), job.getErrorMessage());
+        } catch (Exception e) {
+            log.error("Failed to notify admin of DLQ job", e);
+        }
     }
 
     /**

@@ -80,4 +80,53 @@ public interface PrintJobRepository extends JpaRepository<PrintJob, Long> {
            "AND pj.updatedAt < :timeout " +
            "AND pj.retryCount < pj.maxRetries")
     int resetStuckJobs(@Param("timeout") LocalDateTime timeout);
+
+    /**
+     * Find jobs ready for retry (in RETRYING status and past their backoff time)
+     */
+    @Query("SELECT pj FROM PrintJob pj " +
+           "JOIN FETCH pj.printer " +
+           "WHERE pj.restaurant.id = :restaurantId " +
+           "AND pj.status = 'RETRYING' " +
+           "AND (pj.nextRetryAt IS NULL OR pj.nextRetryAt <= :now) " +
+           "ORDER BY pj.priority ASC, pj.createdAt ASC")
+    List<PrintJob> findJobsReadyForRetry(@Param("restaurantId") Long restaurantId, @Param("now") LocalDateTime now);
+
+    /**
+     * Find pending jobs with priority ordering
+     */
+    @Query("SELECT pj FROM PrintJob pj " +
+           "JOIN FETCH pj.printer " +
+           "WHERE pj.restaurant.id = :restaurantId " +
+           "AND pj.status = 'PENDING' " +
+           "ORDER BY pj.priority ASC, pj.createdAt ASC")
+    List<PrintJob> findPendingJobsByRestaurantWithPriority(@Param("restaurantId") Long restaurantId);
+
+    /**
+     * Count jobs in dead-letter queue for a restaurant
+     */
+    @Query("SELECT COUNT(pj) FROM PrintJob pj " +
+           "WHERE pj.restaurant.id = :restaurantId AND pj.status = 'DEAD_LETTER'")
+    long countDeadLetterJobs(@Param("restaurantId") Long restaurantId);
+
+    /**
+     * Find all jobs in dead-letter queue
+     */
+    @Query("SELECT pj FROM PrintJob pj " +
+           "JOIN FETCH pj.printer " +
+           "WHERE pj.status = 'DEAD_LETTER' " +
+           "ORDER BY pj.movedToDlqAt DESC")
+    List<PrintJob> findAllDeadLetterJobs();
+
+    /**
+     * Move jobs to dead-letter queue that have exceeded max retries
+     */
+    @Modifying
+    @Query("UPDATE PrintJob pj SET " +
+           "pj.status = 'DEAD_LETTER', " +
+           "pj.movedToDlqAt = :now, " +
+           "pj.dlqReason = 'Max retries exceeded' " +
+           "WHERE pj.status = 'RETRYING' " +
+           "AND pj.retryCount >= pj.maxRetries")
+    int moveExhaustedJobsToDlq(@Param("now") LocalDateTime now);
 }

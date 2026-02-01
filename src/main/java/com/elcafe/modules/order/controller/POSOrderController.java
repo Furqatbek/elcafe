@@ -17,6 +17,7 @@ import com.elcafe.modules.order.service.POSOrderDiscountService;
 import com.elcafe.modules.order.service.POSOrderFeeService;
 import com.elcafe.modules.order.service.POSSplitBillService;
 import com.elcafe.modules.order.service.POSTableService;
+import com.elcafe.modules.order.service.IdempotencyService;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.elcafe.modules.promotion.dto.ActiveHappyHourResponse;
@@ -63,6 +64,7 @@ public class POSOrderController {
     private final POSTableService posTableService;
     private final PaymentService paymentService;
     private final HappyHourService happyHourService;
+    private final IdempotencyService idempotencyService;
 
     @PostMapping
     @Operation(
@@ -225,18 +227,30 @@ public class POSOrderController {
     @PostMapping("/{orderId}/payments")
     @Operation(
             summary = "Process payment",
-            description = "Process a payment for an order (supports split payments)"
+            description = "Process a payment for an order (supports split payments). " +
+                    "Include an idempotencyKey in the request to prevent double-charging on retries."
     )
     public ResponseEntity<ApiResponse<PaymentResponseDTO>> processPayment(
             @PathVariable Long orderId,
             @Valid @RequestBody PaymentRequestDTO request) {
 
-        log.info("Processing payment for order {}: method={}, amount={}",
-                orderId, request.getMethod(), request.getAmount());
+        log.info("Processing payment for order {}: method={}, amount={}, idempotencyKey={}",
+                orderId, request.getMethod(), request.getAmount(), request.getIdempotencyKey());
 
-        PaymentResponseDTO response = paymentService.processPOSPayment(orderId, request);
+        // Use idempotency service to prevent double-charging
+        IdempotencyService.IdempotentResult<PaymentResponseDTO> result = idempotencyService.executeIdempotently(
+                request.getIdempotencyKey(),
+                "PAYMENT",
+                request,
+                () -> paymentService.processPOSPayment(orderId, request),
+                PaymentResponseDTO.class
+        );
 
-        return ResponseEntity.ok(ApiResponse.success("Payment processed successfully", response));
+        String message = result.fromCache()
+                ? "Payment already processed (idempotent replay)"
+                : "Payment processed successfully";
+
+        return ResponseEntity.ok(ApiResponse.success(message, result.result()));
     }
 
     @GetMapping("/{orderId}/payments")

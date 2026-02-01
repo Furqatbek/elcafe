@@ -3,6 +3,7 @@ package com.elcafe.modules.order.dto.pos;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,13 +12,25 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 
 /**
- * DTO for processing a payment
+ * DTO for processing a payment.
+ * <p>
+ * IMPORTANT: Always include an idempotencyKey for payment requests to prevent
+ * double-charging in case of network issues or retries.
+ * </p>
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentRequestDTO {
+
+    /**
+     * Unique key to ensure idempotent payment processing.
+     * If the same key is used twice, the second request returns the cached result.
+     * Recommended format: UUID or "{orderId}-{timestamp}-{random}"
+     */
+    @Size(max = 255, message = "Idempotency key must be at most 255 characters")
+    private String idempotencyKey;
 
     @NotNull(message = "Payment method is required")
     private PaymentMethod method;
