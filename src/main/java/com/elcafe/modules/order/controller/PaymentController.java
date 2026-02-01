@@ -18,6 +18,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -79,13 +81,15 @@ public class PaymentController {
 
     @DeleteMapping("/{paymentId}")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Delete payment")
+    @Operation(summary = "Soft delete payment", description = "Soft deletes a payment record for audit compliance. Financial records are never hard deleted.")
     public ResponseEntity<ApiResponse<Void>> deletePayment(
             @PathVariable Long orderId,
             @PathVariable Long paymentId
     ) {
-        paymentService.deletePayment(orderId, paymentId);
-        return ResponseEntity.ok(ApiResponse.success("Payment deleted successfully", null));
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String deletedBy = auth != null ? auth.getName() : "SYSTEM";
+        paymentService.deletePayment(orderId, paymentId, deletedBy);
+        return ResponseEntity.ok(ApiResponse.success("Payment soft deleted successfully", null));
     }
 
     // Additional endpoints for payment management

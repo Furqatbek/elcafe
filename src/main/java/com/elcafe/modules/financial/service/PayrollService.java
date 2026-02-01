@@ -88,18 +88,31 @@ public class PayrollService {
         return savedPayroll;
     }
 
+    /**
+     * Soft delete a payroll entry. Financial records should never be hard deleted for audit compliance.
+     *
+     * @param id The payroll entry ID to delete
+     * @param deletedBy Username of the person performing the deletion
+     */
     @Transactional
-    public void deletePayrollEntry(Long id) {
-        log.info("Deleting payroll entry: {}", id);
+    public void deletePayrollEntry(Long id, String deletedBy) {
+        log.info("Soft deleting payroll entry: {} by user: {}", id, deletedBy);
 
         PayrollEntry payroll = payrollRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Payroll entry not found"));
 
-        if (payroll.getStatus() == PayrollEntry.PaymentStatus.PAID) {
-            throw new RuntimeException("Cannot delete paid payroll entry");
+        if (payroll.isDeleted()) {
+            throw new RuntimeException("Payroll entry has already been deleted");
         }
 
-        payrollRepository.delete(payroll);
+        if (payroll.getStatus() == PayrollEntry.PaymentStatus.PAID) {
+            throw new RuntimeException("Cannot delete paid payroll entry - use void/reverse instead");
+        }
+
+        // Use soft delete instead of hard delete for audit compliance
+        payroll.softDelete(deletedBy);
+        payrollRepository.save(payroll);
+        log.info("Soft deleted payroll entry: {} by user: {}", payroll.getPayrollNumber(), deletedBy);
     }
 
     public PayrollEntry getPayrollEntryById(Long id) {

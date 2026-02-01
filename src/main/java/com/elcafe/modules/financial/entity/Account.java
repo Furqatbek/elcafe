@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 @Table(name = "financial_accounts", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"restaurant_id", "code"})
 })
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -86,6 +88,38 @@ public class Account {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    // Soft delete support - financial records should never be hard deleted
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 100)
+    private String deletedBy;
+
+    // ==================== SOFT DELETE METHODS ====================
+
+    /**
+     * Check if this account has been soft-deleted.
+     */
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /**
+     * Soft delete this account. Financial records should never be hard deleted.
+     */
+    public void softDelete(String deletedByUser) {
+        this.deletedAt = LocalDateTime.now();
+        this.deletedBy = deletedByUser;
+    }
+
+    /**
+     * Restore a soft-deleted account.
+     */
+    public void restore() {
+        this.deletedAt = null;
+        this.deletedBy = null;
+    }
 
     public enum AccountType {
         ASSET,      // Things the business owns (cash, inventory, equipment)

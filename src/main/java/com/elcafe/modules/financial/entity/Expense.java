@@ -4,6 +4,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
         @Index(name = "idx_expense_category", columnList = "category"),
         @Index(name = "idx_expense_account", columnList = "account_id")
 })
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -111,6 +113,38 @@ public class Expense {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    // Soft delete support - financial records should never be hard deleted
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 100)
+    private String deletedBy;
+
+    // ==================== SOFT DELETE METHODS ====================
+
+    /**
+     * Check if this expense has been soft-deleted.
+     */
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /**
+     * Soft delete this expense. Financial records should never be hard deleted.
+     */
+    public void softDelete(String deletedByUser) {
+        this.deletedAt = LocalDateTime.now();
+        this.deletedBy = deletedByUser;
+    }
+
+    /**
+     * Restore a soft-deleted expense.
+     */
+    public void restore() {
+        this.deletedAt = null;
+        this.deletedBy = null;
+    }
 
     public enum ExpenseCategory {
         RENT,

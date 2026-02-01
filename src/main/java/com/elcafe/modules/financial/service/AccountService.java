@@ -51,18 +51,31 @@ public class AccountService {
         return accountRepository.save(existingAccount);
     }
 
+    /**
+     * Soft delete an account. Financial records should never be hard deleted for audit compliance.
+     *
+     * @param id The account ID to delete
+     * @param deletedBy Username of the person performing the deletion
+     */
     @Transactional
-    public void deleteAccount(Long id) {
-        log.info("Deleting account: {}", id);
+    public void deleteAccount(Long id, String deletedBy) {
+        log.info("Soft deleting account: {} by user: {}", id, deletedBy);
 
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Account not found with id: " + id));
+
+        if (account.isDeleted()) {
+            throw new RuntimeException("Account has already been deleted");
+        }
 
         if (account.getSystemAccount()) {
             throw new RuntimeException("Cannot delete system account");
         }
 
-        accountRepository.delete(account);
+        // Use soft delete instead of hard delete for audit compliance
+        account.softDelete(deletedBy);
+        accountRepository.save(account);
+        log.info("Soft deleted account: {} ({}) by user: {}", account.getName(), account.getCode(), deletedBy);
     }
 
     public Account getAccountById(Long id) {

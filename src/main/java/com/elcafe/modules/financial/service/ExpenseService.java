@@ -80,18 +80,31 @@ public class ExpenseService {
         return savedExpense;
     }
 
+    /**
+     * Soft delete an expense. Financial records should never be hard deleted for audit compliance.
+     *
+     * @param id The expense ID to delete
+     * @param deletedBy Username of the person performing the deletion
+     */
     @Transactional
-    public void deleteExpense(Long id) {
-        log.info("Deleting expense: {}", id);
+    public void deleteExpense(Long id, String deletedBy) {
+        log.info("Soft deleting expense: {} by user: {}", id, deletedBy);
 
         Expense expense = expenseRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Expense not found"));
 
-        if (expense.getPaymentStatus() == Expense.PaymentStatus.PAID) {
-            throw new RuntimeException("Cannot delete paid expense");
+        if (expense.isDeleted()) {
+            throw new RuntimeException("Expense has already been deleted");
         }
 
-        expenseRepository.delete(expense);
+        if (expense.getPaymentStatus() == Expense.PaymentStatus.PAID) {
+            throw new RuntimeException("Cannot delete paid expense - use void/reverse instead");
+        }
+
+        // Use soft delete instead of hard delete for audit compliance
+        expense.softDelete(deletedBy);
+        expenseRepository.save(expense);
+        log.info("Soft deleted expense: {} by user: {}", expense.getExpenseNumber(), deletedBy);
     }
 
     public Expense getExpenseById(Long id) {

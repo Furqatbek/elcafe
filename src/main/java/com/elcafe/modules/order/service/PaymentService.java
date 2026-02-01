@@ -165,13 +165,26 @@ public class PaymentService {
         return toResponse(updated);
     }
 
+    /**
+     * Soft delete a payment. Financial records should never be hard deleted for audit compliance.
+     *
+     * @param orderId The order ID
+     * @param paymentId The payment ID to delete
+     * @param deletedBy Username of the person performing the deletion
+     */
     @Transactional
-    public void deletePayment(Long orderId, Long paymentId) {
+    public void deletePayment(Long orderId, Long paymentId, String deletedBy) {
         Payment payment = paymentRepository.findByIdAndOrderId(paymentId, orderId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId + " for order: " + orderId));
 
-        paymentRepository.delete(payment);
-        log.info("Deleted payment: {} for order: {}", payment.getId(), orderId);
+        if (payment.isDeleted()) {
+            throw new RuntimeException("Payment has already been deleted");
+        }
+
+        // Use soft delete instead of hard delete for audit compliance
+        payment.softDelete(deletedBy);
+        paymentRepository.save(payment);
+        log.info("Soft deleted payment: {} for order: {} by user: {}", payment.getId(), orderId, deletedBy);
     }
 
     private PaymentResponse toResponse(Payment payment) {
