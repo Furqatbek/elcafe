@@ -10,6 +10,8 @@ import com.elcafe.modules.order.entity.Payment;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
+import com.elcafe.modules.order.exception.PaymentTransactionException;
+import com.elcafe.modules.order.exception.PaymentTransactionException.PaymentFailureReason;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.repository.PaymentRepository;
 import com.elcafe.modules.financial.service.RevenueService;
@@ -202,18 +204,29 @@ public class PaymentService {
     // ==================== POS Payment Methods ====================
 
     /**
-     * Process a POS payment with tip support
+     * Process a POS payment with tip support.
+     * <p>
+     * Transaction boundary ensures atomicity: if payment creation succeeds but order update fails,
+     * everything is rolled back. For complex payment flows requiring external gateway integration,
+     * use {@link TransactionalOrderOperationService#processPaymentAndUpdateOrder(Long, PaymentRequestDTO)}.
+     * </p>
+     *
+     * @param orderId The order to process payment for
+     * @param request The payment request details
+     * @return Payment response with order and payment details
+     * @throws PaymentTransactionException if payment processing fails (triggers rollback)
      */
-    @Transactional
+    @Transactional(rollbackFor = {PaymentTransactionException.class, RuntimeException.class})
     public PaymentResponseDTO processPOSPayment(Long orderId, PaymentRequestDTO request) {
         log.info("Processing POS payment for order {}: method={}, amount={}, tip={}",
                 orderId, request.getMethod(), request.getAmount(), request.getTipAmount());
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+                .orElseThrow(() -> new PaymentTransactionException(
+                        "Order not found: " + orderId, orderId, PaymentFailureReason.ORDER_STATUS_INVALID));
 
         // Validate order can accept payment
-        validateOrderForPayment(order);
+        validateOrderForPayment(order, orderId);
 
         // Calculate total payment with tip
         BigDecimal tipAmount = request.getTipAmount() != null ? request.getTipAmount() : BigDecimal.ZERO;
@@ -223,7 +236,9 @@ public class PaymentService {
         BigDecimal changeDue = BigDecimal.ZERO;
         if (request.getMethod() == PaymentMethod.CASH && request.getAmountTendered() != null) {
             if (request.getAmountTendered().compareTo(totalPayment) < 0) {
-                throw new IllegalArgumentException("Amount tendered is less than payment amount");
+                throw new PaymentTransactionException(
+                        "Amount tendered is less than payment amount",
+                        orderId, PaymentFailureReason.INVALID_AMOUNT);
             }
             changeDue = request.getAmountTendered().subtract(totalPayment);
         }
@@ -247,7 +262,16 @@ public class PaymentService {
                 .completedAt(LocalDateTime.now())
                 .build();
 
-        Payment savedPayment = paymentRepository.save(payment);
+        Payment savedPayment;
+        try {
+            savedPayment = paymentRepository.save(payment);
+        } catch (Exception e) {
+            throw new PaymentTransactionException(
+                    "Failed to save payment: " + e.getMessage(),
+                    orderId, null, request.getTransactionId(),
+                    PaymentFailureReason.DATABASE_ERROR, e);
+        }
+
         order.addPayment(savedPayment);
 
         // Update order tip if this payment includes tip
@@ -262,19 +286,34 @@ public class PaymentService {
             order.setPaymentStatus(PaymentStatus.COMPLETED);
             log.info("Order {} is now fully paid", orderId);
 
-            // Record revenue when order is fully paid
-            try {
-                revenueService.recordOrderRevenue(order);
-                log.info("Revenue recorded for order {}", orderId);
-            } catch (Exception e) {
-                log.error("Failed to record revenue for order {}: {}", orderId, e.getMessage());
-                // Don't fail the payment - revenue recording is non-critical
-            }
+            // Record revenue when order is fully paid (non-critical - logged but doesn't rollback)
+            recordRevenueNonCritical(order, orderId);
         }
 
-        orderRepository.save(order);
+        try {
+            orderRepository.save(order);
+        } catch (Exception e) {
+            throw new PaymentTransactionException(
+                    "Failed to update order after payment: " + e.getMessage(),
+                    orderId, savedPayment.getId(), savedPayment.getTransactionId(),
+                    PaymentFailureReason.DATABASE_ERROR, e);
+        }
 
         return buildPOSPaymentResponse(savedPayment, order);
+    }
+
+    /**
+     * Record revenue for an order. Non-critical operation that logs errors but doesn't fail the transaction.
+     */
+    private void recordRevenueNonCritical(Order order, Long orderId) {
+        try {
+            revenueService.recordOrderRevenue(order);
+            log.info("Revenue recorded for order {}", orderId);
+        } catch (Exception e) {
+            // Revenue recording is non-critical - log but don't fail the payment
+            log.error("Failed to record revenue for order {}: {} - payment will still succeed",
+                    orderId, e.getMessage());
+        }
     }
 
     /**
@@ -322,15 +361,22 @@ public class PaymentService {
     }
 
     /**
-     * Process a refund (POS)
+     * Process a refund (POS).
+     * Transaction boundary ensures all refund operations are atomic.
+     *
+     * @param orderId The order to refund
+     * @param request The refund request details
+     * @return Updated payment summary
+     * @throws PaymentTransactionException if refund processing fails (triggers rollback)
      */
-    @Transactional
+    @Transactional(rollbackFor = {PaymentTransactionException.class, RuntimeException.class})
     public PaymentResponseDTO processPOSRefund(Long orderId, RefundRequestDTO request) {
         log.info("Processing {} refund for order {}: reason={}",
                 request.getType(), orderId, request.getReason());
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+                .orElseThrow(() -> new PaymentTransactionException(
+                        "Order not found: " + orderId, orderId, PaymentFailureReason.ORDER_STATUS_INVALID));
 
         BigDecimal refundAmount;
 
@@ -394,14 +440,22 @@ public class PaymentService {
     }
 
     /**
-     * Void an order (cancel all payments)
+     * Void an order and cancel all payments.
+     * Transaction boundary ensures all void operations are atomic.
+     *
+     * @param orderId The order to void
+     * @param reason The reason for voiding
+     * @param processedBy Who is voiding the order
+     * @return Updated payment summary
+     * @throws PaymentTransactionException if void processing fails (triggers rollback)
      */
-    @Transactional
+    @Transactional(rollbackFor = {PaymentTransactionException.class, RuntimeException.class})
     public PaymentResponseDTO voidOrder(Long orderId, String reason, String processedBy) {
         log.info("Voiding order {}: reason={}", orderId, reason);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+                .orElseThrow(() -> new PaymentTransactionException(
+                        "Order not found: " + orderId, orderId, PaymentFailureReason.ORDER_STATUS_INVALID));
 
         // Void all payments
         List<Payment> payments = paymentRepository.findByOrderId(orderId);
@@ -449,12 +503,16 @@ public class PaymentService {
 
     // ==================== POS Helper Methods ====================
 
-    private void validateOrderForPayment(Order order) {
+    private void validateOrderForPayment(Order order, Long orderId) {
         if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new IllegalStateException("Cannot process payment for cancelled order");
+            throw new PaymentTransactionException(
+                    "Cannot process payment for cancelled order",
+                    orderId, PaymentFailureReason.ORDER_STATUS_INVALID);
         }
         if (order.isFullyPaid()) {
-            throw new IllegalStateException("Order is already fully paid");
+            throw new PaymentTransactionException(
+                    "Order is already fully paid",
+                    orderId, PaymentFailureReason.ORDER_ALREADY_PAID);
         }
     }
 

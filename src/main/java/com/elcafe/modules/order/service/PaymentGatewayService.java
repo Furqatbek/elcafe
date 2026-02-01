@@ -7,20 +7,27 @@ import com.elcafe.modules.order.dto.payment.RefundResponse;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.Payment;
 import com.elcafe.modules.order.enums.PaymentStatus;
+import com.elcafe.modules.order.exception.PaymentTransactionException;
+import com.elcafe.modules.order.exception.PaymentTransactionException.PaymentFailureReason;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Payment Gateway Integration Service
- * Ready for Stripe, PayPal, or other payment gateway integration
+ * Payment Gateway Integration Service.
+ * Ready for Stripe, PayPal, or other payment gateway integration.
+ * <p>
+ * IMPORTANT: This service uses explicit transaction boundaries to ensure atomicity.
+ * All payment-related operations (payment creation, order status update) are executed
+ * in a single transaction. If any step fails, the entire operation is rolled back.
+ * </p>
  */
 @Slf4j
 @Service
@@ -29,7 +36,7 @@ public class PaymentGatewayService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
-    private final OrderService orderService;
+    private final TransactionalOrderOperationService transactionalOrderOperationService;
     private final OrderEventBroadcaster orderEventBroadcaster;
 
     @Value("${payment.gateway.provider:STRIPE}")
@@ -45,25 +52,35 @@ public class PaymentGatewayService {
     private String webhookSecret;
 
     /**
-     * Create payment intent for order
-     * This prepares the payment on the gateway side without charging
+     * Create payment intent for order.
+     * This prepares the payment on the gateway side without charging.
+     *
+     * @param request The payment intent request
+     * @return Payment intent response with client secret
+     * @throws PaymentTransactionException if payment intent creation fails
      */
-    @Transactional
+    @Transactional(rollbackFor = {PaymentTransactionException.class, RuntimeException.class})
     public PaymentIntentResponse createPaymentIntent(PaymentIntentRequest request) {
         log.info("Creating payment intent for order: {}", request.getOrderId());
 
         Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Order not found: " + request.getOrderId()));
+                .orElseThrow(() -> new PaymentTransactionException(
+                        "Order not found: " + request.getOrderId(),
+                        request.getOrderId(),
+                        PaymentFailureReason.ORDER_STATUS_INVALID));
 
         if (order.getPayment() == null) {
-            throw new RuntimeException("Order has no payment information");
+            throw new PaymentTransactionException(
+                    "Order has no payment information",
+                    request.getOrderId(),
+                    PaymentFailureReason.ORDER_STATUS_INVALID);
         }
 
         try {
             // TODO: Integrate with actual payment gateway (Stripe, PayPal, etc.)
             // Example for Stripe:
             // PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
-            //     .setAmount(order.getTotal().multiply(BigDecimal.valueOf(100)).longValue()) // Amount in cents
+            //     .setAmount(order.getTotal().multiply(BigDecimal.valueOf(100)).longValue())
             //     .setCurrency("usd")
             //     .putMetadata("order_id", order.getId().toString())
             //     .putMetadata("order_number", order.getOrderNumber())
@@ -88,80 +105,127 @@ public class PaymentGatewayService {
                     .status("requires_payment_method")
                     .build();
 
+        } catch (PaymentTransactionException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Failed to create payment intent for order {}: {}", order.getOrderNumber(), e.getMessage(), e);
-            throw new RuntimeException("Failed to create payment intent: " + e.getMessage());
+            log.error("Failed to create payment intent for order {}: {}",
+                    order.getOrderNumber(), e.getMessage(), e);
+            throw new PaymentTransactionException(
+                    "Failed to create payment intent: " + e.getMessage(),
+                    request.getOrderId(),
+                    PaymentFailureReason.GATEWAY_ERROR, e);
         }
     }
 
     /**
-     * Confirm payment and update order status
-     * Called when payment is successfully completed on the client side
+     * Confirm payment and update order status atomically.
+     * Called when payment is successfully completed on the client side.
+     * <p>
+     * This method uses TransactionalOrderOperationService to ensure atomicity:
+     * - Payment status update
+     * - Order status update
+     * - Revenue recording
+     * All succeed or all fail together.
+     * </p>
+     *
+     * @param paymentIntentId The payment intent ID from the gateway
+     * @throws PaymentTransactionException if payment confirmation fails (triggers rollback)
      */
-    @Transactional
+    @Transactional(rollbackFor = {PaymentTransactionException.class, RuntimeException.class})
     public void confirmPayment(String paymentIntentId) {
         log.info("Confirming payment for intent: {}", paymentIntentId);
 
-        Order order = orderRepository.findByPaymentIntentId(paymentIntentId)
-                .orElseThrow(() -> new RuntimeException("Order not found for payment intent: " + paymentIntentId));
-
         try {
-            // TODO: Verify payment with gateway
-            // Example for Stripe:
-            // PaymentIntent intent = PaymentIntent.retrieve(paymentIntentId);
-            // if (!"succeeded".equals(intent.getStatus())) {
-            //     throw new RuntimeException("Payment not successful");
-            // }
+            // Use the transactional service for atomic operation
+            Order order = transactionalOrderOperationService.completeOrderWithPaymentConfirmation(paymentIntentId);
 
-            // Update payment status
-            Payment payment = order.getPayment();
-            payment.setStatus(PaymentStatus.COMPLETED);
-            payment.setCompletedAt(LocalDateTime.now());
-            paymentRepository.save(payment);
-
-            // Update order status from PENDING to PLACED
-            order.setPaymentStatus(com.elcafe.modules.order.enums.PaymentStatus.COMPLETED);
-            orderService.updateOrderStatus(
-                    order.getId(),
-                    com.elcafe.modules.order.enums.OrderStatus.PLACED,
-                    "Payment confirmed",
-                    "PAYMENT_GATEWAY"
-            );
-
-            // Broadcast order placed event to admin
-            orderEventBroadcaster.broadcastOrderPlaced(order);
+            // Broadcast order placed event to admin (non-critical, after transaction)
+            broadcastOrderPlacedNonCritical(order);
 
             log.info("Payment confirmed for order: {}", order.getOrderNumber());
 
+        } catch (PaymentTransactionException e) {
+            log.error("Payment confirmation failed for intent {}: {}", paymentIntentId, e.getMessage());
+            // Mark payment as failed in a separate transaction
+            markPaymentFailedInNewTransaction(paymentIntentId);
+            throw e;
         } catch (Exception e) {
             log.error("Failed to confirm payment for intent {}: {}", paymentIntentId, e.getMessage(), e);
-
-            // Mark payment as failed
-            Payment payment = order.getPayment();
-            payment.setStatus(PaymentStatus.FAILED);
-            paymentRepository.save(payment);
-
-            throw new RuntimeException("Failed to confirm payment: " + e.getMessage());
+            markPaymentFailedInNewTransaction(paymentIntentId);
+            throw new PaymentTransactionException(
+                    "Failed to confirm payment: " + e.getMessage(),
+                    null, paymentIntentId,
+                    PaymentFailureReason.GATEWAY_ERROR, e);
         }
     }
 
     /**
-     * Process refund for cancelled or rejected orders
+     * Mark payment as failed in a new transaction.
+     * This ensures failure is recorded even if the main transaction rolls back.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markPaymentFailedInNewTransaction(String paymentIntentId) {
+        try {
+            orderRepository.findByPaymentIntentId(paymentIntentId).ifPresent(order -> {
+                Payment payment = order.getPayment();
+                if (payment != null) {
+                    payment.setStatus(PaymentStatus.FAILED);
+                    paymentRepository.save(payment);
+                    log.info("Marked payment as FAILED for intent {}", paymentIntentId);
+                }
+            });
+        } catch (Exception e) {
+            log.error("Failed to mark payment as failed for intent {}: {}",
+                    paymentIntentId, e.getMessage());
+        }
+    }
+
+    /**
+     * Broadcast order placed event in a non-critical way.
+     * Failure doesn't affect the main transaction.
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void broadcastOrderPlacedNonCritical(Order order) {
+        try {
+            orderEventBroadcaster.broadcastOrderPlaced(order);
+        } catch (Exception e) {
+            log.error("Failed to broadcast order placed event for {}: {}",
+                    order.getOrderNumber(), e.getMessage());
+        }
+    }
+
+    /**
+     * Process refund for cancelled or rejected orders.
+     *
+     * @param request The refund request
+     * @return Refund response with status
+     * @throws PaymentTransactionException if refund processing fails
+     */
+    @Transactional(rollbackFor = {PaymentTransactionException.class, RuntimeException.class})
     public RefundResponse processRefund(RefundRequest request) {
         log.info("Processing refund for order: {}", request.getOrderId());
 
         Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Order not found: " + request.getOrderId()));
+                .orElseThrow(() -> new PaymentTransactionException(
+                        "Order not found: " + request.getOrderId(),
+                        request.getOrderId(),
+                        PaymentFailureReason.ORDER_STATUS_INVALID));
 
         Payment payment = order.getPayment();
         if (payment == null) {
-            throw new RuntimeException("No payment found for order");
+            throw new PaymentTransactionException(
+                    "No payment found for order",
+                    request.getOrderId(),
+                    PaymentFailureReason.ORDER_STATUS_INVALID);
         }
 
         if (payment.getStatus() != PaymentStatus.COMPLETED) {
-            throw new RuntimeException("Cannot refund payment that is not completed");
+            throw new PaymentTransactionException(
+                    "Cannot refund payment that is not completed",
+                    request.getOrderId(),
+                    payment.getId(),
+                    payment.getTransactionId(),
+                    PaymentFailureReason.ORDER_STATUS_INVALID);
         }
 
         try {
@@ -195,17 +259,29 @@ public class PaymentGatewayService {
                     .estimatedArrival(LocalDateTime.now().plusDays(7))
                     .build();
 
+        } catch (PaymentTransactionException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Failed to process refund for order {}: {}", order.getOrderNumber(), e.getMessage(), e);
-            throw new RuntimeException("Failed to process refund: " + e.getMessage());
+            log.error("Failed to process refund for order {}: {}",
+                    order.getOrderNumber(), e.getMessage(), e);
+            throw new PaymentTransactionException(
+                    "Failed to process refund: " + e.getMessage(),
+                    request.getOrderId(),
+                    payment.getId(),
+                    payment.getTransactionId(),
+                    PaymentFailureReason.REFUND_FAILED, e);
         }
     }
 
     /**
-     * Handle webhook from payment gateway
-     * Called when payment gateway sends status updates
+     * Handle webhook from payment gateway.
+     * Called when payment gateway sends status updates.
+     *
+     * @param payload The webhook payload
+     * @param signature The webhook signature for verification
+     * @throws PaymentTransactionException if webhook processing fails
      */
-    @Transactional
+    @Transactional(rollbackFor = {PaymentTransactionException.class, RuntimeException.class})
     public void handleWebhook(String payload, String signature) {
         log.info("Received payment webhook");
 
@@ -233,13 +309,19 @@ public class PaymentGatewayService {
 
         } catch (Exception e) {
             log.error("Failed to process webhook: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to process webhook: " + e.getMessage());
+            throw new PaymentTransactionException(
+                    "Failed to process webhook: " + e.getMessage(),
+                    PaymentFailureReason.GATEWAY_ERROR);
         }
     }
 
     /**
-     * Verify payment status with gateway
-     * Used by background job to check pending payments
+     * Verify payment status with gateway.
+     * Used by background job to check pending payments.
+     * This is a read-only operation that doesn't require transaction.
+     *
+     * @param paymentIntentId The payment intent ID to verify
+     * @return Payment status string
      */
     public String verifyPaymentStatus(String paymentIntentId) {
         try {
@@ -252,13 +334,16 @@ public class PaymentGatewayService {
             return "succeeded";
 
         } catch (Exception e) {
-            log.error("Failed to verify payment status for intent {}: {}", paymentIntentId, e.getMessage(), e);
+            log.error("Failed to verify payment status for intent {}: {}",
+                    paymentIntentId, e.getMessage(), e);
             return "unknown";
         }
     }
 
     /**
-     * Get publishable key for client-side payment form
+     * Get publishable key for client-side payment form.
+     *
+     * @return The publishable key
      */
     public String getPublishableKey() {
         if (stripePublishableKey == null || stripePublishableKey.isEmpty()) {
