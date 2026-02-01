@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,7 +19,11 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "order_items")
+@Table(name = "order_items", indexes = {
+        @Index(name = "idx_order_item_order", columnList = "order_id"),
+        @Index(name = "idx_order_item_product", columnList = "product_id"),
+        @Index(name = "idx_order_item_deleted_at", columnList = "deleted_at")
+})
 public class OrderItem {
 
     @Id
@@ -79,6 +85,13 @@ public class OrderItem {
     @Column(name = "is_bundle")
     @Builder.Default
     private Boolean isBundle = false;
+
+    // Soft delete support - order items should never be hard deleted for audit trail
+    @Column(name = "deleted_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 100)
+    private String deletedBy;
 
     // ==================== ADD-ON HELPER METHODS ====================
 
@@ -166,5 +179,30 @@ public class OrderItem {
     public boolean hasAddOns() {
         return (itemAddOns != null && !itemAddOns.isEmpty())
                 || (addOns != null && !addOns.isBlank());
+    }
+
+    // ==================== SOFT DELETE METHODS ====================
+
+    /**
+     * Check if this order item has been soft-deleted.
+     */
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /**
+     * Soft delete this order item.
+     */
+    public void softDelete(String deletedByUser) {
+        this.deletedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        this.deletedBy = deletedByUser;
+    }
+
+    /**
+     * Restore a soft-deleted order item.
+     */
+    public void restore() {
+        this.deletedAt = null;
+        this.deletedBy = null;
     }
 }

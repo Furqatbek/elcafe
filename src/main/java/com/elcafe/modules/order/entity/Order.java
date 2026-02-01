@@ -22,6 +22,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,7 +32,17 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@jakarta.persistence.Table(name = "orders")
+@jakarta.persistence.Table(name = "orders", indexes = {
+        @Index(name = "idx_order_restaurant_status", columnList = "restaurant_id, status"),
+        @Index(name = "idx_order_restaurant_created", columnList = "restaurant_id, created_at"),
+        @Index(name = "idx_order_customer", columnList = "customer_id"),
+        @Index(name = "idx_order_dining_table", columnList = "dining_table_id"),
+        @Index(name = "idx_order_waiter", columnList = "waiter_id"),
+        @Index(name = "idx_order_status", columnList = "status"),
+        @Index(name = "idx_order_created_at", columnList = "created_at"),
+        @Index(name = "idx_order_payment_intent", columnList = "payment_intent_id"),
+        @Index(name = "idx_order_deleted_at", columnList = "deleted_at")
+})
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @NamedEntityGraph(
@@ -176,31 +188,32 @@ public class Order {
     @Column(length = 1000)
     private String internalNotes;
 
-    private LocalDateTime scheduledFor;
+    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime scheduledFor;
 
-    @Column(name = "placed_at")
-    private LocalDateTime placedAt;
+    @Column(name = "placed_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime placedAt;
 
-    @Column(name = "accepted_at")
-    private LocalDateTime acceptedAt;
+    @Column(name = "accepted_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime acceptedAt;
 
-    @Column(name = "preparing_at")
-    private LocalDateTime preparingAt;
+    @Column(name = "preparing_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime preparingAt;
 
-    @Column(name = "ready_at")
-    private LocalDateTime readyAt;
+    @Column(name = "ready_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime readyAt;
 
-    @Column(name = "picked_up_at")
-    private LocalDateTime pickedUpAt;
+    @Column(name = "picked_up_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime pickedUpAt;
 
-    @Column(name = "completed_at")
-    private LocalDateTime completedAt;
+    @Column(name = "completed_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime completedAt;
 
-    @Column(name = "cancelled_at")
-    private LocalDateTime cancelledAt;
+    @Column(name = "cancelled_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime cancelledAt;
 
-    @Column(name = "rejected_at")
-    private LocalDateTime rejectedAt;
+    @Column(name = "rejected_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime rejectedAt;
 
     @Column(name = "cancelled_by", length = 200)
     private String cancelledBy;
@@ -211,11 +224,18 @@ public class Order {
     @Column(name = "void_reason", length = 500)
     private String voidReason;
 
-    @Column(name = "voided_at")
-    private LocalDateTime voidedAt;
+    @Column(name = "voided_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime voidedAt;
 
     @Column(name = "voided_by", length = 100)
     private String voidedBy;
+
+    // Soft delete support - financial records should never be hard deleted
+    @Column(name = "deleted_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 100)
+    private String deletedBy;
 
     @Column(name = "payment_intent_id", length = 255)
     private String paymentIntentId;
@@ -239,12 +259,12 @@ public class Order {
     private List<OrderStatusHistory> statusHistory = new ArrayList<>();
 
     @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime createdAt;
 
     @LastModifiedDate
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
+    @Column(nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime updatedAt;
 
     /**
      * Version field for optimistic locking.
@@ -552,5 +572,30 @@ public class Order {
         return (orderTables != null && !orderTables.isEmpty())
                 || (tableIds != null && !tableIds.isBlank())
                 || diningTable != null;
+    }
+
+    // ==================== SOFT DELETE METHODS ====================
+
+    /**
+     * Check if this order has been soft-deleted.
+     */
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /**
+     * Soft delete this order. Financial records should never be hard deleted.
+     */
+    public void softDelete(String deletedByUser) {
+        this.deletedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        this.deletedBy = deletedByUser;
+    }
+
+    /**
+     * Restore a soft-deleted order.
+     */
+    public void restore() {
+        this.deletedAt = null;
+        this.deletedBy = null;
     }
 }

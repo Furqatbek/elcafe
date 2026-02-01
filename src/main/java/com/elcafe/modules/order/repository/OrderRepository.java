@@ -16,6 +16,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -142,4 +143,50 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             @Param("restaurantId") Long restaurantId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
+
+    // ==================== SOFT DELETE QUERIES ====================
+
+    /**
+     * Find order by ID, excluding soft-deleted records
+     */
+    @Query("SELECT o FROM Order o WHERE o.id = :id AND o.deletedAt IS NULL")
+    Optional<Order> findActiveById(@Param("id") Long id);
+
+    /**
+     * Find orders by restaurant and status, excluding soft-deleted records
+     */
+    @Query("SELECT o FROM Order o WHERE o.restaurant.id = :restaurantId AND o.status = :status AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
+    List<Order> findActiveByRestaurantIdAndStatus(@Param("restaurantId") Long restaurantId, @Param("status") OrderStatus status);
+
+    /**
+     * Find soft-deleted orders for a restaurant (for audit/recovery)
+     */
+    @Query("SELECT o FROM Order o WHERE o.restaurant.id = :restaurantId AND o.deletedAt IS NOT NULL ORDER BY o.deletedAt DESC")
+    List<Order> findDeletedByRestaurantId(@Param("restaurantId") Long restaurantId);
+
+    /**
+     * Find all orders including soft-deleted (for complete audit trail)
+     */
+    @Query("SELECT o FROM Order o WHERE o.restaurant.id = :restaurantId ORDER BY o.createdAt DESC")
+    List<Order> findAllIncludingDeletedByRestaurantId(@Param("restaurantId") Long restaurantId);
+
+    /**
+     * Count active (non-deleted) orders by restaurant and status
+     */
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.restaurant.id = :restaurantId AND o.status = :status AND o.deletedAt IS NULL")
+    long countActiveByRestaurantIdAndStatus(@Param("restaurantId") Long restaurantId, @Param("status") OrderStatus status);
+
+    // ==================== TIMEZONE-AWARE QUERIES ====================
+
+    /**
+     * Find orders created after a specific time (timezone-aware)
+     */
+    @Query("SELECT o FROM Order o WHERE o.restaurant.id = :restaurantId AND o.createdAt > :since AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
+    List<Order> findByRestaurantIdAndCreatedAtAfter(@Param("restaurantId") Long restaurantId, @Param("since") OffsetDateTime since);
+
+    /**
+     * Find orders by restaurant and status list (timezone-aware, excluding deleted)
+     */
+    @Query("SELECT o FROM Order o WHERE o.restaurant.id = :restaurantId AND o.status IN :statuses AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
+    List<Order> findByRestaurantIdAndStatusIn(@Param("restaurantId") Long restaurantId, @Param("statuses") List<OrderStatus> statuses);
 }

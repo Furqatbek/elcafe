@@ -14,13 +14,21 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "payments")
+@Table(name = "payments", indexes = {
+        @Index(name = "idx_payment_order", columnList = "order_id"),
+        @Index(name = "idx_payment_status", columnList = "status"),
+        @Index(name = "idx_payment_transaction_id", columnList = "transaction_id"),
+        @Index(name = "idx_payment_created_at", columnList = "created_at"),
+        @Index(name = "idx_payment_deleted_at", columnList = "deleted_at")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class Payment {
 
@@ -77,19 +85,29 @@ public class Payment {
     @Column(name = "split_number")
     private Integer splitNumber;
 
-    private LocalDateTime paidAt;
+    @Column(name = "paid_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime paidAt;
 
-    private LocalDateTime completedAt;
+    @Column(name = "completed_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime completedAt;
 
-    private LocalDateTime refundedAt;
+    @Column(name = "refunded_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime refundedAt;
 
     @CreatedDate
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime createdAt;
 
     @LastModifiedDate
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
+    @Column(nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime updatedAt;
+
+    // Soft delete support - financial records should never be hard deleted
+    @Column(name = "deleted_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime deletedAt;
+
+    @Column(name = "deleted_by", length = 100)
+    private String deletedBy;
 
     /**
      * Version field for optimistic locking.
@@ -113,5 +131,30 @@ public class Payment {
     public BigDecimal getNetAmount() {
         BigDecimal refunded = refundedAmount != null ? refundedAmount : BigDecimal.ZERO;
         return getTotalWithTip().subtract(refunded);
+    }
+
+    // ==================== SOFT DELETE METHODS ====================
+
+    /**
+     * Check if this payment has been soft-deleted.
+     */
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /**
+     * Soft delete this payment. Financial records should never be hard deleted.
+     */
+    public void softDelete(String deletedByUser) {
+        this.deletedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        this.deletedBy = deletedByUser;
+    }
+
+    /**
+     * Restore a soft-deleted payment.
+     */
+    public void restore() {
+        this.deletedAt = null;
+        this.deletedBy = null;
     }
 }
