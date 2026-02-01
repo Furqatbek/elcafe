@@ -1,5 +1,9 @@
 package com.elcafe.modules.order.controller;
 
+import com.elcafe.common.audit.entity.AuditAction;
+import com.elcafe.common.audit.service.AuditService;
+import com.elcafe.common.security.exception.SecurityPolicyViolationException;
+import com.elcafe.common.security.service.FinancialOperationSecurityService;
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.ModifyOrderItemRequest;
 import com.elcafe.modules.order.dto.pos.PaymentRequestDTO;
@@ -10,6 +14,7 @@ import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.order.dto.pos.RefundRequestDTO;
 import com.elcafe.modules.order.dto.pos.SplitBillDTO;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.service.PaymentService;
 import com.elcafe.modules.order.service.POSOrderService;
 import com.elcafe.modules.order.service.POSOrderItemService;
@@ -65,6 +70,9 @@ public class POSOrderController {
     private final PaymentService paymentService;
     private final HappyHourService happyHourService;
     private final IdempotencyService idempotencyService;
+    private final FinancialOperationSecurityService financialSecurityService;
+    private final AuditService auditService;
+    private final OrderRepository orderRepository;
 
     @PostMapping
     @Operation(
@@ -269,9 +277,11 @@ public class POSOrderController {
     }
 
     @PostMapping("/{orderId}/refund")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'CASHIER')")
     @Operation(
             summary = "Process refund",
-            description = "Process a full, partial, or item-based refund for an order"
+            description = "Process a full, partial, or item-based refund for an order. " +
+                    "Requires CASHIER role or higher. Large refunds require manager approval."
     )
     public ResponseEntity<ApiResponse<PaymentResponseDTO>> processRefund(
             @PathVariable Long orderId,
@@ -279,15 +289,61 @@ public class POSOrderController {
 
         log.info("Processing refund for order {}: type={}", orderId, request.getType());
 
+        // Get order for security check
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        // Check refund authorization
+        BigDecimal refundAmount = request.getAmount();
+        FinancialOperationSecurityService.RefundAuthorizationResult authResult =
+                financialSecurityService.canPerformRefund(order, refundAmount);
+
+        if (!authResult.allowed()) {
+            if (authResult.needsApproval()) {
+                return ResponseEntity.status(HttpStatus.ACCEPTED)
+                        .body(ApiResponse.success(
+                                "Refund requires manager approval: " + authResult.reason(),
+                                null));
+            }
+            throw new SecurityPolicyViolationException(
+                    authResult.reason(),
+                    SecurityPolicyViolationException.ViolationType.INSUFFICIENT_PERMISSIONS);
+        }
+
+        // Log the refund operation
+        auditService.logFinancialOperation(
+                AuditAction.REFUND_INITIATED,
+                orderId,
+                order.getOrderNumber(),
+                order.getRestaurant().getId(),
+                refundAmount,
+                "USD",
+                "Refund type: " + request.getType() + ", Reason: " + request.getReason()
+        );
+
         PaymentResponseDTO response = paymentService.processPOSRefund(orderId, request);
+
+        // Log successful refund
+        auditService.logFinancialOperation(
+                AuditAction.REFUND_COMPLETED,
+                orderId,
+                order.getOrderNumber(),
+                order.getRestaurant().getId(),
+                refundAmount,
+                "USD",
+                "Refund completed successfully"
+        );
 
         return ResponseEntity.ok(ApiResponse.success("Refund processed successfully", response));
     }
 
     @PostMapping("/{orderId}/void")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
     @Operation(
             summary = "Void order",
-            description = "Void an order completely (cancels all payments)"
+            description = "Void an order completely (cancels all payments). " +
+                    "Requires MANAGER role or higher. Cannot void orders with card payments " +
+                    "(must use refund). Cannot void after time window expires without owner approval."
     )
     public ResponseEntity<ApiResponse<POSOrderResponse>> voidOrder(
             @PathVariable Long orderId,
@@ -296,12 +352,54 @@ public class POSOrderController {
 
         log.info("Voiding order {}: reason={}", orderId, reason);
 
+        // Get order for security check
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        // Check void authorization
+        FinancialOperationSecurityService.VoidAuthorizationResult authResult =
+                financialSecurityService.canVoidOrder(order);
+
+        if (!authResult.allowed()) {
+            if (authResult.needsApproval()) {
+                return ResponseEntity.status(HttpStatus.ACCEPTED)
+                        .body(ApiResponse.success(
+                                "Void requires manager approval: " + authResult.reason(),
+                                null));
+            }
+            throw new SecurityPolicyViolationException(
+                    authResult.reason(),
+                    SecurityPolicyViolationException.ViolationType.INSUFFICIENT_PERMISSIONS);
+        }
+
+        // Log the void operation
+        auditService.logFinancialOperation(
+                AuditAction.VOID_INITIATED,
+                orderId,
+                order.getOrderNumber(),
+                order.getRestaurant().getId(),
+                order.getTotal(),
+                "USD",
+                "Void reason: " + reason + ", Voided by: " + voidedBy
+        );
+
         paymentService.voidOrder(orderId, reason, voidedBy);
 
-        // Return updated order
-        POSOrderResponse order = posOrderService.getOrderById(orderId);
+        // Log successful void
+        auditService.logFinancialOperation(
+                AuditAction.ORDER_VOIDED,
+                orderId,
+                order.getOrderNumber(),
+                order.getRestaurant().getId(),
+                order.getTotal(),
+                "USD",
+                "Order voided successfully"
+        );
 
-        return ResponseEntity.ok(ApiResponse.success("Order voided successfully", order));
+        // Return updated order
+        POSOrderResponse orderResponse = posOrderService.getOrderById(orderId);
+
+        return ResponseEntity.ok(ApiResponse.success("Order voided successfully", orderResponse));
     }
 
     @PostMapping("/{orderId}/tip")
