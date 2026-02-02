@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 @Data
@@ -26,6 +26,6 @@ public class CampaignStatsResponse {
     private Double deliveryRate;
     private BigDecimal totalCost;
     private Map<String, Long> statusBreakdown;
-    private LocalDateTime startedAt;
-    private LocalDateTime completedAt;
+    private OffsetDateTime startedAt;
+    private OffsetDateTime completedAt;
 }

@@ -19,7 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -146,7 +147,7 @@ public class TelegramCampaignService {
         }
 
         campaign.setStatus(CampaignStatus.SENDING);
-        campaign.setStartedAt(LocalDateTime.now());
+        campaign.setStartedAt(OffsetDateTime.now(ZoneOffset.UTC));
         campaign = campaignRepository.save(campaign);
 
         // Trigger async campaign execution
@@ -238,7 +239,7 @@ public class TelegramCampaignService {
                 LocalDate activeSinceDate = currentBusinessDay.minusDays(activeDays);
                 ShiftTimeService.ShiftTimeRange activeRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, activeSinceDate);
-                return subscriberRepository.findActiveSubscribers(activeRange.start());
+                return subscriberRepository.findActiveSubscribers(activeRange.start().atOffset(ZoneOffset.UTC));
             case INACTIVE:
                 int inactiveDays = 14;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("days_inactive")) {
@@ -249,7 +250,7 @@ public class TelegramCampaignService {
                 LocalDate inactiveBeforeDate = currentBusinessDay.minusDays(inactiveDays);
                 ShiftTimeService.ShiftTimeRange inactiveRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, inactiveBeforeDate);
-                return subscriberRepository.findInactiveSubscribers(inactiveRange.start());
+                return subscriberRepository.findInactiveSubscribers(inactiveRange.start().atOffset(ZoneOffset.UTC));
             case LINKED_CUSTOMERS:
                 return subscriberRepository.findByCustomerIdIsNotNull();
             case CUSTOM:

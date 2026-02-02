@@ -8,7 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -34,11 +34,11 @@ public class TelegramCampaignResponse {
     private Integer failedCount;
     private Double deliveryRate;
     private CampaignStatus status;
-    private LocalDateTime scheduledAt;
-    private LocalDateTime startedAt;
-    private LocalDateTime completedAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private OffsetDateTime scheduledAt;
+    private OffsetDateTime startedAt;
+    private OffsetDateTime completedAt;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
 
     public static TelegramCampaignResponse from(TelegramCampaign campaign) {
         TelegramCampaignResponseBuilder builder = TelegramCampaignResponse.builder()

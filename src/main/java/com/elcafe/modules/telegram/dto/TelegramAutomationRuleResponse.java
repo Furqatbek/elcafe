@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 @Data
@@ -26,9 +26,9 @@ public class TelegramAutomationRuleResponse {
     private Boolean isActive;
     private Map<String, Object> conditions;
     private Integer sentCount;
-    private LocalDateTime lastTriggeredAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private OffsetDateTime lastTriggeredAt;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
 
     public static TelegramAutomationRuleResponse from(TelegramAutomationRule rule) {
         return TelegramAutomationRuleResponse.builder()

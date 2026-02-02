@@ -338,7 +338,7 @@ public class LoyaltyService {
             return;
         }
 
-        LocalDateTime threshold = OffsetDateTime.now(ZoneOffset.UTC).minusDays(config.getReactivationDaysThreshold());
+        OffsetDateTime threshold = OffsetDateTime.now(ZoneOffset.UTC).minusDays(config.getReactivationDaysThreshold());
         if (loyalty.getLastOrderDate().isAfter(threshold)) {
             return;
         }

@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -105,7 +107,7 @@ public class TelegramCampaignExecutor {
 
             // Mark campaign as completed
             campaign.setStatus(CampaignStatus.COMPLETED);
-            campaign.setCompletedAt(LocalDateTime.now());
+            campaign.setCompletedAt(OffsetDateTime.now(ZoneOffset.UTC));
             campaignRepository.save(campaign);
 
             log.info("Campaign {} completed: sent={}, failed={}", campaignId, sentCount, failedCount);

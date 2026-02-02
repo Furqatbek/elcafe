@@ -175,7 +175,7 @@ public class TelegramScheduler {
                 LocalDate cutoffDate = currentBusinessDay.minusDays(daysInactive);
                 ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, cutoffDate);
-                List<TelegramSubscriber> inactiveSubscribers = subscriberRepository.findInactiveSubscribers(shiftRange.start());
+                List<TelegramSubscriber> inactiveSubscribers = subscriberRepository.findInactiveSubscribers(shiftRange.start().atOffset(ZoneOffset.UTC));
 
                 log.info("Found {} inactive subscribers ({}+ business days)", inactiveSubscribers.size(), daysInactive);
 
@@ -216,7 +216,7 @@ public class TelegramScheduler {
     @Transactional
     public void cleanupStuckCampaigns() {
         try {
-            LocalDateTime twoHoursAgo = OffsetDateTime.now(ZoneOffset.UTC).minusHours(2);
+            OffsetDateTime twoHoursAgo = OffsetDateTime.now(ZoneOffset.UTC).minusHours(2);
 
             List<TelegramCampaign> stuckCampaigns = campaignRepository
                     .findByStatusAndStartedAtBefore(CampaignStatus.SENDING, twoHoursAgo);

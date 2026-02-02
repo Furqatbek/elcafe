@@ -21,7 +21,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -77,7 +78,7 @@ public class TelegramBotService {
             TelegramSubscriber subscriber = subscriberRepository.findByTelegramUserId(chatId)
                     .orElse(TelegramSubscriber.builder()
                             .telegramUserId(chatId)
-                            .subscribedAt(LocalDateTime.now())
+                            .subscribedAt(OffsetDateTime.now(ZoneOffset.UTC))
                             .isActive(true)
                             .isBlocked(false)
                             .build());
@@ -87,7 +88,7 @@ public class TelegramBotService {
             subscriber.setLastName(user.getLastName());
             subscriber.setLanguageCode(user.getLanguageCode());
             subscriber.setIsActive(true);
-            subscriber.setLastInteractionAt(LocalDateTime.now());
+            subscriber.setLastInteractionAt(OffsetDateTime.now(ZoneOffset.UTC));
 
             subscriberRepository.save(subscriber);
             log.info("Telegram subscriber registered/updated: chatId={}, username={}", chatId, user.getUserName());
@@ -102,7 +103,7 @@ public class TelegramBotService {
     private void handleSubscriberInteraction(Long chatId) {
         try {
             subscriberRepository.findByTelegramUserId(chatId).ifPresent(subscriber -> {
-                subscriber.setLastInteractionAt(LocalDateTime.now());
+                subscriber.setLastInteractionAt(OffsetDateTime.now(ZoneOffset.UTC));
                 subscriberRepository.save(subscriber);
             });
         } catch (Exception e) {

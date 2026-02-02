@@ -9,7 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 @Data
@@ -33,10 +33,10 @@ public class SmsCampaignResponse {
     private Integer failedCount;
     private BigDecimal totalCost;
     private CampaignStatus status;
-    private LocalDateTime scheduledAt;
-    private LocalDateTime startedAt;
-    private LocalDateTime completedAt;
-    private LocalDateTime createdAt;
+    private OffsetDateTime scheduledAt;
+    private OffsetDateTime startedAt;
+    private OffsetDateTime completedAt;
+    private OffsetDateTime createdAt;
     private Double deliveryRate;
 
     public static SmsCampaignResponse from(SmsCampaign campaign) {

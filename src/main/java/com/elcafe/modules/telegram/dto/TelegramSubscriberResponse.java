@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 @Builder
@@ -24,9 +24,9 @@ public class TelegramSubscriberResponse {
     private Long customerId;
     private Boolean isActive;
     private Boolean isBlocked;
-    private LocalDateTime subscribedAt;
-    private LocalDateTime lastInteractionAt;
-    private LocalDateTime createdAt;
+    private OffsetDateTime subscribedAt;
+    private OffsetDateTime lastInteractionAt;
+    private OffsetDateTime createdAt;
 
     public static TelegramSubscriberResponse from(TelegramSubscriber subscriber) {
         return TelegramSubscriberResponse.builder()

@@ -15,7 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -62,7 +63,7 @@ public class TelegramSubscriberService {
         TelegramSubscriber subscriber = subscriberRepository.findByTelegramUserId(telegramUserId)
                 .orElse(TelegramSubscriber.builder()
                         .telegramUserId(telegramUserId)
-                        .subscribedAt(LocalDateTime.now())
+                        .subscribedAt(OffsetDateTime.now(ZoneOffset.UTC))
                         .build());
 
         subscriber.setUsername(username);
@@ -114,7 +115,7 @@ public class TelegramSubscriberService {
         LocalDate cutoffDate = currentBusinessDay.minusDays(daysInactive);
         ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
                 restaurantId, cutoffDate);
-        return subscriberRepository.findInactiveSubscribers(shiftRange.start());
+        return subscriberRepository.findInactiveSubscribers(shiftRange.start().atOffset(ZoneOffset.UTC));
     }
 
     @Transactional(readOnly = true)
@@ -140,8 +141,8 @@ public class TelegramSubscriberService {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalSubscribers", subscriberRepository.count());
         stats.put("activeSubscribers", subscriberRepository.countActiveSubscribers());
-        stats.put("newThisWeek", subscriberRepository.countNewSubscribersSince(weekRange.start()));
-        stats.put("newThisMonth", subscriberRepository.countNewSubscribersSince(monthRange.start()));
+        stats.put("newThisWeek", subscriberRepository.countNewSubscribersSince(weekRange.start().atOffset(ZoneOffset.UTC)));
+        stats.put("newThisMonth", subscriberRepository.countNewSubscribersSince(monthRange.start().atOffset(ZoneOffset.UTC)));
         stats.put("currentBusinessDay", currentBusinessDay);
         return stats;
     }

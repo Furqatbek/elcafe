@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 @Builder
@@ -24,11 +24,11 @@ public class CustomerLoyaltyResponse {
     private TierInfo tier;
     private BigDecimal totalSpent;
     private Integer orderCount;
-    private LocalDateTime lastOrderDate;
+    private OffsetDateTime lastOrderDate;
     private Boolean firstOrderBonusClaimed;
     private Integer birthdayBonusClaimedYear;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
 
     @Data
     @Builder

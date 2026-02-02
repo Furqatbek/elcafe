@@ -9,7 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -38,5 +38,5 @@ public class TelegramCampaignRequest {
 
     private Map<String, Object> filterCriteria;
 
-    private LocalDateTime scheduledAt;
+    private OffsetDateTime scheduledAt;
 }

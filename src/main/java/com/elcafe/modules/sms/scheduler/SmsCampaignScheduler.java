@@ -33,7 +33,7 @@ public class SmsCampaignScheduler {
     @Scheduled(fixedRate = 60000) // Every 60 seconds
     @Transactional
     public void processScheduledCampaigns() {
-        LocalDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         List<SmsCampaign> dueCampaigns = campaignRepository
                 .findByStatusAndScheduledAtBefore(CampaignStatus.SCHEDULED, now);
@@ -64,7 +64,7 @@ public class SmsCampaignScheduler {
     @Scheduled(cron = "0 0 2 * * ?")
     @Transactional
     public void cleanupOldCampaignData() {
-        LocalDateTime thresholdDate = OffsetDateTime.now(ZoneOffset.UTC).minusDays(90);
+        OffsetDateTime thresholdDate = OffsetDateTime.now(ZoneOffset.UTC).minusDays(90);
 
         // Log old campaigns that could be archived
         long oldCampaigns = campaignRepository.countByStatusAndCreatedAtBefore(

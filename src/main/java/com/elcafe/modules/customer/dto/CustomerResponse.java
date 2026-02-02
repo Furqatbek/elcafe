@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 @Builder
@@ -43,7 +44,7 @@ public class CustomerResponse {
     private BigDecimal totalSpent;
     private Integer orderCount;
     private String tierName;
-    private LocalDateTime lastOrderDate;
+    private OffsetDateTime lastOrderDate;
 
     // Marketing fields - Referral
     private String referralCode;
