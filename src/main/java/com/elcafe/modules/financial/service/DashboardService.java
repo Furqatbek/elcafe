@@ -69,6 +69,15 @@ public class DashboardService {
                           || o.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .collect(Collectors.toList());
 
+        // For sold items: use a more lenient filter that includes all placed orders
+        // This handles split payments (partially paid orders) and POS orders
+        // An order counts as "sold" once it's placed (status != PENDING/CANCELLED/REJECTED)
+        List<Order> ordersForSoldItems = activeOrders.stream()
+                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
+                .filter(o -> o.getStatus() != OrderStatus.REJECTED)
+                .filter(o -> o.getStatus() != OrderStatus.PENDING)
+                .collect(Collectors.toList());
+
         // Calculate income
         BigDecimal totalIncome = completedOrders.stream()
                 .map(Order::getTotal)
@@ -134,12 +143,12 @@ public class DashboardService {
                 .totalExpenses(totalExpenses)
                 .netProfit(netProfit)
                 .profitMargin(profitMargin)
-                .orderStats(buildOrderStats(activeOrders, completedOrders))
+                .orderStats(buildOrderStats(activeOrders, completedOrders, ordersForSoldItems))
                 .incomeByOrderType(calculateIncomeByOrderType(completedOrders))
                 .incomeByPaymentMethod(calculateIncomeByPaymentMethod(completedOrders))
                 .expensesByCategory(calculateExpensesByCategory(expenses, totalPayroll))
                 .dailyStats(calculateDailyStats(restaurantId, completedOrders, expenses, startDate, endDate))
-                .soldItems(calculateSoldItems(completedOrders))
+                .soldItems(calculateSoldItems(ordersForSoldItems))
                 .comparison(calculatePeriodComparison(restaurantId, startDate, endDate, totalIncome, totalExpenses, activeOrders.size()))
                 .inventoryAlerts(calculateInventoryAlerts(restaurantId))
                 .build();
@@ -174,7 +183,7 @@ public class DashboardService {
         return getDashboard(restaurantId, monthStart, today);
     }
 
-    private DashboardResponse.OrderStats buildOrderStats(List<Order> allOrders, List<Order> completedOrders) {
+    private DashboardResponse.OrderStats buildOrderStats(List<Order> allOrders, List<Order> completedOrders, List<Order> ordersForSoldItems) {
         long totalOrders = allOrders.size();
         long completed = completedOrders.size();
         long cancelled = allOrders.stream()
@@ -191,7 +200,8 @@ public class DashboardService {
             avgOrderValue = totalRevenue.divide(BigDecimal.valueOf(completed), 2, RoundingMode.HALF_UP);
         }
 
-        long totalItemsSold = completedOrders.stream()
+        // Use ordersForSoldItems for totalItemsSold (includes split/partial payments)
+        long totalItemsSold = ordersForSoldItems.stream()
                 .flatMap(o -> o.getItems().stream())
                 .filter(item -> !item.isDeleted())  // Exclude soft-deleted items
                 .mapToLong(OrderItem::getQuantity)
