@@ -189,9 +189,23 @@ public class CustomerMenuAssembler {
                         .id(promotion.getId())
                         .title(promotion.getName())
                         .description(promotion.getDescription())
-                        .imageUrl(promotion.getBannerImageUrl())
-                        .promoCode(promotion.getCode())
+                        .imageUrl(null)  // Promotion entity doesn't have bannerImageUrl field
+                        .promoCode(getFirstCouponCode(promotion))
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get the first active coupon code from a promotion, if available.
+     */
+    private String getFirstCouponCode(com.elcafe.modules.promotion.entity.Promotion promotion) {
+        if (promotion.getCouponCodes() == null || promotion.getCouponCodes().isEmpty()) {
+            return null;
+        }
+        return promotion.getCouponCodes().stream()
+                .filter(cc -> cc.getActive() != null && cc.getActive())
+                .map(cc -> cc.getCode())
+                .findFirst()
+                .orElse(null);
     }
 }
