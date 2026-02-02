@@ -2,9 +2,9 @@ package com.elcafe.bff.customer.service;
 
 import com.elcafe.bff.customer.dto.CustomerMenuDTO;
 import com.elcafe.modules.menu.entity.*;
+import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.CategoryRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
-import com.elcafe.modules.promotion.entity.Promotion;
 import com.elcafe.modules.promotion.repository.PromotionRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import lombok.RequiredArgsConstructor;
@@ -45,21 +45,21 @@ public class CustomerMenuAssembler {
                 .id(restaurant.getId())
                 .name(restaurant.getName())
                 .logoUrl(restaurant.getLogoUrl())
-                .coverImageUrl(restaurant.getCoverImageUrl())
+                .coverImageUrl(restaurant.getBannerUrl())
                 .description(restaurant.getDescription())
-                .cuisineType(restaurant.getCuisineType())
-                .rating(restaurant.getAverageRating())
-                .reviewCount(restaurant.getReviewCount())
+                .cuisineType(null)
+                .rating(restaurant.getRating())
+                .reviewCount(0)
                 .address(restaurant.getAddress())
-                .isOpen(restaurant.getIsOpen())
-                .estimatedDeliveryMinutes(restaurant.getEstimatedDeliveryMinutes())
+                .isOpen(restaurant.getAcceptingOrders())
+                .estimatedDeliveryMinutes(restaurant.getEstimatedDeliveryTimeMinutes())
                 .minimumOrderAmount(restaurant.getMinimumOrderAmount())
                 .deliveryFee(restaurant.getDeliveryFee())
                 .build();
     }
 
     private List<CustomerMenuDTO.MenuCategoryDTO> assembleCategories(Long restaurantId) {
-        return categoryRepository.findByRestaurantIdAndIsActiveTrue(restaurantId)
+        return categoryRepository.findByRestaurant_IdAndActiveTrueOrderBySortOrder(restaurantId)
                 .stream()
                 .map(this::mapToMenuCategory)
                 .collect(Collectors.toList());
@@ -68,7 +68,7 @@ public class CustomerMenuAssembler {
     private CustomerMenuDTO.MenuCategoryDTO mapToMenuCategory(Category category) {
         List<CustomerMenuDTO.MenuProductDTO> products = category.getProducts() != null
                 ? category.getProducts().stream()
-                    .filter(Product::getIsActive)
+                    .filter(p -> p.getStatus() == ProductStatus.ACTIVE)
                     .map(this::mapToMenuProduct)
                     .collect(Collectors.toList())
                 : List.of();
@@ -83,33 +83,24 @@ public class CustomerMenuAssembler {
     }
 
     private CustomerMenuDTO.MenuProductDTO mapToMenuProduct(Product product) {
-        BigDecimal originalPrice = null;
-        Boolean isOnSale = false;
-        String saleLabel = null;
-
-        // Check for active promotions
-        if (product.getDiscountedPrice() != null && product.getDiscountedPrice().compareTo(product.getPrice()) < 0) {
-            originalPrice = product.getPrice();
-            isOnSale = true;
-            saleLabel = "Sale";
-        }
+        BigDecimal price = product.getPrice();
 
         return CustomerMenuDTO.MenuProductDTO.builder()
                 .id(product.getId())
                 .name(product.getName())
                 .description(product.getDescription())
                 .imageUrl(product.getImageUrl())
-                .price(isOnSale ? product.getDiscountedPrice() : product.getPrice())
-                .originalPrice(originalPrice)
-                .isOnSale(isOnSale)
-                .saleLabel(saleLabel)
+                .price(price)
+                .originalPrice(null)
+                .isOnSale(false)
+                .saleLabel(null)
                 .isAvailable(product.getIsAvailable())
-                .isPopular(product.getIsPopular())
-                .isNew(product.getIsNew())
-                .dietaryTags(product.getDietaryTags())
-                .allergens(product.getAllergens())
-                .calories(product.getCalories())
-                .preparationTime(product.getPreparationTime())
+                .isPopular(product.getFeatured())
+                .isNew(false)
+                .dietaryTags(null)
+                .allergens(null)
+                .calories(null)
+                .preparationTime(null)
                 .variants(mapVariants(product))
                 .addOnGroups(mapAddOnGroups(product))
                 .build();
@@ -121,7 +112,7 @@ public class CustomerMenuAssembler {
         }
 
         return product.getVariants().stream()
-                .filter(ProductVariant::getIsActive)
+                .filter(v -> v.getIsAvailable() != null && v.getIsAvailable())
                 .map(variant -> CustomerMenuDTO.ProductVariantDTO.builder()
                         .id(variant.getId())
                         .name(variant.getName())
@@ -137,12 +128,12 @@ public class CustomerMenuAssembler {
         }
 
         return product.getAddOnGroups().stream()
-                .filter(AddOnGroup::getIsActive)
+                .filter(g -> g.getActive() != null && g.getActive())
                 .map(group -> CustomerMenuDTO.ProductAddOnGroupDTO.builder()
                         .id(group.getId())
                         .name(group.getName())
                         .description(group.getDescription())
-                        .isRequired(group.getIsRequired())
+                        .isRequired(group.getRequired())
                         .minSelection(group.getMinSelection())
                         .maxSelection(group.getMaxSelection())
                         .options(mapAddOnOptions(group))
@@ -156,28 +147,36 @@ public class CustomerMenuAssembler {
         }
 
         return group.getAddOns().stream()
-                .filter(AddOn::getIsActive)
+                .filter(a -> a.getAvailable() != null && a.getAvailable())
                 .map(addOn -> CustomerMenuDTO.ProductAddOnDTO.builder()
                         .id(addOn.getId())
                         .name(addOn.getName())
                         .price(addOn.getPrice())
-                        .isAvailable(addOn.getIsAvailable())
+                        .isAvailable(addOn.getAvailable())
                         .build())
                 .collect(Collectors.toList());
     }
 
     private List<CustomerMenuDTO.FeaturedProductDTO> assembleFeaturedProducts(Long restaurantId) {
-        return productRepository.findFeaturedByRestaurantId(restaurantId)
+        return productRepository.findByRestaurant_IdAndStatus(restaurantId, ProductStatus.ACTIVE)
                 .stream()
+                .filter(p -> p.getFeatured() != null && p.getFeatured())
                 .limit(6)
                 .map(product -> CustomerMenuDTO.FeaturedProductDTO.builder()
                         .productId(product.getId())
                         .name(product.getName())
                         .imageUrl(product.getImageUrl())
                         .price(product.getPrice())
-                        .tagline(product.getShortDescription())
+                        .tagline(truncateDescription(product.getDescription()))
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    private String truncateDescription(String description) {
+        if (description == null) {
+            return null;
+        }
+        return description.length() > 50 ? description.substring(0, 47) + "..." : description;
     }
 
     private List<CustomerMenuDTO.PromotionBannerDTO> assemblePromotions(Long restaurantId) {
