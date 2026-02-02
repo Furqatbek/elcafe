@@ -44,6 +44,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -110,7 +111,7 @@ public class WaiterOrderService {
                 .discount(BigDecimal.ZERO)
                 .total(BigDecimal.ZERO)
                 .customerNotes(request.getCustomerNotes())
-                .items(new ArrayList<>())
+                .items(new HashSet<>())
                 .build();
 
         Order savedOrder = orderRepository.save(order);
@@ -293,7 +294,7 @@ public class WaiterOrderService {
         // Create a temporary order with just new items to deduct ingredients
         Order tempOrder = Order.builder()
                 .orderNumber(order.getOrderNumber() + "-ADD")
-                .items(newItems)
+                .items(new HashSet<>(newItems))
                 .build();
 
         try {

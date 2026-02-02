@@ -106,7 +106,7 @@ public class PrintService {
     /**
      * Group order items by their kitchen station based on product category
      */
-    private Map<KitchenStation, List<OrderItem>> groupItemsByStation(List<OrderItem> items, List<KitchenStation> stations) {
+    private Map<KitchenStation, List<OrderItem>> groupItemsByStation(Collection<OrderItem> items, List<KitchenStation> stations) {
         Map<KitchenStation, List<OrderItem>> result = new LinkedHashMap<>();
 
         // Initialize with null key for items without station

@@ -45,6 +45,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -478,7 +479,7 @@ public class SelfServiceOrderService {
 
             orderItems.add(orderItem);
         }
-        order.setItems(orderItems);
+        order.setItems(new HashSet<>(orderItems));
 
         // Apply coupon if provided
         if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {

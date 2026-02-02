@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -72,7 +73,7 @@ public class ConsumerOrderService {
                 .orderSource(request.getOrderSource())
                 .customerNotes(request.getCustomerNotes())
                 .scheduledFor(request.getScheduledFor() != null ? request.getScheduledFor().atOffset(ZoneOffset.UTC) : null)
-                .items(new ArrayList<>())
+                .items(new HashSet<>())
                 .statusHistory(new ArrayList<>())
                 .build();
 

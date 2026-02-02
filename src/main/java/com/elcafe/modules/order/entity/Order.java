@@ -27,8 +27,10 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Data
@@ -102,7 +104,7 @@ public class Order {
      */
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<OrderTable> orderTables = new ArrayList<>();
+    private Set<OrderTable> orderTables = new HashSet<>();
 
     // Guest count for dine-in orders
     @Column(name = "guest_count")
@@ -274,7 +276,7 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private List<OrderItem> items = new ArrayList<>();
+    private Set<OrderItem> items = new HashSet<>();
 
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
@@ -498,7 +500,7 @@ public class Order {
      */
     public void addTable(com.elcafe.modules.restaurant.entity.RestaurantTable table, boolean isPrimary) {
         if (orderTables == null) {
-            orderTables = new ArrayList<>();
+            orderTables = new HashSet<>();
         }
         OrderTable orderTable = OrderTable.builder()
                 .order(this)
