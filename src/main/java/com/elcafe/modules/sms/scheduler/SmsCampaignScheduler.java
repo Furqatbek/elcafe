@@ -10,7 +10,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 /**
@@ -32,7 +33,7 @@ public class SmsCampaignScheduler {
     @Scheduled(fixedRate = 60000) // Every 60 seconds
     @Transactional
     public void processScheduledCampaigns() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         List<SmsCampaign> dueCampaigns = campaignRepository
                 .findByStatusAndScheduledAtBefore(CampaignStatus.SCHEDULED, now);
@@ -63,7 +64,7 @@ public class SmsCampaignScheduler {
     @Scheduled(cron = "0 0 2 * * ?")
     @Transactional
     public void cleanupOldCampaignData() {
-        LocalDateTime thresholdDate = LocalDateTime.now().minusDays(90);
+        LocalDateTime thresholdDate = OffsetDateTime.now(ZoneOffset.UTC).minusDays(90);
 
         // Log old campaigns that could be archived
         long oldCampaigns = campaignRepository.countByStatusAndCreatedAtBefore(

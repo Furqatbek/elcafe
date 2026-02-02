@@ -10,7 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "customer_loyalty")
@@ -53,7 +53,7 @@ public class CustomerLoyalty {
     private Integer orderCount = 0;
 
     @Column(name = "last_order_date")
-    private LocalDateTime lastOrderDate;
+    private OffsetDateTime lastOrderDate;
 
     @Column(name = "birthday_bonus_claimed_year")
     private Integer birthdayBonusClaimedYear;
@@ -64,11 +64,11 @@ public class CustomerLoyalty {
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
     /**
      * Add bonus to current balance

@@ -13,7 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 /**
@@ -91,7 +92,7 @@ public class SmsAutomationScheduler {
             try {
                 // Get inactivity threshold from rule conditions or default to 30 days
                 int inactiveDays = getInactiveDaysFromRule(rule);
-                LocalDateTime inactiveSince = LocalDateTime.now().minusDays(inactiveDays);
+                OffsetDateTime inactiveSince = OffsetDateTime.now(ZoneOffset.UTC).minusDays(inactiveDays);
 
                 // Find inactive customers
                 List<Customer> inactiveCustomers = customerRepository

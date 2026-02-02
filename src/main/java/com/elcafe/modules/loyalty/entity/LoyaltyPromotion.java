@@ -11,7 +11,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Set;
 
 @Entity
@@ -49,10 +50,10 @@ public class LoyaltyPromotion {
     private BigDecimal fixedBonusAmount;
 
     @Column(name = "start_date", nullable = false)
-    private LocalDateTime startDate;
+    private OffsetDateTime startDate;
 
     @Column(name = "end_date")
-    private LocalDateTime endDate;
+    private OffsetDateTime endDate;
 
     @Column(name = "days_of_week")
     private String daysOfWeek; // Comma-separated: "MONDAY,FRIDAY,SATURDAY"
@@ -69,11 +70,11 @@ public class LoyaltyPromotion {
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
     public enum PromotionType {
         BONUS_MULTIPLIER,    // Multiply bonus by value
@@ -87,7 +88,7 @@ public class LoyaltyPromotion {
     public boolean isCurrentlyActive() {
         if (!active) return false;
 
-        LocalDateTime now = LocalDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now();
         if (now.isBefore(startDate)) return false;
         if (endDate != null && now.isAfter(endDate)) return false;
 

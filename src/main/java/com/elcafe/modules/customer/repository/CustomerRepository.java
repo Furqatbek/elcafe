@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,7 +30,7 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("SELECT c FROM Customer c WHERE c.active = true AND c.id NOT IN " +
            "(SELECT DISTINCT o.customer.id FROM Order o WHERE o.createdAt >= :since AND o.customer IS NOT NULL)")
-    List<Customer> findInactiveCustomers(@Param("since") LocalDateTime since);
+    List<Customer> findInactiveCustomers(@Param("since") OffsetDateTime since);
 
-    List<Customer> findByCreatedAtAfter(LocalDateTime since);
+    List<Customer> findByCreatedAtAfter(OffsetDateTime since);
 }

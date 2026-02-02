@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,7 +17,7 @@ public interface CustomerLoyaltyRepository extends JpaRepository<CustomerLoyalty
 
     @Query("SELECT cl FROM CustomerLoyalty cl WHERE " +
            "cl.lastOrderDate IS NOT NULL AND cl.lastOrderDate < :thresholdDate")
-    List<CustomerLoyalty> findInactiveCustomers(@Param("thresholdDate") LocalDateTime thresholdDate);
+    List<CustomerLoyalty> findInactiveCustomers(@Param("thresholdDate") OffsetDateTime thresholdDate);
 
     // Note: Disabled until Customer entity has birthdate field
     // Birthday bonuses can be granted manually via API endpoint

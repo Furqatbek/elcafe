@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Repository
@@ -19,7 +19,7 @@ public interface LoyaltyPromotionRepository extends JpaRepository<LoyaltyPromoti
            "(lp.restaurant.id = :restaurantId OR lp.restaurant IS NULL)")
     List<LoyaltyPromotion> findActivePromotions(
         @Param("restaurantId") Long restaurantId,
-        @Param("now") LocalDateTime now
+        @Param("now") OffsetDateTime now
     );
 
     List<LoyaltyPromotion> findByRestaurant_IdAndActive(Long restaurantId, Boolean active);

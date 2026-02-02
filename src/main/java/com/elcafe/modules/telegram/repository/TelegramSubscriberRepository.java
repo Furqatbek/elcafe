@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,16 +30,16 @@ public interface TelegramSubscriberRepository extends JpaRepository<TelegramSubs
     List<TelegramSubscriber> findByCustomerIdIsNotNull();
 
     @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false AND s.lastInteractionAt > :since")
-    List<TelegramSubscriber> findActiveSubscribers(@Param("since") LocalDateTime since);
+    List<TelegramSubscriber> findActiveSubscribers(@Param("since") OffsetDateTime since);
 
     @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false AND (s.lastInteractionAt IS NULL OR s.lastInteractionAt < :before)")
-    List<TelegramSubscriber> findInactiveSubscribers(@Param("before") LocalDateTime before);
+    List<TelegramSubscriber> findInactiveSubscribers(@Param("before") OffsetDateTime before);
 
     @Query("SELECT COUNT(s) FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false")
     long countActiveSubscribers();
 
     @Query("SELECT COUNT(s) FROM TelegramSubscriber s WHERE s.subscribedAt >= :since")
-    long countNewSubscribersSince(@Param("since") LocalDateTime since);
+    long countNewSubscribersSince(@Param("since") OffsetDateTime since);
 
     @Query("SELECT s FROM TelegramSubscriber s WHERE " +
            "(LOWER(s.username) LIKE LOWER(CONCAT('%', :search, '%')) OR " +

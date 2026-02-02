@@ -23,7 +23,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,13 +58,13 @@ public class TelegramScheduler {
     public void processScheduledCampaigns() {
         try {
             List<TelegramCampaign> scheduledCampaigns = campaignRepository
-                    .findByStatusAndScheduledAtBefore(CampaignStatus.SCHEDULED, LocalDateTime.now());
+                    .findByStatusAndScheduledAtBefore(CampaignStatus.SCHEDULED, OffsetDateTime.now(ZoneOffset.UTC));
 
             for (TelegramCampaign campaign : scheduledCampaigns) {
                 log.info("Starting scheduled campaign: id={}, name={}", campaign.getId(), campaign.getName());
 
                 campaign.setStatus(CampaignStatus.SENDING);
-                campaign.setStartedAt(LocalDateTime.now());
+                campaign.setStartedAt(OffsetDateTime.now(ZoneOffset.UTC));
                 campaignRepository.save(campaign);
 
                 // Execute campaign asynchronously
@@ -126,7 +127,7 @@ public class TelegramScheduler {
 
                     if (success) {
                         rule.incrementSentCount();
-                        rule.setLastTriggeredAt(LocalDateTime.now());
+                        rule.setLastTriggeredAt(OffsetDateTime.now(ZoneOffset.UTC));
                         automationRuleRepository.save(rule);
                         log.info("Sent birthday message to subscriber: {}", subscriber.getTelegramUserId());
                     }
@@ -196,7 +197,7 @@ public class TelegramScheduler {
 
                 if (sentCount > 0) {
                     rule.setSentCount(rule.getSentCount() + sentCount);
-                    rule.setLastTriggeredAt(LocalDateTime.now());
+                    rule.setLastTriggeredAt(OffsetDateTime.now(ZoneOffset.UTC));
                     automationRuleRepository.save(rule);
                     log.info("Sent {} inactive user messages for rule: {}", sentCount, rule.getName());
                 }
@@ -215,7 +216,7 @@ public class TelegramScheduler {
     @Transactional
     public void cleanupStuckCampaigns() {
         try {
-            LocalDateTime twoHoursAgo = LocalDateTime.now().minusHours(2);
+            LocalDateTime twoHoursAgo = OffsetDateTime.now(ZoneOffset.UTC).minusHours(2);
 
             List<TelegramCampaign> stuckCampaigns = campaignRepository
                     .findByStatusAndStartedAtBefore(CampaignStatus.SENDING, twoHoursAgo);
@@ -223,7 +224,7 @@ public class TelegramScheduler {
             for (TelegramCampaign campaign : stuckCampaigns) {
                 log.warn("Marking stuck campaign as cancelled: id={}, name={}", campaign.getId(), campaign.getName());
                 campaign.setStatus(CampaignStatus.CANCELLED);
-                campaign.setCompletedAt(LocalDateTime.now());
+                campaign.setCompletedAt(OffsetDateTime.now(ZoneOffset.UTC));
                 campaignRepository.save(campaign);
             }
 

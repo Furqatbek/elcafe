@@ -18,7 +18,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -124,7 +125,7 @@ public class SmsCampaignService {
     }
 
     @Transactional
-    public SmsCampaignResponse scheduleCampaign(Long id, LocalDateTime scheduledAt) {
+    public SmsCampaignResponse scheduleCampaign(Long id, OffsetDateTime scheduledAt) {
         log.info("Scheduling SMS campaign: {} for {}", id, scheduledAt);
 
         SmsCampaign campaign = campaignRepository.findById(id)
@@ -134,7 +135,7 @@ public class SmsCampaignService {
             throw new BadRequestException("Can only schedule campaigns in DRAFT status");
         }
 
-        if (scheduledAt.isBefore(LocalDateTime.now())) {
+        if (scheduledAt.isBefore(OffsetDateTime.now(ZoneOffset.UTC))) {
             throw new BadRequestException("Scheduled time must be in the future");
         }
 
@@ -158,7 +159,7 @@ public class SmsCampaignService {
         }
 
         campaign.setStatus(CampaignStatus.SENDING);
-        campaign.setStartedAt(LocalDateTime.now());
+        campaign.setStartedAt(OffsetDateTime.now(ZoneOffset.UTC));
         campaign = campaignRepository.save(campaign);
 
         // Send asynchronously
@@ -217,7 +218,7 @@ public class SmsCampaignService {
 
         // Mark campaign as completed
         campaign.setStatus(CampaignStatus.COMPLETED);
-        campaign.setCompletedAt(LocalDateTime.now());
+        campaign.setCompletedAt(OffsetDateTime.now(ZoneOffset.UTC));
         campaignRepository.save(campaign);
 
         log.info("Campaign {} completed. Sent: {}, Failed: {}",
@@ -308,7 +309,7 @@ public class SmsCampaignService {
                     // JSON numbers may be Long, use Number to handle both Integer and Long
                     daysInactive = ((Number) campaign.getFilterCriteria().get("days_inactive")).intValue();
                 }
-                LocalDateTime cutoff = LocalDateTime.now().minusDays(daysInactive);
+                OffsetDateTime cutoff = OffsetDateTime.now(ZoneOffset.UTC).minusDays(daysInactive);
                 return customerRepository.findInactiveCustomers(cutoff);
             case NEW_CUSTOMERS:
                 int days = 7;
@@ -316,7 +317,7 @@ public class SmsCampaignService {
                     // JSON numbers may be Long, use Number to handle both Integer and Long
                     days = ((Number) campaign.getFilterCriteria().get("days")).intValue();
                 }
-                LocalDateTime since = LocalDateTime.now().minusDays(days);
+                OffsetDateTime since = OffsetDateTime.now(ZoneOffset.UTC).minusDays(days);
                 return customerRepository.findByCreatedAtAfter(since);
             case SEGMENT:
                 // TODO: Implement segment-based targeting

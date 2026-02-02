@@ -7,7 +7,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 @Data
 @Builder
@@ -50,18 +51,18 @@ public class TelegramSubscriber {
     private Boolean isBlocked = false;
 
     @Column(name = "subscribed_at")
-    private LocalDateTime subscribedAt;
+    private OffsetDateTime subscribedAt;
 
     @Column(name = "last_interaction_at")
-    private LocalDateTime lastInteractionAt;
+    private OffsetDateTime lastInteractionAt;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
     public String getDisplayName() {
         if (firstName != null && lastName != null) {
@@ -75,6 +76,6 @@ public class TelegramSubscriber {
     }
 
     public void updateLastInteraction() {
-        this.lastInteractionAt = LocalDateTime.now();
+        this.lastInteractionAt = OffsetDateTime.now(ZoneOffset.UTC);
     }
 }

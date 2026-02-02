@@ -9,7 +9,8 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 
 @Data
@@ -56,19 +57,19 @@ public class TelegramAutomationRule {
     private Integer sentCount = 0;
 
     @Column(name = "last_triggered_at")
-    private LocalDateTime lastTriggeredAt;
+    private OffsetDateTime lastTriggeredAt;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
     public void incrementSentCount() {
         this.sentCount = (this.sentCount != null ? this.sentCount : 0) + 1;
-        this.lastTriggeredAt = LocalDateTime.now();
+        this.lastTriggeredAt = OffsetDateTime.now();
     }
 
     public boolean shouldTrigger(Map<String, Object> context) {

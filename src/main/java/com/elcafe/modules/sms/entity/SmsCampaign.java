@@ -11,7 +11,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 
 @Data
@@ -77,24 +77,24 @@ public class SmsCampaign {
     private CampaignStatus status = CampaignStatus.DRAFT;
 
     @Column(name = "scheduled_at")
-    private LocalDateTime scheduledAt;
+    private OffsetDateTime scheduledAt;
 
     @Column(name = "started_at")
-    private LocalDateTime startedAt;
+    private OffsetDateTime startedAt;
 
     @Column(name = "completed_at")
-    private LocalDateTime completedAt;
+    private OffsetDateTime completedAt;
 
     @Column(name = "created_by")
     private Long createdBy;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @LastModifiedDate
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
     public void incrementSentCount() {
         this.sentCount = (this.sentCount == null ? 0 : this.sentCount) + 1;

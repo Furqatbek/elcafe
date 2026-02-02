@@ -16,7 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,7 +126,7 @@ public class LoyaltyService {
         // Update customer stats
         loyalty.setTotalSpent(loyalty.getTotalSpent().add(order.getTotal()));
         loyalty.setOrderCount(loyalty.getOrderCount() + 1);
-        loyalty.setLastOrderDate(LocalDateTime.now());
+        loyalty.setLastOrderDate(OffsetDateTime.now(ZoneOffset.UTC));
 
         // Check for first order bonus
         if (!loyalty.getFirstOrderBonusClaimed() && config.getFirstOrderBonusAmount().compareTo(BigDecimal.ZERO) > 0) {
@@ -337,7 +338,7 @@ public class LoyaltyService {
             return;
         }
 
-        LocalDateTime threshold = LocalDateTime.now().minusDays(config.getReactivationDaysThreshold());
+        LocalDateTime threshold = OffsetDateTime.now(ZoneOffset.UTC).minusDays(config.getReactivationDaysThreshold());
         if (loyalty.getLastOrderDate().isAfter(threshold)) {
             return;
         }
@@ -375,7 +376,7 @@ public class LoyaltyService {
     private BigDecimal applyPromotions(BigDecimal baseBonus, Order order, LoyaltyConfig config) {
         List<LoyaltyPromotion> promotions = loyaltyPromotionRepository.findActivePromotions(
                 order.getRestaurant().getId(),
-                LocalDateTime.now()
+                OffsetDateTime.now(ZoneOffset.UTC)
         );
 
         BigDecimal finalBonus = baseBonus;

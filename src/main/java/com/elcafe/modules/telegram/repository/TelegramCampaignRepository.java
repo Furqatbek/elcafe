@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Repository
@@ -17,9 +17,9 @@ public interface TelegramCampaignRepository extends JpaRepository<TelegramCampai
 
     Page<TelegramCampaign> findByStatus(CampaignStatus status, Pageable pageable);
 
-    List<TelegramCampaign> findByStatusAndScheduledAtBefore(CampaignStatus status, LocalDateTime before);
+    List<TelegramCampaign> findByStatusAndScheduledAtBefore(CampaignStatus status, OffsetDateTime before);
 
-    List<TelegramCampaign> findByStatusAndStartedAtBefore(CampaignStatus status, LocalDateTime before);
+    List<TelegramCampaign> findByStatusAndStartedAtBefore(CampaignStatus status, OffsetDateTime before);
 
     @Query("SELECT c FROM TelegramCampaign c LEFT JOIN FETCH c.template WHERE c.id = :id")
     TelegramCampaign findByIdWithTemplate(@Param("id") Long id);
@@ -28,5 +28,5 @@ public interface TelegramCampaignRepository extends JpaRepository<TelegramCampai
     long countByStatus(@Param("status") CampaignStatus status);
 
     @Query("SELECT c FROM TelegramCampaign c WHERE c.createdAt >= :since ORDER BY c.createdAt DESC")
-    List<TelegramCampaign> findRecentCampaigns(@Param("since") LocalDateTime since);
+    List<TelegramCampaign> findRecentCampaigns(@Param("since") OffsetDateTime since);
 }
