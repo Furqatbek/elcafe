@@ -7,8 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -145,8 +145,8 @@ public class DashboardResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ShiftTimeInfo {
-        private LocalDateTime shiftStart;    // Actual start time for query
-        private LocalDateTime shiftEnd;      // Actual end time for query
+        private OffsetDateTime shiftStart;    // Actual start time for query
+        private OffsetDateTime shiftEnd;      // Actual end time for query
         private LocalTime businessOpenTime;  // Restaurant opening time
         private LocalTime businessCloseTime; // Restaurant closing time
         private String description;          // Human-readable description

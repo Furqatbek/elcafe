@@ -44,15 +44,15 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     List<Order> findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             Long restaurantId,
-            LocalDateTime startDate,
-            LocalDateTime endDate
+            OffsetDateTime startDate,
+            OffsetDateTime endDate
     );
 
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
     List<Order> findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
             @Param("restaurantId") Long restaurantId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("startDate") OffsetDateTime startDate,
+            @Param("endDate") OffsetDateTime endDate
     );
 
     List<Order> findByCustomer_IdOrderByCreatedAtDesc(Long customerId);
@@ -134,15 +134,15 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.payments WHERE o.restaurant.id = :restaurantId AND o.createdAt BETWEEN :startDate AND :endDate ORDER BY o.createdAt DESC")
     List<Order> findByRestaurant_IdAndCreatedAtBetweenWithPaymentsOrderByCreatedAtDesc(
             @Param("restaurantId") Long restaurantId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+            @Param("startDate") OffsetDateTime startDate,
+            @Param("endDate") OffsetDateTime endDate);
 
     // Daily statistics for restaurant
     @Query("SELECT COUNT(o), COALESCE(SUM(o.total), 0) FROM Order o WHERE o.restaurant.id = :restaurantId AND o.createdAt BETWEEN :startDate AND :endDate AND o.status NOT IN ('CANCELLED', 'REJECTED')")
     Object[] getDailyStatsForRestaurant(
             @Param("restaurantId") Long restaurantId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate);
+            @Param("startDate") OffsetDateTime startDate,
+            @Param("endDate") OffsetDateTime endDate);
 
     // ==================== SOFT DELETE QUERIES ====================
 

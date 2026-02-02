@@ -21,6 +21,8 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,8 +41,9 @@ public class PromotionAnalyticsService {
     public DiscountAnalytics getDiscountAnalytics(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Generating discount analytics for restaurant {} from {} to {}", restaurantId, startDate, endDate);
 
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        ZoneId zoneId = ZoneId.systemDefault();
+        OffsetDateTime startDateTime = startDate.atStartOfDay().atZone(zoneId).toOffsetDateTime();
+        OffsetDateTime endDateTime = endDate.atTime(LocalTime.MAX).atZone(zoneId).toOffsetDateTime();
 
         // Get all completed orders in the period
         List<Order> allOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
@@ -228,9 +231,10 @@ public class PromotionAnalyticsService {
         List<DailyDiscountTrend> trends = new ArrayList<>();
         LocalDate currentDate = startDate;
 
+        ZoneId zoneId = ZoneId.systemDefault();
         while (!currentDate.isAfter(endDate)) {
-            LocalDateTime dayStart = currentDate.atStartOfDay();
-            LocalDateTime dayEnd = currentDate.atTime(LocalTime.MAX);
+            OffsetDateTime dayStart = currentDate.atStartOfDay().atZone(zoneId).toOffsetDateTime();
+            OffsetDateTime dayEnd = currentDate.atTime(LocalTime.MAX).atZone(zoneId).toOffsetDateTime();
 
             List<Order> dayOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId, dayStart, dayEnd);
@@ -274,8 +278,9 @@ public class PromotionAnalyticsService {
     public List<CouponPerformance> getTopCoupons(Long restaurantId, LocalDate startDate, LocalDate endDate, int limit) {
         log.info("Getting top coupons for restaurant {} from {} to {}", restaurantId, startDate, endDate);
 
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        ZoneId zoneId = ZoneId.systemDefault();
+        OffsetDateTime startDateTime = startDate.atStartOfDay().atZone(zoneId).toOffsetDateTime();
+        OffsetDateTime endDateTime = endDate.atTime(LocalTime.MAX).atZone(zoneId).toOffsetDateTime();
 
         List<Order> ordersWithCoupons = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                         restaurantId, startDateTime, endDateTime).stream()

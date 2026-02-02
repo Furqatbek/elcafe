@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -242,9 +243,12 @@ public class CustomerAnalyticsService {
      * Uses shared REVENUE_STATUSES for consistency across all reports.
      */
     private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
+        ZoneId zoneId = ZoneId.systemDefault();
         if (restaurantId != null) {
             return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                    restaurantId, startDateTime, endDateTime
+                    restaurantId,
+                    startDateTime.atZone(zoneId).toOffsetDateTime(),
+                    endDateTime.atZone(zoneId).toOffsetDateTime()
             ).stream()
                     .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))

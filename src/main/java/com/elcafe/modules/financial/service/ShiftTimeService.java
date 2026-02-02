@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Set;
 
@@ -43,11 +45,12 @@ public class ShiftTimeService {
     );
 
     /**
-     * Record class for shift time range with start and end datetime
+     * Record class for shift time range with start and end datetime.
+     * Uses OffsetDateTime to match PostgreSQL TIMESTAMP WITH TIME ZONE columns.
      */
     public record ShiftTimeRange(
-        LocalDateTime start,
-        LocalDateTime end,
+        OffsetDateTime start,
+        OffsetDateTime end,
         LocalTime openTime,
         LocalTime closeTime
     ) {}
@@ -66,12 +69,14 @@ public class ShiftTimeService {
      * @return ShiftTimeRange with start and end LocalDateTime
      */
     public ShiftTimeRange getShiftTimeRange(Long restaurantId, LocalDate date) {
+        ZoneId zoneId = ZoneId.systemDefault();
+
         // Handle null restaurantId - use full calendar day as fallback
         if (restaurantId == null) {
             log.debug("No restaurantId provided for date {}, using full calendar day", date);
             return new ShiftTimeRange(
-                date.atStartOfDay(),
-                date.atTime(23, 59, 59),
+                date.atStartOfDay().atZone(zoneId).toOffsetDateTime(),
+                date.atTime(23, 59, 59).atZone(zoneId).toOffsetDateTime(),
                 LocalTime.of(0, 0),
                 LocalTime.of(23, 59)
             );
@@ -84,8 +89,8 @@ public class ShiftTimeService {
             // If no business hours or closed, use full calendar day as fallback
             log.debug("No business hours found for restaurant {} on {}, using full day", restaurantId, date);
             return new ShiftTimeRange(
-                date.atStartOfDay(),
-                date.atTime(23, 59, 59),
+                date.atStartOfDay().atZone(zoneId).toOffsetDateTime(),
+                date.atTime(23, 59, 59).atZone(zoneId).toOffsetDateTime(),
                 LocalTime.of(0, 0),
                 LocalTime.of(23, 59)
             );
@@ -95,19 +100,19 @@ public class ShiftTimeService {
         LocalTime openTime = hours.getOpenTime();
         LocalTime closeTime = hours.getCloseTime();
 
-        LocalDateTime shiftStart = date.atTime(openTime);
-        LocalDateTime shiftEnd;
+        OffsetDateTime shiftStart = date.atTime(openTime).atZone(zoneId).toOffsetDateTime();
+        OffsetDateTime shiftEnd;
 
         // Check if shift crosses midnight (closeTime is before openTime)
         if (closeTime.isBefore(openTime) || closeTime.equals(openTime)) {
             // Shift crosses midnight - extend end time to next day's opening time
             // This ensures no gap between shifts (e.g., 02:00 AM to 11:00 AM gap is covered)
-            shiftEnd = date.plusDays(1).atTime(openTime);
+            shiftEnd = date.plusDays(1).atTime(openTime).atZone(zoneId).toOffsetDateTime();
             log.debug("Shift crosses midnight for restaurant {} on {}: {} to {} (extended to next opening)",
                 restaurantId, date, shiftStart, shiftEnd);
         } else {
             // Normal shift - ends same day at closing time
-            shiftEnd = date.atTime(closeTime);
+            shiftEnd = date.atTime(closeTime).atZone(zoneId).toOffsetDateTime();
             log.debug("Normal shift for restaurant {} on {}: {} to {}",
                 restaurantId, date, shiftStart, shiftEnd);
         }
