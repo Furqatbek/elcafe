@@ -125,8 +125,8 @@ public class OrderController {
             }
 
             ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(restaurantId, actualShiftDate);
-            effectiveFromDate = shiftRange.start();
-            effectiveToDate = shiftRange.end();
+            effectiveFromDate = shiftRange.start().toLocalDateTime();
+            effectiveToDate = shiftRange.end().toLocalDateTime();
         }
         // If date range is provided, use shift-aware boundaries for both dates
         else if (fromDate != null || toDate != null) {
@@ -136,16 +136,16 @@ public class OrderController {
             if (startDate != null && endDate != null) {
                 // Multi-day range: use shift boundaries
                 ShiftTimeService.ShiftTimeRange range = shiftTimeService.getShiftTimeRangeForPeriod(restaurantId, startDate, endDate);
-                effectiveFromDate = range.start();
-                effectiveToDate = range.end();
+                effectiveFromDate = range.start().toLocalDateTime();
+                effectiveToDate = range.end().toLocalDateTime();
             } else if (startDate != null) {
                 // Only start date provided
                 ShiftTimeService.ShiftTimeRange range = shiftTimeService.getShiftTimeRange(restaurantId, startDate);
-                effectiveFromDate = range.start();
+                effectiveFromDate = range.start().toLocalDateTime();
             } else if (endDate != null) {
                 // Only end date provided
                 ShiftTimeService.ShiftTimeRange range = shiftTimeService.getShiftTimeRange(restaurantId, endDate);
-                effectiveToDate = range.end();
+                effectiveToDate = range.end().toLocalDateTime();
             }
         }
 

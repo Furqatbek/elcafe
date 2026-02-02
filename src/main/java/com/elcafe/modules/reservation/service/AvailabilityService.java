@@ -163,8 +163,8 @@ public class AvailabilityService {
 
         LocalTime openTime = shiftRange.openTime();
         LocalTime closeTime = shiftRange.closeTime();
-        LocalDateTime shiftStart = shiftRange.start();
-        LocalDateTime shiftEnd = shiftRange.end();
+        LocalDateTime shiftStart = shiftRange.start().toLocalDateTime();
+        LocalDateTime shiftEnd = shiftRange.end().toLocalDateTime();
 
         // Check if shift crosses midnight
         boolean crossesMidnight = closeTime.isBefore(openTime) || closeTime.equals(openTime);

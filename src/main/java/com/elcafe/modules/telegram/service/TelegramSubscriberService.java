@@ -115,7 +115,7 @@ public class TelegramSubscriberService {
         LocalDate cutoffDate = currentBusinessDay.minusDays(daysInactive);
         ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
                 restaurantId, cutoffDate);
-        return subscriberRepository.findInactiveSubscribers(shiftRange.start().atOffset(ZoneOffset.UTC));
+        return subscriberRepository.findInactiveSubscribers(shiftRange.start());
     }
 
     @Transactional(readOnly = true)
@@ -141,8 +141,8 @@ public class TelegramSubscriberService {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalSubscribers", subscriberRepository.count());
         stats.put("activeSubscribers", subscriberRepository.countActiveSubscribers());
-        stats.put("newThisWeek", subscriberRepository.countNewSubscribersSince(weekRange.start().atOffset(ZoneOffset.UTC)));
-        stats.put("newThisMonth", subscriberRepository.countNewSubscribersSince(monthRange.start().atOffset(ZoneOffset.UTC)));
+        stats.put("newThisWeek", subscriberRepository.countNewSubscribersSince(weekRange.start()));
+        stats.put("newThisMonth", subscriberRepository.countNewSubscribersSince(monthRange.start()));
         stats.put("currentBusinessDay", currentBusinessDay);
         return stats;
     }

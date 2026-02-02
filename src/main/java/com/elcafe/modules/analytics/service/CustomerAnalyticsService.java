@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -45,19 +46,23 @@ public class CustomerAnalyticsService {
                 restaurantId, startDate, endDate);
         log.debug("Customer retention using shift range: {} to {}", shift.start(), shift.end());
 
+        // Convert shift boundaries to LocalDateTime for comparison with Customer.createdAt
+        LocalDateTime shiftStartLocal = shift.start().toLocalDateTime();
+        LocalDateTime shiftEndLocal = shift.end().toLocalDateTime();
+
         // Get all customers that existed at the start of the period (strictly before start)
         List<Customer> customersAtStart = customerRepository.findAll().stream()
-                .filter(c -> c.getCreatedAt().isBefore(shift.start()))
+                .filter(c -> c.getCreatedAt().isBefore(shiftStartLocal))
                 .collect(Collectors.toList());
 
         // Get new customers during the period (inclusive boundaries for shift-aware consistency)
         List<Customer> newCustomers = customerRepository.findAll().stream()
-                .filter(c -> !c.getCreatedAt().isBefore(shift.start()) && !c.getCreatedAt().isAfter(shift.end()))
+                .filter(c -> !c.getCreatedAt().isBefore(shiftStartLocal) && !c.getCreatedAt().isAfter(shiftEndLocal))
                 .collect(Collectors.toList());
 
         // Get all customers at the end of the period (up to and including end)
         List<Customer> customersAtEnd = customerRepository.findAll().stream()
-                .filter(c -> !c.getCreatedAt().isAfter(shift.end()))
+                .filter(c -> !c.getCreatedAt().isAfter(shiftEndLocal))
                 .collect(Collectors.toList());
 
         // Get returning customers (customers who made orders during the period)
@@ -242,13 +247,12 @@ public class CustomerAnalyticsService {
      * Get orders with revenue-generating statuses within the given time range.
      * Uses shared REVENUE_STATUSES for consistency across all reports.
      */
-    private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
-        ZoneId zoneId = ZoneId.systemDefault();
+    private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
         if (restaurantId != null) {
             return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId,
-                    startDateTime.atZone(zoneId).toOffsetDateTime(),
-                    endDateTime.atZone(zoneId).toOffsetDateTime()
+                    startDateTime,
+                    endDateTime
             ).stream()
                     .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
@@ -256,7 +260,7 @@ public class CustomerAnalyticsService {
         } else {
             // Use inclusive boundary matching (same as repository "Between" behavior)
             return orderRepository.findAll().stream()
-                    .filter(order -> !order.getCreatedAt().toLocalDateTime().isBefore(startDateTime) && !order.getCreatedAt().toLocalDateTime().isAfter(endDateTime))
+                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
                     .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());

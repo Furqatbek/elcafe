@@ -253,18 +253,18 @@ public class OrderService {
                 ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRangeForPeriod(
                         restaurantId, fromDate.toLocalDate(), toDate.toLocalDate()
                 );
-                adjustedFromDate = shiftRange.start();
-                adjustedToDate = shiftRange.end();
+                adjustedFromDate = shiftRange.start().toLocalDateTime();
+                adjustedToDate = shiftRange.end().toLocalDateTime();
             } else if (fromDate != null) {
                 ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, fromDate.toLocalDate()
                 );
-                adjustedFromDate = shiftRange.start();
+                adjustedFromDate = shiftRange.start().toLocalDateTime();
             } else if (toDate != null) {
                 ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, toDate.toLocalDate()
                 );
-                adjustedToDate = shiftRange.end();
+                adjustedToDate = shiftRange.end().toLocalDateTime();
             }
 
             log.info("Adjusted to shift boundaries: {} to {} -> {} to {}",

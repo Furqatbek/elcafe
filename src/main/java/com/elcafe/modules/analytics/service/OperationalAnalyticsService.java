@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -318,13 +319,12 @@ public class OperationalAnalyticsService {
      * Get orders with revenue-generating statuses within the given time range.
      * Uses shared REVENUE_STATUSES for consistency across all reports.
      */
-    private List<Order> getCompletedOrders(LocalDateTime startDateTime, LocalDateTime endDateTime, Long restaurantId) {
-        ZoneId zoneId = ZoneId.systemDefault();
+    private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
         if (restaurantId != null) {
             return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId,
-                    startDateTime.atZone(zoneId).toOffsetDateTime(),
-                    endDateTime.atZone(zoneId).toOffsetDateTime()
+                    startDateTime,
+                    endDateTime
             ).stream()
                     .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
@@ -332,7 +332,7 @@ public class OperationalAnalyticsService {
         } else {
             // Use inclusive boundary matching (same as repository "Between" behavior)
             return orderRepository.findAll().stream()
-                    .filter(order -> !order.getCreatedAt().toLocalDateTime().isBefore(startDateTime) && !order.getCreatedAt().toLocalDateTime().isAfter(endDateTime))
+                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
                     .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
@@ -446,9 +446,9 @@ public class OperationalAnalyticsService {
         List<KitchenOrder> kitchenOrders;
         if (restaurantId != null) {
             kitchenOrders = kitchenOrderRepository.findByRestaurantAndCreatedAtBetween(
-                    restaurantId, shift.start(), shift.end());
+                    restaurantId, shift.start().toLocalDateTime(), shift.end().toLocalDateTime());
         } else {
-            kitchenOrders = kitchenOrderRepository.findByCreatedAtBetween(shift.start(), shift.end());
+            kitchenOrders = kitchenOrderRepository.findByCreatedAtBetween(shift.start().toLocalDateTime(), shift.end().toLocalDateTime());
         }
 
         // Calculate status distribution
