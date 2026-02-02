@@ -5,8 +5,8 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
-import com.elcafe.modules.restaurant.entity.Table;
-import com.elcafe.modules.restaurant.repository.TableRepository;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.settings.entity.PrinterSettings;
 import com.elcafe.modules.settings.repository.PrinterSettingsRepository;
 import com.elcafe.modules.settings.repository.PrintJobRepository;
@@ -19,6 +19,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,14 +35,14 @@ import java.util.stream.Collectors;
 public class POSDashboardAssembler {
 
     private final OrderRepository orderRepository;
-    private final TableRepository tableRepository;
+    private final RestaurantTableRepository tableRepository;
     private final PrinterSettingsRepository printerSettingsRepository;
     private final PrintJobRepository printJobRepository;
 
     @Transactional(readOnly = true)
     public POSDashboardDTO assembleDashboard(Restaurant restaurant) {
         Long restaurantId = restaurant.getId();
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        OffsetDateTime todayStart = LocalDate.now().atStartOfDay().atOffset(ZoneOffset.UTC);
         LocalDateTime now = LocalDateTime.now();
 
         return POSDashboardDTO.builder()
@@ -65,7 +67,7 @@ public class POSDashboardAssembler {
                 .build();
     }
 
-    private POSDashboardDTO.SalesOverview assembleSalesOverview(Long restaurantId, LocalDateTime todayStart) {
+    private POSDashboardDTO.SalesOverview assembleSalesOverview(Long restaurantId, OffsetDateTime todayStart) {
         List<Order> todayOrders = orderRepository.findByRestaurantIdAndCreatedAtAfter(restaurantId, todayStart);
 
         BigDecimal totalRevenue = BigDecimal.ZERO;
@@ -76,10 +78,10 @@ public class POSDashboardAssembler {
         for (Order order : todayOrders) {
             if (order.getStatus() == OrderStatus.COMPLETED) {
                 totalRevenue = totalRevenue.add(order.getTotal() != null ? order.getTotal() : BigDecimal.ZERO);
-                totalTips = totalTips.add(order.getTip() != null ? order.getTip() : BigDecimal.ZERO);
+                totalTips = totalTips.add(order.getTipAmount() != null ? order.getTipAmount() : BigDecimal.ZERO);
                 completedCount++;
             } else if (order.getStatus() == OrderStatus.PENDING ||
-                       order.getStatus() == OrderStatus.CONFIRMED ||
+                       order.getStatus() == OrderStatus.ACCEPTED ||
                        order.getStatus() == OrderStatus.PREPARING) {
                 pendingCount++;
             }
@@ -102,7 +104,7 @@ public class POSDashboardAssembler {
     private List<POSDashboardDTO.ActiveOrderSummary> assembleActiveOrders(Long restaurantId) {
         List<OrderStatus> activeStatuses = List.of(
                 OrderStatus.PENDING,
-                OrderStatus.CONFIRMED,
+                OrderStatus.ACCEPTED,
                 OrderStatus.PREPARING,
                 OrderStatus.READY
         );
@@ -115,14 +117,23 @@ public class POSDashboardAssembler {
 
     private POSDashboardDTO.ActiveOrderSummary mapToActiveOrderSummary(Order order) {
         LocalDateTime now = LocalDateTime.now();
-        long minutesElapsed = ChronoUnit.MINUTES.between(order.getCreatedAt(), now);
+        LocalDateTime createdAt = order.getCreatedAt() != null
+                ? order.getCreatedAt().toLocalDateTime()
+                : now;
+        long minutesElapsed = ChronoUnit.MINUTES.between(createdAt, now);
         boolean isUrgent = minutesElapsed > 30 && order.getStatus() != OrderStatus.READY;
 
         String tableNumber = null;
         if (order.getTables() != null && !order.getTables().isEmpty()) {
             tableNumber = order.getTables().stream()
-                    .map(Table::getTableNumber)
+                    .map(RestaurantTable::getTableNumber)
                     .collect(Collectors.joining(", "));
+        }
+
+        // Get customer name from customer entity if available
+        String customerName = null;
+        if (order.getCustomer() != null) {
+            customerName = order.getCustomer().getName();
         }
 
         return POSDashboardDTO.ActiveOrderSummary.builder()
@@ -130,11 +141,11 @@ public class POSDashboardAssembler {
                 .orderNumber(order.getOrderNumber())
                 .status(order.getStatus().name())
                 .orderType(order.getOrderType() != null ? order.getOrderType().name() : null)
-                .customerName(order.getCustomerName())
+                .customerName(customerName)
                 .tableNumber(tableNumber)
                 .total(order.getTotal())
                 .itemCount(order.getItems() != null ? order.getItems().size() : 0)
-                .createdAt(order.getCreatedAt())
+                .createdAt(createdAt)
                 .minutesElapsed((int) minutesElapsed)
                 .isUrgent(isUrgent)
                 .build();
@@ -147,14 +158,27 @@ public class POSDashboardAssembler {
                 .collect(Collectors.toList());
     }
 
-    private POSDashboardDTO.TableStatusDTO mapToTableStatus(Table table) {
+    private POSDashboardDTO.TableStatusDTO mapToTableStatus(RestaurantTable table) {
+        // Get current order ID from the orders relationship if table is occupied
+        Long currentOrderId = null;
+        if (table.getStatus() == RestaurantTable.TableStatus.OCCUPIED &&
+            table.getOrders() != null && !table.getOrders().isEmpty()) {
+            // Find the most recent active order
+            currentOrderId = table.getOrders().stream()
+                    .filter(o -> o.getStatus() != OrderStatus.COMPLETED &&
+                                 o.getStatus() != OrderStatus.CANCELLED)
+                    .map(Order::getId)
+                    .findFirst()
+                    .orElse(null);
+        }
+
         return POSDashboardDTO.TableStatusDTO.builder()
                 .tableId(table.getId())
                 .tableNumber(table.getTableNumber())
                 .status(table.getStatus() != null ? table.getStatus().name() : "AVAILABLE")
-                .currentOrderId(table.getCurrentOrderId())
-                .guestCount(table.getGuestCount())
-                .occupiedSince(table.getOccupiedSince())
+                .currentOrderId(currentOrderId)
+                .guestCount(table.getCapacity())  // Use capacity as guest count proxy
+                .occupiedSince(null)  // Field not available on RestaurantTable
                 .build();
     }
 
@@ -197,11 +221,13 @@ public class POSDashboardAssembler {
         }
 
         // Check for delayed orders
+        List<OrderStatus> inProgressStatuses = List.of(OrderStatus.PENDING, OrderStatus.ACCEPTED);
+        List<Order> allInProgressOrders = orderRepository.findByRestaurantIdAndStatusIn(restaurantId, inProgressStatuses);
         LocalDateTime delayThreshold = LocalDateTime.now().minusMinutes(30);
-        List<OrderStatus> inProgressStatuses = List.of(OrderStatus.PENDING, OrderStatus.CONFIRMED);
-        List<Order> delayedOrders = orderRepository.findByRestaurantIdAndStatusIn(restaurantId, inProgressStatuses)
-                .stream()
-                .filter(o -> o.getCreatedAt().isBefore(delayThreshold))
+
+        List<Order> delayedOrders = allInProgressOrders.stream()
+                .filter(o -> o.getCreatedAt() != null &&
+                            o.getCreatedAt().toLocalDateTime().isBefore(delayThreshold))
                 .toList();
 
         if (!delayedOrders.isEmpty()) {
