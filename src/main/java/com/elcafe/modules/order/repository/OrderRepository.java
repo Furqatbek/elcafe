@@ -79,11 +79,11 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     List<Order> findByDeliveryInfo_CourierId(Long courierId);
 
-    List<Order> findByStatusAndPlacedAtBefore(OrderStatus status, LocalDateTime placedAt);
+    List<Order> findByStatusAndPlacedAtBefore(OrderStatus status, OffsetDateTime placedAt);
 
-    List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, LocalDateTime createdAt);
+    List<Order> findByStatusAndCreatedAtBefore(OrderStatus status, OffsetDateTime createdAt);
 
-    List<Order> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+    List<Order> findByCreatedAtBetween(OffsetDateTime startDate, OffsetDateTime endDate);
 
     Optional<Order> findByPaymentIntentId(String paymentIntentId);
 

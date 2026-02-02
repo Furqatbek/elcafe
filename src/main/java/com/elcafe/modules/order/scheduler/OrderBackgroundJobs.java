@@ -11,7 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 
 /**
@@ -37,7 +38,7 @@ public class OrderBackgroundJobs {
     @Transactional
     public void autoRejectExpiredOrders() {
         try {
-            LocalDateTime tenMinutesAgo = LocalDateTime.now().minusMinutes(10);
+            OffsetDateTime tenMinutesAgo = OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(10);
 
             // Find orders that are still PLACED after 10 minutes
             List<Order> expiredOrders = orderRepository
@@ -84,7 +85,7 @@ public class OrderBackgroundJobs {
     @Transactional
     public void verifyPendingPayments() {
         try {
-            LocalDateTime fifteenMinutesAgo = LocalDateTime.now().minusMinutes(15);
+            OffsetDateTime fifteenMinutesAgo = OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(15);
 
             // Find orders stuck in PENDING status
             List<Order> pendingOrders = orderRepository
@@ -138,8 +139,8 @@ public class OrderBackgroundJobs {
         try {
             log.info("Starting order metrics calculation job");
 
-            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-            LocalDateTime now = LocalDateTime.now();
+            OffsetDateTime startOfDay = OffsetDateTime.now(ZoneOffset.UTC).withHour(0).withMinute(0).withSecond(0).withNano(0);
+            OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
             // Get today's orders
             List<Order> todayOrders = orderRepository
@@ -177,7 +178,7 @@ public class OrderBackgroundJobs {
             log.info("Starting cleanup job");
 
             // Archive old order events (older than 90 days)
-            LocalDateTime ninetyDaysAgo = LocalDateTime.now().minusDays(90);
+            OffsetDateTime ninetyDaysAgo = OffsetDateTime.now(ZoneOffset.UTC).minusDays(90);
 
             // TODO: Archive or delete old order_events records
             // TODO: Clean up expired Redis cache keys
