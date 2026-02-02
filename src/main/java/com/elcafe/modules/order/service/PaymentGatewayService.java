@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.modules.loyalty.event.LoyaltyOrderEventListener;
 import com.elcafe.modules.order.dto.payment.PaymentIntentRequest;
 import com.elcafe.modules.order.dto.payment.PaymentIntentResponse;
 import com.elcafe.modules.order.dto.payment.RefundRequest;
@@ -14,6 +15,7 @@ import com.elcafe.modules.order.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +41,7 @@ public class PaymentGatewayService {
     private final OrderRepository orderRepository;
     private final TransactionalOrderOperationService transactionalOrderOperationService;
     private final OrderEventBroadcaster orderEventBroadcaster;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${payment.gateway.provider:STRIPE}")
     private String paymentProvider;
@@ -250,6 +253,10 @@ public class PaymentGatewayService {
             // Update order payment status
             order.setPaymentStatus(com.elcafe.modules.order.enums.PaymentStatus.REFUNDED);
             orderRepository.save(order);
+
+            // Publish refund event for loyalty points reversal and other listeners
+            eventPublisher.publishEvent(new LoyaltyOrderEventListener.OrderRefundedEvent(order, request.getAmount()));
+            log.info("Published OrderRefundedEvent for order: {}", order.getOrderNumber());
 
             log.info("Refund processed: {} for order: {}", refundId, order.getOrderNumber());
 

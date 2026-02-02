@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/public/orders")
 @RequiredArgsConstructor
@@ -35,9 +37,9 @@ public class PublicOrderController {
 
     @GetMapping("/track")
     @Operation(summary = "Track order by phone", description = "Get recent orders for a phone number")
-    public ResponseEntity<ApiResponse<java.util.List<OrderTrackingResponse>>> trackByPhone(
+    public ResponseEntity<ApiResponse<List<OrderTrackingResponse>>> trackByPhone(
             @RequestParam String phone) {
-        java.util.List<OrderTrackingResponse> orders = orderTrackingService.getRecentOrdersByPhone(phone);
+        List<OrderTrackingResponse> orders = orderTrackingService.getRecentOrdersByPhone(phone);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 }

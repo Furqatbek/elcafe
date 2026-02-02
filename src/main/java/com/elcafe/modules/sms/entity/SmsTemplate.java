@@ -7,6 +7,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Data
 @Builder
@@ -56,9 +57,9 @@ public class SmsTemplate {
     /**
      * Replace placeholders in template content with actual values
      */
-    public String render(java.util.Map<String, String> placeholders) {
+    public String render(Map<String, String> placeholders) {
         String rendered = this.content;
-        for (java.util.Map.Entry<String, String> entry : placeholders.entrySet()) {
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
             rendered = rendered.replace("{" + entry.getKey() + "}", entry.getValue() != null ? entry.getValue() : "");
         }
         return rendered;

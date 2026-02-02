@@ -3,21 +3,65 @@
 **Version**: 1.0.0
 **Base URL**: `http://localhost:8080/api/v1`
 **Documentation**: http://localhost:8080/swagger-ui.html
-**Last Updated**: 2025-12-05
+**Last Updated**: 2026-02-02
 
 ## Table of Contents
 
-1. [Authentication](#authentication)
-2. [Restaurant Management](#restaurant-management)
-3. [Menu Management](#menu-management)
-4. [Order Management](#order-management)
-5. [Customer Management](#customer-management)
-6. [Kitchen Operations](#kitchen-operations)
-7. [Waiter Module](#waiter-module)
-8. [Courier System](#courier-system)
-9. [Analytics](#analytics)
-10. [SMS Service](#sms-service)
-11. [File Upload](#file-upload)
+1. [Roles and Permissions](#roles-and-permissions)
+2. [Authentication](#authentication)
+3. [Restaurant Management](#restaurant-management)
+4. [Menu Management](#menu-management)
+5. [Order Management](#order-management)
+6. [Customer Management](#customer-management)
+7. [Kitchen Operations](#kitchen-operations)
+8. [Waiter Module](#waiter-module)
+9. [Courier System](#courier-system)
+10. [Analytics](#analytics)
+11. [SMS Service](#sms-service)
+12. [File Upload](#file-upload)
+
+---
+
+## Roles and Permissions
+
+The API uses Role-Based Access Control (RBAC). Each endpoint requires specific roles for authorization.
+
+### Available Roles
+
+| Role | Description | Access Level |
+|------|-------------|--------------|
+| `ADMIN` | System administrator | Full access to all resources |
+| `OWNER` | Restaurant owner | Management access to owned restaurants |
+| `MANAGER` | Restaurant manager | Operational and financial access |
+| `OPERATOR` | Back-office operator | POS and order management |
+| `CASHIER` | POS cashier | Cash drawer and payment operations |
+| `WAITER` | Front-of-house staff | Table service and order taking |
+| `SUPERVISOR` | Waiter supervisor | Enhanced waiter permissions |
+| `HEAD_WAITER` | Head waiter | Team management permissions |
+| `KITCHEN_STAFF` | Kitchen personnel | Kitchen display and order preparation |
+| `COURIER` | Delivery driver | Delivery order access |
+| `CUSTOMER` | Registered customer | Customer-facing operations |
+
+### Endpoint Permission Matrix
+
+| Endpoint Category | Required Roles |
+|-------------------|----------------|
+| Financial Dashboard | ADMIN, OWNER, MANAGER |
+| Cash Drawer Operations | ADMIN, OWNER, MANAGER, OPERATOR, CASHIER |
+| Waiter Commissions | ADMIN, OWNER, MANAGER |
+| Shift Management | ADMIN, OWNER, MANAGER, OPERATOR |
+| Inventory Operations | ADMIN, OWNER, MANAGER, OPERATOR |
+| Inventory Valuation | ADMIN, OWNER, MANAGER |
+| Stock Counts | ADMIN, OWNER, MANAGER, OPERATOR |
+| Financial Alerts | ADMIN, OWNER, MANAGER |
+| Customer Addresses | Authenticated users |
+
+### Authentication Header
+
+All protected endpoints require the `Authorization` header:
+```http
+Authorization: Bearer {access_token}
+```
 
 ---
 

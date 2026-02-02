@@ -1,6 +1,7 @@
 package com.elcafe.modules.loyalty.event;
 
 import com.elcafe.modules.loyalty.service.LoyaltyService;
+import com.elcafe.modules.marketing.event.OrderCompletedEvent;
 import com.elcafe.modules.order.entity.Order;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,9 +11,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.event.TransactionPhase;
 
+import java.math.BigDecimal;
+
 /**
- * Event listener for order lifecycle events
- * Triggers loyalty operations automatically
+ * Event listener for order lifecycle events.
+ * Triggers loyalty operations automatically.
+ *
+ * Listens for marketing module's OrderCompletedEvent to process loyalty points.
+ * Also listens for OrderRefundedEvent to reverse loyalty points on refunds.
  */
 @Slf4j
 @Component
@@ -22,8 +28,8 @@ public class LoyaltyOrderEventListener {
     private final LoyaltyService loyaltyService;
 
     /**
-     * Listen for order completion events
-     * Triggers after transaction commits to ensure order is persisted
+     * Listen for order completion events from marketing module.
+     * Triggers after transaction commits to ensure order is persisted.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Async
@@ -38,7 +44,8 @@ public class LoyaltyOrderEventListener {
     }
 
     /**
-     * Listen for order refund events
+     * Listen for order refund events.
+     * Processes loyalty point reversals when orders are refunded.
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Async
@@ -52,28 +59,14 @@ public class LoyaltyOrderEventListener {
     }
 
     /**
-     * Event published when an order is completed
-     */
-    public static class OrderCompletedEvent {
-        private final Order order;
-
-        public OrderCompletedEvent(Order order) {
-            this.order = order;
-        }
-
-        public Order getOrder() {
-            return order;
-        }
-    }
-
-    /**
-     * Event published when an order is refunded
+     * Event published when an order is refunded.
+     * This event should be published by the payment/refund service.
      */
     public static class OrderRefundedEvent {
         private final Order order;
-        private final java.math.BigDecimal refundAmount;
+        private final BigDecimal refundAmount;
 
-        public OrderRefundedEvent(Order order, java.math.BigDecimal refundAmount) {
+        public OrderRefundedEvent(Order order, BigDecimal refundAmount) {
             this.order = order;
             this.refundAmount = refundAmount;
         }
@@ -82,7 +75,7 @@ public class LoyaltyOrderEventListener {
             return order;
         }
 
-        public java.math.BigDecimal getRefundAmount() {
+        public BigDecimal getRefundAmount() {
             return refundAmount;
         }
     }

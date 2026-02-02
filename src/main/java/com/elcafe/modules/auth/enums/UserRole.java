@@ -17,6 +17,7 @@ public enum UserRole {
     HEAD_WAITER,     // Head waiter with additional permissions
     KITCHEN_STAFF,   // Kitchen staff
     COURIER,         // Delivery courier
+    CASHIER,         // POS cashier with cash drawer and payment access
 
     // Customer roles
     CUSTOMER,        // Registered customer

@@ -25,7 +25,11 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Data
 @Builder
@@ -341,7 +345,7 @@ public class Order {
         }
 
         // Must have same variantId (both null or same value)
-        if (!java.util.Objects.equals(existing.getVariantId(), newItem.getVariantId())) {
+        if (!Objects.equals(existing.getVariantId(), newItem.getVariantId())) {
             return false;
         }
 
@@ -361,7 +365,7 @@ public class Order {
         }
 
         // Must have same bundleId (both null or same value)
-        if (!java.util.Objects.equals(existing.getBundleId(), newItem.getBundleId())) {
+        if (!Objects.equals(existing.getBundleId(), newItem.getBundleId())) {
             return false;
         }
 
@@ -547,21 +551,21 @@ public class Order {
         if (orderTables != null && !orderTables.isEmpty()) {
             return orderTables.stream()
                     .map(ot -> ot.getTable().getId())
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
         }
         // Fallback to deprecated tableIds field for backward compatibility
         if (tableIds != null && !tableIds.isBlank()) {
-            return java.util.Arrays.stream(tableIds.split(","))
+            return Arrays.stream(tableIds.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
                     .map(Long::parseLong)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
         }
         // Fallback to diningTable field
         if (diningTable != null) {
             return List.of(diningTable.getId());
         }
-        return java.util.Collections.emptyList();
+        return Collections.emptyList();
     }
 
     /**
@@ -571,12 +575,12 @@ public class Order {
         if (orderTables != null && !orderTables.isEmpty()) {
             return orderTables.stream()
                     .map(OrderTable::getTable)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
         }
         if (diningTable != null) {
             return List.of(diningTable);
         }
-        return java.util.Collections.emptyList();
+        return Collections.emptyList();
     }
 
     /**

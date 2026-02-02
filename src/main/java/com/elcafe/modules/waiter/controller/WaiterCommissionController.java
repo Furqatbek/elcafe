@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -26,6 +27,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/waiter-commissions")
 @RequiredArgsConstructor
 @Tag(name = "Waiter Commission", description = "Waiter commission management endpoints")
+@PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
 public class WaiterCommissionController {
 
     private final WaiterCommissionService commissionService;

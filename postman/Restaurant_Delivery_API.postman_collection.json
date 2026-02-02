@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "restaurant-delivery-api",
 		"name": "Restaurant Delivery Control Service API",
-		"description": "Complete API collection for Restaurant Delivery Management System",
+		"description": "Complete API collection for Restaurant Delivery Management System.\n\n## Available Roles\n- ADMIN: Full system access\n- OWNER: Restaurant owner access\n- MANAGER: Restaurant manager access\n- OPERATOR: Back-office operator\n- CASHIER: POS cashier (cash drawer, payments)\n- WAITER: Front-of-house staff\n- SUPERVISOR: Waiter supervisor\n- HEAD_WAITER: Head waiter\n- KITCHEN_STAFF: Kitchen personnel\n- COURIER: Delivery driver\n- CUSTOMER: Registered customer",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "restaurant-delivery-service"
 	},
@@ -57,7 +57,47 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "auth", "register"]
 						},
-						"description": "Register a new user account"
+						"description": "Register a new user account. Available roles: ADMIN, OWNER, MANAGER, OPERATOR, CASHIER, WAITER, SUPERVISOR, HEAD_WAITER, KITCHEN_STAFF, COURIER"
+					},
+					"response": []
+				},
+				{
+					"name": "Register Cashier",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"cashier_token\", jsonData.data.accessToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"cashier@elcafe.com\",\n  \"password\": \"Cashier123!\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phone\": \"+1234567891\",\n  \"role\": \"CASHIER\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						},
+						"description": "Register a new cashier user with CASHIER role for POS cash drawer operations"
 					},
 					"response": []
 				},

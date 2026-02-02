@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Security service for financial operations (refunds, voids).
@@ -73,7 +74,7 @@ public class FinancialOperationSecurityService {
         Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
         Set<String> userRoles = authorities.stream()
                 .map(GrantedAuthority::getAuthority)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
 
         // Check if user has any refund-allowed role
         boolean hasRefundRole = userRoles.stream().anyMatch(REFUND_ALLOWED_ROLES::contains);
@@ -119,7 +120,7 @@ public class FinancialOperationSecurityService {
         Collection<? extends GrantedAuthority> authorities = auth.getAuthorities();
         Set<String> userRoles = authorities.stream()
                 .map(GrantedAuthority::getAuthority)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
 
         Long restaurantId = order.getRestaurant().getId();
 
