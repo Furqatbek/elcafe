@@ -51,8 +51,10 @@ public class DashboardService {
                 restaurantId, startDate, endDate);
         log.info("Dashboard using shift time range: {} to {}", shift.start(), shift.end());
 
-        // Fetch all orders in shift time range
-        List<Order> allOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        // Fetch all orders in shift time range with items eagerly loaded
+        // Using the method that fetches items ensures all items are included,
+        // including those added after the order was initially created
+        List<Order> allOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
                 restaurantId, shift.start(), shift.end());
 
         // Filter out soft-deleted orders first
@@ -377,8 +379,8 @@ public class DashboardService {
         ShiftTimeService.ShiftTimeRange prevShift = shiftTimeService.getShiftTimeRangeForPeriod(
                 restaurantId, prevStartDate, prevEndDate);
 
-        // Get previous period orders using shift time range
-        List<Order> prevAllOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        // Get previous period orders using shift time range (with items eagerly loaded)
+        List<Order> prevAllOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
                 restaurantId, prevShift.start(), prevShift.end());
 
         // Filter out soft-deleted orders
