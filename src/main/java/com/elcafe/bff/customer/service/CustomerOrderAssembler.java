@@ -1,6 +1,7 @@
 package com.elcafe.bff.customer.service;
 
 import com.elcafe.bff.customer.dto.CustomerOrderDTO;
+import com.elcafe.modules.order.entity.DeliveryInfo;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,56 +35,71 @@ public class CustomerOrderAssembler {
                 .items(assembleItems(order))
                 .pricing(assemblePricing(order))
                 .delivery(assembleDeliveryInfo(order))
-                .placedAt(order.getCreatedAt())
-                .estimatedReadyTime(order.getEstimatedReadyTime())
-                .estimatedDeliveryTime(order.getEstimatedDeliveryTime())
+                .placedAt(order.getCreatedAt() != null ? order.getCreatedAt().toLocalDateTime() : null)
+                .estimatedReadyTime(null)  // Field doesn't exist on Order
+                .estimatedDeliveryTime(getEstimatedDeliveryTime(order))
                 .canCancel(canCancel(order))
                 .canModify(canModify(order))
                 .canReorder(order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.DELIVERED)
-                .canRate(order.getStatus() == OrderStatus.DELIVERED && order.getRating() == null)
+                .canRate(order.getStatus() == OrderStatus.DELIVERED)  // Simplified - rating field doesn't exist
                 .restaurantName(restaurant.getName())
                 .restaurantPhone(restaurant.getPhone())
                 .restaurantLogoUrl(restaurant.getLogoUrl())
                 .build();
     }
 
+    private LocalDateTime getEstimatedDeliveryTime(Order order) {
+        if (order.getDeliveryInfo() != null && order.getDeliveryInfo().getEstimatedDeliveryTime() != null) {
+            return order.getDeliveryInfo().getEstimatedDeliveryTime();
+        }
+        return null;
+    }
+
     private String getStatusDisplayText(OrderStatus status) {
         return switch (status) {
             case PENDING -> "Order Received";
-            case CONFIRMED -> "Order Confirmed";
+            case NEW -> "Order Received";
+            case PLACED -> "Order Placed";
+            case ACCEPTED -> "Order Confirmed";
+            case REJECTED -> "Order Rejected";
             case PREPARING -> "Preparing Your Order";
             case READY -> "Ready for Pickup";
-            case OUT_FOR_DELIVERY -> "Out for Delivery";
+            case PICKED_UP -> "Picked Up";
+            case COURIER_ASSIGNED -> "Courier Assigned";
+            case ON_DELIVERY -> "Out for Delivery";
             case DELIVERED -> "Delivered";
             case COMPLETED -> "Completed";
             case CANCELLED -> "Cancelled";
-            default -> status.name();
         };
     }
 
     private String getStatusDescription(OrderStatus status) {
         return switch (status) {
             case PENDING -> "Your order has been received and is waiting to be confirmed.";
-            case CONFIRMED -> "The restaurant has confirmed your order and will start preparing it soon.";
+            case NEW -> "Your order has been received and is waiting to be confirmed.";
+            case PLACED -> "Your order has been placed and is waiting for restaurant confirmation.";
+            case ACCEPTED -> "The restaurant has confirmed your order and will start preparing it soon.";
+            case REJECTED -> "Unfortunately, the restaurant could not accept your order.";
             case PREPARING -> "The kitchen is preparing your delicious meal.";
             case READY -> "Your order is ready! Come pick it up or wait for your courier.";
-            case OUT_FOR_DELIVERY -> "Your order is on its way to you.";
+            case PICKED_UP -> "Your order has been picked up.";
+            case COURIER_ASSIGNED -> "A courier has been assigned to your order.";
+            case ON_DELIVERY -> "Your order is on its way to you.";
             case DELIVERED -> "Your order has been delivered. Enjoy your meal!";
             case COMPLETED -> "Thank you for your order!";
             case CANCELLED -> "This order has been cancelled.";
-            default -> "";
         };
     }
 
     private Integer getStatusStep(OrderStatus status) {
         return switch (status) {
-            case PENDING -> 1;
-            case CONFIRMED -> 2;
+            case PENDING, NEW -> 1;
+            case PLACED, ACCEPTED -> 2;
             case PREPARING -> 3;
-            case READY -> 4;
-            case OUT_FOR_DELIVERY -> 4;
+            case READY, PICKED_UP, COURIER_ASSIGNED -> 4;
+            case ON_DELIVERY -> 4;
             case DELIVERED, COMPLETED -> 5;
-            default -> 0;
+            case REJECTED, CANCELLED -> 0;
         };
     }
 
@@ -100,7 +117,8 @@ public class CustomerOrderAssembler {
         List<String> addOns = List.of();
         if (item.getAddOns() != null) {
             addOns = item.getAddOns().stream()
-                    .map(addOn -> addOn.getAddOn().getName())
+                    .map(addOn -> addOn.getAddOn() != null ? addOn.getAddOn().getName() : "")
+                    .filter(name -> !name.isEmpty())
                     .collect(Collectors.toList());
         }
 
@@ -119,18 +137,18 @@ public class CustomerOrderAssembler {
     }
 
     private CustomerOrderDTO.OrderPricingDTO assemblePricing(Order order) {
-        Restaurant restaurant = order.getRestaurant();
-        String currency = restaurant.getCurrencyCode() != null ? restaurant.getCurrencyCode() : "USD";
-        String currencySymbol = restaurant.getCurrencySymbol() != null ? restaurant.getCurrencySymbol() : "$";
+        // Currency fields don't exist on Restaurant, use defaults
+        String currency = "USD";
+        String currencySymbol = "$";
 
         return CustomerOrderDTO.OrderPricingDTO.builder()
                 .subtotal(order.getSubtotal())
-                .discount(order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO)
-                .discountDescription(order.getDiscountDescription())
+                .discount(order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO)
+                .discountDescription(order.getDiscountReason())  // Use discountReason instead
                 .deliveryFee(order.getDeliveryFee())
                 .serviceFee(order.getServiceFee())
                 .tax(order.getTax())
-                .tip(order.getTip())
+                .tip(order.getTipAmount())  // Use tipAmount instead of tip
                 .total(order.getTotal())
                 .currency(currency)
                 .currencySymbol(currencySymbol)
@@ -138,55 +156,59 @@ public class CustomerOrderAssembler {
     }
 
     private CustomerOrderDTO.DeliveryInfoDTO assembleDeliveryInfo(Order order) {
-        if (order.getDeliveryAddress() == null) {
+        DeliveryInfo deliveryInfo = order.getDeliveryInfo();
+
+        if (deliveryInfo == null) {
             return CustomerOrderDTO.DeliveryInfoDTO.builder()
                     .deliveryType(order.getOrderType() != null ? order.getOrderType().name() : "PICKUP")
                     .build();
         }
 
         CustomerOrderDTO.TrackingInfoDTO tracking = null;
-        if (order.getCourier() != null && order.getStatus() == OrderStatus.OUT_FOR_DELIVERY) {
+        // Simplified tracking - no separate courier entity
+        if (order.getStatus() == OrderStatus.ON_DELIVERY && deliveryInfo.getLatitude() != null) {
             tracking = CustomerOrderDTO.TrackingInfoDTO.builder()
-                    .courierLatitude(order.getCourier().getCurrentLatitude())
-                    .courierLongitude(order.getCourier().getCurrentLongitude())
+                    .courierLatitude(null)  // Courier location not tracked on DeliveryInfo
+                    .courierLongitude(null)
                     .restaurantLatitude(order.getRestaurant().getLatitude())
                     .restaurantLongitude(order.getRestaurant().getLongitude())
-                    .customerLatitude(order.getDeliveryAddress().getLatitude())
-                    .customerLongitude(order.getDeliveryAddress().getLongitude())
+                    .customerLatitude(deliveryInfo.getLatitude())
+                    .customerLongitude(deliveryInfo.getLongitude())
                     .build();
         }
 
         return CustomerOrderDTO.DeliveryInfoDTO.builder()
                 .deliveryType(order.getOrderType() != null ? order.getOrderType().name() : "DELIVERY")
-                .address(formatAddress(order))
-                .instructions(order.getDeliveryAddress().getDeliveryInstructions())
-                .courierName(order.getCourier() != null ? order.getCourier().getName() : null)
-                .courierPhone(order.getCourier() != null ? order.getCourier().getPhone() : null)
+                .address(formatAddress(deliveryInfo))
+                .instructions(deliveryInfo.getDeliveryInstructions())
+                .courierName(deliveryInfo.getCourierName())
+                .courierPhone(deliveryInfo.getCourierPhone())
                 .tracking(tracking)
                 .build();
     }
 
-    private String formatAddress(Order order) {
-        if (order.getDeliveryAddress() == null) {
+    private String formatAddress(DeliveryInfo deliveryInfo) {
+        if (deliveryInfo == null) {
             return null;
         }
 
-        var addr = order.getDeliveryAddress();
         StringBuilder sb = new StringBuilder();
-        if (addr.getStreet() != null) sb.append(addr.getStreet());
-        if (addr.getApartment() != null) sb.append(", ").append(addr.getApartment());
-        if (addr.getCity() != null) sb.append(", ").append(addr.getCity());
-        if (addr.getState() != null) sb.append(", ").append(addr.getState());
-        if (addr.getZipCode() != null) sb.append(" ").append(addr.getZipCode());
+        if (deliveryInfo.getAddress() != null) sb.append(deliveryInfo.getAddress());
+        if (deliveryInfo.getCity() != null) sb.append(", ").append(deliveryInfo.getCity());
+        if (deliveryInfo.getState() != null) sb.append(", ").append(deliveryInfo.getState());
+        if (deliveryInfo.getZipCode() != null) sb.append(" ").append(deliveryInfo.getZipCode());
         return sb.toString();
     }
 
     private boolean canCancel(Order order) {
         return order.getStatus() == OrderStatus.PENDING ||
-               order.getStatus() == OrderStatus.CONFIRMED;
+               order.getStatus() == OrderStatus.NEW ||
+               order.getStatus() == OrderStatus.PLACED ||
+               order.getStatus() == OrderStatus.ACCEPTED;
     }
 
     private boolean canModify(Order order) {
-        return order.getStatus() == OrderStatus.PENDING;
+        return order.getStatus() == OrderStatus.PENDING ||
+               order.getStatus() == OrderStatus.NEW;
     }
 }
