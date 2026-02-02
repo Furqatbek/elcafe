@@ -2,6 +2,7 @@ package com.elcafe.modules.order.controller;
 
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.service.OrderService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -89,6 +90,7 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(
             @RequestParam(required = false) Long restaurantId,
             @RequestParam(required = false) OrderStatus status,
+            @RequestParam(required = false) OrderType orderType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate shiftDate,
@@ -126,9 +128,9 @@ public class OrderController {
         }
 
         // If any filter is provided, use filtered query
-        if (restaurantId != null || status != null || effectiveFromDate != null || effectiveToDate != null || search != null) {
+        if (restaurantId != null || status != null || orderType != null || effectiveFromDate != null || effectiveToDate != null || search != null) {
             Page<Order> orders = orderService.getOrdersWithFilters(
-                    restaurantId, status, effectiveFromDate, effectiveToDate, search, true, pageable
+                    restaurantId, status, orderType, effectiveFromDate, effectiveToDate, search, true, pageable
             );
             return ResponseEntity.ok(ApiResponse.success(orders));
         }

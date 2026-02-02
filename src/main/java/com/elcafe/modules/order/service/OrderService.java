@@ -201,14 +201,15 @@ public class OrderService {
     public Page<Order> getOrdersWithFilters(
             Long restaurantId,
             OrderStatus status,
+            OrderType orderType,
             LocalDateTime fromDate,
             LocalDateTime toDate,
             String search,
             boolean isShiftAware,
             Pageable pageable
     ) {
-        log.info("Fetching orders with filters: restaurantId={}, status={}, fromDate={}, toDate={}, search={}, isShiftAware={}",
-                restaurantId, status, fromDate, toDate, search, isShiftAware);
+        log.info("Fetching orders with filters: restaurantId={}, status={}, orderType={}, fromDate={}, toDate={}, search={}, isShiftAware={}",
+                restaurantId, status, orderType, fromDate, toDate, search, isShiftAware);
 
         // Adjust date range to business day boundaries (only if not already shift-aware)
         LocalDateTime adjustedFromDate = fromDate;
@@ -228,6 +229,7 @@ public class OrderService {
         Specification<Order> spec = OrderSpecification.withFilters(
                 restaurantId,
                 status,
+                orderType,
                 adjustedFromDate,
                 adjustedToDate,
                 search

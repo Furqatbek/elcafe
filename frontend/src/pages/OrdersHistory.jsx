@@ -84,6 +84,7 @@ export default function OrdersHistory() {
   // Filter state
   const [selectedRestaurant, setSelectedRestaurant] = useState('1');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedOrderType, setSelectedOrderType] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [shiftDate, setShiftDate] = useState(format(new Date(), 'yyyy-MM-dd')); // Default to today's shift
@@ -132,6 +133,9 @@ export default function OrdersHistory() {
       if (selectedStatus !== 'all') {
         params.status = selectedStatus;
       }
+      if (selectedOrderType !== 'all') {
+        params.orderType = selectedOrderType;
+      }
 
       // All date filtering uses shift-aware logic on backend
       // If custom date range is set, use that; otherwise use shiftDate for single-day filtering
@@ -177,7 +181,7 @@ export default function OrdersHistory() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, selectedRestaurant, selectedStatus, dateFrom, dateTo, shiftDate, searchQuery]);
+  }, [currentPage, pageSize, selectedRestaurant, selectedStatus, selectedOrderType, dateFrom, dateTo, shiftDate, searchQuery]);
 
   useEffect(() => {
     loadOrders();
@@ -240,6 +244,7 @@ export default function OrdersHistory() {
   const clearFilters = () => {
     setSelectedRestaurant('all');
     setSelectedStatus('all');
+    setSelectedOrderType('all');
     setDateFrom('');
     setDateTo('');
     setShiftDate(format(new Date(), 'yyyy-MM-dd'));
@@ -465,6 +470,22 @@ export default function OrdersHistory() {
                   <SelectItem value="READY">{t('orders.statuses.READY', 'Ready')}</SelectItem>
                   <SelectItem value="DELIVERED">{t('orders.statuses.DELIVERED', 'Delivered')}</SelectItem>
                   <SelectItem value="CANCELLED">{t('orders.statuses.CANCELLED', 'Cancelled')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Order Type Filter */}
+            <div className="space-y-2">
+              <Label>{t('ordersHistory.orderType', 'Order Type')}</Label>
+              <Select value={selectedOrderType} onValueChange={(v) => { setSelectedOrderType(v); setCurrentPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('common.all', 'All')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
+                  <SelectItem value="DINE_IN">{t('orders.orderTypes.DINE_IN', 'Dine In')}</SelectItem>
+                  <SelectItem value="TAKEAWAY">{t('orders.orderTypes.TAKEAWAY', 'Takeaway')}</SelectItem>
+                  <SelectItem value="DELIVERY">{t('orders.orderTypes.DELIVERY', 'Delivery')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
