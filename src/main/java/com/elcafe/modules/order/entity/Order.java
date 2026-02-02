@@ -573,6 +573,7 @@ public class Order {
     /**
      * Get all tables associated with this order.
      */
+    @JsonIgnore
     public List<com.elcafe.modules.restaurant.entity.RestaurantTable> getTables() {
         if (orderTables != null && !orderTables.isEmpty()) {
             return orderTables.stream()
@@ -588,6 +589,7 @@ public class Order {
     /**
      * Get the primary table for this order.
      */
+    @JsonIgnore
     public com.elcafe.modules.restaurant.entity.RestaurantTable getPrimaryTable() {
         if (orderTables != null && !orderTables.isEmpty()) {
             return orderTables.stream()
