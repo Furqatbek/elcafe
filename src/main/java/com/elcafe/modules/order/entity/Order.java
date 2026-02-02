@@ -594,7 +594,7 @@ public class Order {
                     .filter(ot -> Boolean.TRUE.equals(ot.getIsPrimary()))
                     .map(OrderTable::getTable)
                     .findFirst()
-                    .orElse(orderTables.get(0).getTable());
+                    .orElseGet(() -> orderTables.iterator().next().getTable());
         }
         return diningTable;
     }
