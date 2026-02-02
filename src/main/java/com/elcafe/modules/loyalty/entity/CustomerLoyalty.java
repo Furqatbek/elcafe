@@ -28,12 +28,15 @@ public class CustomerLoyalty {
     @JoinColumn(name = "customer_id", nullable = false, unique = true)
     private Customer customer;
 
+    @Builder.Default
     @Column(name = "current_balance", nullable = false, precision = 10, scale = 2)
     private BigDecimal currentBalance = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "lifetime_earned", nullable = false, precision = 10, scale = 2)
     private BigDecimal lifetimeEarned = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "lifetime_spent", nullable = false, precision = 10, scale = 2)
     private BigDecimal lifetimeSpent = BigDecimal.ZERO;
 
@@ -41,9 +44,11 @@ public class CustomerLoyalty {
     @JoinColumn(name = "tier_id")
     private CustomerTier tier;
 
+    @Builder.Default
     @Column(name = "total_spent", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalSpent = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "order_count", nullable = false)
     private Integer orderCount = 0;
 
@@ -53,6 +58,7 @@ public class CustomerLoyalty {
     @Column(name = "birthday_bonus_claimed_year")
     private Integer birthdayBonusClaimedYear;
 
+    @Builder.Default
     @Column(name = "first_order_bonus_claimed")
     private Boolean firstOrderBonusClaimed = false;
 

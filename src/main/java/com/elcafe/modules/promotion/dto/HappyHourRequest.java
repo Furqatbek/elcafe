@@ -27,8 +27,10 @@ public class HappyHourRequest {
     @DecimalMax(value = "100.00", message = "Discount cannot exceed 100%")
     private BigDecimal discountPercent;
 
+    @Builder.Default
     private Boolean active = true;
 
+    @Builder.Default
     private Integer priority = 0;
 
     @NotEmpty(message = "At least one schedule is required")

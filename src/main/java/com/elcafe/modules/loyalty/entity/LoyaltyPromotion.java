@@ -63,6 +63,7 @@ public class LoyaltyPromotion {
     @Column(name = "max_bonus_per_order", precision = 10, scale = 2)
     private BigDecimal maxBonusPerOrder;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;
 

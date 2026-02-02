@@ -29,12 +29,15 @@ public class CustomerTier {
     @Column(nullable = false, unique = true)
     private Integer level;
 
+    @Builder.Default
     @Column(name = "min_total_spend", precision = 10, scale = 2)
     private BigDecimal minTotalSpend = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "min_order_count")
     private Integer minOrderCount = 0;
 
+    @Builder.Default
     @Column(name = "bonus_multiplier", precision = 3, scale = 2)
     private BigDecimal bonusMultiplier = BigDecimal.ONE;
 
