@@ -53,9 +53,14 @@ public class DashboardService {
         List<Order> allOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId, shift.start(), shift.end());
 
+        // Filter out soft-deleted orders first
+        List<Order> activeOrders = allOrders.stream()
+                .filter(o -> !o.isDeleted())
+                .collect(Collectors.toList());
+
         // Filter completed orders for income calculation:
         // Include orders with revenue status OR fully paid orders (handles POS orders)
-        List<Order> completedOrders = allOrders.stream()
+        List<Order> completedOrders = activeOrders.stream()
                 .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
                 .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
                           || o.isFullyPaid()
@@ -127,13 +132,13 @@ public class DashboardService {
                 .totalExpenses(totalExpenses)
                 .netProfit(netProfit)
                 .profitMargin(profitMargin)
-                .orderStats(buildOrderStats(allOrders, completedOrders))
+                .orderStats(buildOrderStats(activeOrders, completedOrders))
                 .incomeByOrderType(calculateIncomeByOrderType(completedOrders))
                 .incomeByPaymentMethod(calculateIncomeByPaymentMethod(completedOrders))
                 .expensesByCategory(calculateExpensesByCategory(expenses, totalPayroll))
                 .dailyStats(calculateDailyStats(restaurantId, completedOrders, expenses, startDate, endDate))
                 .soldItems(calculateSoldItems(completedOrders))
-                .comparison(calculatePeriodComparison(restaurantId, startDate, endDate, totalIncome, totalExpenses, allOrders.size()))
+                .comparison(calculatePeriodComparison(restaurantId, startDate, endDate, totalIncome, totalExpenses, activeOrders.size()))
                 .inventoryAlerts(calculateInventoryAlerts(restaurantId))
                 .build();
     }
@@ -186,6 +191,7 @@ public class DashboardService {
 
         long totalItemsSold = completedOrders.stream()
                 .flatMap(o -> o.getItems().stream())
+                .filter(item -> !item.isDeleted())  // Exclude soft-deleted items
                 .mapToLong(OrderItem::getQuantity)
                 .sum();
 
@@ -290,6 +296,11 @@ public class DashboardService {
 
         for (Order order : orders) {
             for (OrderItem item : order.getItems()) {
+                // Skip soft-deleted items - they should not count towards sold items
+                if (item.isDeleted()) {
+                    continue;
+                }
+
                 Long productId = item.getProductId();
                 DashboardResponse.SoldItem existing = itemsMap.get(productId);
 
@@ -355,8 +366,13 @@ public class DashboardService {
                 restaurantId, prevStartDate, prevEndDate);
 
         // Get previous period orders using shift time range
-        List<Order> prevOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        List<Order> prevAllOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId, prevShift.start(), prevShift.end());
+
+        // Filter out soft-deleted orders
+        List<Order> prevOrders = prevAllOrders.stream()
+                .filter(o -> !o.isDeleted())
+                .collect(Collectors.toList());
 
         List<Order> prevCompletedOrders = prevOrders.stream()
                 .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
