@@ -43,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -444,7 +445,7 @@ public class SelfServiceOrderService {
                 .deliveryFee(BigDecimal.ZERO)
                 .total(subtotal)
                 .customerNotes(customerNotes)
-                .placedAt(LocalDateTime.now())
+                .placedAt(OffsetDateTime.now())
                 .build();
 
         // Convert cart items to order items

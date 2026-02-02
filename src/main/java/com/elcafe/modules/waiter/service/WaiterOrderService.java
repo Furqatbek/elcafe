@@ -674,7 +674,7 @@ public class WaiterOrderService {
                         .orderNumber(order.getOrderNumber())
                         .tableId(order.getDiningTable() != null ? order.getDiningTable().getId() : null)
                         .tableNumber(order.getDiningTable() != null ? order.getDiningTable().getTableNumber() : null)
-                        .createdAt(order.getCreatedAt())
+                        .createdAt(order.getCreatedAt().toLocalDateTime())
                         .status(order.getStatus())
                         .total(order.getTotal())
                         .build())

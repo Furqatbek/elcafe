@@ -104,7 +104,7 @@ public class FinancialOperationSecurityService {
                     "Refund amount exceeds threshold. Manager approval required.");
         }
 
-        return RefundAuthorizationResult.allowed();
+        return RefundAuthorizationResult.permit();
     }
 
     /**
@@ -198,7 +198,7 @@ public class FinancialOperationSecurityService {
                     "Order total exceeds void threshold. Manager approval required.");
         }
 
-        return VoidAuthorizationResult.allowed();
+        return VoidAuthorizationResult.permit();
     }
 
     /**
@@ -277,7 +277,7 @@ public class FinancialOperationSecurityService {
             boolean needsApproval,
             String reason
     ) {
-        public static RefundAuthorizationResult allowed() {
+        public static RefundAuthorizationResult permit() {
             return new RefundAuthorizationResult(true, false, null);
         }
 
@@ -298,7 +298,7 @@ public class FinancialOperationSecurityService {
             boolean needsApproval,
             String reason
     ) {
-        public static VoidAuthorizationResult allowed() {
+        public static VoidAuthorizationResult permit() {
             return new VoidAuthorizationResult(true, false, null);
         }
 

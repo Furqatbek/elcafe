@@ -74,7 +74,7 @@ public class OrderEventBroadcaster {
         eventData.put("acceptedAt", order.getAcceptedAt());
         // Calculate estimated delivery time (base time + preparation estimate)
         if (order.getAcceptedAt() != null) {
-            LocalDateTime estimatedDelivery = order.getAcceptedAt()
+            LocalDateTime estimatedDelivery = order.getAcceptedAt().toLocalDateTime()
                     .plusMinutes(order.getRestaurant().getEstimatedDeliveryTimeMinutes());
             eventData.put("estimatedDeliveryTime", estimatedDelivery);
         }

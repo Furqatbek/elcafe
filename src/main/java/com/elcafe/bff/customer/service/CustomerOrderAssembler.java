@@ -114,25 +114,26 @@ public class CustomerOrderAssembler {
     }
 
     private CustomerOrderDTO.OrderItemDTO mapToOrderItem(OrderItem item) {
+        // Get add-ons from the itemAddOns relationship, or parse from deprecated addOns string
         List<String> addOns = List.of();
-        if (item.getAddOns() != null) {
-            addOns = item.getAddOns().stream()
-                    .map(addOn -> addOn.getAddOn() != null ? addOn.getAddOn().getName() : "")
+        if (item.getItemAddOns() != null && !item.getItemAddOns().isEmpty()) {
+            addOns = item.getItemAddOns().stream()
+                    .map(ao -> ao.getAddOnName() != null ? ao.getAddOnName() : "")
                     .filter(name -> !name.isEmpty())
                     .collect(Collectors.toList());
+        } else if (item.getAddOnsDisplay() != null && !item.getAddOnsDisplay().isEmpty()) {
+            // Fallback to deprecated string field
+            addOns = List.of(item.getAddOnsDisplay().split(",\\s*"));
         }
-
-        String variantName = item.getVariant() != null ? item.getVariant().getName() : null;
-        String imageUrl = item.getProduct() != null ? item.getProduct().getImageUrl() : null;
 
         return CustomerOrderDTO.OrderItemDTO.builder()
                 .productName(item.getProductName())
-                .variantName(variantName)
+                .variantName(item.getVariantName())  // Use variantName field directly
                 .quantity(item.getQuantity())
                 .price(item.getTotalPrice())
-                .imageUrl(imageUrl)
+                .imageUrl(null)  // OrderItem doesn't store product image URL
                 .addOns(addOns)
-                .specialInstructions(item.getNotes())
+                .specialInstructions(item.getSpecialInstructions())  // Use specialInstructions instead of getNotes()
                 .build();
     }
 

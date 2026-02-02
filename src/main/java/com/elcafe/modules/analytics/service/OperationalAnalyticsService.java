@@ -328,7 +328,7 @@ public class OperationalAnalyticsService {
         } else {
             // Use inclusive boundary matching (same as repository "Between" behavior)
             return orderRepository.findAll().stream()
-                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
+                    .filter(order -> !order.getCreatedAt().toLocalDateTime().isBefore(startDateTime) && !order.getCreatedAt().toLocalDateTime().isAfter(endDateTime))
                     .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
@@ -394,7 +394,7 @@ public class OperationalAnalyticsService {
         if (order.getStatusHistory() == null || order.getStatusHistory().isEmpty()) {
             // Fallback to current status
             if (order.getStatus() == status) {
-                return Optional.of(order.getCreatedAt());
+                return Optional.of(order.getCreatedAt().toLocalDateTime());
             }
             return Optional.empty();
         }

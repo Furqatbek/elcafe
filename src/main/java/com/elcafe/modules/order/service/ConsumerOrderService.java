@@ -27,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -69,7 +71,7 @@ public class ConsumerOrderService {
                 .status(OrderStatus.NEW)
                 .orderSource(request.getOrderSource())
                 .customerNotes(request.getCustomerNotes())
-                .scheduledFor(request.getScheduledFor())
+                .scheduledFor(request.getScheduledFor() != null ? request.getScheduledFor().atOffset(ZoneOffset.UTC) : null)
                 .items(new ArrayList<>())
                 .statusHistory(new ArrayList<>())
                 .build();
@@ -367,7 +369,7 @@ public class ConsumerOrderService {
                 .total(order.getTotal())
                 .customerNotes(order.getCustomerNotes())
                 .scheduledFor(order.getScheduledFor())
-                .createdAt(order.getCreatedAt())
+                .createdAt(order.getCreatedAt().toLocalDateTime())
                 .estimatedDeliveryTime(order.getDeliveryInfo() != null ? order.getDeliveryInfo().getEstimatedDeliveryTime() : null)
                 .restaurant(restaurantInfo)
                 .customer(customerInfo)

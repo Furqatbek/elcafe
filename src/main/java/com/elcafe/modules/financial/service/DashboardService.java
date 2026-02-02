@@ -270,7 +270,7 @@ public class DashboardService {
         // Group orders by business day (not calendar date) for shift-aware reporting
         // This ensures orders after midnight but before the next shift are attributed to the previous business day
         Map<LocalDate, List<Order>> ordersByDate = orders.stream()
-                .collect(Collectors.groupingBy(o -> shiftTimeService.getBusinessDay(restaurantId, o.getCreatedAt())));
+                .collect(Collectors.groupingBy(o -> shiftTimeService.getBusinessDay(restaurantId, o.getCreatedAt().toLocalDateTime())));
 
         // Group expenses by date
         Map<LocalDate, List<Expense>> expensesByDate = expenses.stream()

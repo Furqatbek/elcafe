@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -118,7 +119,7 @@ public class PaymentService {
 
         // Set paidAt if status is COMPLETED
         if (payment.getStatus() == PaymentStatus.COMPLETED) {
-            payment.setPaidAt(LocalDateTime.now());
+            payment.setPaidAt(OffsetDateTime.now());
         }
 
         Payment saved = paymentRepository.save(payment);
@@ -139,7 +140,7 @@ public class PaymentService {
 
             // Set paidAt when status changes to COMPLETED
             if (request.getStatus() == PaymentStatus.COMPLETED && oldStatus != PaymentStatus.COMPLETED) {
-                payment.setPaidAt(LocalDateTime.now());
+                payment.setPaidAt(OffsetDateTime.now());
             }
             // Clear paidAt if status is changed from COMPLETED to something else
             else if (request.getStatus() != PaymentStatus.COMPLETED && oldStatus == PaymentStatus.COMPLETED) {
@@ -206,11 +207,11 @@ public class PaymentService {
                 .paymentDetails(payment.getPaymentDetails())
                 .refundReason(payment.getRefundReason())
                 .processedBy(payment.getProcessedBy())
-                .paidAt(payment.getPaidAt())
-                .completedAt(payment.getCompletedAt())
-                .refundedAt(payment.getRefundedAt())
-                .createdAt(payment.getCreatedAt())
-                .updatedAt(payment.getUpdatedAt())
+                .paidAt(payment.getPaidAt() != null ? payment.getPaidAt().toLocalDateTime() : null)
+                .completedAt(payment.getCompletedAt() != null ? payment.getCompletedAt().toLocalDateTime() : null)
+                .refundedAt(payment.getRefundedAt() != null ? payment.getRefundedAt().toLocalDateTime() : null)
+                .createdAt(payment.getCreatedAt() != null ? payment.getCreatedAt().toLocalDateTime() : null)
+                .updatedAt(payment.getUpdatedAt() != null ? payment.getUpdatedAt().toLocalDateTime() : null)
                 .build();
     }
 
@@ -271,8 +272,8 @@ public class PaymentService {
                 .paymentDetails(request.getPaymentDetails())
                 .processedBy(request.getProcessedBy())
                 .splitNumber(request.getSplitNumber())
-                .paidAt(LocalDateTime.now())
-                .completedAt(LocalDateTime.now())
+                .paidAt(OffsetDateTime.now())
+                .completedAt(OffsetDateTime.now())
                 .build();
 
         Payment savedPayment;
@@ -430,7 +431,7 @@ public class PaymentService {
                     payment.getRefundedAmount() : BigDecimal.ZERO;
             payment.setRefundedAmount(currentRefunded.add(toRefund));
             payment.setRefundReason(request.getReason());
-            payment.setRefundedAt(LocalDateTime.now());
+            payment.setRefundedAt(OffsetDateTime.now());
 
             // Update payment status
             if (payment.getRefundedAmount().compareTo(payment.getTotalWithTip()) >= 0) {
@@ -476,14 +477,14 @@ public class PaymentService {
             payment.setStatus(PaymentStatus.VOIDED);
             payment.setRefundedAmount(payment.getTotalWithTip());
             payment.setRefundReason(reason);
-            payment.setRefundedAt(LocalDateTime.now());
+            payment.setRefundedAt(OffsetDateTime.now());
             paymentRepository.save(payment);
         }
 
         // Update order status
         order.setStatus(OrderStatus.CANCELLED);
         order.setPaymentStatus(PaymentStatus.VOIDED);
-        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledAt(OffsetDateTime.now());
         order.setCancelledBy(processedBy);
         order.setCancellationReason(reason);
         orderRepository.save(order);
@@ -583,7 +584,7 @@ public class PaymentService {
                 .transactionId(payment.getTransactionId())
                 .processedBy(payment.getProcessedBy())
                 .splitNumber(payment.getSplitNumber())
-                .paidAt(payment.getPaidAt())
+                .paidAt(payment.getPaidAt() != null ? payment.getPaidAt().toLocalDateTime() : null)
                 .orderTotal(order.getTotal())
                 .orderGrandTotal(grandTotal)
                 .totalPaid(order.getTotalPaid())
@@ -602,7 +603,7 @@ public class PaymentService {
                 .tipAmount(payment.getTipAmount())
                 .refundedAmount(payment.getRefundedAmount())
                 .splitNumber(payment.getSplitNumber())
-                .paidAt(payment.getPaidAt())
+                .paidAt(payment.getPaidAt() != null ? payment.getPaidAt().toLocalDateTime() : null)
                 .build();
     }
 }

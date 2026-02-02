@@ -48,7 +48,7 @@ public class CustomerMenuAssembler {
                 .coverImageUrl(restaurant.getBannerUrl())
                 .description(restaurant.getDescription())
                 .cuisineType(null)
-                .rating(restaurant.getRating())
+                .rating(restaurant.getRating() != null ? restaurant.getRating().doubleValue() : null)
                 .reviewCount(0)
                 .address(restaurant.getAddress())
                 .isOpen(restaurant.getAcceptingOrders())
@@ -68,7 +68,7 @@ public class CustomerMenuAssembler {
     private CustomerMenuDTO.MenuCategoryDTO mapToMenuCategory(Category category) {
         List<CustomerMenuDTO.MenuProductDTO> products = category.getProducts() != null
                 ? category.getProducts().stream()
-                    .filter(p -> p.getStatus() == ProductStatus.ACTIVE)
+                    .filter(p -> p.getStatus() == ProductStatus.LIVE)
                     .map(this::mapToMenuProduct)
                     .collect(Collectors.toList())
                 : List.of();
@@ -158,7 +158,7 @@ public class CustomerMenuAssembler {
     }
 
     private List<CustomerMenuDTO.FeaturedProductDTO> assembleFeaturedProducts(Long restaurantId) {
-        return productRepository.findByRestaurant_IdAndStatus(restaurantId, ProductStatus.ACTIVE)
+        return productRepository.findByRestaurant_IdAndStatus(restaurantId, ProductStatus.LIVE)
                 .stream()
                 .filter(p -> p.getFeatured() != null && p.getFeatured())
                 .limit(6)
@@ -182,7 +182,7 @@ public class CustomerMenuAssembler {
     private List<CustomerMenuDTO.PromotionBannerDTO> assemblePromotions(Long restaurantId) {
         LocalDateTime now = LocalDateTime.now();
 
-        return promotionRepository.findActivePromotionsByRestaurantId(restaurantId, now)
+        return promotionRepository.findActivePromotions(restaurantId, now)
                 .stream()
                 .limit(3)
                 .map(promotion -> CustomerMenuDTO.PromotionBannerDTO.builder()

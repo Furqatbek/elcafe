@@ -65,7 +65,7 @@ public class OrderTrackingService {
         return orderRepository.findAll().stream()
                 .filter(o -> o.getCustomer() != null &&
                         phone.equals(o.getCustomer().getPhone()) &&
-                        o.getCreatedAt().isAfter(since))
+                        o.getCreatedAt().toLocalDateTime().isAfter(since))
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .limit(5)
                 .map(this::buildTrackingResponse)
@@ -99,7 +99,7 @@ public class OrderTrackingService {
                 .totalAmount(order.getGrandTotal() != null ? order.getGrandTotal() : order.getTotal())
                 .itemCount(order.getItems().size())
                 .items(items)
-                .createdAt(order.getCreatedAt())
+                .createdAt(order.getCreatedAt().toLocalDateTime())
                 .confirmedAt(findStatusTimestamp(order, OrderStatus.ACCEPTED))
                 .preparingAt(findStatusTimestamp(order, OrderStatus.PREPARING))
                 .readyAt(findStatusTimestamp(order, OrderStatus.READY))
@@ -170,7 +170,7 @@ public class OrderTrackingService {
         }
 
         // Adjust based on current status
-        LocalDateTime baseTime = order.getCreatedAt();
+        LocalDateTime baseTime = order.getCreatedAt().toLocalDateTime();
         if (order.getStatus() == OrderStatus.PREPARING) {
             // If preparing, use that timestamp
             LocalDateTime preparingAt = findStatusTimestamp(order, OrderStatus.PREPARING);

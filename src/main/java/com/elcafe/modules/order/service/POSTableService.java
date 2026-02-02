@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
@@ -38,7 +38,7 @@ public class POSTableService {
         // Update order status to DELIVERED/COMPLETED if not already
         if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.CANCELLED) {
             order.setStatus(OrderStatus.DELIVERED);
-            order.setCompletedAt(LocalDateTime.now());
+            order.setCompletedAt(OffsetDateTime.now());
         }
 
         // Release all tables associated with this order

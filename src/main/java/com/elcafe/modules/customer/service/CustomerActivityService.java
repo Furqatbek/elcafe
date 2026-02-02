@@ -80,7 +80,7 @@ public class CustomerActivityService {
         Integer recency = null;
         LocalDateTime lastOrderDate = null;
         if (!orders.isEmpty()) {
-            lastOrderDate = orders.get(0).getCreatedAt();
+            lastOrderDate = orders.get(0).getCreatedAt().toLocalDateTime();
             recency = (int) ChronoUnit.DAYS.between(lastOrderDate, LocalDateTime.now());
         }
 

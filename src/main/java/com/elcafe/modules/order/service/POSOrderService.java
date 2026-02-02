@@ -374,7 +374,7 @@ public class POSOrderService {
                 .entryFee(order.getEntryFee())
                 .total(order.getTotal())
                 .orderNotes(order.getCustomerNotes())
-                .createdAt(order.getCreatedAt())
+                .createdAt(order.getCreatedAt().toLocalDateTime())
                 .build();
 
         List<POSOrderResponse.OrderItemResponse> itemResponses = order.getItems().stream()
@@ -564,5 +564,105 @@ public class POSOrderService {
             log.error("Failed to record promotion usage for order {}: {}",
                     order.getOrderNumber(), e.getMessage(), e);
         }
+    }
+
+    /**
+     * Create an order from offline data (synced from POS offline mode).
+     * This method parses the offline order data and creates an order.
+     *
+     * @param restaurantId The restaurant ID
+     * @param orderData The order data as a map (from offline storage)
+     * @param clientOrderId The client-side order ID
+     * @param deviceId The device ID that created the order
+     * @return The created Order
+     */
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public Order createOrderFromOffline(Long restaurantId, java.util.Map<String, Object> orderData,
+                                        String clientOrderId, String deviceId) {
+        log.info("Creating order from offline data: restaurantId={}, clientOrderId={}, deviceId={}",
+                restaurantId, clientOrderId, deviceId);
+
+        // Validate restaurant
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+
+        // Create order
+        Order order = new Order();
+        order.setOrderNumber(dailyOrderSequenceService.generateNextOrderNumber());
+        order.setRestaurant(restaurant);
+        order.setStatus(OrderStatus.NEW);
+        order.setClientOrderId(clientOrderId);
+        order.setDeviceId(deviceId);
+        order.setIsOfflineOrder(true);
+
+        // Extract order type
+        String orderTypeStr = (String) orderData.getOrDefault("orderType", "DINE_IN");
+        order.setOrderType(OrderType.valueOf(orderTypeStr));
+
+        // Extract pricing
+        order.setSubtotal(getBigDecimal(orderData, "subtotal", BigDecimal.ZERO));
+        order.setTax(getBigDecimal(orderData, "tax", BigDecimal.ZERO));
+        order.setDeliveryFee(getBigDecimal(orderData, "deliveryFee", BigDecimal.ZERO));
+        order.setServiceFee(getBigDecimal(orderData, "serviceFee", BigDecimal.ZERO));
+        order.setDiscount(getBigDecimal(orderData, "discount", BigDecimal.ZERO));
+        order.setTotal(getBigDecimal(orderData, "total", BigDecimal.ZERO));
+
+        // Extract items
+        java.util.List<java.util.Map<String, Object>> itemsData =
+                (java.util.List<java.util.Map<String, Object>>) orderData.get("items");
+        if (itemsData != null) {
+            for (java.util.Map<String, Object> itemData : itemsData) {
+                OrderItem item = createOrderItemFromOfflineData(itemData, order);
+                order.addItem(item);
+            }
+        }
+
+        // Save order
+        Order savedOrder = orderRepository.save(order);
+
+        log.info("Offline order created successfully: {} -> clientOrderId: {}",
+                savedOrder.getOrderNumber(), clientOrderId);
+
+        return savedOrder;
+    }
+
+    private OrderItem createOrderItemFromOfflineData(java.util.Map<String, Object> itemData, Order order) {
+        OrderItem item = new OrderItem();
+        item.setOrder(order);
+        item.setProductId(getLong(itemData, "productId"));
+        item.setProductName((String) itemData.getOrDefault("productName", "Unknown"));
+        item.setQuantity(getInteger(itemData, "quantity", 1));
+        item.setUnitPrice(getBigDecimal(itemData, "unitPrice", BigDecimal.ZERO));
+        item.setTotalPrice(getBigDecimal(itemData, "totalPrice", BigDecimal.ZERO));
+        item.setSpecialInstructions((String) itemData.get("specialInstructions"));
+        return item;
+    }
+
+    private BigDecimal getBigDecimal(java.util.Map<String, Object> data, String key, BigDecimal defaultValue) {
+        Object value = data.get(key);
+        if (value == null) return defaultValue;
+        if (value instanceof BigDecimal) return (BigDecimal) value;
+        if (value instanceof Number) return BigDecimal.valueOf(((Number) value).doubleValue());
+        if (value instanceof String) return new BigDecimal((String) value);
+        return defaultValue;
+    }
+
+    private Long getLong(java.util.Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        if (value == null) return null;
+        if (value instanceof Long) return (Long) value;
+        if (value instanceof Number) return ((Number) value).longValue();
+        if (value instanceof String) return Long.valueOf((String) value);
+        return null;
+    }
+
+    private Integer getInteger(java.util.Map<String, Object> data, String key, Integer defaultValue) {
+        Object value = data.get(key);
+        if (value == null) return defaultValue;
+        if (value instanceof Integer) return (Integer) value;
+        if (value instanceof Number) return ((Number) value).intValue();
+        if (value instanceof String) return Integer.valueOf((String) value);
+        return defaultValue;
     }
 }

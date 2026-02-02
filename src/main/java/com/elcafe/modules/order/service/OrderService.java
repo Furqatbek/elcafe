@@ -418,7 +418,7 @@ public class OrderService {
                 payment.setStatus(PaymentStatus.VOIDED);
                 payment.setRefundedAmount(payment.getTotalWithTip());
                 payment.setRefundReason("Order reverted: " + reason);
-                payment.setRefundedAt(java.time.LocalDateTime.now());
+                payment.setRefundedAt(java.time.OffsetDateTime.now());
                 paymentRepository.save(payment);
                 log.info("Voided payment {} for reverted order {}", payment.getId(), orderId);
             }

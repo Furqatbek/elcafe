@@ -252,7 +252,7 @@ public class CustomerAnalyticsService {
         } else {
             // Use inclusive boundary matching (same as repository "Between" behavior)
             return orderRepository.findAll().stream()
-                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
+                    .filter(order -> !order.getCreatedAt().toLocalDateTime().isBefore(startDateTime) && !order.getCreatedAt().toLocalDateTime().isAfter(endDateTime))
                     .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());
@@ -280,12 +280,12 @@ public class CustomerAnalyticsService {
 
         // Customer lifespan (from first to last order)
         LocalDateTime firstOrderDate = customerOrders.stream()
-                .map(Order::getCreatedAt)
+                .map(order -> order.getCreatedAt().toLocalDateTime())
                 .min(LocalDateTime::compareTo)
                 .orElse(customer.getCreatedAt());
 
         LocalDateTime lastOrderDate = customerOrders.stream()
-                .map(Order::getCreatedAt)
+                .map(order -> order.getCreatedAt().toLocalDateTime())
                 .max(LocalDateTime::compareTo)
                 .orElse(LocalDateTime.now());
 

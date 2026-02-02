@@ -52,7 +52,7 @@ public class FinancialAnalyticsService {
         // This ensures orders after midnight but before the next shift are attributed to the previous business day
         Map<LocalDate, List<Order>> ordersByDate = orders.stream()
                 .collect(Collectors.groupingBy(order ->
-                        shiftTimeService.getBusinessDay(restaurantId, order.getCreatedAt())));
+                        shiftTimeService.getBusinessDay(restaurantId, order.getCreatedAt().toLocalDateTime())));
 
         return ordersByDate.entrySet().stream()
                 .map(entry -> {
@@ -380,7 +380,7 @@ public class FinancialAnalyticsService {
         } else {
             // Use inclusive boundary matching (same as repository "Between" behavior)
             return orderRepository.findAll().stream()
-                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
+                    .filter(order -> !order.getCreatedAt().toLocalDateTime().isBefore(startDateTime) && !order.getCreatedAt().toLocalDateTime().isAfter(endDateTime))
                     .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
                     .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
                     .collect(Collectors.toList());

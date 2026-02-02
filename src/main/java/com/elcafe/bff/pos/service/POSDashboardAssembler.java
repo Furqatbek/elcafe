@@ -60,10 +60,10 @@ public class POSDashboardAssembler {
         return POSDashboardDTO.RestaurantInfo.builder()
                 .id(restaurant.getId())
                 .name(restaurant.getName())
-                .timezone(restaurant.getTimezone() != null ? restaurant.getTimezone() : "UTC")
-                .isOpen(restaurant.getIsOpen())
-                .currency(restaurant.getCurrencyCode() != null ? restaurant.getCurrencyCode() : "USD")
-                .currencySymbol(restaurant.getCurrencySymbol() != null ? restaurant.getCurrencySymbol() : "$")
+                .timezone("UTC")  // Restaurant entity doesn't have timezone field
+                .isOpen(restaurant.getAcceptingOrders())  // Use acceptingOrders field
+                .currency("USD")  // Restaurant entity doesn't have currency fields
+                .currencySymbol("$")
                 .build();
     }
 
@@ -133,7 +133,7 @@ public class POSDashboardAssembler {
         // Get customer name from customer entity if available
         String customerName = null;
         if (order.getCustomer() != null) {
-            customerName = order.getCustomer().getName();
+            customerName = order.getCustomer().getFullName();  // Use getFullName() instead of getName()
         }
 
         return POSDashboardDTO.ActiveOrderSummary.builder()
@@ -183,7 +183,7 @@ public class POSDashboardAssembler {
     }
 
     private List<POSDashboardDTO.PrinterStatusDTO> assemblePrinterStatuses(Long restaurantId) {
-        return printerSettingsRepository.findByRestaurantId(restaurantId)
+        return printerSettingsRepository.findByRestaurant_Id(restaurantId)
                 .stream()
                 .map(printer -> mapToPrinterStatus(printer, restaurantId))
                 .collect(Collectors.toList());
@@ -196,9 +196,9 @@ public class POSDashboardAssembler {
 
         return POSDashboardDTO.PrinterStatusDTO.builder()
                 .printerId(printer.getId())
-                .printerName(printer.getName())
+                .printerName(printer.getPrinterName())  // Use printerName field
                 .printerType(printer.getPrinterType() != null ? printer.getPrinterType().name() : null)
-                .isOnline(printer.getIsEnabled())
+                .isOnline(printer.getEnabled())  // Use enabled field
                 .pendingJobs((int) pendingJobs)
                 .failedJobs((int) failedJobs)
                 .build();

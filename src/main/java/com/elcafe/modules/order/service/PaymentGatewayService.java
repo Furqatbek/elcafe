@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 /**
  * Payment Gateway Integration Service.
@@ -243,7 +244,7 @@ public class PaymentGatewayService {
 
             // Update payment status
             payment.setStatus(PaymentStatus.REFUNDED);
-            payment.setRefundedAt(LocalDateTime.now());
+            payment.setRefundedAt(OffsetDateTime.now());
             paymentRepository.save(payment);
 
             // Update order payment status

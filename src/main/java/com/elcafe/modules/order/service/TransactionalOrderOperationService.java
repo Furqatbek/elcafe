@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -225,7 +226,7 @@ public class TransactionalOrderOperationService {
         Payment payment = order.getPayment();
         if (payment != null) {
             payment.setStatus(PaymentStatus.COMPLETED);
-            payment.setCompletedAt(LocalDateTime.now());
+            payment.setCompletedAt(OffsetDateTime.now());
             paymentRepository.save(payment);
         }
 
@@ -276,14 +277,14 @@ public class TransactionalOrderOperationService {
             payment.setStatus(PaymentStatus.VOIDED);
             payment.setRefundedAmount(payment.getTotalWithTip());
             payment.setRefundReason(reason);
-            payment.setRefundedAt(LocalDateTime.now());
+            payment.setRefundedAt(OffsetDateTime.now());
             paymentRepository.save(payment);
         }
 
         // Step 2: Update order status
         order.setStatus(OrderStatus.CANCELLED);
         order.setPaymentStatus(PaymentStatus.VOIDED);
-        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledAt(OffsetDateTime.now());
         order.setCancelledBy(voidedBy);
         order.setCancellationReason(reason);
 
@@ -333,8 +334,8 @@ public class TransactionalOrderOperationService {
                 .paymentDetails(request.getPaymentDetails())
                 .processedBy(request.getProcessedBy())
                 .splitNumber(request.getSplitNumber())
-                .paidAt(LocalDateTime.now())
-                .completedAt(LocalDateTime.now())
+                .paidAt(OffsetDateTime.now())
+                .completedAt(OffsetDateTime.now())
                 .build();
     }
 
@@ -411,7 +412,7 @@ public class TransactionalOrderOperationService {
                 .transactionId(payment.getTransactionId())
                 .processedBy(payment.getProcessedBy())
                 .splitNumber(payment.getSplitNumber())
-                .paidAt(payment.getPaidAt())
+                .paidAt(payment.getPaidAt() != null ? payment.getPaidAt().toLocalDateTime() : null)
                 .orderTotal(order.getTotal())
                 .orderGrandTotal(grandTotal)
                 .totalPaid(order.getTotalPaid())
@@ -430,7 +431,7 @@ public class TransactionalOrderOperationService {
                 .tipAmount(payment.getTipAmount())
                 .refundedAmount(payment.getRefundedAmount())
                 .splitNumber(payment.getSplitNumber())
-                .paidAt(payment.getPaidAt())
+                .paidAt(payment.getPaidAt() != null ? payment.getPaidAt().toLocalDateTime() : null)
                 .build();
     }
 }
