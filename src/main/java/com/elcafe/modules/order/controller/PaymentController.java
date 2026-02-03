@@ -22,7 +22,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Slf4j
@@ -150,8 +150,8 @@ public class PaymentController {
     @Operation(summary = "Get payments by status and date range")
     public ResponseEntity<ApiResponse<List<PaymentResponse>>> getPaymentsByStatusAndDateRange(
             @RequestParam PaymentStatus status,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate
     ) {
         List<PaymentResponse> payments = paymentService.getPaymentsByStatusAndDateRange(status, startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success("Payment report retrieved successfully", payments));

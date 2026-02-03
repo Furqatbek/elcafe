@@ -11,7 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,15 +37,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Query("SELECT p FROM Payment p WHERE p.status = :status AND p.createdAt BETWEEN :startDate AND :endDate")
     List<Payment> findByStatusAndDateRange(
             @Param("status") PaymentStatus status,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("startDate") OffsetDateTime startDate,
+            @Param("endDate") OffsetDateTime endDate
     );
 
     @Query("SELECT p FROM Payment p WHERE p.method = :method AND p.createdAt BETWEEN :startDate AND :endDate")
     List<Payment> findByMethodAndDateRange(
             @Param("method") PaymentMethod method,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate
+            @Param("startDate") OffsetDateTime startDate,
+            @Param("endDate") OffsetDateTime endDate
     );
 
     @Query("SELECT COUNT(p) FROM Payment p WHERE p.status = :status")

@@ -83,8 +83,8 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public List<PaymentResponse> getPaymentsByStatusAndDateRange(
             PaymentStatus status,
-            LocalDateTime startDate,
-            LocalDateTime endDate
+            OffsetDateTime startDate,
+            OffsetDateTime endDate
     ) {
         return paymentRepository.findByStatusAndDateRange(status, startDate, endDate).stream()
                 .map(this::toResponse)
