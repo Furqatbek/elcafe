@@ -32,7 +32,8 @@ public class CustomerActivityService {
      * Get all customers with their activity data (RFM analysis)
      */
     public List<CustomerActivityDTO> getAllCustomersActivity() {
-        List<Customer> customers = customerRepository.findAll();
+        // Use active customers only to avoid loading inactive/soft-deleted customers
+        List<Customer> customers = customerRepository.findByActiveTrue();
         List<CustomerActivityDTO> activityList = customers.stream()
                 .map(this::calculateCustomerActivity)
                 .collect(Collectors.toList());

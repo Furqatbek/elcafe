@@ -147,4 +147,14 @@ public interface WaiterCommissionRepository extends JpaRepository<WaiterCommissi
             @Param("waiterId") Long waiterId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * Find commissions by payroll entry ID
+     */
+    List<WaiterCommission> findByPayrollEntryId(Long payrollEntryId);
+
+    /**
+     * Find commissions by order ID
+     */
+    List<WaiterCommission> findByOrderId(Long orderId);
 }

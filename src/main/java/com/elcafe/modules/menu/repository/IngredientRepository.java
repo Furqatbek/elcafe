@@ -37,4 +37,9 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Long> {
     );
 
     boolean existsByName(String name);
+
+    /**
+     * Find all active ingredients
+     */
+    List<Ingredient> findByIsActiveTrue();
 }

@@ -202,11 +202,19 @@ public class FinancialAnalyticsService {
             }
         }
 
+        // Batch load products for COGS calculation to avoid N+1 queries
+        Set<Long> productIds = orders.stream()
+                .flatMap(order -> order.getItems().stream())
+                .map(OrderItem::getProductId)
+                .collect(Collectors.toSet());
+        Map<Long, Product> productsMap = productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
         // Calculate COGS based on product cost prices as fallback/comparison
         BigDecimal productBasedCOGS = orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .map(item -> {
-                    Product product = productRepository.findById(item.getProductId()).orElse(null);
+                    Product product = productsMap.get(item.getProductId());
                     if (product != null && product.getCostPrice() != null) {
                         return product.getCostPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
                     }
@@ -307,12 +315,17 @@ public class FinancialAnalyticsService {
                 .flatMap(order -> order.getItems().stream())
                 .collect(Collectors.groupingBy(OrderItem::getProductId));
 
+        // Batch load all products to avoid N+1 queries
+        Set<Long> productIds = itemsByProduct.keySet();
+        Map<Long, Product> productsMap = productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
         // Calculate total contribution across all products
         BigDecimal totalContribution = itemsByProduct.entrySet().stream()
                 .map(entry -> {
                     Long productId = entry.getKey();
                     List<OrderItem> items = entry.getValue();
-                    Product product = productRepository.findById(productId).orElse(null);
+                    Product product = productsMap.get(productId);
                     if (product != null && product.getCostPrice() != null) {
                         BigDecimal margin = product.getPrice().subtract(product.getCostPrice());
                         int totalSold = items.stream().mapToInt(OrderItem::getQuantity).sum();
@@ -327,7 +340,7 @@ public class FinancialAnalyticsService {
                     Long productId = entry.getKey();
                     List<OrderItem> items = entry.getValue();
 
-                    Product product = productRepository.findById(productId).orElse(null);
+                    Product product = productsMap.get(productId);
                     if (product == null) {
                         return null;
                     }
@@ -372,23 +385,22 @@ public class FinancialAnalyticsService {
      * Uses shared REVENUE_STATUSES for consistency across all reports.
      */
     private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
+        List<Order> orders;
         if (restaurantId != null) {
-            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId,
                     startDateTime,
                     endDateTime
-            ).stream()
-                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                    .collect(Collectors.toList());
+            );
         } else {
-            // Use inclusive boundary matching (same as repository "Between" behavior)
-            return orderRepository.findAll().stream()
-                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
-                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                    .collect(Collectors.toList());
+            // Use proper repository query instead of findAll()
+            orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
         }
+
+        return orders.stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
+                .collect(Collectors.toList());
     }
 
     private BigDecimal calculateRevenueByPaymentMethod(List<Order> orders, PaymentMethod method) {

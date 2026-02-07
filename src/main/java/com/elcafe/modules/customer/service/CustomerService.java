@@ -103,7 +103,7 @@ public class CustomerService {
 
         // Auto-generate a referral code for the new customer so they can invite others
         try {
-            Restaurant restaurant = restaurantRepository.findAll().stream().findFirst().orElse(null);
+            Restaurant restaurant = restaurantRepository.findAnyActiveRestaurant().orElse(null);
             if (restaurant != null) {
                 referralService.generateReferralCode(restaurant.getId(), savedCustomer.getId());
                 log.info("Referral code auto-generated for new customer: {}", savedCustomer.getId());
@@ -176,29 +176,24 @@ public class CustomerService {
                 .map(Customer::getId)
                 .collect(Collectors.toSet());
 
-        // Fetch loyalty data in bulk
-        Map<Long, CustomerLoyalty> loyaltyMap = customerLoyaltyRepository.findAll().stream()
-                .filter(cl -> customerIds.contains(cl.getCustomer().getId()))
+        // Fetch loyalty data in bulk using proper query
+        Map<Long, CustomerLoyalty> loyaltyMap = customerLoyaltyRepository.findByCustomerIdIn(customerIds).stream()
                 .collect(Collectors.toMap(
                         cl -> cl.getCustomer().getId(),
                         Function.identity(),
                         (a, b) -> a
                 ));
 
-        // Fetch referral codes in bulk
-        Map<Long, ReferralCode> referralCodeMap = referralCodeRepository.findAll().stream()
-                .filter(rc -> customerIds.contains(rc.getCustomer().getId()))
+        // Fetch referral codes in bulk using proper query
+        Map<Long, ReferralCode> referralCodeMap = referralCodeRepository.findByCustomerIdIn(customerIds).stream()
                 .collect(Collectors.toMap(
                         rc -> rc.getCustomer().getId(),
                         Function.identity(),
                         (a, b) -> a // In case of duplicates, keep the first
                 ));
 
-        // Count successful referrals per customer
-        Map<Long, Long> referralSuccessMap = referralRepository.findAll().stream()
-                .filter(r -> r.getStatus() == ReferralStatus.COMPLETED &&
-                             r.getReferralCode() != null &&
-                             customerIds.contains(r.getReferralCode().getCustomer().getId()))
+        // Count successful referrals per customer using proper query
+        Map<Long, Long> referralSuccessMap = referralRepository.findByReferralCodeCustomerIdInAndStatus(customerIds, ReferralStatus.COMPLETED).stream()
                 .collect(Collectors.groupingBy(
                         r -> r.getReferralCode().getCustomer().getId(),
                         Collectors.counting()
@@ -280,21 +275,15 @@ public class CustomerService {
             response.setOrderCount(0);
         }
 
-        // Add referral data
-        referralCodeRepository.findAll().stream()
-                .filter(rc -> rc.getCustomer().getId().equals(id))
-                .findFirst()
+        // Add referral data using proper query
+        referralCodeRepository.findByCustomerId(id)
                 .ifPresent(referralCode -> {
                     response.setReferralCode(referralCode.getCode());
                     response.setReferralUsageCount(referralCode.getUsageCount());
                 });
 
-        // Count successful referrals
-        long successCount = referralRepository.findAll().stream()
-                .filter(r -> r.getStatus() == ReferralStatus.COMPLETED &&
-                             r.getReferralCode() != null &&
-                             r.getReferralCode().getCustomer().getId().equals(id))
-                .count();
+        // Count successful referrals using proper query
+        long successCount = referralRepository.countByReferralCodeCustomerIdAndStatus(id, ReferralStatus.COMPLETED);
         response.setReferralSuccessCount((int) successCount);
 
         return response;

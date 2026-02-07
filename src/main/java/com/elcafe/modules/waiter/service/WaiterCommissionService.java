@@ -290,9 +290,8 @@ public class WaiterCommissionService {
      */
     @Transactional
     public void markCommissionsAsPaid(Long payrollEntryId) {
-        List<WaiterCommission> commissions = commissionRepository.findAll().stream()
-                .filter(c -> c.getPayrollEntry() != null && c.getPayrollEntry().getId().equals(payrollEntryId))
-                .collect(Collectors.toList());
+        // Use proper repository query instead of findAll()
+        List<WaiterCommission> commissions = commissionRepository.findByPayrollEntryId(payrollEntryId);
 
         for (WaiterCommission commission : commissions) {
             commission.markAsPaid();
@@ -307,8 +306,8 @@ public class WaiterCommissionService {
      */
     @Transactional
     public void cancelCommission(Long orderId) {
-        commissionRepository.findAll().stream()
-                .filter(c -> c.getOrder().getId().equals(orderId))
+        // Use proper repository query instead of findAll()
+        commissionRepository.findByOrderId(orderId)
                 .forEach(commission -> {
                     commission.cancel();
                     commissionRepository.save(commission);
@@ -320,7 +319,8 @@ public class WaiterCommissionService {
      * Get commission report for all waiters in a restaurant
      */
     public List<WaiterCommissionSummaryDTO> getRestaurantCommissionReport(Long restaurantId, LocalDate startDate, LocalDate endDate) {
-        List<Waiter> waiters = waiterRepository.findAll().stream()
+        // Use proper repository query to get only active waiters (commission enabled is checked in filter)
+        List<Waiter> waiters = waiterRepository.findByActiveTrue().stream()
                 .filter(w -> Boolean.TRUE.equals(w.getCommissionEnabled()))
                 .collect(Collectors.toList());
 

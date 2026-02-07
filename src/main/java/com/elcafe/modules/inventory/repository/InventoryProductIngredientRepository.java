@@ -32,4 +32,16 @@ public interface InventoryProductIngredientRepository extends JpaRepository<Prod
     void deleteByProductId(Long productId);
 
     void deleteByProductIdAndIngredientId(Long productId, Long ingredientId);
+
+    /**
+     * Find all product ingredients with their products and ingredients (for bulk cost calculation)
+     */
+    @Query("SELECT pi FROM InventoryProductIngredient pi JOIN FETCH pi.product JOIN FETCH pi.ingredient")
+    List<ProductIngredient> findAllWithProductsAndIngredients();
+
+    /**
+     * Find product ingredients for a list of product IDs (for batch operations)
+     */
+    @Query("SELECT pi FROM InventoryProductIngredient pi JOIN FETCH pi.ingredient WHERE pi.product.id IN :productIds")
+    List<ProductIngredient> findByProductIdInWithIngredients(java.util.Collection<Long> productIds);
 }

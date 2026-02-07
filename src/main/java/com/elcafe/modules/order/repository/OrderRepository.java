@@ -189,4 +189,29 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
      */
     @Query("SELECT o FROM Order o WHERE o.restaurant.id = :restaurantId AND o.status IN :statuses AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
     List<Order> findByRestaurantIdAndStatusIn(@Param("restaurantId") Long restaurantId, @Param("statuses") List<OrderStatus> statuses);
+
+    /**
+     * Find recent orders by customer phone (for order tracking)
+     */
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items LEFT JOIN FETCH o.statusHistory " +
+           "WHERE o.customer.phone = :phone AND o.createdAt >= :since ORDER BY o.createdAt DESC")
+    List<Order> findByCustomerPhoneAndCreatedAtAfterWithDetails(
+            @Param("phone") String phone,
+            @Param("since") OffsetDateTime since);
+
+    /**
+     * Find orders by date range (for analytics when restaurantId is null)
+     */
+    @Query("SELECT o FROM Order o WHERE o.createdAt >= :startDate AND o.createdAt <= :endDate ORDER BY o.createdAt DESC")
+    List<Order> findByCreatedAtBetweenOrderByCreatedAtDesc(
+            @Param("startDate") OffsetDateTime startDate,
+            @Param("endDate") OffsetDateTime endDate);
+
+    /**
+     * Find orders by date range with items (for analytics)
+     */
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.createdAt >= :startDate AND o.createdAt <= :endDate ORDER BY o.createdAt DESC")
+    List<Order> findByCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
+            @Param("startDate") OffsetDateTime startDate,
+            @Param("endDate") OffsetDateTime endDate);
 }

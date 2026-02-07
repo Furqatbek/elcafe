@@ -51,19 +51,13 @@ public class CustomerAnalyticsService {
         LocalDateTime shiftEndLocal = shift.end().toLocalDateTime();
 
         // Get all customers that existed at the start of the period (strictly before start)
-        List<Customer> customersAtStart = customerRepository.findAll().stream()
-                .filter(c -> c.getCreatedAt().isBefore(shiftStartLocal))
-                .collect(Collectors.toList());
+        List<Customer> customersAtStart = customerRepository.findByCreatedAtBefore(shiftStartLocal);
 
         // Get new customers during the period (inclusive boundaries for shift-aware consistency)
-        List<Customer> newCustomers = customerRepository.findAll().stream()
-                .filter(c -> !c.getCreatedAt().isBefore(shiftStartLocal) && !c.getCreatedAt().isAfter(shiftEndLocal))
-                .collect(Collectors.toList());
+        List<Customer> newCustomers = customerRepository.findByCreatedAtBetween(shiftStartLocal, shiftEndLocal);
 
         // Get all customers at the end of the period (up to and including end)
-        List<Customer> customersAtEnd = customerRepository.findAll().stream()
-                .filter(c -> !c.getCreatedAt().isAfter(shiftEndLocal))
-                .collect(Collectors.toList());
+        List<Customer> customersAtEnd = customerRepository.findByCreatedAtLessThanEqual(shiftEndLocal);
 
         // Get returning customers (customers who made orders during the period)
         Set<Long> returningCustomerIds = getCompletedOrders(shift.start(), shift.end(), restaurantId).stream()
@@ -124,7 +118,8 @@ public class CustomerAnalyticsService {
      * Calculate Customer Lifetime Value (CLV)
      */
     public CustomerLTVDTO getCustomerLTV(Long restaurantId) {
-        List<Customer> allCustomers = customerRepository.findAll();
+        // Use active customers only for LTV calculation
+        List<Customer> allCustomers = customerRepository.findByActiveTrue();
 
         // Calculate metrics for each customer
         List<CustomerMetrics> customerMetrics = allCustomers.stream()
@@ -248,23 +243,22 @@ public class CustomerAnalyticsService {
      * Uses shared REVENUE_STATUSES for consistency across all reports.
      */
     private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
+        List<Order> orders;
         if (restaurantId != null) {
-            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId,
                     startDateTime,
                     endDateTime
-            ).stream()
-                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                    .collect(Collectors.toList());
+            );
         } else {
-            // Use inclusive boundary matching (same as repository "Between" behavior)
-            return orderRepository.findAll().stream()
-                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
-                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                    .collect(Collectors.toList());
+            // Use proper repository query instead of findAll()
+            orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
         }
+
+        return orders.stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
+                .collect(Collectors.toList());
     }
 
     private CustomerMetrics calculateCustomerMetrics(Customer customer, Long restaurantId) {

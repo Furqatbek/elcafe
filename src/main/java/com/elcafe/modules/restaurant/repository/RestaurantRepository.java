@@ -1,11 +1,14 @@
 package com.elcafe.modules.restaurant.repository;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, JpaSpecificationExecutor<Restaurant> {
@@ -13,4 +16,18 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, J
     List<Restaurant> findByActiveTrue();
 
     List<Restaurant> findByActiveTrueAndAcceptingOrdersTrue();
+
+    /**
+     * Find the first active restaurant (for single-restaurant setups)
+     */
+    @Query("SELECT r FROM Restaurant r WHERE r.active = true ORDER BY r.id ASC")
+    List<Restaurant> findFirstActiveRestaurant(Pageable pageable);
+
+    /**
+     * Find any active restaurant
+     */
+    default Optional<Restaurant> findAnyActiveRestaurant() {
+        List<Restaurant> result = findFirstActiveRestaurant(Pageable.ofSize(1));
+        return result.isEmpty() ? Optional.empty() : Optional.of(result.get(0));
+    }
 }

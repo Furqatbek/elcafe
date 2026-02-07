@@ -33,4 +33,15 @@ public interface ReferralCodeRepository extends JpaRepository<ReferralCode, Long
     @Query("SELECT COUNT(rc) FROM ReferralCode rc " +
            "WHERE rc.restaurant.id = :restaurantId AND rc.active = true")
     long countActiveByRestaurantId(@Param("restaurantId") Long restaurantId);
+
+    /**
+     * Find referral codes for a list of customer IDs (for bulk operations)
+     */
+    @Query("SELECT rc FROM ReferralCode rc WHERE rc.customer.id IN :customerIds")
+    List<ReferralCode> findByCustomerIdIn(@Param("customerIds") java.util.Collection<Long> customerIds);
+
+    /**
+     * Find referral code by customer ID
+     */
+    Optional<ReferralCode> findByCustomerId(Long customerId);
 }

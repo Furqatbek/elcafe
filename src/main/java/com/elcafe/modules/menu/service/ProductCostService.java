@@ -11,7 +11,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Service for calculating and updating product cost prices based on recipe ingredients.
@@ -114,17 +118,32 @@ public class ProductCostService {
 
     /**
      * Recalculate cost prices for all products in the system.
-     * Useful for bulk updates or data migration.
+     * Uses bulk loading to avoid N+1 query performance issues.
      *
      * @return Number of products updated
      */
     @Transactional
     public int recalculateAllProductCosts() {
+        // Load all products
         List<Product> allProducts = productRepository.findAll();
+        Set<Long> productIds = allProducts.stream()
+                .map(Product::getId)
+                .collect(Collectors.toSet());
+
+        // Bulk load all product ingredients with their ingredients in a single query
+        List<ProductIngredient> allProductIngredients = productIngredientRepository.findByProductIdInWithIngredients(productIds);
+
+        // Group product ingredients by product ID for efficient lookup
+        Map<Long, List<ProductIngredient>> ingredientsByProductId = allProductIngredients.stream()
+                .collect(Collectors.groupingBy(pi -> pi.getProduct().getId()));
 
         int updatedCount = 0;
         for (Product product : allProducts) {
-            BigDecimal newCostPrice = calculateCostFromIngredients(product.getId());
+            // Calculate cost using pre-loaded ingredients
+            List<ProductIngredient> productIngredients = ingredientsByProductId.getOrDefault(product.getId(), List.of());
+            BigDecimal newCostPrice = productIngredients.stream()
+                    .map(this::calculateIngredientCost)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             // Only update if cost changed
             if (product.getCostPrice() == null ||

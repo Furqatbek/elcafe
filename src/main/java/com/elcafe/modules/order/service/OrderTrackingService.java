@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,14 +61,10 @@ public class OrderTrackingService {
      */
     @Transactional(readOnly = true)
     public List<OrderTrackingResponse> getRecentOrdersByPhone(String phone) {
-        // Get orders from last 24 hours
-        LocalDateTime since = LocalDateTime.now().minusHours(24);
+        // Get orders from last 24 hours using proper database query
+        OffsetDateTime since = OffsetDateTime.now().minusHours(24);
 
-        return orderRepository.findAll().stream()
-                .filter(o -> o.getCustomer() != null &&
-                        phone.equals(o.getCustomer().getPhone()) &&
-                        o.getCreatedAt().toLocalDateTime().isAfter(since))
-                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+        return orderRepository.findByCustomerPhoneAndCreatedAtAfterWithDetails(phone, since).stream()
                 .limit(5)
                 .map(this::buildTrackingResponse)
                 .collect(Collectors.toList());

@@ -33,4 +33,10 @@ public interface CustomerLoyaltyRepository extends JpaRepository<CustomerLoyalty
 
     @Query("SELECT COUNT(cl) FROM CustomerLoyalty cl WHERE cl.tier.id = :tierId")
     Long countByTierId(@Param("tierId") Long tierId);
+
+    /**
+     * Find loyalty records for a list of customer IDs (for bulk operations)
+     */
+    @Query("SELECT cl FROM CustomerLoyalty cl WHERE cl.customer.id IN :customerIds")
+    List<CustomerLoyalty> findByCustomerIdIn(@Param("customerIds") java.util.Collection<Long> customerIds);
 }

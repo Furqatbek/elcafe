@@ -48,10 +48,9 @@ public class OrderController {
     ) {
         // Set restaurant if not provided in the request
         if (order.getRestaurant() == null || order.getRestaurant().getId() == null) {
-            // Get the first available restaurant as default
-            Restaurant restaurant = restaurantRepository.findAll().stream()
-                    .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("No restaurant found in the system"));
+            // Get the first available active restaurant as default
+            Restaurant restaurant = restaurantRepository.findAnyActiveRestaurant()
+                    .orElseThrow(() -> new IllegalStateException("No active restaurant found in the system"));
             order.setRestaurant(restaurant);
         }
 

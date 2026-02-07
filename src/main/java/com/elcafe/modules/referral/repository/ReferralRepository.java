@@ -65,4 +65,20 @@ public interface ReferralRepository extends JpaRepository<Referral, Long> {
            "AND r.createdAt >= :startDate")
     long countByRestaurantIdAndCreatedAtAfter(@Param("restaurantId") Long restaurantId,
                                                @Param("startDate") LocalDateTime startDate);
+
+    /**
+     * Find referrals by referral code customer IDs and status (for bulk operations)
+     */
+    @Query("SELECT r FROM Referral r WHERE r.referralCode.customer.id IN :customerIds AND r.status = :status")
+    List<Referral> findByReferralCodeCustomerIdInAndStatus(
+            @Param("customerIds") java.util.Collection<Long> customerIds,
+            @Param("status") ReferralStatus status);
+
+    /**
+     * Count completed referrals by referral code customer ID
+     */
+    @Query("SELECT COUNT(r) FROM Referral r WHERE r.referralCode.customer.id = :customerId AND r.status = :status")
+    long countByReferralCodeCustomerIdAndStatus(
+            @Param("customerId") Long customerId,
+            @Param("status") ReferralStatus status);
 }

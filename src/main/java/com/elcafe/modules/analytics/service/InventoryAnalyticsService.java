@@ -25,7 +25,11 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -85,10 +89,8 @@ public class InventoryAnalyticsService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
 
-        // Get all active ingredients
-        List<Ingredient> allIngredients = ingredientRepository.findAll().stream()
-                .filter(Ingredient::getIsActive)
-                .collect(Collectors.toList());
+        // Get all active ingredients using proper query
+        List<Ingredient> allIngredients = ingredientRepository.findByIsActiveTrue();
 
         // Try to get inventory value using valuation service
         BigDecimal totalInventoryValue = BigDecimal.ZERO;
@@ -191,23 +193,22 @@ public class InventoryAnalyticsService {
      * Uses shared REVENUE_STATUSES for consistency across all reports.
      */
     private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
+        List<Order> orders;
         if (restaurantId != null) {
-            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId,
                     startDateTime,
                     endDateTime
-            ).stream()
-                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                    .collect(Collectors.toList());
+            );
         } else {
-            // Use inclusive boundary matching (same as repository "Between" behavior)
-            return orderRepository.findAll().stream()
-                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
-                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                    .collect(Collectors.toList());
+            // Use proper repository query instead of findAll()
+            orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
         }
+
+        return orders.stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
+                .collect(Collectors.toList());
     }
 
     /**
@@ -216,10 +217,20 @@ public class InventoryAnalyticsService {
     private Map<Long, BigDecimal> calculateIngredientUsage(List<Order> orders) {
         Map<Long, BigDecimal> ingredientUsage = new HashMap<>();
 
+        // Collect all product IDs from orders to batch load
+        Set<Long> productIds = orders.stream()
+                .flatMap(order -> order.getItems().stream())
+                .map(OrderItem::getProductId)
+                .collect(Collectors.toSet());
+
+        // Batch load all products
+        Map<Long, Product> productsMap = productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
         orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .forEach(item -> {
-                    Product product = productRepository.findById(item.getProductId()).orElse(null);
+                    Product product = productsMap.get(item.getProductId());
                     if (product != null && product.getIngredients() != null) {
                         // For each ingredient in the product, add the quantity used
                         product.getIngredients().forEach(productIngredient -> {

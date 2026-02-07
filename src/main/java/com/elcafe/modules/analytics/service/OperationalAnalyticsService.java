@@ -320,23 +320,22 @@ public class OperationalAnalyticsService {
      * Uses shared REVENUE_STATUSES for consistency across all reports.
      */
     private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
+        List<Order> orders;
         if (restaurantId != null) {
-            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                     restaurantId,
                     startDateTime,
                     endDateTime
-            ).stream()
-                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                    .collect(Collectors.toList());
+            );
         } else {
-            // Use inclusive boundary matching (same as repository "Between" behavior)
-            return orderRepository.findAll().stream()
-                    .filter(order -> !order.getCreatedAt().isBefore(startDateTime) && !order.getCreatedAt().isAfter(endDateTime))
-                    .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                    .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                    .collect(Collectors.toList());
+            // Use proper repository query instead of findAll()
+            orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
         }
+
+        return orders.stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
+                .collect(Collectors.toList());
     }
 
     private double calculatePreparationTime(Order order) {
