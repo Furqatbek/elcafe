@@ -16,6 +16,10 @@ ALTER TABLE financial_transactions
 
 -- Step 3: Add a CHECK constraint to ensure balanced journal entries have equal debits and credits
 -- Note: This applies only when the entry is marked as balanced
+-- First drop the constraint if it exists (may have been created by V89)
+ALTER TABLE financial_journal_entries
+    DROP CONSTRAINT IF EXISTS chk_journal_entry_balanced;
+
 ALTER TABLE financial_journal_entries
     ADD CONSTRAINT chk_journal_entry_balanced
     CHECK (balanced = false OR total_debit = total_credit);
