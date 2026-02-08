@@ -43,8 +43,18 @@ public class QRCodeService {
     @Value("${app.selfservice.base-url:http://localhost:3000/order}")
     private String selfServiceBaseUrl;
 
+    /**
+     * Characters used for QR code generation.
+     * Excludes ambiguous characters (0, O, 1, I) for better readability.
+     */
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    /**
+     * Length of generated QR codes.
+     * 8 characters provides 32^8 = ~1.1 trillion combinations for uniqueness.
+     */
     private static final int CODE_LENGTH = 8;
+
     private final SecureRandom random = new SecureRandom();
 
     /**

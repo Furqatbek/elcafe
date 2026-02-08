@@ -22,6 +22,9 @@ import java.util.Set;
 @EntityListeners(AuditingEntityListener.class)
 public class Bundle {
 
+    /** Length of day abbreviations (MON, TUE, WED, etc.) used for availability checking. */
+    private static final int DAY_ABBREVIATION_LENGTH = 3;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -151,7 +154,7 @@ public class Bundle {
 
         // Check day restrictions
         if (availableDays != null && !availableDays.isEmpty()) {
-            String today = java.time.LocalDate.now().getDayOfWeek().name().substring(0, 3);
+            String today = java.time.LocalDate.now().getDayOfWeek().name().substring(0, DAY_ABBREVIATION_LENGTH);
             if (!availableDays.toUpperCase().contains(today)) {
                 return false;
             }

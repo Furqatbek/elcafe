@@ -47,15 +47,20 @@ public class BundleService {
     }
 
     /**
-     * Get active bundles with full details for menu display
+     * Get active bundles with full details for menu display.
+     * Uses split queries to avoid Cartesian product issues when fetching multiple collections.
+     *
+     * @param restaurantId the restaurant ID
      * @param includeAll if true, returns all active bundles regardless of time/day restrictions (for POS)
+     * @return list of bundle responses with all details
      */
     @Transactional(readOnly = true)
     public List<BundleResponse> getActiveBundlesForMenu(Long restaurantId, boolean includeAll) {
-        // Fetch bundles with items first
+        // Split query pattern: Fetch bundles with items first, then option groups separately.
+        // This avoids Cartesian product (N*M rows) that would occur with a single query
+        // joining both collections. Hibernate merges results in the persistence context.
         List<Bundle> bundles = bundleRepository.findActiveWithItemsByRestaurantId(restaurantId);
 
-        // Then fetch option groups to populate the second-level cache
         if (!bundles.isEmpty()) {
             bundleRepository.findActiveWithOptionGroupsByRestaurantId(restaurantId);
         }

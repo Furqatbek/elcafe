@@ -197,7 +197,8 @@ public class BundleResponse {
     }
 
     /**
-     * Calculate original price based on individual item prices
+     * Calculate original price based on individual item prices.
+     * Falls back to bundle items if originalPrice is not stored.
      */
     private static BigDecimal calculateOriginalPrice(Bundle bundle) {
         if (bundle.getOriginalPrice() != null) {
@@ -210,8 +211,9 @@ public class BundleResponse {
         if (bundle.getItems() != null) {
             for (BundleItem item : bundle.getItems()) {
                 if (item.getProduct() != null && item.getProduct().getPrice() != null) {
+                    int quantity = item.getQuantity() != null ? item.getQuantity() : 1;
                     total = total.add(item.getProduct().getPrice()
-                            .multiply(BigDecimal.valueOf(item.getQuantity())));
+                            .multiply(BigDecimal.valueOf(quantity)));
                 }
             }
         }

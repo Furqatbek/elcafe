@@ -1,5 +1,6 @@
 package com.elcafe.modules.selfservice.repository;
 
+import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.selfservice.entity.SelfServiceOrder;
 import com.elcafe.modules.selfservice.enums.SelfServiceOrderType;
 import org.springframework.data.domain.Page;
@@ -16,6 +17,9 @@ import java.util.Optional;
 @Repository
 public interface SelfServiceOrderRepository extends JpaRepository<SelfServiceOrder, Long> {
 
+    /** Terminal order statuses that indicate an order is no longer pending. */
+    List<OrderStatus> TERMINAL_STATUSES = List.of(OrderStatus.CANCELLED, OrderStatus.COMPLETED);
+
     Optional<SelfServiceOrder> findByOrderId(Long orderId);
 
     List<SelfServiceOrder> findBySessionId(Long sessionId);
@@ -23,8 +27,17 @@ public interface SelfServiceOrderRepository extends JpaRepository<SelfServiceOrd
     Page<SelfServiceOrder> findByOrderRestaurantIdOrderByCreatedAtDesc(Long restaurantId, Pageable pageable);
 
     @Query("SELECT o FROM SelfServiceOrder o WHERE o.order.restaurant.id = :restaurantId " +
-           "AND o.actualReadyTime IS NULL AND o.order.status NOT IN ('CANCELLED', 'COMPLETED')")
-    List<SelfServiceOrder> findPendingByRestaurant(@Param("restaurantId") Long restaurantId);
+           "AND o.actualReadyTime IS NULL AND o.order.status NOT IN :terminalStatuses")
+    List<SelfServiceOrder> findPendingByRestaurant(
+            @Param("restaurantId") Long restaurantId,
+            @Param("terminalStatuses") List<OrderStatus> terminalStatuses);
+
+    /**
+     * Find pending orders for a restaurant using default terminal statuses.
+     */
+    default List<SelfServiceOrder> findPendingByRestaurant(Long restaurantId) {
+        return findPendingByRestaurant(restaurantId, TERMINAL_STATUSES);
+    }
 
     @Query("SELECT o FROM SelfServiceOrder o WHERE o.actualReadyTime IS NOT NULL " +
            "AND o.pickedUpAt IS NULL AND o.order.restaurant.id = :restaurantId")

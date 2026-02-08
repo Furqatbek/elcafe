@@ -11,6 +11,15 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository for Bundle entities.
+ *
+ * Note on query patterns:
+ * - DISTINCT is required when using JOIN FETCH with collections to prevent
+ *   duplicate parent entities in the result set (JPA/Hibernate behavior).
+ * - Split queries (items separate from option groups) are used to avoid
+ *   Cartesian product issues when fetching multiple collections.
+ */
 @Repository
 public interface BundleRepository extends JpaRepository<Bundle, Long> {
 
@@ -31,6 +40,9 @@ public interface BundleRepository extends JpaRepository<Bundle, Long> {
            "WHERE b.id = :id")
     Optional<Bundle> findByIdWithOptionGroups(@Param("id") Long id);
 
+    /**
+     * Fetch active bundles with items. DISTINCT required to prevent duplicate bundles.
+     */
     @Query("SELECT DISTINCT b FROM Bundle b " +
            "LEFT JOIN FETCH b.items i " +
            "LEFT JOIN FETCH i.product " +
@@ -38,6 +50,10 @@ public interface BundleRepository extends JpaRepository<Bundle, Long> {
            "ORDER BY b.displayOrder")
     List<Bundle> findActiveWithItemsByRestaurantId(@Param("restaurantId") Long restaurantId);
 
+    /**
+     * Fetch active bundles with option groups. DISTINCT required to prevent duplicate bundles.
+     * Called after findActiveWithItemsByRestaurantId to populate options in persistence context.
+     */
     @Query("SELECT DISTINCT b FROM Bundle b " +
            "LEFT JOIN FETCH b.optionGroups og " +
            "LEFT JOIN FETCH og.options o " +

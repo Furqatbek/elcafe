@@ -4,12 +4,11 @@ import com.elcafe.modules.bundle.entity.BundleOptionGroup;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
+/**
+ * Repository for BundleOptionGroup entities.
+ * Note: Option groups are managed via cascade from Bundle entity,
+ * so direct find/delete operations are not needed.
+ */
 @Repository
 public interface BundleOptionGroupRepository extends JpaRepository<BundleOptionGroup, Long> {
-
-    List<BundleOptionGroup> findByBundleId(Long bundleId);
-
-    void deleteByBundleId(Long bundleId);
 }

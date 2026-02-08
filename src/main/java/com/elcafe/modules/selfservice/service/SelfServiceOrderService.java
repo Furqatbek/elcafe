@@ -83,14 +83,24 @@ public class SelfServiceOrderService {
     @Lazy private final OrderEventPublisher orderEventPublisher;
     @Lazy private final NotificationService notificationService;
 
+    /**
+     * Session expiry time in hours.
+     * 4 hours provides enough time for browsing menu and completing orders
+     * while limiting orphaned session accumulation.
+     */
     private static final int SESSION_EXPIRY_HOURS = 4;
 
-    // Phone validation: allows digits, spaces, dashes, parentheses, and + prefix
-    // Must have at least 7 digits (international standard minimum)
+    /**
+     * Phone validation pattern.
+     * Allows digits, spaces, dashes, parentheses, and optional + prefix.
+     * Requires 7-20 characters to support international formats.
+     */
     private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?[\\d\\s\\-()]{7,20}$");
 
-    // Maximum length for text inputs to prevent DoS via large payloads
+    /** Maximum length for customer notes to prevent DoS via large payloads. */
     private static final int MAX_NOTES_LENGTH = 500;
+
+    /** Maximum length for customer name. */
     private static final int MAX_NAME_LENGTH = 100;
 
     /**
@@ -409,31 +419,9 @@ public class SelfServiceOrderService {
     @Transactional
     public SelfServiceOrder submitOrder(String sessionToken, SubmitOrderRequest request) {
         SelfServiceSession session = getValidSession(sessionToken);
-
         log.info("Submitting order: sessionId={}, orderType={}", session.getId(), request.getOrderType());
 
-        // Validate and sanitize customer details
-        if (request.getOrderType() == SelfServiceOrderType.TAKEAWAY) {
-            if (request.getCustomerName() == null || request.getCustomerName().trim().isEmpty()) {
-                throw OrderSubmissionException.missingCustomerDetails("Customer name");
-            }
-            if (request.getCustomerPhone() == null || request.getCustomerPhone().trim().isEmpty()) {
-                throw OrderSubmissionException.missingCustomerDetails("Customer phone");
-            }
-        }
-
-        // Validate phone number format if provided
-        if (request.getCustomerPhone() != null && !request.getCustomerPhone().trim().isEmpty()) {
-            String phone = request.getCustomerPhone().trim();
-            if (!isValidPhoneNumber(phone)) {
-                throw OrderSubmissionException.invalidPhone();
-            }
-        }
-
-        // Validate and sanitize customer name length
-        if (request.getCustomerName() != null && request.getCustomerName().length() > MAX_NAME_LENGTH) {
-            throw new OrderSubmissionException("VALIDATION_ERROR", "Customer name exceeds maximum length of " + MAX_NAME_LENGTH);
-        }
+        validateOrderRequest(request);
 
         List<SelfServiceCartItem> cartItems = cartItemRepository.findBySessionIdOrderByAddedAtAsc(session.getId());
         if (cartItems.isEmpty()) {
@@ -447,77 +435,127 @@ public class SelfServiceOrderService {
                     return OrderSubmissionException.serviceNotConfigured();
                 });
 
-        // Calculate totals
-        BigDecimal subtotal = cartItems.stream()
-                .map(SelfServiceCartItem::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal subtotal = calculateSubtotal(cartItems);
+        validateMinimumOrderAmount(subtotal, settings);
 
-        // Check minimum order amount
-        if (subtotal.compareTo(settings.getMinimumOrderAmount()) < 0) {
-            log.info("Order submission failed: minimum not met. Required={}, Got={}", settings.getMinimumOrderAmount(), subtotal);
-            throw OrderSubmissionException.minimumNotMet(settings.getMinimumOrderAmount(), subtotal);
-        }
-
-        // Find or create customer by phone (phone is the unique key for customers)
-        Customer customer = null;
-        if (request.getCustomerPhone() != null && !request.getCustomerPhone().isEmpty()) {
-            String phone = request.getCustomerPhone().trim();
-            String customerName = request.getCustomerName() != null ? request.getCustomerName().trim() : "";
-
-            customer = customerRepository.findByPhone(phone)
-                    .map(existingCustomer -> {
-                        // Update name if provided and customer has no name set
-                        if (!customerName.isEmpty() &&
-                            (existingCustomer.getFirstName() == null || existingCustomer.getFirstName().isEmpty()
-                             || "Customer".equals(existingCustomer.getFirstName()))) {
-                            existingCustomer.setFirstName(customerName);
-                            return customerRepository.save(existingCustomer);
-                        }
-                        return existingCustomer;
-                    })
-                    .orElseGet(() -> {
-                        // Create new customer with phone as unique key
-                        Customer newCustomer = Customer.builder()
-                                .phone(phone)
-                                .firstName(customerName.isEmpty() ? "Customer" : customerName)
-                                .lastName("")
-                                .registrationSource(RegistrationSource.QR_ORDER)
-                                .active(true)
-                                .build();
-                        log.info("Creating new customer from self-service order: phone={}", phone);
-                        return customerRepository.save(newCustomer);
-                    });
-        }
-
-        // Get customer notes (frontend sends "notes", DTO also supports "specialInstructions")
-        // Sanitize to prevent XSS and limit length
+        Customer customer = findOrCreateCustomer(request);
         String customerNotes = sanitizeTextInput(
                 request.getNotes() != null ? request.getNotes() : request.getSpecialInstructions(),
                 MAX_NOTES_LENGTH
         );
 
-        // Map SelfServiceOrderType to OrderType
-        OrderType orderType = request.getOrderType() == SelfServiceOrderType.TAKEAWAY
-                ? OrderType.TAKEAWAY
-                : OrderType.DINE_IN;
+        OrderType orderType = mapOrderType(request.getOrderType());
+        RestaurantTable diningTable = fetchDiningTable(session, orderType);
 
-        // Fetch fresh table reference for dine-in orders to ensure proper linking
-        RestaurantTable diningTable = null;
-        if (orderType == OrderType.DINE_IN && session.getTable() != null) {
-            diningTable = restaurantTableRepository.findById(session.getTable().getId()).orElse(null);
-            log.info("Setting dining table for self-service dine-in order: tableId={}, tableNumber={}",
-                    diningTable != null ? diningTable.getId() : null,
-                    diningTable != null ? diningTable.getTableNumber() : null);
+        Order order = createOrder(session, customer, diningTable, orderType, subtotal, customerNotes, settings);
+        List<OrderItem> orderItems = convertCartItemsToOrderItems(cartItems, order);
+        order.setItems(new HashSet<>(orderItems));
+
+        applyCouponIfProvided(request, order, session, customer, subtotal, orderType, orderItems);
+        recalculateTotalAfterDiscount(order, subtotal);
+
+        order = orderRepository.save(order);
+
+        updateTableStatusIfDineIn(orderType, diningTable, order);
+        sendOrderNotifications(order);
+
+        SelfServiceOrder ssOrder = createSelfServiceOrder(order, session, request, settings);
+        finalizeOrderSubmission(session, request, customer);
+
+        log.info("Self-service order created: {} for session {}", order.getId(), session.getId());
+        return ssOrder;
+    }
+
+    private void validateOrderRequest(SubmitOrderRequest request) {
+        if (request.getOrderType() == SelfServiceOrderType.TAKEAWAY) {
+            if (request.getCustomerName() == null || request.getCustomerName().trim().isEmpty()) {
+                throw OrderSubmissionException.missingCustomerDetails("Customer name");
+            }
+            if (request.getCustomerPhone() == null || request.getCustomerPhone().trim().isEmpty()) {
+                throw OrderSubmissionException.missingCustomerDetails("Customer phone");
+            }
         }
 
-        // Create main order
-        Order order = Order.builder()
+        if (request.getCustomerPhone() != null && !request.getCustomerPhone().trim().isEmpty()) {
+            if (!isValidPhoneNumber(request.getCustomerPhone().trim())) {
+                throw OrderSubmissionException.invalidPhone();
+            }
+        }
+
+        if (request.getCustomerName() != null && request.getCustomerName().length() > MAX_NAME_LENGTH) {
+            throw new OrderSubmissionException("VALIDATION_ERROR", "Customer name exceeds maximum length of " + MAX_NAME_LENGTH);
+        }
+    }
+
+    private BigDecimal calculateSubtotal(List<SelfServiceCartItem> cartItems) {
+        return cartItems.stream()
+                .map(SelfServiceCartItem::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void validateMinimumOrderAmount(BigDecimal subtotal, SelfServiceSettings settings) {
+        if (subtotal.compareTo(settings.getMinimumOrderAmount()) < 0) {
+            log.info("Order submission failed: minimum not met. Required={}, Got={}", settings.getMinimumOrderAmount(), subtotal);
+            throw OrderSubmissionException.minimumNotMet(settings.getMinimumOrderAmount(), subtotal);
+        }
+    }
+
+    private Customer findOrCreateCustomer(SubmitOrderRequest request) {
+        if (request.getCustomerPhone() == null || request.getCustomerPhone().isEmpty()) {
+            return null;
+        }
+
+        String phone = request.getCustomerPhone().trim();
+        String customerName = request.getCustomerName() != null ? request.getCustomerName().trim() : "";
+
+        return customerRepository.findByPhone(phone)
+                .map(existingCustomer -> {
+                    if (!customerName.isEmpty() &&
+                        (existingCustomer.getFirstName() == null || existingCustomer.getFirstName().isEmpty()
+                         || "Customer".equals(existingCustomer.getFirstName()))) {
+                        existingCustomer.setFirstName(customerName);
+                        return customerRepository.save(existingCustomer);
+                    }
+                    return existingCustomer;
+                })
+                .orElseGet(() -> {
+                    Customer newCustomer = Customer.builder()
+                            .phone(phone)
+                            .firstName(customerName.isEmpty() ? "Customer" : customerName)
+                            .lastName("")
+                            .registrationSource(RegistrationSource.QR_ORDER)
+                            .active(true)
+                            .build();
+                    log.info("Creating new customer from self-service order: phone={}", phone);
+                    return customerRepository.save(newCustomer);
+                });
+    }
+
+    private OrderType mapOrderType(SelfServiceOrderType selfServiceOrderType) {
+        return selfServiceOrderType == SelfServiceOrderType.TAKEAWAY ? OrderType.TAKEAWAY : OrderType.DINE_IN;
+    }
+
+    private RestaurantTable fetchDiningTable(SelfServiceSession session, OrderType orderType) {
+        if (orderType != OrderType.DINE_IN || session.getTable() == null) {
+            return null;
+        }
+
+        RestaurantTable diningTable = restaurantTableRepository.findById(session.getTable().getId()).orElse(null);
+        log.info("Setting dining table for self-service dine-in order: tableId={}, tableNumber={}",
+                diningTable != null ? diningTable.getId() : null,
+                diningTable != null ? diningTable.getTableNumber() : null);
+        return diningTable;
+    }
+
+    private Order createOrder(SelfServiceSession session, Customer customer, RestaurantTable diningTable,
+                              OrderType orderType, BigDecimal subtotal, String customerNotes, SelfServiceSettings settings) {
+        return Order.builder()
                 .orderNumber(dailyOrderSequenceService.generateNextOrderNumber())
                 .restaurant(session.getRestaurant())
                 .customer(customer)
                 .diningTable(diningTable)
                 .orderType(orderType)
-                .status(settings.getAutoAcceptOrders() ? OrderStatus.ACCEPTED : OrderStatus.PENDING)
+                .status(Boolean.TRUE.equals(settings.getAutoAcceptOrders()) ? OrderStatus.ACCEPTED : OrderStatus.PENDING)
                 .subtotal(subtotal)
                 .tax(BigDecimal.ZERO)
                 .discount(BigDecimal.ZERO)
@@ -526,8 +564,9 @@ public class SelfServiceOrderService {
                 .customerNotes(customerNotes)
                 .placedAt(OffsetDateTime.now())
                 .build();
+    }
 
-        // Convert cart items to order items
+    private List<OrderItem> convertCartItemsToOrderItems(List<SelfServiceCartItem> cartItems, Order order) {
         List<OrderItem> orderItems = new ArrayList<>();
         for (SelfServiceCartItem cartItem : cartItems) {
             OrderItem orderItem = OrderItem.builder()
@@ -538,16 +577,13 @@ public class SelfServiceOrderService {
                     .specialInstructions(cartItem.getSpecialInstructions())
                     .build();
 
-            // Handle bundle vs regular product
             if (Boolean.TRUE.equals(cartItem.getIsBundle()) && cartItem.getBundleId() != null) {
-                // Bundle items don't have a productId - set to null to avoid confusing bundles with products
                 orderItem.setProductId(null);
                 orderItem.setProductName(cartItem.getBundleName());
                 orderItem.setBundleId(cartItem.getBundleId());
                 orderItem.setBundleName(cartItem.getBundleName());
                 orderItem.setIsBundle(true);
             } else {
-                // Regular product
                 orderItem.setProductId(cartItem.getProduct().getId());
                 orderItem.setProductName(cartItem.getProduct().getName());
                 orderItem.setVariantId(cartItem.getVariant() != null ? cartItem.getVariant().getId() : null);
@@ -557,93 +593,93 @@ public class SelfServiceOrderService {
 
             orderItems.add(orderItem);
         }
-        order.setItems(new HashSet<>(orderItems));
+        return orderItems;
+    }
 
-        // Apply coupon if provided
-        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
-            try {
-                // Build validation request from order
-                ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
-                        .code(request.getCouponCode())
-                        .restaurantId(session.getRestaurant().getId())
-                        .customerId(customer != null ? customer.getId() : null)
-                        .orderSubtotal(subtotal)
-                        .orderType(orderType.name())
-                        .items(orderItems.stream()
-                                .map(item -> ValidateCouponRequest.OrderItemInfo.builder()
-                                        .productId(item.getProductId())
-                                        .quantity(item.getQuantity())
-                                        .price(item.getUnitPrice())
-                                        .build())
-                                .toList())
-                        .build();
-
-                ValidateCouponResponse couponResponse = couponValidationService.validateCoupon(validateRequest);
-
-                if (couponResponse.getValid()) {
-                    // Apply the discount using DiscountCalculationService
-                    ApplyDiscountRequest discountRequest = ApplyDiscountRequest.builder()
-                            .couponCode(request.getCouponCode())
-                            .discountType(DiscountType.COUPON)
-                            .build();
-                    discountCalculationService.applyDiscount(order, discountRequest);
-                    log.info("Coupon {} applied to self-service order: discount={}", request.getCouponCode(), order.getDiscount());
-                } else {
-                    log.warn("Invalid coupon code {} for self-service order: {}", request.getCouponCode(), couponResponse.getErrorMessage());
-                }
-            } catch (Exception e) {
-                log.warn("Failed to apply coupon {} for self-service order: {}", request.getCouponCode(), e.getMessage());
-                // Continue without discount - don't fail the order
-            }
+    private void applyCouponIfProvided(SubmitOrderRequest request, Order order, SelfServiceSession session,
+                                        Customer customer, BigDecimal subtotal, OrderType orderType, List<OrderItem> orderItems) {
+        if (request.getCouponCode() == null || request.getCouponCode().isBlank()) {
+            return;
         }
 
-        // Recalculate total after discount
+        try {
+            ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
+                    .code(request.getCouponCode())
+                    .restaurantId(session.getRestaurant().getId())
+                    .customerId(customer != null ? customer.getId() : null)
+                    .orderSubtotal(subtotal)
+                    .orderType(orderType.name())
+                    .items(orderItems.stream()
+                            .map(item -> ValidateCouponRequest.OrderItemInfo.builder()
+                                    .productId(item.getProductId())
+                                    .quantity(item.getQuantity())
+                                    .price(item.getUnitPrice())
+                                    .build())
+                            .toList())
+                    .build();
+
+            ValidateCouponResponse couponResponse = couponValidationService.validateCoupon(validateRequest);
+
+            if (Boolean.TRUE.equals(couponResponse.getValid())) {
+                ApplyDiscountRequest discountRequest = ApplyDiscountRequest.builder()
+                        .couponCode(request.getCouponCode())
+                        .discountType(DiscountType.COUPON)
+                        .build();
+                discountCalculationService.applyDiscount(order, discountRequest);
+                log.info("Coupon {} applied to self-service order: discount={}", request.getCouponCode(), order.getDiscount());
+            } else {
+                log.warn("Invalid coupon code {} for self-service order: {}", request.getCouponCode(), couponResponse.getErrorMessage());
+            }
+        } catch (Exception e) {
+            log.warn("Failed to apply coupon {} for self-service order: {}", request.getCouponCode(), e.getMessage());
+        }
+    }
+
+    private void recalculateTotalAfterDiscount(Order order, BigDecimal subtotal) {
         BigDecimal discount = order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO;
         order.setTotal(subtotal.subtract(discount));
+    }
 
-        order = orderRepository.save(order);
-
-        // Update table status to OCCUPIED for dine-in orders
-        // The diningTable variable was already fetched fresh above when creating the order
-        if (orderType == OrderType.DINE_IN && diningTable != null) {
-            // Update table status regardless of current status (AVAILABLE, RESERVED, etc.)
-            // This ensures the table is marked as OCCUPIED when an order is placed
-            RestaurantTable.TableStatus previousStatus = diningTable.getStatus();
-            diningTable.setStatus(RestaurantTable.TableStatus.OCCUPIED);
-            restaurantTableRepository.save(diningTable);
-            log.info("Table {} marked as OCCUPIED for self-service dine-in order {} (previous status: {})",
-                    diningTable.getTableNumber(), order.getOrderNumber(), previousStatus);
+    private void updateTableStatusIfDineIn(OrderType orderType, RestaurantTable diningTable, Order order) {
+        if (orderType != OrderType.DINE_IN || diningTable == null) {
+            return;
         }
 
-        // Send database notifications (for admin panel, kitchen, restaurant, customer)
+        RestaurantTable.TableStatus previousStatus = diningTable.getStatus();
+        diningTable.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+        restaurantTableRepository.save(diningTable);
+        log.info("Table {} marked as OCCUPIED for self-service dine-in order {} (previous status: {})",
+                diningTable.getTableNumber(), order.getOrderNumber(), previousStatus);
+    }
+
+    private void sendOrderNotifications(Order order) {
         try {
             notificationService.notifyNewOrder(order);
         } catch (Exception e) {
             log.error("Failed to create database notifications for order {}: {}", order.getOrderNumber(), e.getMessage());
         }
 
-        // Send notifications to admin panel via WebSocket
         try {
             orderEventBroadcaster.broadcastOrderPlaced(order);
         } catch (Exception e) {
             log.error("Failed to broadcast order placed event for order {}: {}", order.getOrderNumber(), e.getMessage());
         }
 
-        // Send notification to owner via Telegram
         try {
             ownerNotificationService.notifyNewOrder(order);
         } catch (Exception e) {
             log.error("Failed to send owner notification for order {}: {}", order.getOrderNumber(), e.getMessage());
         }
 
-        // Send notification to waiters via WebSocket event system
         try {
             orderEventPublisher.publishOrderCreated(order, "SELF_SERVICE");
         } catch (Exception e) {
             log.error("Failed to publish order created event for order {}: {}", order.getOrderNumber(), e.getMessage());
         }
+    }
 
-        // Create self-service order metadata
+    private SelfServiceOrder createSelfServiceOrder(Order order, SelfServiceSession session,
+                                                     SubmitOrderRequest request, SelfServiceSettings settings) {
         SelfServiceOrder ssOrder = SelfServiceOrder.builder()
                 .order(order)
                 .session(session)
@@ -655,20 +691,16 @@ public class SelfServiceOrderService {
                 .estimatedReadyTime(LocalDateTime.now().plusMinutes(settings.getEstimatedPrepTimeMinutes()))
                 .build();
 
-        ssOrder = selfServiceOrderRepository.save(ssOrder);
+        return selfServiceOrderRepository.save(ssOrder);
+    }
 
-        // Clear cart
+    private void finalizeOrderSubmission(SelfServiceSession session, SubmitOrderRequest request, Customer customer) {
         cartItemRepository.deleteAllBySessionId(session.getId());
 
-        // Update session with customer info
         session.setCustomerName(request.getCustomerName());
         session.setCustomerPhone(request.getCustomerPhone());
         session.setCustomer(customer);
         sessionRepository.save(session);
-
-        log.info("Self-service order created: {} for session {}", order.getId(), session.getId());
-
-        return ssOrder;
     }
 
     /**

@@ -4,12 +4,11 @@ import com.elcafe.modules.bundle.entity.BundleItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
+/**
+ * Repository for BundleItem entities.
+ * Note: Bundle items are managed via cascade from Bundle entity,
+ * so direct find/delete operations are not needed.
+ */
 @Repository
 public interface BundleItemRepository extends JpaRepository<BundleItem, Long> {
-
-    List<BundleItem> findByBundleId(Long bundleId);
-
-    void deleteByBundleId(Long bundleId);
 }
