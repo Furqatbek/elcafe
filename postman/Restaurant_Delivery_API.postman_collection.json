@@ -3006,6 +3006,300 @@
 				}
 			],
 			"description": "Public order tracking endpoints for customers"
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Get Analytics Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/summary?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "summary"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN (returns all if omitted), required for other roles"}
+							]
+						},
+						"description": "Get comprehensive analytics summary. ADMIN/OPERATOR roles required. Non-admin users are automatically scoped to their assigned restaurant."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Daily Revenue",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/daily-revenue?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "daily-revenue"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"}
+							]
+						},
+						"description": "Get daily revenue breakdown. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sales by Category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/sales-by-category?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "sales-by-category"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"}
+							]
+						},
+						"description": "Get sales breakdown by product category. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get COGS Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/cogs?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "cogs"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"}
+							]
+						},
+						"description": "Get Cost of Goods Sold analytics. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profitability Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/profitability?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1&laborCosts=5000&operatingExpenses=3000",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "profitability"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"},
+								{"key": "laborCosts", "value": "5000"},
+								{"key": "operatingExpenses", "value": "3000"}
+							]
+						},
+						"description": "Get profitability analytics including labor costs. ADMIN role required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Contribution Margins",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/financial/contribution-margins?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "financial", "contribution-margins"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1"}
+							]
+						},
+						"description": "Get contribution margins per menu item. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Sales per Hour",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/sales-per-hour?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "sales-per-hour"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get hourly sales breakdown. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Peak Hours",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/peak-hours?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "peak-hours"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get peak business hours. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table Turnover",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/table-turnover?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "table-turnover"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"},
+								{"key": "totalTables", "value": "", "disabled": true},
+								{"key": "totalSeats", "value": "", "disabled": true},
+								{"key": "operatingHoursPerDay", "value": "", "disabled": true}
+							]
+						},
+						"description": "Get table turnover rate and occupancy. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order Timing Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/order-timing?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "order-timing"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get preparation, wait time, and delivery metrics. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Kitchen Analytics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/operational/kitchen?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "operational", "kitchen"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get kitchen performance and chef metrics. ADMIN/OPERATOR/KITCHEN_STAFF roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Retention",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/customer/retention?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "customer", "retention"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get customer retention and churn rate. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer LTV",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/customer/ltv?restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "customer", "ltv"],
+							"query": [
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get customer lifetime value metrics. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Satisfaction",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/customer/satisfaction?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "customer", "satisfaction"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get aggregated satisfaction scores from all sources. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Inventory Turnover",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/inventory/turnover?startDate=2024-01-01&endDate=2024-12-31&restaurantId=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "inventory", "turnover"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"},
+								{"key": "restaurantId", "value": "1", "description": "Optional for ADMIN"}
+							]
+						},
+						"description": "Get inventory turnover ratio and ingredient-level metrics. ADMIN/OPERATOR roles required."
+					},
+					"response": []
+				}
+			],
+			"description": "Business analytics and reporting endpoints. All endpoints require authentication and validate restaurant access based on user role."
 		}
 	],
 	"variable": [
