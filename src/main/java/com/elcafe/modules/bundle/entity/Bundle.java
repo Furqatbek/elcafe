@@ -48,7 +48,7 @@ public class Bundle {
     @Column(name = "savings_amount", precision = 10, scale = 2)
     private BigDecimal savingsAmount;
 
-    @Column(name = "savings_percent", precision = 5, scale = 2)
+    @Column(name = "savings_percent", precision = 10, scale = 2)
     private BigDecimal savingsPercent;
 
     @Column(nullable = false)
