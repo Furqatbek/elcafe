@@ -13,7 +13,8 @@ import java.time.LocalDateTime;
 @Table(name = "inventory_batches", indexes = {
         @Index(name = "idx_batch_ingredient", columnList = "ingredient_id"),
         @Index(name = "idx_batch_expiry", columnList = "expiry_date"),
-        @Index(name = "idx_batch_status", columnList = "status")
+        @Index(name = "idx_batch_status", columnList = "status"),
+        @Index(name = "idx_batch_fefo", columnList = "ingredient_id, status, quantity, expiry_date")
 })
 @Getter
 @Setter

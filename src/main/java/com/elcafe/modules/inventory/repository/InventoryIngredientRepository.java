@@ -3,6 +3,7 @@ package com.elcafe.modules.inventory.repository;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,6 +13,13 @@ import java.util.Optional;
 public interface InventoryIngredientRepository extends JpaRepository<Ingredient, Long> {
 
     List<Ingredient> findByRestaurant_Id(Long restaurantId);
+
+    /**
+     * Find all ingredients for a restaurant with supplier eagerly fetched.
+     * Use this method when you need to access supplier data to avoid N+1 queries.
+     */
+    @Query("SELECT i FROM InventoryIngredient i LEFT JOIN FETCH i.supplierEntity WHERE i.restaurant.id = :restaurantId")
+    List<Ingredient> findByRestaurantIdWithSupplier(@Param("restaurantId") Long restaurantId);
 
     List<Ingredient> findByRestaurant_IdAndActiveTrue(Long restaurantId);
 

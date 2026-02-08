@@ -44,7 +44,8 @@ public class POSuggestionService {
         log.info("Generating PO suggestions for restaurant: {}", restaurantId);
 
         // Get all ingredients that need reordering (with linked suppliers)
-        List<Ingredient> ingredientsNeedingReorder = ingredientRepository.findByRestaurant_Id(restaurantId)
+        // Use JOIN FETCH method to avoid N+1 queries when accessing supplier
+        List<Ingredient> ingredientsNeedingReorder = ingredientRepository.findByRestaurantIdWithSupplier(restaurantId)
                 .stream()
                 .filter(ing -> ing.getActive() && ing.getTrackInventory())
                 .filter(Ingredient::needsReorder)
@@ -110,7 +111,8 @@ public class POSuggestionService {
             ingredients = ingredientRepository.findAllById(request.getIngredientIds());
         } else {
             // All ingredients from this supplier that need reorder
-            ingredients = ingredientRepository.findByRestaurant_Id(request.getRestaurantId())
+            // Use JOIN FETCH method to avoid N+1 queries when accessing supplier
+            ingredients = ingredientRepository.findByRestaurantIdWithSupplier(request.getRestaurantId())
                     .stream()
                     .filter(ing -> ing.getActive() && ing.getTrackInventory())
                     .filter(Ingredient::needsReorder)

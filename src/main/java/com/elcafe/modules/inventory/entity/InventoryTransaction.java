@@ -18,7 +18,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "inventory_transactions")
+@Table(name = "inventory_transactions", indexes = {
+        @Index(name = "idx_inv_txn_ingredient", columnList = "ingredient_id"),
+        @Index(name = "idx_inv_txn_reference", columnList = "reference_type, reference_id"),
+        @Index(name = "idx_inv_txn_created_at", columnList = "created_at"),
+        @Index(name = "idx_inv_txn_batch", columnList = "batch_id")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class InventoryTransaction {
 
@@ -43,10 +48,10 @@ public class InventoryTransaction {
     @Column(nullable = false, precision = 10, scale = 3)
     private BigDecimal balanceAfter;
 
-    @Column(length = 50)
+    @Column(name = "reference_type", length = 50)
     private String referenceType; // ORDER, PURCHASE, ADJUSTMENT, WASTE, etc.
 
-    @Column
+    @Column(name = "reference_id")
     private Long referenceId; // Order ID, Purchase ID, etc.
 
     @Column(columnDefinition = "TEXT")
@@ -71,7 +76,7 @@ public class InventoryTransaction {
     private ValuationMethod valuationMethod;
 
     @CreatedDate
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     /**
