@@ -23,6 +23,7 @@ public class UserPrincipal implements UserDetails {
     private String password;
     private UserRole role;
     private boolean active;
+    private Long restaurantId;
 
     /**
      * Create UserPrincipal from User entity
@@ -33,7 +34,8 @@ public class UserPrincipal implements UserDetails {
                 user.getEmail(),
                 user.getPassword(),
                 user.getRole(),
-                user.getActive()
+                user.getActive(),
+                user.getRestaurantId()
         );
     }
 

@@ -1,5 +1,6 @@
 package com.elcafe.modules.analytics.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.analytics.dto.*;
 import com.elcafe.modules.analytics.service.*;
 import com.elcafe.utils.ApiResponse;
@@ -32,6 +33,7 @@ public class AnalyticsController {
     private final CustomerAnalyticsService customerAnalyticsService;
     private final InventoryAnalyticsService inventoryAnalyticsService;
     private final AnalyticsSummaryService analyticsSummaryService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     // ========== Summary Endpoint ==========
 
@@ -45,8 +47,9 @@ public class AnalyticsController {
             @RequestParam(required = false) BigDecimal laborCosts,
             @RequestParam(required = false) BigDecimal operatingExpenses
     ) {
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         AnalyticsSummaryDTO summary = analyticsSummaryService.getAnalyticsSummary(
-                startDate, endDate, restaurantId, laborCosts, operatingExpenses);
+                startDate, endDate, effectiveRestaurantId, laborCosts, operatingExpenses);
         return ResponseEntity.ok(ApiResponse.success("Analytics summary retrieved successfully", summary));
     }
 
@@ -60,6 +63,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam Long restaurantId
     ) {
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         List<DailyRevenueDTO> revenue = financialAnalyticsService.getDailyRevenue(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Daily revenue retrieved successfully", revenue));
     }
@@ -72,6 +76,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam Long restaurantId
     ) {
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         List<SalesPerCategoryDTO> sales = financialAnalyticsService.getSalesPerCategory(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Sales per category retrieved successfully", sales));
     }
@@ -84,6 +89,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam Long restaurantId
     ) {
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         COGSAnalyticsDTO cogs = financialAnalyticsService.getCOGSAnalytics(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("COGS analytics retrieved successfully", cogs));
     }
@@ -98,6 +104,7 @@ public class AnalyticsController {
             @RequestParam(required = false) BigDecimal laborCosts,
             @RequestParam(required = false) BigDecimal operatingExpenses
     ) {
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         ProfitabilityAnalyticsDTO profitability = financialAnalyticsService.getProfitabilityAnalytics(
                 startDate, endDate, restaurantId, laborCosts, operatingExpenses);
         return ResponseEntity.ok(ApiResponse.success("Profitability analytics retrieved successfully", profitability));
