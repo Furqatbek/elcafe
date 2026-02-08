@@ -21,6 +21,11 @@ public class AdjustStockRequest {
 
     private String notes;
 
-    @NotNull(message = "Performed by is required")
+    /**
+     * @deprecated This field is ignored for security reasons.
+     * The authenticated user's identity is used instead to prevent audit trail falsification.
+     * This field is retained for backward compatibility with existing API clients.
+     */
+    @Deprecated
     private String performedBy;
 }
