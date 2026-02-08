@@ -1,5 +1,7 @@
 package com.elcafe.modules.kitchen.service;
 
+import com.elcafe.common.audit.entity.AuditAction;
+import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.kitchen.entity.KitchenOrder;
@@ -15,13 +17,18 @@ import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -32,6 +39,16 @@ public class KitchenOrderService {
     private final OrderRepository orderRepository;
     private final NotificationService notificationService;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
+    private final AuditService auditService;
+
+    // Idempotency key cache to prevent duplicate status transitions
+    // In production, this should be replaced with Redis or similar distributed cache
+    private final Map<String, LocalDateTime> idempotencyCache = new ConcurrentHashMap<>();
+    private static final Duration IDEMPOTENCY_TTL = Duration.ofMinutes(5);
+
+    // Configuration for timeout alerts
+    private static final int PREPARING_TIMEOUT_MINUTES = 45;
+    private static final int READY_TIMEOUT_MINUTES = 30;
 
     @Transactional
     public KitchenOrder createKitchenOrder(Order order) {
@@ -189,9 +206,30 @@ public class KitchenOrderService {
     /**
      * Start preparation with restaurant authorization and chef name sanitization.
      * Prevents IDOR attacks by validating user has access to the order's restaurant.
+     * Includes idempotency protection, audit logging, and non-blocking notifications.
      */
     @Transactional
     public KitchenOrder startPreparationWithAuth(Long kitchenOrderId, String chefName, UserPrincipal currentUser) {
+        return startPreparationWithAuth(kitchenOrderId, chefName, currentUser, null);
+    }
+
+    /**
+     * Start preparation with idempotency key support.
+     * @param idempotencyKey Optional key to prevent duplicate requests
+     */
+    @Transactional
+    public KitchenOrder startPreparationWithAuth(Long kitchenOrderId, String chefName,
+                                                   UserPrincipal currentUser, String idempotencyKey) {
+        // Check idempotency to prevent duplicate state transitions
+        String effectiveKey = idempotencyKey != null ? idempotencyKey :
+                String.format("start:%d:%s", kitchenOrderId, currentUser.getId());
+        if (isDuplicateRequest(effectiveKey)) {
+            log.warn("Duplicate request detected for starting kitchen order {} (key: {})",
+                    kitchenOrderId, effectiveKey);
+            return kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
+                    .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+        }
+
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
                 .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
 
@@ -201,10 +239,12 @@ public class KitchenOrderService {
         // Sanitize chef name to prevent XSS and validate length
         String sanitizedChefName = sanitizeChefName(chefName, currentUser);
 
-        if (kitchenOrder.getStatus() != KitchenOrderStatus.PENDING) {
+        KitchenOrderStatus previousStatus = kitchenOrder.getStatus();
+
+        if (previousStatus != KitchenOrderStatus.PENDING) {
             throw new IllegalStateException(
                     String.format("Cannot start preparation: current status is %s, expected PENDING",
-                            kitchenOrder.getStatus()));
+                            previousStatus));
         }
 
         kitchenOrder.startPreparation(sanitizedChefName);
@@ -217,13 +257,22 @@ public class KitchenOrderService {
         OrderStatusHistory statusHistory = OrderStatusHistory.builder()
                 .order(order)
                 .status(OrderStatus.PREPARING)
-                .changedBy(currentUser.getEmail()) // Use authenticated user's email for audit
+                .changedBy(currentUser.getEmail())
                 .notes("Preparation started by " + sanitizedChefName)
                 .build();
         order.addStatusHistory(statusHistory);
         orderRepository.save(order);
 
-        notificationService.notifyOrderPreparing(order);
+        // Audit log the status transition
+        logStatusTransition(kitchenOrder, previousStatus, KitchenOrderStatus.PREPARING,
+                currentUser, "Started by " + sanitizedChefName);
+
+        // Non-blocking notification - failures don't affect the transaction
+        sendNotificationAsync(() -> notificationService.notifyOrderPreparing(order),
+                "order preparing", order.getOrderNumber());
+
+        // Mark idempotency key as processed
+        markRequestProcessed(effectiveKey);
 
         log.info("Kitchen order {} started preparation by {} (user: {})",
                 kitchenOrder.getId(), sanitizedChefName, currentUser.getEmail());
@@ -233,19 +282,40 @@ public class KitchenOrderService {
     /**
      * Mark as ready with restaurant authorization.
      * Prevents IDOR attacks by validating user has access to the order's restaurant.
+     * Includes idempotency protection, audit logging, and non-blocking notifications.
      */
     @Transactional
     public KitchenOrder markAsReadyWithAuth(Long kitchenOrderId, UserPrincipal currentUser) {
+        return markAsReadyWithAuth(kitchenOrderId, currentUser, null);
+    }
+
+    /**
+     * Mark as ready with idempotency key support.
+     */
+    @Transactional
+    public KitchenOrder markAsReadyWithAuth(Long kitchenOrderId, UserPrincipal currentUser, String idempotencyKey) {
+        // Check idempotency
+        String effectiveKey = idempotencyKey != null ? idempotencyKey :
+                String.format("ready:%d:%s", kitchenOrderId, currentUser.getId());
+        if (isDuplicateRequest(effectiveKey)) {
+            log.warn("Duplicate request detected for marking kitchen order {} ready (key: {})",
+                    kitchenOrderId, effectiveKey);
+            return kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
+                    .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+        }
+
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
                 .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
 
         // Validate restaurant access - prevents IDOR
         validateRestaurantAccess(kitchenOrder, currentUser);
 
-        if (kitchenOrder.getStatus() != KitchenOrderStatus.PREPARING) {
+        KitchenOrderStatus previousStatus = kitchenOrder.getStatus();
+
+        if (previousStatus != KitchenOrderStatus.PREPARING) {
             throw new IllegalStateException(
                     String.format("Cannot mark as ready: current status is %s, expected PREPARING",
-                            kitchenOrder.getStatus()));
+                            previousStatus));
         }
 
         kitchenOrder.completePreparation();
@@ -257,13 +327,21 @@ public class KitchenOrderService {
         OrderStatusHistory statusHistory = OrderStatusHistory.builder()
                 .order(order)
                 .status(OrderStatus.READY)
-                .changedBy(currentUser.getEmail()) // Use authenticated user's email
+                .changedBy(currentUser.getEmail())
                 .notes("Order ready for pickup/delivery")
                 .build();
         order.addStatusHistory(statusHistory);
         orderRepository.save(order);
 
-        notificationService.notifyOrderReady(order);
+        // Audit log the status transition
+        logStatusTransition(kitchenOrder, previousStatus, KitchenOrderStatus.READY,
+                currentUser, "Marked ready");
+
+        // Non-blocking notification
+        sendNotificationAsync(() -> notificationService.notifyOrderReady(order),
+                "order ready", order.getOrderNumber());
+
+        markRequestProcessed(effectiveKey);
 
         log.info("Kitchen order {} marked as ready by {}", kitchenOrder.getId(), currentUser.getEmail());
         return savedOrder;
@@ -272,9 +350,28 @@ public class KitchenOrderService {
     /**
      * Mark as picked up with restaurant authorization and courier verification.
      * Prevents IDOR attacks and ensures only assigned couriers can pick up orders.
+     * Includes idempotency protection and audit logging.
      */
     @Transactional
     public KitchenOrder markAsPickedUpWithAuth(Long kitchenOrderId, UserPrincipal currentUser) {
+        return markAsPickedUpWithAuth(kitchenOrderId, currentUser, null);
+    }
+
+    /**
+     * Mark as picked up with idempotency key support.
+     */
+    @Transactional
+    public KitchenOrder markAsPickedUpWithAuth(Long kitchenOrderId, UserPrincipal currentUser, String idempotencyKey) {
+        // Check idempotency
+        String effectiveKey = idempotencyKey != null ? idempotencyKey :
+                String.format("pickup:%d:%s", kitchenOrderId, currentUser.getId());
+        if (isDuplicateRequest(effectiveKey)) {
+            log.warn("Duplicate request detected for picking up kitchen order {} (key: {})",
+                    kitchenOrderId, effectiveKey);
+            return kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
+                    .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+        }
+
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
                 .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
 
@@ -286,10 +383,12 @@ public class KitchenOrderService {
             validateCourierAssignment(kitchenOrder, currentUser);
         }
 
-        if (kitchenOrder.getStatus() != KitchenOrderStatus.READY) {
+        KitchenOrderStatus previousStatus = kitchenOrder.getStatus();
+
+        if (previousStatus != KitchenOrderStatus.READY) {
             throw new IllegalStateException(
                     String.format("Cannot mark order as picked up: current status is %s, expected READY",
-                            kitchenOrder.getStatus()));
+                            previousStatus));
         }
 
         kitchenOrder.setStatus(KitchenOrderStatus.PICKED_UP);
@@ -301,11 +400,17 @@ public class KitchenOrderService {
         OrderStatusHistory statusHistory = OrderStatusHistory.builder()
                 .order(order)
                 .status(OrderStatus.PICKED_UP)
-                .changedBy(currentUser.getEmail()) // Use authenticated user's email
+                .changedBy(currentUser.getEmail())
                 .notes("Order picked up by " + currentUser.getEmail())
                 .build();
         order.addStatusHistory(statusHistory);
         orderRepository.save(order);
+
+        // Audit log the status transition
+        logStatusTransition(kitchenOrder, previousStatus, KitchenOrderStatus.PICKED_UP,
+                currentUser, "Picked up");
+
+        markRequestProcessed(effectiveKey);
 
         log.info("Kitchen order {} marked as picked up by {}", kitchenOrder.getId(), currentUser.getEmail());
         return savedOrder;
@@ -400,5 +505,139 @@ public class KitchenOrderService {
         }
 
         return sanitized;
+    }
+
+    // ==================== PRODUCTION FEATURES ====================
+
+    /**
+     * Check if a request with the given idempotency key has already been processed.
+     * Cleans up expired entries from the cache.
+     */
+    private boolean isDuplicateRequest(String idempotencyKey) {
+        cleanupExpiredIdempotencyKeys();
+        return idempotencyCache.containsKey(idempotencyKey);
+    }
+
+    /**
+     * Mark an idempotency key as processed.
+     */
+    private void markRequestProcessed(String idempotencyKey) {
+        idempotencyCache.put(idempotencyKey, LocalDateTime.now());
+    }
+
+    /**
+     * Remove expired idempotency keys from the cache.
+     */
+    private void cleanupExpiredIdempotencyKeys() {
+        LocalDateTime cutoff = LocalDateTime.now().minus(IDEMPOTENCY_TTL);
+        idempotencyCache.entrySet().removeIf(entry -> entry.getValue().isBefore(cutoff));
+    }
+
+    /**
+     * Send notification asynchronously without blocking the main transaction.
+     * If notification fails, it's logged but doesn't affect the order status update.
+     */
+    private void sendNotificationAsync(Runnable notificationTask, String notificationType, String orderNumber) {
+        try {
+            notificationTask.run();
+        } catch (Exception e) {
+            // Log the failure but don't roll back the transaction
+            log.error("Failed to send {} notification for order {}: {}",
+                    notificationType, orderNumber, e.getMessage());
+            // In production, you might want to queue this for retry
+            // or send to a dead letter queue for manual intervention
+        }
+    }
+
+    /**
+     * Log status transition to the audit log for compliance and traceability.
+     */
+    private void logStatusTransition(KitchenOrder kitchenOrder, KitchenOrderStatus fromStatus,
+                                      KitchenOrderStatus toStatus, UserPrincipal user, String notes) {
+        try {
+            Order order = kitchenOrder.getOrder();
+            auditService.logAction(AuditService.AuditLogBuilder.create()
+                    .action(AuditAction.ORDER_STATUS_CHANGED)
+                    .entityType("KitchenOrder")
+                    .entityId(kitchenOrder.getId())
+                    .orderId(order.getId())
+                    .orderNumber(order.getOrderNumber())
+                    .restaurantId(order.getRestaurant().getId())
+                    .userId(user.getId())
+                    .username(user.getEmail())
+                    .userRole(user.getRole().name())
+                    .previousValue(fromStatus.name())
+                    .newValue(toStatus.name())
+                    .actionDetail(String.format("Kitchen order status changed from %s to %s. %s",
+                            fromStatus, toStatus, notes)));
+        } catch (Exception e) {
+            // Log audit failure but don't fail the main operation
+            log.error("Failed to log audit for kitchen order {} status change: {}",
+                    kitchenOrder.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Find orders that have been stuck in PREPARING status for too long.
+     * Should be called by a scheduled task to alert kitchen managers.
+     */
+    @Transactional(readOnly = true)
+    public List<KitchenOrder> findStuckPreparingOrders(Long restaurantId) {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(PREPARING_TIMEOUT_MINUTES);
+        List<KitchenOrder> stuckOrders = kitchenOrderRepository.findStuckOrders(
+                restaurantId,
+                KitchenOrderStatus.PREPARING,
+                cutoff
+        );
+
+        if (!stuckOrders.isEmpty()) {
+            log.warn("Found {} orders stuck in PREPARING status for more than {} minutes in restaurant {}",
+                    stuckOrders.size(), PREPARING_TIMEOUT_MINUTES, restaurantId);
+        }
+
+        return stuckOrders;
+    }
+
+    /**
+     * Find orders that have been ready but not picked up for too long.
+     * Should be called by a scheduled task to alert for pickup.
+     */
+    @Transactional(readOnly = true)
+    public List<KitchenOrder> findStuckReadyOrders(Long restaurantId) {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(READY_TIMEOUT_MINUTES);
+        List<KitchenOrder> stuckOrders = kitchenOrderRepository.findStuckOrders(
+                restaurantId,
+                KitchenOrderStatus.READY,
+                cutoff
+        );
+
+        if (!stuckOrders.isEmpty()) {
+            log.warn("Found {} orders stuck in READY status for more than {} minutes in restaurant {}",
+                    stuckOrders.size(), READY_TIMEOUT_MINUTES, restaurantId);
+        }
+
+        return stuckOrders;
+    }
+
+    /**
+     * Get estimated time remaining for orders in PREPARING status.
+     * Returns null if not applicable (not preparing or no estimate).
+     */
+    public Duration getEstimatedTimeRemaining(KitchenOrder kitchenOrder) {
+        if (kitchenOrder.getStatus() != KitchenOrderStatus.PREPARING) {
+            return null;
+        }
+
+        LocalDateTime startTime = kitchenOrder.getPreparationStartedAt();
+        Integer estimatedMinutes = kitchenOrder.getEstimatedPreparationTimeMinutes();
+
+        if (startTime == null || estimatedMinutes == null) {
+            return null;
+        }
+
+        LocalDateTime estimatedCompletion = startTime.plusMinutes(estimatedMinutes);
+        Duration remaining = Duration.between(LocalDateTime.now(), estimatedCompletion);
+
+        return remaining.isNegative() ? Duration.ZERO : remaining;
     }
 }

@@ -5,6 +5,7 @@ import com.elcafe.modules.inventory.enums.ValuationMethod;
 import com.elcafe.modules.inventory.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service for calculating inventory valuation using different methods:
@@ -29,6 +31,14 @@ public class InventoryValuationService {
     private final InventoryIngredientRepository ingredientRepository;
     private final ValuationSettingsRepository valuationSettingsRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
+
+    /**
+     * Configuration to strictly enforce expired batch prevention.
+     * When true, consumption will fail if only expired batches are available.
+     * When false, expired batches can be used with a warning (legacy behavior).
+     */
+    @Value("${inventory.strict-expiry-enforcement:true}")
+    private boolean strictExpiryEnforcement;
 
     /**
      * Get the current valuation method for a restaurant
@@ -94,7 +104,8 @@ public class InventoryValuationService {
 
     /**
      * Calculate cost using Weighted Average Cost
-     * Uses ingredient's WAC for all units
+     * Uses ingredient's WAC for all units.
+     * PRODUCTION FEATURE: Filters out expired batches before consumption.
      */
     @Transactional
     public ConsumptionResult consumeWeightedAverage(Long ingredientId, BigDecimal quantity, Long orderId) {
@@ -104,9 +115,35 @@ public class InventoryValuationService {
                 .orElseThrow(() -> new RuntimeException("Ingredient not found"));
 
         BigDecimal wac = ingredient.getEffectiveCost();
+        LocalDate today = LocalDate.now();
 
         // Still consume from batches using FEFO for physical inventory
-        List<InventoryBatch> batches = batchRepository.findActiveBatchesFEFO(ingredientId);
+        List<InventoryBatch> allBatches = batchRepository.findActiveBatchesFEFO(ingredientId);
+
+        // PRODUCTION FEATURE: Filter out expired batches
+        List<InventoryBatch> batches = filterOutExpiredBatches(allBatches, today, ingredient.getName());
+
+        // Check if we have enough non-expired stock
+        if (strictExpiryEnforcement) {
+            BigDecimal availableNonExpiredStock = batches.stream()
+                    .map(InventoryBatch::getQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal expiredStock = allBatches.stream()
+                    .filter(b -> b.getExpiryDate() != null && b.getExpiryDate().isBefore(today))
+                    .map(InventoryBatch::getQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (availableNonExpiredStock.compareTo(quantity) < 0 && expiredStock.compareTo(BigDecimal.ZERO) > 0) {
+                log.error("EXPIRED BATCH CONSUMPTION BLOCKED (WAC): Ingredient {} (ID: {}) has {} expired, " +
+                          "{} valid. Requested: {}.",
+                        ingredient.getName(), ingredientId, expiredStock, availableNonExpiredStock, quantity);
+
+                throw new IllegalStateException(
+                        String.format("Cannot consume %s units of %s: only %s non-expired units available.",
+                                quantity, ingredient.getName(), availableNonExpiredStock));
+            }
+        }
 
         List<BatchConsumption> consumptions = new ArrayList<>();
         BigDecimal remaining = quantity;
@@ -145,7 +182,7 @@ public class InventoryValuationService {
 
         // If no batches were available but ingredient has stock, log a warning
         if (batches.isEmpty()) {
-            log.warn("No active batches found for ingredient {} (ID: {}), deducted {} directly from ingredient stock",
+            log.warn("No active non-expired batches found for ingredient {} (ID: {}), deducted {} directly from ingredient stock",
                     ingredient.getName(), ingredientId, quantity);
         } else if (remaining.compareTo(BigDecimal.ZERO) > 0) {
             log.warn("Could not fully consume from batches for ingredient {} (ID: {}). Requested: {}, from batches: {}, remaining: {}",
@@ -335,19 +372,50 @@ public class InventoryValuationService {
     }
 
     /**
-     * Core method to consume from batches and record consumption
+     * Core method to consume from batches and record consumption.
+     * PRODUCTION FEATURE: Filters out expired batches to prevent consumption.
      */
     private ConsumptionResult consumeFromBatches(List<InventoryBatch> batches, Long ingredientId,
                                                   BigDecimal quantity, Long orderId, ValuationMethod method) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
                 .orElseThrow(() -> new RuntimeException("Ingredient not found"));
 
+        LocalDate today = LocalDate.now();
+
+        // PRODUCTION FEATURE: Filter out expired batches
+        List<InventoryBatch> validBatches = filterOutExpiredBatches(batches, today, ingredient.getName());
+        List<InventoryBatch> expiredBatches = batches.stream()
+                .filter(b -> b.getExpiryDate() != null && b.getExpiryDate().isBefore(today))
+                .collect(Collectors.toList());
+
+        // Check if we have enough non-expired stock
+        BigDecimal availableNonExpiredStock = validBatches.stream()
+                .map(InventoryBatch::getQuantity)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (strictExpiryEnforcement && availableNonExpiredStock.compareTo(quantity) < 0) {
+            BigDecimal expiredStock = expiredBatches.stream()
+                    .map(InventoryBatch::getQuantity)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (expiredStock.compareTo(BigDecimal.ZERO) > 0) {
+                log.error("EXPIRED BATCH CONSUMPTION BLOCKED: Ingredient {} (ID: {}) has {} expired, " +
+                          "{} valid. Requested: {}. Consider writing off expired batches.",
+                        ingredient.getName(), ingredientId, expiredStock, availableNonExpiredStock, quantity);
+
+                throw new IllegalStateException(
+                        String.format("Cannot consume %s units of %s: only %s non-expired units available. " +
+                                      "%s units are expired and blocked from consumption.",
+                                quantity, ingredient.getName(), availableNonExpiredStock, expiredStock));
+            }
+        }
+
         List<BatchConsumption> consumptions = new ArrayList<>();
         BigDecimal remaining = quantity;
         BigDecimal totalCost = BigDecimal.ZERO;
         BigDecimal totalQuantityConsumedFromBatches = BigDecimal.ZERO;
 
-        for (InventoryBatch batch : batches) {
+        for (InventoryBatch batch : validBatches) {
             if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
 
             BigDecimal consumed = batch.consume(remaining);
@@ -397,8 +465,8 @@ public class InventoryValuationService {
         }
 
         // Log warnings for incomplete batch consumption
-        if (batches.isEmpty()) {
-            log.warn("No active batches found for ingredient {} (ID: {}), deducted {} directly from ingredient stock",
+        if (validBatches.isEmpty()) {
+            log.warn("No active non-expired batches found for ingredient {} (ID: {}), deducted {} directly from ingredient stock",
                     ingredient.getName(), ingredientId, quantity);
         } else if (remaining.compareTo(BigDecimal.ZERO) > 0) {
             log.warn("Could not fully consume from batches for ingredient {} (ID: {}). Requested: {}, from batches: {}, remaining: {}",
@@ -406,6 +474,31 @@ public class InventoryValuationService {
         }
 
         return new ConsumptionResult(quantity, totalCost, avgCost, method, consumptions);
+    }
+
+    /**
+     * Filter out expired batches from the list.
+     * Logs warnings for any expired batches found.
+     */
+    private List<InventoryBatch> filterOutExpiredBatches(List<InventoryBatch> batches, LocalDate today, String ingredientName) {
+        List<InventoryBatch> validBatches = new ArrayList<>();
+        List<String> expiredBatchNumbers = new ArrayList<>();
+
+        for (InventoryBatch batch : batches) {
+            if (batch.getExpiryDate() != null && batch.getExpiryDate().isBefore(today)) {
+                expiredBatchNumbers.add(String.format("%s (expired: %s, qty: %s)",
+                        batch.getBatchNumber(), batch.getExpiryDate(), batch.getQuantity()));
+            } else {
+                validBatches.add(batch);
+            }
+        }
+
+        if (!expiredBatchNumbers.isEmpty()) {
+            log.warn("FEFO ENFORCEMENT: Skipping {} expired batch(es) for ingredient {}: {}",
+                    expiredBatchNumbers.size(), ingredientName, expiredBatchNumbers);
+        }
+
+        return validBatches;
     }
 
     /**

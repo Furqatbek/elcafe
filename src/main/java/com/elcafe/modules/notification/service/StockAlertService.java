@@ -1,6 +1,8 @@
 package com.elcafe.modules.notification.service;
 
 import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.entity.InventoryBatch;
+import com.elcafe.modules.inventory.repository.InventoryBatchRepository;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.notification.config.StockAlertConfig;
 import com.elcafe.modules.notification.entity.StockAlertSubscription;
@@ -14,6 +16,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -31,8 +34,12 @@ public class StockAlertService {
     private final StockAlertConfig alertConfig;
     private final TelegramBotService telegramBotService;
     private final InventoryIngredientRepository ingredientRepository;
+    private final InventoryBatchRepository batchRepository;
     private final StockAlertSubscriptionRepository subscriptionRepository;
     private final RestaurantRepository restaurantRepository;
+
+    // Default alert threshold for expiring batches (days before expiry)
+    private static final int DEFAULT_EXPIRY_ALERT_DAYS = 7;
 
     /**
      * Scheduled task to check stock levels and send alerts
@@ -207,6 +214,191 @@ public class StockAlertService {
                     "currentStock", i.getCurrentStock(),
                     "minimumStock", i.getMinimumStock(),
                     "unit", i.getUnit()
+                ))
+                .collect(Collectors.toList())
+        );
+    }
+
+    // ==================== PRODUCTION FEATURE: EXPIRY ALERTS ====================
+
+    /**
+     * Scheduled task to check batch expiry and send alerts.
+     * Runs daily to alert about expiring and expired batches.
+     */
+    @Scheduled(cron = "0 0 6 * * *") // Run daily at 6 AM
+    @Transactional
+    public void checkAndSendExpiryAlerts() {
+        if (!alertConfig.isEnabled()) {
+            log.debug("Expiry alerts are disabled (stock alerts disabled)");
+            return;
+        }
+
+        log.info("Starting batch expiry alert check...");
+
+        List<Restaurant> restaurants = restaurantRepository.findByActiveTrue();
+
+        for (Restaurant restaurant : restaurants) {
+            checkRestaurantBatchExpiry(restaurant);
+        }
+
+        log.info("Batch expiry alert check completed");
+    }
+
+    /**
+     * Check batch expiry for a specific restaurant and send alerts.
+     */
+    private void checkRestaurantBatchExpiry(Restaurant restaurant) {
+        LocalDate today = LocalDate.now();
+        LocalDate expiryThreshold = today.plusDays(DEFAULT_EXPIRY_ALERT_DAYS);
+
+        // Get expired batches
+        List<InventoryBatch> expiredBatches = batchRepository.findExpiredBatches(restaurant.getId(), today);
+
+        // Get expiring batches (within threshold)
+        List<InventoryBatch> expiringBatches = batchRepository.findExpiringBatches(
+                restaurant.getId(), expiryThreshold);
+
+        // Filter out already expired from expiring list
+        expiringBatches = expiringBatches.stream()
+                .filter(b -> b.getExpiryDate() != null && !b.getExpiryDate().isBefore(today))
+                .collect(Collectors.toList());
+
+        if (expiredBatches.isEmpty() && expiringBatches.isEmpty()) {
+            return;
+        }
+
+        // Get active subscriptions for this restaurant
+        List<StockAlertSubscription> subscriptions =
+            subscriptionRepository.findByRestaurant_IdAndActiveTrue(restaurant.getId());
+
+        if (subscriptions.isEmpty()) {
+            // Log warning even without subscriptions for visibility
+            if (!expiredBatches.isEmpty()) {
+                log.warn("EXPIRED BATCHES (no subscribers): Restaurant {} has {} expired batches",
+                        restaurant.getName(), expiredBatches.size());
+            }
+            return;
+        }
+
+        // Send alerts to subscribers
+        for (StockAlertSubscription subscription : subscriptions) {
+            // Send expired batch alert (CRITICAL)
+            if (!expiredBatches.isEmpty()) {
+                String batchList = formatBatchExpiryList(expiredBatches);
+                boolean sent = telegramBotService.sendStockAlert(
+                    subscription.getTelegramChatId(),
+                    restaurant.getName(),
+                    "EXPIRED_BATCHES",
+                    batchList
+                );
+                if (sent) {
+                    log.warn("EXPIRED BATCH ALERT sent for restaurant {}: {} batches",
+                            restaurant.getName(), expiredBatches.size());
+                }
+            }
+
+            // Send expiring soon alert (WARNING)
+            if (!expiringBatches.isEmpty()) {
+                String batchList = formatBatchExpiryList(expiringBatches);
+                boolean sent = telegramBotService.sendStockAlert(
+                    subscription.getTelegramChatId(),
+                    restaurant.getName(),
+                    "EXPIRING_SOON",
+                    batchList
+                );
+                if (sent) {
+                    log.info("EXPIRING SOON alert sent for restaurant {}: {} batches",
+                            restaurant.getName(), expiringBatches.size());
+                }
+            }
+
+            subscription.setLastAlertSentAt(LocalDateTime.now());
+            subscriptionRepository.save(subscription);
+        }
+    }
+
+    /**
+     * Format batch expiry list for Telegram message.
+     */
+    private String formatBatchExpiryList(List<InventoryBatch> batches) {
+        StringBuilder sb = new StringBuilder();
+        LocalDate today = LocalDate.now();
+
+        for (InventoryBatch batch : batches) {
+            String ingredientName = batch.getIngredient() != null ?
+                    batch.getIngredient().getName() : "Unknown";
+            String unit = batch.getIngredient() != null ?
+                    batch.getIngredient().getUnit() : "";
+
+            sb.append(String.format("• <b>%s</b>\n", ingredientName));
+            sb.append(String.format("  Партия: %s\n", batch.getBatchNumber()));
+            sb.append(String.format("  Остаток: %.2f %s\n", batch.getQuantity(), unit));
+
+            if (batch.getExpiryDate() != null) {
+                long daysUntilExpiry = java.time.temporal.ChronoUnit.DAYS.between(today, batch.getExpiryDate());
+                if (daysUntilExpiry < 0) {
+                    sb.append(String.format("  ⚠️ ПРОСРОЧЕНО: %s (на %d дн.)\n",
+                            batch.getExpiryDate(), Math.abs(daysUntilExpiry)));
+                } else if (daysUntilExpiry == 0) {
+                    sb.append(String.format("  ⚠️ ИСТЕКАЕТ СЕГОДНЯ: %s\n", batch.getExpiryDate()));
+                } else {
+                    sb.append(String.format("  Срок годности: %s (осталось %d дн.)\n",
+                            batch.getExpiryDate(), daysUntilExpiry));
+                }
+            }
+            sb.append("\n");
+        }
+        return sb.toString().trim();
+    }
+
+    /**
+     * Manually trigger expiry alert check for a specific restaurant.
+     */
+    @Transactional
+    public void triggerExpiryAlertForRestaurant(Long restaurantId) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new RuntimeException("Restaurant not found: " + restaurantId));
+
+        checkRestaurantBatchExpiry(restaurant);
+        log.info("Manual expiry alert triggered for restaurant: {}", restaurant.getName());
+    }
+
+    /**
+     * Get expiry summary for a restaurant.
+     */
+    public Map<String, Object> getExpirySummary(Long restaurantId) {
+        LocalDate today = LocalDate.now();
+        LocalDate expiryThreshold = today.plusDays(DEFAULT_EXPIRY_ALERT_DAYS);
+
+        List<InventoryBatch> expiredBatches = batchRepository.findExpiredBatches(restaurantId, today);
+        List<InventoryBatch> expiringBatches = batchRepository.findExpiringBatches(restaurantId, expiryThreshold);
+
+        // Filter out already expired from expiring list
+        expiringBatches = expiringBatches.stream()
+                .filter(b -> b.getExpiryDate() != null && !b.getExpiryDate().isBefore(today))
+                .collect(Collectors.toList());
+
+        return Map.of(
+            "expiredCount", expiredBatches.size(),
+            "expiringCount", expiringBatches.size(),
+            "expiredBatches", expiredBatches.stream()
+                .map(b -> Map.of(
+                    "id", b.getId(),
+                    "batchNumber", b.getBatchNumber(),
+                    "ingredientName", b.getIngredient() != null ? b.getIngredient().getName() : "Unknown",
+                    "quantity", b.getQuantity(),
+                    "expiryDate", b.getExpiryDate() != null ? b.getExpiryDate().toString() : null
+                ))
+                .collect(Collectors.toList()),
+            "expiringBatches", expiringBatches.stream()
+                .map(b -> Map.of(
+                    "id", b.getId(),
+                    "batchNumber", b.getBatchNumber(),
+                    "ingredientName", b.getIngredient() != null ? b.getIngredient().getName() : "Unknown",
+                    "quantity", b.getQuantity(),
+                    "expiryDate", b.getExpiryDate() != null ? b.getExpiryDate().toString() : null,
+                    "daysUntilExpiry", b.getExpiryDate() != null ?
+                            java.time.temporal.ChronoUnit.DAYS.between(today, b.getExpiryDate()) : null
                 ))
                 .collect(Collectors.toList())
         );

@@ -52,4 +52,30 @@ public interface KitchenOrderRepository extends JpaRepository<KitchenOrder, Long
 
     @Query("SELECT AVG(ko.actualPreparationTimeMinutes) FROM KitchenOrder ko WHERE ko.status IN :completedStatuses AND ko.actualPreparationTimeMinutes IS NOT NULL")
     Double getAveragePreparationTime(@Param("completedStatuses") List<KitchenOrderStatus> completedStatuses);
+
+    /**
+     * Find orders stuck in a specific status since before the given cutoff time.
+     * Used for timeout detection and alerting.
+     */
+    @Query("SELECT ko FROM KitchenOrder ko JOIN FETCH ko.order o JOIN FETCH o.restaurant r " +
+           "WHERE r.id = :restaurantId AND ko.status = :status " +
+           "AND ((ko.status = 'PREPARING' AND ko.preparationStartedAt < :cutoff) " +
+           "OR (ko.status = 'READY' AND ko.preparationCompletedAt < :cutoff)) " +
+           "ORDER BY ko.createdAt ASC")
+    List<KitchenOrder> findStuckOrders(
+            @Param("restaurantId") Long restaurantId,
+            @Param("status") KitchenOrderStatus status,
+            @Param("cutoff") LocalDateTime cutoff);
+
+    /**
+     * Find all stuck orders across all restaurants for system-wide monitoring.
+     */
+    @Query("SELECT ko FROM KitchenOrder ko JOIN FETCH ko.order o JOIN FETCH o.restaurant r " +
+           "WHERE ko.status = :status " +
+           "AND ((ko.status = 'PREPARING' AND ko.preparationStartedAt < :cutoff) " +
+           "OR (ko.status = 'READY' AND ko.preparationCompletedAt < :cutoff)) " +
+           "ORDER BY ko.createdAt ASC")
+    List<KitchenOrder> findAllStuckOrders(
+            @Param("status") KitchenOrderStatus status,
+            @Param("cutoff") LocalDateTime cutoff);
 }
