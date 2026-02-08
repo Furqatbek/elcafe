@@ -1,5 +1,6 @@
 package com.elcafe.modules.kitchen.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.kitchen.entity.KitchenOrder;
 import com.elcafe.modules.kitchen.enums.KitchenPriority;
 import com.elcafe.modules.kitchen.service.KitchenOrderService;
@@ -22,13 +23,15 @@ import java.util.List;
 public class KitchenOrderController {
 
     private final KitchenOrderService kitchenOrderService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/active")
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'KITCHEN_STAFF')")
     @Operation(summary = "Get active orders", description = "Get all pending and preparing orders")
     public ResponseEntity<ApiResponse<List<KitchenOrder>>> getActiveOrders(
             @RequestParam(required = false) Long restaurantId) {
-        List<KitchenOrder> orders = kitchenOrderService.getActiveOrders(restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        List<KitchenOrder> orders = kitchenOrderService.getActiveOrders(effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Active orders retrieved", orders));
     }
 
@@ -37,7 +40,8 @@ public class KitchenOrderController {
     @Operation(summary = "Get ready orders", description = "Get all orders ready for pickup")
     public ResponseEntity<ApiResponse<List<KitchenOrder>>> getReadyOrders(
             @RequestParam(required = false) Long restaurantId) {
-        List<KitchenOrder> orders = kitchenOrderService.getReadyOrders(restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        List<KitchenOrder> orders = kitchenOrderService.getReadyOrders(effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Ready orders retrieved", orders));
     }
 

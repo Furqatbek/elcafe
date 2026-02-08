@@ -1,5 +1,6 @@
 package com.elcafe.modules.kitchen.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.kitchen.dto.CreateKitchenStationRequest;
 import com.elcafe.modules.kitchen.dto.KitchenStationDTO;
 import com.elcafe.modules.kitchen.dto.UpdateKitchenStationRequest;
@@ -25,26 +26,32 @@ import java.util.List;
 public class KitchenStationController {
 
     private final KitchenStationService kitchenStationService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'KITCHEN_STAFF')")
     @Operation(summary = "Get all kitchen stations", description = "Get all kitchen stations for a restaurant")
     public ResponseEntity<ApiResponse<List<KitchenStationDTO>>> getStations(
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         log.info("Fetching kitchen stations for restaurant: {}", restaurantId);
         List<KitchenStationDTO> stations = kitchenStationService.getStationsByRestaurant(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Kitchen stations retrieved successfully", stations));
     }
 
     @GetMapping("/active")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'KITCHEN_STAFF')")
     @Operation(summary = "Get active kitchen stations", description = "Get only active kitchen stations for a restaurant")
     public ResponseEntity<ApiResponse<List<KitchenStationDTO>>> getActiveStations(
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         log.info("Fetching active kitchen stations for restaurant: {}", restaurantId);
         List<KitchenStationDTO> stations = kitchenStationService.getActiveStationsByRestaurant(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Active kitchen stations retrieved successfully", stations));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'KITCHEN_STAFF')")
     @Operation(summary = "Get kitchen station by ID", description = "Get a single kitchen station by its ID")
     public ResponseEntity<ApiResponse<KitchenStationDTO>> getStation(@PathVariable Long id) {
         log.info("Fetching kitchen station: {}", id);
