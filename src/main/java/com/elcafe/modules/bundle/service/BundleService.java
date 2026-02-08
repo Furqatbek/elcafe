@@ -238,9 +238,12 @@ public class BundleService {
      */
     @Transactional(readOnly = true)
     public BigDecimal calculateBundlePrice(Long bundleId, List<Long> selectedOptionIds) {
+        log.debug("Calculating price for bundle {} with options: {}", bundleId, selectedOptionIds);
+
         Bundle bundle = findByIdWithAllDetails(bundleId);
 
         BigDecimal total = bundle.getBundlePrice();
+        BigDecimal adjustments = BigDecimal.ZERO;
 
         // Add price adjustments for selected options
         if (bundle.getOptionGroups() != null && selectedOptionIds != null) {
@@ -248,11 +251,15 @@ public class BundleService {
                 for (BundleOption option : group.getOptions()) {
                     if (selectedOptionIds.contains(option.getId()) &&
                         option.getPriceAdjustment() != null) {
-                        total = total.add(option.getPriceAdjustment());
+                        adjustments = adjustments.add(option.getPriceAdjustment());
                     }
                 }
             }
         }
+
+        total = total.add(adjustments);
+        log.debug("Bundle {} price calculation: base={}, adjustments={}, total={}",
+                bundleId, bundle.getBundlePrice(), adjustments, total);
 
         return total;
     }
@@ -262,9 +269,12 @@ public class BundleService {
      */
     @Transactional(readOnly = true)
     public void validateBundleOrder(Long bundleId, List<Long> selectedOptionIds) {
+        log.debug("Validating bundle order: bundleId={}, selectedOptions={}", bundleId, selectedOptionIds);
+
         Bundle bundle = findByIdWithAllDetails(bundleId);
 
         if (!bundle.isCurrentlyAvailable()) {
+            log.warn("Bundle {} is not currently available", bundleId);
             throw new BadRequestException("This bundle is not currently available");
         }
 
@@ -277,12 +287,16 @@ public class BundleService {
                             .count();
 
                     if (selectedCount < group.getMinSelections()) {
+                        log.warn("Bundle {} validation failed: too few selections for group '{}' (selected={}, min={})",
+                                bundleId, group.getName(), selectedCount, group.getMinSelections());
                         throw new BadRequestException(
                                 String.format("Please select at least %d option(s) for '%s'",
                                         group.getMinSelections(), group.getName()));
                     }
 
                     if (selectedCount > group.getMaxSelections()) {
+                        log.warn("Bundle {} validation failed: too many selections for group '{}' (selected={}, max={})",
+                                bundleId, group.getName(), selectedCount, group.getMaxSelections());
                         throw new BadRequestException(
                                 String.format("Please select at most %d option(s) for '%s'",
                                         group.getMaxSelections(), group.getName()));
@@ -290,6 +304,8 @@ public class BundleService {
                 }
             }
         }
+
+        log.debug("Bundle {} order validation passed", bundleId);
     }
 
     // Helper methods
@@ -339,6 +355,11 @@ public class BundleService {
                 .build();
     }
 
+    /**
+     * Parse time string in HH:mm format.
+     * Returns null for null/blank input.
+     * Throws BadRequestException for invalid formats.
+     */
     private LocalTime parseTime(String timeStr) {
         if (timeStr == null || timeStr.isBlank()) {
             return null;
@@ -346,8 +367,9 @@ public class BundleService {
         try {
             return LocalTime.parse(timeStr, TIME_FORMATTER);
         } catch (Exception e) {
-            log.warn("Failed to parse time: {}", timeStr);
-            return null;
+            log.warn("Failed to parse time '{}': {}", timeStr, e.getMessage());
+            throw new BadRequestException(
+                    String.format("Invalid time format '%s'. Expected format: HH:mm (e.g., 09:00, 14:30)", timeStr));
         }
     }
 }

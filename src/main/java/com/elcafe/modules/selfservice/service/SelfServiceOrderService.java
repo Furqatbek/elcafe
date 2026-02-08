@@ -34,6 +34,7 @@ import com.elcafe.modules.selfservice.dto.CartItemResponse;
 import com.elcafe.modules.selfservice.dto.SubmitOrderRequest;
 import com.elcafe.modules.selfservice.entity.*;
 import com.elcafe.modules.selfservice.enums.SelfServiceOrderType;
+import com.elcafe.modules.selfservice.exception.*;
 import com.elcafe.modules.selfservice.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -97,11 +98,17 @@ public class SelfServiceOrderService {
      */
     @Transactional
     public SelfServiceSession startSession(String qrCode, String deviceInfo, String ipAddress) {
+        log.info("Starting self-service session: qrCode={}, ip={}", qrCode, ipAddress);
+
         QRCode qr = qrCodeRepository.findByCode(qrCode)
-                .orElseThrow(() -> new RuntimeException("Invalid QR code"));
+                .orElseThrow(() -> {
+                    log.warn("Invalid QR code scanned: {}", qrCode);
+                    return new SelfServiceException("Invalid QR code");
+                });
 
         if (!qr.isValid()) {
-            throw new RuntimeException("QR code is expired or inactive");
+            log.warn("Expired/inactive QR code used: {}", qrCode);
+            throw new SelfServiceException("QR code is expired or inactive");
         }
 
         // Check if self-service is enabled
@@ -175,17 +182,24 @@ public class SelfServiceOrderService {
     public SelfServiceCartItem addToCart(String sessionToken, AddToCartRequest request) {
         SelfServiceSession session = getValidSession(sessionToken);
 
+        log.debug("Adding to cart: sessionId={}, productId={}, bundleId={}, qty={}",
+                session.getId(), request.getProductId(), request.getBundleId(), request.getQuantity());
+
         // Handle bundle
         if (Boolean.TRUE.equals(request.getIsBundle()) && request.getBundleId() != null) {
             return addBundleToCart(session, request);
         }
 
         Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> {
+                    log.warn("Product not found: {}", request.getProductId());
+                    return new ProductNotFoundException(request.getProductId());
+                });
 
         // Check if product belongs to session's restaurant
         if (!product.getCategory().getRestaurant().getId().equals(session.getRestaurant().getId())) {
-            throw new RuntimeException("Product not available at this restaurant");
+            log.warn("Product {} not available at restaurant {}", request.getProductId(), session.getRestaurant().getId());
+            throw new CartOperationException("addToCart", request.getProductId(), "Product not available at this restaurant");
         }
 
         ProductVariant variant = null;
@@ -193,7 +207,7 @@ public class SelfServiceOrderService {
 
         if (request.getVariantId() != null) {
             variant = variantRepository.findById(request.getVariantId())
-                    .orElseThrow(() -> new RuntimeException("Variant not found"));
+                    .orElseThrow(() -> new CartOperationException("addToCart", "Variant not found: " + request.getVariantId()));
             unitPrice = variant.getPrice();
         }
 
@@ -264,17 +278,24 @@ public class SelfServiceOrderService {
      * Add bundle to cart.
      */
     private SelfServiceCartItem addBundleToCart(SelfServiceSession session, AddToCartRequest request) {
+        log.debug("Adding bundle to cart: sessionId={}, bundleId={}", session.getId(), request.getBundleId());
+
         var bundle = bundleRepository.findById(request.getBundleId())
-                .orElseThrow(() -> new RuntimeException("Bundle not found"));
+                .orElseThrow(() -> {
+                    log.warn("Bundle not found: {}", request.getBundleId());
+                    return new ProductNotFoundException(request.getBundleId(), true);
+                });
 
         // Check if bundle belongs to session's restaurant
         if (!bundle.getRestaurant().getId().equals(session.getRestaurant().getId())) {
-            throw new RuntimeException("Bundle not available at this restaurant");
+            log.warn("Bundle {} not available at restaurant {}", request.getBundleId(), session.getRestaurant().getId());
+            throw new CartOperationException("addBundleToCart", request.getBundleId(), "Bundle not available at this restaurant");
         }
 
         // Check if bundle is active and currently available
         if (!bundle.isCurrentlyAvailable()) {
-            throw new RuntimeException("Bundle is not currently available");
+            log.info("Bundle {} is not currently available", request.getBundleId());
+            throw new CartOperationException("addBundleToCart", request.getBundleId(), "Bundle is not currently available");
         }
 
         // Check if same bundle already in cart (update quantity)
@@ -317,14 +338,17 @@ public class SelfServiceOrderService {
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
 
         if (!item.getSession().getId().equals(session.getId())) {
-            throw new RuntimeException("Cart item does not belong to this session");
+            log.warn("Cart item {} does not belong to session {}", cartItemId, session.getId());
+            throw new CartOperationException("updateQuantity", cartItemId, "Cart item not found");
         }
 
         if (quantity <= 0) {
+            log.debug("Removing cart item {} (quantity set to {})", cartItemId, quantity);
             cartItemRepository.delete(item);
             return null;
         }
 
+        log.debug("Updating cart item {} quantity: {} -> {}", cartItemId, item.getQuantity(), quantity);
         item.setQuantity(quantity);
         session.touch();
         sessionRepository.save(session);
@@ -339,16 +363,23 @@ public class SelfServiceOrderService {
     public void removeFromCart(String sessionToken, Long cartItemId) {
         SelfServiceSession session = getValidSession(sessionToken);
 
+        log.debug("Removing from cart: sessionId={}, cartItemId={}", session.getId(), cartItemId);
+
         SelfServiceCartItem item = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new RuntimeException("Cart item not found"));
+                .orElseThrow(() -> {
+                    log.debug("Cart item not found: {}", cartItemId);
+                    return new CartOperationException("removeFromCart", cartItemId, "Cart item not found");
+                });
 
         if (!item.getSession().getId().equals(session.getId())) {
-            throw new RuntimeException("Cart item does not belong to this session");
+            log.warn("Cart item {} does not belong to session {}", cartItemId, session.getId());
+            throw new CartOperationException("removeFromCart", cartItemId, "Cart item not found");
         }
 
         cartItemRepository.delete(item);
         session.touch();
         sessionRepository.save(session);
+        log.debug("Cart item {} removed successfully", cartItemId);
     }
 
     /**
@@ -379,13 +410,15 @@ public class SelfServiceOrderService {
     public SelfServiceOrder submitOrder(String sessionToken, SubmitOrderRequest request) {
         SelfServiceSession session = getValidSession(sessionToken);
 
+        log.info("Submitting order: sessionId={}, orderType={}", session.getId(), request.getOrderType());
+
         // Validate and sanitize customer details
         if (request.getOrderType() == SelfServiceOrderType.TAKEAWAY) {
             if (request.getCustomerName() == null || request.getCustomerName().trim().isEmpty()) {
-                throw new RuntimeException("Customer name is required for takeaway orders");
+                throw OrderSubmissionException.missingCustomerDetails("Customer name");
             }
             if (request.getCustomerPhone() == null || request.getCustomerPhone().trim().isEmpty()) {
-                throw new RuntimeException("Customer phone is required for takeaway orders");
+                throw OrderSubmissionException.missingCustomerDetails("Customer phone");
             }
         }
 
@@ -393,22 +426,26 @@ public class SelfServiceOrderService {
         if (request.getCustomerPhone() != null && !request.getCustomerPhone().trim().isEmpty()) {
             String phone = request.getCustomerPhone().trim();
             if (!isValidPhoneNumber(phone)) {
-                throw new RuntimeException("Invalid phone number format");
+                throw OrderSubmissionException.invalidPhone();
             }
         }
 
         // Validate and sanitize customer name length
         if (request.getCustomerName() != null && request.getCustomerName().length() > MAX_NAME_LENGTH) {
-            throw new RuntimeException("Customer name exceeds maximum length");
+            throw new OrderSubmissionException("VALIDATION_ERROR", "Customer name exceeds maximum length of " + MAX_NAME_LENGTH);
         }
 
         List<SelfServiceCartItem> cartItems = cartItemRepository.findBySessionIdOrderByAddedAtAsc(session.getId());
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            log.info("Order submission failed: empty cart for session {}", session.getId());
+            throw OrderSubmissionException.emptyCart();
         }
 
         SelfServiceSettings settings = settingsRepository.findByRestaurantId(session.getRestaurant().getId())
-                .orElseThrow(() -> new RuntimeException("Self-service not configured"));
+                .orElseThrow(() -> {
+                    log.error("Self-service not configured for restaurant: {}", session.getRestaurant().getId());
+                    return OrderSubmissionException.serviceNotConfigured();
+                });
 
         // Calculate totals
         BigDecimal subtotal = cartItems.stream()
@@ -417,7 +454,8 @@ public class SelfServiceOrderService {
 
         // Check minimum order amount
         if (subtotal.compareTo(settings.getMinimumOrderAmount()) < 0) {
-            throw new RuntimeException("Minimum order amount not met");
+            log.info("Order submission failed: minimum not met. Required={}, Got={}", settings.getMinimumOrderAmount(), subtotal);
+            throw OrderSubmissionException.minimumNotMet(settings.getMinimumOrderAmount(), subtotal);
         }
 
         // Find or create customer by phone (phone is the unique key for customers)
@@ -681,10 +719,14 @@ public class SelfServiceOrderService {
      */
     private SelfServiceSession getValidSession(String sessionToken) {
         SelfServiceSession session = sessionRepository.findBySessionTokenAndIsActiveTrue(sessionToken)
-                .orElseThrow(() -> new RuntimeException("Session not found or expired"));
+                .orElseThrow(() -> {
+                    log.debug("Session not found or inactive: token={}", sessionToken != null ? sessionToken.substring(0, Math.min(8, sessionToken.length())) + "..." : "null");
+                    return new SessionNotFoundException();
+                });
 
         if (!session.isValid()) {
-            throw new RuntimeException("Session expired");
+            log.debug("Session expired: id={}, expiresAt={}", session.getId(), session.getExpiresAt());
+            throw new SessionNotFoundException();
         }
 
         return session;

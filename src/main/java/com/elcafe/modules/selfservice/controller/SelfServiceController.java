@@ -210,9 +210,11 @@ public class SelfServiceController {
 
     /**
      * Get products by category.
+     * Uses @Transactional(readOnly = true) to ensure lazy collections are accessible.
      */
     @GetMapping("/menu/{restaurantId}/products")
     @Operation(summary = "Get products", description = "Get products for a restaurant, optionally filtered by category")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getProducts(
             @PathVariable Long restaurantId,
             @RequestParam(required = false) Long categoryId) {
@@ -245,9 +247,11 @@ public class SelfServiceController {
 
     /**
      * Get product details with variants.
+     * Uses @Transactional(readOnly = true) to ensure lazy collections are accessible.
      */
     @GetMapping("/menu/product/{productId}")
     @Operation(summary = "Get product details", description = "Get product details including variants and modifiers")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getProductDetails(
             @PathVariable Long productId) {
 
