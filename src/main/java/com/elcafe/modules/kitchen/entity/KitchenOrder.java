@@ -33,7 +33,15 @@ public class KitchenOrder {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false, unique = true)
+    @JoinColumn(
+        name = "order_id",
+        nullable = false,
+        unique = true,
+        foreignKey = @ForeignKey(
+            name = "fk_kitchen_order_order",
+            foreignKeyDefinition = "FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE"
+        )
+    )
     private Order order;
 
     @Enumerated(EnumType.STRING)
