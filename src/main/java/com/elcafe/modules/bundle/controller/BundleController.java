@@ -1,9 +1,13 @@
 package com.elcafe.modules.bundle.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.bundle.dto.BundleRequest;
 import com.elcafe.modules.bundle.dto.BundleResponse;
+import com.elcafe.modules.bundle.entity.Bundle;
+import com.elcafe.modules.bundle.repository.BundleRepository;
 import com.elcafe.modules.bundle.service.BundleService;
 import com.elcafe.utils.ApiResponse;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +29,8 @@ import java.util.List;
 public class BundleController {
 
     private final BundleService bundleService;
+    private final BundleRepository bundleRepository;
+    private final RestaurantAuthorizationService restaurantAuthService;
 
     /**
      * Get all bundles for a restaurant (admin)
@@ -34,6 +40,9 @@ public class BundleController {
     public ResponseEntity<ApiResponse<Page<BundleResponse>>> getBundles(
             @PathVariable Long restaurantId,
             @PageableDefault(size = 20, sort = "displayOrder", direction = Sort.Direction.ASC) Pageable pageable) {
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        restaurantAuthService.validateRestaurantAccess(restaurantId);
+
         log.debug("Getting bundles for restaurant: {}", restaurantId);
         Page<BundleResponse> bundles = bundleService.getBundlesByRestaurant(restaurantId, pageable);
         return ResponseEntity.ok(ApiResponse.success(bundles));
@@ -70,6 +79,9 @@ public class BundleController {
     public ResponseEntity<ApiResponse<BundleResponse>> createBundle(
             @PathVariable Long restaurantId,
             @Valid @RequestBody BundleRequest request) {
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        restaurantAuthService.validateRestaurantAccess(restaurantId);
+
         log.info("Creating bundle for restaurant: {}", restaurantId);
         BundleResponse created = bundleService.createBundle(restaurantId, request);
         return ResponseEntity.ok(ApiResponse.success("Bundle created successfully", created));
@@ -83,6 +95,9 @@ public class BundleController {
     public ResponseEntity<ApiResponse<BundleResponse>> updateBundle(
             @PathVariable Long id,
             @Valid @RequestBody BundleRequest request) {
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        validateBundleAccess(id);
+
         log.info("Updating bundle: {}", id);
         BundleResponse updated = bundleService.updateBundle(id, request);
         return ResponseEntity.ok(ApiResponse.success("Bundle updated successfully", updated));
@@ -94,6 +109,9 @@ public class BundleController {
     @DeleteMapping("/bundles/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<Void>> deleteBundle(@PathVariable Long id) {
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        validateBundleAccess(id);
+
         log.info("Deleting bundle: {}", id);
         bundleService.deleteBundle(id);
         return ResponseEntity.ok(ApiResponse.success("Bundle deleted successfully", null));
@@ -105,9 +123,21 @@ public class BundleController {
     @PatchMapping("/bundles/{id}/toggle")
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<BundleResponse>> toggleBundle(@PathVariable Long id) {
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        validateBundleAccess(id);
+
         log.info("Toggling bundle: {}", id);
         BundleResponse toggled = bundleService.toggleBundle(id);
         return ResponseEntity.ok(ApiResponse.success("Bundle toggled successfully", toggled));
+    }
+
+    /**
+     * Validates that the current user has access to the bundle's restaurant.
+     */
+    private void validateBundleAccess(Long bundleId) {
+        Bundle bundle = bundleRepository.findById(bundleId)
+                .orElseThrow(() -> new EntityNotFoundException("Bundle not found with id: " + bundleId));
+        restaurantAuthService.validateRestaurantAccess(bundle.getRestaurant().getId());
     }
 
     /**

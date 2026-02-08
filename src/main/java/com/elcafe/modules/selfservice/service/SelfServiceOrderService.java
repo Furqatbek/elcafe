@@ -40,6 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.HtmlUtils;
+
+import java.util.regex.Pattern;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -80,6 +83,14 @@ public class SelfServiceOrderService {
     @Lazy private final NotificationService notificationService;
 
     private static final int SESSION_EXPIRY_HOURS = 4;
+
+    // Phone validation: allows digits, spaces, dashes, parentheses, and + prefix
+    // Must have at least 7 digits (international standard minimum)
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^\\+?[\\d\\s\\-()]{7,20}$");
+
+    // Maximum length for text inputs to prevent DoS via large payloads
+    private static final int MAX_NOTES_LENGTH = 500;
+    private static final int MAX_NAME_LENGTH = 100;
 
     /**
      * Start a new self-service session by scanning QR code.
@@ -368,7 +379,7 @@ public class SelfServiceOrderService {
     public SelfServiceOrder submitOrder(String sessionToken, SubmitOrderRequest request) {
         SelfServiceSession session = getValidSession(sessionToken);
 
-        // Validate customer details for takeaway orders
+        // Validate and sanitize customer details
         if (request.getOrderType() == SelfServiceOrderType.TAKEAWAY) {
             if (request.getCustomerName() == null || request.getCustomerName().trim().isEmpty()) {
                 throw new RuntimeException("Customer name is required for takeaway orders");
@@ -376,6 +387,19 @@ public class SelfServiceOrderService {
             if (request.getCustomerPhone() == null || request.getCustomerPhone().trim().isEmpty()) {
                 throw new RuntimeException("Customer phone is required for takeaway orders");
             }
+        }
+
+        // Validate phone number format if provided
+        if (request.getCustomerPhone() != null && !request.getCustomerPhone().trim().isEmpty()) {
+            String phone = request.getCustomerPhone().trim();
+            if (!isValidPhoneNumber(phone)) {
+                throw new RuntimeException("Invalid phone number format");
+            }
+        }
+
+        // Validate and sanitize customer name length
+        if (request.getCustomerName() != null && request.getCustomerName().length() > MAX_NAME_LENGTH) {
+            throw new RuntimeException("Customer name exceeds maximum length");
         }
 
         List<SelfServiceCartItem> cartItems = cartItemRepository.findBySessionIdOrderByAddedAtAsc(session.getId());
@@ -428,7 +452,11 @@ public class SelfServiceOrderService {
         }
 
         // Get customer notes (frontend sends "notes", DTO also supports "specialInstructions")
-        String customerNotes = request.getNotes() != null ? request.getNotes() : request.getSpecialInstructions();
+        // Sanitize to prevent XSS and limit length
+        String customerNotes = sanitizeTextInput(
+                request.getNotes() != null ? request.getNotes() : request.getSpecialInstructions(),
+                MAX_NOTES_LENGTH
+        );
 
         // Map SelfServiceOrderType to OrderType
         OrderType orderType = request.getOrderType() == SelfServiceOrderType.TAKEAWAY
@@ -695,5 +723,67 @@ public class SelfServiceOrderService {
                 .specialInstructions(item.getSpecialInstructions())
                 .modifiers(modifiers)
                 .build();
+    }
+
+    // ==================== SECURITY METHODS ====================
+
+    /**
+     * Get order status with session validation to prevent IDOR attacks.
+     * Only the session that created the order can access its status.
+     */
+    public SelfServiceOrder getOrderStatusWithSessionValidation(String sessionToken, Long orderId) {
+        SelfServiceSession session = sessionRepository.findBySessionTokenAndIsActiveTrue(sessionToken)
+                .orElseThrow(() -> new RuntimeException("Session not found or expired"));
+
+        SelfServiceOrder order = selfServiceOrderRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // Validate that the order belongs to this session
+        if (order.getSession() == null || !order.getSession().getId().equals(session.getId())) {
+            log.warn("IDOR attempt: Session {} tried to access order {} belonging to session {}",
+                    session.getId(), orderId, order.getSession() != null ? order.getSession().getId() : "null");
+            throw new RuntimeException("Order not found"); // Don't reveal that order exists
+        }
+
+        return order;
+    }
+
+    /**
+     * Validates phone number format.
+     * Allows international formats with optional + prefix.
+     */
+    private boolean isValidPhoneNumber(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return false;
+        }
+
+        // Remove common formatting characters for digit count check
+        String digitsOnly = phone.replaceAll("[^0-9]", "");
+        if (digitsOnly.length() < 7 || digitsOnly.length() > 15) {
+            return false;
+        }
+
+        return PHONE_PATTERN.matcher(phone).matches();
+    }
+
+    /**
+     * Sanitizes text input to prevent XSS and limits length.
+     * Uses HTML escaping to neutralize any script injection attempts.
+     */
+    private String sanitizeTextInput(String input, int maxLength) {
+        if (input == null) {
+            return null;
+        }
+
+        // Trim and limit length
+        String sanitized = input.trim();
+        if (sanitized.length() > maxLength) {
+            sanitized = sanitized.substring(0, maxLength);
+        }
+
+        // HTML escape to prevent XSS
+        sanitized = HtmlUtils.htmlEscape(sanitized);
+
+        return sanitized.isBlank() ? null : sanitized;
     }
 }

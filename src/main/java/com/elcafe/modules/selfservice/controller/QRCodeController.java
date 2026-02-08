@@ -1,5 +1,6 @@
 package com.elcafe.modules.selfservice.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.selfservice.dto.CreateQRCodeRequest;
 import com.elcafe.modules.selfservice.entity.QRCode;
 import com.elcafe.modules.selfservice.entity.SelfServiceSettings;
@@ -33,6 +34,7 @@ public class QRCodeController {
 
     private final QRCodeService qrCodeService;
     private final SelfServiceOrderService orderService;
+    private final RestaurantAuthorizationService restaurantAuthService;
 
     /**
      * Create a new QR code.
@@ -41,6 +43,9 @@ public class QRCodeController {
     @Operation(summary = "Create QR code", description = "Create a new QR code")
     public ResponseEntity<Map<String, Object>> createQRCode(@Valid @RequestBody CreateQRCodeRequest request) {
         try {
+            // Validate restaurant access to prevent cross-restaurant IDOR
+            restaurantAuthService.validateRestaurantAccess(request.getRestaurantId());
+
             QRCode qrCode = qrCodeService.createQRCode(request);
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -61,6 +66,9 @@ public class QRCodeController {
     @Operation(summary = "Generate for all tables", description = "Generate QR codes for all tables in a restaurant")
     public ResponseEntity<Map<String, Object>> generateForAllTables(
             @PathVariable Long restaurantId) {
+
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        restaurantAuthService.validateRestaurantAccess(restaurantId);
 
         try {
             List<QRCode> generated = qrCodeService.generateForAllTables(restaurantId);
@@ -89,6 +97,9 @@ public class QRCodeController {
     public ResponseEntity<Page<QRCode>> getByRestaurant(
             @PathVariable Long restaurantId,
             Pageable pageable) {
+
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        restaurantAuthService.validateRestaurantAccess(restaurantId);
 
         Page<QRCode> qrCodes = qrCodeService.getByRestaurant(restaurantId, pageable);
         return ResponseEntity.ok(qrCodes);
@@ -190,6 +201,9 @@ public class QRCodeController {
     @GetMapping("/restaurant/{restaurantId}/stats")
     @Operation(summary = "Get statistics", description = "Get QR code statistics for a restaurant")
     public ResponseEntity<QRCodeService.QRCodeStats> getStats(@PathVariable Long restaurantId) {
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        restaurantAuthService.validateRestaurantAccess(restaurantId);
+
         QRCodeService.QRCodeStats stats = qrCodeService.getStats(restaurantId);
         return ResponseEntity.ok(stats);
     }
@@ -202,6 +216,9 @@ public class QRCodeController {
     @GetMapping("/restaurant/{restaurantId}/settings")
     @Operation(summary = "Get settings", description = "Get self-service settings for a restaurant")
     public ResponseEntity<SelfServiceSettings> getSettings(@PathVariable Long restaurantId) {
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        restaurantAuthService.validateRestaurantAccess(restaurantId);
+
         SelfServiceSettings settings = orderService.getSettings(restaurantId);
         if (settings == null) {
             // Return default settings if none exist
@@ -227,6 +244,9 @@ public class QRCodeController {
     public ResponseEntity<SelfServiceSettings> saveSettings(
             @PathVariable Long restaurantId,
             @Valid @RequestBody SelfServiceSettings settings) {
+
+        // Validate restaurant access to prevent cross-restaurant IDOR
+        restaurantAuthService.validateRestaurantAccess(restaurantId);
 
         SelfServiceSettings saved = orderService.saveSettings(restaurantId, settings);
         return ResponseEntity.ok(saved);

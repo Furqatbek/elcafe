@@ -691,13 +691,16 @@ public class SelfServiceController {
 
     /**
      * Get order status.
+     * Requires session token to validate ownership - prevents IDOR attacks.
      */
     @GetMapping("/order/{orderId}/status")
     @Operation(summary = "Get order status", description = "Get the status of an order")
     public ResponseEntity<Map<String, Object>> getOrderStatus(
+            @RequestHeader("X-Session-Token") String sessionToken,
             @PathVariable Long orderId) {
 
-        SelfServiceOrder order = orderService.getOrderStatus(orderId);
+        // Validate session and order ownership to prevent IDOR
+        SelfServiceOrder order = orderService.getOrderStatusWithSessionValidation(sessionToken, orderId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("orderId", order.getOrder().getId());
