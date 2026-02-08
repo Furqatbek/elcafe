@@ -266,23 +266,57 @@ public class InventoryBatchService {
     }
 
     /**
-     * Mark expired batches as expired (for scheduled job)
+     * Mark expired batches as expired and deduct from ingredient stock (for scheduled job).
+     * This method fixes the phantom stock issue by ensuring currentStock is reduced
+     * when batches expire, maintaining consistency between Ingredient.currentStock
+     * and InventoryBatch quantities.
      */
     @Transactional
     public int markExpiredBatches(Long restaurantId) {
         List<InventoryBatch> expiredBatches = batchRepository.findExpiredBatches(restaurantId, LocalDate.now());
         int count = 0;
+        BigDecimal totalExpiredQuantity = BigDecimal.ZERO;
 
         for (InventoryBatch batch : expiredBatches) {
             if (batch.getStatus() == InventoryBatch.Status.ACTIVE) {
+                BigDecimal expiredQuantity = batch.getQuantity();
+
+                // Mark batch as expired
                 batch.markExpired();
                 batchRepository.save(batch);
+
+                // CRITICAL FIX: Deduct expired quantity from ingredient's currentStock
+                // to prevent phantom stock
+                if (expiredQuantity != null && expiredQuantity.compareTo(BigDecimal.ZERO) > 0) {
+                    Ingredient ingredient = batch.getIngredient();
+                    ingredient.forceDeductStock(expiredQuantity);
+                    ingredientRepository.save(ingredient);
+
+                    log.info("Deducted {} {} of {} from stock due to batch {} expiry",
+                            expiredQuantity, ingredient.getUnit(), ingredient.getName(),
+                            batch.getBatchNumber());
+
+                    totalExpiredQuantity = totalExpiredQuantity.add(expiredQuantity);
+
+                    // Optionally create a waste record for the expired stock
+                    try {
+                        wasteService.recordWasteFromBatch(batch,
+                                WasteRecord.WasteReason.EXPIRED,
+                                "SYSTEM",
+                                "Auto-expired by scheduled job");
+                    } catch (Exception e) {
+                        log.warn("Failed to create waste record for expired batch {}: {}",
+                                batch.getBatchNumber(), e.getMessage());
+                    }
+                }
+
                 count++;
             }
         }
 
         if (count > 0) {
-            log.info("Marked {} batches as expired for restaurant {}", count, restaurantId);
+            log.info("Marked {} batches as expired for restaurant {}, total quantity removed: {}",
+                    count, restaurantId, totalExpiredQuantity);
         }
 
         return count;

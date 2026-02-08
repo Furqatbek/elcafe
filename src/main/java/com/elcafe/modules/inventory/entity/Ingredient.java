@@ -26,6 +26,15 @@ public class Ingredient {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /**
+     * Version field for optimistic locking - prevents race conditions
+     * when multiple transactions try to modify stock concurrently
+     */
+    @Version
+    @Column(nullable = false)
+    @Builder.Default
+    private Long version = 0L;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
@@ -119,11 +128,45 @@ public class Ingredient {
         return currentStock.compareTo(requiredQuantity) >= 0;
     }
 
+    /**
+     * Add stock to current inventory.
+     * Thread-safety is ensured by @Version optimistic locking at JPA level.
+     * @throws IllegalArgumentException if quantity is null or negative
+     */
     public void addStock(BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Stock quantity to add must be non-negative");
+        }
         this.currentStock = this.currentStock.add(quantity);
     }
 
+    /**
+     * Deduct stock from current inventory.
+     * Thread-safety is ensured by @Version optimistic locking at JPA level.
+     * @throws IllegalArgumentException if quantity is null or negative
+     * @throws IllegalStateException if deduction would result in negative stock
+     */
     public void deductStock(BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Stock quantity to deduct must be non-negative");
+        }
+        BigDecimal newStock = this.currentStock.subtract(quantity);
+        if (newStock.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException(
+                String.format("Insufficient stock: attempted to deduct %s but only %s available",
+                    quantity, this.currentStock));
+        }
+        this.currentStock = newStock;
+    }
+
+    /**
+     * Force set stock to zero (e.g., for expired batch write-offs).
+     * Use cautiously - only for administrative corrections.
+     */
+    public void forceDeductStock(BigDecimal quantity) {
+        if (quantity == null || quantity.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Stock quantity to deduct must be non-negative");
+        }
         this.currentStock = this.currentStock.subtract(quantity);
         if (this.currentStock.compareTo(BigDecimal.ZERO) < 0) {
             this.currentStock = BigDecimal.ZERO;

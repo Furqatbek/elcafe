@@ -11,6 +11,8 @@ import com.elcafe.modules.inventory.entity.Supplier;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.SupplierRepository;
 import com.elcafe.modules.inventory.service.InventoryService;
+import com.elcafe.modules.inventory.service.StockOperationService;
+import com.elcafe.modules.inventory.service.StockOperationService.StockReconciliationResult;
 import com.elcafe.modules.menu.service.ProductCostService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -37,6 +39,7 @@ public class InventoryIngredientController {
     private final SupplierRepository supplierRepository;
     private final InventoryService inventoryService;
     private final ProductCostService productCostService;
+    private final StockOperationService stockOperationService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<IngredientResponse>>> getIngredients(
@@ -229,6 +232,42 @@ public class InventoryIngredientController {
         List<InventoryTransaction> transactions = inventoryService.getTransactionHistory(id);
 
         return ResponseEntity.ok(ApiResponse.success("Transactions retrieved successfully", transactions));
+    }
+
+    /**
+     * Reconcile stock for a single ingredient - check consistency between
+     * Ingredient.currentStock and sum of InventoryBatch quantities.
+     */
+    @GetMapping("/{id}/reconcile")
+    public ResponseEntity<ApiResponse<StockReconciliationResult>> reconcileIngredient(
+            @PathVariable Long id) {
+        log.info("Reconciling stock for ingredient: {}", id);
+
+        StockReconciliationResult result = stockOperationService.reconcileStock(id);
+
+        String message = result.consistent()
+                ? "Stock is consistent"
+                : "Stock discrepancy detected";
+
+        return ResponseEntity.ok(ApiResponse.success(message, result));
+    }
+
+    /**
+     * Reconcile all ingredients for a restaurant - returns only discrepancies.
+     * This is useful for scheduled audits and manual inventory checks.
+     */
+    @GetMapping("/reconcile")
+    public ResponseEntity<ApiResponse<List<StockReconciliationResult>>> reconcileAllIngredients(
+            @RequestParam Long restaurantId) {
+        log.info("Reconciling all ingredients for restaurant: {}", restaurantId);
+
+        List<StockReconciliationResult> discrepancies = stockOperationService.reconcileAllStock(restaurantId);
+
+        String message = discrepancies.isEmpty()
+                ? "All stock is consistent"
+                : String.format("Found %d ingredient(s) with stock discrepancies", discrepancies.size());
+
+        return ResponseEntity.ok(ApiResponse.success(message, discrepancies));
     }
 
     private IngredientResponse mapToResponse(Ingredient ingredient) {

@@ -87,6 +87,9 @@ public class InventoryService {
 
             // Try to use valuation service for batch-based consumption
             InventoryValuationService.ConsumptionResult consumptionResult = null;
+            boolean valuationFailed = false;
+            String valuationFailureReason = null;
+
             try {
                 consumptionResult = valuationService.consumeWithValuation(
                         ingredientId, quantityRequired, order.getId());
@@ -94,14 +97,24 @@ public class InventoryService {
                         consumptionResult.quantityConsumed(), ingredient.getName(),
                         consumptionResult.method(), consumptionResult.totalCost());
             } catch (Exception e) {
-                log.warn("Failed to use valuation service for deduction, falling back to simple deduction: {}",
-                        e.getMessage());
-                // Fallback to simple deduction
+                valuationFailed = true;
+                valuationFailureReason = e.getMessage();
+                log.error("COGS TRACKING DEGRADED: Valuation service failed for ingredient {} (order {}). " +
+                        "Falling back to simple deduction - batch-level cost tracking will be lost. Error: {}",
+                        ingredient.getName(), order.getOrderNumber(), e.getMessage());
+
+                // Fallback to simple deduction - but track the failure
                 ingredient.deductStock(quantityRequired);
                 ingredientRepository.save(ingredient);
             }
 
             BigDecimal balanceAfter = ingredient.getCurrentStock();
+
+            // Build notes with failure tracking
+            String transactionNotes = "Deducted for order: " + order.getOrderNumber();
+            if (valuationFailed) {
+                transactionNotes += " [VALUATION_FAILED: " + valuationFailureReason + "]";
+            }
 
             // Record transaction with cost info if available
             InventoryTransaction.InventoryTransactionBuilder transactionBuilder = InventoryTransaction.builder()
@@ -112,7 +125,7 @@ public class InventoryService {
                     .balanceAfter(balanceAfter)
                     .referenceType("ORDER")
                     .referenceId(order.getId())
-                    .notes("Deducted for order: " + order.getOrderNumber())
+                    .notes(transactionNotes)
                     .performedBy("SYSTEM");
 
             // Add cost info from valuation if available
@@ -121,6 +134,13 @@ public class InventoryService {
                         .costPerUnit(consumptionResult.averageCostPerUnit())
                         .totalCost(consumptionResult.totalCost())
                         .valuationMethod(consumptionResult.method());
+            } else {
+                // Use ingredient's effective cost as fallback for tracking purposes
+                BigDecimal fallbackCost = ingredient.getEffectiveCost();
+                transactionBuilder
+                        .costPerUnit(fallbackCost)
+                        .totalCost(fallbackCost.multiply(quantityRequired))
+                        .valuationMethod(ValuationMethod.WEIGHTED_AVERAGE); // Indicate it's WAC fallback
             }
 
             transactionRepository.save(transactionBuilder.build());
