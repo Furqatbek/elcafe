@@ -62,7 +62,7 @@ public class AnalyticsSummaryService {
         InventoryTurnoverDTO inventoryTurnover = inventoryAnalyticsService.getInventoryTurnover(startDate, endDate, restaurantId);
 
         // Safe null handling for inventory turnovers
-        List<InventoryTurnoverDTO.IngredientTurnover> ingredientTurnovers =
+        List<InventoryTurnoverDTO.IngredientTurnoverDTO> ingredientTurnovers =
                 inventoryTurnover != null && inventoryTurnover.getIngredientTurnovers() != null
                         ? inventoryTurnover.getIngredientTurnovers()
                         : List.of();

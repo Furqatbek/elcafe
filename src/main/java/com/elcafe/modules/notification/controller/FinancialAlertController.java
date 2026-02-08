@@ -1,5 +1,6 @@
 package com.elcafe.modules.notification.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.notification.dto.FinancialAlertSubscriptionRequest;
 import com.elcafe.modules.notification.dto.FinancialAlertSubscriptionResponse;
 import com.elcafe.modules.notification.entity.FinancialAlertSubscription;
@@ -31,6 +32,7 @@ public class FinancialAlertController {
     private final FinancialAlertSubscriptionRepository subscriptionRepository;
     private final DailyFinancialReportService dailyFinancialReportService;
     private final RestaurantRepository restaurantRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     /**
      * Get all subscriptions for a restaurant
@@ -38,6 +40,8 @@ public class FinancialAlertController {
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<List<FinancialAlertSubscriptionResponse>> getSubscriptions(
             @PathVariable Long restaurantId) {
+
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
 
         List<FinancialAlertSubscription> subscriptions =
             subscriptionRepository.findByRestaurant_Id(restaurantId);
@@ -55,6 +59,8 @@ public class FinancialAlertController {
     @PostMapping
     public ResponseEntity<FinancialAlertSubscriptionResponse> createSubscription(
             @Valid @RequestBody FinancialAlertSubscriptionRequest request) {
+
+        restaurantAuthorizationService.validateRestaurantAccess(request.getRestaurantId());
 
         // Check if subscription already exists
         if (subscriptionRepository.findByRestaurant_IdAndTelegramChatId(
@@ -94,6 +100,9 @@ public class FinancialAlertController {
         FinancialAlertSubscription subscription = subscriptionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Subscription not found"));
 
+        // Validate user has access to the restaurant this subscription belongs to
+        restaurantAuthorizationService.validateRestaurantAccess(subscription.getRestaurant().getId());
+
         subscription.setSubscriberName(request.getSubscriberName());
         subscription.setAlertDailyRevenue(request.getAlertDailyRevenue());
         subscription.setAlertDailyExpenses(request.getAlertDailyExpenses());
@@ -114,9 +123,14 @@ public class FinancialAlertController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSubscription(@PathVariable Long id) {
-        if (!subscriptionRepository.existsById(id)) {
+        FinancialAlertSubscription subscription = subscriptionRepository.findById(id)
+            .orElse(null);
+        if (subscription == null) {
             return ResponseEntity.notFound().build();
         }
+
+        // Validate user has access to the restaurant this subscription belongs to
+        restaurantAuthorizationService.validateRestaurantAccess(subscription.getRestaurant().getId());
 
         subscriptionRepository.deleteById(id);
         log.info("Deleted financial alert subscription {}", id);
@@ -132,6 +146,9 @@ public class FinancialAlertController {
         FinancialAlertSubscription subscription = subscriptionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Subscription not found"));
 
+        // Validate user has access to the restaurant this subscription belongs to
+        restaurantAuthorizationService.validateRestaurantAccess(subscription.getRestaurant().getId());
+
         subscription.setActive(!subscription.getActive());
         subscription = subscriptionRepository.save(subscription);
 
@@ -146,6 +163,8 @@ public class FinancialAlertController {
      */
     @PostMapping("/trigger/{restaurantId}")
     public ResponseEntity<Map<String, Object>> triggerDailyReport(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
+
         dailyFinancialReportService.triggerReportForRestaurant(restaurantId);
 
         return ResponseEntity.ok(Map.of(
@@ -164,6 +183,8 @@ public class FinancialAlertController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
 
         // Support both single date and date range (like P&L API)
         LocalDate start;

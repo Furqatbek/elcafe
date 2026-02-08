@@ -18,7 +18,6 @@ import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.repository.PaymentRepository;
 import com.elcafe.modules.financial.service.RevenueRecordingService;
 import com.elcafe.modules.financial.service.RevenueService;
-import com.elcafe.modules.notification.service.FinancialOperationAlertService;
 import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1623,9 +1623,143 @@ All error responses follow this format:
 
 ## Rate Limiting
 
+The API uses a token bucket algorithm (Bucket4j) for rate limiting:
+
+### Standard Limits
+| Limit Type | Rate | Refill Rate |
+|------------|------|-------------|
+| User API calls | 100 requests/minute | 100 tokens/minute |
+| Analytics endpoints | 20 requests/minute | 20 tokens/minute |
+| Expensive endpoints | 10 requests/minute | 10 tokens/minute |
+
+### Specific Limits
 - **OTP requests**: 3 requests per 15 minutes per phone number
 - **Login attempts**: 5 attempts per 15 minutes per user
-- **Public API**: 100 requests per minute per IP
+
+### Rate Limit Response
+When rate limit is exceeded, the API returns:
+```json
+{
+  "success": false,
+  "message": "Rate limit exceeded. Please wait before making more requests.",
+  "timestamp": "2025-12-05T15:30:00Z"
+}
+```
+**HTTP Status**: 429 Too Many Requests
+
+---
+
+## Financial Alerts & Notifications
+
+### Financial Alert Subscriptions
+
+#### Get Subscriptions (Admin/Owner/Manager)
+```http
+GET /api/v1/notifications/financial-alerts/restaurant/{restaurantId}
+Authorization: Bearer {token}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "restaurantId": 1,
+      "telegramChatId": "123456789",
+      "subscriberName": "Finance Team",
+      "alertDailyRevenue": true,
+      "alertDailyExpenses": true,
+      "alertDailyProfit": true,
+      "reportTime": "23:00:00",
+      "active": true,
+      "createdAt": "2025-12-01T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### Create Subscription (Admin/Owner/Manager)
+```http
+POST /api/v1/notifications/financial-alerts
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "restaurantId": 1,
+  "telegramChatId": "123456789",
+  "subscriberName": "Finance Team",
+  "alertDailyRevenue": true,
+  "alertDailyExpenses": true,
+  "alertDailyProfit": true,
+  "reportTime": "23:00",
+  "active": true
+}
+```
+
+#### Update Subscription (Admin/Owner/Manager)
+```http
+PUT /api/v1/notifications/financial-alerts/{id}
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "subscriberName": "Updated Name",
+  "alertDailyRevenue": true,
+  "alertDailyExpenses": false,
+  "alertDailyProfit": true,
+  "reportTime": "22:00",
+  "active": true
+}
+```
+
+#### Delete Subscription (Admin/Owner/Manager)
+```http
+DELETE /api/v1/notifications/financial-alerts/{id}
+Authorization: Bearer {token}
+```
+
+#### Toggle Subscription (Admin/Owner/Manager)
+```http
+POST /api/v1/notifications/financial-alerts/{id}/toggle
+Authorization: Bearer {token}
+```
+
+#### Trigger Daily Report Manually (Admin/Owner/Manager)
+```http
+POST /api/v1/notifications/financial-alerts/trigger/{restaurantId}
+Authorization: Bearer {token}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Daily financial report triggered successfully"
+}
+```
+
+#### Get Daily Metrics (Admin/Owner/Manager)
+```http
+GET /api/v1/notifications/financial-alerts/metrics/{restaurantId}?startDate=2025-12-01&endDate=2025-12-05
+Authorization: Bearer {token}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "restaurantId": 1,
+    "startDate": "2025-12-01",
+    "endDate": "2025-12-05",
+    "totalRevenue": 5000000,
+    "totalExpenses": 3000000,
+    "netProfit": 2000000,
+    "orderCount": 150
+  }
+}
 
 ---
 
@@ -2216,4 +2350,4 @@ Authorization: Bearer {token}
 ---
 
 **API Version**: 1.0.0
-**Last Updated**: 2025-12-15
+**Last Updated**: 2026-02-08

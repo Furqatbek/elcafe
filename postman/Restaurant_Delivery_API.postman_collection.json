@@ -3300,6 +3300,132 @@
 				}
 			],
 			"description": "Business analytics and reporting endpoints. All endpoints require authentication and validate restaurant access based on user role."
+		},
+		{
+			"name": "Financial Alerts",
+			"item": [
+				{
+					"name": "Get Subscriptions for Restaurant",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/restaurant/{{restaurant_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "restaurant", "{{restaurant_id}}"]
+						},
+						"description": "Get all financial alert subscriptions for a restaurant. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Subscription",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"restaurantId\": 1,\n  \"telegramChatId\": \"123456789\",\n  \"subscriberName\": \"Finance Team\",\n  \"alertDailyRevenue\": true,\n  \"alertDailyExpenses\": true,\n  \"alertDailyProfit\": true,\n  \"reportTime\": \"23:00\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts"]
+						},
+						"description": "Create a new financial alert subscription. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Subscription",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"subscriberName\": \"Updated Name\",\n  \"alertDailyRevenue\": true,\n  \"alertDailyExpenses\": false,\n  \"alertDailyProfit\": true,\n  \"reportTime\": \"22:00\",\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/{{subscription_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "{{subscription_id}}"]
+						},
+						"description": "Update an existing financial alert subscription. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Subscription",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/{{subscription_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "{{subscription_id}}"]
+						},
+						"description": "Delete a financial alert subscription. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle Subscription",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/{{subscription_id}}/toggle",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "{{subscription_id}}", "toggle"]
+						},
+						"description": "Toggle the active status of a subscription. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Trigger Daily Report",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/trigger/{{restaurant_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "trigger", "{{restaurant_id}}"]
+						},
+						"description": "Manually trigger a daily financial report for a restaurant. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Daily Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/notifications/financial-alerts/metrics/{{restaurant_id}}?startDate=2024-01-01&endDate=2024-12-31",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "notifications", "financial-alerts", "metrics", "{{restaurant_id}}"],
+							"query": [
+								{"key": "startDate", "value": "2024-01-01"},
+								{"key": "endDate", "value": "2024-12-31"}
+							]
+						},
+						"description": "Get daily financial metrics for a restaurant. ADMIN/OWNER/MANAGER roles required."
+					},
+					"response": []
+				}
+			],
+			"description": "Financial alerts and notifications management. Subscribe to daily reports via Telegram. All endpoints require ADMIN, OWNER, or MANAGER role and validate restaurant-level access."
 		}
 	],
 	"variable": [
