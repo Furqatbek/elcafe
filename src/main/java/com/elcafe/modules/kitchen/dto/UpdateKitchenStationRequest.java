@@ -1,5 +1,7 @@
 package com.elcafe.modules.kitchen.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -25,6 +27,8 @@ public class UpdateKitchenStationRequest {
     @Size(max = 20, message = "Color must not exceed 20 characters")
     private String color;
 
+    @Min(value = 0, message = "Sort order must be at least 0")
+    @Max(value = 9999, message = "Sort order must not exceed 9999")
     private Integer sortOrder;
 
     private Boolean active;

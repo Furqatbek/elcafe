@@ -7,6 +7,8 @@ import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.kitchen.entity.KitchenOrder;
 import com.elcafe.modules.kitchen.enums.KitchenOrderStatus;
 import com.elcafe.modules.kitchen.enums.KitchenPriority;
+import com.elcafe.modules.kitchen.exception.InvalidKitchenStatusTransitionException;
+import com.elcafe.modules.kitchen.exception.KitchenOrderNotFoundException;
 import com.elcafe.modules.kitchen.repository.KitchenOrderRepository;
 import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.entity.DeliveryInfo;
@@ -50,13 +52,17 @@ public class KitchenOrderService {
     private static final int PREPARING_TIMEOUT_MINUTES = 45;
     private static final int READY_TIMEOUT_MINUTES = 30;
 
+    // Default values
+    private static final int DEFAULT_PREPARATION_TIME_MINUTES = 30;
+    private static final int MAX_CHEF_NAME_LENGTH = 100;
+
     @Transactional
     public KitchenOrder createKitchenOrder(Order order) {
         KitchenOrder kitchenOrder = KitchenOrder.builder()
                 .order(order)
                 .status(KitchenOrderStatus.PENDING)
                 .priority(KitchenPriority.NORMAL)
-                .estimatedPreparationTimeMinutes(30) // Default 30 minutes
+                .estimatedPreparationTimeMinutes(DEFAULT_PREPARATION_TIME_MINUTES)
                 .build();
 
         return kitchenOrderRepository.save(kitchenOrder);
@@ -67,31 +73,33 @@ public class KitchenOrderService {
                 KitchenOrderStatus.PENDING,
                 KitchenOrderStatus.PREPARING
         );
-
-        if (restaurantId != null) {
-            return kitchenOrderRepository.findByRestaurantAndStatuses(restaurantId, activeStatuses);
-        }
-        return kitchenOrderRepository.findByStatusInOrderByPriorityDescCreatedAtAsc(activeStatuses);
+        return getOrdersByStatuses(restaurantId, activeStatuses);
     }
 
     public List<KitchenOrder> getReadyOrders(Long restaurantId) {
         List<KitchenOrderStatus> readyStatuses = List.of(KitchenOrderStatus.READY);
+        return getOrdersByStatuses(restaurantId, readyStatuses);
+    }
 
+    /**
+     * Common helper method to retrieve orders by status list.
+     * Reduces code duplication between getActiveOrders and getReadyOrders.
+     */
+    private List<KitchenOrder> getOrdersByStatuses(Long restaurantId, List<KitchenOrderStatus> statuses) {
         if (restaurantId != null) {
-            return kitchenOrderRepository.findByRestaurantAndStatuses(restaurantId, readyStatuses);
+            return kitchenOrderRepository.findByRestaurantAndStatuses(restaurantId, statuses);
         }
-        return kitchenOrderRepository.findByStatusOrderByCreatedAtAsc(KitchenOrderStatus.READY);
+        return kitchenOrderRepository.findByStatusInOrderByPriorityDescCreatedAtAsc(statuses);
     }
 
     @Transactional
     public KitchenOrder startPreparation(Long kitchenOrderId, String chefName) {
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
 
         if (kitchenOrder.getStatus() != KitchenOrderStatus.PENDING) {
-            throw new IllegalStateException(
-                    String.format("Cannot start preparation: current status is %s, expected PENDING",
-                            kitchenOrder.getStatus()));
+            throw new InvalidKitchenStatusTransitionException(
+                    "start preparation", kitchenOrder.getStatus(), KitchenOrderStatus.PENDING);
         }
 
         kitchenOrder.startPreparation(chefName);
@@ -120,12 +128,11 @@ public class KitchenOrderService {
     @Transactional
     public KitchenOrder markAsReady(Long kitchenOrderId) {
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
 
         if (kitchenOrder.getStatus() != KitchenOrderStatus.PREPARING) {
-            throw new IllegalStateException(
-                    String.format("Cannot mark as ready: current status is %s, expected PREPARING",
-                            kitchenOrder.getStatus()));
+            throw new InvalidKitchenStatusTransitionException(
+                    "mark as ready", kitchenOrder.getStatus(), KitchenOrderStatus.PREPARING);
         }
 
         kitchenOrder.completePreparation();
@@ -154,13 +161,12 @@ public class KitchenOrderService {
     @Transactional
     public KitchenOrder markAsPickedUp(Long kitchenOrderId) {
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
 
         // Validate status transition: only READY orders can be picked up
         if (kitchenOrder.getStatus() != KitchenOrderStatus.READY) {
-            throw new IllegalStateException(
-                    String.format("Cannot mark order as picked up: current status is %s, expected READY",
-                            kitchenOrder.getStatus()));
+            throw new InvalidKitchenStatusTransitionException(
+                    "mark as picked up", kitchenOrder.getStatus(), KitchenOrderStatus.READY);
         }
 
         kitchenOrder.setStatus(KitchenOrderStatus.PICKED_UP);
@@ -186,14 +192,13 @@ public class KitchenOrderService {
     @Transactional
     public KitchenOrder updatePriority(Long kitchenOrderId, KitchenPriority priority) {
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
 
         // Only allow priority updates for active orders (PENDING or PREPARING)
         if (kitchenOrder.getStatus() != KitchenOrderStatus.PENDING &&
             kitchenOrder.getStatus() != KitchenOrderStatus.PREPARING) {
-            throw new IllegalStateException(
-                    String.format("Cannot update priority: order is in %s status",
-                            kitchenOrder.getStatus()));
+            throw new InvalidKitchenStatusTransitionException(
+                    String.format("Cannot update priority: order is in %s status", kitchenOrder.getStatus()));
         }
 
         kitchenOrder.setPriority(priority);
@@ -227,11 +232,11 @@ public class KitchenOrderService {
             log.warn("Duplicate request detected for starting kitchen order {} (key: {})",
                     kitchenOrderId, effectiveKey);
             return kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                    .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                    .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
         }
 
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
 
         // Validate restaurant access - prevents IDOR
         validateRestaurantAccess(kitchenOrder, currentUser);
@@ -242,9 +247,8 @@ public class KitchenOrderService {
         KitchenOrderStatus previousStatus = kitchenOrder.getStatus();
 
         if (previousStatus != KitchenOrderStatus.PENDING) {
-            throw new IllegalStateException(
-                    String.format("Cannot start preparation: current status is %s, expected PENDING",
-                            previousStatus));
+            throw new InvalidKitchenStatusTransitionException(
+                    "start preparation", previousStatus, KitchenOrderStatus.PENDING);
         }
 
         kitchenOrder.startPreparation(sanitizedChefName);
@@ -301,11 +305,11 @@ public class KitchenOrderService {
             log.warn("Duplicate request detected for marking kitchen order {} ready (key: {})",
                     kitchenOrderId, effectiveKey);
             return kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                    .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                    .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
         }
 
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
 
         // Validate restaurant access - prevents IDOR
         validateRestaurantAccess(kitchenOrder, currentUser);
@@ -313,9 +317,8 @@ public class KitchenOrderService {
         KitchenOrderStatus previousStatus = kitchenOrder.getStatus();
 
         if (previousStatus != KitchenOrderStatus.PREPARING) {
-            throw new IllegalStateException(
-                    String.format("Cannot mark as ready: current status is %s, expected PREPARING",
-                            previousStatus));
+            throw new InvalidKitchenStatusTransitionException(
+                    "mark as ready", previousStatus, KitchenOrderStatus.PREPARING);
         }
 
         kitchenOrder.completePreparation();
@@ -369,11 +372,11 @@ public class KitchenOrderService {
             log.warn("Duplicate request detected for picking up kitchen order {} (key: {})",
                     kitchenOrderId, effectiveKey);
             return kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                    .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                    .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
         }
 
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
 
         // Validate restaurant access - prevents IDOR
         validateRestaurantAccess(kitchenOrder, currentUser);
@@ -386,9 +389,8 @@ public class KitchenOrderService {
         KitchenOrderStatus previousStatus = kitchenOrder.getStatus();
 
         if (previousStatus != KitchenOrderStatus.READY) {
-            throw new IllegalStateException(
-                    String.format("Cannot mark order as picked up: current status is %s, expected READY",
-                            previousStatus));
+            throw new InvalidKitchenStatusTransitionException(
+                    "mark as picked up", previousStatus, KitchenOrderStatus.READY);
         }
 
         kitchenOrder.setStatus(KitchenOrderStatus.PICKED_UP);
@@ -423,16 +425,15 @@ public class KitchenOrderService {
     @Transactional
     public KitchenOrder updatePriorityWithAuth(Long kitchenOrderId, KitchenPriority priority, UserPrincipal currentUser) {
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
-                .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
+                .orElseThrow(() -> new KitchenOrderNotFoundException(kitchenOrderId));
 
         // Validate restaurant access - prevents IDOR
         validateRestaurantAccess(kitchenOrder, currentUser);
 
         if (kitchenOrder.getStatus() != KitchenOrderStatus.PENDING &&
             kitchenOrder.getStatus() != KitchenOrderStatus.PREPARING) {
-            throw new IllegalStateException(
-                    String.format("Cannot update priority: order is in %s status",
-                            kitchenOrder.getStatus()));
+            throw new InvalidKitchenStatusTransitionException(
+                    String.format("Cannot update priority: order is in %s status", kitchenOrder.getStatus()));
         }
 
         kitchenOrder.setPriority(priority);
@@ -490,8 +491,8 @@ public class KitchenOrderService {
 
         // Trim and limit length
         String sanitized = chefName.trim();
-        if (sanitized.length() > 100) {
-            sanitized = sanitized.substring(0, 100);
+        if (sanitized.length() > MAX_CHEF_NAME_LENGTH) {
+            sanitized = sanitized.substring(0, MAX_CHEF_NAME_LENGTH);
         }
 
         // HTML escape to prevent XSS

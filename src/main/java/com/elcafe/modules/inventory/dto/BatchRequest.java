@@ -1,6 +1,6 @@
 package com.elcafe.modules.inventory.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
@@ -24,6 +24,7 @@ public class BatchRequest {
 
     @NotNull(message = "Quantity is required")
     @Positive(message = "Quantity must be positive")
+    @DecimalMax(value = "999999.99", message = "Quantity must not exceed 999999.99")
     private BigDecimal quantity;
 
     @NotNull(message = "Received date is required")

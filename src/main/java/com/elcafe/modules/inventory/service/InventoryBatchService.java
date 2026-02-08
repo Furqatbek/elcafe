@@ -6,19 +6,26 @@ import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryBatch;
 import com.elcafe.modules.inventory.entity.Supplier;
 import com.elcafe.modules.inventory.entity.WasteRecord;
+import com.elcafe.modules.inventory.exception.BatchNotFoundException;
+import com.elcafe.modules.inventory.exception.DuplicateBatchNumberException;
+import com.elcafe.modules.inventory.exception.IngredientNotFoundException;
 import com.elcafe.modules.inventory.repository.InventoryBatchRepository;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -30,26 +37,34 @@ public class InventoryBatchService {
     private final InventoryIngredientRepository ingredientRepository;
     private final SupplierRepository supplierRepository;
     private final WasteService wasteService;
+    private final StockOperationService stockOperationService;
+
+    // Atomic counter for batch number generation to prevent race conditions
+    private static final AtomicLong BATCH_SEQUENCE = new AtomicLong(System.currentTimeMillis() % 100000);
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final int MAX_BATCH_GENERATION_RETRIES = 3;
 
     /**
-     * Create a new batch for an ingredient
+     * Create a new batch for an ingredient.
+     * Uses REPEATABLE_READ isolation to ensure consistent stock updates
+     * when multiple batches are being created concurrently.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public InventoryBatch createBatch(BatchRequest request) {
         log.info("Creating batch for ingredient: {}", request.getIngredientId());
 
         Ingredient ingredient = ingredientRepository.findById(request.getIngredientId())
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new IngredientNotFoundException(request.getIngredientId()));
 
-        // Generate batch number if not provided
+        // Generate batch number if not provided (uses atomic generation with retry)
         String batchNumber = request.getBatchNumber();
         if (batchNumber == null || batchNumber.isBlank()) {
-            batchNumber = generateBatchNumber(ingredient.getId());
-        }
-
-        // Check for duplicate batch number
-        if (batchRepository.findByIngredientIdAndBatchNumber(ingredient.getId(), batchNumber).isPresent()) {
-            throw new RuntimeException("Batch number already exists for this ingredient");
+            batchNumber = generateUniqueBatchNumber(ingredient.getId());
+        } else {
+            // Check for duplicate batch number when user provides one
+            if (batchRepository.findByIngredientIdAndBatchNumber(ingredient.getId(), batchNumber).isPresent()) {
+                throw new DuplicateBatchNumberException(ingredient.getId(), batchNumber);
+            }
         }
 
         // Calculate expiry date from shelf life if not provided
@@ -80,8 +95,8 @@ public class InventoryBatchService {
 
         InventoryBatch savedBatch = batchRepository.save(batch);
 
-        // Update ingredient's current stock
-        ingredient.addStock(request.getQuantity());
+        // Update ingredient's current stock using centralized service
+        stockOperationService.addStockSimple(ingredient, request.getQuantity());
         ingredientRepository.save(ingredient);
 
         log.info("Batch created: {} for ingredient: {}", batchNumber, ingredient.getName());
@@ -94,7 +109,7 @@ public class InventoryBatchService {
     @Transactional(readOnly = true)
     public List<BatchResponse> getBatchesByIngredient(Long ingredientId) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new IngredientNotFoundException(ingredientId));
 
         int alertDays = ingredient.getExpiryAlertDays() != null ? ingredient.getExpiryAlertDays() : 7;
 
@@ -137,19 +152,21 @@ public class InventoryBatchService {
     }
 
     /**
-     * Consume stock using FEFO (First Expired First Out)
+     * Consume stock using FEFO (First Expired First Out).
+     * Uses REPEATABLE_READ isolation to prevent phantom reads during batch selection
+     * and ensure consistent stock levels during concurrent consumption.
      * @return List of batches that were consumed from
      */
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public List<BatchConsumption> consumeStockFEFO(Long ingredientId, BigDecimal quantity, String reason) {
         log.info("Consuming {} from ingredient {} using FEFO", quantity, ingredientId);
 
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new IngredientNotFoundException(ingredientId));
 
         if (!ingredient.getTrackExpiry()) {
-            // If not tracking expiry, just deduct from ingredient's stock
-            ingredient.deductStock(quantity);
+            // If not tracking expiry, just deduct from ingredient's stock using centralized service
+            stockOperationService.deductStockSimple(ingredient, quantity);
             ingredientRepository.save(ingredient);
             return List.of();
         }
@@ -172,9 +189,9 @@ public class InventoryBatchService {
             }
         }
 
-        // Update ingredient's current stock
+        // Update ingredient's current stock using centralized service
         BigDecimal totalConsumed = quantity.subtract(remaining);
-        ingredient.deductStock(totalConsumed);
+        stockOperationService.deductStockSimple(ingredient, totalConsumed);
         ingredientRepository.save(ingredient);
 
         if (remaining.compareTo(BigDecimal.ZERO) > 0) {
@@ -187,20 +204,21 @@ public class InventoryBatchService {
     /**
      * Write off a batch (waste, damage, etc.)
      */
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public void writeOffBatch(Long batchId, String reason) {
         writeOffBatch(batchId, reason, "SYSTEM");
     }
 
     /**
-     * Write off a batch with recorded by information
+     * Write off a batch with recorded by information.
+     * Uses REPEATABLE_READ isolation to ensure consistent stock deduction.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public void writeOffBatch(Long batchId, String reason, String recordedBy) {
         log.info("Writing off batch: {}, reason: {}", batchId, reason);
 
         InventoryBatch batch = batchRepository.findById(batchId)
-                .orElseThrow(() -> new RuntimeException("Batch not found"));
+                .orElseThrow(() -> new BatchNotFoundException(batchId));
 
         BigDecimal quantity = batch.getQuantity();
 
@@ -217,9 +235,9 @@ public class InventoryBatchService {
         batch.writeOff(reason);
         batchRepository.save(batch);
 
-        // Deduct from ingredient's stock
+        // Deduct from ingredient's stock using centralized service
         Ingredient ingredient = batch.getIngredient();
-        ingredient.deductStock(quantity);
+        stockOperationService.deductStockSimple(ingredient, quantity);
         ingredientRepository.save(ingredient);
 
         log.info("Batch {} written off, quantity: {}", batch.getBatchNumber(), quantity);
@@ -253,7 +271,7 @@ public class InventoryBatchService {
     @Transactional
     public InventoryBatch updateBatchExpiry(Long batchId, LocalDate newExpiryDate) {
         InventoryBatch batch = batchRepository.findById(batchId)
-                .orElseThrow(() -> new RuntimeException("Batch not found"));
+                .orElseThrow(() -> new BatchNotFoundException(batchId));
 
         batch.setExpiryDate(newExpiryDate);
 
@@ -270,8 +288,9 @@ public class InventoryBatchService {
      * This method fixes the phantom stock issue by ensuring currentStock is reduced
      * when batches expire, maintaining consistency between Ingredient.currentStock
      * and InventoryBatch quantities.
+     * Uses REPEATABLE_READ isolation to ensure consistent stock deduction during batch processing.
      */
-    @Transactional
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public int markExpiredBatches(Long restaurantId) {
         List<InventoryBatch> expiredBatches = batchRepository.findExpiredBatches(restaurantId, LocalDate.now());
         int count = 0;
@@ -286,10 +305,10 @@ public class InventoryBatchService {
                 batchRepository.save(batch);
 
                 // CRITICAL FIX: Deduct expired quantity from ingredient's currentStock
-                // to prevent phantom stock
+                // to prevent phantom stock using centralized service
                 if (expiredQuantity != null && expiredQuantity.compareTo(BigDecimal.ZERO) > 0) {
                     Ingredient ingredient = batch.getIngredient();
-                    ingredient.forceDeductStock(expiredQuantity);
+                    stockOperationService.forceDeductStockSimple(ingredient, expiredQuantity);
                     ingredientRepository.save(ingredient);
 
                     log.info("Deducted {} {} of {} from stock due to batch {} expiry",
@@ -344,10 +363,36 @@ public class InventoryBatchService {
         return batchRepository.getEffectiveQuantity(ingredientId, LocalDate.now());
     }
 
+    /**
+     * Generate a unique batch number using atomic sequence to prevent race conditions.
+     * Format: B-{ingredientId}-{yyyyMMddHHmmss}-{sequence}{random}
+     * The combination of timestamp, atomic sequence, and random component ensures uniqueness
+     * even under high concurrent load.
+     */
     private String generateBatchNumber(Long ingredientId) {
-        String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        long count = batchRepository.countActiveBatches(ingredientId) + 1;
-        return String.format("B-%d-%s-%03d", ingredientId, datePrefix, count);
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        long sequence = BATCH_SEQUENCE.incrementAndGet() % 1000;
+        int randomSuffix = SECURE_RANDOM.nextInt(100);
+        return String.format("B-%d-%s-%03d%02d", ingredientId, timestamp, sequence, randomSuffix);
+    }
+
+    /**
+     * Generate batch number with retry logic for database-level uniqueness validation.
+     * Falls back to regeneration if duplicate is detected.
+     */
+    private String generateUniqueBatchNumber(Long ingredientId) {
+        for (int attempt = 0; attempt < MAX_BATCH_GENERATION_RETRIES; attempt++) {
+            String batchNumber = generateBatchNumber(ingredientId);
+            if (batchRepository.findByIngredientIdAndBatchNumber(ingredientId, batchNumber).isEmpty()) {
+                return batchNumber;
+            }
+            log.warn("Batch number collision detected: {} (attempt {}), regenerating...",
+                    batchNumber, attempt + 1);
+        }
+        // Last resort: use full timestamp with nanoseconds
+        String fallback = String.format("B-%d-%s", ingredientId, System.nanoTime());
+        log.info("Using fallback batch number: {}", fallback);
+        return fallback;
     }
 
     // Inner classes for return types

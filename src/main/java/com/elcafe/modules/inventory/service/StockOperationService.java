@@ -279,6 +279,41 @@ public class StockOperationService {
         }
     }
 
+    // ==================== CONVENIENCE METHODS FOR INTERNAL USE ====================
+
+    /**
+     * Simple stock addition without starting a new transaction.
+     * Use this within an existing transaction when audit logging is not critical.
+     * For full audit trail, use addStockWithRetry instead.
+     */
+    public void addStockSimple(Ingredient ingredient, BigDecimal quantity) {
+        ingredient.addStock(quantity);
+        log.debug("Stock added (simple): {} {} of {}",
+                quantity, ingredient.getUnit(), ingredient.getName());
+    }
+
+    /**
+     * Simple stock deduction without starting a new transaction.
+     * Use this within an existing transaction when audit logging is not critical.
+     * For full audit trail, use deductStockWithRetry instead.
+     */
+    public void deductStockSimple(Ingredient ingredient, BigDecimal quantity) {
+        ingredient.deductStock(quantity);
+        log.debug("Stock deducted (simple): {} {} of {}",
+                quantity, ingredient.getUnit(), ingredient.getName());
+    }
+
+    /**
+     * Simple force stock deduction without starting a new transaction.
+     * Use this within an existing transaction when audit logging is not critical.
+     * For full audit trail, use forceDeductStockWithRetry instead.
+     */
+    public void forceDeductStockSimple(Ingredient ingredient, BigDecimal quantity) {
+        ingredient.forceDeductStock(quantity);
+        log.debug("Stock force deducted (simple): {} {} of {}",
+                quantity, ingredient.getUnit(), ingredient.getName());
+    }
+
     // Result types
     public record StockReconciliationResult(
             Long ingredientId,
