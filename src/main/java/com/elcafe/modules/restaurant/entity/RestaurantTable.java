@@ -76,7 +76,9 @@ public class RestaurantTable {
     @Column(name = "qr_code")
     private String qrCode;
 
-    @OneToMany(mappedBy = "diningTable", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "diningTable", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private List<Order> orders;
 
     @CreationTimestamp
