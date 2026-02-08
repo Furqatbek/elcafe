@@ -19,7 +19,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "kitchen_orders")
+@Table(name = "kitchen_orders", indexes = {
+        @Index(name = "idx_kitchen_order_status", columnList = "status"),
+        @Index(name = "idx_kitchen_order_status_priority", columnList = "status, priority"),
+        @Index(name = "idx_kitchen_order_created_at", columnList = "created_at"),
+        @Index(name = "idx_kitchen_order_chef", columnList = "assigned_chef")
+})
 @EntityListeners(AuditingEntityListener.class)
 public class KitchenOrder {
 
@@ -66,6 +71,10 @@ public class KitchenOrder {
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    @Version
+    @Column(nullable = false)
+    private Long version;
 
     public void startPreparation(String chefName) {
         this.status = KitchenOrderStatus.PREPARING;

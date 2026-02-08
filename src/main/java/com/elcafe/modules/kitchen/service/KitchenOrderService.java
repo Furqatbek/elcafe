@@ -61,11 +61,13 @@ public class KitchenOrderService {
 
     @Transactional
     public KitchenOrder startPreparation(Long kitchenOrderId, String chefName) {
-        KitchenOrder kitchenOrder = kitchenOrderRepository.findById(kitchenOrderId)
+        KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
                 .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
 
         if (kitchenOrder.getStatus() != KitchenOrderStatus.PENDING) {
-            throw new RuntimeException("Order is not in PENDING status");
+            throw new IllegalStateException(
+                    String.format("Cannot start preparation: current status is %s, expected PENDING",
+                            kitchenOrder.getStatus()));
         }
 
         kitchenOrder.startPreparation(chefName);
@@ -93,11 +95,13 @@ public class KitchenOrderService {
 
     @Transactional
     public KitchenOrder markAsReady(Long kitchenOrderId) {
-        KitchenOrder kitchenOrder = kitchenOrderRepository.findById(kitchenOrderId)
+        KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
                 .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
 
         if (kitchenOrder.getStatus() != KitchenOrderStatus.PREPARING) {
-            throw new RuntimeException("Order is not being prepared");
+            throw new IllegalStateException(
+                    String.format("Cannot mark as ready: current status is %s, expected PREPARING",
+                            kitchenOrder.getStatus()));
         }
 
         kitchenOrder.completePreparation();
@@ -125,19 +129,51 @@ public class KitchenOrderService {
 
     @Transactional
     public KitchenOrder markAsPickedUp(Long kitchenOrderId) {
-        KitchenOrder kitchenOrder = kitchenOrderRepository.findById(kitchenOrderId)
+        KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
                 .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
 
+        // Validate status transition: only READY orders can be picked up
+        if (kitchenOrder.getStatus() != KitchenOrderStatus.READY) {
+            throw new IllegalStateException(
+                    String.format("Cannot mark order as picked up: current status is %s, expected READY",
+                            kitchenOrder.getStatus()));
+        }
+
         kitchenOrder.setStatus(KitchenOrderStatus.PICKED_UP);
-        return kitchenOrderRepository.save(kitchenOrder);
+        KitchenOrder savedOrder = kitchenOrderRepository.save(kitchenOrder);
+
+        // Update main order status
+        Order order = kitchenOrder.getOrder();
+        order.setStatus(OrderStatus.PICKED_UP);
+
+        OrderStatusHistory statusHistory = OrderStatusHistory.builder()
+                .order(order)
+                .status(OrderStatus.PICKED_UP)
+                .changedBy("COURIER")
+                .notes("Order picked up from kitchen")
+                .build();
+        order.addStatusHistory(statusHistory);
+        orderRepository.save(order);
+
+        log.info("Kitchen order {} marked as picked up", kitchenOrder.getId());
+        return savedOrder;
     }
 
     @Transactional
     public KitchenOrder updatePriority(Long kitchenOrderId, KitchenPriority priority) {
-        KitchenOrder kitchenOrder = kitchenOrderRepository.findById(kitchenOrderId)
+        KitchenOrder kitchenOrder = kitchenOrderRepository.findByIdWithOrder(kitchenOrderId)
                 .orElseThrow(() -> new RuntimeException("Kitchen order not found"));
 
+        // Only allow priority updates for active orders (PENDING or PREPARING)
+        if (kitchenOrder.getStatus() != KitchenOrderStatus.PENDING &&
+            kitchenOrder.getStatus() != KitchenOrderStatus.PREPARING) {
+            throw new IllegalStateException(
+                    String.format("Cannot update priority: order is in %s status",
+                            kitchenOrder.getStatus()));
+        }
+
         kitchenOrder.setPriority(priority);
+        log.info("Kitchen order {} priority updated to {}", kitchenOrderId, priority);
         return kitchenOrderRepository.save(kitchenOrder);
     }
 }

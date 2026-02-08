@@ -16,6 +16,18 @@ public interface KitchenOrderRepository extends JpaRepository<KitchenOrder, Long
 
     Optional<KitchenOrder> findByOrderId(Long orderId);
 
+    /**
+     * Find kitchen order by ID with Order eagerly fetched to prevent LazyInitializationException.
+     */
+    @Query("SELECT ko FROM KitchenOrder ko JOIN FETCH ko.order WHERE ko.id = :id")
+    Optional<KitchenOrder> findByIdWithOrder(@Param("id") Long id);
+
+    /**
+     * Find kitchen order by ID with Order and Restaurant eagerly fetched.
+     */
+    @Query("SELECT ko FROM KitchenOrder ko JOIN FETCH ko.order o LEFT JOIN FETCH o.restaurant WHERE ko.id = :id")
+    Optional<KitchenOrder> findByIdWithOrderAndRestaurant(@Param("id") Long id);
+
     List<KitchenOrder> findByStatusOrderByCreatedAtAsc(KitchenOrderStatus status);
 
     List<KitchenOrder> findByStatusInOrderByPriorityDescCreatedAtAsc(List<KitchenOrderStatus> statuses);
