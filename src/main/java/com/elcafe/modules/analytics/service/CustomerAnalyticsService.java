@@ -210,13 +210,15 @@ public class CustomerAnalyticsService {
      * Note: This is a placeholder implementation. In a real system, you would integrate with
      * review/rating APIs (Google, Yandex, Telegram) and internal feedback systems.
      */
-    public CustomerSatisfactionDTO getCustomerSatisfaction(LocalDate startDate, LocalDate endDate) {
+    public CustomerSatisfactionDTO getCustomerSatisfaction(LocalDate startDate, LocalDate endDate, Long restaurantId) {
         // TODO: Integrate with actual review/rating systems
         // For now, returning placeholder data structure
+        // restaurantId will be used to filter reviews once integrated
 
         return CustomerSatisfactionDTO.builder()
                 .startDate(startDate)
                 .endDate(endDate)
+                .restaurantId(restaurantId)
                 .overallSatisfactionScore(0.0)
                 .googleRating(0.0)
                 .googleReviewCount(0)

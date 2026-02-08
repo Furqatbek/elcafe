@@ -56,7 +56,7 @@ public class AnalyticsSummaryService {
         // Customer metrics
         CustomerRetentionDTO retention = customerAnalyticsService.getCustomerRetention(startDate, endDate, restaurantId);
         CustomerLTVDTO ltv = customerAnalyticsService.getCustomerLTV(restaurantId);
-        CustomerSatisfactionDTO satisfaction = customerAnalyticsService.getCustomerSatisfaction(startDate, endDate);
+        CustomerSatisfactionDTO satisfaction = customerAnalyticsService.getCustomerSatisfaction(startDate, endDate, restaurantId);
 
         // Inventory metrics
         InventoryTurnoverDTO inventoryTurnover = inventoryAnalyticsService.getInventoryTurnover(startDate, endDate, restaurantId);

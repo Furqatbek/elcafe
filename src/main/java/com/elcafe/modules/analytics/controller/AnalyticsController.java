@@ -118,6 +118,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam Long restaurantId
     ) {
+        restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         List<ContributionMarginDTO> margins = financialAnalyticsService.getContributionMargins(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Contribution margins retrieved successfully", margins));
     }
@@ -132,7 +133,8 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
-        List<SalesPerHourDTO> sales = operationalAnalyticsService.getSalesPerHour(startDate, endDate, restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        List<SalesPerHourDTO> sales = operationalAnalyticsService.getSalesPerHour(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Sales per hour retrieved successfully", sales));
     }
 
@@ -144,7 +146,8 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
-        PeakHoursDTO peakHours = operationalAnalyticsService.getPeakHours(startDate, endDate, restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        PeakHoursDTO peakHours = operationalAnalyticsService.getPeakHours(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Peak hours retrieved successfully", peakHours));
     }
 
@@ -159,8 +162,9 @@ public class AnalyticsController {
             @RequestParam(required = false) Integer totalSeats,
             @RequestParam(required = false) Integer operatingHoursPerDay
     ) {
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         TableTurnoverDTO turnover = operationalAnalyticsService.getTableTurnover(
-                startDate, endDate, restaurantId, totalTables, totalSeats, operatingHoursPerDay);
+                startDate, endDate, effectiveRestaurantId, totalTables, totalSeats, operatingHoursPerDay);
         return ResponseEntity.ok(ApiResponse.success("Table turnover retrieved successfully", turnover));
     }
 
@@ -172,7 +176,8 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
-        OrderTimingAnalyticsDTO timing = operationalAnalyticsService.getOrderTimingAnalytics(startDate, endDate, restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        OrderTimingAnalyticsDTO timing = operationalAnalyticsService.getOrderTimingAnalytics(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Order timing analytics retrieved successfully", timing));
     }
 
@@ -184,7 +189,8 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
-        Map<String, Object> analytics = operationalAnalyticsService.getKitchenAnalytics(startDate, endDate, restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        Map<String, Object> analytics = operationalAnalyticsService.getKitchenAnalytics(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Kitchen analytics retrieved successfully", analytics));
     }
 
@@ -198,7 +204,8 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
-        CustomerRetentionDTO retention = customerAnalyticsService.getCustomerRetention(startDate, endDate, restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        CustomerRetentionDTO retention = customerAnalyticsService.getCustomerRetention(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Customer retention retrieved successfully", retention));
     }
 
@@ -208,7 +215,8 @@ public class AnalyticsController {
     public ResponseEntity<ApiResponse<CustomerLTVDTO>> getCustomerLTV(
             @RequestParam(required = false) Long restaurantId
     ) {
-        CustomerLTVDTO ltv = customerAnalyticsService.getCustomerLTV(restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        CustomerLTVDTO ltv = customerAnalyticsService.getCustomerLTV(effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Customer LTV retrieved successfully", ltv));
     }
 
@@ -217,9 +225,11 @@ public class AnalyticsController {
     @Operation(summary = "Get customer satisfaction", description = "Aggregated satisfaction scores from all sources")
     public ResponseEntity<ApiResponse<CustomerSatisfactionDTO>> getCustomerSatisfaction(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Long restaurantId
     ) {
-        CustomerSatisfactionDTO satisfaction = customerAnalyticsService.getCustomerSatisfaction(startDate, endDate);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        CustomerSatisfactionDTO satisfaction = customerAnalyticsService.getCustomerSatisfaction(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Customer satisfaction retrieved successfully", satisfaction));
     }
 
@@ -233,7 +243,8 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
-        InventoryTurnoverDTO turnover = inventoryAnalyticsService.getInventoryTurnover(startDate, endDate, restaurantId);
+        Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
+        InventoryTurnoverDTO turnover = inventoryAnalyticsService.getInventoryTurnover(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Inventory turnover retrieved successfully", turnover));
     }
 }
