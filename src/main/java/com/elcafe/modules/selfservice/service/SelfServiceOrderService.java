@@ -210,11 +210,23 @@ public class SelfServiceOrderService {
 
         cartItem = cartItemRepository.save(cartItem);
 
-        // Add modifiers
+        // Add modifiers - batch fetch to avoid N+1 queries
         if (request.getModifiers() != null && !request.getModifiers().isEmpty()) {
+            List<Long> linkedItemIds = request.getModifiers().stream()
+                    .map(AddToCartRequest.ModifierRequest::getLinkedItemId)
+                    .toList();
+
+            List<LinkedItem> linkedItems = linkedItemRepository.findAllByIdWithLinkedProduct(linkedItemIds);
+
+            // Create a map for quick lookup
+            java.util.Map<Long, LinkedItem> linkedItemMap = linkedItems.stream()
+                    .collect(java.util.stream.Collectors.toMap(LinkedItem::getId, li -> li));
+
             for (AddToCartRequest.ModifierRequest modReq : request.getModifiers()) {
-                LinkedItem linkedItem = linkedItemRepository.findById(modReq.getLinkedItemId())
-                        .orElseThrow(() -> new RuntimeException("Modifier not found"));
+                LinkedItem linkedItem = linkedItemMap.get(modReq.getLinkedItemId());
+                if (linkedItem == null) {
+                    throw new RuntimeException("Modifier not found: " + modReq.getLinkedItemId());
+                }
 
                 if (linkedItem.getLinkedProduct() == null) {
                     throw new RuntimeException("Modifier product not found for linked item: " + linkedItem.getId());
@@ -462,8 +474,8 @@ public class SelfServiceOrderService {
 
             // Handle bundle vs regular product
             if (Boolean.TRUE.equals(cartItem.getIsBundle()) && cartItem.getBundleId() != null) {
-                // Bundle item - set bundle fields for analytics tracking
-                orderItem.setProductId(cartItem.getBundleId()); // Use bundleId as productId for reference
+                // Bundle items don't have a productId - set to null to avoid confusing bundles with products
+                orderItem.setProductId(null);
                 orderItem.setProductName(cartItem.getBundleName());
                 orderItem.setBundleId(cartItem.getBundleId());
                 orderItem.setBundleName(cartItem.getBundleName());

@@ -79,7 +79,19 @@ public class BundleRequest {
         private Boolean isRequired;
         private Integer displayOrder;
 
+        @jakarta.validation.Valid
         private List<OptionRequest> options;
+
+        /**
+         * Cross-field validation: maxSelections must be >= minSelections.
+         */
+        @AssertTrue(message = "Max selections must be greater than or equal to min selections")
+        public boolean isSelectionsRangeValid() {
+            if (minSelections == null || maxSelections == null) {
+                return true; // Let individual field validators handle null cases
+            }
+            return maxSelections >= minSelections;
+        }
     }
 
     @Data

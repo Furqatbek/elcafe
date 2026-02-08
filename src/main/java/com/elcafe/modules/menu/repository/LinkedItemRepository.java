@@ -33,4 +33,11 @@ public interface LinkedItemRepository extends JpaRepository<LinkedItem, Long> {
     void deleteByProductIdAndLinkedProductId(Long productId, Long linkedProductId);
 
     boolean existsByProductIdAndLinkedProductId(Long productId, Long linkedProductId);
+
+    /**
+     * Batch fetch linked items by IDs with their linked products eagerly loaded.
+     * Use this to avoid N+1 queries when loading multiple modifiers.
+     */
+    @Query("SELECT li FROM LinkedItem li LEFT JOIN FETCH li.linkedProduct WHERE li.id IN :ids")
+    List<LinkedItem> findAllByIdWithLinkedProduct(@Param("ids") List<Long> ids);
 }

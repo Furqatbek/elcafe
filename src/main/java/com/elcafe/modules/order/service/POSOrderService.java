@@ -229,7 +229,8 @@ public class POSOrderService {
             Bundle bundle = bundleRepository.findById(itemRequest.getBundleId())
                     .orElseThrow(() -> new IllegalArgumentException("Bundle not found with ID: " + itemRequest.getBundleId()));
 
-            orderItem.setProductId(itemRequest.getBundleId());
+            // Bundle items don't have a productId - set to null to avoid confusing bundles with products
+            orderItem.setProductId(null);
             orderItem.setProductName(bundle.getName());
             orderItem.setBundleId(bundle.getId());
             orderItem.setBundleName(bundle.getName());

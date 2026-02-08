@@ -77,12 +77,27 @@ public class SelfServiceCartItem {
 
     /**
      * Calculate total price for this cart item including modifiers.
+     * Modifiers are stored with their total quantity already, so we don't multiply
+     * by item quantity again to avoid double-counting.
      */
     public BigDecimal getTotalPrice() {
         BigDecimal itemTotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
-        BigDecimal modifiersTotal = modifiers.stream()
+        // Modifiers are applied per unit, multiply by item quantity
+        BigDecimal modifiersPerUnit = modifiers.stream()
                 .map(m -> m.getPrice().multiply(BigDecimal.valueOf(m.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return itemTotal.add(modifiersTotal.multiply(BigDecimal.valueOf(quantity)));
+        // Total = (unit price * quantity) + (modifiers per unit * quantity)
+        return itemTotal.add(modifiersPerUnit.multiply(BigDecimal.valueOf(quantity)));
+    }
+
+    /**
+     * Get the unit price including modifiers for a single item.
+     * This is useful for display purposes.
+     */
+    public BigDecimal getUnitPriceWithModifiers() {
+        BigDecimal modifiersPerUnit = modifiers.stream()
+                .map(m -> m.getPrice().multiply(BigDecimal.valueOf(m.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return unitPrice.add(modifiersPerUnit);
     }
 }

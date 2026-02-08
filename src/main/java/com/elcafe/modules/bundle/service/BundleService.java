@@ -183,18 +183,18 @@ public class BundleService {
             bundle.setDisplayOrder(request.getDisplayOrder());
         }
 
-        // Update items
-        bundle.getItems().clear();
+        // Update items only if provided in request (null means keep existing, empty list means clear all)
         if (request.getItems() != null) {
+            bundle.getItems().clear();
             for (BundleRequest.BundleItemRequest itemReq : request.getItems()) {
                 BundleItem item = createBundleItem(itemReq);
                 bundle.addItem(item);
             }
         }
 
-        // Update option groups
-        bundle.getOptionGroups().clear();
+        // Update option groups only if provided in request (null means keep existing, empty list means clear all)
         if (request.getOptionGroups() != null) {
+            bundle.getOptionGroups().clear();
             for (BundleRequest.OptionGroupRequest groupReq : request.getOptionGroups()) {
                 BundleOptionGroup group = createOptionGroup(groupReq);
                 bundle.addOptionGroup(group);
