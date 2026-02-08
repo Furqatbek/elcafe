@@ -1,6 +1,7 @@
 package com.elcafe.modules.referral.entity;
 
 import com.elcafe.modules.customer.entity.Customer;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
@@ -59,6 +60,7 @@ public class ReferralCode {
     @OneToMany(mappedBy = "referralCode", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
+    @JsonIgnore
     private List<Referral> referrals = new ArrayList<>();
 
     /**

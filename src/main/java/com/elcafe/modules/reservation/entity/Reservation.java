@@ -1,6 +1,7 @@
 package com.elcafe.modules.reservation.entity;
 
 import com.elcafe.modules.auth.entity.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.reservation.enums.ReservationSource;
 import com.elcafe.modules.reservation.enums.ReservationStatus;
@@ -136,6 +137,7 @@ public class Reservation {
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
+    @JsonIgnore
     private List<ReservationDeposit> deposits = new ArrayList<>();
 
     @CreationTimestamp

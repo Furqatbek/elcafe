@@ -1,6 +1,7 @@
 package com.elcafe.modules.menu.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,6 +61,7 @@ public class MenuCollection {
 
     @OneToMany(mappedBy = "menuCollection", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<MenuCollectionItem> items = new ArrayList<>();
 
     @CreatedDate

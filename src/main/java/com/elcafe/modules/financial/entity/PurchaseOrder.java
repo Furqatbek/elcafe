@@ -1,6 +1,7 @@
 package com.elcafe.modules.financial.entity;
 
 import com.elcafe.modules.inventory.entity.Supplier;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
@@ -111,6 +112,7 @@ public class PurchaseOrder {
 
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<PurchaseOrderItem> items = new ArrayList<>();
 
     @CreationTimestamp

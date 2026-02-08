@@ -4,6 +4,7 @@ import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.pos.giftcard.enums.GiftCardStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -112,6 +113,7 @@ public class GiftCard {
 
     @OneToMany(mappedBy = "giftCard", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<GiftCardTransaction> transactions = new ArrayList<>();
 
     @CreatedDate

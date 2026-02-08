@@ -1,5 +1,6 @@
 package com.elcafe.modules.bundle.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -50,6 +51,7 @@ public class BundleOptionGroup {
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @JsonIgnore
     private Set<BundleOption> options = new HashSet<>();
 
     // Helper methods

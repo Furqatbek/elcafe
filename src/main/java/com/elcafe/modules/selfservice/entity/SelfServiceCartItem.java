@@ -1,6 +1,7 @@
 package com.elcafe.modules.selfservice.entity;
 
 import com.elcafe.modules.menu.entity.Product;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.elcafe.modules.menu.entity.ProductVariant;
 import jakarta.persistence.*;
 import lombok.*;
@@ -68,6 +69,7 @@ public class SelfServiceCartItem {
 
     @OneToMany(mappedBy = "cartItem", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<SelfServiceCartModifier> modifiers = new ArrayList<>();
 
     @PreUpdate

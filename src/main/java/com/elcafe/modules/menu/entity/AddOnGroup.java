@@ -1,6 +1,7 @@
 package com.elcafe.modules.menu.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -61,6 +62,7 @@ public class AddOnGroup {
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @JsonIgnore
     private List<AddOn> addOns = new ArrayList<>();
 
     @CreatedDate

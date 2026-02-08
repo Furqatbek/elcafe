@@ -1,6 +1,7 @@
 package com.elcafe.modules.inventory.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -90,6 +91,7 @@ public class StockCount {
 
     @OneToMany(mappedBy = "stockCount", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<StockCountItem> items = new ArrayList<>();
 
     @CreationTimestamp

@@ -1,6 +1,7 @@
 package com.elcafe.modules.selfservice.entity;
 
 import com.elcafe.modules.customer.entity.Customer;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import jakarta.persistence.*;
@@ -74,6 +75,7 @@ public class SelfServiceSession {
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private List<SelfServiceCartItem> cartItems = new ArrayList<>();
 
     /**

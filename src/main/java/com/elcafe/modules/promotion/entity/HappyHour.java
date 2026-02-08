@@ -1,6 +1,7 @@
 package com.elcafe.modules.promotion.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -51,10 +52,12 @@ public class HappyHour {
 
     @OneToMany(mappedBy = "happyHour", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private Set<HappyHourSchedule> schedules = new HashSet<>();
 
     @OneToMany(mappedBy = "happyHour", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore
     private Set<HappyHourProduct> products = new HashSet<>();
 
     @CreationTimestamp
