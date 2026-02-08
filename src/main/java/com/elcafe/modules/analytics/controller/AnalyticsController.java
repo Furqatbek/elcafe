@@ -6,11 +6,13 @@ import com.elcafe.modules.analytics.service.*;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -25,6 +27,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/analytics")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Analytics", description = "Business analytics and reporting APIs")
 public class AnalyticsController {
 
@@ -44,9 +47,10 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId,
-            @RequestParam(required = false) BigDecimal laborCosts,
-            @RequestParam(required = false) BigDecimal operatingExpenses
+            @RequestParam(required = false) @PositiveOrZero(message = "Labor costs cannot be negative") BigDecimal laborCosts,
+            @RequestParam(required = false) @PositiveOrZero(message = "Operating expenses cannot be negative") BigDecimal operatingExpenses
     ) {
+        validateDateRange(startDate, endDate);
         Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         AnalyticsSummaryDTO summary = analyticsSummaryService.getAnalyticsSummary(
                 startDate, endDate, effectiveRestaurantId, laborCosts, operatingExpenses);
@@ -63,6 +67,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         List<DailyRevenueDTO> revenue = financialAnalyticsService.getDailyRevenue(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Daily revenue retrieved successfully", revenue));
@@ -76,6 +81,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         List<SalesPerCategoryDTO> sales = financialAnalyticsService.getSalesPerCategory(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Sales per category retrieved successfully", sales));
@@ -89,6 +95,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         COGSAnalyticsDTO cogs = financialAnalyticsService.getCOGSAnalytics(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("COGS analytics retrieved successfully", cogs));
@@ -101,9 +108,10 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam Long restaurantId,
-            @RequestParam(required = false) BigDecimal laborCosts,
-            @RequestParam(required = false) BigDecimal operatingExpenses
+            @RequestParam(required = false) @PositiveOrZero(message = "Labor costs cannot be negative") BigDecimal laborCosts,
+            @RequestParam(required = false) @PositiveOrZero(message = "Operating expenses cannot be negative") BigDecimal operatingExpenses
     ) {
+        validateDateRange(startDate, endDate);
         restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         ProfitabilityAnalyticsDTO profitability = financialAnalyticsService.getProfitabilityAnalytics(
                 startDate, endDate, restaurantId, laborCosts, operatingExpenses);
@@ -118,6 +126,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
         List<ContributionMarginDTO> margins = financialAnalyticsService.getContributionMargins(startDate, endDate, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Contribution margins retrieved successfully", margins));
@@ -133,6 +142,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         List<SalesPerHourDTO> sales = operationalAnalyticsService.getSalesPerHour(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Sales per hour retrieved successfully", sales));
@@ -146,6 +156,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         PeakHoursDTO peakHours = operationalAnalyticsService.getPeakHours(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Peak hours retrieved successfully", peakHours));
@@ -162,6 +173,7 @@ public class AnalyticsController {
             @RequestParam(required = false) Integer totalSeats,
             @RequestParam(required = false) Integer operatingHoursPerDay
     ) {
+        validateDateRange(startDate, endDate);
         Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         TableTurnoverDTO turnover = operationalAnalyticsService.getTableTurnover(
                 startDate, endDate, effectiveRestaurantId, totalTables, totalSeats, operatingHoursPerDay);
@@ -176,6 +188,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         OrderTimingAnalyticsDTO timing = operationalAnalyticsService.getOrderTimingAnalytics(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Order timing analytics retrieved successfully", timing));
@@ -189,6 +202,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         Map<String, Object> analytics = operationalAnalyticsService.getKitchenAnalytics(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Kitchen analytics retrieved successfully", analytics));
@@ -204,6 +218,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         CustomerRetentionDTO retention = customerAnalyticsService.getCustomerRetention(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Customer retention retrieved successfully", retention));
@@ -228,6 +243,7 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         CustomerSatisfactionDTO satisfaction = customerAnalyticsService.getCustomerSatisfaction(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Customer satisfaction retrieved successfully", satisfaction));
@@ -243,8 +259,24 @@ public class AnalyticsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long restaurantId
     ) {
+        validateDateRange(startDate, endDate);
         Long effectiveRestaurantId = restaurantAuthorizationService.resolveRestaurantId(restaurantId);
         InventoryTurnoverDTO turnover = inventoryAnalyticsService.getInventoryTurnover(startDate, endDate, effectiveRestaurantId);
         return ResponseEntity.ok(ApiResponse.success("Inventory turnover retrieved successfully", turnover));
+    }
+
+    // ========== Validation Helpers ==========
+
+    /**
+     * Validates that startDate is not after endDate.
+     *
+     * @param startDate the start date
+     * @param endDate the end date
+     * @throws IllegalArgumentException if startDate is after endDate
+     */
+    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("Start date cannot be after end date");
+        }
     }
 }

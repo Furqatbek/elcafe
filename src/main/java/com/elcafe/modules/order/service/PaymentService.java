@@ -1,5 +1,7 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.common.audit.entity.AuditAction;
+import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.modules.order.dto.*;
 import com.elcafe.modules.order.dto.pos.PaymentRequestDTO;
 import com.elcafe.modules.order.dto.pos.PaymentResponseDTO;
@@ -17,8 +19,11 @@ import com.elcafe.modules.order.repository.PaymentRepository;
 import com.elcafe.modules.financial.service.RevenueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +42,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final RevenueService revenueService;
+    private final AuditService auditService;
 
     @Transactional(readOnly = true)
     public Page<PaymentResponse> getAllPayments(Pageable pageable) {
@@ -101,12 +107,6 @@ public class PaymentService {
             throw new RuntimeException("Payment already exists for order: " + orderId);
         }
 
-        // Validate transaction ID uniqueness if provided
-        if (request.getTransactionId() != null &&
-            paymentRepository.existsByTransactionId(request.getTransactionId())) {
-            throw new RuntimeException("Payment with transaction ID '" + request.getTransactionId() + "' already exists");
-        }
-
         Payment payment = Payment.builder()
                 .order(order)
                 .method(request.getMethod())
@@ -115,6 +115,7 @@ public class PaymentService {
                 .transactionId(request.getTransactionId())
                 .paymentGateway(request.getPaymentGateway())
                 .paymentDetails(request.getPaymentDetails())
+                .processedBy(getCurrentUsername())
                 .build();
 
         // Set paidAt if status is COMPLETED
@@ -122,7 +123,17 @@ public class PaymentService {
             payment.setPaidAt(OffsetDateTime.now());
         }
 
-        Payment saved = paymentRepository.save(payment);
+        Payment saved;
+        try {
+            saved = paymentRepository.save(payment);
+        } catch (DataIntegrityViolationException e) {
+            // Handle race condition: transaction ID uniqueness enforced by DB constraint
+            if (e.getMessage() != null && e.getMessage().contains("transaction_id")) {
+                throw new RuntimeException("Payment with transaction ID '" + request.getTransactionId() + "' already exists");
+            }
+            throw e;
+        }
+
         log.info("Created payment: {} for order: {}", saved.getId(), orderId);
         return toResponse(saved);
     }
@@ -182,9 +193,24 @@ public class PaymentService {
             throw new RuntimeException("Payment has already been deleted");
         }
 
+        Order order = payment.getOrder();
+
         // Use soft delete instead of hard delete for audit compliance
         payment.softDelete(deletedBy);
         paymentRepository.save(payment);
+
+        // Audit log the deletion
+        auditService.logFinancialOperation(
+                AuditAction.PAYMENT_CANCELLED,
+                orderId,
+                order.getOrderNumber(),
+                order.getRestaurant() != null ? order.getRestaurant().getId() : null,
+                payment.getAmount(),
+                "UZS",
+                String.format("Payment %d soft deleted by %s. Method: %s, TransactionId: %s",
+                        paymentId, deletedBy, payment.getMethod(), payment.getTransactionId())
+        );
+
         log.info("Soft deleted payment: {} for order: {} by user: {}", payment.getId(), orderId, deletedBy);
     }
 
@@ -385,8 +411,10 @@ public class PaymentService {
      */
     @Transactional(rollbackFor = {PaymentTransactionException.class, RuntimeException.class})
     public PaymentResponseDTO processPOSRefund(Long orderId, RefundRequestDTO request) {
-        log.info("Processing {} refund for order {}: reason={}",
-                request.getType(), orderId, request.getReason());
+        String processedBy = request.getProcessedBy() != null ? request.getProcessedBy() : getCurrentUsername();
+
+        log.info("Processing {} refund for order {}: reason={}, processedBy={}",
+                request.getType(), orderId, request.getReason(), processedBy);
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new PaymentTransactionException(
@@ -420,6 +448,7 @@ public class PaymentService {
         // Apply refund to payments (starting with most recent)
         List<Payment> completedPayments = paymentRepository.findByOrderIdAndStatus(orderId, PaymentStatus.COMPLETED);
         BigDecimal remainingRefund = refundAmount;
+        BigDecimal totalRefunded = BigDecimal.ZERO;
 
         for (Payment payment : completedPayments) {
             if (remainingRefund.compareTo(BigDecimal.ZERO) <= 0) break;
@@ -432,6 +461,7 @@ public class PaymentService {
             payment.setRefundedAmount(currentRefunded.add(toRefund));
             payment.setRefundReason(request.getReason());
             payment.setRefundedAt(OffsetDateTime.now());
+            payment.setProcessedBy(processedBy);
 
             // Update payment status
             if (payment.getRefundedAmount().compareTo(payment.getTotalWithTip()) >= 0) {
@@ -441,6 +471,7 @@ public class PaymentService {
             }
 
             paymentRepository.save(payment);
+            totalRefunded = totalRefunded.add(toRefund);
             remainingRefund = remainingRefund.subtract(toRefund);
 
             log.info("Refunded {} from payment {}", toRefund, payment.getId());
@@ -449,6 +480,18 @@ public class PaymentService {
         // Update order payment status
         updateOrderPaymentStatus(order);
         orderRepository.save(order);
+
+        // Audit log the refund operation
+        auditService.logFinancialOperation(
+                AuditAction.REFUND_COMPLETED,
+                orderId,
+                order.getOrderNumber(),
+                order.getRestaurant() != null ? order.getRestaurant().getId() : null,
+                totalRefunded,
+                "UZS",
+                String.format("%s refund processed by %s. Reason: %s",
+                        request.getType(), processedBy, request.getReason())
+        );
 
         return getPOSPaymentSummary(orderId);
     }
@@ -605,5 +648,13 @@ public class PaymentService {
                 .splitNumber(payment.getSplitNumber())
                 .paidAt(payment.getPaidAt() != null ? payment.getPaidAt().toLocalDateTime() : null)
                 .build();
+    }
+
+    /**
+     * Get the current authenticated username for audit trail.
+     */
+    private String getCurrentUsername() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.isAuthenticated() ? auth.getName() : "SYSTEM";
     }
 }
