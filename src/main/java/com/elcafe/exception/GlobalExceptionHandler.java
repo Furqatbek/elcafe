@@ -1,5 +1,6 @@
 package com.elcafe.exception;
 
+import com.elcafe.modules.analytics.exception.AnalyticsCalculationException;
 import com.elcafe.modules.order.exception.PaymentTransactionException;
 import com.elcafe.utils.ApiResponse;
 import jakarta.persistence.OptimisticLockException;
@@ -187,6 +188,29 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.TOO_MANY_REQUESTS)
                 .header("Retry-After", "60")
+                .body(ApiResponse.error(ex.getMessage(), details));
+    }
+
+    @ExceptionHandler(AnalyticsCalculationException.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleAnalyticsCalculationException(
+            AnalyticsCalculationException ex,
+            WebRequest request
+    ) {
+        log.warn("Analytics calculation failed for metric '{}': {}",
+                 ex.getMetricName(), ex.getMessage());
+        Map<String, Object> details = new HashMap<>();
+        details.put("metricName", ex.getMetricName());
+        details.put("restaurantId", ex.getRestaurantId());
+        details.put("partialDataAvailable", ex.isPartialDataAvailable());
+        details.put("errorCode", "ANALYTICS_CALCULATION_FAILED");
+
+        // If partial data is available, return 206 Partial Content
+        HttpStatus status = ex.isPartialDataAvailable()
+                ? HttpStatus.PARTIAL_CONTENT
+                : HttpStatus.INTERNAL_SERVER_ERROR;
+
+        return ResponseEntity
+                .status(status)
                 .body(ApiResponse.error(ex.getMessage(), details));
     }
 

@@ -209,7 +209,8 @@ public class FinancialAnalyticsService {
             try {
                 batchBasedCOGS = batchConsumptionService.calculateTotalCOGS(restaurantId, shift.start().toLocalDateTime(), shift.end().toLocalDateTime());
             } catch (Exception e) {
-                log.debug("Could not calculate batch-based COGS: {}", e.getMessage());
+                log.warn("Could not calculate batch-based COGS for restaurant {}, falling back to product costs: {}",
+                         restaurantId, e.getMessage());
             }
         }
 

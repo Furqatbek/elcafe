@@ -71,7 +71,8 @@ public class InventoryAnalyticsService {
             try {
                 totalCOGS = batchConsumptionService.calculateTotalCOGS(restaurantId, shift.start().toLocalDateTime(), shift.end().toLocalDateTime());
             } catch (Exception e) {
-                log.debug("Could not get batch-based COGS: {}", e.getMessage());
+                log.warn("Could not get batch-based COGS for restaurant {}, falling back to product costs: {}",
+                         restaurantId, e.getMessage());
             }
         }
 
@@ -101,7 +102,8 @@ public class InventoryAnalyticsService {
                         valuationService.calculateInventoryValue(restaurantId, method);
                 totalInventoryValue = valuation.totalValue();
             } catch (Exception e) {
-                log.debug("Could not get valuation-based inventory value: {}", e.getMessage());
+                log.warn("Could not get valuation-based inventory value for restaurant {}, falling back to simple calculation: {}",
+                         restaurantId, e.getMessage());
             }
         }
 

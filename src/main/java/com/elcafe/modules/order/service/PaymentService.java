@@ -171,7 +171,8 @@ public class PaymentService {
         if (request.getAmount() != null) payment.setAmount(request.getAmount());
 
         if (request.getTransactionId() != null) {
-            if (!payment.getTransactionId().equals(request.getTransactionId()) &&
+            String currentTransactionId = payment.getTransactionId();
+            if ((currentTransactionId == null || !currentTransactionId.equals(request.getTransactionId())) &&
                 paymentRepository.existsByTransactionId(request.getTransactionId())) {
                 throw new RuntimeException("Payment with transaction ID '" + request.getTransactionId() + "' already exists");
             }
