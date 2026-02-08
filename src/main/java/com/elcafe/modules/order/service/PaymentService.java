@@ -16,10 +16,17 @@ import com.elcafe.modules.order.exception.PaymentTransactionException;
 import com.elcafe.modules.order.exception.PaymentTransactionException.PaymentFailureReason;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.repository.PaymentRepository;
+import com.elcafe.modules.financial.service.RevenueRecordingService;
 import com.elcafe.modules.financial.service.RevenueService;
+import com.elcafe.modules.notification.service.FinancialOperationAlertService;
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
@@ -42,6 +49,8 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
     private final RevenueService revenueService;
+    private final RevenueRecordingService revenueRecordingService;
+    private final PaymentIdempotencyService idempotencyService;
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
@@ -261,6 +270,35 @@ public class PaymentService {
         log.info("Processing POS payment for order {}: method={}, amount={}, tip={}",
                 orderId, request.getMethod(), request.getAmount(), request.getTipAmount());
 
+        // Check for duplicate transaction ID (idempotency)
+        if (request.getTransactionId() != null) {
+            Long existingOrderId = idempotencyService.getProcessedOrderForTransaction(request.getTransactionId());
+            if (existingOrderId != null) {
+                log.info("Duplicate payment request detected for transaction {}, returning existing payment",
+                        request.getTransactionId());
+                // Return the existing payment summary instead of creating a duplicate
+                return getPOSPaymentSummary(existingOrderId);
+            }
+        }
+
+        // Acquire lock to prevent concurrent payments for the same order
+        if (!idempotencyService.acquireOrderPaymentLock(orderId)) {
+            throw new PaymentTransactionException(
+                    "Another payment is being processed for this order. Please wait and retry.",
+                    orderId, PaymentFailureReason.CONCURRENT_MODIFICATION);
+        }
+
+        try {
+            return doProcessPOSPayment(orderId, request);
+        } finally {
+            idempotencyService.releaseOrderPaymentLock(orderId);
+        }
+    }
+
+    /**
+     * Internal method to process POS payment after idempotency checks.
+     */
+    private PaymentResponseDTO doProcessPOSPayment(Long orderId, PaymentRequestDTO request) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new PaymentTransactionException(
                         "Order not found: " + orderId, orderId, PaymentFailureReason.ORDER_STATUS_INVALID));
@@ -332,6 +370,12 @@ public class PaymentService {
 
         try {
             orderRepository.save(order);
+        } catch (OptimisticLockException | ObjectOptimisticLockingFailureException e) {
+            log.warn("Concurrent modification detected for order {}, retrying may be needed", orderId);
+            throw new PaymentTransactionException(
+                    "Order was modified by another transaction. Please retry.",
+                    orderId, savedPayment.getId(), savedPayment.getTransactionId(),
+                    PaymentFailureReason.CONCURRENT_MODIFICATION, e);
         } catch (Exception e) {
             throw new PaymentTransactionException(
                     "Failed to update order after payment: " + e.getMessage(),
@@ -339,19 +383,24 @@ public class PaymentService {
                     PaymentFailureReason.DATABASE_ERROR, e);
         }
 
+        // Register successful payment for idempotency tracking
+        idempotencyService.registerSuccessfulPayment(savedPayment.getTransactionId(), orderId);
+
         return buildPOSPaymentResponse(savedPayment, order);
     }
 
     /**
-     * Record revenue for an order. Non-critical operation that logs errors but doesn't fail the transaction.
+     * Record revenue for an order. Non-critical operation with retry and alerting.
+     * Uses async processing with retry to ensure revenue recording doesn't block the payment.
      */
     private void recordRevenueNonCritical(Order order, Long orderId) {
         try {
-            revenueService.recordOrderRevenue(order);
-            log.info("Revenue recorded for order {}", orderId);
+            // Use async revenue recording with retry and alerting
+            revenueRecordingService.recordRevenueWithRetry(order);
+            log.info("Revenue recording initiated for order {}", orderId);
         } catch (Exception e) {
-            // Revenue recording is non-critical - log but don't fail the payment
-            log.error("Failed to record revenue for order {}: {} - payment will still succeed",
+            // Even the async call itself failed - this shouldn't normally happen
+            log.error("Failed to initiate revenue recording for order {}: {} - payment will still succeed",
                     orderId, e.getMessage());
         }
     }
@@ -470,7 +519,15 @@ public class PaymentService {
                 payment.setStatus(PaymentStatus.PARTIALLY_REFUNDED);
             }
 
-            paymentRepository.save(payment);
+            try {
+                paymentRepository.save(payment);
+            } catch (OptimisticLockException | ObjectOptimisticLockingFailureException e) {
+                log.warn("Concurrent modification detected for payment {}, retrying may be needed", payment.getId());
+                throw new PaymentTransactionException(
+                        "Payment was modified by another transaction. Please retry.",
+                        orderId, payment.getId(), payment.getTransactionId(),
+                        PaymentFailureReason.CONCURRENT_MODIFICATION, e);
+            }
             totalRefunded = totalRefunded.add(toRefund);
             remainingRefund = remainingRefund.subtract(toRefund);
 
@@ -479,7 +536,14 @@ public class PaymentService {
 
         // Update order payment status
         updateOrderPaymentStatus(order);
-        orderRepository.save(order);
+        try {
+            orderRepository.save(order);
+        } catch (OptimisticLockException | ObjectOptimisticLockingFailureException e) {
+            log.warn("Concurrent modification detected for order {} during refund", orderId);
+            throw new PaymentTransactionException(
+                    "Order was modified by another transaction. Please retry refund.",
+                    orderId, PaymentFailureReason.CONCURRENT_MODIFICATION, e);
+        }
 
         // Audit log the refund operation
         auditService.logFinancialOperation(

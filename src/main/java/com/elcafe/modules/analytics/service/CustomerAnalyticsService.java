@@ -1,5 +1,6 @@
 package com.elcafe.modules.analytics.service;
 
+import com.elcafe.config.CacheConfig;
 import com.elcafe.modules.analytics.dto.CustomerLTVDTO;
 import com.elcafe.modules.analytics.dto.CustomerRetentionDTO;
 import com.elcafe.modules.analytics.dto.CustomerSatisfactionDTO;
@@ -11,6 +12,7 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -40,6 +42,9 @@ public class CustomerAnalyticsService {
      * Calculate customer retention rate.
      * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
+    @Cacheable(value = CacheConfig.CUSTOMER_RETENTION,
+               key = "'retention:' + #restaurantId + ':' + #startDate + ':' + #endDate",
+               unless = "#result == null")
     public CustomerRetentionDTO getCustomerRetention(LocalDate startDate, LocalDate endDate, Long restaurantId) {
         // Get shift-based time range
         ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
@@ -117,6 +122,9 @@ public class CustomerAnalyticsService {
     /**
      * Calculate Customer Lifetime Value (CLV)
      */
+    @Cacheable(value = CacheConfig.CUSTOMER_LTV,
+               key = "'ltv:' + #restaurantId",
+               unless = "#result == null")
     public CustomerLTVDTO getCustomerLTV(Long restaurantId) {
         // Use active customers only for LTV calculation
         List<Customer> allCustomers = customerRepository.findByActiveTrue();
@@ -206,15 +214,111 @@ public class CustomerAnalyticsService {
     }
 
     /**
-     * Calculate customer satisfaction score
-     * Note: This is a placeholder implementation. In a real system, you would integrate with
-     * review/rating APIs (Google, Yandex, Telegram) and internal feedback systems.
+     * Calculate customer satisfaction score using order-based proxy metrics.
+     * <p>
+     * This implementation calculates satisfaction based on operational metrics:
+     * - Order completion rate (successfully delivered/served orders)
+     * - Order cancellation rate
+     * - Repeat customer rate (indicator of satisfaction)
+     * <p>
+     * For full external review integration (Google, Yandex, Telegram),
+     * implement dedicated ReviewIntegrationService with API clients.
      */
     public CustomerSatisfactionDTO getCustomerSatisfaction(LocalDate startDate, LocalDate endDate, Long restaurantId) {
-        // TODO: Integrate with actual review/rating systems
-        // For now, returning placeholder data structure
-        // restaurantId will be used to filter reviews once integrated
+        // Get shift-based time range for consistent reporting
+        ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
+                restaurantId, startDate, endDate);
+        log.debug("Customer satisfaction using shift range: {} to {}", shift.start(), shift.end());
 
+        // Get all orders in the period
+        List<Order> allOrders = getAllOrdersInPeriod(shift.start(), shift.end(), restaurantId);
+
+        if (allOrders.isEmpty()) {
+            return buildEmptySatisfactionDTO(startDate, endDate, restaurantId);
+        }
+
+        // Calculate operational satisfaction metrics
+        int totalOrders = allOrders.size();
+
+        // Completed orders (successfully delivered/served)
+        long completedOrders = allOrders.stream()
+                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
+                .count();
+
+        // Cancelled orders
+        long cancelledOrders = allOrders.stream()
+                .filter(order -> order.getStatus() == OrderStatus.CANCELLED)
+                .count();
+
+        // Calculate rates
+        double completionRate = totalOrders > 0 ? (double) completedOrders / totalOrders * 100 : 0.0;
+        double cancellationRate = totalOrders > 0 ? (double) cancelledOrders / totalOrders * 100 : 0.0;
+
+        // Calculate repeat customer metrics
+        Map<Long, Long> ordersByCustomer = allOrders.stream()
+                .filter(order -> order.getCustomer() != null)
+                .collect(Collectors.groupingBy(order -> order.getCustomer().getId(), Collectors.counting()));
+
+        long repeatCustomerCount = ordersByCustomer.values().stream()
+                .filter(count -> count > 1)
+                .count();
+
+        double repeatCustomerRate = ordersByCustomer.size() > 0
+                ? (double) repeatCustomerCount / ordersByCustomer.size() * 100 : 0.0;
+
+        // Calculate internal satisfaction score (weighted average of operational metrics)
+        // Completion rate (40%), inverse cancellation rate (30%), repeat customer rate (30%)
+        double internalScore = (completionRate * 0.4) +
+                              ((100 - cancellationRate) * 0.3) +
+                              (repeatCustomerRate * 0.3);
+
+        // Convert to 5-star scale (0-100% -> 0-5 stars)
+        double internalRating = internalScore / 20.0;
+
+        // Categorize based on internal score
+        int positiveCount = (int) (internalScore >= 80 ? completedOrders : completedOrders * (internalScore / 100));
+        int negativeCount = (int) cancelledOrders;
+        int neutralCount = Math.max(0, totalOrders - positiveCount - negativeCount);
+
+        double positivePercentage = totalOrders > 0 ? (double) positiveCount / totalOrders * 100 : 0.0;
+        double negativePercentage = totalOrders > 0 ? (double) negativeCount / totalOrders * 100 : 0.0;
+
+        return CustomerSatisfactionDTO.builder()
+                .startDate(startDate)
+                .endDate(endDate)
+                .restaurantId(restaurantId)
+                .overallSatisfactionScore(internalScore)
+                .googleRating(0.0)  // External integration pending
+                .googleReviewCount(0)
+                .yandexRating(0.0)  // External integration pending
+                .yandexReviewCount(0)
+                .telegramRating(0.0)  // External integration pending
+                .telegramReviewCount(0)
+                .internalRating(internalRating)
+                .internalReviewCount(totalOrders)
+                .totalReviews(totalOrders)
+                .averageRating(internalRating)
+                .positiveReviews(positiveCount)
+                .neutralReviews(neutralCount)
+                .negativeReviews(negativeCount)
+                .positivePercentage(positivePercentage)
+                .negativePercentage(negativePercentage)
+                .build();
+    }
+
+    /**
+     * Get all orders in a time period (including cancelled) for satisfaction analysis.
+     */
+    private List<Order> getAllOrdersInPeriod(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
+        if (restaurantId != null) {
+            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+                    restaurantId, startDateTime, endDateTime);
+        } else {
+            return orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
+        }
+    }
+
+    private CustomerSatisfactionDTO buildEmptySatisfactionDTO(LocalDate startDate, LocalDate endDate, Long restaurantId) {
         return CustomerSatisfactionDTO.builder()
                 .startDate(startDate)
                 .endDate(endDate)

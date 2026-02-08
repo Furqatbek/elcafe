@@ -106,6 +106,7 @@ public class PaymentTransactionException extends RuntimeException {
         INVALID_AMOUNT,
         REFUND_FAILED,
         DATABASE_ERROR,
+        CONCURRENT_MODIFICATION,
         UNKNOWN
     }
 }

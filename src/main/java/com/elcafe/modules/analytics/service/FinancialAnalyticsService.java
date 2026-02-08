@@ -1,5 +1,6 @@
 package com.elcafe.modules.analytics.service;
 
+import com.elcafe.config.CacheConfig;
 import com.elcafe.modules.analytics.dto.*;
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.inventory.service.BatchConsumptionService;
@@ -13,6 +14,7 @@ import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -42,6 +44,9 @@ public class FinancialAnalyticsService {
      * Calculate daily revenue for a date range.
      * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
+    @Cacheable(value = CacheConfig.DAILY_REVENUE,
+               key = "'revenue:' + #restaurantId + ':' + #startDate + ':' + #endDate",
+               unless = "#result == null || #result.isEmpty()")
     public List<DailyRevenueDTO> getDailyRevenue(LocalDate startDate, LocalDate endDate, Long restaurantId) {
         // Get shift-based time range
         ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
@@ -95,6 +100,9 @@ public class FinancialAnalyticsService {
      * Calculate sales per category.
      * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
+    @Cacheable(value = CacheConfig.SALES_BY_CATEGORY,
+               key = "'category:' + #restaurantId + ':' + #startDate + ':' + #endDate",
+               unless = "#result == null || #result.isEmpty()")
     public List<SalesPerCategoryDTO> getSalesPerCategory(LocalDate startDate, LocalDate endDate, Long restaurantId) {
         // Get shift-based time range
         ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
@@ -180,6 +188,9 @@ public class FinancialAnalyticsService {
      * Uses actual batch consumption data when available, falls back to product cost prices.
      * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
+    @Cacheable(value = CacheConfig.COGS_ANALYTICS,
+               key = "'cogs:' + #restaurantId + ':' + #startDate + ':' + #endDate",
+               unless = "#result == null")
     public COGSAnalyticsDTO getCOGSAnalytics(LocalDate startDate, LocalDate endDate, Long restaurantId) {
         // Get shift-based time range
         ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
@@ -252,6 +263,9 @@ public class FinancialAnalyticsService {
      * Calculate comprehensive profitability metrics including labor costs
      * Note: Labor costs should be provided as input or calculated from employee/shift data
      */
+    @Cacheable(value = CacheConfig.PROFITABILITY,
+               key = "'profit:' + #restaurantId + ':' + #startDate + ':' + #endDate + ':' + #laborCosts + ':' + #operatingExpenses",
+               unless = "#result == null")
     public ProfitabilityAnalyticsDTO getProfitabilityAnalytics(
             LocalDate startDate, LocalDate endDate, Long restaurantId,
             BigDecimal laborCosts, BigDecimal otherOperatingExpenses) {
@@ -302,6 +316,9 @@ public class FinancialAnalyticsService {
      * Calculate contribution margin per menu item.
      * Uses shift-based time ranges for restaurants with midnight-crossing shifts.
      */
+    @Cacheable(value = CacheConfig.CONTRIBUTION_MARGINS,
+               key = "'margins:' + #restaurantId + ':' + #startDate + ':' + #endDate",
+               unless = "#result == null || #result.isEmpty()")
     public List<ContributionMarginDTO> getContributionMargins(LocalDate startDate, LocalDate endDate, Long restaurantId) {
         // Get shift-based time range
         ShiftTimeService.ShiftTimeRange shift = shiftTimeService.getShiftTimeRangeForPeriod(
