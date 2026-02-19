@@ -179,15 +179,29 @@ export default function Orders() {
     requestNotificationPermission();
   }, []);
 
+  // Track whether any modal is open to pause auto-refresh
+  const anyModalOpen = addItemModalOpen || paymentModalOpen || cancelModalOpen || editOrderModalOpen || changeTableModalOpen;
+
   // Load tables when restaurant changes, with auto-refresh
   useEffect(() => {
     if (selectedRestaurantId) {
       loadTablesAndOrders();
-      // Auto-refresh every 5 seconds for real-time order updates
-      const interval = setInterval(() => {
-        loadTablesAndOrders();
-      }, 5000);
-      return () => clearInterval(interval);
+    }
+  }, [selectedRestaurantId]);
+
+  // Auto-refresh every 5 seconds, but pause when any modal is open
+  useEffect(() => {
+    if (!selectedRestaurantId || anyModalOpen) return;
+    const interval = setInterval(() => {
+      loadTablesAndOrders();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [selectedRestaurantId, anyModalOpen]);
+
+  // Preload products when restaurant changes so Edit modal opens instantly
+  useEffect(() => {
+    if (selectedRestaurantId) {
+      loadProducts();
     }
   }, [selectedRestaurantId]);
 
@@ -679,9 +693,8 @@ export default function Orders() {
     }
   };
 
-  // Open edit order modal
-  const handleOpenEditOrder = async (order) => {
-    await loadProducts();
+  // Open edit order modal (products already preloaded on restaurant change)
+  const handleOpenEditOrder = (order) => {
     setEditingOrder(order);
     setNewItemProductId('');
     setNewItemQuantity(1);
@@ -689,56 +702,85 @@ export default function Orders() {
     setEditOrderModalOpen(true);
   };
 
-  // Update item quantity
+  // Update item quantity with optimistic UI
   const handleUpdateItemQuantity = async (orderId, itemId, newQuantity) => {
     if (newQuantity < 1) return;
+
+    // Optimistic update: immediately update local state
+    if (editingOrder && editingOrder.id === orderId) {
+      const optimisticOrder = {
+        ...editingOrder,
+        items: editingOrder.items?.map(item =>
+          item.id === itemId
+            ? { ...item, quantity: newQuantity, totalPrice: (item.unitPrice || 0) * newQuantity }
+            : item
+        ),
+      };
+      setEditingOrder(optimisticOrder);
+    }
 
     setUpdatingItem(itemId);
     try {
       await posAPI.updateItemQuantity(orderId, itemId, newQuantity);
-      await loadTablesAndOrders();
-
-      // Update the editing order with fresh data
-      if (editingOrder && editingOrder.id === orderId) {
-        const updatedOrders = tableOrders[selectedTable?.id] || [];
-        const updatedOrder = updatedOrders.find(o => o.id === orderId);
-        if (updatedOrder) {
-          setEditingOrder(updatedOrder);
+      // Background sync - don't block UI
+      loadTablesAndOrders().then(() => {
+        if (editingOrder && editingOrder.id === orderId) {
+          const updatedOrders = tableOrders[selectedTable?.id] || [];
+          const updatedOrder = updatedOrders.find(o => o.id === orderId);
+          if (updatedOrder) {
+            setEditingOrder(updatedOrder);
+          }
         }
-      }
+      });
     } catch (error) {
       console.error('Failed to update item quantity:', error);
+      // Revert optimistic update on failure
+      loadTablesAndOrders();
       alert(t('orders.updateItemError', 'Failed to update item quantity'));
     } finally {
       setUpdatingItem(null);
     }
   };
 
-  // Remove item from order
+  // Remove item from order with optimistic UI
   const handleRemoveItem = async (orderId, itemId) => {
     if (!confirm(t('orders.confirmRemoveItem', 'Are you sure you want to remove this item?'))) {
       return;
     }
 
+    // Optimistic update: immediately remove item from local state
+    const previousOrder = editingOrder;
+    if (editingOrder && editingOrder.id === orderId) {
+      const remainingItems = editingOrder.items?.filter(item => item.id !== itemId);
+      if (remainingItems && remainingItems.length > 0) {
+        setEditingOrder({ ...editingOrder, items: remainingItems });
+      } else {
+        setEditOrderModalOpen(false);
+        setEditingOrder(null);
+      }
+    }
+
     setUpdatingItem(itemId);
     try {
       await posAPI.removeItemFromOrder(orderId, itemId);
-      await loadTablesAndOrders();
-
-      // Update the editing order with fresh data
-      if (editingOrder && editingOrder.id === orderId) {
-        const updatedOrders = tableOrders[selectedTable?.id] || [];
-        const updatedOrder = updatedOrders.find(o => o.id === orderId);
-        if (updatedOrder) {
-          setEditingOrder(updatedOrder);
-        } else {
-          // Order might be empty now, close the modal
-          setEditOrderModalOpen(false);
-          setEditingOrder(null);
+      // Background sync
+      loadTablesAndOrders().then(() => {
+        if (editingOrder && editingOrder.id === orderId) {
+          const updatedOrders = tableOrders[selectedTable?.id] || [];
+          const updatedOrder = updatedOrders.find(o => o.id === orderId);
+          if (updatedOrder) {
+            setEditingOrder(updatedOrder);
+          }
         }
-      }
+      });
     } catch (error) {
       console.error('Failed to remove item:', error);
+      // Revert optimistic update on failure
+      if (previousOrder) {
+        setEditingOrder(previousOrder);
+        setEditOrderModalOpen(true);
+      }
+      loadTablesAndOrders();
       alert(t('orders.removeItemError', 'Failed to remove item'));
     } finally {
       setUpdatingItem(null);
@@ -808,15 +850,14 @@ export default function Orders() {
       // Show success notification
       showSuccessNotification(t('orders.itemAddedSuccess', '{{name}} added successfully!', { name: selectedProduct?.name || 'Item' }));
 
-      // Refresh data
-      await loadTablesAndOrders();
-
-      // Update the editing order with fresh data
-      const updatedOrders = tableOrders[selectedTable?.id] || [];
-      const updatedOrder = updatedOrders.find(o => o.id === editingOrder.id);
-      if (updatedOrder) {
-        setEditingOrder(updatedOrder);
-      }
+      // Background sync - don't block UI
+      loadTablesAndOrders().then(() => {
+        const updatedOrders = tableOrders[selectedTable?.id] || [];
+        const updatedOrder = updatedOrders.find(o => o.id === editingOrder.id);
+        if (updatedOrder) {
+          setEditingOrder(updatedOrder);
+        }
+      });
     } catch (error) {
       console.error('Failed to add item:', error);
       alert(t('orders.addItemError', 'Failed to add item: ') + (error.response?.data?.message || error.message));
@@ -852,10 +893,12 @@ export default function Orders() {
     return stats;
   };
 
-  // Filter products by category (using categoryName field from API)
-  const filteredProducts = selectedCategory === 'all'
-    ? availableProducts
-    : availableProducts.filter(p => p.categoryName === selectedCategory);
+  // Filter products by category (memoized to avoid re-computation on every render)
+  const filteredProducts = useMemo(() => {
+    return selectedCategory === 'all'
+      ? availableProducts
+      : availableProducts.filter(p => p.categoryName === selectedCategory);
+  }, [availableProducts, selectedCategory]);
 
   const stats = getTableStats();
 
