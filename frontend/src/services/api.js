@@ -891,6 +891,26 @@ export const referralAPI = {
     api.get(`/restaurants/${restaurantId}/referrals/stats`),
 };
 
+// Loyalty Milestones API
+export const milestoneAPI = {
+  // Milestones CRUD
+  getMilestones: (restaurantId) =>
+    api.get(`/restaurants/${restaurantId}/milestones`),
+  getMilestone: (id) => api.get(`/milestones/${id}`),
+  createMilestone: (restaurantId, data) =>
+    api.post(`/restaurants/${restaurantId}/milestones`, data),
+  updateMilestone: (id, data) => api.put(`/milestones/${id}`, data),
+  deleteMilestone: (id) => api.delete(`/milestones/${id}`),
+
+  // Customer progress
+  getCustomerProgress: (restaurantId, customerId) =>
+    api.get(`/restaurants/${restaurantId}/milestones/customers/${customerId}/progress`),
+  getPendingRewards: (customerId) =>
+    api.get(`/milestones/customers/${customerId}/pending-rewards`),
+  redeemReward: (milestoneId, customerId) =>
+    api.post(`/milestones/${milestoneId}/customers/${customerId}/redeem`),
+};
+
 // SMS Marketing API
 export const smsAPI = {
   // Templates

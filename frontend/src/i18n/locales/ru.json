@@ -102,7 +102,8 @@
       "referrals": "Рефералы",
       "smsMarketing": "SMS Маркетинг",
       "telegramMarketing": "Telegram",
-      "ordersHistory": "История заказов"
+      "ordersHistory": "История заказов",
+      "milestones": "Достижения"
     }
   },
   "dashboard": {
@@ -3531,6 +3532,58 @@
     "notesTitle": "Примечания для клиентов",
     "notesPlaceholder": "Особые инструкции или правила для отображения клиентам...",
     "noSettings": "Не удалось загрузить настройки"
+  },
+  "milestones": {
+    "title": "Программа лояльности",
+    "subtitle": "Создайте награды в стиле карты штампов — посетите X раз и получите награду",
+    "addMilestone": "Добавить достижение",
+    "listTitle": "Достижения",
+    "listDescription": "Управление наградами за лояльность",
+    "noMilestones": "Достижений пока нет",
+    "getStarted": "Создайте первое достижение, чтобы начать награждать постоянных клиентов",
+    "createMilestone": "Создать достижение",
+    "createDescription": "Настройте новую награду в стиле карты штампов",
+    "editMilestone": "Редактировать достижение",
+    "editDescription": "Обновить настройки достижения",
+    "deleteMilestone": "Удалить достижение",
+    "deleteConfirmation": "Вы уверены, что хотите удалить \"{{name}}\"? Это действие необратимо.",
+    "visits": "визитов",
+    "points": "баллов",
+    "repeating": "Повторяемое",
+    "oneTime": "Одноразовое",
+    "rewardTypes": {
+      "FREE_ITEM": "Бесплатный товар",
+      "DISCOUNT_PERCENTAGE": "Скидка (%)",
+      "DISCOUNT_FIXED": "Фиксированная скидка",
+      "BONUS_POINTS": "Бонусные баллы"
+    },
+    "form": {
+      "name": "Название",
+      "namePlaceholder": "напр., Карта любителя кофе",
+      "requiredVisits": "Необходимо визитов",
+      "description": "Описание",
+      "descriptionPlaceholder": "Опишите награду за достижение...",
+      "rewardType": "Тип награды",
+      "rewardProduct": "Товар-награда",
+      "rewardValue": "Размер награды",
+      "minOrderAmount": "Минимальная сумма заказа",
+      "minOrderAmountPlaceholder": "0 = без минимума",
+      "isRepeating": "Повторяемое достижение"
+    },
+    "table": {
+      "name": "Название",
+      "visits": "Визиты",
+      "reward": "Награда",
+      "minOrder": "Мин. заказ",
+      "repeating": "Повтор",
+      "status": "Статус"
+    },
+    "messages": {
+      "fillRequired": "Пожалуйста, заполните все обязательные поля",
+      "createError": "Ошибка при создании достижения",
+      "updateError": "Ошибка при обновлении достижения",
+      "deleteError": "Ошибка при удалении достижения"
+    }
   },
   "common": {
     "cancel": "Отмена",

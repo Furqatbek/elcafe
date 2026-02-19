@@ -102,7 +102,8 @@
       "referrals": "Referallar",
       "smsMarketing": "SMS Marketing",
       "telegramMarketing": "Telegram",
-      "ordersHistory": "Buyurtmalar tarixi"
+      "ordersHistory": "Buyurtmalar tarixi",
+      "milestones": "Yutuqlar"
     }
   },
   "dashboard": {
@@ -3577,6 +3578,58 @@
     "notesTitle": "Mijozlar uchun eslatmalar",
     "notesPlaceholder": "Mijozlarga ko'rsatiladigan maxsus ko'rsatmalar...",
     "noSettings": "Sozlamalarni yuklashda xatolik"
+  },
+  "milestones": {
+    "title": "Sadoqat yutuqlari",
+    "subtitle": "Shtamp-karta uslubidagi mukofotlarni yarating — X marta tashrif buyuring va mukofot oling",
+    "addMilestone": "Yutuq qo'shish",
+    "listTitle": "Yutuqlar",
+    "listDescription": "Sadoqat mukofotlarini boshqaring",
+    "noMilestones": "Hali yutuqlar yo'q",
+    "getStarted": "Doimiy mijozlarni mukofotlash uchun birinchi yutuqni yarating",
+    "createMilestone": "Yutuq yaratish",
+    "createDescription": "Yangi shtamp-karta uslubidagi mukofot sozlash",
+    "editMilestone": "Yutuqni tahrirlash",
+    "editDescription": "Yutuq sozlamalarini yangilash",
+    "deleteMilestone": "Yutuqni o'chirish",
+    "deleteConfirmation": "\"{{name}}\" ni o'chirishga ishonchingiz komilmi? Bu amalni qaytarib bo'lmaydi.",
+    "visits": "tashrif",
+    "points": "ball",
+    "repeating": "Takrorlanuvchi",
+    "oneTime": "Bir martalik",
+    "rewardTypes": {
+      "FREE_ITEM": "Bepul mahsulot",
+      "DISCOUNT_PERCENTAGE": "Chegirma (%)",
+      "DISCOUNT_FIXED": "Belgilangan chegirma",
+      "BONUS_POINTS": "Bonus ballar"
+    },
+    "form": {
+      "name": "Nomi",
+      "namePlaceholder": "masalan, Qahva ishqibozlari kartasi",
+      "requiredVisits": "Kerakli tashriflar",
+      "description": "Tavsif",
+      "descriptionPlaceholder": "Yutuq mukofotini tavsiflang...",
+      "rewardType": "Mukofot turi",
+      "rewardProduct": "Mukofot mahsuloti",
+      "rewardValue": "Mukofot qiymati",
+      "minOrderAmount": "Minimal buyurtma summasi",
+      "minOrderAmountPlaceholder": "0 = minimalsiz",
+      "isRepeating": "Takrorlanuvchi yutuq"
+    },
+    "table": {
+      "name": "Nomi",
+      "visits": "Tashriflar",
+      "reward": "Mukofot",
+      "minOrder": "Min. buyurtma",
+      "repeating": "Takror",
+      "status": "Holat"
+    },
+    "messages": {
+      "fillRequired": "Iltimos, barcha majburiy maydonlarni to'ldiring",
+      "createError": "Yutuq yaratishda xatolik",
+      "updateError": "Yutuqni yangilashda xatolik",
+      "deleteError": "Yutuqni o'chirishda xatolik"
+    }
   },
   "common": {
     "cancel": "Bekor qilish",

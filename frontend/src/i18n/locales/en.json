@@ -105,7 +105,8 @@
       "referrals": "Referrals",
       "smsMarketing": "SMS Marketing",
       "telegramMarketing": "Telegram",
-      "ordersHistory": "Orders History"
+      "ordersHistory": "Orders History",
+      "milestones": "Milestones"
     }
   },
   "dashboard": {
@@ -3780,6 +3781,58 @@
     "notesTitle": "Notes for Customers",
     "notesPlaceholder": "Special instructions or policies to display to customers...",
     "noSettings": "Failed to load settings"
+  },
+  "milestones": {
+    "title": "Loyalty Milestones",
+    "subtitle": "Create stamp-card style rewards — visit X times and earn a reward",
+    "addMilestone": "Add Milestone",
+    "listTitle": "Milestones",
+    "listDescription": "Manage your loyalty milestone rewards",
+    "noMilestones": "No milestones yet",
+    "getStarted": "Create your first milestone to start rewarding loyal customers",
+    "createMilestone": "Create Milestone",
+    "createDescription": "Set up a new stamp-card style reward",
+    "editMilestone": "Edit Milestone",
+    "editDescription": "Update milestone settings",
+    "deleteMilestone": "Delete Milestone",
+    "deleteConfirmation": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+    "visits": "visits",
+    "points": "points",
+    "repeating": "Repeating",
+    "oneTime": "One-time",
+    "rewardTypes": {
+      "FREE_ITEM": "Free Item",
+      "DISCOUNT_PERCENTAGE": "Discount (%)",
+      "DISCOUNT_FIXED": "Fixed Discount",
+      "BONUS_POINTS": "Bonus Points"
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "e.g., Coffee Lover Card",
+      "requiredVisits": "Required Visits",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe the milestone reward...",
+      "rewardType": "Reward Type",
+      "rewardProduct": "Reward Product",
+      "rewardValue": "Reward Value",
+      "minOrderAmount": "Minimum Order Amount",
+      "minOrderAmountPlaceholder": "0 = no minimum",
+      "isRepeating": "Repeating milestone"
+    },
+    "table": {
+      "name": "Name",
+      "visits": "Visits",
+      "reward": "Reward",
+      "minOrder": "Min Order",
+      "repeating": "Repeating",
+      "status": "Status"
+    },
+    "messages": {
+      "fillRequired": "Please fill in all required fields",
+      "createError": "Failed to create milestone",
+      "updateError": "Failed to update milestone",
+      "deleteError": "Failed to delete milestone"
+    }
   },
   "common": {
     "cancel": "Cancel",
