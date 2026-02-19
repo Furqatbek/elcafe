@@ -102,7 +102,7 @@ public class CustomerActivityService {
                 .monetary(monetary)
                 .averageCheck(averageCheck)
                 .lastOrderDate(lastOrderDate)
-                .registrationDate(customer.getCreatedAt())
+                .registrationDate(customer.getCreatedAt() != null ? customer.getCreatedAt().toLocalDateTime() : null)
                 .registrationSource(customer.getRegistrationSource())
                 .orderSources(orderSources)
                 .build();

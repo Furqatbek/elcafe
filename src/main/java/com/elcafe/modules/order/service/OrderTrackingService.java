@@ -121,7 +121,7 @@ public class OrderTrackingService {
     private OrderTrackingResponse.StatusUpdate buildStatusUpdate(OrderStatusHistory history) {
         return OrderTrackingResponse.StatusUpdate.builder()
                 .status(history.getStatus())
-                .timestamp(history.getCreatedAt())
+                .timestamp(history.getCreatedAt() != null ? history.getCreatedAt().toLocalDateTime() : null)
                 .message(getStatusMessage(history.getStatus()))
                 .build();
     }
@@ -224,7 +224,7 @@ public class OrderTrackingService {
     private LocalDateTime findStatusTimestamp(Order order, OrderStatus status) {
         return order.getStatusHistory().stream()
                 .filter(h -> h.getStatus() == status)
-                .map(OrderStatusHistory::getCreatedAt)
+                .map(h -> h.getCreatedAt() != null ? h.getCreatedAt().toLocalDateTime() : null)
                 .findFirst()
                 .orElse(null);
     }

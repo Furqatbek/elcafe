@@ -355,7 +355,7 @@ public class OperationalAnalyticsService {
 
         // Fallback: use creation time to first status change
         if (newTime.isPresent()) {
-            return Duration.between(newTime.get(), order.getUpdatedAt()).toMinutes();
+            return Duration.between(newTime.get(), order.getUpdatedAt().toLocalDateTime()).toMinutes();
         }
 
         return 0.0;
@@ -381,7 +381,7 @@ public class OperationalAnalyticsService {
         Optional<LocalDateTime> readyTime = findStatusTime(order, OrderStatus.READY);
 
         if (readyTime.isPresent() && deliveryInfo.getActualDeliveryTime() != null) {
-            return Duration.between(readyTime.get(), deliveryInfo.getActualDeliveryTime()).toMinutes();
+            return Duration.between(readyTime.get(), deliveryInfo.getActualDeliveryTime().toLocalDateTime()).toMinutes();
         }
 
         // Fallback to delivered status time
@@ -404,7 +404,7 @@ public class OperationalAnalyticsService {
 
         return order.getStatusHistory().stream()
                 .filter(history -> history.getStatus() == status)
-                .map(OrderStatusHistory::getCreatedAt)
+                .map(h -> h.getCreatedAt().toLocalDateTime())
                 .min(LocalDateTime::compareTo);
     }
 

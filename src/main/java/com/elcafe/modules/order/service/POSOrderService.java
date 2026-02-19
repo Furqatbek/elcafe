@@ -40,6 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -272,7 +274,7 @@ public class POSOrderService {
         deliveryInfo.setState(deliveryInfoReq.getState());
         deliveryInfo.setZipCode(deliveryInfoReq.getZipCode());
         deliveryInfo.setDeliveryInstructions(deliveryInfoReq.getDeliveryInstructions());
-        deliveryInfo.setEstimatedDeliveryTime(LocalDateTime.now().plusMinutes(45));
+        deliveryInfo.setEstimatedDeliveryTime(OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(45));
         return deliveryInfo;
     }
 
@@ -375,7 +377,7 @@ public class POSOrderService {
                 .entryFee(order.getEntryFee())
                 .total(order.getTotal())
                 .orderNotes(order.getCustomerNotes())
-                .createdAt(order.getCreatedAt().toLocalDateTime())
+                .createdAt(order.getCreatedAt())
                 .build();
 
         List<POSOrderResponse.OrderItemResponse> itemResponses = order.getItems().stream()

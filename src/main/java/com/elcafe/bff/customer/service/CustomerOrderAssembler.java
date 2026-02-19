@@ -50,7 +50,7 @@ public class CustomerOrderAssembler {
 
     private LocalDateTime getEstimatedDeliveryTime(Order order) {
         if (order.getDeliveryInfo() != null && order.getDeliveryInfo().getEstimatedDeliveryTime() != null) {
-            return order.getDeliveryInfo().getEstimatedDeliveryTime();
+            return order.getDeliveryInfo().getEstimatedDeliveryTime().toLocalDateTime();
         }
         return null;
     }

@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 
 @Data
@@ -34,8 +33,8 @@ public class CustomerResponse {
     private String language;
     private RegistrationSource registrationSource;
     private Boolean active;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime updatedAt;
 
     // Marketing fields - Loyalty
     private BigDecimal bonusBalance;

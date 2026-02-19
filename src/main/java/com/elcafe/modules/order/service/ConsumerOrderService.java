@@ -371,7 +371,7 @@ public class ConsumerOrderService {
                 .customerNotes(order.getCustomerNotes())
                 .scheduledFor(order.getScheduledFor() != null ? order.getScheduledFor().toLocalDateTime() : null)
                 .createdAt(order.getCreatedAt().toLocalDateTime())
-                .estimatedDeliveryTime(order.getDeliveryInfo() != null ? order.getDeliveryInfo().getEstimatedDeliveryTime() : null)
+                .estimatedDeliveryTime(order.getDeliveryInfo() != null && order.getDeliveryInfo().getEstimatedDeliveryTime() != null ? order.getDeliveryInfo().getEstimatedDeliveryTime().toLocalDateTime() : null)
                 .restaurant(restaurantInfo)
                 .customer(customerInfo)
                 .items(itemsInfo)

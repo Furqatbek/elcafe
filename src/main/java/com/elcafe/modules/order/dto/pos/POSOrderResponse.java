@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Data
@@ -33,8 +33,8 @@ public class POSOrderResponse {
     private BigDecimal total;
     private String paymentMethod;
     private String orderNotes;
-    private LocalDateTime createdAt;
-    private LocalDateTime estimatedDeliveryTime;
+    private OffsetDateTime createdAt;
+    private OffsetDateTime estimatedDeliveryTime;
     private DeliveryAddressResponse deliveryAddress;
     private DineInInfoResponse dineInInfo;
 

@@ -390,7 +390,7 @@ public class CustomerAnalyticsService {
         LocalDateTime firstOrderDate = customerOrders.stream()
                 .map(order -> order.getCreatedAt().toLocalDateTime())
                 .min(LocalDateTime::compareTo)
-                .orElse(customer.getCreatedAt());
+                .orElse(customer.getCreatedAt() != null ? customer.getCreatedAt().toLocalDateTime() : LocalDateTime.now());
 
         LocalDateTime lastOrderDate = customerOrders.stream()
                 .map(order -> order.getCreatedAt().toLocalDateTime())

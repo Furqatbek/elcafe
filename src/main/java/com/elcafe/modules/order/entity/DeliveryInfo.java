@@ -9,7 +9,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 @Builder
@@ -67,11 +67,15 @@ public class DeliveryInfo {
 
     private String courierTrackingId;
 
-    private LocalDateTime pickupTime;
+    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime pickupTime;
 
-    private LocalDateTime estimatedDeliveryTime;
+    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime estimatedDeliveryTime;
 
-    private LocalDateTime deliveryTime;
+    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime deliveryTime;
 
-    private LocalDateTime actualDeliveryTime;
+    @Column(columnDefinition = "TIMESTAMP WITH TIME ZONE")
+    private OffsetDateTime actualDeliveryTime;
 }
