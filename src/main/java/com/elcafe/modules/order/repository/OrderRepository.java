@@ -15,7 +15,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -104,16 +103,16 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     // Waiter metrics queries (with date filter for period support)
     @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate")
-    BigDecimal calculateTotalRevenueByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
+    BigDecimal calculateTotalRevenueByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") OffsetDateTime startDate);
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate")
-    Long countValidOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
+    Long countValidOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") OffsetDateTime startDate);
 
     @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') ORDER BY o.createdAt DESC")
     List<Order> findRecentOrdersByWaiter(@Param("waiterId") Long waiterId, Pageable pageable);
 
     @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate ORDER BY o.createdAt DESC")
-    List<Order> findRecentOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate, Pageable pageable);
+    List<Order> findRecentOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") OffsetDateTime startDate, Pageable pageable);
 
     @Query("SELECT CAST(o.createdAt AS LocalDate) as date, COALESCE(SUM(o.total), 0) as revenue, COUNT(o) as orderCount " +
            "FROM Order o " +
@@ -122,7 +121,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
            "AND o.createdAt >= :startDate " +
            "GROUP BY CAST(o.createdAt AS LocalDate) " +
            "ORDER BY CAST(o.createdAt AS LocalDate) DESC")
-    List<Object[]> findDailyRevenueByWaiter(@Param("waiterId") Long waiterId, @Param("startDate") LocalDateTime startDate);
+    List<Object[]> findDailyRevenueByWaiter(@Param("waiterId") Long waiterId, @Param("startDate") OffsetDateTime startDate);
 
     // POS: Find open dine-in orders for a restaurant (includes orders with orderTables, diningTable, or legacy tableIds)
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items LEFT JOIN FETCH o.orderTables ot LEFT JOIN FETCH ot.table WHERE o.restaurant.id = :restaurantId AND (SIZE(o.orderTables) > 0 OR o.diningTable IS NOT NULL OR o.tableIds IS NOT NULL) AND o.status IN :statuses ORDER BY o.createdAt DESC")

@@ -42,6 +42,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -639,7 +641,7 @@ public class WaiterOrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
         // Calculate start date based on period
-        LocalDateTime startDate = calculateStartDate(period);
+        OffsetDateTime startDate = calculateStartDate(period);
         int activityDays = getActivityDays(period);
 
         // Calculate total revenue for the period
@@ -655,7 +657,7 @@ public class WaiterOrderService {
         }
 
         // Get activity data for the period
-        LocalDateTime activityStartDate = LocalDateTime.now().minusDays(activityDays);
+        OffsetDateTime activityStartDate = OffsetDateTime.now(ZoneOffset.UTC).minusDays(activityDays);
         List<Object[]> dailyData = orderRepository.findDailyRevenueByWaiter(waiterId, activityStartDate);
 
         List<DailyRevenueData> activity = dailyData.stream()
@@ -693,12 +695,12 @@ public class WaiterOrderService {
     /**
      * Calculate the start date based on the period parameter
      */
-    private LocalDateTime calculateStartDate(String period) {
-        LocalDateTime now = LocalDateTime.now();
+    private OffsetDateTime calculateStartDate(String period) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         return switch (period.toLowerCase()) {
-            case "daily" -> now.toLocalDate().atStartOfDay();
-            case "monthly" -> now.minusDays(30).toLocalDate().atStartOfDay();
-            default -> now.minusDays(7).toLocalDate().atStartOfDay(); // weekly (default)
+            case "daily" -> now.toLocalDate().atStartOfDay().atOffset(ZoneOffset.UTC);
+            case "monthly" -> now.minusDays(30).toLocalDate().atStartOfDay().atOffset(ZoneOffset.UTC);
+            default -> now.minusDays(7).toLocalDate().atStartOfDay().atOffset(ZoneOffset.UTC); // weekly (default)
         };
     }
 
