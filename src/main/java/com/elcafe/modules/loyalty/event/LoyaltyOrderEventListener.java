@@ -1,6 +1,7 @@
 package com.elcafe.modules.loyalty.event;
 
 import com.elcafe.modules.loyalty.service.LoyaltyService;
+import com.elcafe.modules.loyalty.service.MilestoneService;
 import com.elcafe.modules.marketing.event.OrderCompletedEvent;
 import com.elcafe.modules.order.entity.Order;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ import java.math.BigDecimal;
 public class LoyaltyOrderEventListener {
 
     private final LoyaltyService loyaltyService;
+    private final MilestoneService milestoneService;
 
     /**
      * Listen for order completion events from marketing module.
@@ -37,6 +39,7 @@ public class LoyaltyOrderEventListener {
         try {
             log.info("Handling order completed event for order {}", event.getOrder().getId());
             loyaltyService.processOrderCompletion(event.getOrder());
+            milestoneService.processOrderCompletion(event.getOrder());
         } catch (Exception e) {
             log.error("Error processing loyalty for completed order {}", event.getOrder().getId(), e);
             // Don't throw exception - loyalty processing should not fail the order
