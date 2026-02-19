@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 @Builder
@@ -27,6 +27,6 @@ public class CustomerMilestoneProgressResponse {
     private BigDecimal rewardValue;
     private String rewardProductName;
     private BigDecimal minOrderAmount;
-    private LocalDateTime lastCompletionAt;
-    private LocalDateTime lastRedemptionAt;
+    private OffsetDateTime lastCompletionAt;
+    private OffsetDateTime lastRedemptionAt;
 }
