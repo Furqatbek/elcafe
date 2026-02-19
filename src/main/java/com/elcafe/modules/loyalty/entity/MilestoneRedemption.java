@@ -8,7 +8,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "milestone_redemptions", indexes = {
@@ -62,18 +62,18 @@ public class MilestoneRedemption {
     private Order lastVisitOrder;
 
     @Column(name = "last_completion_at")
-    private LocalDateTime lastCompletionAt;
+    private OffsetDateTime lastCompletionAt;
 
     @Column(name = "last_redemption_at")
-    private LocalDateTime lastRedemptionAt;
+    private OffsetDateTime lastRedemptionAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
+    private OffsetDateTime updatedAt;
 
     /**
      * Record a visit and check if milestone is reached
@@ -85,7 +85,7 @@ public class MilestoneRedemption {
         if (this.currentVisits >= requiredVisits) {
             this.rewardPending = true;
             this.totalCompletions++;
-            this.lastCompletionAt = LocalDateTime.now();
+            this.lastCompletionAt = OffsetDateTime.now();
             return true;
         }
         return false;
@@ -99,7 +99,7 @@ public class MilestoneRedemption {
             throw new IllegalStateException("No pending reward to redeem");
         }
         this.rewardPending = false;
-        this.lastRedemptionAt = LocalDateTime.now();
+        this.lastRedemptionAt = OffsetDateTime.now();
         if (isRepeating) {
             this.currentVisits = 0;
         }
