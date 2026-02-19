@@ -1365,13 +1365,127 @@ Map<String, Object> metadata = Map.of(); // No context for debugging
 
 ---
 
+## Loyalty Milestones (Stamp Card Rewards)
+
+### Overview
+
+The milestone system provides stamp-card style rewards (e.g., "Visit 10 times, get 1 free item"). Restaurants can configure multiple milestones with different reward types and visit requirements.
+
+### Key Features
+
+- **Configurable Visit Thresholds**: Set how many visits are needed (e.g., 5, 10, 20)
+- **Multiple Reward Types**: FREE_ITEM, DISCOUNT_PERCENTAGE, DISCOUNT_FIXED, BONUS_POINTS
+- **Minimum Order Amount**: Only count visits where the order total meets a threshold
+- **Repeating Milestones**: Optionally reset after completion for ongoing rewards
+- **Automatic Visit Tracking**: Visits are recorded automatically on order completion via event listener
+
+### Database Schema
+
+#### `loyalty_milestones`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | BIGSERIAL | Primary key |
+| restaurant_id | BIGINT | Restaurant FK |
+| name | VARCHAR(255) | Milestone name |
+| description | TEXT | Description |
+| required_visits | INTEGER | Visits needed to earn reward |
+| reward_type | VARCHAR(30) | FREE_ITEM, DISCOUNT_PERCENTAGE, DISCOUNT_FIXED, BONUS_POINTS |
+| reward_value | DECIMAL(10,2) | Discount amount or bonus points |
+| reward_product_id | BIGINT | Product FK (for FREE_ITEM rewards) |
+| min_order_amount | DECIMAL(10,2) | Minimum order total to count as a visit |
+| is_repeating | BOOLEAN | Whether milestone resets after completion |
+| active | BOOLEAN | Whether milestone is active |
+| created_at | TIMESTAMP | Creation timestamp |
+| updated_at | TIMESTAMP | Last update timestamp |
+
+#### `milestone_redemptions`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | BIGSERIAL | Primary key |
+| milestone_id | BIGINT | Milestone FK |
+| customer_id | BIGINT | Customer FK |
+| current_visits | INTEGER | Current visit count toward milestone |
+| total_completions | INTEGER | Number of times milestone was completed |
+| reward_pending | BOOLEAN | Whether a reward is waiting to be redeemed |
+| last_visit_order_id | BIGINT | Last qualifying order FK |
+| last_completion_at | TIMESTAMP | When milestone was last completed |
+| last_redemption_at | TIMESTAMP | When reward was last redeemed |
+| created_at | TIMESTAMP | Creation timestamp |
+| updated_at | TIMESTAMP | Last update timestamp |
+
+### API Endpoints
+
+#### Admin/Manager Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/restaurants/{restaurantId}/milestones` | Create a milestone |
+| PUT | `/api/v1/milestones/{milestoneId}` | Update a milestone |
+| GET | `/api/v1/milestones/{milestoneId}` | Get milestone by ID |
+| GET | `/api/v1/restaurants/{restaurantId}/milestones` | Get all restaurant milestones |
+| DELETE | `/api/v1/milestones/{milestoneId}` | Delete a milestone |
+
+#### Customer Progress Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/restaurants/{restaurantId}/milestones/customers/{customerId}/progress` | Get customer's milestone progress |
+| GET | `/api/v1/milestones/customers/{customerId}/pending-rewards` | Get pending rewards |
+| POST | `/api/v1/milestones/{milestoneId}/customers/{customerId}/redeem` | Redeem a pending reward |
+
+### How It Works
+
+1. **Admin creates a milestone** for a restaurant (e.g., "Coffee Lover Card" — 10 visits for a free coffee)
+2. **Customer places an order** — the `LoyaltyOrderEventListener` fires after order completion
+3. **MilestoneService.processOrderCompletion()** checks all active milestones:
+   - Skips if order total < milestone's `minOrderAmount`
+   - Skips non-repeating milestones already completed
+   - Skips milestones with pending (unredeemed) rewards
+   - Increments visit counter and checks if threshold reached
+4. **When threshold reached**: `rewardPending` is set to `true`, `totalCompletions` incremented
+5. **Staff redeems reward** via the redeem endpoint, which resets the counter if repeating
+
+### Example: Create a "Buy 10, Get 1 Free" Milestone
+
+```json
+POST /api/v1/restaurants/1/milestones
+{
+  "name": "Coffee Lover Card",
+  "description": "Buy 10 coffees and get 1 free!",
+  "requiredVisits": 10,
+  "rewardType": "FREE_ITEM",
+  "rewardProductId": 42,
+  "minOrderAmount": 15000,
+  "isRepeating": true
+}
+```
+
+### Example: Create a Discount Milestone
+
+```json
+POST /api/v1/restaurants/1/milestones
+{
+  "name": "Loyal Customer Reward",
+  "description": "Visit 5 times and get 20% off your next order",
+  "requiredVisits": 5,
+  "rewardType": "DISCOUNT_PERCENTAGE",
+  "rewardValue": 20.00,
+  "minOrderAmount": 0,
+  "isRepeating": true
+}
+```
+
+---
+
 ## Support
 
 For questions or issues:
 
 - **Documentation**: `/docs/API_REFERENCE.md`
-- **Database Schema**: `/src/main/resources/db/migration/V27__*.sql`
+- **Database Schema**: `/src/main/resources/db/migration/V27__*.sql`, `/src/main/resources/db/migration/V101__*.sql`
 - **Source Code**: `/src/main/java/com/elcafe/modules/loyalty/`
 
-**Version:** 1.0
-**Last Updated:** 2025-12-15
+**Version:** 1.1
+**Last Updated:** 2026-02-19

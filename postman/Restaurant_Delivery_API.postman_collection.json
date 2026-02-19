@@ -3426,6 +3426,130 @@
 				}
 			],
 			"description": "Financial alerts and notifications management. Subscribe to daily reports via Telegram. All endpoints require ADMIN, OWNER, or MANAGER role and validate restaurant-level access."
+		},
+		{
+			"name": "Loyalty Milestones",
+			"item": [
+				{
+					"name": "Create Milestone",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Coffee Lover Card\",\n  \"description\": \"Buy 10 coffees and get 1 free!\",\n  \"requiredVisits\": 10,\n  \"rewardType\": \"FREE_ITEM\",\n  \"rewardProductId\": 1,\n  \"minOrderAmount\": 15000,\n  \"isRepeating\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/milestones",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "milestones"]
+						},
+						"description": "Create a new stamp-card milestone for a restaurant. ADMIN/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Restaurant Milestones",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/milestones",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "milestones"]
+						},
+						"description": "Get all milestones for a restaurant."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Milestone by ID",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "1"]
+						},
+						"description": "Get milestone details by ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Milestone",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Coffee Card\",\n  \"requiredVisits\": 8,\n  \"minOrderAmount\": 20000,\n  \"active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "1"]
+						},
+						"description": "Update an existing milestone. ADMIN/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Milestone",
+					"request": {
+						"method": "DELETE",
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "1"]
+						},
+						"description": "Delete a milestone. ADMIN/MANAGER roles required."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Milestone Progress",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/restaurants/{{restaurant_id}}/milestones/customers/{{customer_id}}/progress",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "restaurants", "{{restaurant_id}}", "milestones", "customers", "{{customer_id}}", "progress"]
+						},
+						"description": "Get a customer's progress on all active milestones at a restaurant."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Customer Pending Rewards",
+					"request": {
+						"method": "GET",
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/customers/{{customer_id}}/pending-rewards",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "customers", "{{customer_id}}", "pending-rewards"]
+						},
+						"description": "Get all pending milestone rewards for a customer."
+					},
+					"response": []
+				},
+				{
+					"name": "Redeem Milestone Reward",
+					"request": {
+						"method": "POST",
+						"url": {
+							"raw": "{{base_url}}/api/v1/milestones/1/customers/{{customer_id}}/redeem",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "milestones", "1", "customers", "{{customer_id}}", "redeem"]
+						},
+						"description": "Redeem a pending milestone reward for a customer."
+					},
+					"response": []
+				}
+			],
+			"description": "Loyalty milestone (stamp card) management. Create stamp-card style rewards like 'visit 10 times, get 1 free item'. Supports configurable reward types, minimum order amounts, and repeating milestones."
 		}
 	],
 	"variable": [

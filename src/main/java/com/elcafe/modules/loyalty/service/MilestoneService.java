@@ -2,7 +2,6 @@ package com.elcafe.modules.loyalty.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
-import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.loyalty.dto.CustomerMilestoneProgressResponse;
 import com.elcafe.modules.loyalty.dto.MilestoneCreateRequest;
 import com.elcafe.modules.loyalty.dto.MilestoneResponse;
@@ -35,7 +34,6 @@ public class MilestoneService {
     private final LoyaltyMilestoneRepository milestoneRepository;
     private final MilestoneRedemptionRepository redemptionRepository;
     private final RestaurantRepository restaurantRepository;
-    private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
     private final MilestoneMapper milestoneMapper;
 

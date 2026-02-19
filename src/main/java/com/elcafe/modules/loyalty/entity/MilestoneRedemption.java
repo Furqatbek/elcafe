@@ -1,12 +1,10 @@
 package com.elcafe.modules.loyalty.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.order.entity.Order;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -30,10 +28,16 @@ public class MilestoneRedemption {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "milestone_id", nullable = false)
     private LoyaltyMilestone milestone;
 
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
@@ -50,6 +54,9 @@ public class MilestoneRedemption {
     @Column(name = "reward_pending", nullable = false)
     private Boolean rewardPending = false;
 
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "last_visit_order_id")
     private Order lastVisitOrder;

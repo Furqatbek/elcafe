@@ -1,12 +1,10 @@
 package com.elcafe.modules.loyalty.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -27,6 +25,9 @@ public class LoyaltyMilestone {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
@@ -47,6 +48,9 @@ public class LoyaltyMilestone {
     @Column(name = "reward_value", precision = 10, scale = 2)
     private BigDecimal rewardValue;
 
+    @JsonIgnore
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reward_product_id")
     private Product rewardProduct;
