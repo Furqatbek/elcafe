@@ -52,6 +52,10 @@ public class LoyaltyMilestone {
     private Product rewardProduct;
 
     @Builder.Default
+    @Column(name = "min_order_amount", precision = 10, scale = 2)
+    private BigDecimal minOrderAmount = BigDecimal.ZERO;
+
+    @Builder.Default
     @Column(name = "is_repeating", nullable = false)
     private Boolean isRepeating = true;
 

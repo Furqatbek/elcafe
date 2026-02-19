@@ -24,6 +24,7 @@ public class MilestoneResponse {
     private BigDecimal rewardValue;
     private Long rewardProductId;
     private String rewardProductName;
+    private BigDecimal minOrderAmount;
     private Boolean isRepeating;
     private Boolean active;
     private LocalDateTime createdAt;

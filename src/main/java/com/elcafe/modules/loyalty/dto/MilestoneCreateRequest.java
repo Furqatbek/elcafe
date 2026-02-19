@@ -33,6 +33,8 @@ public class MilestoneCreateRequest {
 
     private Long rewardProductId;
 
+    private BigDecimal minOrderAmount;
+
     @Builder.Default
     private Boolean isRepeating = true;
 }

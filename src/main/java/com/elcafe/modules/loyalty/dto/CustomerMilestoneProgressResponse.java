@@ -26,6 +26,7 @@ public class CustomerMilestoneProgressResponse {
     private LoyaltyMilestone.RewardType rewardType;
     private BigDecimal rewardValue;
     private String rewardProductName;
+    private BigDecimal minOrderAmount;
     private LocalDateTime lastCompletionAt;
     private LocalDateTime lastRedemptionAt;
 }

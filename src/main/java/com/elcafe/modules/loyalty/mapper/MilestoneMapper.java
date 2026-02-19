@@ -24,6 +24,7 @@ public class MilestoneMapper {
                 .rewardValue(milestone.getRewardValue())
                 .rewardProductId(milestone.getRewardProduct() != null ? milestone.getRewardProduct().getId() : null)
                 .rewardProductName(milestone.getRewardProduct() != null ? milestone.getRewardProduct().getName() : null)
+                .minOrderAmount(milestone.getMinOrderAmount())
                 .isRepeating(milestone.getIsRepeating())
                 .active(milestone.getActive())
                 .createdAt(milestone.getCreatedAt())
@@ -47,6 +48,7 @@ public class MilestoneMapper {
                 .rewardType(milestone.getRewardType())
                 .rewardValue(milestone.getRewardValue())
                 .rewardProductName(milestone.getRewardProduct() != null ? milestone.getRewardProduct().getName() : null)
+                .minOrderAmount(milestone.getMinOrderAmount())
                 .lastCompletionAt(redemption != null ? redemption.getLastCompletionAt() : null)
                 .lastRedemptionAt(redemption != null ? redemption.getLastRedemptionAt() : null)
                 .build();

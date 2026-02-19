@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,6 +56,7 @@ public class MilestoneService {
                 .requiredVisits(request.getRequiredVisits())
                 .rewardType(request.getRewardType())
                 .rewardValue(request.getRewardValue())
+                .minOrderAmount(request.getMinOrderAmount() != null ? request.getMinOrderAmount() : BigDecimal.ZERO)
                 .isRepeating(request.getIsRepeating())
                 .active(true)
                 .build();
@@ -100,6 +102,9 @@ public class MilestoneService {
             Product product = productRepository.findById(request.getRewardProductId())
                     .orElseThrow(() -> new ResourceNotFoundException("Product", "id", request.getRewardProductId()));
             milestone.setRewardProduct(product);
+        }
+        if (request.getMinOrderAmount() != null) {
+            milestone.setMinOrderAmount(request.getMinOrderAmount());
         }
         if (request.getIsRepeating() != null) {
             milestone.setIsRepeating(request.getIsRepeating());
@@ -175,6 +180,15 @@ public class MilestoneService {
 
             // Skip if non-repeating and already completed once
             if (!milestone.getIsRepeating() && redemption.getTotalCompletions() > 0) {
+                continue;
+            }
+
+            // Skip if order total is below the milestone's minimum order amount
+            if (milestone.getMinOrderAmount() != null
+                    && milestone.getMinOrderAmount().compareTo(BigDecimal.ZERO) > 0
+                    && order.getTotal().compareTo(milestone.getMinOrderAmount()) < 0) {
+                log.debug("Order total {} below milestone '{}' minimum {}, skipping",
+                        order.getTotal(), milestone.getName(), milestone.getMinOrderAmount());
                 continue;
             }
 

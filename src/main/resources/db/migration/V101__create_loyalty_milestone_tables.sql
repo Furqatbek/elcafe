@@ -9,6 +9,7 @@ CREATE TABLE loyalty_milestones (
     reward_type VARCHAR(30) NOT NULL,
     reward_value DECIMAL(10, 2),
     reward_product_id BIGINT REFERENCES products(id) ON DELETE SET NULL,
+    min_order_amount DECIMAL(10, 2) DEFAULT 0,
     is_repeating BOOLEAN NOT NULL DEFAULT true,
     active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

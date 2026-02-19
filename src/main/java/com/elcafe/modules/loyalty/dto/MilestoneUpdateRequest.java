@@ -28,6 +28,8 @@ public class MilestoneUpdateRequest {
 
     private Long rewardProductId;
 
+    private BigDecimal minOrderAmount;
+
     private Boolean isRepeating;
 
     private Boolean active;
