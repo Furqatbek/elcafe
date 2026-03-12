@@ -400,6 +400,11 @@ public class POSOrderService {
 
                     return itemResponse;
                 })
+                .sorted((a, b) -> {
+                    String nameA = a.getProductName() != null ? a.getProductName() : "";
+                    String nameB = b.getProductName() != null ? b.getProductName() : "";
+                    return nameA.compareToIgnoreCase(nameB);
+                })
                 .collect(Collectors.toList());
         response.setItems(itemResponses);
 

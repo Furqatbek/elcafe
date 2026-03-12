@@ -232,6 +232,11 @@ public class MenuService {
                                 .createdAt(product.getCreatedAt())
                                 .updatedAt(product.getUpdatedAt())
                                 .build()))
+                .sorted((a, b) -> {
+                    String nameA = a.getName() != null ? a.getName() : "";
+                    String nameB = b.getName() != null ? b.getName() : "";
+                    return nameA.compareToIgnoreCase(nameB);
+                })
                 .collect(Collectors.toList());
     }
 
