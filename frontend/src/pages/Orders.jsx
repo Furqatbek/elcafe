@@ -213,6 +213,17 @@ export default function Orders() {
     }
   }, [tableOrders, selectedTable]);
 
+  // Keep editingOrder synced with latest data from tableOrders
+  useEffect(() => {
+    if (editingOrder && selectedTable) {
+      const orders = tableOrders[selectedTable.id] || [];
+      const updatedOrder = orders.find(o => o.id === editingOrder.id);
+      if (updatedOrder) {
+        setEditingOrder(updatedOrder);
+      }
+    }
+  }, [tableOrders, selectedTable?.id, editingOrder?.id]);
+
   const loadRestaurants = async () => {
     try {
       const response = await restaurantAPI.getAll({ page: 0, size: 100 });
