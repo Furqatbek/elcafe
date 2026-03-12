@@ -187,6 +187,7 @@ export const orderAPI = {
   getAll: (params) => api.get('/orders', { params }),
   getPending: () => api.get('/orders/pending'),
   getByRestaurant: (restaurantId) => api.get(`/orders/restaurant/${restaurantId}`),
+  getSelfServiceOrders: (params) => api.get('/orders/self-service', { params }),
   updateStatus: (id, status, notes, changedBy = 'OPERATOR') =>
     api.patch(`/orders/${id}/status`, null, { params: { status, notes, changedBy } }),
   revertOrder: (id, { targetStatus, reason, revertedBy }) =>

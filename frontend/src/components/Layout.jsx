@@ -107,6 +107,7 @@ export default function Layout() {
       path: '/orders',
       subItems: [
         { label: t('nav.sub.ordersHistory'), icon: History, path: '/orders/history' },
+        { label: t('nav.sub.selfServiceOrders', 'Self-Service'), icon: QrCode, path: '/orders/self-service' },
       ],
     },
     {

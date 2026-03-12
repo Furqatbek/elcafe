@@ -7,6 +7,8 @@ import com.elcafe.modules.order.service.OrderService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.financial.service.ShiftTimeService;
+import com.elcafe.modules.selfservice.entity.SelfServiceOrder;
+import com.elcafe.modules.selfservice.repository.SelfServiceOrderRepository;
 import com.elcafe.security.CurrentUser;
 import com.elcafe.security.UserPrincipal;
 import com.elcafe.utils.ApiResponse;
@@ -39,6 +41,7 @@ public class OrderController {
     private final OrderService orderService;
     private final RestaurantRepository restaurantRepository;
     private final ShiftTimeService shiftTimeService;
+    private final SelfServiceOrderRepository selfServiceOrderRepository;
 
     @PostMapping
     @Operation(summary = "Create order", description = "Create a new order")
@@ -184,5 +187,20 @@ public class OrderController {
     ) {
         Order order = orderService.revertOrderToActive(id, targetStatus, reason, revertedBy);
         return ResponseEntity.ok(ApiResponse.success("Order reverted to active status", order));
+    }
+
+    @GetMapping("/self-service")
+    @Operation(summary = "Get self-service orders", description = "Get all orders that came from the self-service module (QR code ordering)")
+    public ResponseEntity<ApiResponse<Page<SelfServiceOrder>>> getSelfServiceOrders(
+            @RequestParam(required = false) Long restaurantId,
+            Pageable pageable
+    ) {
+        Page<SelfServiceOrder> orders;
+        if (restaurantId != null) {
+            orders = selfServiceOrderRepository.findByOrderRestaurantIdOrderByCreatedAtDesc(restaurantId, pageable);
+        } else {
+            orders = selfServiceOrderRepository.findAll(pageable);
+        }
+        return ResponseEntity.ok(ApiResponse.success(orders));
     }
 }

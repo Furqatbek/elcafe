@@ -59,6 +59,7 @@ import {
 } from './pages/inventory';
 import POSApp from './pos/POSApp';
 import OrdersHistory from './pages/OrdersHistory';
+import SelfServiceOrders from './pages/SelfServiceOrders';
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -112,6 +113,7 @@ function App() {
           <Route path="dashboard/inventory-analytics" element={<AdminRoute><InventoryAnalytics /></AdminRoute>} />
           <Route path="orders" element={<Orders />} />
           <Route path="orders/history" element={<OrdersHistory />} />
+          <Route path="orders/self-service" element={<SelfServiceOrders />} />
           <Route path="restaurants" element={<Restaurants />} />
           <Route path="restaurants/tables" element={<Tables />} />
           <Route path="restaurants/working-hours" element={<WorkingHours />} />
