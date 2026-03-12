@@ -1988,7 +1988,7 @@ export default function Orders() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{t('orders.allCategories', 'All Categories')}</SelectItem>
-                    {[...new Set(availableProducts.map(p => p.categoryName).filter(Boolean))].map((category) => (
+                    {[...new Set(availableProducts.map(p => p.categoryName).filter(Boolean))].sort((a, b) => a.localeCompare(b)).map((category) => (
                       <SelectItem key={category} value={category}>{category}</SelectItem>
                     ))}
                   </SelectContent>
@@ -2006,7 +2006,7 @@ export default function Orders() {
                     {(selectedCategory === 'all'
                       ? availableProducts
                       : availableProducts.filter(p => p.categoryName === selectedCategory)
-                    ).map((product) => (
+                    ).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map((product) => (
                       <SelectItem key={product.id} value={product.id.toString()}>
                         <span className="flex justify-between items-center w-full gap-4">
                           <span>{product.name}</span>
@@ -2077,7 +2077,7 @@ export default function Orders() {
               </h4>
 
               <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
-                {editingOrder?.items?.map((item) => (
+                {editingOrder?.items?.slice().sort((a, b) => (a.productName || '').localeCompare(b.productName || '')).map((item) => (
                   <div
                     key={item.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
