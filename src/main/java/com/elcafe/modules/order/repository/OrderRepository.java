@@ -213,4 +213,16 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Order> findByCreatedAtBetweenWithItemsOrderByCreatedAtDesc(
             @Param("startDate") OffsetDateTime startDate,
             @Param("endDate") OffsetDateTime endDate);
+
+    /**
+     * Find orders by source (for external orders page)
+     */
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.orderSource IN :sources AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
+    Page<Order> findByOrderSourceIn(@Param("sources") List<OrderSource> sources, Pageable pageable);
+
+    /**
+     * Find orders by restaurant and source (for external orders page)
+     */
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.orderSource IN :sources AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
+    Page<Order> findByRestaurantIdAndOrderSourceIn(@Param("restaurantId") Long restaurantId, @Param("sources") List<OrderSource> sources, Pageable pageable);
 }

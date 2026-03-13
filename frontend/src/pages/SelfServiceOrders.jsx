@@ -28,15 +28,24 @@ import {
   DialogTitle,
 } from '../components/ui/dialog';
 import {
-  QrCode,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../components/ui/tabs';
+import {
+  Globe,
   ShoppingCart,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
   Eye,
   Clock,
-  Utensils,
-  ShoppingBag,
+  QrCode,
+  Smartphone,
+  Phone,
+  Send,
+  MessageCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -51,27 +60,28 @@ const orderStatusColors = {
   CANCELLED: 'bg-red-100 text-red-800',
 };
 
-const orderTypeColors = {
-  DINE_IN: 'bg-blue-100 text-blue-800',
-  TAKEAWAY: 'bg-orange-100 text-orange-800',
+const orderSourceConfig = {
+  TELEGRAM_BOT: { label: 'Telegram', icon: Send, color: 'bg-blue-100 text-blue-800' },
+  WEBSITE: { label: 'Website', icon: Globe, color: 'bg-green-100 text-green-800' },
+  MOBILE_APP: { label: 'Mobile App', icon: Smartphone, color: 'bg-purple-100 text-purple-800' },
+  PHONE_CALL: { label: 'Phone', icon: Phone, color: 'bg-orange-100 text-orange-800' },
+  OTHER: { label: 'Other', icon: MessageCircle, color: 'bg-gray-100 text-gray-800' },
+  SELF_SERVICE: { label: 'QR Code', icon: QrCode, color: 'bg-cyan-100 text-cyan-800' },
 };
 
 export default function SelfServiceOrders() {
   const { t } = useTranslation();
 
   // Data state
-  const [orders, setOrders] = useState([]);
+  const [selfServiceOrders, setSelfServiceOrders] = useState([]);
+  const [externalOrders, setExternalOrders] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalOrders: 0,
-    dineInOrders: 0,
-    takeawayOrders: 0,
-    pendingOrders: 0,
-  });
+  const [activeTab, setActiveTab] = useState('all');
 
   // Filter state
   const [selectedRestaurant, setSelectedRestaurant] = useState('1');
+  const [selectedSource, setSelectedSource] = useState('all');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,56 +120,85 @@ export default function SelfServiceOrders() {
         params.restaurantId = selectedRestaurant;
       }
 
-      const response = await orderAPI.getSelfServiceOrders(params);
-      const data = response.data.data;
-
-      if (data?.content) {
-        setOrders(data.content);
-        setTotalPages(data.totalPages || 1);
-        setTotalElements(data.totalElements || 0);
-        calculateStats(data.content);
-      } else if (Array.isArray(data)) {
-        setOrders(data);
-        setTotalPages(1);
-        setTotalElements(data.length);
-        calculateStats(data);
+      // Load self-service orders
+      const selfServiceResponse = await orderAPI.getSelfServiceOrders(params);
+      const selfServiceData = selfServiceResponse.data.data;
+      if (selfServiceData?.content) {
+        setSelfServiceOrders(selfServiceData.content);
       } else {
-        setOrders([]);
+        setSelfServiceOrders(Array.isArray(selfServiceData) ? selfServiceData : []);
+      }
+
+      // Load external orders with optional source filter
+      const externalParams = { ...params };
+      if (selectedSource !== 'all') {
+        externalParams.source = selectedSource;
+      }
+      const externalResponse = await orderAPI.getExternalOrders(externalParams);
+      const externalData = externalResponse.data.data;
+      if (externalData?.content) {
+        setExternalOrders(externalData.content);
+        setTotalPages(externalData.totalPages || 1);
+        setTotalElements(externalData.totalElements || 0);
+      } else {
+        setExternalOrders(Array.isArray(externalData) ? externalData : []);
         setTotalPages(1);
         setTotalElements(0);
       }
     } catch (error) {
-      console.error('Failed to load self-service orders:', error);
-      setOrders([]);
+      console.error('Failed to load orders:', error);
+      setSelfServiceOrders([]);
+      setExternalOrders([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, pageSize, selectedRestaurant]);
+  }, [currentPage, pageSize, selectedRestaurant, selectedSource]);
 
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
 
-  // Calculate statistics
-  const calculateStats = (ordersList) => {
-    const dineIn = ordersList.filter(o => o.orderType === 'DINE_IN').length;
-    const takeaway = ordersList.filter(o => o.orderType === 'TAKEAWAY').length;
-    const pending = ordersList.filter(o =>
-      o.order?.status === 'NEW' || o.order?.status === 'PENDING' || o.order?.status === 'PREPARING'
-    ).length;
-
-    setStats({
-      totalOrders: ordersList.length,
-      dineInOrders: dineIn,
-      takeawayOrders: takeaway,
-      pendingOrders: pending,
-    });
+  // Get displayed orders based on active tab
+  const getDisplayedOrders = () => {
+    if (activeTab === 'self-service') {
+      return selfServiceOrders.map(so => ({
+        ...so.order,
+        orderSource: 'SELF_SERVICE',
+        selfServiceData: so,
+      }));
+    } else if (activeTab === 'external') {
+      return externalOrders;
+    } else {
+      // Combine both
+      const ssOrders = selfServiceOrders.map(so => ({
+        ...so.order,
+        orderSource: 'SELF_SERVICE',
+        selfServiceData: so,
+      }));
+      return [...ssOrders, ...externalOrders].sort((a, b) =>
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+    }
   };
 
+  const displayedOrders = getDisplayedOrders();
+
   // View order details
-  const handleViewOrder = (selfServiceOrder) => {
-    setSelectedOrder(selfServiceOrder);
+  const handleViewOrder = (order) => {
+    setSelectedOrder(order);
     setDetailsModalOpen(true);
+  };
+
+  // Get source icon and label
+  const getSourceDisplay = (source) => {
+    const config = orderSourceConfig[source] || orderSourceConfig.OTHER;
+    const Icon = config.icon;
+    return (
+      <Badge className={config.color}>
+        <Icon className="h-3 w-3 mr-1" />
+        {config.label}
+      </Badge>
+    );
   };
 
   return (
@@ -168,11 +207,11 @@ export default function SelfServiceOrders() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
-            <QrCode className="h-8 w-8" />
-            {t('selfServiceOrders.title', 'Self-Service Orders')}
+            <Globe className="h-8 w-8" />
+            {t('externalOrders.title', 'Online & External Orders')}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t('selfServiceOrders.subtitle', 'Orders placed via QR code scanning')}
+            {t('externalOrders.subtitle', 'Orders from QR code, website, mobile app, Telegram, phone calls')}
           </p>
         </div>
         <Button onClick={loadOrders} disabled={loading}>
@@ -182,52 +221,88 @@ export default function SelfServiceOrders() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t('selfServiceOrders.totalOrders', 'Total Orders')}
+              {t('externalOrders.qrCode', 'QR Code')}
             </CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <QrCode className="h-4 w-4 text-cyan-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
+            <div className="text-2xl font-bold text-cyan-600">{selfServiceOrders.length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t('selfServiceOrders.dineIn', 'Dine-In')}
+              {t('externalOrders.website', 'Website')}
             </CardTitle>
-            <Utensils className="h-4 w-4 text-blue-600" />
+            <Globe className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.dineInOrders}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {externalOrders.filter(o => o.orderSource === 'WEBSITE').length}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {t('selfServiceOrders.takeaway', 'Takeaway')}
+              {t('externalOrders.mobileApp', 'Mobile App')}
             </CardTitle>
-            <ShoppingBag className="h-4 w-4 text-orange-600" />
+            <Smartphone className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.takeawayOrders}</div>
+            <div className="text-2xl font-bold text-purple-600">
+              {externalOrders.filter(o => o.orderSource === 'MOBILE_APP').length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t('externalOrders.telegram', 'Telegram')}
+            </CardTitle>
+            <Send className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {externalOrders.filter(o => o.orderSource === 'TELEGRAM_BOT').length}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {t('externalOrders.phoneCall', 'Phone')}
+            </CardTitle>
+            <Phone className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {externalOrders.filter(o => o.orderSource === 'PHONE_CALL').length}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-600">
-              {t('selfServiceOrders.pending', 'Pending')}
+              {t('externalOrders.pending', 'Pending')}
             </CardTitle>
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendingOrders}</div>
+            <div className="text-2xl font-bold text-yellow-600">
+              {displayedOrders.filter(o =>
+                o.status === 'NEW' || o.status === 'PENDING' || o.status === 'PREPARING'
+              ).length}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -236,15 +311,15 @@ export default function SelfServiceOrders() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <QrCode className="h-5 w-5" />
-            {t('selfServiceOrders.filters', 'Filters')}
+            <Globe className="h-5 w-5" />
+            {t('externalOrders.filters', 'Filters')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4">
             {/* Restaurant Filter */}
             <div className="space-y-2 w-64">
-              <Label>{t('selfServiceOrders.restaurant', 'Restaurant')}</Label>
+              <Label>{t('externalOrders.restaurant', 'Restaurant')}</Label>
               <Select value={selectedRestaurant} onValueChange={(v) => { setSelectedRestaurant(v); setCurrentPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder={t('common.all', 'All')} />
@@ -257,80 +332,113 @@ export default function SelfServiceOrders() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Source Filter */}
+            <div className="space-y-2 w-64">
+              <Label>{t('externalOrders.source', 'Order Source')}</Label>
+              <Select value={selectedSource} onValueChange={(v) => { setSelectedSource(v); setCurrentPage(1); }}>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('common.all', 'All')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('common.all', 'All Sources')}</SelectItem>
+                  <SelectItem value="TELEGRAM_BOT">Telegram Bot</SelectItem>
+                  <SelectItem value="WEBSITE">Website</SelectItem>
+                  <SelectItem value="MOBILE_APP">Mobile App</SelectItem>
+                  <SelectItem value="PHONE_CALL">Phone Call</SelectItem>
+                  <SelectItem value="OTHER">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Orders Table */}
+      {/* Orders Table with Tabs */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>{t('selfServiceOrders.ordersList', 'Self-Service Orders')}</span>
+            <span>{t('externalOrders.ordersList', 'External Orders')}</span>
             <span className="text-sm font-normal text-muted-foreground">
-              {t('selfServiceOrders.showing', 'Showing')} {orders.length} {t('selfServiceOrders.of', 'of')} {totalElements}
+              {t('externalOrders.showing', 'Showing')} {displayedOrders.length} {t('externalOrders.orders', 'orders')}
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
+            <TabsList>
+              <TabsTrigger value="all">
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                {t('externalOrders.all', 'All')}
+              </TabsTrigger>
+              <TabsTrigger value="self-service">
+                <QrCode className="h-4 w-4 mr-2" />
+                {t('externalOrders.qrOrders', 'QR Code')}
+              </TabsTrigger>
+              <TabsTrigger value="external">
+                <Globe className="h-4 w-4 mr-2" />
+                {t('externalOrders.onlineOrders', 'Online')}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           {loading ? (
             <div className="flex justify-center items-center py-12">
               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : orders.length === 0 ? (
+          ) : displayedOrders.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <QrCode className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>{t('selfServiceOrders.noOrders', 'No self-service orders found')}</p>
+              <Globe className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p>{t('externalOrders.noOrders', 'No external orders found')}</p>
             </div>
           ) : (
             <>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('selfServiceOrders.orderNumber', 'Order #')}</TableHead>
-                    <TableHead>{t('selfServiceOrders.date', 'Date')}</TableHead>
-                    <TableHead>{t('selfServiceOrders.customer', 'Customer')}</TableHead>
-                    <TableHead>{t('selfServiceOrders.table', 'Table')}</TableHead>
-                    <TableHead>{t('selfServiceOrders.type', 'Type')}</TableHead>
-                    <TableHead>{t('selfServiceOrders.status', 'Status')}</TableHead>
-                    <TableHead className="text-right">{t('selfServiceOrders.total', 'Total')}</TableHead>
+                    <TableHead>{t('externalOrders.orderNumber', 'Order #')}</TableHead>
+                    <TableHead>{t('externalOrders.date', 'Date')}</TableHead>
+                    <TableHead>{t('externalOrders.source', 'Source')}</TableHead>
+                    <TableHead>{t('externalOrders.customer', 'Customer')}</TableHead>
+                    <TableHead>{t('externalOrders.type', 'Type')}</TableHead>
+                    <TableHead>{t('externalOrders.status', 'Status')}</TableHead>
+                    <TableHead className="text-right">{t('externalOrders.total', 'Total')}</TableHead>
                     <TableHead className="text-center">{t('common.actions', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((selfServiceOrder) => (
-                    <TableRow key={selfServiceOrder.id}>
+                  {displayedOrders.map((order) => (
+                    <TableRow key={order.id}>
                       <TableCell className="font-medium">
-                        {selfServiceOrder.order?.orderNumber || `#${selfServiceOrder.order?.id}`}
+                        {order.orderNumber || `#${order.id}`}
                       </TableCell>
                       <TableCell>
-                        {selfServiceOrder.createdAt ? format(new Date(selfServiceOrder.createdAt), 'dd/MM/yyyy HH:mm') : '-'}
+                        {order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm') : '-'}
                       </TableCell>
                       <TableCell>
-                        {selfServiceOrder.customerName || selfServiceOrder.customerPhone || '-'}
+                        {getSourceDisplay(order.orderSource)}
                       </TableCell>
                       <TableCell>
-                        {selfServiceOrder.order?.diningTable?.tableNumber || '-'}
+                        {order.customer?.firstName || order.customer?.phone || order.selfServiceData?.customerName || '-'}
                       </TableCell>
                       <TableCell>
-                        <Badge className={orderTypeColors[selfServiceOrder.orderType] || 'bg-gray-100'}>
-                          {selfServiceOrder.orderType === 'DINE_IN'
-                            ? t('orders.orderTypes.DINE_IN', 'Dine In')
-                            : t('orders.orderTypes.TAKEAWAY', 'Takeaway')}
+                        <Badge variant="outline">
+                          {order.orderType ? t(`orders.orderTypes.${order.orderType}`, order.orderType) : '-'}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={orderStatusColors[selfServiceOrder.order?.status] || 'bg-gray-100'}>
-                          {t(`orders.statuses.${selfServiceOrder.order?.status}`, selfServiceOrder.order?.status)}
+                        <Badge className={orderStatusColors[order.status] || 'bg-gray-100'}>
+                          {t(`orders.statuses.${order.status}`, order.status)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {(selfServiceOrder.order?.total || 0).toLocaleString()}
+                        {(order.total || 0).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-center">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleViewOrder(selfServiceOrder)}
+                          onClick={() => handleViewOrder(order)}
                           title={t('common.view', 'View')}
                         >
                           <Eye className="h-4 w-4" />
@@ -344,7 +452,7 @@ export default function SelfServiceOrders() {
               {/* Pagination */}
               <div className="flex items-center justify-between mt-4">
                 <div className="text-sm text-muted-foreground">
-                  {t('selfServiceOrders.page', 'Page')} {currentPage} {t('selfServiceOrders.of', 'of')} {totalPages}
+                  {t('externalOrders.page', 'Page')} {currentPage} {t('externalOrders.of', 'of')} {totalPages}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -377,11 +485,11 @@ export default function SelfServiceOrders() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <QrCode className="h-5 w-5" />
-              {t('selfServiceOrders.orderDetails', 'Self-Service Order Details')}
+              <Globe className="h-5 w-5" />
+              {t('externalOrders.orderDetails', 'Order Details')}
             </DialogTitle>
             <DialogDescription>
-              {selectedOrder?.order?.orderNumber || `#${selectedOrder?.order?.id}`}
+              {selectedOrder?.orderNumber || `#${selectedOrder?.id}`}
             </DialogDescription>
           </DialogHeader>
 
@@ -390,96 +498,50 @@ export default function SelfServiceOrders() {
               {/* Order Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.orderType', 'Order Type')}</Label>
-                  <Badge className={`${orderTypeColors[selectedOrder.orderType]} mt-1`}>
-                    {selectedOrder.orderType === 'DINE_IN'
-                      ? t('orders.orderTypes.DINE_IN', 'Dine In')
-                      : t('orders.orderTypes.TAKEAWAY', 'Takeaway')}
+                  <Label className="text-muted-foreground">{t('externalOrders.source', 'Source')}</Label>
+                  <div className="mt-1">
+                    {getSourceDisplay(selectedOrder.orderSource)}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">{t('externalOrders.status', 'Status')}</Label>
+                  <Badge className={`${orderStatusColors[selectedOrder.status]} mt-1`}>
+                    {t(`orders.statuses.${selectedOrder.status}`, selectedOrder.status)}
                   </Badge>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.status', 'Status')}</Label>
-                  <Badge className={`${orderStatusColors[selectedOrder.order?.status]} mt-1`}>
-                    {t(`orders.statuses.${selectedOrder.order?.status}`, selectedOrder.order?.status)}
-                  </Badge>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.customer', 'Customer')}</Label>
+                  <Label className="text-muted-foreground">{t('externalOrders.orderType', 'Order Type')}</Label>
                   <p className="mt-1 font-medium">
-                    {selectedOrder.customerName || '-'}
+                    {selectedOrder.orderType ? t(`orders.orderTypes.${selectedOrder.orderType}`, selectedOrder.orderType) : '-'}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.phone', 'Phone')}</Label>
+                  <Label className="text-muted-foreground">{t('externalOrders.customer', 'Customer')}</Label>
                   <p className="mt-1 font-medium">
-                    {selectedOrder.customerPhone || '-'}
+                    {selectedOrder.customer?.firstName || selectedOrder.selfServiceData?.customerName || '-'}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.table', 'Table')}</Label>
+                  <Label className="text-muted-foreground">{t('externalOrders.phone', 'Phone')}</Label>
                   <p className="mt-1 font-medium">
-                    {selectedOrder.order?.diningTable?.tableNumber || '-'}
+                    {selectedOrder.customer?.phone || selectedOrder.selfServiceData?.customerPhone || '-'}
                   </p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.createdAt', 'Created At')}</Label>
+                  <Label className="text-muted-foreground">{t('externalOrders.createdAt', 'Created At')}</Label>
                   <p className="mt-1 font-medium">
                     {selectedOrder.createdAt ? format(new Date(selectedOrder.createdAt), 'dd/MM/yyyy HH:mm') : '-'}
                   </p>
                 </div>
               </div>
 
-              {/* Timing Info */}
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4">
-                <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.estimatedReady', 'Estimated Ready')}</Label>
-                  <p className="mt-1 font-medium">
-                    {selectedOrder.estimatedReadyTime
-                      ? format(new Date(selectedOrder.estimatedReadyTime), 'HH:mm')
-                      : '-'}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.actualReady', 'Actual Ready')}</Label>
-                  <p className="mt-1 font-medium">
-                    {selectedOrder.actualReadyTime
-                      ? format(new Date(selectedOrder.actualReadyTime), 'HH:mm')
-                      : '-'}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.pickedUp', 'Picked Up')}</Label>
-                  <p className="mt-1 font-medium">
-                    {selectedOrder.pickedUpAt
-                      ? format(new Date(selectedOrder.pickedUpAt), 'HH:mm')
-                      : '-'}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.notified', 'Notified')}</Label>
-                  <p className="mt-1 font-medium">
-                    {selectedOrder.notifiedAt
-                      ? format(new Date(selectedOrder.notifiedAt), 'HH:mm')
-                      : '-'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Special Instructions */}
-              {selectedOrder.specialInstructions && (
-                <div>
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.specialInstructions', 'Special Instructions')}</Label>
-                  <p className="mt-1 bg-yellow-50 p-3 rounded-lg">{selectedOrder.specialInstructions}</p>
-                </div>
-              )}
-
               {/* Order Items */}
               <div>
                 <Label className="text-muted-foreground mb-2 block">
-                  {t('selfServiceOrders.items', 'Items')}
+                  {t('externalOrders.items', 'Items')}
                 </Label>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-                  {selectedOrder.order?.items?.map((item, idx) => (
+                  {selectedOrder.items?.map((item, idx) => (
                     <div key={idx} className="flex justify-between">
                       <div>
                         <span className="font-medium">{item.quantity}x</span> {item.productName}
@@ -490,7 +552,7 @@ export default function SelfServiceOrders() {
                       </span>
                     </div>
                   )) || (
-                    <p className="text-muted-foreground">{t('selfServiceOrders.noItems', 'No items')}</p>
+                    <p className="text-muted-foreground">{t('externalOrders.noItems', 'No items')}</p>
                   )}
                 </div>
               </div>
@@ -499,31 +561,31 @@ export default function SelfServiceOrders() {
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('orders.subtotal', 'Subtotal')}</span>
-                  <span>{(selectedOrder.order?.subtotal || 0).toLocaleString()}</span>
+                  <span>{(selectedOrder.subtotal || 0).toLocaleString()}</span>
                 </div>
-                {selectedOrder.order?.serviceFee > 0 && (
+                {selectedOrder.deliveryFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('orders.deliveryFee', 'Delivery Fee')}</span>
+                    <span>{selectedOrder.deliveryFee.toLocaleString()}</span>
+                  </div>
+                )}
+                {selectedOrder.serviceFee > 0 && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">{t('orders.serviceFee', 'Service Fee')}</span>
-                    <span>{selectedOrder.order.serviceFee.toLocaleString()}</span>
+                    <span>{selectedOrder.serviceFee.toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-lg pt-2 border-t">
                   <span>{t('orders.total', 'Total')}</span>
-                  <span>{(selectedOrder.order?.total || 0).toLocaleString()}</span>
+                  <span>{(selectedOrder.total || 0).toLocaleString()}</span>
                 </div>
               </div>
 
-              {/* Feedback */}
-              {selectedOrder.feedbackRating && (
-                <div className="bg-green-50 rounded-lg p-4">
-                  <Label className="text-muted-foreground">{t('selfServiceOrders.feedback', 'Customer Feedback')}</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-2xl">{'⭐'.repeat(selectedOrder.feedbackRating)}</span>
-                    <span className="text-muted-foreground">({selectedOrder.feedbackRating}/5)</span>
-                  </div>
-                  {selectedOrder.feedbackComment && (
-                    <p className="mt-2 text-sm">{selectedOrder.feedbackComment}</p>
-                  )}
+              {/* Notes */}
+              {selectedOrder.customerNotes && (
+                <div>
+                  <Label className="text-muted-foreground">{t('externalOrders.notes', 'Customer Notes')}</Label>
+                  <p className="mt-1 bg-yellow-50 p-3 rounded-lg">{selectedOrder.customerNotes}</p>
                 </div>
               )}
             </div>

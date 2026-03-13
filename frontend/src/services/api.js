@@ -188,6 +188,7 @@ export const orderAPI = {
   getPending: () => api.get('/orders/pending'),
   getByRestaurant: (restaurantId) => api.get(`/orders/restaurant/${restaurantId}`),
   getSelfServiceOrders: (params) => api.get('/orders/self-service', { params }),
+  getExternalOrders: (params) => api.get('/orders/external', { params }),
   updateStatus: (id, status, notes, changedBy = 'OPERATOR') =>
     api.patch(`/orders/${id}/status`, null, { params: { status, notes, changedBy } }),
   revertOrder: (id, { targetStatus, reason, revertedBy }) =>

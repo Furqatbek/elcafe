@@ -56,6 +56,7 @@ import {
   QrCode,
   Trophy,
   Stamp,
+  Globe,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -107,7 +108,7 @@ export default function Layout() {
       path: '/orders',
       subItems: [
         { label: t('nav.sub.ordersHistory'), icon: History, path: '/orders/history' },
-        { label: t('nav.sub.selfServiceOrders', 'Self-Service'), icon: QrCode, path: '/orders/self-service' },
+        { label: t('nav.sub.externalOrders', 'Online Orders'), icon: Globe, path: '/orders/self-service' },
       ],
     },
     {

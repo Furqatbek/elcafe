@@ -1,8 +1,10 @@
 package com.elcafe.modules.order.controller;
 
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
+import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.service.OrderService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -39,6 +41,7 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final OrderRepository orderRepository;
     private final RestaurantRepository restaurantRepository;
     private final ShiftTimeService shiftTimeService;
     private final SelfServiceOrderRepository selfServiceOrderRepository;
@@ -200,6 +203,34 @@ public class OrderController {
             orders = selfServiceOrderRepository.findByOrderRestaurantIdOrderByCreatedAtDesc(restaurantId, pageable);
         } else {
             orders = selfServiceOrderRepository.findAll(pageable);
+        }
+        return ResponseEntity.ok(ApiResponse.success(orders));
+    }
+
+    @GetMapping("/external")
+    @Operation(summary = "Get external orders", description = "Get all orders from external sources (website, mobile app, telegram bot, phone call, etc.)")
+    public ResponseEntity<ApiResponse<Page<Order>>> getExternalOrders(
+            @RequestParam(required = false) Long restaurantId,
+            @RequestParam(required = false) OrderSource source,
+            Pageable pageable
+    ) {
+        // External sources: everything except ADMIN_PANEL, WALK_IN, and WAITER
+        List<OrderSource> externalSources = List.of(
+                OrderSource.TELEGRAM_BOT,
+                OrderSource.WEBSITE,
+                OrderSource.MOBILE_APP,
+                OrderSource.PHONE_CALL,
+                OrderSource.OTHER
+        );
+
+        // If specific source is requested, filter by that
+        List<OrderSource> sourcesToFilter = source != null ? List.of(source) : externalSources;
+
+        Page<Order> orders;
+        if (restaurantId != null) {
+            orders = orderRepository.findByRestaurantIdAndOrderSourceIn(restaurantId, sourcesToFilter, pageable);
+        } else {
+            orders = orderRepository.findByOrderSourceIn(sourcesToFilter, pageable);
         }
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
