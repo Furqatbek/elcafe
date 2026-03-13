@@ -1544,23 +1544,19 @@ const usePOSStore = create(
       // Merge persisted state with initial state
       merge: (persistedState, currentState) => {
         if (!persistedState) return currentState;
-
-        // Use sessionStorage to distinguish a full page reload from SPA navigation.
-        // sessionStorage survives SPA navigation but is cleared on hard refresh / new tab.
-        const isPageReload = !sessionStorage.getItem('pos_initialized');
-        sessionStorage.setItem('pos_initialized', '1');
-
+        // merge() is called once on page load (including F5 refresh) but NOT during
+        // SPA navigation (the store stays in memory across route changes).
+        // Always reset transient UI state so screens that depend on non-persisted
+        // state (activeOrder, splitBill, etc.) never render with stale data.
         return {
           ...currentState,
           ...persistedState,
           ui: {
-            // Always start from the top on a full page reload so screens that depend
-            // on non-persisted state (activeOrder, splitBill, etc.) don't crash.
-            currentScreen: isPageReload ? 'start' : (persistedState.ui?.currentScreen || 'start'),
-            isLoading: false,       // Never persist a loading spinner
-            error: null,            // Never persist an error message
-            selectedCategory: isPageReload ? null : (persistedState.ui?.selectedCategory ?? null),
-            selectedProduct: isPageReload ? null : (persistedState.ui?.selectedProduct ?? null),
+            currentScreen: 'start', // Always restart from start on any page load
+            isLoading: false,       // Never restore a loading spinner
+            error: null,            // Never restore an error message
+            selectedCategory: null,
+            selectedProduct: null,
           },
         };
       },

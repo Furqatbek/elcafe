@@ -21,6 +21,39 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Token refresh state - shared across all concurrent requests
+let isRefreshing = false;
+let refreshSubscribers = []; // queue of { resolve, reject, config } waiting for refresh
+
+const onRefreshSuccess = (newToken) => {
+  refreshSubscribers.forEach(({ resolve, config }) => {
+    config.headers.Authorization = `Bearer ${newToken}`;
+    resolve(api(config));
+  });
+  refreshSubscribers = [];
+};
+
+const onRefreshFailure = (error) => {
+  refreshSubscribers.forEach(({ reject }) => reject(error));
+  refreshSubscribers = [];
+};
+
+const decodeJWT = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch {
+    return null;
+  }
+};
+
 // Response interceptor to handle token refresh
 api.interceptors.response.use(
   (response) => response,
@@ -30,15 +63,22 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
+      // If a refresh is already in progress, queue this request instead of firing another refresh
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          refreshSubscribers.push({ resolve, reject, config: originalRequest });
+        });
+      }
+
+      isRefreshing = true;
+
       try {
         const refreshToken = localStorage.getItem('refresh_token');
 
-        // If no refresh token exists, redirect to login immediately
         if (!refreshToken || refreshToken === '' || refreshToken === 'null' || refreshToken === 'undefined') {
           throw new Error('No refresh token available');
         }
 
-        // Check if refresh token is expired
         const refreshTokenExpiry = localStorage.getItem('refresh_token_expiry');
         if (refreshTokenExpiry && Date.now() >= parseInt(refreshTokenExpiry)) {
           throw new Error('Refresh token expired');
@@ -49,50 +89,36 @@ api.interceptors.response.use(
         });
 
         const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-
-        // Update tokens with expiration tracking
         const now = Date.now();
-
-        // Try to decode JWT to get actual expiration
-        const decodeJWT = (token) => {
-          try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(
-              atob(base64)
-                .split('')
-                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                .join('')
-            );
-            return JSON.parse(jsonPayload);
-          } catch {
-            return null;
-          }
-        };
 
         const decodedAccess = decodeJWT(accessToken);
         const accessTokenExpiry = decodedAccess?.exp
           ? decodedAccess.exp * 1000
-          : now + (15 * 60 * 1000); // 15 minutes default
+          : now + (15 * 60 * 1000);
 
         localStorage.setItem('access_token', accessToken);
         localStorage.setItem('access_token_expiry', accessTokenExpiry.toString());
 
         if (newRefreshToken) {
           const decodedRefresh = decodeJWT(newRefreshToken);
-          const refreshTokenExpiry = decodedRefresh?.exp
+          const newRefreshExpiry = decodedRefresh?.exp
             ? decodedRefresh.exp * 1000
-            : now + (7 * 24 * 60 * 60 * 1000); // 7 days default
-
+            : now + (7 * 24 * 60 * 60 * 1000);
           localStorage.setItem('refresh_token', newRefreshToken);
-          localStorage.setItem('refresh_token_expiry', refreshTokenExpiry.toString());
+          localStorage.setItem('refresh_token_expiry', newRefreshExpiry.toString());
         }
 
         localStorage.setItem('token_set_time', now.toString());
 
+        // Resolve all queued requests with the new token
+        onRefreshSuccess(accessToken);
+
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
+        // Reject all queued requests
+        onRefreshFailure(refreshError);
+
         // Clear all auth data
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
@@ -103,10 +129,11 @@ api.interceptors.response.use(
         // Only redirect to login if we're on the admin app (not customer/order pages)
         const isCustomerApp = window.location.pathname.startsWith('/order');
         if (!isCustomerApp) {
-          // Use /admin/login since the admin app uses basename="/admin"
           window.location.href = '/admin/login';
         }
         return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 
