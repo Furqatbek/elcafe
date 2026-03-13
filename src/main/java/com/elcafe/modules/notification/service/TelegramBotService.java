@@ -1,5 +1,6 @@
 package com.elcafe.modules.notification.service;
 
+import com.elcafe.modules.notification.config.TelegramBotRegistry;
 import com.elcafe.modules.telegram.entity.TelegramBotConfig;
 import com.elcafe.modules.telegram.entity.TelegramSubscriber;
 import com.elcafe.modules.telegram.repository.TelegramBotConfigRepository;
@@ -9,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
@@ -20,7 +20,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.BotSession;
-import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -41,6 +40,7 @@ public class TelegramBotService {
 
     private final TelegramBotConfigRepository configRepository;
     private final TelegramSubscriberRepository subscriberRepository;
+    private final TelegramBotRegistry botRegistry;
 
     private ElCafeBot bot;
     private BotSession botSession;
@@ -81,24 +81,20 @@ public class TelegramBotService {
             return;
         }
 
-        try {
-            this.currentToken = config.getBotToken();
-            this.welcomeMessage = config.getWelcomeMessage();
+        this.currentToken = config.getBotToken();
+        this.welcomeMessage = config.getWelcomeMessage();
 
-            bot = new ElCafeBot(
-                config.getBotToken(),
-                config.getBotUsername(),
-                this::handleSubscriberRegistration,
-                this::handleSubscriberInteraction,
-                this.welcomeMessage
-            );
+        bot = new ElCafeBot(
+            config.getBotToken(),
+            config.getBotUsername(),
+            this::handleSubscriberRegistration,
+            this::handleSubscriberInteraction,
+            this.welcomeMessage
+        );
 
-            TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-            botSession = botsApi.registerBot(bot);
-
+        botSession = botRegistry.registerBot(bot);
+        if (botSession != null) {
             log.info("Telegram customer bot registered successfully: @{}", config.getBotUsername());
-        } catch (TelegramApiException e) {
-            log.error("Failed to register Telegram bot: {}", e.getMessage());
         }
     }
 
@@ -106,8 +102,8 @@ public class TelegramBotService {
      * Stop the currently running bot.
      */
     public synchronized void stopBot() {
-        if (botSession != null && botSession.isRunning()) {
-            botSession.stop();
+        if (currentToken != null) {
+            botRegistry.unregisterBot(currentToken);
             log.info("Telegram customer bot stopped");
         }
         bot = null;
@@ -169,7 +165,7 @@ public class TelegramBotService {
      * Check if bot is ready to send messages
      */
     public boolean isReady() {
-        return bot != null && botSession != null && botSession.isRunning();
+        return bot != null && currentToken != null && botRegistry.isRegistered(currentToken);
     }
 
     /**

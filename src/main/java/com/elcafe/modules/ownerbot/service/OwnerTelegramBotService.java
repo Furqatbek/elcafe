@@ -2,6 +2,7 @@ package com.elcafe.modules.ownerbot.service;
 
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
+import com.elcafe.modules.notification.config.TelegramBotRegistry;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationSettings;
 import com.elcafe.modules.ownerbot.entity.OwnerTelegramBotConfig;
 import com.elcafe.modules.ownerbot.entity.OwnerTelegramSubscriber;
@@ -16,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -24,7 +24,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.BotSession;
-import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -44,9 +43,11 @@ public class OwnerTelegramBotService {
     private final OwnerNotificationSettingsRepository settingsRepository;
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
+    private final TelegramBotRegistry botRegistry;
 
     private OwnerBot bot;
     private BotSession botSession;
+    private String currentToken;
     private String welcomeMessage;
 
     // Cache for pending verifications (code -> user data)
@@ -86,17 +87,14 @@ public class OwnerTelegramBotService {
             return;
         }
 
-        try {
-            this.welcomeMessage = config.getWelcomeMessage();
+        this.currentToken = config.getBotToken();
+        this.welcomeMessage = config.getWelcomeMessage();
 
-            bot = new OwnerBot(config.getBotToken(), config.getBotUsername());
+        bot = new OwnerBot(config.getBotToken(), config.getBotUsername());
 
-            TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-            botSession = botsApi.registerBot(bot);
-
+        botSession = botRegistry.registerBot(bot);
+        if (botSession != null) {
             log.info("Owner Telegram bot registered successfully: @{}", config.getBotUsername());
-        } catch (TelegramApiException e) {
-            log.error("Failed to register Owner Telegram bot: {}", e.getMessage());
         }
     }
 
@@ -104,12 +102,13 @@ public class OwnerTelegramBotService {
      * Stop the currently running bot.
      */
     public synchronized void stopBot() {
-        if (botSession != null && botSession.isRunning()) {
-            botSession.stop();
+        if (currentToken != null) {
+            botRegistry.unregisterBot(currentToken);
             log.info("Owner Telegram bot stopped");
         }
         bot = null;
         botSession = null;
+        currentToken = null;
     }
 
     /**
@@ -122,7 +121,7 @@ public class OwnerTelegramBotService {
     }
 
     public boolean isReady() {
-        return bot != null && botSession != null && botSession.isRunning();
+        return bot != null && currentToken != null && botRegistry.isRegistered(currentToken);
     }
 
     /**
