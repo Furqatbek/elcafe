@@ -53,6 +53,29 @@ public class OrderItem {
     @Column(nullable = false)
     private Integer quantity;
 
+    /**
+     * For weight-based products (isSoldByWeight = true).
+     * Stores the actual weight ordered (e.g., 0.75 for 750g when unit is KG).
+     * When set, totalPrice = unitPrice × weightAmount × quantity.
+     */
+    @Column(name = "weight_amount", precision = 10, scale = 4)
+    private BigDecimal weightAmount;
+
+    /**
+     * Unit for weightAmount (KG, G, LB, OZ). Copied from product at order time.
+     */
+    @Column(name = "weight_unit", length = 10)
+    private String weightUnit;
+
+    /**
+     * For portion-based products. Multiplier applied to unitPrice.
+     * 0.5 = half portion, 1.0 = full portion (default), 2.0 = double portion.
+     * totalPrice = unitPrice × portionMultiplier × quantity.
+     */
+    @Column(name = "portion_multiplier", precision = 10, scale = 4)
+    @Builder.Default
+    private BigDecimal portionMultiplier = BigDecimal.ONE;
+
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal unitPrice;
 

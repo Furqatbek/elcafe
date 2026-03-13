@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.dto.pos;
 
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,20 @@ public class ModifyOrderItemRequest {
     private Integer quantity;
 
     private BigDecimal price;
+
+    /**
+     * For weight-based products: actual weight ordered (e.g., 0.75 for 750g).
+     * When provided, totalPrice = price × weightAmount × quantity.
+     */
+    @DecimalMin(value = "0.0", inclusive = false, message = "Weight must be greater than 0")
+    private BigDecimal weightAmount;
+
+    /**
+     * For portion-based products: multiplier on unit price.
+     * 0.5 = half portion, 1.0 = full (default), 2.0 = double portion.
+     */
+    @DecimalMin(value = "0.0", inclusive = false, message = "Portion multiplier must be greater than 0")
+    private BigDecimal portionMultiplier;
 
     private List<ModifierInfo> modifiers;
 

@@ -79,6 +79,20 @@ public class CreateOrderRequest {
         @Max(value = 100, message = "Quantity must not exceed 100")
         private Integer quantity;
 
+        /**
+         * For weight-based products: actual weight ordered (e.g., 0.75 for 750g).
+         * When provided, price = unitPrice × weightAmount × quantity.
+         */
+        @DecimalMin(value = "0.0", inclusive = false, message = "Weight must be greater than 0")
+        private BigDecimal weightAmount;
+
+        /**
+         * For portion-based products: multiplier on unit price.
+         * 0.5 = half portion, 1.0 = full (default), 2.0 = double portion.
+         */
+        @DecimalMin(value = "0.0", inclusive = false, message = "Portion multiplier must be greater than 0")
+        private BigDecimal portionMultiplier;
+
         @Size(max = 500, message = "Special instructions must not exceed 500 characters")
         private String specialInstructions;
     }

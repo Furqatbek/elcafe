@@ -225,7 +225,26 @@ public class POSOrderService {
         orderItem.setOrder(order);
         orderItem.setQuantity(itemRequest.getQuantity());
         orderItem.setUnitPrice(itemRequest.getPrice());
-        orderItem.setTotalPrice(itemRequest.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity())));
+
+        // Determine effective multiplier for weight-based or portion-based items
+        BigDecimal totalPrice;
+        if (itemRequest.getWeightAmount() != null && itemRequest.getWeightAmount().compareTo(BigDecimal.ZERO) > 0) {
+            // Weight-based: price per unit × weight × quantity
+            orderItem.setWeightAmount(itemRequest.getWeightAmount());
+            totalPrice = itemRequest.getPrice()
+                    .multiply(itemRequest.getWeightAmount())
+                    .multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+        } else if (itemRequest.getPortionMultiplier() != null && itemRequest.getPortionMultiplier().compareTo(BigDecimal.ZERO) > 0) {
+            // Portion-based: price × portion multiplier × quantity
+            orderItem.setPortionMultiplier(itemRequest.getPortionMultiplier());
+            totalPrice = itemRequest.getPrice()
+                    .multiply(itemRequest.getPortionMultiplier())
+                    .multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+        } else {
+            // Standard countable item
+            totalPrice = itemRequest.getPrice().multiply(BigDecimal.valueOf(itemRequest.getQuantity()));
+        }
+        orderItem.setTotalPrice(totalPrice.setScale(2, java.math.RoundingMode.HALF_UP));
         orderItem.setSpecialInstructions(itemRequest.getNotes());
 
         if (Boolean.TRUE.equals(itemRequest.getIsBundle()) && itemRequest.getBundleId() != null) {
@@ -247,6 +266,10 @@ public class POSOrderService {
             orderItem.setProductId(product.getId());
             orderItem.setProductName(product.getName());
             orderItem.setIsBundle(false);
+            // Copy weight unit from product for weight-based items
+            if (orderItem.getWeightAmount() != null && product.getWeightUnit() != null) {
+                orderItem.setWeightUnit(product.getWeightUnit());
+            }
         }
 
         if (itemRequest.getModifiers() != null && !itemRequest.getModifiers().isEmpty()) {

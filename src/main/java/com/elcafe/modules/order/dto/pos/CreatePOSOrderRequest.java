@@ -139,6 +139,22 @@ public class CreatePOSOrderRequest {
         @DecimalMin(value = "0.0", message = "Price must be 0 or greater")
         private BigDecimal price;
 
+        /**
+         * For weight-based products: actual weight ordered (e.g., 0.75 for 750g).
+         * When provided, totalPrice = price × weightAmount × quantity.
+         * Leave null for countable items.
+         */
+        @DecimalMin(value = "0.0", inclusive = false, message = "Weight must be greater than 0")
+        private BigDecimal weightAmount;
+
+        /**
+         * For portion-based products: multiplier on unit price.
+         * 0.5 = half portion, 1.0 = full (default), 2.0 = double portion.
+         * totalPrice = price × portionMultiplier × quantity.
+         */
+        @DecimalMin(value = "0.0", inclusive = false, message = "Portion multiplier must be greater than 0")
+        private BigDecimal portionMultiplier;
+
         private List<ModifierInfo> modifiers;
 
         @Size(max = 500, message = "Notes must not exceed 500 characters")
