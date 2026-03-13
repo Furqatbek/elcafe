@@ -7,6 +7,7 @@ import com.elcafe.modules.ownerbot.entity.OwnerTelegramBotConfig;
 import com.elcafe.modules.ownerbot.repository.OwnerTelegramBotConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -20,6 +21,8 @@ import java.util.stream.Collectors;
 public class OwnerTelegramBotConfigService {
 
     private final OwnerTelegramBotConfigRepository configRepository;
+    @Lazy
+    private final OwnerTelegramBotService ownerTelegramBotService;
 
     @Transactional(readOnly = true)
     public List<OwnerBotConfigResponse> getAllConfigs() {
@@ -64,6 +67,10 @@ public class OwnerTelegramBotConfigService {
 
         config = configRepository.save(config);
         log.info("Owner Telegram bot config created with ID: {}", config.getId());
+
+        // Restart bot to apply new configuration
+        ownerTelegramBotService.restartBot();
+
         return toResponse(config);
     }
 
@@ -92,6 +99,10 @@ public class OwnerTelegramBotConfigService {
 
         config = configRepository.save(config);
         log.info("Owner Telegram bot config updated: {}", id);
+
+        // Restart bot to apply new configuration
+        ownerTelegramBotService.restartBot();
+
         return toResponse(config);
     }
 
@@ -103,6 +114,10 @@ public class OwnerTelegramBotConfigService {
         config.setIsActive(!Boolean.TRUE.equals(config.getIsActive()));
         config = configRepository.save(config);
         log.info("Owner Telegram bot config {} toggled to: {}", id, config.getIsActive());
+
+        // Restart bot to apply new configuration
+        ownerTelegramBotService.restartBot();
+
         return toResponse(config);
     }
 
@@ -113,6 +128,9 @@ public class OwnerTelegramBotConfigService {
                 .orElseThrow(() -> new ResourceNotFoundException("OwnerTelegramBotConfig", "id", id));
         configRepository.delete(config);
         log.info("Owner Telegram bot config deleted: {}", id);
+
+        // Restart bot (will stop if no active config remains)
+        ownerTelegramBotService.restartBot();
     }
 
     private OwnerBotConfigResponse toResponse(OwnerTelegramBotConfig config) {

@@ -1,12 +1,12 @@
 package com.elcafe.modules.notification.service;
 
-import com.elcafe.modules.notification.config.TelegramConfig;
+import com.elcafe.modules.telegram.entity.TelegramBotConfig;
 import com.elcafe.modules.telegram.entity.TelegramSubscriber;
+import com.elcafe.modules.telegram.repository.TelegramBotConfigRepository;
 import com.elcafe.modules.telegram.repository.TelegramSubscriberRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
@@ -19,6 +19,7 @@ import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.generics.BotSession;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.time.OffsetDateTime;
@@ -31,43 +32,96 @@ import java.util.function.Consumer;
 
 /**
  * Telegram Bot Service for sending notifications and managing subscribers.
- * Integrates with the marketing module to register subscribers automatically.
+ * Reads configuration from database (managed via frontend admin panel).
  */
 @Slf4j
 @Service
-@Lazy
 @RequiredArgsConstructor
 public class TelegramBotService {
 
-    private final TelegramConfig telegramConfig;
+    private final TelegramBotConfigRepository configRepository;
     private final TelegramSubscriberRepository subscriberRepository;
+
     private ElCafeBot bot;
+    private BotSession botSession;
+    private String currentToken;
+    private String welcomeMessage;
 
     @PostConstruct
     public void init() {
-        if (!telegramConfig.isEnabled()) {
-            log.info("Telegram bot is disabled");
+        initializeBot();
+    }
+
+    /**
+     * Initialize or reinitialize the bot from database configuration.
+     * Called on startup and when configuration is updated from frontend.
+     */
+    public synchronized void initializeBot() {
+        // Stop existing bot if running
+        stopBot();
+
+        // Load config from database
+        Optional<TelegramBotConfig> configOpt = configRepository.findByIsActiveTrue();
+
+        if (configOpt.isEmpty()) {
+            log.info("No active Telegram bot configuration found in database. Bot will not start.");
+            log.info("Configure the bot via Settings -> Telegram in the admin panel.");
             return;
         }
 
-        if (telegramConfig.getToken() == null || telegramConfig.getToken().isEmpty()) {
-            log.warn("Telegram bot token is not configured. Bot will not be registered.");
+        TelegramBotConfig config = configOpt.get();
+
+        if (config.getBotToken() == null || config.getBotToken().isEmpty()) {
+            log.warn("Telegram bot token is empty. Bot will not be registered.");
+            return;
+        }
+
+        if (!Boolean.TRUE.equals(config.getIsActive())) {
+            log.info("Telegram bot is disabled in configuration.");
             return;
         }
 
         try {
+            this.currentToken = config.getBotToken();
+            this.welcomeMessage = config.getWelcomeMessage();
+
             bot = new ElCafeBot(
-                telegramConfig.getToken(),
-                telegramConfig.getUsername(),
+                config.getBotToken(),
+                config.getBotUsername(),
                 this::handleSubscriberRegistration,
-                this::handleSubscriberInteraction
+                this::handleSubscriberInteraction,
+                this.welcomeMessage
             );
+
             TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-            botsApi.registerBot(bot);
-            log.info("Telegram bot registered successfully: @{}", telegramConfig.getUsername());
+            botSession = botsApi.registerBot(bot);
+
+            log.info("Telegram customer bot registered successfully: @{}", config.getBotUsername());
         } catch (TelegramApiException e) {
             log.error("Failed to register Telegram bot: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Stop the currently running bot.
+     */
+    public synchronized void stopBot() {
+        if (botSession != null && botSession.isRunning()) {
+            botSession.stop();
+            log.info("Telegram customer bot stopped");
+        }
+        bot = null;
+        botSession = null;
+        currentToken = null;
+    }
+
+    /**
+     * Restart the bot with new configuration from database.
+     * Called when configuration is updated via frontend.
+     */
+    public void restartBot() {
+        log.info("Restarting Telegram customer bot with new configuration...");
+        initializeBot();
     }
 
     /**
@@ -115,19 +169,15 @@ public class TelegramBotService {
      * Check if bot is ready to send messages
      */
     public boolean isReady() {
-        return telegramConfig.isEnabled() && bot != null;
+        return bot != null && botSession != null && botSession.isRunning();
     }
 
     /**
      * Send a text message to a specific chat
-     *
-     * @param chatId  The chat ID to send the message to
-     * @param message The message text (supports HTML)
-     * @return The sent message ID, or null if failed
      */
     public Integer sendMessage(Long chatId, String message) {
         if (!isReady()) {
-            log.debug("Telegram bot is disabled or not initialized, skipping message to chatId: {}", chatId);
+            log.debug("Telegram bot is not running, skipping message to chatId: {}", chatId);
             return null;
         }
 
@@ -147,11 +197,6 @@ public class TelegramBotService {
 
     /**
      * Send a message with inline keyboard buttons
-     *
-     * @param chatId  The chat ID
-     * @param message The message text (supports HTML)
-     * @param buttons List of button rows, each row is a list of [text, url] pairs
-     * @return The sent message ID, or null if failed
      */
     public Integer sendMessageWithButtons(Long chatId, String message, List<List<Map<String, String>>> buttons) {
         if (!isReady()) {
@@ -196,11 +241,6 @@ public class TelegramBotService {
 
     /**
      * Send a photo with optional caption
-     *
-     * @param chatId   The chat ID
-     * @param photoUrl The photo URL
-     * @param caption  Optional caption (supports HTML)
-     * @return The sent message ID, or null if failed
      */
     public Integer sendPhoto(Long chatId, String photoUrl, String caption) {
         if (!isReady()) {
@@ -225,12 +265,6 @@ public class TelegramBotService {
 
     /**
      * Send a photo with caption and inline keyboard buttons
-     *
-     * @param chatId   The chat ID
-     * @param photoUrl The photo URL
-     * @param caption  Optional caption (supports HTML)
-     * @param buttons  List of button rows
-     * @return The sent message ID, or null if failed
      */
     public Integer sendPhotoWithButtons(Long chatId, String photoUrl, String caption,
                                          List<List<Map<String, String>>> buttons) {
@@ -305,14 +339,17 @@ public class TelegramBotService {
         private final String username;
         private final java.util.function.BiConsumer<User, Long> onSubscribe;
         private final Consumer<Long> onInteraction;
+        private final String customWelcomeMessage;
 
         public ElCafeBot(String token, String username,
                         java.util.function.BiConsumer<User, Long> onSubscribe,
-                        Consumer<Long> onInteraction) {
+                        Consumer<Long> onInteraction,
+                        String customWelcomeMessage) {
             super(token);
             this.username = username;
             this.onSubscribe = onSubscribe;
             this.onInteraction = onInteraction;
+            this.customWelcomeMessage = customWelcomeMessage;
         }
 
         @Override
@@ -334,43 +371,39 @@ public class TelegramBotService {
                         onSubscribe.accept(user, chatId);
                     }
 
-                    String welcomeMessage = String.format(
-                        "👋 <b>Xush kelibsiz ElCafe botiga!</b>\n\n" +
-                        "Siz muvaffaqiyatli ro'yxatdan o'tdingiz va endi bizning " +
-                        "aksiyalar, chegirmalar va yangiliklar haqida xabar olasiz.\n\n" +
-                        "🎁 <b>Sizni nimalar kutmoqda:</b>\n" +
-                        "• Maxsus aksiyalar va chegirmalar\n" +
-                        "• Tug'ilgan kun tabriklari\n" +
-                        "• Yangi taomlar haqida xabarlar\n" +
-                        "• Buyurtma holati haqida bildirishnomalar\n\n" +
-                        "Buyruqlar:\n" +
-                        "/start - Botni qayta ishga tushirish\n" +
-                        "/status - Obuna holatini tekshirish\n" +
-                        "/help - Yordam"
-                    );
+                    String welcomeMessage = customWelcomeMessage != null && !customWelcomeMessage.isEmpty()
+                        ? customWelcomeMessage
+                        : "👋 <b>Xush kelibsiz!</b>\n\n" +
+                          "Siz muvaffaqiyatli ro'yxatdan o'tdingiz va endi bizning " +
+                          "aksiyalar, chegirmalar va yangiliklar haqida xabar olasiz.\n\n" +
+                          "🎁 <b>Sizni nimalar kutmoqda:</b>\n" +
+                          "• Maxsus aksiyalar va chegirmalar\n" +
+                          "• Tug'ilgan kun tabriklari\n" +
+                          "• Yangi taomlar haqida xabarlar\n" +
+                          "• Buyurtma holati haqida bildirishnomalar\n\n" +
+                          "Buyruqlar:\n" +
+                          "/start - Botni qayta ishga tushirish\n" +
+                          "/status - Obuna holatini tekshirish\n" +
+                          "/help - Yordam";
                     sendReply(chatId, welcomeMessage);
                 } else if (messageText.equals("/status")) {
-                    // Update interaction
                     if (onInteraction != null) {
                         onInteraction.accept(chatId);
                     }
                     sendReply(chatId, "✅ Siz obuna bo'lgansiz va xabarlar olishga tayyorsiz!");
                 } else if (messageText.equals("/help")) {
-                    // Update interaction
                     if (onInteraction != null) {
                         onInteraction.accept(chatId);
                     }
                     String helpMessage =
-                        "📚 <b>ElCafe Bot Yordam</b>\n\n" +
+                        "📚 <b>Bot Yordam</b>\n\n" +
                         "Bu bot orqali siz quyidagilarni olishingiz mumkin:\n\n" +
                         "🎁 <b>Aksiyalar</b> - maxsus takliflar va chegirmalar\n" +
                         "🎂 <b>Tug'ilgan kun</b> - bayram kunida sovg'alar\n" +
                         "🍽 <b>Yangiliklar</b> - yangi taomlar haqida\n" +
-                        "📦 <b>Buyurtmalar</b> - buyurtma holati\n\n" +
-                        "Savollar bo'lsa, @elcafe_support ga yozing.";
+                        "📦 <b>Buyurtmalar</b> - buyurtma holati";
                     sendReply(chatId, helpMessage);
                 } else {
-                    // Update interaction for any message
                     if (onInteraction != null) {
                         onInteraction.accept(chatId);
                     }

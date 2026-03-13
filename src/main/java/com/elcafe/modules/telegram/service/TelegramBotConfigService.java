@@ -1,12 +1,14 @@
 package com.elcafe.modules.telegram.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.notification.service.TelegramBotService;
 import com.elcafe.modules.telegram.dto.TelegramBotConfigRequest;
 import com.elcafe.modules.telegram.dto.TelegramBotConfigResponse;
 import com.elcafe.modules.telegram.entity.TelegramBotConfig;
 import com.elcafe.modules.telegram.repository.TelegramBotConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -20,6 +22,8 @@ import java.util.stream.Collectors;
 public class TelegramBotConfigService {
 
     private final TelegramBotConfigRepository configRepository;
+    @Lazy
+    private final TelegramBotService telegramBotService;
 
     @Transactional(readOnly = true)
     public List<TelegramBotConfigResponse> getAllConfigs() {
@@ -56,6 +60,10 @@ public class TelegramBotConfigService {
 
         config = configRepository.save(config);
         log.info("Telegram bot config created with ID: {}", config.getId());
+
+        // Restart bot to apply new configuration
+        telegramBotService.restartBot();
+
         return toResponse(config);
     }
 
@@ -84,6 +92,10 @@ public class TelegramBotConfigService {
 
         config = configRepository.save(config);
         log.info("Telegram bot config updated: {}", id);
+
+        // Restart bot to apply new configuration
+        telegramBotService.restartBot();
+
         return toResponse(config);
     }
 
@@ -95,6 +107,10 @@ public class TelegramBotConfigService {
         config.setIsActive(!Boolean.TRUE.equals(config.getIsActive()));
         config = configRepository.save(config);
         log.info("Telegram bot config {} toggled to: {}", id, config.getIsActive());
+
+        // Restart bot to apply new configuration
+        telegramBotService.restartBot();
+
         return toResponse(config);
     }
 
@@ -105,6 +121,9 @@ public class TelegramBotConfigService {
                 .orElseThrow(() -> new ResourceNotFoundException("TelegramBotConfig", "id", id));
         configRepository.delete(config);
         log.info("Telegram bot config deleted: {}", id);
+
+        // Restart bot (will stop if no active config remains)
+        telegramBotService.restartBot();
     }
 
     private TelegramBotConfigResponse toResponse(TelegramBotConfig config) {

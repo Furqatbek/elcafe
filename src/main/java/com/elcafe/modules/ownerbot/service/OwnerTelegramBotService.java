@@ -2,17 +2,17 @@ package com.elcafe.modules.ownerbot.service;
 
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
-import com.elcafe.modules.ownerbot.config.OwnerBotConfig;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationSettings;
+import com.elcafe.modules.ownerbot.entity.OwnerTelegramBotConfig;
 import com.elcafe.modules.ownerbot.entity.OwnerTelegramSubscriber;
 import com.elcafe.modules.ownerbot.repository.OwnerNotificationSettingsRepository;
+import com.elcafe.modules.ownerbot.repository.OwnerTelegramBotConfigRepository;
 import com.elcafe.modules.ownerbot.repository.OwnerTelegramSubscriberRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -23,6 +23,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.generics.BotSession;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.time.LocalDateTime;
@@ -31,49 +32,97 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Telegram Bot Service for restaurant owners and staff notifications.
- * Handles registration, verification, and real-time notifications.
+ * Reads configuration from database (managed via frontend admin panel).
  */
 @Slf4j
 @Service
-@Lazy
 @RequiredArgsConstructor
 public class OwnerTelegramBotService {
 
-    private final OwnerBotConfig config;
+    private final OwnerTelegramBotConfigRepository configRepository;
     private final OwnerTelegramSubscriberRepository subscriberRepository;
     private final OwnerNotificationSettingsRepository settingsRepository;
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
 
     private OwnerBot bot;
+    private BotSession botSession;
+    private String welcomeMessage;
 
     // Cache for pending verifications (code -> user data)
     private final Map<String, PendingVerification> pendingVerifications = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
-        if (!config.isEnabled()) {
-            log.info("Owner Telegram bot is disabled");
+        initializeBot();
+    }
+
+    /**
+     * Initialize or reinitialize the bot from database configuration.
+     * Called on startup and when configuration is updated from frontend.
+     */
+    public synchronized void initializeBot() {
+        // Stop existing bot if running
+        stopBot();
+
+        // Load config from database
+        Optional<OwnerTelegramBotConfig> configOpt = configRepository.findByIsActiveTrue();
+
+        if (configOpt.isEmpty()) {
+            log.info("No active Owner Telegram bot configuration found in database. Bot will not start.");
+            log.info("Configure the bot via Settings -> Telegram in the admin panel.");
             return;
         }
 
-        if (config.getToken() == null || config.getToken().isEmpty()) {
-            log.warn("Owner Telegram bot token is not configured. Bot will not be registered.");
+        OwnerTelegramBotConfig config = configOpt.get();
+
+        if (config.getBotToken() == null || config.getBotToken().isEmpty()) {
+            log.warn("Owner Telegram bot token is empty. Bot will not be registered.");
+            return;
+        }
+
+        if (!Boolean.TRUE.equals(config.getIsActive())) {
+            log.info("Owner Telegram bot is disabled in configuration.");
             return;
         }
 
         try {
-            bot = new OwnerBot(config.getToken(), config.getUsername());
+            this.welcomeMessage = config.getWelcomeMessage();
+
+            bot = new OwnerBot(config.getBotToken(), config.getBotUsername());
+
             TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
-            botsApi.registerBot(bot);
-            log.info("Owner Telegram bot registered successfully: @{}", config.getUsername());
+            botSession = botsApi.registerBot(bot);
+
+            log.info("Owner Telegram bot registered successfully: @{}", config.getBotUsername());
         } catch (TelegramApiException e) {
             log.error("Failed to register Owner Telegram bot: {}", e.getMessage());
         }
     }
 
+    /**
+     * Stop the currently running bot.
+     */
+    public synchronized void stopBot() {
+        if (botSession != null && botSession.isRunning()) {
+            botSession.stop();
+            log.info("Owner Telegram bot stopped");
+        }
+        bot = null;
+        botSession = null;
+    }
+
+    /**
+     * Restart the bot with new configuration from database.
+     * Called when configuration is updated via frontend.
+     */
+    public void restartBot() {
+        log.info("Restarting Owner Telegram bot with new configuration...");
+        initializeBot();
+    }
+
     public boolean isReady() {
-        return config.isEnabled() && bot != null;
+        return bot != null && botSession != null && botSession.isRunning();
     }
 
     /**
@@ -245,22 +294,23 @@ public class OwnerTelegramBotService {
                 subscriber.setLastInteractionAt(LocalDateTime.now());
                 subscriberRepository.save(subscriber);
 
-                String welcomeMessage =
-                    "👋 <b>Добро пожаловать в Jangirovs Owner Bot!</b>\n\n" +
-                    "Этот бот предназначен для владельцев и менеджеров ресторанов.\n\n" +
-                    "📱 <b>Вы будете получать уведомления о:</b>\n" +
-                    "• Новых заказах\n" +
-                    "• Новых бронированиях\n" +
-                    "• Низком уровне запасов\n" +
-                    "• Отзывах клиентов\n" +
-                    "• Ежедневных отчётах\n\n" +
-                    "🔐 <b>Для подключения:</b>\n" +
-                    "1. Войдите в админ-панель Jangirovs\n" +
-                    "2. Перейдите в Настройки → Telegram\n" +
-                    "3. Получите код подключения\n" +
-                    "4. Отправьте код сюда\n\n" +
-                    "Или введите 6-значный код подключения:";
-                sendReply(chatId, welcomeMessage);
+                String welcomeMsg = welcomeMessage != null && !welcomeMessage.isEmpty()
+                    ? welcomeMessage
+                    : "👋 <b>Добро пожаловать в Owner Bot!</b>\n\n" +
+                      "Этот бот предназначен для владельцев и менеджеров ресторанов.\n\n" +
+                      "📱 <b>Вы будете получать уведомления о:</b>\n" +
+                      "• Новых заказах\n" +
+                      "• Новых бронированиях\n" +
+                      "• Низком уровне запасов\n" +
+                      "• Отзывах клиентов\n" +
+                      "• Ежедневных отчётах\n\n" +
+                      "🔐 <b>Для подключения:</b>\n" +
+                      "1. Войдите в админ-панель\n" +
+                      "2. Перейдите в Настройки → Telegram\n" +
+                      "3. Получите код подключения\n" +
+                      "4. Отправьте код сюда\n\n" +
+                      "Или введите 6-значный код подключения:";
+                sendReply(chatId, welcomeMsg);
             }
         }
 
