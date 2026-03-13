@@ -184,14 +184,20 @@ public class TelegramCampaignExecutor {
 
         String result = text;
         result = result.replace("{name}", getDisplayName(subscriber));
+        result = result.replace("{display_name}", subscriber.getDisplayName() != null ? subscriber.getDisplayName() : "");
         result = result.replace("{first_name}", subscriber.getFirstName() != null ? subscriber.getFirstName() : "");
         result = result.replace("{last_name}", subscriber.getLastName() != null ? subscriber.getLastName() : "");
         result = result.replace("{username}", subscriber.getUsername() != null ? "@" + subscriber.getUsername() : "");
+        result = result.replace("{phone}", subscriber.getPhone() != null ? subscriber.getPhone() : "");
 
         return result;
     }
 
     private String getDisplayName(TelegramSubscriber subscriber) {
+        // Prefer the name the user entered during wizard registration
+        if (subscriber.getDisplayName() != null) {
+            return subscriber.getDisplayName();
+        }
         if (subscriber.getFirstName() != null) {
             return subscriber.getFirstName();
         }

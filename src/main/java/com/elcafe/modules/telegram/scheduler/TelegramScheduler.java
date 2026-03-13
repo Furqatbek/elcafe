@@ -175,7 +175,7 @@ public class TelegramScheduler {
                 LocalDate cutoffDate = currentBusinessDay.minusDays(daysInactive);
                 ShiftTimeService.ShiftTimeRange shiftRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, cutoffDate);
-                List<TelegramSubscriber> inactiveSubscribers = subscriberRepository.findInactiveSubscribers(shiftRange.start());
+                List<TelegramSubscriber> inactiveSubscribers = subscriberRepository.findTargetableInactiveSubscribers(shiftRange.start());
 
                 log.info("Found {} inactive subscribers ({}+ business days)", inactiveSubscribers.size(), daysInactive);
 
@@ -183,15 +183,17 @@ public class TelegramScheduler {
                 for (TelegramSubscriber subscriber : inactiveSubscribers) {
                     if (subscriber.getIsBlocked()) continue;
 
+                    String name = subscriber.getDisplayName() != null ? subscriber.getDisplayName()
+                            : (subscriber.getFirstName() != null ? subscriber.getFirstName() : "Hurmatli mijoz");
                     Map<String, String> placeholders = new HashMap<>();
-                    placeholders.put("name", subscriber.getFirstName() != null ? subscriber.getFirstName() : "Hurmatli mijoz");
+                    placeholders.put("name", name);
 
                     boolean success = campaignExecutor.sendTemplateMessage(subscriber, rule.getTemplate(), placeholders);
 
                     if (success) {
                         sentCount++;
                         // Rate limiting - wait 50ms between messages
-                        Thread.sleep(50);
+                        try { Thread.sleep(50); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                     }
                 }
 

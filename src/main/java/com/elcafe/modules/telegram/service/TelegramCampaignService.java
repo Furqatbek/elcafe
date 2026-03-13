@@ -228,7 +228,7 @@ public class TelegramCampaignService {
 
         switch (campaign.getTargetAudience()) {
             case ALL:
-                return subscriberRepository.findByIsActiveTrueAndIsBlockedFalse();
+                return subscriberRepository.findTargetableSubscribers();
             case ACTIVE:
                 int activeDays = 7;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("active_days")) {
@@ -239,7 +239,7 @@ public class TelegramCampaignService {
                 LocalDate activeSinceDate = currentBusinessDay.minusDays(activeDays);
                 ShiftTimeService.ShiftTimeRange activeRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, activeSinceDate);
-                return subscriberRepository.findActiveSubscribers(activeRange.start());
+                return subscriberRepository.findTargetableActiveSubscribers(activeRange.start());
             case INACTIVE:
                 int inactiveDays = 14;
                 if (campaign.getFilterCriteria() != null && campaign.getFilterCriteria().containsKey("days_inactive")) {
@@ -250,13 +250,13 @@ public class TelegramCampaignService {
                 LocalDate inactiveBeforeDate = currentBusinessDay.minusDays(inactiveDays);
                 ShiftTimeService.ShiftTimeRange inactiveRange = shiftTimeService.getShiftTimeRange(
                         restaurantId, inactiveBeforeDate);
-                return subscriberRepository.findInactiveSubscribers(inactiveRange.start());
+                return subscriberRepository.findTargetableInactiveSubscribers(inactiveRange.start());
             case LINKED_CUSTOMERS:
-                return subscriberRepository.findByCustomerIdIsNotNull();
+                return subscriberRepository.findTargetableLinkedSubscribers();
             case CUSTOM:
                 return new ArrayList<>();
             default:
-                return subscriberRepository.findByIsActiveTrueAndIsBlockedFalse();
+                return subscriberRepository.findTargetableSubscribers();
         }
     }
 

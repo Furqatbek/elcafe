@@ -35,6 +35,29 @@ public interface TelegramSubscriberRepository extends JpaRepository<TelegramSubs
     @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false AND (s.lastInteractionAt IS NULL OR s.lastInteractionAt < :before)")
     List<TelegramSubscriber> findInactiveSubscribers(@Param("before") OffsetDateTime before);
 
+    // ---- Campaign / automation targeting: only fully-registered subscribers ----
+    // Subscribers with conversation_state IS NULL are legacy (registered before the wizard
+    // was added) and are treated as fully registered for backward compatibility.
+
+    @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false " +
+           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
+    List<TelegramSubscriber> findTargetableSubscribers();
+
+    @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false " +
+           "AND s.lastInteractionAt > :since " +
+           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
+    List<TelegramSubscriber> findTargetableActiveSubscribers(@Param("since") OffsetDateTime since);
+
+    @Query("SELECT s FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false " +
+           "AND (s.lastInteractionAt IS NULL OR s.lastInteractionAt < :before) " +
+           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
+    List<TelegramSubscriber> findTargetableInactiveSubscribers(@Param("before") OffsetDateTime before);
+
+    @Query("SELECT s FROM TelegramSubscriber s WHERE s.customer IS NOT NULL " +
+           "AND s.isActive = true AND s.isBlocked = false " +
+           "AND (s.conversationState IS NULL OR s.conversationState = 'REGISTERED')")
+    List<TelegramSubscriber> findTargetableLinkedSubscribers();
+
     @Query("SELECT COUNT(s) FROM TelegramSubscriber s WHERE s.isActive = true AND s.isBlocked = false")
     long countActiveSubscribers();
 
