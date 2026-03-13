@@ -11,6 +11,7 @@ import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.entity.Payment;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -417,7 +418,9 @@ public class FinancialAnalyticsService {
 
         return orders.stream()
                 .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
+                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus())
+                        || order.isFullyPaid()
+                        || order.getPaymentStatus() == PaymentStatus.COMPLETED)
                 .collect(Collectors.toList());
     }
 

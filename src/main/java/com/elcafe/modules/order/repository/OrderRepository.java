@@ -95,29 +95,30 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<OrderSource> findDistinctOrderSourcesByCustomerId(@Param("customerId") Long customerId);
 
     // Waiter metrics queries (all-time - backward compatibility)
-    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED')")
+    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('CANCELLED') AND (o.status NOT IN ('PENDING', 'NEW') OR o.paymentStatus = 'COMPLETED')")
     BigDecimal calculateTotalRevenueByWaiter(@Param("waiterId") Long waiterId);
 
-    @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED')")
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('CANCELLED') AND (o.status NOT IN ('PENDING', 'NEW') OR o.paymentStatus = 'COMPLETED')")
     Long countValidOrdersByWaiter(@Param("waiterId") Long waiterId);
 
     // Waiter metrics queries (with date filter for period support)
-    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate")
+    @Query("SELECT COALESCE(SUM(o.total), 0) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('CANCELLED') AND (o.status NOT IN ('PENDING', 'NEW') OR o.paymentStatus = 'COMPLETED') AND o.createdAt >= :startDate")
     BigDecimal calculateTotalRevenueByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") OffsetDateTime startDate);
 
-    @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate")
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('CANCELLED') AND (o.status NOT IN ('PENDING', 'NEW') OR o.paymentStatus = 'COMPLETED') AND o.createdAt >= :startDate")
     Long countValidOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") OffsetDateTime startDate);
 
-    @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') ORDER BY o.createdAt DESC")
+    @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('CANCELLED') AND (o.status NOT IN ('PENDING', 'NEW') OR o.paymentStatus = 'COMPLETED') ORDER BY o.createdAt DESC")
     List<Order> findRecentOrdersByWaiter(@Param("waiterId") Long waiterId, Pageable pageable);
 
-    @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('PENDING', 'CANCELLED') AND o.createdAt >= :startDate ORDER BY o.createdAt DESC")
+    @Query("SELECT o FROM Order o WHERE o.waiter.id = :waiterId AND o.status NOT IN ('CANCELLED') AND (o.status NOT IN ('PENDING', 'NEW') OR o.paymentStatus = 'COMPLETED') AND o.createdAt >= :startDate ORDER BY o.createdAt DESC")
     List<Order> findRecentOrdersByWaiterSince(@Param("waiterId") Long waiterId, @Param("startDate") OffsetDateTime startDate, Pageable pageable);
 
     @Query("SELECT CAST(o.createdAt AS LocalDate) as date, COALESCE(SUM(o.total), 0) as revenue, COUNT(o) as orderCount " +
            "FROM Order o " +
            "WHERE o.waiter.id = :waiterId " +
-           "AND o.status NOT IN ('PENDING', 'CANCELLED') " +
+           "AND o.status NOT IN ('CANCELLED') " +
+           "AND (o.status NOT IN ('PENDING', 'NEW') OR o.paymentStatus = 'COMPLETED') " +
            "AND o.createdAt >= :startDate " +
            "GROUP BY CAST(o.createdAt AS LocalDate) " +
            "ORDER BY CAST(o.createdAt AS LocalDate) DESC")
