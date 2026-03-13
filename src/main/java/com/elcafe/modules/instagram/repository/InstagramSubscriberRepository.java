@@ -26,4 +26,13 @@ public interface InstagramSubscriberRepository extends JpaRepository<InstagramSu
            "LOWER(s.displayName) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
            "s.phone LIKE CONCAT('%', :q, '%')")
     Page<InstagramSubscriber> search(@Param("q") String query, Pageable pageable);
+
+    /** All active, non-blocked subscribers (used for broadcast). */
+    @Query("SELECT s FROM InstagramSubscriber s WHERE s.isActive = true AND s.isBlocked = false")
+    java.util.List<InstagramSubscriber> findAllActiveNotBlocked();
+
+    /** Active, non-blocked, fully registered subscribers (used for targeted broadcast). */
+    @Query("SELECT s FROM InstagramSubscriber s WHERE s.isActive = true AND s.isBlocked = false " +
+           "AND s.conversationState = 'REGISTERED'")
+    java.util.List<InstagramSubscriber> findAllRegistered();
 }

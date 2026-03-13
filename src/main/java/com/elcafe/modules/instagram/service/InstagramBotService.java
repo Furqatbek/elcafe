@@ -252,6 +252,72 @@ public class InstagramBotService {
     }
 
     // -------------------------------------------------------------------------
+    // Admin DM controls
+    // -------------------------------------------------------------------------
+
+    @Transactional
+    public InstagramSubscriber blockSubscriber(Long id) {
+        InstagramSubscriber s = subscriberRepository.findById(id)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Subscriber not found: " + id));
+        s.setIsBlocked(true);
+        return subscriberRepository.save(s);
+    }
+
+    @Transactional
+    public InstagramSubscriber unblockSubscriber(Long id) {
+        InstagramSubscriber s = subscriberRepository.findById(id)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Subscriber not found: " + id));
+        s.setIsBlocked(false);
+        return subscriberRepository.save(s);
+    }
+
+    /**
+     * Admin sends a DM to one subscriber by their DB id.
+     * Returns true if the Meta API accepted the message.
+     */
+    public boolean sendAdminMessage(Long id, String text) {
+        InstagramSubscriber s = subscriberRepository.findById(id)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Subscriber not found: " + id));
+        InstagramBotConfig config = getActiveConfig();
+        if (config == null) {
+            log.warn("No active Instagram config — cannot send admin DM to subscriber {}", id);
+            return false;
+        }
+        return apiClient.sendMessage(config, s.getIgsid(), text);
+    }
+
+    /**
+     * Broadcast a text message to multiple subscribers.
+     *
+     * @param text    message to send
+     * @param target  "ALL" = all active non-blocked; "REGISTERED" = only fully registered ones
+     * @return number of messages successfully delivered
+     */
+    public int broadcast(String text, String target) {
+        InstagramBotConfig config = getActiveConfig();
+        if (config == null) {
+            log.warn("No active Instagram config — broadcast skipped");
+            return 0;
+        }
+        List<InstagramSubscriber> recipients = "REGISTERED".equalsIgnoreCase(target)
+                ? subscriberRepository.findAllRegistered()
+                : subscriberRepository.findAllActiveNotBlocked();
+
+        int sent = 0;
+        for (InstagramSubscriber s : recipients) {
+            try {
+                if (apiClient.sendMessage(config, s.getIgsid(), text)) {
+                    sent++;
+                }
+            } catch (Exception e) {
+                log.error("Broadcast failed for subscriber {}: {}", s.getId(), e.getMessage());
+            }
+        }
+        log.info("Instagram broadcast sent to {}/{} recipients", sent, recipients.size());
+        return sent;
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 

@@ -1234,6 +1234,10 @@ export const instagramAPI = {
   getSubscribers: (params = {}) => api.get('/instagram/subscribers', { params }),
   searchSubscribers: (q, params = {}) => api.get('/instagram/subscribers/search', { params: { q, ...params } }),
   getSubscriber: (id) => api.get(`/instagram/subscribers/${id}`),
+  blockSubscriber: (id) => api.post(`/instagram/subscribers/${id}/block`),
+  unblockSubscriber: (id) => api.post(`/instagram/subscribers/${id}/unblock`),
+  sendDm: (id, text) => api.post(`/instagram/subscribers/${id}/send`, { text }),
+  broadcast: (text, target) => api.post('/instagram/subscribers/broadcast', { text, target }),
 };
 
 export default api;

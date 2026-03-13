@@ -17,6 +17,14 @@ import {
 } from '../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import {
   Instagram,
   Users,
   Settings,
@@ -27,8 +35,19 @@ import {
   Search,
   Eye,
   EyeOff,
+  Send,
+  Ban,
+  CheckCircle,
+  Megaphone,
 } from 'lucide-react';
 import { Switch } from '../components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 
 const stateColors = {
   REGISTERED:              'bg-green-100 text-green-800',
@@ -50,6 +69,17 @@ export default function InstagramMarketing() {
   const [subscriberTotalPages, setSubscriberTotalPages] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
+
+  // Send DM dialog
+  const [dmTarget, setDmTarget] = useState(null); // { id, displayName, username }
+  const [dmText, setDmText] = useState('');
+  const [sendingDm, setSendingDm] = useState(false);
+
+  // Broadcast tab state
+  const [broadcastText, setBroadcastText] = useState('');
+  const [broadcastTarget, setBroadcastTarget] = useState('ALL');
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState(null);
 
   // Config state
   const [configId, setConfigId] = useState(null);
@@ -120,6 +150,61 @@ export default function InstagramMarketing() {
     if (e.key === 'Escape') {
       setSearchQuery('');
       loadSubscribers(0);
+    }
+  };
+
+  const handleBlock = async (subscriber) => {
+    const action = subscriber.isBlocked ? 'unblock' : 'block';
+    if (!window.confirm(t(`instagram.subscribers.confirm${action === 'block' ? 'Block' : 'Unblock'}`, { name: subscriber.displayName || subscriber.username || subscriber.igsid }))) return;
+    try {
+      const response = action === 'block'
+        ? await instagramAPI.blockSubscriber(subscriber.id)
+        : await instagramAPI.unblockSubscriber(subscriber.id);
+      setSubscribers(prev => prev.map(s => s.id === subscriber.id ? response.data : s));
+    } catch (error) {
+      console.error(`Failed to ${action} subscriber:`, error);
+      alert(t('instagram.errors.blockAction'));
+    }
+  };
+
+  const openSendDm = (subscriber) => {
+    setDmTarget(subscriber);
+    setDmText('');
+  };
+
+  const handleSendDm = async () => {
+    if (!dmText.trim() || !dmTarget) return;
+    setSendingDm(true);
+    try {
+      await instagramAPI.sendDm(dmTarget.id, dmText.trim());
+      alert(t('instagram.dm.sent'));
+      setDmTarget(null);
+      setDmText('');
+    } catch (error) {
+      console.error('Failed to send DM:', error);
+      alert(t('instagram.errors.sendDm'));
+    } finally {
+      setSendingDm(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Broadcast
+  // -------------------------------------------------------------------------
+
+  const handleBroadcast = async () => {
+    if (!broadcastText.trim()) return;
+    if (!window.confirm(t('instagram.broadcast.confirm', { target: broadcastTarget }))) return;
+    setBroadcasting(true);
+    setBroadcastResult(null);
+    try {
+      const response = await instagramAPI.broadcast(broadcastText.trim(), broadcastTarget);
+      setBroadcastResult(response.data.sent);
+    } catch (error) {
+      console.error('Broadcast failed:', error);
+      alert(t('instagram.errors.broadcast'));
+    } finally {
+      setBroadcasting(false);
     }
   };
 
@@ -216,6 +301,10 @@ export default function InstagramMarketing() {
             <Users className="h-4 w-4" />
             {t('instagram.tabs.subscribers')}
           </TabsTrigger>
+          <TabsTrigger value="broadcast" className="flex items-center gap-2">
+            <Megaphone className="h-4 w-4" />
+            {t('instagram.tabs.broadcast')}
+          </TabsTrigger>
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
             {t('instagram.tabs.settings')}
@@ -261,18 +350,19 @@ export default function InstagramMarketing() {
                     <TableHead>{t('instagram.subscribers.state')}</TableHead>
                     <TableHead>{t('instagram.subscribers.status')}</TableHead>
                     <TableHead>{t('instagram.subscribers.subscribedAt')}</TableHead>
+                    <TableHead className="text-right">{t('instagram.subscribers.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {subscribers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                         {loading ? t('common.loading') : t('instagram.subscribers.empty')}
                       </TableCell>
                     </TableRow>
                   ) : (
                     subscribers.map((s) => (
-                      <TableRow key={s.id}>
+                      <TableRow key={s.id} className={s.isBlocked ? 'opacity-50' : ''}>
                         <TableCell className="font-mono text-sm">
                           {s.username ? `@${s.username}` : s.igsid}
                         </TableCell>
@@ -288,12 +378,42 @@ export default function InstagramMarketing() {
                           ) : '—'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={s.isActive ? 'default' : 'secondary'}>
-                            {s.isActive ? t('instagram.subscribers.active') : t('instagram.subscribers.inactive')}
-                          </Badge>
+                          {s.isBlocked ? (
+                            <Badge variant="destructive">{t('instagram.subscribers.blocked')}</Badge>
+                          ) : (
+                            <Badge variant={s.isActive ? 'default' : 'secondary'}>
+                              {s.isActive ? t('instagram.subscribers.active') : t('instagram.subscribers.inactive')}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {s.subscribedAt ? new Date(s.subscribedAt).toLocaleDateString() : '—'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {/* Send DM */}
+                            {!s.isBlocked && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-blue-500 hover:text-blue-700"
+                                title={t('instagram.dm.sendButton')}
+                                onClick={() => openSendDm(s)}
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {/* Block / Unblock */}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className={`h-8 w-8 ${s.isBlocked ? 'text-green-500 hover:text-green-700' : 'text-red-500 hover:text-red-700'}`}
+                              title={s.isBlocked ? t('instagram.subscribers.unblock') : t('instagram.subscribers.block')}
+                              onClick={() => handleBlock(s)}
+                            >
+                              {s.isBlocked ? <CheckCircle className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -325,6 +445,62 @@ export default function InstagramMarketing() {
                   </Button>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ------------------------------------------------------------------ */}
+        {/* Broadcast Tab                                                       */}
+        {/* ------------------------------------------------------------------ */}
+        <TabsContent value="broadcast">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-pink-500" />
+                {t('instagram.broadcast.title')}
+              </CardTitle>
+              <CardDescription>{t('instagram.broadcast.description')}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 max-w-xl">
+
+              <div className="space-y-2">
+                <Label>{t('instagram.broadcast.audience')}</Label>
+                <Select value={broadcastTarget} onValueChange={setBroadcastTarget}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">{t('instagram.broadcast.audienceAll')}</SelectItem>
+                    <SelectItem value="REGISTERED">{t('instagram.broadcast.audienceRegistered')}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('instagram.broadcast.audienceHint')}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{t('instagram.broadcast.message')}</Label>
+                <Textarea
+                  value={broadcastText}
+                  onChange={(e) => setBroadcastText(e.target.value)}
+                  placeholder={t('instagram.broadcast.messagePlaceholder')}
+                  rows={5}
+                />
+              </div>
+
+              {broadcastResult !== null && (
+                <div className="rounded-md bg-green-50 border border-green-200 p-3 text-sm text-green-800">
+                  {t('instagram.broadcast.result', { count: broadcastResult })}
+                </div>
+              )}
+
+              <Button
+                onClick={handleBroadcast}
+                disabled={broadcasting || !broadcastText.trim()}
+                className="w-full"
+              >
+                <Megaphone className="mr-2 h-4 w-4" />
+                {broadcasting ? t('instagram.broadcast.sending') : t('instagram.broadcast.send')}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -518,6 +694,43 @@ export default function InstagramMarketing() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* -------------------------------------------------------------------- */}
+      {/* Send DM Dialog                                                        */}
+      {/* -------------------------------------------------------------------- */}
+      <Dialog open={!!dmTarget} onOpenChange={(open) => { if (!open) setDmTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('instagram.dm.title')}</DialogTitle>
+            <DialogDescription>
+              {t('instagram.dm.description', {
+                name: dmTarget?.displayName || dmTarget?.username || dmTarget?.igsid || '',
+              })}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label>{t('instagram.dm.message')}</Label>
+            <Textarea
+              value={dmText}
+              onChange={(e) => setDmText(e.target.value)}
+              placeholder={t('instagram.dm.messagePlaceholder')}
+              rows={4}
+              autoFocus
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDmTarget(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSendDm} disabled={sendingDm || !dmText.trim()}>
+              <Send className="mr-2 h-4 w-4" />
+              {sendingDm ? t('common.sending') : t('instagram.dm.sendButton')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
