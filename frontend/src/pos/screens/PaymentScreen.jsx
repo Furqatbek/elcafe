@@ -244,8 +244,8 @@ const PaymentScreen = () => {
           const allPaid = updatedSplits?.every(split => split.paid);
 
           if (allPaid) {
-            // All splits paid - close order and release table
-            await posAPI.closeOrder(currentOrder.id);
+            // All splits paid - close order and release table (best-effort; backend already auto-closes)
+            try { await posAPI.closeOrder(currentOrder.id); } catch (e) { console.warn('closeOrder failed (order may already be closed):', e); }
             setPaymentStatus('COMPLETED');
             printOrderReceipt(response.data.data?.orderNumber || currentOrder.orderNumber);
             clearSplitBill();
@@ -280,15 +280,15 @@ const PaymentScreen = () => {
           // Check if fully paid
           const newTotalPaid = totalPaid + paymentData.amount;
           if (newTotalPaid >= grandTotal - 0.01) {
-            // Order fully paid - close order and release table
-            await posAPI.closeOrder(currentOrder.id);
+            // Order fully paid - close order and release table (best-effort; backend already auto-closes)
+            try { await posAPI.closeOrder(currentOrder.id); } catch (e) { console.warn('closeOrder failed (order may already be closed):', e); }
             setPaymentStatus('COMPLETED');
             printOrderReceipt(response.data.data?.orderNumber || currentOrder.orderNumber);
             completeOrder();
           }
         } else {
-          // Single payment - close order and release table
-          await posAPI.closeOrder(currentOrder.id);
+          // Single payment - close order and release table (best-effort; backend already auto-closes)
+          try { await posAPI.closeOrder(currentOrder.id); } catch (e) { console.warn('closeOrder failed (order may already be closed):', e); }
           setPaymentStatus('COMPLETED');
           const orderNum = response.data.data?.orderNumber;
           printOrderReceipt(orderNum);
@@ -374,9 +374,22 @@ const PaymentScreen = () => {
       setShowCardDialog(false);
 
     } catch (error) {
-      console.error('Payment failed:', error);
-      setPaymentStatus('FAILED');
-      setPaymentError(error.response?.data?.message || error.message || t('pos.payment.errors.paymentFailed', 'Payment failed'));
+      const reason = error.response?.data?.errors?.reason;
+      if (error.response?.status === 409 && reason === 'ORDER_ALREADY_PAID') {
+        // Order was already fully paid (e.g. previous payment succeeded but UI didn't update)
+        // Treat as success: close the order and complete
+        console.warn('Order already fully paid - completing order flow');
+        try { await posAPI.closeOrder(currentOrder.id); } catch (e) { console.warn('closeOrder failed:', e); }
+        setPaymentStatus('COMPLETED');
+        completeOrder();
+        if (currentOrder.type === 'DINE_IN') {
+          try { await fetchFloorPlan(restaurantId); } catch (e) { console.error('Failed to refresh floor plan:', e); }
+        }
+      } else {
+        console.error('Payment failed:', error);
+        setPaymentStatus('FAILED');
+        setPaymentError(error.response?.data?.message || error.message || t('pos.payment.errors.paymentFailed', 'Payment failed'));
+      }
     } finally {
       setProcessingPayment(false);
     }

@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.dto.pos;
 
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,6 +33,8 @@ public class POSOrderResponse {
     private BigDecimal entryFee;
     private BigDecimal total;
     private String paymentMethod;
+    private PaymentStatus paymentStatus;
+    private boolean fullyPaid;
     private String orderNotes;
     private OffsetDateTime createdAt;
     private OffsetDateTime estimatedDeliveryTime;

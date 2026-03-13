@@ -28,6 +28,7 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
@@ -376,6 +377,8 @@ public class POSOrderService {
                 .serviceFee(order.getServiceFee())
                 .entryFee(order.getEntryFee())
                 .total(order.getTotal())
+                .paymentStatus(order.getPaymentStatus())
+                .fullyPaid(order.isFullyPaid())
                 .orderNotes(order.getCustomerNotes())
                 .createdAt(order.getCreatedAt())
                 .build();
@@ -497,6 +500,7 @@ public class POSOrderService {
         log.info("Found {} open dine-in orders for restaurant {}", orders.size(), restaurantId);
 
         return orders.stream()
+                .filter(order -> order.getPaymentStatus() != PaymentStatus.COMPLETED)
                 .map(order -> mapToResponse(order, "DINE_IN"))
                 .collect(Collectors.toList());
     }

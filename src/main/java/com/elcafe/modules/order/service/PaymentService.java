@@ -51,6 +51,7 @@ public class PaymentService {
     private final RevenueRecordingService revenueRecordingService;
     private final PaymentIdempotencyService idempotencyService;
     private final AuditService auditService;
+    private final POSTableService posTableService;
 
     @Transactional(readOnly = true)
     public Page<PaymentResponse> getAllPayments(Pageable pageable) {
@@ -360,9 +361,12 @@ public class PaymentService {
         }
 
         // Check if order is fully paid
-        if (order.isFullyPaid()) {
+        boolean orderFullyPaid = order.isFullyPaid();
+        if (orderFullyPaid) {
             order.setPaymentStatus(PaymentStatus.COMPLETED);
-            log.info("Order {} is now fully paid", orderId);
+            order.setStatus(OrderStatus.DELIVERED);
+            order.setCompletedAt(OffsetDateTime.now());
+            log.info("Order {} is now fully paid - marking DELIVERED and releasing tables", orderId);
 
             // Record revenue when order is fully paid (non-critical - logged but doesn't rollback)
             recordRevenueNonCritical(order, orderId);
@@ -381,6 +385,11 @@ public class PaymentService {
                     "Failed to update order after payment: " + e.getMessage(),
                     orderId, savedPayment.getId(), savedPayment.getTransactionId(),
                     PaymentFailureReason.DATABASE_ERROR, e);
+        }
+
+        // Release tables after order is saved so the table status update is part of the same transaction
+        if (orderFullyPaid) {
+            posTableService.releaseTablesForOrder(order);
         }
 
         // Register successful payment for idempotency tracking
