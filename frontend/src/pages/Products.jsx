@@ -59,7 +59,11 @@ export default function Products() {
     categoryId: '',
     sortOrder: 0,
     inStock: true,
-    featured: false
+    featured: false,
+    isSoldByWeight: false,
+    weightUnit: 'KG',
+    minWeight: '',
+    maxWeight: '',
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -185,7 +189,10 @@ export default function Products() {
         imageUrl,
         price: parseFloat(formData.price),
         costPrice: formData.costPrice ? parseFloat(formData.costPrice) : null,
-        categoryId: parseInt(formData.categoryId)
+        categoryId: parseInt(formData.categoryId),
+        minWeight: formData.isSoldByWeight && formData.minWeight ? parseFloat(formData.minWeight) : null,
+        maxWeight: formData.isSoldByWeight && formData.maxWeight ? parseFloat(formData.maxWeight) : null,
+        weightUnit: formData.isSoldByWeight ? formData.weightUnit : null,
       });
       setCreateModalOpen(false);
       resetForm();
@@ -206,7 +213,11 @@ export default function Products() {
       categoryId: '',
       sortOrder: 0,
       inStock: true,
-      featured: false
+      featured: false,
+      isSoldByWeight: false,
+      weightUnit: 'KG',
+      minWeight: '',
+      maxWeight: '',
     });
     setImageFile(null);
     setImagePreview('');
@@ -223,7 +234,11 @@ export default function Products() {
       categoryId: product.categoryId?.toString() || '',
       sortOrder: product.sortOrder || 0,
       inStock: product.available ?? true,
-      featured: product.isFeatured ?? false
+      featured: product.isFeatured ?? false,
+      isSoldByWeight: product.isSoldByWeight ?? false,
+      weightUnit: product.weightUnit || 'KG',
+      minWeight: product.minWeight?.toString() || '',
+      maxWeight: product.maxWeight?.toString() || '',
     });
     setImagePreview(product.imageUrl || '');
     setEditModalOpen(true);
@@ -246,7 +261,10 @@ export default function Products() {
         imageUrl,
         price: parseFloat(formData.price),
         costPrice: formData.costPrice ? parseFloat(formData.costPrice) : null,
-        categoryId: parseInt(formData.categoryId)
+        categoryId: parseInt(formData.categoryId),
+        minWeight: formData.isSoldByWeight && formData.minWeight ? parseFloat(formData.minWeight) : null,
+        maxWeight: formData.isSoldByWeight && formData.maxWeight ? parseFloat(formData.maxWeight) : null,
+        weightUnit: formData.isSoldByWeight ? formData.weightUnit : null,
       });
       setEditModalOpen(false);
       resetForm();
@@ -712,6 +730,72 @@ export default function Products() {
                 />
               </div>
 
+              {/* Weight-based selling toggle */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="isSoldByWeight"
+                    checked={formData.isSoldByWeight}
+                    onChange={(e) => setFormData({ ...formData, isSoldByWeight: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="isSoldByWeight" className="font-medium">
+                    {t('pages.products.soldByWeight', 'Sold by weight')}
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {t('pages.products.soldByWeightHint', 'Cashier will enter the weight when adding this item to an order.')}
+                </p>
+
+                {formData.isSoldByWeight && (
+                  <div className="pl-6 space-y-3">
+                    <div className="space-y-2">
+                      <Label>{t('pages.products.weightUnit', 'Unit')}</Label>
+                      <select
+                        value={formData.weightUnit}
+                        onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value })}
+                        className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                      >
+                        <option value="KG">KG – kilogram</option>
+                        <option value="G">G – gram</option>
+                        <option value="LB">LB – pound</option>
+                        <option value="OZ">OZ – ounce</option>
+                      </select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('pages.products.pricePerUnit', 'Price above is per {{unit}}.', { unit: formData.weightUnit })}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="minWeight">{t('pages.products.minWeight', 'Min weight')} ({formData.weightUnit})</Label>
+                        <Input
+                          id="minWeight"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={formData.minWeight}
+                          onChange={(e) => setFormData({ ...formData, minWeight: e.target.value })}
+                          placeholder="0.1"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="maxWeight">{t('pages.products.maxWeight', 'Max weight')} ({formData.weightUnit})</Label>
+                        <Input
+                          id="maxWeight"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={formData.maxWeight}
+                          onChange={(e) => setFormData({ ...formData, maxWeight: e.target.value })}
+                          placeholder="10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -887,6 +971,72 @@ export default function Products() {
                   onChange={(e) => setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })}
                   min={0}
                 />
+              </div>
+
+              {/* Weight-based selling toggle */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-isSoldByWeight"
+                    checked={formData.isSoldByWeight}
+                    onChange={(e) => setFormData({ ...formData, isSoldByWeight: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="edit-isSoldByWeight" className="font-medium">
+                    {t('pages.products.soldByWeight', 'Sold by weight')}
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {t('pages.products.soldByWeightHint', 'Cashier will enter the weight when adding this item to an order.')}
+                </p>
+
+                {formData.isSoldByWeight && (
+                  <div className="pl-6 space-y-3">
+                    <div className="space-y-2">
+                      <Label>{t('pages.products.weightUnit', 'Unit')}</Label>
+                      <select
+                        value={formData.weightUnit}
+                        onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value })}
+                        className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                      >
+                        <option value="KG">KG – kilogram</option>
+                        <option value="G">G – gram</option>
+                        <option value="LB">LB – pound</option>
+                        <option value="OZ">OZ – ounce</option>
+                      </select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('pages.products.pricePerUnit', 'Price above is per {{unit}}.', { unit: formData.weightUnit })}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="edit-minWeight">{t('pages.products.minWeight', 'Min weight')} ({formData.weightUnit})</Label>
+                        <Input
+                          id="edit-minWeight"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={formData.minWeight}
+                          onChange={(e) => setFormData({ ...formData, minWeight: e.target.value })}
+                          placeholder="0.1"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="edit-maxWeight">{t('pages.products.maxWeight', 'Max weight')} ({formData.weightUnit})</Label>
+                        <Input
+                          id="edit-maxWeight"
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          value={formData.maxWeight}
+                          onChange={(e) => setFormData({ ...formData, maxWeight: e.target.value })}
+                          placeholder="10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-4">

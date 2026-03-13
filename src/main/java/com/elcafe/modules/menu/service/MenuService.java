@@ -167,6 +167,10 @@ public class MenuService {
         product.setInStock(productData.getInStock());
         product.setFeatured(productData.getFeatured());
         product.setHasVariants(productData.getHasVariants());
+        product.setIsSoldByWeight(productData.getIsSoldByWeight());
+        product.setWeightUnit(productData.getWeightUnit());
+        product.setMinWeight(productData.getMinWeight());
+        product.setMaxWeight(productData.getMaxWeight());
 
         return productRepository.save(product);
     }

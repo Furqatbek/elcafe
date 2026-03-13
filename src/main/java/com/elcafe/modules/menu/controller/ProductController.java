@@ -56,6 +56,10 @@ public class ProductController {
                 .inStock(request.getInStock())
                 .featured(request.getFeatured())
                 .hasVariants(request.getHasVariants())
+                .isSoldByWeight(request.getIsSoldByWeight())
+                .weightUnit(request.getWeightUnit())
+                .minWeight(request.getMinWeight())
+                .maxWeight(request.getMaxWeight())
                 .build();
 
         Product createdProduct = menuService.createProduct(product);
@@ -123,6 +127,10 @@ public class ProductController {
                 .inStock(request.getInStock())
                 .featured(request.getFeatured())
                 .hasVariants(request.getHasVariants())
+                .isSoldByWeight(request.getIsSoldByWeight())
+                .weightUnit(request.getWeightUnit())
+                .minWeight(request.getMinWeight())
+                .maxWeight(request.getMaxWeight())
                 .build();
 
         Product updatedProduct = menuService.updateProduct(id, productData);
