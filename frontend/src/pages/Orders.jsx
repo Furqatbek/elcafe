@@ -43,7 +43,8 @@ import {
   Coffee,
   Percent,
   Check,
-  ArrowRightLeft
+  ArrowRightLeft,
+  DoorOpen
 } from 'lucide-react';
 import { format } from 'date-fns';
 import PrintReceipt from '../components/PrintReceipt';
@@ -645,6 +646,17 @@ export default function Orders() {
       alert(t('orders.paymentError', 'Failed to process payment: ') + (error.response?.data?.message || error.message));
     } finally {
       setProcessingPayment(false);
+    }
+  };
+
+  // Release table for a fully-paid order that is still marked as occupied
+  const handleReleaseTable = async (order) => {
+    try {
+      await posAPI.closeOrder(order.id);
+      await loadTablesAndOrders();
+    } catch (error) {
+      console.error('Failed to release table:', error);
+      alert(t('orders.releaseTableError', 'Failed to release table: ') + (error.response?.data?.message || error.message));
     }
   };
 
@@ -1331,10 +1343,21 @@ export default function Orders() {
                           )}
 
                           {(order.paymentStatus === 'COMPLETED' || order.fullyPaid) && (
-                            <Badge className="bg-green-100 text-green-800">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              {t('orders.paid', 'Paid')}
-                            </Badge>
+                            <>
+                              <Badge className="bg-green-100 text-green-800">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                {t('orders.paid', 'Paid')}
+                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                                onClick={() => handleReleaseTable(order)}
+                              >
+                                <DoorOpen className="h-4 w-4 mr-1" />
+                                {t('orders.releaseTable', 'Release Table')}
+                              </Button>
+                            </>
                           )}
                         </div>
                       </CardContent>
