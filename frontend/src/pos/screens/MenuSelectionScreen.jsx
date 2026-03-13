@@ -4,6 +4,7 @@ import { cn } from '../../lib/utils';
 import { Search, ShoppingCart, X, Grid3x3, Package } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import TouchButton from '../components/TouchButton';
+import WeightInputModal from '../components/WeightInputModal';
 import usePOSStore from '../store/posStore';
 
 // Special category ID for combos/bundles
@@ -31,6 +32,7 @@ const MenuSelectionScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [_viewMode, _setViewMode] = useState('grid'); // 'grid' | 'list'
   const [loading, setLoading] = useState(true);
+  const [weightModalProduct, setWeightModalProduct] = useState(null);
 
   const restaurantId = 1; // TODO: Add restaurant selector if multiple restaurants
 
@@ -90,6 +92,11 @@ const MenuSelectionScreen = () => {
   const showBundles = isBundlesSelected || (!ui.selectedCategory && filteredBundles.length > 0);
 
   const handleProductSelect = (product) => {
+    // Weight-based products: show weight input modal first
+    if (product.isSoldByWeight) {
+      setWeightModalProduct(product);
+      return;
+    }
     // If product has modifiers, show modifier screen
     if (product.hasModifiers || product.variants?.length > 0) {
       setSelectedProduct(product);
@@ -98,6 +105,13 @@ const MenuSelectionScreen = () => {
       // Add directly to cart
       addItemToCart(product, [], 1);
     }
+  };
+
+  const handleWeightConfirm = (weightAmount) => {
+    if (weightModalProduct) {
+      addItemToCart(weightModalProduct, [], 1, { weightAmount });
+    }
+    setWeightModalProduct(null);
   };
 
   const handleBundleSelect = (bundle) => {
@@ -483,6 +497,15 @@ const MenuSelectionScreen = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Weight input modal for sell-by-weight products */}
+      {weightModalProduct && (
+        <WeightInputModal
+          product={weightModalProduct}
+          onConfirm={handleWeightConfirm}
+          onClose={() => setWeightModalProduct(null)}
+        />
       )}
     </div>
   );

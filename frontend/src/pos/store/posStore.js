@@ -141,20 +141,36 @@ const usePOSStore = create(
         ui: { ...state.ui, currentScreen: type === 'DINE_IN' ? 'tables' : 'menu' },
       })),
 
-      addItemToCart: (product, modifiers = [], quantity = 1) => set((state) => {
-        const itemPrice = product.price + modifiers.reduce((sum, mod) => sum + mod.price, 0);
+      addItemToCart: (product, modifiers = [], quantity = 1, options = {}) => set((state) => {
+        const { weightAmount = null, portionMultiplier = null } = options;
+        const modifierExtra = modifiers.reduce((sum, mod) => sum + mod.price, 0);
+        const basePrice = product.price;
 
-        // Create a unique key based on product ID and modifiers to identify duplicates
+        // Helper: compute item total respecting weight / portion
+        const computeTotal = (bp, mods, qty, wt, pm) => {
+          const full = bp + mods.reduce((s, m) => s + m.price, 0);
+          if (wt) return full * wt * qty;
+          return full * (pm || 1) * qty;
+        };
+
+        // Weight-based items are never merged — each weight entry is a separate line
+        const isWeightItem = !!weightAmount;
+
+        // Create a unique key based on product ID, modifiers, and portion to identify duplicates
         const modifierKey = modifiers.map(m => `${m.id || m.name}`).sort().join(',');
+        const portionKey = portionMultiplier ? portionMultiplier.toFixed(4) : 'none';
 
-        // Check if this exact product + modifier combination already exists
-        const existingItemIndex = state.currentOrder.items.findIndex(item => {
+        // Check if this exact product + modifier + portion combination already exists (non-weight only)
+        const existingItemIndex = isWeightItem ? -1 : state.currentOrder.items.findIndex(item => {
+          if (item.weightAmount) return false; // never merge into a weight item
           const existingModifierKey = item.modifiers.map(m => `${m.id || m.name}`).sort().join(',');
-          // For bundles, compare bundleId; for regular products, compare productId
+          const existingPortionKey = item.portionMultiplier ? item.portionMultiplier.toFixed(4) : 'none';
           if (product.isBundle) {
             return item.bundleId === product.bundleId && existingModifierKey === modifierKey;
           }
-          return item.productId === product.id && !item.isBundle && existingModifierKey === modifierKey;
+          return item.productId === product.id && !item.isBundle
+            && existingModifierKey === modifierKey
+            && existingPortionKey === portionKey;
         });
 
         let items;
@@ -163,11 +179,10 @@ const usePOSStore = create(
           items = state.currentOrder.items.map((item, index) => {
             if (index === existingItemIndex) {
               const newQuantity = item.quantity + quantity;
-              const basePrice = item.basePrice + item.modifiers.reduce((sum, mod) => sum + mod.price, 0);
               return {
                 ...item,
                 quantity: newQuantity,
-                itemTotal: basePrice * newQuantity,
+                itemTotal: computeTotal(item.basePrice, item.modifiers, newQuantity, item.weightAmount, item.portionMultiplier),
               };
             }
             return item;
@@ -178,10 +193,13 @@ const usePOSStore = create(
             id: `${product.id}-${Date.now()}`,
             productId: product.isBundle ? product.bundleId : product.id,
             name: product.name,
-            basePrice: product.price,
+            basePrice,
             modifiers,
             quantity,
-            itemTotal: itemPrice * quantity,
+            weightAmount,                          // null for non-weight items
+            weightUnit: product.weightUnit || null, // KG, G, LB, OZ
+            portionMultiplier,                     // null means 1× (full)
+            itemTotal: computeTotal(basePrice, modifiers, quantity, weightAmount, portionMultiplier),
             notes: '',
             // Bundle fields
             bundleId: product.bundleId || null,
@@ -277,12 +295,14 @@ const usePOSStore = create(
       updateItemQuantity: (itemId, quantity) => set((state) => {
         const items = state.currentOrder.items.map(item => {
           if (item.id === itemId) {
-            const basePrice = (item.basePrice + item.modifiers.reduce((sum, mod) => sum + mod.price, 0));
-            return {
-              ...item,
-              quantity,
-              itemTotal: basePrice * quantity,
-            };
+            const fullPrice = item.basePrice + (item.modifiers || []).reduce((sum, mod) => sum + mod.price, 0);
+            let itemTotal;
+            if (item.weightAmount) {
+              itemTotal = fullPrice * item.weightAmount * quantity;
+            } else {
+              itemTotal = fullPrice * (item.portionMultiplier || 1) * quantity;
+            }
+            return { ...item, quantity, itemTotal };
           }
           return item;
         });
@@ -306,6 +326,36 @@ const usePOSStore = create(
             total,
           },
         };
+      }),
+
+      // Update the weight for a weight-based order item
+      updateItemWeight: (itemId, weightAmount) => set((state) => {
+        const items = state.currentOrder.items.map(item => {
+          if (item.id === itemId) {
+            const fullPrice = item.basePrice + (item.modifiers || []).reduce((sum, mod) => sum + mod.price, 0);
+            return { ...item, weightAmount, itemTotal: fullPrice * weightAmount * item.quantity };
+          }
+          return item;
+        });
+        const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
+        const serviceFee = subtotal * ((state.currentOrder.serviceFeePercent || 0) / 100);
+        const total = Math.max(0, subtotal + state.currentOrder.deliveryFee + serviceFee + (state.currentOrder.entryFee || 0) - (state.currentOrder.discount || 0));
+        return { currentOrder: { ...state.currentOrder, items, subtotal, serviceFee, total } };
+      }),
+
+      // Update the portion multiplier for an order item (e.g. 0.5 = half, 2 = double)
+      updateItemPortion: (itemId, portionMultiplier) => set((state) => {
+        const items = state.currentOrder.items.map(item => {
+          if (item.id === itemId) {
+            const fullPrice = item.basePrice + (item.modifiers || []).reduce((sum, mod) => sum + mod.price, 0);
+            return { ...item, portionMultiplier, itemTotal: fullPrice * portionMultiplier * item.quantity };
+          }
+          return item;
+        });
+        const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
+        const serviceFee = subtotal * ((state.currentOrder.serviceFeePercent || 0) / 100);
+        const total = Math.max(0, subtotal + state.currentOrder.deliveryFee + serviceFee + (state.currentOrder.entryFee || 0) - (state.currentOrder.discount || 0));
+        return { currentOrder: { ...state.currentOrder, items, subtotal, serviceFee, total } };
       }),
 
       removeItemFromCart: (itemId) => set((state) => {
@@ -1299,6 +1349,8 @@ const usePOSStore = create(
               productId: item.productId,
               quantity: item.quantity,
               price: item.basePrice,
+              weightAmount: item.weightAmount || null,
+              portionMultiplier: item.portionMultiplier || null,
               modifiers: item.modifiers?.map(mod => ({
                 name: mod.name,
                 price: mod.price,

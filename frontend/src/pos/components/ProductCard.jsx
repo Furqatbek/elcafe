@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Plus } from 'lucide-react';
+import { Plus, Scale } from 'lucide-react';
 
 /**
  * ProductCard - Touch-optimized product card for menu selection
@@ -13,7 +13,7 @@ const ProductCard = ({
   className = '',
 }) => {
   const { t } = useTranslation();
-  const { name, price, description, imageUrl, available = true, stockStatus, maxQuantityAvailable } = product;
+  const { name, price, description, imageUrl, available = true, stockStatus, maxQuantityAvailable, isSoldByWeight, weightUnit } = product;
 
   const handleSelect = () => {
     if (!available) return;
@@ -119,10 +119,16 @@ const ProductCard = ({
           </p>
         )}
 
-        <div className="mt-auto pt-1 sm:pt-3 flex items-center justify-between">
+        <div className="mt-auto pt-1 sm:pt-3 flex items-center justify-between gap-1">
           <span className="text-lg sm:text-2xl font-bold text-gray-900">
             {price.toFixed(2)}
           </span>
+          {isSoldByWeight && (
+            <span className="flex items-center gap-0.5 text-[10px] sm:text-xs font-semibold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+              <Scale className="w-3 h-3" />
+              {weightUnit || 'KG'}
+            </span>
+          )}
         </div>
       </div>
     </button>
