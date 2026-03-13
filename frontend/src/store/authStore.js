@@ -101,7 +101,9 @@ const validateStoredTokens = () => {
     return false;
   }
 
-  return !!accessToken && !isAccessTokenExpired();
+  // Authenticated if access token is valid, OR if it's expired but refresh token is still good.
+  // SessionManager will silently renew the access token on mount.
+  return !!accessToken && (!isAccessTokenExpired() || !isRefreshTokenExpired());
 };
 
 // Helper to get stored user
