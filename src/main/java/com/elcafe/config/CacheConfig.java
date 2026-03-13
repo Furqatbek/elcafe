@@ -1,5 +1,7 @@
 package com.elcafe.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
@@ -44,12 +46,15 @@ public class CacheConfig {
      */
     @Bean
     @Primary
-    public CacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
+    public CacheManager redisCacheManager(
+            RedisConnectionFactory connectionFactory,
+            @Qualifier("redisObjectMapper") ObjectMapper redisObjectMapper) {
+        GenericJackson2JsonRedisSerializer serializer =
+                new GenericJackson2JsonRedisSerializer(redisObjectMapper);
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(15))
                 .serializeValuesWith(
-                        RedisSerializationContext.SerializationPair.fromSerializer(
-                                new GenericJackson2JsonRedisSerializer()));
+                        RedisSerializationContext.SerializationPair.fromSerializer(serializer));
 
         Map<String, RedisCacheConfiguration> cacheConfigurations = new HashMap<>();
 
