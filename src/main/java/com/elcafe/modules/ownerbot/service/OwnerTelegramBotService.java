@@ -102,8 +102,8 @@ public class OwnerTelegramBotService {
      * Stop the currently running bot.
      */
     public synchronized void stopBot() {
-        if (currentToken != null) {
-            botRegistry.unregisterBot(currentToken);
+        if (currentToken != null && bot != null) {
+            botRegistry.unregisterBot(currentToken, bot);
             log.info("Owner Telegram bot stopped");
         }
         bot = null;
