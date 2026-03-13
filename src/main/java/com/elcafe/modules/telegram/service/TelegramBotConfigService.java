@@ -74,11 +74,13 @@ public class TelegramBotConfigService {
         TelegramBotConfig config = configRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TelegramBotConfig", "id", id));
 
-        if (StringUtils.hasText(request.getBotToken())) {
-            config.setBotToken(request.getBotToken());
+        // Always overwrite token/username so they can be cleared by sending an empty string.
+        // A null in the request means "leave unchanged" (field not sent by the client).
+        if (request.getBotToken() != null) {
+            config.setBotToken(request.getBotToken().isBlank() ? null : request.getBotToken());
         }
-        if (StringUtils.hasText(request.getBotUsername())) {
-            config.setBotUsername(request.getBotUsername());
+        if (request.getBotUsername() != null) {
+            config.setBotUsername(request.getBotUsername().isBlank() ? null : request.getBotUsername());
         }
         if (request.getWebhookUrl() != null) {
             config.setWebhookUrl(request.getWebhookUrl());
@@ -110,6 +112,24 @@ public class TelegramBotConfigService {
 
         // Restart bot to apply new configuration
         telegramBotService.restartBot();
+
+        return toResponse(config);
+    }
+
+    @Transactional
+    public TelegramBotConfigResponse clearCredentials(Long id) {
+        log.info("Clearing Telegram bot credentials: {}", id);
+        TelegramBotConfig config = configRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("TelegramBotConfig", "id", id));
+
+        config.setBotToken(null);
+        config.setBotUsername(null);
+        config.setIsActive(false);
+        config = configRepository.save(config);
+        log.info("Telegram bot credentials cleared for config: {}", id);
+
+        // Stop the bot since credentials are gone
+        telegramBotService.stopBot();
 
         return toResponse(config);
     }

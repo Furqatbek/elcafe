@@ -61,6 +61,12 @@ public class TelegramBotConfigController {
         return ResponseEntity.ok(configService.toggleConfig(id));
     }
 
+    @DeleteMapping("/{id}/credentials")
+    public ResponseEntity<TelegramBotConfigResponse> clearCredentials(@PathVariable Long id) {
+        log.info("Clearing Telegram bot credentials: {}", id);
+        return ResponseEntity.ok(configService.clearCredentials(id));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteConfig(@PathVariable Long id) {
         log.info("Deleting Telegram bot config: {}", id);
