@@ -7,6 +7,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
@@ -37,6 +38,26 @@ public class TelegramSubscriber {
 
     @Column(name = "language_code", length = 10)
     private String languageCode;
+
+    /** Full name as entered by the user during bot registration. */
+    @Column(name = "display_name", length = 200)
+    private String displayName;
+
+    /** Phone number collected during bot registration. */
+    @Column(length = 30)
+    private String phone;
+
+    /** Birthday collected during bot registration (optional). */
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    /**
+     * Tracks the current registration step.
+     * Values: AWAITING_NAME | AWAITING_PHONE | AWAITING_BIRTHDAY | AWAITING_LOCATION |
+     *         AWAITING_MORE_LOCATIONS | REGISTERED
+     */
+    @Column(name = "conversation_state", length = 30)
+    private String conversationState;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
