@@ -456,11 +456,16 @@ public class SelfServiceOrderService {
 
         order = orderRepository.save(order);
 
-        updateTableStatusIfDineIn(orderType, diningTable, order);
-        sendOrderNotifications(order);
-
+        // Create SelfServiceOrder BEFORE sending notifications to ensure atomicity
+        // If this fails, the entire transaction rolls back including the main order
         SelfServiceOrder ssOrder = createSelfServiceOrder(order, session, request, settings);
+
+        updateTableStatusIfDineIn(orderType, diningTable, order);
         finalizeOrderSubmission(session, request, customer);
+
+        // Send notifications AFTER all database operations complete successfully
+        // These are fire-and-forget operations that should not affect the transaction
+        sendOrderNotifications(order);
 
         log.info("Self-service order created: {} for session {}", order.getId(), session.getId());
         return ssOrder;
