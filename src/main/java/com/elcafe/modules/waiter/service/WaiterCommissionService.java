@@ -320,7 +320,7 @@ public class WaiterCommissionService {
      */
     public List<WaiterCommissionSummaryDTO> getRestaurantCommissionReport(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         // Use proper repository query to get only active waiters (commission enabled is checked in filter)
-        List<Waiter> waiters = waiterRepository.findByActiveTrue().stream()
+        List<Waiter> waiters = waiterRepository.findByActiveTrueOrderByNameAsc().stream()
                 .filter(w -> Boolean.TRUE.equals(w.getCommissionEnabled()))
                 .collect(Collectors.toList());
 
