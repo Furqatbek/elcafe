@@ -3165,7 +3165,8 @@
     "tabs": {
       "subscribers": "Подписчики",
       "campaigns": "Кампании",
-      "templates": "Шаблоны"
+      "templates": "Шаблоны",
+      "settings": "Настройки"
     },
     "stats": {
       "totalSubscribers": "Всего подписчиков",
@@ -3259,7 +3260,27 @@
       "deleteCampaign": "Не удалось удалить кампанию",
       "saveTemplate": "Не удалось сохранить шаблон",
       "toggleTemplate": "Не удалось изменить статус шаблона",
-      "deleteTemplate": "Не удалось удалить шаблон"
+      "deleteTemplate": "Не удалось удалить шаблон",
+      "saveBotConfig": "Не удалось сохранить настройки бота"
+    },
+    "settings": {
+      "customerBot": "Бот для клиентов",
+      "customerBotDescription": "Настройка бота для уведомлений клиентов и маркетинга",
+      "ownerBot": "Бот для персонала",
+      "ownerBotDescription": "Настройка бота для уведомлений персонала",
+      "botUsername": "Имя бота",
+      "botToken": "Токен бота",
+      "enterToken": "Введите токен бота",
+      "tokenHint": "Получите токен у @BotFather в Telegram. Оставьте пустым, чтобы сохранить текущий.",
+      "webhookUrl": "URL вебхука",
+      "welcomeMessage": "Приветственное сообщение",
+      "welcomeMessagePlaceholder": "Сообщение при запуске бота...",
+      "botActive": "Бот активен",
+      "autoVerifyOwners": "Автоверификация владельцев",
+      "customerBotUpdated": "Настройки бота для клиентов обновлены",
+      "customerBotCreated": "Настройки бота для клиентов созданы",
+      "ownerBotUpdated": "Настройки бота для персонала обновлены",
+      "ownerBotCreated": "Настройки бота для персонала созданы"
     }
   },
   "push": {

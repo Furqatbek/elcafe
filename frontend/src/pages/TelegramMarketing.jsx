@@ -46,8 +46,12 @@ import {
   CheckCircle,
   Clock,
   UserX,
-  UserCheck
+  UserCheck,
+  Settings,
+  Bot,
+  Save
 } from 'lucide-react';
+import { Switch } from '../components/ui/switch';
 
 const statusColors = {
   DRAFT: 'bg-gray-500',
@@ -97,6 +101,27 @@ export default function TelegramMarketing() {
     isActive: true,
   });
 
+  // Bot configs state
+  const [customerBotConfigs, setCustomerBotConfigs] = useState([]);
+  const [ownerBotConfigs, setOwnerBotConfigs] = useState([]);
+  const [customerBotForm, setCustomerBotForm] = useState({
+    botToken: '',
+    botUsername: '',
+    webhookUrl: '',
+    isActive: true,
+    welcomeMessage: '',
+  });
+  const [ownerBotForm, setOwnerBotForm] = useState({
+    botToken: '',
+    botUsername: '',
+    isActive: true,
+    welcomeMessage: '',
+    autoVerifyOwners: true,
+  });
+  const [editingCustomerBotId, setEditingCustomerBotId] = useState(null);
+  const [editingOwnerBotId, setEditingOwnerBotId] = useState(null);
+  const [savingConfig, setSavingConfig] = useState(false);
+
   useEffect(() => {
     if (activeTab === 'subscribers') {
       loadSubscribers();
@@ -105,6 +130,8 @@ export default function TelegramMarketing() {
       loadCampaigns();
     } else if (activeTab === 'templates') {
       loadTemplates();
+    } else if (activeTab === 'settings') {
+      loadBotConfigs();
     }
   }, [activeTab]);
 
@@ -159,6 +186,91 @@ export default function TelegramMarketing() {
       alert(t('telegram.errors.loadTemplates'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Bot config functions
+  const loadBotConfigs = async () => {
+    setLoading(true);
+    try {
+      const [customerRes, ownerRes] = await Promise.all([
+        telegramAPI.getCustomerBotConfigs().catch(() => ({ data: [] })),
+        telegramAPI.getOwnerBotConfigs().catch(() => ({ data: [] })),
+      ]);
+      setCustomerBotConfigs(customerRes.data || []);
+      setOwnerBotConfigs(ownerRes.data || []);
+
+      // Pre-fill forms if configs exist
+      if (customerRes.data && customerRes.data.length > 0) {
+        const config = customerRes.data[0];
+        setEditingCustomerBotId(config.id);
+        setCustomerBotForm({
+          botToken: '',
+          botUsername: config.botUsername || '',
+          webhookUrl: config.webhookUrl || '',
+          isActive: config.isActive ?? true,
+          welcomeMessage: config.welcomeMessage || '',
+        });
+      }
+      if (ownerRes.data && ownerRes.data.length > 0) {
+        const config = ownerRes.data[0];
+        setEditingOwnerBotId(config.id);
+        setOwnerBotForm({
+          botToken: '',
+          botUsername: config.botUsername || '',
+          isActive: config.isActive ?? true,
+          welcomeMessage: config.welcomeMessage || '',
+          autoVerifyOwners: config.autoVerifyOwners ?? true,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load bot configs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveCustomerBotConfig = async () => {
+    setSavingConfig(true);
+    try {
+      const data = { ...customerBotForm };
+      if (!data.botToken) delete data.botToken; // Don't send empty token
+
+      if (editingCustomerBotId) {
+        await telegramAPI.updateCustomerBotConfig(editingCustomerBotId, data);
+        alert(t('telegram.settings.customerBotUpdated'));
+      } else {
+        await telegramAPI.createCustomerBotConfig(data);
+        alert(t('telegram.settings.customerBotCreated'));
+      }
+      loadBotConfigs();
+    } catch (error) {
+      console.error('Failed to save customer bot config:', error);
+      alert(t('telegram.errors.saveBotConfig'));
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  const handleSaveOwnerBotConfig = async () => {
+    setSavingConfig(true);
+    try {
+      const data = { ...ownerBotForm };
+      if (!data.botToken) delete data.botToken; // Don't send empty token
+
+      if (editingOwnerBotId) {
+        await telegramAPI.updateOwnerBotConfig(editingOwnerBotId, data);
+        alert(t('telegram.settings.ownerBotUpdated'));
+      } else {
+        await telegramAPI.createOwnerBotConfig(data);
+        alert(t('telegram.settings.ownerBotCreated'));
+      }
+      loadBotConfigs();
+    } catch (error) {
+      console.error('Failed to save owner bot config:', error);
+      alert(t('telegram.errors.saveBotConfig'));
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -355,6 +467,10 @@ export default function TelegramMarketing() {
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             {t('telegram.tabs.templates')}
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            {t('telegram.tabs.settings')}
           </TabsTrigger>
         </TabsList>
 
@@ -714,6 +830,146 @@ export default function TelegramMarketing() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Customer Bot Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-5 w-5" />
+                  {t('telegram.settings.customerBot')}
+                </CardTitle>
+                <CardDescription>{t('telegram.settings.customerBotDescription')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>{t('telegram.settings.botUsername')}</Label>
+                  <Input
+                    value={customerBotForm.botUsername}
+                    onChange={(e) => setCustomerBotForm({ ...customerBotForm, botUsername: e.target.value })}
+                    placeholder="@YourBotUsername"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('telegram.settings.botToken')}</Label>
+                  <Input
+                    type="password"
+                    value={customerBotForm.botToken}
+                    onChange={(e) => setCustomerBotForm({ ...customerBotForm, botToken: e.target.value })}
+                    placeholder={customerBotConfigs.length > 0 && customerBotConfigs[0].hasToken ? '********' : t('telegram.settings.enterToken')}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('telegram.settings.tokenHint')}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('telegram.settings.webhookUrl')}</Label>
+                  <Input
+                    value={customerBotForm.webhookUrl}
+                    onChange={(e) => setCustomerBotForm({ ...customerBotForm, webhookUrl: e.target.value })}
+                    placeholder="https://your-domain.com/webhook"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('telegram.settings.welcomeMessage')}</Label>
+                  <Textarea
+                    value={customerBotForm.welcomeMessage}
+                    onChange={(e) => setCustomerBotForm({ ...customerBotForm, welcomeMessage: e.target.value })}
+                    placeholder={t('telegram.settings.welcomeMessagePlaceholder')}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label>{t('telegram.settings.botActive')}</Label>
+                  <Switch
+                    checked={customerBotForm.isActive}
+                    onCheckedChange={(checked) => setCustomerBotForm({ ...customerBotForm, isActive: checked })}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSaveCustomerBotConfig}
+                  disabled={savingConfig}
+                  className="w-full"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {savingConfig ? t('common.saving') : t('common.save')}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Owner Bot Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-5 w-5" />
+                  {t('telegram.settings.ownerBot')}
+                </CardTitle>
+                <CardDescription>{t('telegram.settings.ownerBotDescription')}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>{t('telegram.settings.botUsername')}</Label>
+                  <Input
+                    value={ownerBotForm.botUsername}
+                    onChange={(e) => setOwnerBotForm({ ...ownerBotForm, botUsername: e.target.value })}
+                    placeholder="@YourOwnerBotUsername"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('telegram.settings.botToken')}</Label>
+                  <Input
+                    type="password"
+                    value={ownerBotForm.botToken}
+                    onChange={(e) => setOwnerBotForm({ ...ownerBotForm, botToken: e.target.value })}
+                    placeholder={ownerBotConfigs.length > 0 && ownerBotConfigs[0].hasToken ? '********' : t('telegram.settings.enterToken')}
+                  />
+                  <p className="text-xs text-muted-foreground">{t('telegram.settings.tokenHint')}</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>{t('telegram.settings.welcomeMessage')}</Label>
+                  <Textarea
+                    value={ownerBotForm.welcomeMessage}
+                    onChange={(e) => setOwnerBotForm({ ...ownerBotForm, welcomeMessage: e.target.value })}
+                    placeholder={t('telegram.settings.welcomeMessagePlaceholder')}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label>{t('telegram.settings.botActive')}</Label>
+                  <Switch
+                    checked={ownerBotForm.isActive}
+                    onCheckedChange={(checked) => setOwnerBotForm({ ...ownerBotForm, isActive: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label>{t('telegram.settings.autoVerifyOwners')}</Label>
+                  <Switch
+                    checked={ownerBotForm.autoVerifyOwners}
+                    onCheckedChange={(checked) => setOwnerBotForm({ ...ownerBotForm, autoVerifyOwners: checked })}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSaveOwnerBotConfig}
+                  disabled={savingConfig}
+                  className="w-full"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {savingConfig ? t('common.saving') : t('common.save')}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 

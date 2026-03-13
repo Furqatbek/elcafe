@@ -3414,7 +3414,8 @@
     "tabs": {
       "subscribers": "Subscribers",
       "campaigns": "Campaigns",
-      "templates": "Templates"
+      "templates": "Templates",
+      "settings": "Settings"
     },
     "stats": {
       "totalSubscribers": "Total Subscribers",
@@ -3508,7 +3509,27 @@
       "deleteCampaign": "Failed to delete campaign",
       "saveTemplate": "Failed to save template",
       "toggleTemplate": "Failed to toggle template",
-      "deleteTemplate": "Failed to delete template"
+      "deleteTemplate": "Failed to delete template",
+      "saveBotConfig": "Failed to save bot configuration"
+    },
+    "settings": {
+      "customerBot": "Customer Bot",
+      "customerBotDescription": "Configure the bot for customer notifications and marketing",
+      "ownerBot": "Owner/Staff Bot",
+      "ownerBotDescription": "Configure the bot for staff notifications and alerts",
+      "botUsername": "Bot Username",
+      "botToken": "Bot Token",
+      "enterToken": "Enter your bot token",
+      "tokenHint": "Get this from @BotFather on Telegram. Leave empty to keep existing.",
+      "webhookUrl": "Webhook URL",
+      "welcomeMessage": "Welcome Message",
+      "welcomeMessagePlaceholder": "Message sent when users start the bot...",
+      "botActive": "Bot Active",
+      "autoVerifyOwners": "Auto-verify Owners",
+      "customerBotUpdated": "Customer bot configuration updated",
+      "customerBotCreated": "Customer bot configuration created",
+      "ownerBotUpdated": "Owner bot configuration updated",
+      "ownerBotCreated": "Owner bot configuration created"
     }
   },
   "push": {

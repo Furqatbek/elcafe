@@ -3211,7 +3211,8 @@
     "tabs": {
       "subscribers": "Obunchilar",
       "campaigns": "Kampaniyalar",
-      "templates": "Shablonlar"
+      "templates": "Shablonlar",
+      "settings": "Sozlamalar"
     },
     "stats": {
       "totalSubscribers": "Jami obunchilar",
@@ -3305,7 +3306,27 @@
       "deleteCampaign": "Kampaniyani o'chirishda xatolik",
       "saveTemplate": "Shablonni saqlashda xatolik",
       "toggleTemplate": "Shablon holatini o'zgartirishda xatolik",
-      "deleteTemplate": "Shablonni o'chirishda xatolik"
+      "deleteTemplate": "Shablonni o'chirishda xatolik",
+      "saveBotConfig": "Bot sozlamalarini saqlashda xatolik"
+    },
+    "settings": {
+      "customerBot": "Mijozlar boti",
+      "customerBotDescription": "Mijozlar uchun bildirishnomalar va marketing boti sozlamalari",
+      "ownerBot": "Xodimlar boti",
+      "ownerBotDescription": "Xodimlar uchun bildirishnomalar boti sozlamalari",
+      "botUsername": "Bot foydalanuvchi nomi",
+      "botToken": "Bot tokeni",
+      "enterToken": "Bot tokenini kiriting",
+      "tokenHint": "Tokenni Telegram'dagi @BotFather dan oling. Mavjudni saqlash uchun bo'sh qoldiring.",
+      "webhookUrl": "Webhook URL",
+      "welcomeMessage": "Salomlash xabari",
+      "welcomeMessagePlaceholder": "Botni ishga tushirganda yuboriladigan xabar...",
+      "botActive": "Bot faol",
+      "autoVerifyOwners": "Egalarni avtomatik tasdiqlash",
+      "customerBotUpdated": "Mijozlar boti sozlamalari yangilandi",
+      "customerBotCreated": "Mijozlar boti sozlamalari yaratildi",
+      "ownerBotUpdated": "Xodimlar boti sozlamalari yangilandi",
+      "ownerBotCreated": "Xodimlar boti sozlamalari yaratildi"
     }
   },
   "push": {

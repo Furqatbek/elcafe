@@ -1008,6 +1008,25 @@ export const telegramAPI = {
   sendCampaign: (id) => api.post(`/telegram/campaigns/${id}/send`),
   cancelCampaign: (id) => api.post(`/telegram/campaigns/${id}/cancel`),
   deleteCampaign: (id) => api.delete(`/telegram/campaigns/${id}`),
+
+  // Customer Bot Config
+  getCustomerBotConfigs: () => api.get('/telegram/config'),
+  getActiveCustomerBotConfig: () => api.get('/telegram/config/active'),
+  getCustomerBotConfig: (id) => api.get(`/telegram/config/${id}`),
+  createCustomerBotConfig: (data) => api.post('/telegram/config', data),
+  updateCustomerBotConfig: (id, data) => api.put(`/telegram/config/${id}`, data),
+  toggleCustomerBotConfig: (id) => api.patch(`/telegram/config/${id}/toggle`),
+  deleteCustomerBotConfig: (id) => api.delete(`/telegram/config/${id}`),
+
+  // Owner Bot Config
+  getOwnerBotConfigs: () => api.get('/telegram/owner-config'),
+  getActiveOwnerBotConfig: () => api.get('/telegram/owner-config/active'),
+  getOwnerBotConfig: (id) => api.get(`/telegram/owner-config/${id}`),
+  getOwnerBotConfigByRestaurant: (restaurantId) => api.get(`/telegram/owner-config/restaurant/${restaurantId}`),
+  createOwnerBotConfig: (data, restaurantId) => api.post('/telegram/owner-config', data, { params: { restaurantId } }),
+  updateOwnerBotConfig: (id, data) => api.put(`/telegram/owner-config/${id}`, data),
+  toggleOwnerBotConfig: (id) => api.patch(`/telegram/owner-config/${id}/toggle`),
+  deleteOwnerBotConfig: (id) => api.delete(`/telegram/owner-config/${id}`),
 };
 
 // QR Code / Self-Service API
