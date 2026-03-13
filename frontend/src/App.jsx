@@ -44,6 +44,7 @@ import Bundles from './pages/Bundles';
 import ReferralProgram from './pages/ReferralProgram';
 import SmsMarketing from './pages/SmsMarketing';
 import TelegramMarketing from './pages/TelegramMarketing';
+import InstagramMarketing from './pages/InstagramMarketing';
 import QRCodes from './pages/QRCodes';
 import LoyaltyMilestones from './pages/LoyaltyMilestones';
 import Reservations from './pages/Reservations';
@@ -153,6 +154,7 @@ function App() {
           <Route path="marketing/referrals" element={<AdminRoute><ReferralProgram /></AdminRoute>} />
           <Route path="marketing/sms" element={<AdminRoute><SmsMarketing /></AdminRoute>} />
           <Route path="marketing/telegram" element={<AdminRoute><TelegramMarketing /></AdminRoute>} />
+          <Route path="marketing/instagram" element={<AdminRoute><InstagramMarketing /></AdminRoute>} />
           <Route path="marketing/qr-codes" element={<AdminRoute><QRCodes /></AdminRoute>} />
           <Route path="marketing/milestones" element={<AdminRoute><LoyaltyMilestones /></AdminRoute>} />
           <Route path="marketing/analytics" element={<AdminRoute><PromotionAnalytics /></AdminRoute>} />

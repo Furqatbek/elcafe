@@ -102,6 +102,7 @@
       "referrals": "Рефералы",
       "smsMarketing": "SMS Маркетинг",
       "telegramMarketing": "Telegram",
+      "instagramMarketing": "Instagram",
       "ordersHistory": "История заказов",
       "milestones": "Достижения",
       "externalOrders": "Онлайн заказы"
@@ -3281,6 +3282,68 @@
       "customerBotCreated": "Настройки бота для клиентов созданы",
       "ownerBotUpdated": "Настройки бота для персонала обновлены",
       "ownerBotCreated": "Настройки бота для персонала созданы"
+    }
+  },
+  "instagram": {
+    "title": "Instagram Маркетинг",
+    "description": "Управление ботом Instagram DM и подписчиками",
+    "tabs": {
+      "subscribers": "Подписчики",
+      "settings": "Настройки"
+    },
+    "subscribers": {
+      "title": "Подписчики Instagram",
+      "description": "Пользователи, взаимодействовавшие с вашим ботом Instagram",
+      "searchPlaceholder": "Поиск по имени пользователя, имени или телефону...",
+      "username": "Имя пользователя",
+      "displayName": "Имя",
+      "phone": "Телефон",
+      "state": "Регистрация",
+      "status": "Статус",
+      "subscribedAt": "Подписан",
+      "active": "Активен",
+      "inactive": "Неактивен",
+      "empty": "Нет подписчиков"
+    },
+    "states": {
+      "registered": "Зарегистрирован",
+      "inProgress": "В процессе"
+    },
+    "settings": {
+      "credentials": "Учётные данные приложения",
+      "credentialsDescription": "Подключите ваше приложение Meta для Instagram DM",
+      "appId": "ID приложения Meta",
+      "appSecret": "Секрет приложения",
+      "enterSecret": "Введите секрет приложения",
+      "secretHint": "Используется для проверки подписей webhook. Оставьте пустым для сохранения текущего.",
+      "accessToken": "Токен доступа страницы",
+      "enterToken": "Введите токен доступа",
+      "tokenHint": "Долгосрочный токен доступа от Meta. Оставьте пустым для сохранения текущего.",
+      "accountId": "ID аккаунта Instagram",
+      "webhookUrl": "URL вебхука",
+      "webhookHint": "Скопируйте этот URL в Meta App → Webhooks → URL обратного вызова Instagram.",
+      "verifyToken": "Токен верификации",
+      "enterVerifyToken": "Введите токен верификации",
+      "verifyTokenHint": "Установите то же значение в Meta App → Webhooks → Verify Token.",
+      "active": "Интеграция активна",
+      "clearCredentials": "Очистить все учётные данные",
+      "confirmClearCredentials": "Это удалит токен доступа и секрет приложения и отключит интеграцию. Продолжить?",
+      "credentialsCleared": "Учётные данные очищены",
+      "configUpdated": "Конфигурация Instagram обновлена",
+      "configCreated": "Конфигурация Instagram создана",
+      "botBehaviour": "Поведение бота",
+      "botBehaviourDescription": "Настройте сообщения и автоответы на комментарии",
+      "welcomeMessage": "Приветственное сообщение",
+      "welcomeMessagePlaceholder": "Приветствие при первом сообщении пользователя...",
+      "autoReply": "Автоответ на комментарии",
+      "autoReplyDescription": "Автоматически отвечать на новые комментарии к публикациям",
+      "autoReplyTemplate": "Шаблон автоответа",
+      "autoReplyTemplatePlaceholder": "Спасибо за комментарий! 🙌",
+      "autoReplyTemplateHint": "Используйте {comment} для вставки текста исходного комментария."
+    },
+    "errors": {
+      "saveConfig": "Не удалось сохранить конфигурацию",
+      "clearCredentials": "Не удалось очистить учётные данные"
     }
   },
   "push": {

@@ -105,6 +105,7 @@
       "referrals": "Referrals",
       "smsMarketing": "SMS Marketing",
       "telegramMarketing": "Telegram",
+      "instagramMarketing": "Instagram",
       "ordersHistory": "Orders History",
       "milestones": "Milestones",
       "externalOrders": "Online Orders"
@@ -3530,6 +3531,68 @@
       "customerBotCreated": "Customer bot configuration created",
       "ownerBotUpdated": "Owner bot configuration updated",
       "ownerBotCreated": "Owner bot configuration created"
+    }
+  },
+  "instagram": {
+    "title": "Instagram Marketing",
+    "description": "Manage Instagram DM bot and subscribers",
+    "tabs": {
+      "subscribers": "Subscribers",
+      "settings": "Settings"
+    },
+    "subscribers": {
+      "title": "Instagram Subscribers",
+      "description": "Users who interacted with your Instagram DM bot",
+      "searchPlaceholder": "Search by username, name or phone...",
+      "username": "Username",
+      "displayName": "Name",
+      "phone": "Phone",
+      "state": "Registration",
+      "status": "Status",
+      "subscribedAt": "Subscribed",
+      "active": "Active",
+      "inactive": "Inactive",
+      "empty": "No subscribers yet"
+    },
+    "states": {
+      "registered": "Registered",
+      "inProgress": "In progress"
+    },
+    "settings": {
+      "credentials": "App Credentials",
+      "credentialsDescription": "Connect your Meta App to enable Instagram DMs",
+      "appId": "Meta App ID",
+      "appSecret": "App Secret",
+      "enterSecret": "Enter your app secret",
+      "secretHint": "Used to verify webhook signatures. Leave empty to keep existing.",
+      "accessToken": "Page Access Token",
+      "enterToken": "Enter your access token",
+      "tokenHint": "Long-lived Page Access Token from Meta. Leave empty to keep existing.",
+      "accountId": "Instagram Account ID",
+      "webhookUrl": "Webhook URL",
+      "webhookHint": "Copy this URL into your Meta App → Webhooks → Instagram callback URL.",
+      "verifyToken": "Verify Token",
+      "enterVerifyToken": "Enter your verify token",
+      "verifyTokenHint": "Set the same value in Meta App → Webhooks → Verify Token.",
+      "active": "Integration Active",
+      "clearCredentials": "Clear All Credentials",
+      "confirmClearCredentials": "This will remove the access token and app secret, and disable the integration. Continue?",
+      "credentialsCleared": "Credentials cleared",
+      "configUpdated": "Instagram configuration updated",
+      "configCreated": "Instagram configuration created",
+      "botBehaviour": "Bot Behaviour",
+      "botBehaviourDescription": "Customize messages and comment auto-replies",
+      "welcomeMessage": "Welcome Message",
+      "welcomeMessagePlaceholder": "Greeting sent when users first message the bot...",
+      "autoReply": "Auto-reply to Comments",
+      "autoReplyDescription": "Automatically reply to new comments on your posts",
+      "autoReplyTemplate": "Auto-reply Template",
+      "autoReplyTemplatePlaceholder": "Thanks for your comment! 🙌",
+      "autoReplyTemplateHint": "Use {comment} to include the original comment text."
+    },
+    "errors": {
+      "saveConfig": "Failed to save configuration",
+      "clearCredentials": "Failed to clear credentials"
     }
   },
   "push": {

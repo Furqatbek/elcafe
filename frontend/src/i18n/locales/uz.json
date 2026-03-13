@@ -102,6 +102,7 @@
       "referrals": "Referallar",
       "smsMarketing": "SMS Marketing",
       "telegramMarketing": "Telegram",
+      "instagramMarketing": "Instagram",
       "ordersHistory": "Buyurtmalar tarixi",
       "milestones": "Yutuqlar",
       "externalOrders": "Onlayn buyurtmalar"
@@ -3327,6 +3328,68 @@
       "customerBotCreated": "Mijozlar boti sozlamalari yaratildi",
       "ownerBotUpdated": "Xodimlar boti sozlamalari yangilandi",
       "ownerBotCreated": "Xodimlar boti sozlamalari yaratildi"
+    }
+  },
+  "instagram": {
+    "title": "Instagram Marketing",
+    "description": "Instagram DM boti va obunachilarn boshqarish",
+    "tabs": {
+      "subscribers": "Obunachilар",
+      "settings": "Sozlamalar"
+    },
+    "subscribers": {
+      "title": "Instagram obunachilari",
+      "description": "Instagram DM botingiz bilan muloqot qilgan foydalanuvchilar",
+      "searchPlaceholder": "Foydalanuvchi nomi, ism yoki telefon bo'yicha qidirish...",
+      "username": "Foydalanuvchi nomi",
+      "displayName": "Ism",
+      "phone": "Telefon",
+      "state": "Ro'yxatdan o'tish",
+      "status": "Holat",
+      "subscribedAt": "Obuna bo'lgan",
+      "active": "Faol",
+      "inactive": "Faol emas",
+      "empty": "Hali obunachi yo'q"
+    },
+    "states": {
+      "registered": "Ro'yxatdan o'tgan",
+      "inProgress": "Jarayonda"
+    },
+    "settings": {
+      "credentials": "Ilova ma'lumotlari",
+      "credentialsDescription": "Instagram DM uchun Meta ilovangizni ulang",
+      "appId": "Meta ilova ID",
+      "appSecret": "Ilova siri",
+      "enterSecret": "Ilova sirini kiriting",
+      "secretHint": "Webhook imzolarini tekshirish uchun ishlatiladi. Mavjudini saqlash uchun bo'sh qoldiring.",
+      "accessToken": "Sahifa kirish tokeni",
+      "enterToken": "Kirish tokenini kiriting",
+      "tokenHint": "Meta'dan uzoq muddatli kirish tokeni. Mavjudini saqlash uchun bo'sh qoldiring.",
+      "accountId": "Instagram hisob ID",
+      "webhookUrl": "Webhook URL",
+      "webhookHint": "Bu URL-ni Meta App → Webhooks → Instagram callback URL-ga nusxalang.",
+      "verifyToken": "Tasdiqlash tokeni",
+      "enterVerifyToken": "Tasdiqlash tokenini kiriting",
+      "verifyTokenHint": "Meta App → Webhooks → Verify Token da bir xil qiymat o'rnating.",
+      "active": "Integratsiya faol",
+      "clearCredentials": "Barcha ma'lumotlarni tozalash",
+      "confirmClearCredentials": "Bu kirish tokeni va ilova sirini o'chiradi va integratsiyani o'chiradi. Davom etasizmi?",
+      "credentialsCleared": "Ma'lumotlar tozalandi",
+      "configUpdated": "Instagram konfiguratsiyasi yangilandi",
+      "configCreated": "Instagram konfiguratsiyasi yaratildi",
+      "botBehaviour": "Bot xatti-harakati",
+      "botBehaviourDescription": "Xabarlar va izohga avtomatik javoblarni sozlang",
+      "welcomeMessage": "Xush kelibsiz xabari",
+      "welcomeMessagePlaceholder": "Foydalanuvchi birinchi xabar yuborganda yuboriladi...",
+      "autoReply": "Izohlarga avtomatik javob",
+      "autoReplyDescription": "Postlarга yangi izohlarga avtomatik javob bering",
+      "autoReplyTemplate": "Avtomatik javob shabloni",
+      "autoReplyTemplatePlaceholder": "Izohingiz uchun rahmat! 🙌",
+      "autoReplyTemplateHint": "Asl izoh matnini qo'shish uchun {comment} dan foydalaning."
+    },
+    "errors": {
+      "saveConfig": "Konfiguratsiyani saqlashda xatolik",
+      "clearCredentials": "Ma'lumotlarni tozalashda xatolik"
     }
   },
   "push": {

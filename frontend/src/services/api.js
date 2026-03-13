@@ -1220,4 +1220,20 @@ export const orderTrackingAPI = {
     api.get(`/public/orders/track`, { params: { phone } }),
 };
 
+// Instagram API
+export const instagramAPI = {
+  // Config
+  getConfigs: () => api.get('/instagram/config'),
+  getConfig: (id) => api.get(`/instagram/config/${id}`),
+  createConfig: (data) => api.post('/instagram/config', data),
+  updateConfig: (id, data) => api.put(`/instagram/config/${id}`, data),
+  deleteConfig: (id) => api.delete(`/instagram/config/${id}`),
+  clearCredentials: (id) => api.delete(`/instagram/config/${id}/credentials`),
+
+  // Subscribers
+  getSubscribers: (params = {}) => api.get('/instagram/subscribers', { params }),
+  searchSubscribers: (q, params = {}) => api.get('/instagram/subscribers/search', { params: { q, ...params } }),
+  getSubscriber: (id) => api.get(`/instagram/subscribers/${id}`),
+};
+
 export default api;
