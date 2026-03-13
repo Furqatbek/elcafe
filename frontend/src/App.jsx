@@ -34,6 +34,8 @@ import POSuggestions from './pages/POSuggestions';
 import Expenses from './pages/Expenses';
 import FinancialReports from './pages/FinancialReports';
 import PrinterSettings from './pages/PrinterSettings';
+import ReceiptTemplateSettings from './pages/ReceiptTemplateSettings';
+import { receiptTemplateAPI } from './services/api';
 import KitchenStations from './pages/KitchenStations';
 import PricingDashboard from './pages/PricingDashboard';
 import FinancialAlerts from './pages/FinancialAlerts';
@@ -90,6 +92,18 @@ function App() {
     if (!localStorage.getItem('selectedRestaurantId')) {
       localStorage.setItem('selectedRestaurantId', '1');
     }
+  }, []);
+
+  // Load receipt template once on startup so PrintReceipt can use it
+  useEffect(() => {
+    const restaurantId = Number(localStorage.getItem('selectedRestaurantId')) || 1;
+    receiptTemplateAPI.getTemplate(restaurantId)
+      .then(res => {
+        if (res.data?.data) {
+          localStorage.setItem('receiptTemplate', JSON.stringify(res.data.data));
+        }
+      })
+      .catch(() => {}); // Silently ignore — PrintReceipt falls back to built-in defaults
   }, []);
 
   return (
@@ -164,6 +178,7 @@ function App() {
           <Route path="bundles" element={<AdminRoute><Bundles /></AdminRoute>} />
           <Route path="referrals" element={<AdminRoute><ReferralProgram /></AdminRoute>} />
           <Route path="settings/printers" element={<PrinterSettings />} />
+          <Route path="settings/receipt-template" element={<AdminRoute><ReceiptTemplateSettings /></AdminRoute>} />
           <Route path="settings/kitchen-stations" element={<AdminRoute><KitchenStations /></AdminRoute>} />
           <Route path="pos" element={<POSApp />} />
         </Route>

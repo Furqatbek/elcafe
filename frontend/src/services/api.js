@@ -753,6 +753,11 @@ export const pricingAPI = {
     api.get('/pricing/calculate/psychological', { params: { price } }),
 };
 
+export const receiptTemplateAPI = {
+  getTemplate: (restaurantId) => api.get('/settings/receipt-template', { params: { restaurantId } }),
+  saveTemplate: (restaurantId, data) => api.put('/settings/receipt-template', data, { params: { restaurantId } }),
+};
+
 export const printerAPI = {
   // Printer CRUD
   getPrinters: (restaurantId) => api.get('/settings/printers', { params: { restaurantId } }),

@@ -118,7 +118,15 @@ const getOrderTypeLabel = (orderType) => {
 
 const PrintReceipt = (order, onPrint) => {
   const printWindow = window.open('', '_blank');
-  const receiptHTML = generateReceiptHTML(order);
+
+  // Read saved template from localStorage (loaded on admin startup)
+  let tmpl = {};
+  try {
+    const raw = localStorage.getItem('receiptTemplate');
+    if (raw) tmpl = JSON.parse(raw);
+  } catch (_) {}
+
+  const receiptHTML = generateReceiptHTML(order, tmpl);
 
   printWindow.document.write(receiptHTML);
   printWindow.document.close();
@@ -133,8 +141,21 @@ const PrintReceipt = (order, onPrint) => {
   if (onPrint) onPrint();
 };
 
-const generateReceiptHTML = (order) => {
+export const generateReceiptHTML = (order, tmpl = {}) => {
     const currentDate = format(new Date(), 'dd/MM/yyyy HH:mm');
+
+    // Template values with fallback defaults
+    const brandName    = tmpl.restaurantName || 'Jangirov\'s';
+    const tagline      = tmpl.tagline || '';
+    const phone        = tmpl.phone || '+998770049909';
+    const website      = tmpl.website || 'www.jangirovs.uz';
+    const footerMsg    = tmpl.footerMessage || '*** RAHMAT! ***';
+    const currency     = tmpl.currency || 'UZS';
+    const showQr       = tmpl.showQrCode !== false;
+    const qrUrl        = tmpl.qrUrl || 'https://jangirovs.uz/order/menu/1/TAKEAWAY';
+    const qrTitle      = tmpl.qrTitle || 'ONLINE BUYURTMA';
+    const qrSubtitle   = tmpl.qrSubtitle || 'Skanerlang va buyurtma bering';
+    const paperWidth   = tmpl.paperWidthMm || 58;
 
     // Helper to truncate text for thermal printer width
     const truncate = (text, maxLen) => {
@@ -156,7 +177,7 @@ const generateReceiptHTML = (order) => {
     }
 
     @page {
-      size: 58mm auto;
+      size: ${paperWidth}mm auto;
       margin: 0;
     }
 
@@ -175,7 +196,7 @@ const generateReceiptHTML = (order) => {
       font-size: 15px;
       font-weight: 500;
       line-height: 1.1;
-      width: 58mm;
+      width: ${paperWidth}mm;
       margin: 0 auto;
       padding: 0;
       background: white;
@@ -370,7 +391,8 @@ const generateReceiptHTML = (order) => {
 
   <div class="receipt">
     <div class="header">
-      <div class="brand-name">Jangirov's</div>
+      <div class="brand-name">${brandName}</div>
+      ${tagline ? `<div style="font-size:13px;margin-top:1px;">${tagline}</div>` : ''}
     </div>
 
     <div class="info-section">
@@ -519,21 +541,21 @@ const generateReceiptHTML = (order) => {
       <div class="promo-row">
         <div class="promo-label">HAPPY HOUR</div>
         ${order.promotionName ? `<div class="promo-value">${truncate(order.promotionName, 22)}</div>` : ''}
-        <div class="promo-discount">-${Math.round(order.discount)} so'm</div>
+        <div class="promo-discount">-${Math.round(order.discount)} ${currency}</div>
       </div>
       ` : ''}
       ${order.discountType === 'COUPON' ? `
       <div class="promo-row">
         <div class="promo-label">KUPON: ${truncate(order.couponCode, 12) || 'N/A'}</div>
         ${order.promotionName ? `<div class="promo-value">${truncate(order.promotionName, 22)}</div>` : ''}
-        <div class="promo-discount">-${Math.round(order.discount)} so'm</div>
+        <div class="promo-discount">-${Math.round(order.discount)} ${currency}</div>
       </div>
       ` : ''}
       ${order.discountType === 'PROMOTION' ? `
       <div class="promo-row">
         <div class="promo-label">AKSIYA</div>
         ${order.promotionName ? `<div class="promo-value">${truncate(order.promotionName, 22)}</div>` : ''}
-        <div class="promo-discount">-${Math.round(order.discount)} so'm</div>
+        <div class="promo-discount">-${Math.round(order.discount)} ${currency}</div>
       </div>
       ` : ''}
       ${order.discountType === 'FREE_ITEM' ? `
@@ -546,7 +568,7 @@ const generateReceiptHTML = (order) => {
       <div class="promo-row">
         <div class="promo-label">CHEGIRMA</div>
         ${order.discountReason ? `<div class="promo-value">${truncate(order.discountReason, 22)}</div>` : ''}
-        <div class="promo-discount">-${Math.round(order.discount)} so'm</div>
+        <div class="promo-discount">-${Math.round(order.discount)} ${currency}</div>
       </div>
       ` : ''}
       ${freeItems.length > 0 ? `
@@ -570,16 +592,18 @@ const generateReceiptHTML = (order) => {
     </div>
     ` : ''}
 
+    ${showQr ? `
     <div class="qr-section">
-      <div class="qr-title">ONLINE BUYURTMA</div>
-      <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent('https://jangirovs.uz/order/menu/1/TAKEAWAY')}" alt="QR Code" />
-      <div class="qr-subtitle">Skanerlang va buyurtma bering</div>
+      <div class="qr-title">${qrTitle}</div>
+      <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(qrUrl)}" alt="QR Code" />
+      <div class="qr-subtitle">${qrSubtitle}</div>
     </div>
+    ` : ''}
 
     <div class="footer">
-      <div>+998770049909</div>
-      <div>www.jangirovs.uz</div>
-      <div class="thank-you">*** RAHMAT! ***</div>
+      ${phone ? `<div>${phone}</div>` : ''}
+      ${website ? `<div>${website}</div>` : ''}
+      <div class="thank-you">${footerMsg}</div>
       <div style="font-size:13px;">${currentDate}</div>
     </div>
   </div>
