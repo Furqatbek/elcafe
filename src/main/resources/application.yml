@@ -204,6 +204,13 @@ telegram:
     enabled: ${TELEGRAM_OWNER_BOT_ENABLED:true}
     token: ${TELEGRAM_OWNER_BOT_TOKEN:}
     username: ${TELEGRAM_OWNER_BOT_USERNAME:}
+  # Proxy settings — required when api.telegram.org is blocked (e.g. in Uzbekistan)
+  # Set TELEGRAM_PROXY_ENABLED=true and configure a SOCKS5 or HTTP proxy
+  proxy:
+    enabled: ${TELEGRAM_PROXY_ENABLED:false}
+    type: ${TELEGRAM_PROXY_TYPE:SOCKS5}   # SOCKS5, SOCKS4, or HTTP
+    host: ${TELEGRAM_PROXY_HOST:}
+    port: ${TELEGRAM_PROXY_PORT:1080}
 
 # Stock Alert Configuration
 stock-alert:

@@ -1,7 +1,9 @@
 package com.elcafe.modules.notification.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -24,10 +26,25 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * handler — so both bots can still process incoming messages independently.
  *
  * The correct production setup is to assign each bot its own unique token.
+ *
+ * Supports SOCKS5/HTTP proxy via telegram.proxy.* properties — required in
+ * countries where api.telegram.org is blocked (e.g. Uzbekistan).
  */
 @Slf4j
 @Component
 public class TelegramBotRegistry {
+
+    @Value("${telegram.proxy.enabled:false}")
+    private boolean proxyEnabled;
+
+    @Value("${telegram.proxy.type:SOCKS5}")
+    private String proxyType;
+
+    @Value("${telegram.proxy.host:}")
+    private String proxyHost;
+
+    @Value("${telegram.proxy.port:1080}")
+    private int proxyPort;
 
     private TelegramBotsApi botsApi;
 
@@ -43,6 +60,24 @@ public class TelegramBotRegistry {
             botsApi = new TelegramBotsApi(DefaultBotSession.class);
         }
         return botsApi;
+    }
+
+    private DefaultBotOptions buildBotOptions() {
+        DefaultBotOptions options = new DefaultBotOptions();
+        if (proxyEnabled && proxyHost != null && !proxyHost.isBlank()) {
+            DefaultBotOptions.ProxyType type;
+            try {
+                type = DefaultBotOptions.ProxyType.valueOf(proxyType.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                log.warn("Unknown proxy type '{}', falling back to SOCKS5", proxyType);
+                type = DefaultBotOptions.ProxyType.SOCKS5;
+            }
+            options.setProxyType(type);
+            options.setProxyHost(proxyHost);
+            options.setProxyPort(proxyPort);
+            log.info("Telegram proxy configured: {}://{}:{}", type, proxyHost, proxyPort);
+        }
+        return options;
     }
 
     /**
@@ -71,7 +106,7 @@ public class TelegramBotRegistry {
         }
 
         // First bot for this token: start a dispatcher that fans out to all handlers
-        DispatcherBot dispatcher = new DispatcherBot(token, bot.getBotUsername(), handlers);
+        DispatcherBot dispatcher = new DispatcherBot(buildBotOptions(), token, bot.getBotUsername(), handlers);
         try {
             BotSession session = getBotsApi().registerBot(dispatcher);
             activeSessions.put(token, session);
@@ -124,8 +159,8 @@ public class TelegramBotRegistry {
         private final String username;
         private final List<TelegramLongPollingBot> handlers;
 
-        DispatcherBot(String token, String username, List<TelegramLongPollingBot> handlers) {
-            super(token);
+        DispatcherBot(DefaultBotOptions options, String token, String username, List<TelegramLongPollingBot> handlers) {
+            super(options, token);
             this.username = username;
             this.handlers = handlers;
         }
