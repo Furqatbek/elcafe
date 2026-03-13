@@ -2181,7 +2181,12 @@
       "review": "Ko'rish",
       "orderDetails": "Buyurtma tafsilotlari",
       "couponDiscount": "Kupon / Chegirma",
-      "discount": "Chegirma"
+      "discount": "Chegirma",
+      "weightItem": "vaznli mahsulot",
+      "portion": "porsiya",
+      "setPortion": "Porsiya belgilash",
+      "closePortion": "Yopish",
+      "qty": "Soni"
     },
     "coupon": {
       "enterCode": "Kupon kodini kiriting",
@@ -2402,6 +2407,12 @@
       "originalTotal": "Asl jami",
       "paid": "To'langan",
       "unpaid": "To'lanmagan"
+    },
+    "weight": {
+      "perUnit": "uchun",
+      "addToCart": "{{weight}} {{unit}} savatga qo'shish",
+      "enterWeight": "Vazn kiriting",
+      "maxExceeded": "Maksimal: {{max}} {{unit}}"
     }
   },
   "pages": {
@@ -2427,7 +2438,24 @@
         "createVariantFailed": "Variant yaratib bo'lmadi",
         "updateVariantFailed": "Variantni yangilab bo'lmadi",
         "deleteVariantFailed": "Variantni o'chirib bo'lmadi"
-      }
+      },
+      "soldByWeight": "Vazn bo'yicha sotish",
+      "soldByWeightHint": "Kassir buyurtma qo'shishda vaznni kiritadi.",
+      "weightUnit": "O'lchov birligi",
+      "pricePerUnit": "Yuqoridagi narx {{unit}} uchun.",
+      "minWeight": "Minimal vazn",
+      "maxWeight": "Maksimal vazn",
+      "costPrice": "Tannarx",
+      "costPricePlaceholder": "Ixtiyoriy",
+      "calculatedMargin": "Hisoblangan marjin",
+      "profit": "Bir birlik foydasi",
+      "category": "Kategoriya",
+      "createDescription": "Yangi mahsulot yaratish uchun ma'lumotlarni to'ldiring",
+      "updateDescription": "Mahsulot ma'lumotlarini yangilash",
+      "update": "Yangilash",
+      "productImage": "Mahsulot rasmi",
+      "orEnterImageUrl": "Yoki rasm URL manzilini kiriting:",
+      "preview": "Ko'rinish"
     },
     "orders": {
       "createOrder": "Buyurtma yaratish",

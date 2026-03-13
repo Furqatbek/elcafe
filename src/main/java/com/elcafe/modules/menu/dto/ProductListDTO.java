@@ -41,6 +41,12 @@ public class ProductListDTO {
     private Boolean available; // Maps to inStock
     private Boolean isFeatured; // Maps to featured
 
+    // Weight-based selling
+    private Boolean isSoldByWeight;
+    private String weightUnit;
+    private BigDecimal minWeight;
+    private BigDecimal maxWeight;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

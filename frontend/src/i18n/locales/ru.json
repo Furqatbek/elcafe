@@ -2181,7 +2181,12 @@
       "review": "Просмотр",
       "orderDetails": "Детали заказа",
       "couponDiscount": "Купон / Скидка",
-      "discount": "Скидка"
+      "discount": "Скидка",
+      "weightItem": "по весу",
+      "portion": "порция",
+      "setPortion": "Задать порцию",
+      "closePortion": "Закрыть",
+      "qty": "Кол-во"
     },
     "coupon": {
       "enterCode": "Введите код купона",
@@ -2356,7 +2361,13 @@
       "other": "Другое"
     },
     "enterFullscreen": "Полный экран",
-    "exitFullscreen": "Выход из полного экрана (ESC)"
+    "exitFullscreen": "Выход из полного экрана (ESC)",
+    "weight": {
+      "perUnit": "за",
+      "addToCart": "Добавить {{weight}} {{unit}} в корзину",
+      "enterWeight": "Введите вес",
+      "maxExceeded": "Макс: {{max}} {{unit}}"
+    }
   },
   "pages": {
     "menu": {
@@ -2381,7 +2392,24 @@
         "createVariantFailed": "Не удалось создать вариант",
         "updateVariantFailed": "Не удалось обновить вариант",
         "deleteVariantFailed": "Не удалось удалить вариант"
-      }
+      },
+      "soldByWeight": "Продаётся по весу",
+      "soldByWeightHint": "Кассир вводит вес при добавлении товара в заказ.",
+      "weightUnit": "Единица измерения",
+      "pricePerUnit": "Цена выше указана за {{unit}}.",
+      "minWeight": "Мин. вес",
+      "maxWeight": "Макс. вес",
+      "costPrice": "Себестоимость",
+      "costPricePlaceholder": "Необязательно",
+      "calculatedMargin": "Расчётная маржа",
+      "profit": "Прибыль за единицу",
+      "category": "Категория",
+      "createDescription": "Заполните данные для создания нового товара",
+      "updateDescription": "Обновите данные товара",
+      "update": "Обновить",
+      "productImage": "Изображение товара",
+      "orEnterImageUrl": "Или введите URL изображения:",
+      "preview": "Предпросмотр"
     },
     "orders": {
       "createOrder": "Создать заказ",

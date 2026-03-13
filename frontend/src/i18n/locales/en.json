@@ -2246,7 +2246,12 @@
       "review": "Review",
       "orderDetails": "Order Details",
       "couponDiscount": "Coupon / Discount",
-      "discount": "Discount"
+      "discount": "Discount",
+      "weightItem": "by weight",
+      "portion": "portion",
+      "setPortion": "Set portion",
+      "closePortion": "Close",
+      "qty": "Qty"
     },
     "coupon": {
       "enterCode": "Enter coupon code",
@@ -2592,6 +2597,12 @@
       "note": "Note",
       "orderNotes": "Order Notes",
       "deliveryTo": "Delivery To"
+    },
+    "weight": {
+      "perUnit": "per",
+      "addToCart": "Add {{weight}} {{unit}} to cart",
+      "enterWeight": "Enter weight",
+      "maxExceeded": "Max: {{max}} {{unit}}"
     }
   },
   "pages": {
@@ -2617,7 +2628,24 @@
         "createVariantFailed": "Failed to create variant",
         "updateVariantFailed": "Failed to update variant",
         "deleteVariantFailed": "Failed to delete variant"
-      }
+      },
+      "soldByWeight": "Sold by weight",
+      "soldByWeightHint": "Cashier will enter the weight when adding this item to an order.",
+      "weightUnit": "Unit",
+      "pricePerUnit": "Price above is per {{unit}}.",
+      "minWeight": "Min weight",
+      "maxWeight": "Max weight",
+      "costPrice": "Cost Price",
+      "costPricePlaceholder": "Optional",
+      "calculatedMargin": "Calculated Margin",
+      "profit": "Profit per unit",
+      "category": "Category",
+      "createDescription": "Fill in the details to create a new product",
+      "updateDescription": "Update the product details",
+      "update": "Update",
+      "productImage": "Product Image",
+      "orEnterImageUrl": "Or enter image URL instead:",
+      "preview": "Preview"
     },
     "orders": {
       "createOrder": "Create Order",
