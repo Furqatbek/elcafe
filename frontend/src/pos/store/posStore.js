@@ -1528,6 +1528,12 @@ const usePOSStore = create(
     }),
     {
       name: 'pos-storage', // localStorage key
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.error('[posStore] Failed to rehydrate from localStorage, clearing corrupted data:', error);
+          try { localStorage.removeItem('pos-storage'); } catch (_) {}
+        }
+      },
       partialize: (state) => ({
         // Persist these parts for cross-page navigation
         currentOrder: state.currentOrder,
@@ -1537,16 +1543,25 @@ const usePOSStore = create(
       }),
       // Merge persisted state with initial state
       merge: (persistedState, currentState) => {
-        // If persisted state has a cleared order (empty items), use it
-        if (persistedState?.currentOrder?.items?.length === 0) {
-          return {
-            ...currentState,
-            ...persistedState,
-          };
-        }
+        if (!persistedState) return currentState;
+
+        // Use sessionStorage to distinguish a full page reload from SPA navigation.
+        // sessionStorage survives SPA navigation but is cleared on hard refresh / new tab.
+        const isPageReload = !sessionStorage.getItem('pos_initialized');
+        sessionStorage.setItem('pos_initialized', '1');
+
         return {
           ...currentState,
           ...persistedState,
+          ui: {
+            // Always start from the top on a full page reload so screens that depend
+            // on non-persisted state (activeOrder, splitBill, etc.) don't crash.
+            currentScreen: isPageReload ? 'start' : (persistedState.ui?.currentScreen || 'start'),
+            isLoading: false,       // Never persist a loading spinner
+            error: null,            // Never persist an error message
+            selectedCategory: isPageReload ? null : (persistedState.ui?.selectedCategory ?? null),
+            selectedProduct: isPageReload ? null : (persistedState.ui?.selectedProduct ?? null),
+          },
         };
       },
     }
