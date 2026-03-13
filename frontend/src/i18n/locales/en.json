@@ -392,7 +392,10 @@
     "saving": "Saving...",
     "creating": "Creating...",
     "loading": "Loading...",
-    "minutes": "minutes"
+    "minutes": "minutes",
+    "search": "Search",
+    "clear": "Clear",
+    "sending": "Sending..."
   },
   "orders": {
     "title": "Orders",

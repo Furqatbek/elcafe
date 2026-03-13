@@ -906,7 +906,10 @@
     "saving": "Saqlanmoqda...",
     "creating": "Yaratilmoqda...",
     "loading": "Yuklanmoqda...",
-    "minutes": "daqiqa"
+    "minutes": "daqiqa",
+    "search": "Qidirish",
+    "clear": "Tozalash",
+    "sending": "Yuborilmoqda..."
   },
   "validation": {
     "required": "Bu maydon majburiy",
