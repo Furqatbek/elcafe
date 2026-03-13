@@ -50,7 +50,7 @@ public class WaiterController {
     public ResponseEntity<ApiResponse<Page<WaiterResponse>>> getAllWaiters(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "name") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
 
         Sort sort = sortDir.equalsIgnoreCase("desc")

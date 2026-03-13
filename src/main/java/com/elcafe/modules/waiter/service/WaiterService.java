@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -67,7 +68,7 @@ public class WaiterService {
      */
     @Transactional(readOnly = true)
     public List<WaiterResponse> getActiveWaiters() {
-        return waiterRepository.findByActiveTrue().stream()
+        return waiterRepository.findByActiveTrueOrderByNameAsc().stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
     }
@@ -266,6 +267,9 @@ public class WaiterService {
     public List<RestaurantTable> getActiveTables(Long waiterId) {
         return waiterTableRepository.findByWaiterIdAndActiveTrue(waiterId).stream()
                 .map(WaiterTable::getTable)
+                .sorted(Comparator.comparing(
+                        t -> t.getTableNumber() != null ? t.getTableNumber() : "",
+                        String.CASE_INSENSITIVE_ORDER))
                 .toList();
     }
 

@@ -24,14 +24,14 @@ public interface WaiterRepository extends JpaRepository<Waiter, Long> {
     Optional<Waiter> findByEmailAndActive(String email, Boolean active);
 
     /**
-     * Find all waiters by role
+     * Find all waiters by role, sorted alphabetically by name
      */
-    List<Waiter> findByRole(WaiterRole role);
+    List<Waiter> findByRoleOrderByNameAsc(WaiterRole role);
 
     /**
-     * Find all active waiters
+     * Find all active waiters, sorted alphabetically by name
      */
-    List<Waiter> findByActiveTrue();
+    List<Waiter> findByActiveTrueOrderByNameAsc();
 
     /**
      * Check if PIN code exists
@@ -44,15 +44,16 @@ public interface WaiterRepository extends JpaRepository<Waiter, Long> {
     boolean existsByEmail(String email);
 
     /**
-     * Find waiters by role and active status
+     * Find waiters by role and active status, sorted alphabetically by name
      */
-    List<Waiter> findByRoleAndActive(WaiterRole role, Boolean active);
+    List<Waiter> findByRoleAndActiveOrderByNameAsc(WaiterRole role, Boolean active);
 
     /**
-     * Find waiters with active table assignments
+     * Find waiters with active table assignments, sorted alphabetically by name
      */
     @Query("SELECT DISTINCT w FROM Waiter w " +
            "JOIN w.waiterTables wt " +
-           "WHERE wt.active = true AND w.active = true")
+           "WHERE wt.active = true AND w.active = true " +
+           "ORDER BY w.name ASC")
     List<Waiter> findWaitersWithActiveTables();
 }
