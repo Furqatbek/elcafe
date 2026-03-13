@@ -88,7 +88,7 @@ public class SelfServiceOrderService {
      * 4 hours provides enough time for browsing menu and completing orders
      * while limiting orphaned session accumulation.
      */
-    private static final int SESSION_EXPIRY_HOURS = 4;
+    private static final int SESSION_EXPIRY_HOURS = 24;
 
     /**
      * Phone validation pattern.
@@ -761,9 +761,11 @@ public class SelfServiceOrderService {
                     return new SessionNotFoundException();
                 });
 
+        // Auto-renew expired sessions so orders are never blocked by expiry
         if (!session.isValid()) {
-            log.debug("Session expired: id={}, expiresAt={}", session.getId(), session.getExpiresAt());
-            throw new SessionNotFoundException();
+            log.info("Session expired — auto-renewing: id={}, was expiresAt={}", session.getId(), session.getExpiresAt());
+            session.setExpiresAt(LocalDateTime.now().plusHours(SESSION_EXPIRY_HOURS));
+            session = sessionRepository.save(session);
         }
 
         return session;
