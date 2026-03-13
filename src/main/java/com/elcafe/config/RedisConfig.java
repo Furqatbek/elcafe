@@ -69,16 +69,6 @@ public class RedisConfig {
         return objectMapper;
     }
 
-    /**
-     * Exposes the Redis-specific ObjectMapper as a bean so other configs
-     * (e.g. CacheConfig) can share the same properly-configured mapper,
-     * including JavaTimeModule support for LocalDateTime fields.
-     */
-    @Bean(name = "redisObjectMapper")
-    public ObjectMapper redisObjectMapper() {
-        return createRedisObjectMapper();
-    }
-
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();

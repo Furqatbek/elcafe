@@ -1,7 +1,10 @@
 package com.elcafe.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Qualifier;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
@@ -44,13 +47,22 @@ public class CacheConfig {
      * Redis cache manager for distributed caching.
      * Primary cache manager when Redis is available.
      */
+    private ObjectMapper buildRedisObjectMapper() {
+        PolymorphicTypeValidator typeValidator = BasicPolymorphicTypeValidator.builder()
+                .allowIfBaseType(Object.class)
+                .build();
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.activateDefaultTyping(typeValidator, ObjectMapper.DefaultTyping.NON_FINAL);
+        return mapper;
+    }
+
     @Bean
     @Primary
-    public CacheManager redisCacheManager(
-            RedisConnectionFactory connectionFactory,
-            @Qualifier("redisObjectMapper") ObjectMapper redisObjectMapper) {
+    public CacheManager redisCacheManager(RedisConnectionFactory connectionFactory) {
         GenericJackson2JsonRedisSerializer serializer =
-                new GenericJackson2JsonRedisSerializer(redisObjectMapper);
+                new GenericJackson2JsonRedisSerializer(buildRedisObjectMapper());
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(Duration.ofMinutes(15))
                 .serializeValuesWith(
