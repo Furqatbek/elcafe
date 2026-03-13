@@ -48,13 +48,14 @@ export function NotificationBell() {
   // Handle order event for notification store - memoized to prevent effect re-runs
   const handleOrderEvent = useCallback((event) => {
     const { eventType, data } = event;
-    if (eventType === 'order.placed') {
+    if (eventType === 'order.placed' || eventType === 'order.accepted') {
       useNotificationStore.getState().addOrderNotification({
         type: eventType,
         orderNumber: data?.orderNumber,
         orderType: data?.orderType,
         total: data?.totalAmount || data?.total,
         tableNumber: data?.tableNumber,
+        orderSource: data?.orderSource,
       });
     }
   }, []);
@@ -157,6 +158,18 @@ export function NotificationBell() {
         return 'Delivery';
       default:
         return type?.replace('_', ' ') || 'Order';
+    }
+  };
+
+  // Source label + icon for display
+  const formatOrderSource = (source) => {
+    switch (source) {
+      case 'SELF_SERVICE': return { label: 'Self-Service', icon: '📱' };
+      case 'WEBSITE':      return { label: 'Website',      icon: '🌐' };
+      case 'MOBILE_APP':   return { label: 'Mobile App',   icon: '📲' };
+      case 'TELEGRAM_BOT': return { label: 'Telegram',     icon: '✈️' };
+      case 'WAITER':       return { label: 'Waiter',       icon: '🧑‍🍳' };
+      default:             return source ? { label: source.replace('_', ' '), icon: '📋' } : null;
     }
   };
 
@@ -263,26 +276,42 @@ export function NotificationBell() {
                     <button
                       key={notification.id}
                       className={`w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                        !notification.read ? 'bg-blue-50' : ''
+                        !notification.read
+                          ? notification.type === 'order.accepted'
+                            ? 'bg-green-50'
+                            : 'bg-blue-50'
+                          : ''
                       }`}
                       onClick={() => handleNotificationClick(notification)}
                     >
                       <div className="flex items-start gap-3">
                         <div className={`p-2 rounded-full ${
-                          notification.type === 'order.placed'
+                          notification.type === 'order.accepted'
                             ? 'bg-green-100 text-green-600'
+                            : notification.type === 'order.placed'
+                            ? 'bg-blue-100 text-blue-600'
                             : 'bg-gray-100 text-gray-600'
                         }`}>
                           <ShoppingCart className="h-4 w-4" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900">
-                            New Order #{notification.orderNumber}
+                            {notification.type === 'order.accepted' ? '✅ ' : ''}Order #{notification.orderNumber}
                           </p>
                           <p className="text-xs text-gray-500 mt-0.5">
                             {formatOrderType(notification.orderType)}
-                            {notification.tableNumber && ` - Table ${notification.tableNumber}`}
+                            {notification.tableNumber && ` · Table ${notification.tableNumber}`}
                           </p>
+                          {(() => {
+                            const src = formatOrderSource(notification.orderSource);
+                            return src ? (
+                              <p className="text-xs mt-0.5">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 font-medium">
+                                  {src.icon} {src.label}
+                                </span>
+                              </p>
+                            ) : null;
+                          })()}
                           <p className="text-xs font-medium text-gray-700 mt-0.5">
                             {Number(notification.total || 0).toLocaleString()} UZS
                           </p>
@@ -294,7 +323,9 @@ export function NotificationBell() {
                           </p>
                         </div>
                         {!notification.read && (
-                          <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2" />
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-2 ${
+                            notification.type === 'order.accepted' ? 'bg-green-500' : 'bg-blue-500'
+                          }`} />
                         )}
                       </div>
                     </button>

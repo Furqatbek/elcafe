@@ -83,10 +83,31 @@ const formatOrderType = (type) => {
   }
 };
 
+// Format order source for display
+const formatOrderSource = (source) => {
+  switch (source) {
+    case 'SELF_SERVICE':
+      return '📱 Self-Service (QR)';
+    case 'WEBSITE':
+      return '🌐 Website';
+    case 'MOBILE_APP':
+      return '📲 Mobile App';
+    case 'TELEGRAM_BOT':
+      return '✈️ Telegram';
+    case 'WAITER':
+      return '🧑‍🍳 Waiter';
+    case 'ADMIN_PANEL':
+      return '🖥️ Admin Panel';
+    default:
+      return source?.replace('_', ' ') || '';
+  }
+};
+
 // Get toast variant based on event type
 const getToastVariant = (eventType) => {
   switch (eventType) {
     case 'order.placed':
+    case 'order.accepted':
       return 'success';
     case 'order.cancelled':
     case 'order.rejected':
@@ -128,6 +149,7 @@ export function useWebSocketNotifications(options = {}) {
     const orderType = formatOrderType(data?.orderType);
     const total = data?.totalAmount || data?.total || 0;
     const tableNumber = data?.tableNumber;
+    const source = formatOrderSource(data?.orderSource);
 
     // Build notification message
     let title = '';
@@ -136,9 +158,19 @@ export function useWebSocketNotifications(options = {}) {
     switch (eventType) {
       case 'order.placed':
         title = `New Order #${orderNumber}`;
-        description = tableNumber
-          ? `${orderType} - Table ${tableNumber}. Total: ${Number(total).toLocaleString()} UZS`
-          : `${orderType} order received. Total: ${Number(total).toLocaleString()} UZS`;
+        description = [
+          source,
+          tableNumber ? `Table ${tableNumber}` : orderType,
+          `${Number(total).toLocaleString()} UZS`,
+        ].filter(Boolean).join(' · ');
+        break;
+      case 'order.accepted':
+        title = `✅ Order #${orderNumber} Accepted`;
+        description = [
+          source,
+          tableNumber ? `Table ${tableNumber}` : orderType,
+          `${Number(total).toLocaleString()} UZS`,
+        ].filter(Boolean).join(' · ');
         break;
       case 'order.cancelled':
         title = `Order #${orderNumber} Cancelled`;
@@ -157,8 +189,8 @@ export function useWebSocketNotifications(options = {}) {
         description = `Status: ${eventType?.replace('order.', '')?.replace('_', ' ')}`;
     }
 
-    // Play sound for new orders
-    if (soundEnabled && eventType === 'order.placed') {
+    // Play sound for new and accepted orders
+    if (soundEnabled && (eventType === 'order.placed' || eventType === 'order.accepted')) {
       playNotificationSound();
     }
 
@@ -168,14 +200,13 @@ export function useWebSocketNotifications(options = {}) {
         title,
         description,
         variant: getToastVariant(eventType),
-        duration: eventType === 'order.placed' ? 10000 : 5000,
+        duration: (eventType === 'order.placed' || eventType === 'order.accepted') ? 10000 : 5000,
       });
     }
 
-    // Show browser notification for new orders
-    if (browserNotificationEnabled && eventType === 'order.placed') {
+    // Show browser notification for new and accepted orders
+    if (browserNotificationEnabled && (eventType === 'order.placed' || eventType === 'order.accepted')) {
       showBrowserNotification(title, description, () => {
-        // Navigate to orders page on click
         window.location.href = '/admin/orders';
       });
     }

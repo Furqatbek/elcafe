@@ -46,6 +46,9 @@ public class OrderEventBroadcaster {
             eventData.put("tableId", order.getDiningTable().getId());
         }
         eventData.put("placedAt", order.getPlacedAt());
+        if (order.getOrderSource() != null) {
+            eventData.put("orderSource", order.getOrderSource().name());
+        }
 
         OrderEventMessage message = OrderEventMessage.builder()
                 .eventType("order.placed")
@@ -70,9 +73,19 @@ public class OrderEventBroadcaster {
         Map<String, Object> eventData = new HashMap<>();
         eventData.put("orderId", order.getId());
         eventData.put("orderNumber", order.getOrderNumber());
+        eventData.put("orderType", order.getOrderType());
+        eventData.put("totalAmount", order.getTotal());
+        eventData.put("itemCount", order.getItems().size());
+        eventData.put("consumer", buildConsumerInfo(order));
         eventData.put("status", order.getStatus());
         eventData.put("acceptedAt", order.getAcceptedAt());
-        // Calculate estimated delivery time (base time + preparation estimate)
+        if (order.getOrderSource() != null) {
+            eventData.put("orderSource", order.getOrderSource().name());
+        }
+        if (order.getDiningTable() != null) {
+            eventData.put("tableNumber", order.getDiningTable().getTableNumber());
+            eventData.put("tableId", order.getDiningTable().getId());
+        }
         if (order.getAcceptedAt() != null) {
             LocalDateTime estimatedDelivery = order.getAcceptedAt().toLocalDateTime()
                     .plusMinutes(order.getRestaurant().getEstimatedDeliveryTimeMinutes());
@@ -85,8 +98,15 @@ public class OrderEventBroadcaster {
                 .data(eventData)
                 .build();
 
-        // Send to specific consumer
-        sendToConsumer(order.getCustomer().getId(), message);
+        // Send to restaurant admin/kitchen topic so staff see the signal
+        String restaurantDestination = "/topic/restaurant/" + order.getRestaurant().getId() + "/orders";
+        messagingTemplate.convertAndSend(restaurantDestination, message);
+        log.info("Order accepted event sent to restaurant topic: {}", restaurantDestination);
+
+        // Also send to the consumer if they have an account
+        if (order.getCustomer() != null) {
+            sendToConsumer(order.getCustomer().getId(), message);
+        }
     }
 
     /**

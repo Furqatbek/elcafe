@@ -18,6 +18,7 @@ import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.PaymentRepository;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
 import com.elcafe.modules.notification.service.CustomerNotificationService;
+import com.elcafe.modules.order.service.OrderEventBroadcaster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -51,6 +52,7 @@ public class OrderService {
     @Lazy private final InventoryValuationService inventoryValuationService;
     @Lazy private final OwnerNotificationService ownerNotificationService;
     @Lazy private final CustomerNotificationService customerNotificationService;
+    @Lazy private final OrderEventBroadcaster orderEventBroadcaster;
 
     @Transactional
     public Order createOrder(Order order) {
@@ -142,6 +144,15 @@ public class OrderService {
 
         order = orderRepository.save(order);
         log.info("Order status updated: {} -> {}", currentStatus, newStatus);
+
+        // Broadcast real-time WebSocket signal to kitchen/admin when order is accepted
+        if (newStatus == OrderStatus.ACCEPTED && orderEventBroadcaster != null) {
+            try {
+                orderEventBroadcaster.broadcastOrderAccepted(order);
+            } catch (Exception e) {
+                log.error("Failed to broadcast order.accepted event for order {}: {}", order.getOrderNumber(), e.getMessage());
+            }
+        }
 
         // Record revenue when order is completed or delivered
         if (newStatus == OrderStatus.COMPLETED || newStatus == OrderStatus.DELIVERED) {
