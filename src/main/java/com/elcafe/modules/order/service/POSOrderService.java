@@ -399,6 +399,7 @@ public class POSOrderService {
                 .serviceFeePercent(order.getServiceFeePercent())
                 .serviceFee(order.getServiceFee())
                 .entryFee(order.getEntryFee())
+                .discount(order.getDiscount())
                 .total(order.getTotal())
                 .paymentStatus(order.getPaymentStatus())
                 .fullyPaid(order.isFullyPaid())

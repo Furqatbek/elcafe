@@ -1169,6 +1169,8 @@ const usePOSStore = create(
                 deliveryFee: 0,
                 serviceFeePercent: existingOrder.serviceFeePercent || 0,
                 serviceFee: existingOrder.serviceFee || 0,
+                entryFee: existingOrder.entryFee || 0,
+                discount: existingOrder.discount || 0,
                 total: existingOrder.total || 0,
                 notes: existingOrder.orderNotes || '',
               },

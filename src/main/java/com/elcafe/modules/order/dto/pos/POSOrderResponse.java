@@ -31,6 +31,7 @@ public class POSOrderResponse {
     private BigDecimal serviceFeePercent;
     private BigDecimal serviceFee;
     private BigDecimal entryFee;
+    private BigDecimal discount;
     private BigDecimal total;
     private String paymentMethod;
     private PaymentStatus paymentStatus;

@@ -851,5 +851,9 @@ public class WaiterOrderService {
         // Calculate total
         BigDecimal total = subtotal.add(tax).subtract(order.getDiscount());
         order.setTotal(total);
+
+        // Keep grandTotal in sync so payment validation uses the correct amount
+        BigDecimal tip = order.getTipAmount() != null ? order.getTipAmount() : BigDecimal.ZERO;
+        order.setGrandTotal(total.add(tip));
     }
 }
