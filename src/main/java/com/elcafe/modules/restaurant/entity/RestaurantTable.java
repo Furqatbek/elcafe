@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.entity;
 
 import com.elcafe.modules.order.entity.Order;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -77,6 +78,7 @@ public class RestaurantTable {
     private String qrCode;
 
     @OneToMany(mappedBy = "diningTable", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Order> orders;
