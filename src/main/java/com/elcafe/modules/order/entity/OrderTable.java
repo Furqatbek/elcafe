@@ -2,6 +2,7 @@ package com.elcafe.modules.order.entity;
 
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -35,6 +36,7 @@ public class OrderTable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id", nullable = false)
+    @JsonIgnoreProperties({"orders", "restaurant", "waiterTables", "hibernateLazyInitializer", "handler"})
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private RestaurantTable table;
