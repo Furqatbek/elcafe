@@ -63,6 +63,7 @@ import {
 import POSApp from './pos/POSApp';
 import OrdersHistory from './pages/OrdersHistory';
 import SelfServiceOrders from './pages/SelfServiceOrders';
+import Profile from './pages/Profile';
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -180,6 +181,7 @@ function App() {
           <Route path="settings/printers" element={<PrinterSettings />} />
           <Route path="settings/receipt-template" element={<AdminRoute><ReceiptTemplateSettings /></AdminRoute>} />
           <Route path="settings/kitchen-stations" element={<AdminRoute><KitchenStations /></AdminRoute>} />
+          <Route path="profile" element={<Profile />} />
           <Route path="pos" element={<POSApp />} />
         </Route>
       </Routes>
