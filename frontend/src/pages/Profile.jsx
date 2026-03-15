@@ -4,7 +4,7 @@ import { Eye, EyeOff, UserCircle, Lock } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { authAPI } from '../services/api';
 import { Button } from '../components/ui/button';
-import { useToast } from '../components/ui/use-toast';
+import { useToast } from '../hooks/useToast';
 
 export default function Profile() {
   const { t } = useTranslation();
