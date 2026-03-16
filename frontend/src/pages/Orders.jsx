@@ -745,16 +745,8 @@ export default function Orders() {
     setUpdatingItem(itemId);
     try {
       await posAPI.updateItemQuantity(orderId, itemId, newQuantity);
-      // Background sync - don't block UI
-      loadTablesAndOrders().then(() => {
-        if (editingOrder && editingOrder.id === orderId) {
-          const updatedOrders = tableOrders[selectedTable?.id] || [];
-          const updatedOrder = updatedOrders.find(o => o.id === orderId);
-          if (updatedOrder) {
-            setEditingOrder(updatedOrder);
-          }
-        }
-      });
+      // Background sync - useEffect handles editingOrder update from fresh tableOrders
+      loadTablesAndOrders();
     } catch (error) {
       console.error('Failed to update item quantity:', error);
       // Revert optimistic update on failure
@@ -786,16 +778,8 @@ export default function Orders() {
     setUpdatingItem(itemId);
     try {
       await posAPI.removeItemFromOrder(orderId, itemId);
-      // Background sync
-      loadTablesAndOrders().then(() => {
-        if (editingOrder && editingOrder.id === orderId) {
-          const updatedOrders = tableOrders[selectedTable?.id] || [];
-          const updatedOrder = updatedOrders.find(o => o.id === orderId);
-          if (updatedOrder) {
-            setEditingOrder(updatedOrder);
-          }
-        }
-      });
+      // Background sync - useEffect handles editingOrder update from fresh tableOrders
+      loadTablesAndOrders();
     } catch (error) {
       console.error('Failed to remove item:', error);
       // Revert optimistic update on failure
