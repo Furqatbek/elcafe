@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { orderAPI, restaurantAPI, menuAPI, tablesAPI, posAPI } from '../services/api';
@@ -90,6 +90,8 @@ export default function Orders() {
   // Selected table state
   const [selectedTable, setSelectedTable] = useState(null);
   const [selectedTableOrders, setSelectedTableOrders] = useState([]);
+  // Ref to always have current selectedTable inside callbacks without causing stale closures
+  const selectedTableRef = useRef(null);
 
   // Add item modal
   const [addItemModalOpen, setAddItemModalOpen] = useState(false);
@@ -206,6 +208,11 @@ export default function Orders() {
     }
   }, [selectedRestaurantId]);
 
+  // Keep ref in sync with state so callbacks always see the current value
+  useEffect(() => {
+    selectedTableRef.current = selectedTable;
+  }, [selectedTable]);
+
   // Update selected table orders when tableOrders changes
   useEffect(() => {
     if (selectedTable) {
@@ -288,9 +295,10 @@ export default function Orders() {
       }
       setTableOrders(ordersByTable);
 
-      // Update selected table if it exists
-      if (selectedTable) {
-        const updatedTable = tablesData.find(t => t.id === selectedTable.id);
+      // Update selected table data if one is currently selected
+      const currentSelectedTable = selectedTableRef.current;
+      if (currentSelectedTable) {
+        const updatedTable = tablesData.find(t => t.id === currentSelectedTable.id);
         if (updatedTable) {
           setSelectedTable(updatedTable);
         }
@@ -300,7 +308,7 @@ export default function Orders() {
     } finally {
       setRefreshing(false);
     }
-  }, [selectedRestaurantId, selectedTable]);
+  }, [selectedRestaurantId]);
 
   // Load products for add item modal
   const loadProducts = async () => {
