@@ -5,9 +5,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,7 +34,39 @@ import java.util.Map;
  */
 @Configuration
 @EnableCaching
-public class CacheConfig {
+public class CacheConfig implements CachingConfigurer {
+
+    private static final Logger log = LoggerFactory.getLogger(CacheConfig.class);
+
+    /**
+     * Silently absorbs Redis errors (e.g. READONLY replica, connection refused) so
+     * that a Redis failure never crashes a user request — the method is simply
+     * invoked directly without caching for that call.
+     */
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new CacheErrorHandler() {
+            @Override
+            public void handleCacheGetError(RuntimeException exception, Cache cache, Object key) {
+                log.warn("Redis cache GET error on cache '{}' key '{}': {}", cache.getName(), key, exception.getMessage());
+            }
+
+            @Override
+            public void handleCachePutError(RuntimeException exception, Cache cache, Object key, Object value) {
+                log.warn("Redis cache PUT error on cache '{}' key '{}': {}", cache.getName(), key, exception.getMessage());
+            }
+
+            @Override
+            public void handleCacheEvictError(RuntimeException exception, Cache cache, Object key) {
+                log.warn("Redis cache EVICT error on cache '{}' key '{}': {}", cache.getName(), key, exception.getMessage());
+            }
+
+            @Override
+            public void handleCacheClearError(RuntimeException exception, Cache cache) {
+                log.warn("Redis cache CLEAR error on cache '{}': {}", cache.getName(), exception.getMessage());
+            }
+        };
+    }
 
     // Cache names
     public static final String ANALYTICS_SUMMARY = "analytics-summary";

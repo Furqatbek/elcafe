@@ -16,6 +16,7 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import io.lettuce.core.ReadFrom;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
@@ -51,6 +52,7 @@ public class RedisConfig {
 
         LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
                 .commandTimeout(redisTimeout)
+                .readFrom(ReadFrom.MASTER_PREFERRED)
                 .build();
 
         return new LettuceConnectionFactory(serverConfig, clientConfig);
