@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Data
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -32,13 +33,13 @@ public class OrderItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     @JsonIgnore
     @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private Order order;
 
     @Column(nullable = false)
@@ -99,7 +100,6 @@ public class OrderItem {
     @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private List<OrderItemAddOn> itemAddOns = new ArrayList<>();
 
     @Column(length = 500)
