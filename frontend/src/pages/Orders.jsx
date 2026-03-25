@@ -865,14 +865,8 @@ export default function Orders() {
       // Show success notification
       showSuccessNotification(t('orders.itemAddedSuccess', '{{name}} added successfully!', { name: selectedProduct?.name || 'Item' }));
 
-      // Background sync - don't block UI
-      loadTablesAndOrders().then(() => {
-        const updatedOrders = tableOrders[selectedTable?.id] || [];
-        const updatedOrder = updatedOrders.find(o => o.id === editingOrder.id);
-        if (updatedOrder) {
-          setEditingOrder(updatedOrder);
-        }
-      });
+      // Background sync - useEffect handles editingOrder update from fresh tableOrders
+      loadTablesAndOrders();
     } catch (error) {
       console.error('Failed to add item:', error);
       alert(t('orders.addItemError', 'Failed to add item: ') + (error.response?.data?.message || error.message));
