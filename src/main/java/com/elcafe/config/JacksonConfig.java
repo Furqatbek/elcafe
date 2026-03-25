@@ -22,6 +22,6 @@ public class JacksonConfig {
 
     @Bean
     public Jackson2ObjectMapperBuilderCustomizer hibernateObjectMapperCustomizer(Hibernate6Module hibernate6Module) {
-        return builder -> builder.modules(hibernate6Module);
+        return builder -> builder.modulesToInstall(hibernate6Module);
     }
 }
