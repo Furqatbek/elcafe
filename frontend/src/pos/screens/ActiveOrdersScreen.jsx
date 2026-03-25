@@ -57,10 +57,10 @@ const ActiveOrdersScreen = () => {
 
   const handleModifyOrder = (order) => {
     // Store selected order and navigate to modification screen
-    usePOSStore.setState({
+    usePOSStore.setState(state => ({
       activeOrder: order,
-      ui: { ...ui, currentScreen: 'modify-order' }
-    });
+      ui: { ...state.ui, currentScreen: 'modify-order' }
+    }));
   };
 
   const handlePayOrder = (order) => {
@@ -77,7 +77,7 @@ const ActiveOrdersScreen = () => {
     }));
 
     // Store selected order and navigate to payment
-    usePOSStore.setState({
+    usePOSStore.setState(state => ({
       activeOrder: order,
       currentOrder: {
         id: order.id,
@@ -97,16 +97,16 @@ const ActiveOrdersScreen = () => {
         tableIds: order.tableIds,
         guestCount: order.guestCount,
       },
-      ui: { ...ui, currentScreen: 'payment' }
-    });
+      ui: { ...state.ui, currentScreen: 'payment' }
+    }));
   };
 
   const handleSplitBill = (order) => {
     // Store selected order and navigate to split bill screen
-    usePOSStore.setState({
+    usePOSStore.setState(state => ({
       activeOrder: order,
-      ui: { ...ui, currentScreen: 'split-bill' }
-    });
+      ui: { ...state.ui, currentScreen: 'split-bill' }
+    }));
   };
 
   const getStatusColor = (status) => {

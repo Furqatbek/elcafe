@@ -130,6 +130,7 @@ export default function Orders() {
 
   // Success notification state
   const [successMessage, setSuccessMessage] = useState('');
+  const successTimeoutRef = useRef(null);
 
   // Change table modal state
   const [changeTableModalOpen, setChangeTableModalOpen] = useState(false);
@@ -175,11 +176,13 @@ export default function Orders() {
     browserNotificationEnabled: true,
   });
 
-  // Load restaurants on mount
+  // Load restaurants on mount; clear notification timeout on unmount
   useEffect(() => {
     loadRestaurants();
-    // Request browser notification permission
     requestNotificationPermission();
+    return () => {
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+    };
   }, []);
 
   // Track whether any modal is open to pause auto-refresh
@@ -804,8 +807,9 @@ export default function Orders() {
 
   // Show success notification helper
   const showSuccessNotification = (message) => {
+    if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
     setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    successTimeoutRef.current = setTimeout(() => setSuccessMessage(''), 3000);
   };
 
   // Open change table modal

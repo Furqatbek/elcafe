@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -44,6 +44,16 @@ const OrderModificationScreen = () => {
     removedItemIds: [],
     quantityChanges: {}, // itemId -> newQuantity
   });
+  const successTimeoutRef = useRef(null);
+  const navTimeoutRef = useRef(null);
+
+  // Clear pending timers on unmount to prevent state updates on unmounted component
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+      if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current);
+    };
+  }, []);
 
   const restaurantId = 1;
 
@@ -185,8 +195,9 @@ const OrderModificationScreen = () => {
     }
 
     // Brief success feedback
+    if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
     setSuccess(t('pos.modify.itemAdded', 'Item added'));
-    setTimeout(() => setSuccess(null), 1500);
+    successTimeoutRef.current = setTimeout(() => setSuccess(null), 1500);
   };
 
   const handleSaveChanges = async () => {
@@ -215,8 +226,10 @@ const OrderModificationScreen = () => {
         });
       }
 
+      // Reset pending changes so the Save button is disabled and double-save is prevented
+      setPendingChanges({ addedItems: [], removedItemIds: [], quantityChanges: {} });
       setSuccess(t('pos.modify.changesSaved', 'Changes saved successfully'));
-      setTimeout(() => {
+      navTimeoutRef.current = setTimeout(() => {
         setCurrentScreen('active-orders');
       }, 1500);
     } catch (err) {
