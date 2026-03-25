@@ -156,6 +156,32 @@ public class OwnerNotificationService {
     }
 
     /**
+     * Send a single batched low-stock alert covering all affected items for one restaurant.
+     * Callers should prefer this over calling notifyLowStock() in a loop to avoid
+     * submitting one async task per item and saturating the executor queue.
+     */
+    @Async
+    @Transactional
+    public void notifyLowStockBatch(Long restaurantId, List<String[]> items) {
+        // items: each element is [name, currentStock, threshold]
+        if (items == null || items.isEmpty()) return;
+
+        List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.LOW_STOCK);
+        if (subscribers.isEmpty()) return;
+
+        StringBuilder sb = new StringBuilder("📦 <b>Низкий уровень запасов</b>\n\n");
+        for (String[] item : items) {
+            sb.append(String.format("• <b>%s</b> — остаток: %s (мин: %s)\n", item[0], item[1], item[2]));
+        }
+        sb.append("\n⚠️ Рекомендуется пополнить запасы");
+        String message = sb.toString();
+
+        for (OwnerTelegramSubscriber subscriber : subscribers) {
+            sendNotification(subscriber, OwnerNotificationType.LOW_STOCK, message, "INVENTORY", null);
+        }
+    }
+
+    /**
      * Send customer review notification
      */
     @Async

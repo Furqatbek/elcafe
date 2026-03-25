@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -47,25 +48,27 @@ public class LowStockAlertScheduler {
     private void checkLowStockForRestaurant(Restaurant restaurant) {
         List<Ingredient> lowStockItems = ingredientRepository.findLowStockIngredients(restaurant.getId());
 
+        // Collect all below-threshold items first, then send one batched async notification.
+        // Previously one @Async call was submitted per item, causing a task burst that could
+        // saturate the executor queue and force tasks to run synchronously on the scheduler thread.
+        List<String[]> belowThreshold = new ArrayList<>();
         for (Ingredient ingredient : lowStockItems) {
-            // Only alert if below threshold
             BigDecimal threshold = ingredient.getMinimumStock() != null
                     ? ingredient.getMinimumStock()
                     : BigDecimal.TEN;
-
             if (ingredient.getCurrentStock().compareTo(threshold) < 0) {
-                notificationService.notifyLowStock(
-                        restaurant.getId(),
+                belowThreshold.add(new String[]{
                         ingredient.getName(),
-                        ingredient.getCurrentStock().intValue(),
-                        threshold.intValue()
-                );
+                        String.valueOf(ingredient.getCurrentStock().intValue()),
+                        String.valueOf(threshold.intValue())
+                });
             }
         }
 
-        if (!lowStockItems.isEmpty()) {
-            log.info("Low stock alerts sent for {} items in restaurant {}",
-                    lowStockItems.size(), restaurant.getName());
+        if (!belowThreshold.isEmpty()) {
+            notificationService.notifyLowStockBatch(restaurant.getId(), belowThreshold);
+            log.info("Low stock batch alert sent for {} items in restaurant {}",
+                    belowThreshold.size(), restaurant.getName());
         }
     }
 }

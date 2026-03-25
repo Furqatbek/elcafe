@@ -35,8 +35,9 @@ public class AsyncConfig {
     private RejectedExecutionHandler callerRunsWithLoggingPolicy() {
         return (runnable, executor) -> {
             if (!executor.isShutdown()) {
-                log.warn("Async task queue full (capacity: {}), executing in caller thread. " +
+                log.warn("Async task queue full ({}/{} slots used), executing in caller thread. " +
                         "Consider increasing queue capacity or thread pool size.",
+                        executor.getQueue().size(),
                         executor.getQueue().size() + executor.getQueue().remainingCapacity());
                 runnable.run();
             } else {
