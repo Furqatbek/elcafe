@@ -34,18 +34,22 @@ public class SelfServiceSession {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Restaurant restaurant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "table_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private RestaurantTable table;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "qr_code_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private QRCode qrCode;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Customer customer;
 
     @Column(name = "customer_name", length = 100)

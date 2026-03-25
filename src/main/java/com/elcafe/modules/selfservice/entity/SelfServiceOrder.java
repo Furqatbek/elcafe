@@ -27,14 +27,17 @@ public class SelfServiceOrder {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false, unique = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private SelfServiceSession session;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "qr_code_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private QRCode qrCode;
 
     @Enumerated(EnumType.STRING)

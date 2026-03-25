@@ -61,6 +61,7 @@ spring:
     serialization:
       write-dates-as-timestamps: false
       indent-output: true
+      fail-on-empty-beans: false
     deserialization:
       fail-on-unknown-properties: false
     time-zone: Asia/Tashkent
