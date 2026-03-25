@@ -3,11 +3,13 @@ package com.elcafe.modules.bundle.entity;
 import com.elcafe.modules.menu.entity.Product;
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "bundle_items", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"bundle_id", "product_id"})

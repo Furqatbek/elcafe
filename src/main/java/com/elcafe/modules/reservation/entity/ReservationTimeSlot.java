@@ -4,6 +4,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -12,6 +13,7 @@ import java.time.LocalTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "reservation_time_slots")
 public class ReservationTimeSlot {

@@ -3,12 +3,14 @@ package com.elcafe.modules.selfservice.entity;
 import com.elcafe.modules.menu.entity.LinkedItem;
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
 
 /**
  * Modifier (add-on) for a cart item.
  */
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "self_service_cart_modifiers")
 @Getter

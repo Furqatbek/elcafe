@@ -4,6 +4,7 @@ import com.elcafe.modules.inventory.enums.ValuationMethod;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
  * Records which batches were consumed for each transaction.
  * Links orders/transactions to specific batch costs for accurate COGS.
  */
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "batch_consumptions", indexes = {
         @Index(name = "idx_consumption_batch", columnList = "batch_id"),

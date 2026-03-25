@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -13,6 +14,7 @@ import java.time.OffsetDateTime;
  * Tracks all financial state changes to allow reconstruction of order state at any point in time.
  * This is critical for POS systems for auditing, dispute resolution, and compliance.
  */
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "order_financial_events", indexes = {
         @Index(name = "idx_financial_event_order", columnList = "order_id"),

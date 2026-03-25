@@ -4,11 +4,13 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "stock_variance_history", indexes = {
         @Index(name = "idx_variance_history_restaurant", columnList = "restaurant_id"),

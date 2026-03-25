@@ -3,6 +3,7 @@ package com.elcafe.modules.bundle.entity;
 import com.elcafe.modules.menu.entity.Product;
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
 
@@ -10,6 +11,7 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "bundle_options")
 public class BundleOption {

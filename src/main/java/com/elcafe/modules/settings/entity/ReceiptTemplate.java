@@ -4,9 +4,11 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "receipt_templates", indexes = {
         @Index(name = "idx_receipt_template_restaurant", columnList = "restaurant_id", unique = true)

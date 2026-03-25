@@ -6,6 +6,7 @@ import com.elcafe.modules.notification.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
  * Notification entity to track order state notifications for different roles
  * Stores notifications for ADMIN, RESTAURANT, CUSTOMER, COURIER, KITCHEN, WAITER
  */
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "notifications", indexes = {
     @Index(name = "idx_user_role", columnList = "user_role"),

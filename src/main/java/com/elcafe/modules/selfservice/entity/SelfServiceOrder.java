@@ -4,12 +4,14 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.selfservice.enums.SelfServiceOrderType;
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 
 /**
  * Self-service order metadata linked to main order.
  */
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "self_service_orders")
 @Getter

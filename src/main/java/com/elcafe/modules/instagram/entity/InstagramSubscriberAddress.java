@@ -2,6 +2,7 @@ package com.elcafe.modules.instagram.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -10,6 +11,7 @@ import java.time.ZoneOffset;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "instagram_subscriber_addresses")
 public class InstagramSubscriberAddress {

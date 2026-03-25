@@ -2,6 +2,7 @@ package com.elcafe.modules.selfservice.entity;
 
 import com.elcafe.modules.customer.entity.Customer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import jakarta.persistence.*;
@@ -18,6 +19,7 @@ import java.util.List;
 @jakarta.persistence.Table(name = "self_service_sessions")
 @Getter
 @Setter
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

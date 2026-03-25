@@ -4,6 +4,7 @@ import com.elcafe.modules.inventory.enums.CostChangeReason;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.time.LocalDateTime;
  * Tracks historical cost changes for ingredients.
  * Enables historical COGS calculations and cost auditing.
  */
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "ingredient_cost_history", indexes = {
         @Index(name = "idx_cost_history_ingredient", columnList = "ingredient_id"),
