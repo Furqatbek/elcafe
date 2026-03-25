@@ -43,10 +43,12 @@ public class GiftCard {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Restaurant restaurant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "gift_card_type_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private GiftCardType giftCardType;
 
     @Column(name = "card_number", nullable = false, length = 50)
@@ -79,10 +81,12 @@ public class GiftCard {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "purchased_by_customer_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Customer purchasedByCustomer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "purchase_order_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Order purchaseOrder;
 
     @Column(name = "purchase_amount", precision = 10, scale = 2)

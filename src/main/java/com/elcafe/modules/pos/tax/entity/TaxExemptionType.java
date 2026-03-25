@@ -30,6 +30,7 @@ public class TaxExemptionType {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Restaurant restaurant;
 
     @Column(name = "name", nullable = false, length = 100)

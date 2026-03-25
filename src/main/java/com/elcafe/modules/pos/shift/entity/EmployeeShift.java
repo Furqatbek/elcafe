@@ -44,18 +44,22 @@ public class EmployeeShift {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Restaurant restaurant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User employee;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "waiter_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Waiter waiter;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cash_drawer_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private CashDrawer cashDrawer;
 
     @Column(name = "shift_date", nullable = false)
@@ -133,6 +137,7 @@ public class EmployeeShift {
     // Approvals
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "approved_by")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User approvedBy;
 
     @Column(name = "approved_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")

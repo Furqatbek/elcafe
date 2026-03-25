@@ -37,10 +37,12 @@ public class CashDrawerOperation {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cash_drawer_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private CashDrawer cashDrawer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shift_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private EmployeeShift shift;
 
     @Enumerated(EnumType.STRING)
@@ -55,14 +57,17 @@ public class CashDrawerOperation {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "operator_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User operator;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Payment payment;
 
     @Column(name = "notes", columnDefinition = "TEXT")

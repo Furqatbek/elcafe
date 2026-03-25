@@ -36,18 +36,22 @@ public class TaxExemptionLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Restaurant restaurant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Customer customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exemption_type_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private TaxExemptionType exemptionType;
 
     @Column(name = "exemption_number", length = 100)
@@ -58,6 +62,7 @@ public class TaxExemptionLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "applied_by", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User appliedBy;
 
     @Column(name = "reason", length = 500)

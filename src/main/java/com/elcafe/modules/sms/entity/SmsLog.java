@@ -46,14 +46,17 @@ public class SmsLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "template_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private SmsTemplate template;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "campaign_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private SmsCampaign campaign;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "automation_rule_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private SmsAutomationRule automationRule;
 
     @Column(name = "eskiz_message_id")

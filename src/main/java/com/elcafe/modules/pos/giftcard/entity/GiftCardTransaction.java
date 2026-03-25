@@ -36,14 +36,17 @@ public class GiftCardTransaction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "gift_card_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private GiftCard giftCard;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Payment payment;
 
     @Enumerated(EnumType.STRING)
@@ -61,6 +64,7 @@ public class GiftCardTransaction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "performed_by")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User performedBy;
 
     @Column(name = "notes", columnDefinition = "TEXT")
