@@ -73,7 +73,7 @@ class WaiterServiceTest {
 
         WaiterResponse result = waiterService.getById(1L);
         assertEquals(waiter.getName(), result.getName());
-        assertEquals(2L, result.getActiveTablesCount());
+        assertEquals(Long.valueOf(2L), result.getActiveTablesCount());
     }
 
     @Test
