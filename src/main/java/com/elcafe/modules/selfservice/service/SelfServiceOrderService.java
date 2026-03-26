@@ -449,7 +449,7 @@ public class SelfServiceOrderService {
 
         Order order = createOrder(session, customer, diningTable, orderType, subtotal, customerNotes, settings);
         List<OrderItem> orderItems = convertCartItemsToOrderItems(cartItems, order);
-        order.setItems(new HashSet<>(orderItems));
+        order.setItems(new ArrayList<>(orderItems));
 
         applyCouponIfProvided(request, order, session, customer, subtotal, orderType, orderItems);
         recalculateTotalAfterDiscount(order, subtotal);
