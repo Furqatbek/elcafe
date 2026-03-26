@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.mock.bean.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.web.servlet.MockMvc;
@@ -60,16 +60,16 @@ class WaiterOrderControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockitoBean
+    @MockBean
     private WaiterOrderService waiterOrderService;
 
-    @MockitoBean
+    @MockBean
     private OrderEventService orderEventService;
 
-    @MockitoBean
+    @MockBean
     private JwtUtil jwtUtil;
 
-    @MockitoBean
+    @MockBean
     private UserDetailsService userDetailsService;
 
     // ----- Helper methods -----
