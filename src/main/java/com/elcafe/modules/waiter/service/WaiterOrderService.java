@@ -113,7 +113,7 @@ public class WaiterOrderService {
                 .discount(BigDecimal.ZERO)
                 .total(BigDecimal.ZERO)
                 .customerNotes(request.getCustomerNotes())
-                .items(new HashSet<>())
+                .items(new ArrayList<>())
                 .build();
 
         Order savedOrder = orderRepository.save(order);
@@ -296,7 +296,7 @@ public class WaiterOrderService {
         // Create a temporary order with just new items to deduct ingredients
         Order tempOrder = Order.builder()
                 .orderNumber(order.getOrderNumber() + "-ADD")
-                .items(new HashSet<>(newItems))
+                .items(new ArrayList<>(newItems))
                 .build();
 
         try {

@@ -73,7 +73,7 @@ public class ConsumerOrderService {
                 .orderSource(request.getOrderSource())
                 .customerNotes(request.getCustomerNotes())
                 .scheduledFor(request.getScheduledFor() != null ? request.getScheduledFor().atOffset(ZoneOffset.UTC) : null)
-                .items(new HashSet<>())
+                .items(new ArrayList<>())
                 .statusHistory(new ArrayList<>())
                 .build();
 
