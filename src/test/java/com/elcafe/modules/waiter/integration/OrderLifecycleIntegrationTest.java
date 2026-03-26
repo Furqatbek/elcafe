@@ -345,11 +345,12 @@ class OrderLifecycleIntegrationTest {
         em.flush();
         em.clear();
 
-        List<OrderEvent> events = orderEventRepository.findByOrderIdOrderByCreatedAtAsc(saved.getId());
+        List<OrderEvent> events = orderEventRepository.findByOrderIdOrderByCreatedAtDesc(saved.getId());
         assertEquals(3, events.size());
-        assertEquals(OrderEventType.ORDER_CREATED, events.get(0).getEventType());
+        // Desc order: CLOSED, UPDATED, CREATED
+        assertEquals(OrderEventType.ORDER_CLOSED, events.get(0).getEventType());
         assertEquals(OrderEventType.ORDER_UPDATED, events.get(1).getEventType());
-        assertEquals(OrderEventType.ORDER_CLOSED, events.get(2).getEventType());
+        assertEquals(OrderEventType.ORDER_CREATED, events.get(2).getEventType());
     }
 
     // ==================== Concurrent modifications ====================
