@@ -298,6 +298,7 @@ public class Order {
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @BatchSize(size = 20)
     private List<Payment> payments = new ArrayList<>();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
