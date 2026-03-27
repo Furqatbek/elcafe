@@ -214,6 +214,8 @@ public class POSOrderItemService {
 
         BigDecimal serviceFee = order.getServiceFee() != null ? order.getServiceFee() : BigDecimal.ZERO;
         BigDecimal entryFee = order.getEntryFee() != null ? order.getEntryFee() : BigDecimal.ZERO;
-        order.setTotal(subtotal.add(order.getTax()).add(order.getDeliveryFee()).add(serviceFee).add(entryFee));
+        BigDecimal discount = order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO;
+        BigDecimal deliveryFee = order.getDeliveryFee() != null ? order.getDeliveryFee() : BigDecimal.ZERO;
+        order.setTotal(subtotal.add(order.getTax()).add(deliveryFee).add(serviceFee).add(entryFee).subtract(discount));
     }
 }

@@ -347,8 +347,13 @@ public class WaiterOrderService {
         }
 
         if (request.getQuantity() != null) {
-            item.setQuantity(request.getQuantity());
-            item.setTotalPrice(item.getUnitPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
+            if (request.getQuantity() < 1) {
+                // Quantity 0 or negative means remove the item
+                order.getItems().remove(item);
+            } else {
+                item.setQuantity(request.getQuantity());
+                item.setTotalPrice(item.getUnitPrice().multiply(BigDecimal.valueOf(request.getQuantity())));
+            }
         }
 
         if (request.getAddOns() != null) {
@@ -849,7 +854,8 @@ public class WaiterOrderService {
         order.setTax(tax);
 
         // Calculate total
-        BigDecimal total = subtotal.add(tax).subtract(order.getDiscount());
+        BigDecimal discount = order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO;
+        BigDecimal total = subtotal.add(tax).subtract(discount);
         order.setTotal(total);
 
         // Keep grandTotal in sync so payment validation uses the correct amount
