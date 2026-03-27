@@ -68,7 +68,7 @@ export default function KitchenDashboard() {
       loadOrders(); // Load orders immediately when restaurant is selected
       const interval = setInterval(() => {
         loadOrders();
-      }, 10000); // Refresh every 10 seconds
+      }, 30000); // Refresh every 30 seconds (primary updates via WebSocket)
       return () => clearInterval(interval);
     }
   }, [selectedRestaurant]);

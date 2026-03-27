@@ -195,12 +195,12 @@ export default function Orders() {
     }
   }, [selectedRestaurantId]);
 
-  // Auto-refresh every 5 seconds, but pause when any modal is open
+  // Auto-refresh every 30 seconds as fallback (primary updates come via WebSocket)
   useEffect(() => {
     if (!selectedRestaurantId || anyModalOpen) return;
     const interval = setInterval(() => {
       loadTablesAndOrders();
-    }, 5000);
+    }, 30000);
     return () => clearInterval(interval);
   }, [selectedRestaurantId, anyModalOpen]);
 
