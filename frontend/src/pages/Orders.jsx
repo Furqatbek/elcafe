@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { orderAPI, restaurantAPI, menuAPI, tablesAPI, posAPI } from '../services/api';
 import { useOrderNotifications, requestNotificationPermission } from '../hooks/useOrderNotifications';
+import { useWebSocketNotifications } from '../hooks/useWebSocketNotifications';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -195,7 +196,21 @@ export default function Orders() {
     }
   }, [selectedRestaurantId]);
 
-  // Auto-refresh every 30 seconds as fallback (primary updates come via WebSocket)
+  // WebSocket: refresh data on real-time order events
+  useWebSocketNotifications({
+    restaurantId: selectedRestaurantId || null,
+    enabled: !!selectedRestaurantId,
+    toastEnabled: false,
+    soundEnabled: false,
+    browserNotificationEnabled: false,
+    onOrderEvent: useCallback(() => {
+      if (selectedRestaurantId && !anyModalOpen) {
+        loadTablesAndOrders();
+      }
+    }, [selectedRestaurantId, anyModalOpen]),
+  });
+
+  // Auto-refresh every 30 seconds as fallback (in case WebSocket disconnects)
   useEffect(() => {
     if (!selectedRestaurantId || anyModalOpen) return;
     const interval = setInterval(() => {

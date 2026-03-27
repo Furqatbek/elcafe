@@ -146,6 +146,9 @@ public class WebSocketEventHandler {
             // Broadcast to all waiters
             messagingTemplate.convertAndSend("/topic/waiter/orders", message);
 
+            // Broadcast to admin panel
+            broadcastToAdminPanel(event.getOrderId(), "order.submitted");
+
             // Notify specific waiter
             if (event.getWaiterId() != null) {
                 messagingTemplate.convertAndSendToUser(
@@ -192,6 +195,9 @@ public class WebSocketEventHandler {
 
             // Broadcast to kitchen (to update display)
             messagingTemplate.convertAndSend("/topic/kitchen", message);
+
+            // Broadcast to admin panel
+            broadcastToAdminPanel(event.getOrderId(), "order.ready");
         } catch (Exception e) {
             log.error("Error broadcasting order ready event: {}", e.getMessage(), e);
         }
@@ -227,6 +233,9 @@ public class WebSocketEventHandler {
 
             // Broadcast to all waiters
             messagingTemplate.convertAndSend("/topic/waiter/orders", message);
+
+            // Broadcast to admin panel
+            broadcastToAdminPanel(event.getOrderId(), "order.bill_requested");
         } catch (Exception e) {
             log.error("Error broadcasting bill requested event: {}", e.getMessage(), e);
         }
@@ -263,6 +272,9 @@ public class WebSocketEventHandler {
 
             // Broadcast to all waiters
             messagingTemplate.convertAndSend("/topic/waiter/orders", message);
+
+            // Broadcast to admin panel
+            broadcastToAdminPanel(event.getOrderId(), "order.paid");
         } catch (Exception e) {
             log.error("Error broadcasting order paid event: {}", e.getMessage(), e);
         }
@@ -286,6 +298,9 @@ public class WebSocketEventHandler {
                                 LocalDateTime.now())
                 );
             }
+
+            // Broadcast to admin panel
+            broadcastToAdminPanel(event.getOrderId(), "order.item_added");
         } catch (Exception e) {
             log.error("Error broadcasting item added event: {}", e.getMessage(), e);
         }
@@ -310,6 +325,9 @@ public class WebSocketEventHandler {
                                 LocalDateTime.now())
                 );
             }
+
+            // Broadcast to admin panel
+            broadcastToAdminPanel(event.getOrderId(), "order.item_removed");
         } catch (Exception e) {
             log.error("Error broadcasting item removed event: {}", e.getMessage(), e);
         }

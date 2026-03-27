@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { kitchenAPI, restaurantAPI } from '../services/api';
 import { formatTime } from '../utils/dateUtils';
 import { useOrderNotifications, requestNotificationPermission } from '../hooks/useOrderNotifications';
+import { useWebSocketNotifications } from '../hooks/useWebSocketNotifications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -63,12 +64,24 @@ export default function KitchenDashboard() {
     requestNotificationPermission();
   }, []);
 
+  // WebSocket: refresh kitchen on real-time order events
+  useWebSocketNotifications({
+    restaurantId: selectedRestaurant || null,
+    enabled: !!selectedRestaurant,
+    toastEnabled: false,
+    soundEnabled: false,
+    browserNotificationEnabled: false,
+    onOrderEvent: useCallback(() => {
+      if (selectedRestaurant) loadOrders();
+    }, [selectedRestaurant]),
+  });
+
   useEffect(() => {
     if (selectedRestaurant) {
-      loadOrders(); // Load orders immediately when restaurant is selected
+      loadOrders();
       const interval = setInterval(() => {
         loadOrders();
-      }, 30000); // Refresh every 30 seconds (primary updates via WebSocket)
+      }, 30000); // Fallback refresh every 30 seconds
       return () => clearInterval(interval);
     }
   }, [selectedRestaurant]);
