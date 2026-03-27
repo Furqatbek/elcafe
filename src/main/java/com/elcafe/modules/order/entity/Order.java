@@ -284,6 +284,7 @@ public class Order {
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @BatchSize(size = 20)
     private List<OrderItem> items = new ArrayList<>();
 
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
