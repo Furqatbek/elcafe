@@ -125,7 +125,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Object[]> findDailyRevenueByWaiter(@Param("waiterId") Long waiterId, @Param("startDate") OffsetDateTime startDate);
 
     // POS: Find open dine-in orders for a restaurant (includes orders with orderTables, diningTable, or legacy tableIds)
-    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items LEFT JOIN FETCH o.orderTables ot LEFT JOIN FETCH ot.table WHERE o.restaurant.id = :restaurantId AND (SIZE(o.orderTables) > 0 OR o.diningTable IS NOT NULL OR o.tableIds IS NOT NULL) AND o.status IN :statuses ORDER BY o.createdAt DESC")
+    // Note: only JOIN FETCH items (one collection) to avoid cartesian product duplicates with List<OrderItem>.
+    // orderTables are loaded via @BatchSize on the entity.
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND (SIZE(o.orderTables) > 0 OR o.diningTable IS NOT NULL OR o.tableIds IS NOT NULL) AND o.status IN :statuses ORDER BY o.createdAt DESC")
     List<Order> findByRestaurant_IdAndDiningTableIsNotNullAndStatusIn(
             @Param("restaurantId") Long restaurantId,
             @Param("statuses") List<OrderStatus> statuses);
@@ -193,7 +195,7 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     /**
      * Find recent orders by customer phone (for order tracking)
      */
-    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items LEFT JOIN FETCH o.statusHistory " +
+    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items " +
            "WHERE o.customer.phone = :phone AND o.createdAt >= :since ORDER BY o.createdAt DESC")
     List<Order> findByCustomerPhoneAndCreatedAtAfterWithDetails(
             @Param("phone") String phone,

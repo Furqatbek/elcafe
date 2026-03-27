@@ -16,6 +16,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.hibernate.annotations.BatchSize;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.springframework.data.annotation.CreatedDate;
@@ -57,14 +58,7 @@ import java.util.stream.Collectors;
     attributeNodes = {
         @NamedAttributeNode("items"),
         @NamedAttributeNode("diningTable"),
-        @NamedAttributeNode("waiter"),
-        @NamedAttributeNode(value = "orderTables", subgraph = "orderTables-subgraph")
-    },
-    subgraphs = {
-        @NamedSubgraph(
-            name = "orderTables-subgraph",
-            attributeNodes = @NamedAttributeNode("table")
-        )
+        @NamedAttributeNode("waiter")
     }
 )
 public class Order {
@@ -113,6 +107,7 @@ public class Order {
     @Builder.Default
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @BatchSize(size = 20)
     private Set<OrderTable> orderTables = new HashSet<>();
 
     // Guest count for dine-in orders
@@ -309,6 +304,7 @@ public class Order {
     @JsonIgnore
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    @BatchSize(size = 20)
     private List<OrderStatusHistory> statusHistory = new ArrayList<>();
 
     @CreatedDate
