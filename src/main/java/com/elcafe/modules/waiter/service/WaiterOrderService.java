@@ -30,6 +30,7 @@ import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.entity.RestaurantTable.TableStatus;
 import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.waiter.entity.Waiter;
+import com.elcafe.modules.waiter.event.OrderEventPublisher;
 import com.elcafe.modules.waiter.enums.OrderEventType;
 import com.elcafe.modules.waiter.repository.WaiterRepository;
 import lombok.RequiredArgsConstructor;
@@ -67,6 +68,7 @@ public class WaiterOrderService {
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final OrderEventService orderEventService;
+    private final OrderEventPublisher orderEventPublisher;
     private final InventoryService inventoryService;
     private final DiscountCalculationService discountCalculationService;
     private final CouponValidationService couponValidationService;
@@ -199,8 +201,9 @@ public class WaiterOrderService {
             }
         }
 
-        // Record event
+        // Record event and broadcast via WebSocket
         orderEventService.recordEvent(savedOrder, OrderEventType.ORDER_CREATED, waiter.getName());
+        orderEventPublisher.publishOrderCreated(savedOrder, waiter.getName());
 
         log.info("Created order {} for table {} by waiter {} with {} items",
                 savedOrder.getOrderNumber(), table.getTableNumber(), waiter.getName(),
@@ -487,8 +490,9 @@ public class WaiterOrderService {
 
         Order updatedOrder = orderRepository.save(order);
 
-        // Record event
+        // Record event and broadcast via WebSocket
         orderEventService.recordEvent(updatedOrder, OrderEventType.ORDER_SUBMITTED_TO_KITCHEN, waiter.getName());
+        orderEventPublisher.publishOrderSubmitted(updatedOrder, waiter.getName());
 
         log.info("Submitted order {} to kitchen by waiter {}", order.getOrderNumber(), waiter.getName());
 
@@ -545,8 +549,9 @@ public class WaiterOrderService {
             tableRepository.save(order.getDiningTable());
         }
 
-        // Record event
+        // Record event and broadcast via WebSocket
         orderEventService.recordEvent(order, OrderEventType.BILL_REQUESTED, waiter.getName());
+        orderEventPublisher.publishBillRequested(order, null, waiter.getName());
 
         log.info("Bill requested for order {} by waiter {}", order.getOrderNumber(), waiter.getName());
 
@@ -580,8 +585,10 @@ public class WaiterOrderService {
 
         Order updatedOrder = orderRepository.save(order);
 
-        // Record event
+        // Record event and broadcast via WebSocket
         orderEventService.recordEvent(updatedOrder, OrderEventType.ORDER_CLOSED, waiter.getName());
+        orderEventPublisher.publishOrderPaid(updatedOrder, updatedOrder.getTotal(),
+                "COMPLETED", null, waiter.getName());
 
         // Calculate commission for the waiter
         waiterCommissionService.calculateCommissionForOrder(updatedOrder)
