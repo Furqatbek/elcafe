@@ -35,6 +35,12 @@ public class POSTableService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
 
+        // Verify order has been paid before closing
+        if (!order.isFullyPaid() && order.getStatus() != OrderStatus.CANCELLED) {
+            throw new IllegalStateException("Cannot close order — payment has not been recorded. " +
+                    "Process payment before closing the order.");
+        }
+
         // Update order status to DELIVERED/COMPLETED if not already
         if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.CANCELLED) {
             order.setStatus(OrderStatus.DELIVERED);

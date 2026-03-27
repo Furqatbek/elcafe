@@ -564,6 +564,12 @@ public class WaiterOrderService {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
+        // Verify order has been paid before closing
+        if (!order.isFullyPaid()) {
+            throw new BadRequestException("Cannot close order — payment has not been recorded. " +
+                    "Process payment before closing the order.");
+        }
+
         order.setStatus(OrderStatus.COMPLETED);
 
         // Update table status to cleaning
