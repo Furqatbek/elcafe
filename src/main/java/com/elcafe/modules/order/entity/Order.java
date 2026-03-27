@@ -357,8 +357,8 @@ public class Order {
      * Check if two order items match (same product, variant, addOns, special instructions, and bundle).
      */
     private boolean itemsMatch(OrderItem existing, OrderItem newItem) {
-        // Must have same productId
-        if (!existing.getProductId().equals(newItem.getProductId())) {
+        // Must have same productId (null-safe for bundle items)
+        if (!Objects.equals(existing.getProductId(), newItem.getProductId())) {
             return false;
         }
 

@@ -216,6 +216,11 @@ public class POSOrderItemService {
         BigDecimal entryFee = order.getEntryFee() != null ? order.getEntryFee() : BigDecimal.ZERO;
         BigDecimal discount = order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO;
         BigDecimal deliveryFee = order.getDeliveryFee() != null ? order.getDeliveryFee() : BigDecimal.ZERO;
-        order.setTotal(subtotal.add(order.getTax()).add(deliveryFee).add(serviceFee).add(entryFee).subtract(discount));
+        BigDecimal total = subtotal.add(order.getTax()).add(deliveryFee).add(serviceFee).add(entryFee).subtract(discount);
+        order.setTotal(total);
+
+        // Keep grandTotal in sync so payment validation uses the correct amount
+        BigDecimal tipAmount = order.getTipAmount() != null ? order.getTipAmount() : BigDecimal.ZERO;
+        order.setGrandTotal(total.add(tipAmount));
     }
 }
