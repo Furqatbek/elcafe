@@ -191,7 +191,8 @@ public class POSOrderItemService {
         return order.getStatus() == OrderStatus.NEW ||
                 order.getStatus() == OrderStatus.PENDING ||
                 order.getStatus() == OrderStatus.ACCEPTED ||
-                order.getStatus() == OrderStatus.PREPARING;
+                order.getStatus() == OrderStatus.PREPARING ||
+                order.getStatus() == OrderStatus.READY;
     }
 
     /**
