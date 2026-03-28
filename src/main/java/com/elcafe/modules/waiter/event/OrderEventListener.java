@@ -7,6 +7,7 @@ import com.elcafe.modules.waiter.repository.OrderEventRepository;
 import com.elcafe.modules.waiter.service.WaiterPerformanceService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -31,6 +32,7 @@ public class OrderEventListener {
     private final OrderRepository orderRepository;
     private final WaiterPerformanceService performanceService;
     private final ObjectMapper objectMapper;
+    private final EntityManager entityManager;
 
     /**
      * Handle order created events
@@ -263,7 +265,7 @@ public class OrderEventListener {
             String metadata = objectMapper.writeValueAsString(event.getMetadata());
 
             OrderEvent orderEvent = OrderEvent.builder()
-                    .order(orderRepository.getReferenceById(event.getOrderId()))
+                    .order(entityManager.getReference(Order.class, event.getOrderId()))
                     .eventType(event.getEventType())
                     .triggeredBy(event.getTriggeredBy())
                     .metadata(metadata)
@@ -277,7 +279,7 @@ public class OrderEventListener {
             log.error("Error serializing event metadata: {}", e.getMessage());
             // Save without metadata if serialization fails
             OrderEvent orderEvent = OrderEvent.builder()
-                    .order(orderRepository.getReferenceById(event.getOrderId()))
+                    .order(entityManager.getReference(Order.class, event.getOrderId()))
                     .eventType(event.getEventType())
                     .triggeredBy(event.getTriggeredBy())
                     .metadata("{}")
