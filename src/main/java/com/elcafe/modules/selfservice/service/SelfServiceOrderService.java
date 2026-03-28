@@ -12,6 +12,7 @@ import com.elcafe.modules.menu.repository.ProductVariantRepository;
 import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
+import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -567,6 +568,7 @@ public class SelfServiceOrderService {
                 .deliveryFee(BigDecimal.ZERO)
                 .total(subtotal)
                 .customerNotes(customerNotes)
+                .orderSource(OrderSource.SELF_SERVICE)
                 .placedAt(OffsetDateTime.now())
                 .build();
     }
@@ -594,6 +596,25 @@ public class SelfServiceOrderService {
                 orderItem.setVariantId(cartItem.getVariant() != null ? cartItem.getVariant().getId() : null);
                 orderItem.setVariantName(cartItem.getVariant() != null ? cartItem.getVariant().getName() : null);
                 orderItem.setIsBundle(false);
+            }
+
+            // Transfer cart modifiers/add-ons to order item
+            if (cartItem.getModifiers() != null && !cartItem.getModifiers().isEmpty()) {
+                for (SelfServiceCartModifier modifier : cartItem.getModifiers()) {
+                    String modifierName = modifier.getLinkedItem() != null
+                            && modifier.getLinkedItem().getLinkedProduct() != null
+                            ? modifier.getLinkedItem().getLinkedProduct().getName()
+                            : "Add-on";
+                    Long addOnId = modifier.getLinkedItem() != null
+                            ? modifier.getLinkedItem().getId()
+                            : null;
+                    orderItem.addAddOn(
+                            addOnId,
+                            modifierName,
+                            modifier.getPrice() != null ? modifier.getPrice() : BigDecimal.ZERO,
+                            modifier.getQuantity() != null ? modifier.getQuantity() : 1
+                    );
+                }
             }
 
             orderItems.add(orderItem);

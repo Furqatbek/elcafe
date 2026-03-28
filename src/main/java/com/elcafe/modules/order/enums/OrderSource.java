@@ -8,5 +8,6 @@ public enum OrderSource {
     PHONE_CALL,
     WALK_IN,
     WAITER,
+    SELF_SERVICE,
     OTHER
 }
