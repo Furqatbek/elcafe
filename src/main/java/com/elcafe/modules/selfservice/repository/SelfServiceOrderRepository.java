@@ -5,6 +5,7 @@ import com.elcafe.modules.selfservice.entity.SelfServiceOrder;
 import com.elcafe.modules.selfservice.enums.SelfServiceOrderType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,6 +25,7 @@ public interface SelfServiceOrderRepository extends JpaRepository<SelfServiceOrd
 
     List<SelfServiceOrder> findBySessionId(Long sessionId);
 
+    @EntityGraph(attributePaths = {"order", "order.items", "session", "qrCode"})
     Page<SelfServiceOrder> findByOrderRestaurantIdOrderByCreatedAtDesc(Long restaurantId, Pageable pageable);
 
     @Query("SELECT o FROM SelfServiceOrder o WHERE o.order.restaurant.id = :restaurantId " +
