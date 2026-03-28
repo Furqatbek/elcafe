@@ -22,9 +22,9 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
-    // Note: no @EntityGraph on paginated queries — JOIN FETCH + pagination
-    // causes Hibernate to load all rows into memory (HHH90003004 warning).
-    // Items are loaded via open-in-view or @BatchSize when accessed.
+    @Override
+    @EntityGraph(attributePaths = {"items"}, type = EntityGraph.EntityGraphType.FETCH)
+    Page<Order> findAll(Specification<Order> spec, Pageable pageable);
 
     @Override
     @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)

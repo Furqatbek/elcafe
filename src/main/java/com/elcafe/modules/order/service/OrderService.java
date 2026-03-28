@@ -231,7 +231,8 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Page<Order> getAllOrders(Pageable pageable) {
-        return orderRepository.findAll(pageable);
+        // Use spec-based findAll to ensure @EntityGraph loads items
+        return orderRepository.findAll((Specification<Order>) null, pageable);
     }
 
     /**
