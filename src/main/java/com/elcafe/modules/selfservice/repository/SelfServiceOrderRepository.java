@@ -21,6 +21,7 @@ public interface SelfServiceOrderRepository extends JpaRepository<SelfServiceOrd
     /** Terminal order statuses that indicate an order is no longer pending. */
     List<OrderStatus> TERMINAL_STATUSES = List.of(OrderStatus.CANCELLED, OrderStatus.COMPLETED);
 
+    @EntityGraph(attributePaths = {"order", "order.items", "session", "qrCode"})
     Optional<SelfServiceOrder> findByOrderId(Long orderId);
 
     List<SelfServiceOrder> findBySessionId(Long sessionId);
