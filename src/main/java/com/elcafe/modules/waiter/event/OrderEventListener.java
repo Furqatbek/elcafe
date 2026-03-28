@@ -263,9 +263,7 @@ public class OrderEventListener {
             String metadata = objectMapper.writeValueAsString(event.getMetadata());
 
             OrderEvent orderEvent = OrderEvent.builder()
-                    .order(com.elcafe.modules.order.entity.Order.builder()
-                            .id(event.getOrderId())
-                            .build())
+                    .order(orderRepository.getReferenceById(event.getOrderId()))
                     .eventType(event.getEventType())
                     .triggeredBy(event.getTriggeredBy())
                     .metadata(metadata)
@@ -279,9 +277,7 @@ public class OrderEventListener {
             log.error("Error serializing event metadata: {}", e.getMessage());
             // Save without metadata if serialization fails
             OrderEvent orderEvent = OrderEvent.builder()
-                    .order(com.elcafe.modules.order.entity.Order.builder()
-                            .id(event.getOrderId())
-                            .build())
+                    .order(orderRepository.getReferenceById(event.getOrderId()))
                     .eventType(event.getEventType())
                     .triggeredBy(event.getTriggeredBy())
                     .metadata("{}")
