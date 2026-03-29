@@ -2,7 +2,7 @@ package com.elcafe.modules.analytics.service;
 
 import com.elcafe.modules.analytics.dto.InventoryTurnoverDTO;
 import com.elcafe.modules.financial.service.ShiftTimeService;
-import com.elcafe.modules.inventory.repository.IngredientRepository;
+import com.elcafe.modules.menu.repository.IngredientRepository;
 import com.elcafe.modules.inventory.service.BatchConsumptionService;
 import com.elcafe.modules.inventory.service.InventoryValuationService;
 import com.elcafe.modules.menu.repository.ProductRepository;
