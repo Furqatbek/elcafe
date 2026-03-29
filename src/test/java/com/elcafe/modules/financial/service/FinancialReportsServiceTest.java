@@ -44,7 +44,9 @@ class FinancialReportsServiceTest {
     void setUp() {
         ShiftTimeService.ShiftTimeRange range = new ShiftTimeService.ShiftTimeRange(
                 OffsetDateTime.of(2026, 3, 1, 9, 0, 0, 0, ZoneOffset.of("+05:00")),
-                OffsetDateTime.of(2026, 3, 31, 23, 0, 0, 0, ZoneOffset.of("+05:00"))
+                OffsetDateTime.of(2026, 3, 31, 23, 0, 0, 0, ZoneOffset.of("+05:00")),
+                java.time.LocalTime.of(9, 0),
+                java.time.LocalTime.of(23, 0)
         );
         when(shiftTimeService.getShiftTimeRangeForPeriod(anyLong(), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(range);
@@ -53,11 +55,9 @@ class FinancialReportsServiceTest {
     @Test
     @DisplayName("generateProfitLossReport — returns report")
     void profitLoss_returnsReport() {
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
-        when(expenseRepository.sumAmountByRestaurantIdAndDateRange(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(payrollRepository.sumAmountByRestaurantIdAndDateRange(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
-        when(shiftTimeService.getRevenueStatusList()).thenReturn(List.of());
+        when(expenseRepository.findByRestaurant_IdAndExpenseDateBetween(anyLong(), any(), any())).thenReturn(List.of());
 
         var result = reportsService.generateProfitLossReport(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
         assertNotNull(result);
@@ -66,7 +66,7 @@ class FinancialReportsServiceTest {
     @Test
     @DisplayName("generateBalanceSheet — returns report")
     void balanceSheet_returnsReport() {
-        when(accountRepository.findByRestaurantId(1L)).thenReturn(List.of());
+        when(accountRepository.findByRestaurant_IdAndType(anyLong(), any())).thenReturn(List.of());
 
         var result = reportsService.generateBalanceSheet(1L, LocalDate.now());
         assertNotNull(result);
@@ -75,8 +75,7 @@ class FinancialReportsServiceTest {
     @Test
     @DisplayName("generateCashFlowReport — returns report")
     void cashFlow_returnsReport() {
-        when(transactionRepository.findByAccountRestaurantIdAndTransactionDateBetween(anyLong(), any(), any()))
-                .thenReturn(List.of());
+        when(accountRepository.findByRestaurant_IdAndCategory(anyLong(), any())).thenReturn(List.of());
 
         var result = reportsService.generateCashFlowReport(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
         assertNotNull(result);
@@ -85,9 +84,9 @@ class FinancialReportsServiceTest {
     @Test
     @DisplayName("generateCogsReport — returns report")
     void cogsReport_returnsReport() {
-        when(transactionRepository.findByAccountRestaurantIdAndTransactionDateBetween(anyLong(), any(), any()))
+        when(accountRepository.findByRestaurant_IdAndCategory(anyLong(), any())).thenReturn(List.of());
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
-        when(accountRepository.findByRestaurantIdAndAccountType(anyLong(), any())).thenReturn(java.util.Optional.empty());
 
         var result = reportsService.generateCogsReport(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
         assertNotNull(result);
@@ -96,13 +95,11 @@ class FinancialReportsServiceTest {
     @Test
     @DisplayName("P&L report — zero revenue and expenses produces zero profit")
     void profitLoss_zeroRevenue_zeroProfit() {
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
-        when(expenseRepository.sumAmountByRestaurantIdAndDateRange(anyLong(), any(), any())).thenReturn(null);
-        when(payrollRepository.sumAmountByRestaurantIdAndDateRange(anyLong(), any(), any())).thenReturn(null);
-        when(shiftTimeService.getRevenueStatusList()).thenReturn(List.of());
+        when(expenseRepository.findByRestaurant_IdAndExpenseDateBetween(anyLong(), any(), any())).thenReturn(List.of());
 
         var result = reportsService.generateProfitLossReport(1L, LocalDate.of(2026, 3, 1), LocalDate.of(2026, 3, 31));
-        assertEquals(0, BigDecimal.ZERO.compareTo(result.getNetProfit()));
+        assertEquals(0, BigDecimal.ZERO.compareTo(result.getNetIncome()));
     }
 }

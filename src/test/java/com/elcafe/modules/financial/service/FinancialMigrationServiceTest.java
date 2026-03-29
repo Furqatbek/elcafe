@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createRestaurant;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
@@ -39,9 +40,9 @@ class FinancialMigrationServiceTest {
     @DisplayName("syncRestaurantFinancialData — returns migration result")
     void sync_returnsResult() {
         when(restaurantRepository.findById(1L)).thenReturn(Optional.of(createRestaurant()));
-        when(accountRepository.findByRestaurantId(1L)).thenReturn(List.of());
-        when(orderRepository.findByRestaurantId(anyLong())).thenReturn(List.of());
-        when(expenseRepository.findByRestaurantIdOrderByExpenseDateDesc(1L)).thenReturn(List.of());
+        when(accountRepository.existsByRestaurant_Id(1L)).thenReturn(true);
+        when(orderRepository.findByRestaurant_IdAndStatus(anyLong(), any())).thenReturn(List.of());
+        when(expenseRepository.findByRestaurant_Id(1L)).thenReturn(List.of());
 
         var result = migrationService.syncRestaurantFinancialData(1L);
         assertNotNull(result);
@@ -52,9 +53,9 @@ class FinancialMigrationServiceTest {
     void syncAll_processesAll() {
         when(restaurantRepository.findAll()).thenReturn(List.of(createRestaurant()));
         when(restaurantRepository.findById(anyLong())).thenReturn(Optional.of(createRestaurant()));
-        when(accountRepository.findByRestaurantId(anyLong())).thenReturn(List.of());
-        when(orderRepository.findByRestaurantId(anyLong())).thenReturn(List.of());
-        when(expenseRepository.findByRestaurantIdOrderByExpenseDateDesc(anyLong())).thenReturn(List.of());
+        when(accountRepository.existsByRestaurant_Id(anyLong())).thenReturn(true);
+        when(orderRepository.findByRestaurant_IdAndStatus(anyLong(), any())).thenReturn(List.of());
+        when(expenseRepository.findByRestaurant_Id(anyLong())).thenReturn(List.of());
 
         List<FinancialMigrationService.MigrationResult> results = migrationService.syncAllRestaurants();
         assertNotNull(results);

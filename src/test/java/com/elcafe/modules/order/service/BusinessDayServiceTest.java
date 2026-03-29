@@ -27,7 +27,7 @@ class BusinessDayServiceTest {
     @Test
     @DisplayName("getBusinessDayRange — returns date range")
     void getBusinessDayRange_returnsRange() {
-        when(workingHoursRepository.findByRestaurantId(anyLong())).thenReturn(List.of());
+        when(workingHoursRepository.findByRestaurant_Id(anyLong())).thenReturn(List.of());
 
         BusinessDayService.DateRange range = businessDayService.getBusinessDayRange(1L, LocalDate.now());
 
@@ -39,7 +39,7 @@ class BusinessDayServiceTest {
     @Test
     @DisplayName("getBusinessDayRangeForPeriod — returns range spanning multiple days")
     void getBusinessDayRangeForPeriod_returnsRange() {
-        when(workingHoursRepository.findByRestaurantId(anyLong())).thenReturn(List.of());
+        when(workingHoursRepository.findByRestaurant_Id(anyLong())).thenReturn(List.of());
 
         BusinessDayService.DateRange range = businessDayService.getBusinessDayRangeForPeriod(
                 1L, LocalDate.now().minusDays(7), LocalDate.now());

@@ -56,8 +56,8 @@ class RevenueServiceTest {
     @Test
     @DisplayName("recordOrderRevenue — records revenue for completed order")
     void recordOrderRevenue_records() {
-        when(accountRepository.findByRestaurantIdAndAccountType(anyLong(), any()))
-                .thenReturn(Optional.of(revenueAccount));
+        when(accountRepository.findByRestaurant_IdAndCategory(anyLong(), any()))
+                .thenReturn(List.of(revenueAccount));
 
         assertDoesNotThrow(() -> revenueService.recordOrderRevenue(order));
     }
@@ -65,8 +65,8 @@ class RevenueServiceTest {
     @Test
     @DisplayName("recordOrderRevenue — creates accounts if not found")
     void recordOrderRevenue_createsAccounts() {
-        when(accountRepository.findByRestaurantIdAndAccountType(anyLong(), any()))
-                .thenReturn(Optional.empty());
+        when(accountRepository.findByRestaurant_IdAndCategory(anyLong(), any()))
+                .thenReturn(List.of());
         when(accountRepository.save(any(Account.class))).thenAnswer(i -> {
             Account a = i.getArgument(0);
             a.setId(1L);
@@ -80,8 +80,8 @@ class RevenueServiceTest {
     @DisplayName("recordCogs — records cost of goods sold")
     void recordCogs_records() {
         when(productIngredientRepository.findByProductId(anyLong())).thenReturn(List.of());
-        when(accountRepository.findByRestaurantIdAndAccountType(anyLong(), any()))
-                .thenReturn(Optional.of(revenueAccount));
+        when(accountRepository.findByRestaurant_IdAndCategory(anyLong(), any()))
+                .thenReturn(List.of(revenueAccount));
 
         assertDoesNotThrow(() -> revenueService.recordCogs(order, java.time.LocalDate.now()));
     }
@@ -89,8 +89,8 @@ class RevenueServiceTest {
     @Test
     @DisplayName("recordRefund — records refund entry")
     void recordRefund_records() {
-        when(accountRepository.findByRestaurantIdAndAccountType(anyLong(), any()))
-                .thenReturn(Optional.of(revenueAccount));
+        when(accountRepository.findByRestaurant_IdAndCategory(anyLong(), any()))
+                .thenReturn(List.of(revenueAccount));
 
         assertDoesNotThrow(() -> revenueService.recordRefund(order, BigDecimal.valueOf(50000), "Customer complaint"));
     }

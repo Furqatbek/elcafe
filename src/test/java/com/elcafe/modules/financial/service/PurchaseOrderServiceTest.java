@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -57,7 +58,7 @@ class PurchaseOrderServiceTest {
         po.setId(1L);
         po.setRestaurant(createRestaurant());
         po.setTotalAmount(BigDecimal.valueOf(500000));
-        po.setStatus(PurchaseOrder.PurchaseOrderStatus.DRAFT);
+        po.setStatus(PurchaseOrder.Status.DRAFT);
     }
 
     @Test
@@ -90,21 +91,20 @@ class PurchaseOrderServiceTest {
         when(purchaseOrderRepository.save(any(PurchaseOrder.class))).thenAnswer(i -> i.getArgument(0));
 
         PurchaseOrder result = purchaseOrderService.approvePurchaseOrder(1L, "admin");
-        assertEquals(PurchaseOrder.PurchaseOrderStatus.APPROVED, result.getStatus());
+        assertEquals(PurchaseOrder.Status.APPROVED, result.getStatus());
     }
 
     @Test
     @DisplayName("getPurchaseOrdersByRestaurant — returns list")
     void getByRestaurant_returnsList() {
-        when(purchaseOrderRepository.findByRestaurantIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(po));
+        when(purchaseOrderRepository.findByRestaurant_Id(1L)).thenReturn(List.of(po));
         assertEquals(1, purchaseOrderService.getPurchaseOrdersByRestaurant(1L).size());
     }
 
     @Test
     @DisplayName("getUnpaidOrders — returns unpaid")
     void getUnpaid_returns() {
-        when(purchaseOrderRepository.findByRestaurantIdAndPaymentDateIsNullAndStatusNot(
-                any(), any())).thenReturn(List.of(po));
+        when(purchaseOrderRepository.findUnpaidOrders(anyLong())).thenReturn(List.of(po));
         assertEquals(1, purchaseOrderService.getUnpaidOrders(1L).size());
     }
 }

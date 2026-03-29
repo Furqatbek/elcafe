@@ -54,7 +54,7 @@ class WaiterControllerTest {
     private WaiterResponse buildResponse(Long id, String name) {
         return WaiterResponse.builder()
                 .id(id).name(name).role(WaiterRole.WAITER).active(true)
-                .activeTablesCount(0L).build();
+                .activeTablesCount(0).build();
     }
 
     @Test

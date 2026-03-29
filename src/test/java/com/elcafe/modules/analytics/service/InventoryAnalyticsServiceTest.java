@@ -42,8 +42,10 @@ class InventoryAnalyticsServiceTest {
         when(shiftTimeService.getShiftTimeRangeForPeriod(anyLong(), any(), any()))
                 .thenReturn(new ShiftTimeService.ShiftTimeRange(
                         OffsetDateTime.now(ZoneOffset.UTC).minusDays(30),
-                        OffsetDateTime.now(ZoneOffset.UTC)));
-        when(ingredientRepository.findByRestaurantId(1L)).thenReturn(List.of());
+                        OffsetDateTime.now(ZoneOffset.UTC),
+                        java.time.LocalTime.of(0, 0),
+                        java.time.LocalTime.of(23, 59)));
+        when(ingredientRepository.findByIsActiveTrue()).thenReturn(List.of());
 
         InventoryTurnoverDTO result = inventoryAnalyticsService.getInventoryTurnover(
                 LocalDate.now().minusDays(30), LocalDate.now(), 1L);

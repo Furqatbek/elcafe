@@ -46,7 +46,7 @@ class ExpenseServiceTest {
         expense.setId(1L);
         expense.setRestaurant(restaurant);
         expense.setAmount(BigDecimal.valueOf(50000));
-        expense.setCategory(Expense.ExpenseCategory.FOOD);
+        expense.setCategory(Expense.ExpenseCategory.SUPPLIES);
         expense.setDescription("Vegetables");
         expense.setExpenseDate(LocalDate.now());
     }
@@ -77,16 +77,16 @@ class ExpenseServiceTest {
     @Test
     @DisplayName("getExpensesByRestaurant — returns list")
     void getExpensesByRestaurant_returnsList() {
-        when(expenseRepository.findByRestaurantIdOrderByExpenseDateDesc(1L)).thenReturn(List.of(expense));
+        when(expenseRepository.findByRestaurant_Id(1L)).thenReturn(List.of(expense));
         assertEquals(1, expenseService.getExpensesByRestaurant(1L).size());
     }
 
     @Test
     @DisplayName("getExpensesByCategory — filters correctly")
     void getExpensesByCategory_filters() {
-        when(expenseRepository.findByRestaurantIdAndCategoryOrderByExpenseDateDesc(1L, Expense.ExpenseCategory.FOOD))
+        when(expenseRepository.findByRestaurant_IdAndCategory(1L, Expense.ExpenseCategory.SUPPLIES))
                 .thenReturn(List.of(expense));
-        assertEquals(1, expenseService.getExpensesByCategory(1L, Expense.ExpenseCategory.FOOD).size());
+        assertEquals(1, expenseService.getExpensesByCategory(1L, Expense.ExpenseCategory.SUPPLIES).size());
     }
 
     @Test
@@ -94,7 +94,7 @@ class ExpenseServiceTest {
     void getExpensesByDateRange_returns() {
         LocalDate start = LocalDate.now().minusDays(7);
         LocalDate end = LocalDate.now();
-        when(expenseRepository.findByRestaurantIdAndExpenseDateBetweenOrderByExpenseDateDesc(1L, start, end))
+        when(expenseRepository.findByRestaurant_IdAndExpenseDateBetween(1L, start, end))
                 .thenReturn(List.of(expense));
         assertEquals(1, expenseService.getExpensesByDateRange(1L, start, end).size());
     }
@@ -102,7 +102,7 @@ class ExpenseServiceTest {
     @Test
     @DisplayName("getTotalExpensesByDateRange — returns sum")
     void getTotalExpensesByDateRange_returnsSum() {
-        when(expenseRepository.sumAmountByRestaurantIdAndDateRange(anyLong(), any(), any()))
+        when(expenseRepository.getTotalExpensesByDateRange(anyLong(), any(), any()))
                 .thenReturn(BigDecimal.valueOf(150000));
         assertEquals(0, BigDecimal.valueOf(150000).compareTo(
                 expenseService.getTotalExpensesByDateRange(1L, LocalDate.now().minusDays(7), LocalDate.now())));
@@ -111,17 +111,17 @@ class ExpenseServiceTest {
     @Test
     @DisplayName("approveExpense — sets approved status")
     void approveExpense_setsApproved() {
-        expense.setStatus(Expense.ExpenseStatus.PENDING);
         when(expenseRepository.findById(1L)).thenReturn(Optional.of(expense));
         when(expenseRepository.save(any(Expense.class))).thenAnswer(i -> i.getArgument(0));
 
         Expense result = expenseService.approveExpense(1L, "admin");
-        assertEquals(Expense.ExpenseStatus.APPROVED, result.getStatus());
+        assertNotNull(result.getApprovedBy());
     }
 
     @Test
     @DisplayName("deleteExpense — soft deletes")
     void deleteExpense_softDeletes() {
+        expense.setPaymentStatus(Expense.PaymentStatus.UNPAID);
         when(expenseRepository.findById(1L)).thenReturn(Optional.of(expense));
         when(expenseRepository.save(any(Expense.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -132,7 +132,7 @@ class ExpenseServiceTest {
     @Test
     @DisplayName("getUnpaidExpenses — returns unpaid only")
     void getUnpaidExpenses_returns() {
-        when(expenseRepository.findByRestaurantIdAndPaymentDateIsNullOrderByExpenseDateDesc(1L))
+        when(expenseRepository.findUnpaidExpenses(1L))
                 .thenReturn(List.of(expense));
         assertEquals(1, expenseService.getUnpaidExpenses(1L).size());
     }

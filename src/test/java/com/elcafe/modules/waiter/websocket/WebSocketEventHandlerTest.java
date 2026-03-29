@@ -37,10 +37,8 @@ class WebSocketEventHandlerTest {
         Order order = createOrder(1L, OrderStatus.NEW);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        OrderCreatedEvent event = OrderCreatedEvent.builder()
-                .orderId(1L).orderNumber("W001").waiterId(1L)
-                .itemCount(2).totalAmount(BigDecimal.valueOf(50000))
-                .eventTimestamp(LocalDateTime.now()).build();
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                this, 1L, "W001", null, 1L, "test", 2);
 
         handler.handleOrderCreatedForWebSocket(event);
 
@@ -53,10 +51,9 @@ class WebSocketEventHandlerTest {
         Order order = createOrder(1L, OrderStatus.PREPARING);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        OrderSubmittedEvent event = OrderSubmittedEvent.builder()
-                .orderId(1L).orderNumber("W001").waiterId(1L)
-                .itemCount(2).totalAmount(BigDecimal.valueOf(50000))
-                .eventTimestamp(LocalDateTime.now()).build();
+        OrderSubmittedEvent event = new OrderSubmittedEvent(
+                this, 1L, "W001", null, 1L, "test",
+                BigDecimal.valueOf(50000), 2);
 
         handler.handleOrderSubmittedForWebSocket(event);
 

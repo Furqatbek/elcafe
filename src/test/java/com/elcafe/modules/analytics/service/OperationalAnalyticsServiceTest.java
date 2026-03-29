@@ -37,7 +37,9 @@ class OperationalAnalyticsServiceTest {
         when(shiftTimeService.getShiftTimeRangeForPeriod(anyLong(), any(), any()))
                 .thenReturn(new ShiftTimeService.ShiftTimeRange(
                         OffsetDateTime.now(ZoneOffset.UTC).minusDays(7),
-                        OffsetDateTime.now(ZoneOffset.UTC)));
+                        OffsetDateTime.now(ZoneOffset.UTC),
+                        java.time.LocalTime.of(0, 0),
+                        java.time.LocalTime.of(23, 59)));
         when(shiftTimeService.getRevenueStatusList()).thenReturn(List.of());
     }
 
@@ -45,7 +47,7 @@ class OperationalAnalyticsServiceTest {
     @DisplayName("getSalesPerHour — returns hourly breakdown")
     void getSalesPerHour_returns() {
         stubShiftTime();
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
 
         List<SalesPerHourDTO> result = operationalAnalyticsService.getSalesPerHour(
@@ -57,7 +59,7 @@ class OperationalAnalyticsServiceTest {
     @DisplayName("getPeakHours — returns peak hours analysis")
     void getPeakHours_returns() {
         stubShiftTime();
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
 
         PeakHoursDTO result = operationalAnalyticsService.getPeakHours(

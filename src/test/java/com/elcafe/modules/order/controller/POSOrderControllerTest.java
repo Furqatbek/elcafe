@@ -78,7 +78,7 @@ class POSOrderControllerTest {
 
     private POSOrderResponse buildResponse() {
         return POSOrderResponse.builder()
-                .id(1L).orderNumber("ORD-001").status("NEW")
+                .id(1L).orderNumber("ORD-001").status(com.elcafe.modules.order.enums.OrderStatus.NEW)
                 .subtotal(BigDecimal.valueOf(80000)).total(BigDecimal.valueOf(80000))
                 .items(List.of()).build();
     }

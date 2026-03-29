@@ -59,15 +59,17 @@ class JournalServiceTest {
     @DisplayName("createJournalEntry — creates entry with transactions")
     void createJournalEntry_creates() {
         when(restaurantRepository.findById(1L)).thenReturn(Optional.of(createRestaurant()));
-        when(accountRepository.findById(1L)).thenReturn(Optional.of(debitAccount));
-        when(accountRepository.findById(2L)).thenReturn(Optional.of(creditAccount));
+        when(accountRepository.findByIdWithLock(1L)).thenReturn(Optional.of(debitAccount));
+        when(accountRepository.findByIdWithLock(2L)).thenReturn(Optional.of(creditAccount));
         when(journalEntryRepository.save(any(JournalEntry.class))).thenAnswer(i -> {
             JournalEntry e = i.getArgument(0); e.setId(1L); return e;
         });
+        when(journalEntryRepository.findByRestaurant_Id(anyLong())).thenReturn(List.of());
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
+        when(accountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         JournalEntry result = journalService.createJournalEntry(
-                1L, LocalDate.now(), "Test entry", 1L, 2L, BigDecimal.valueOf(50000), null);
+                1L, LocalDate.now(), "Test entry", "TEST", null, 1L, 2L, BigDecimal.valueOf(50000), null);
 
         assertNotNull(result);
         verify(journalEntryRepository).save(any(JournalEntry.class));
@@ -76,14 +78,14 @@ class JournalServiceTest {
     @Test
     @DisplayName("getJournalEntriesByRestaurant — returns list")
     void getByRestaurant_returnsList() {
-        when(journalEntryRepository.findByRestaurantIdOrderByEntryDateDesc(1L)).thenReturn(List.of());
+        when(journalEntryRepository.findByRestaurant_Id(1L)).thenReturn(List.of());
         assertNotNull(journalService.getJournalEntriesByRestaurant(1L));
     }
 
     @Test
     @DisplayName("getJournalEntriesByDateRange — returns filtered")
     void getByDateRange_returnsFiltered() {
-        when(journalEntryRepository.findByRestaurantIdAndEntryDateBetweenOrderByEntryDateDesc(anyLong(), any(), any()))
+        when(journalEntryRepository.findPostedEntriesByDateRange(anyLong(), any(), any()))
                 .thenReturn(List.of());
         assertNotNull(journalService.getJournalEntriesByDateRange(1L, LocalDate.now().minusDays(7), LocalDate.now()));
     }
@@ -91,7 +93,7 @@ class JournalServiceTest {
     @Test
     @DisplayName("getTransactionsByAccount — returns list")
     void getTransactionsByAccount_returnsList() {
-        when(transactionRepository.findByAccountIdOrderByTransactionDateDesc(1L)).thenReturn(List.of());
+        when(transactionRepository.findByAccount_Id(1L)).thenReturn(List.of());
         assertNotNull(journalService.getTransactionsByAccount(1L));
     }
 }

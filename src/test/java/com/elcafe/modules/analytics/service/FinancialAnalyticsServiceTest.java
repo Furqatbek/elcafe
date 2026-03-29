@@ -37,7 +37,9 @@ class FinancialAnalyticsServiceTest {
         when(shiftTimeService.getShiftTimeRangeForPeriod(anyLong(), any(), any()))
                 .thenReturn(new ShiftTimeService.ShiftTimeRange(
                         OffsetDateTime.now(ZoneOffset.UTC).minusDays(7),
-                        OffsetDateTime.now(ZoneOffset.UTC)));
+                        OffsetDateTime.now(ZoneOffset.UTC),
+                        java.time.LocalTime.of(0, 0),
+                        java.time.LocalTime.of(23, 59)));
         when(shiftTimeService.getRevenueStatusList()).thenReturn(List.of());
     }
 
@@ -45,7 +47,7 @@ class FinancialAnalyticsServiceTest {
     @DisplayName("getDailyRevenue — returns daily breakdown")
     void getDailyRevenue_returns() {
         stubShiftTime();
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
 
         List<DailyRevenueDTO> result = financialAnalyticsService.getDailyRevenue(
@@ -57,7 +59,7 @@ class FinancialAnalyticsServiceTest {
     @DisplayName("getSalesPerCategory — returns category breakdown")
     void getSalesPerCategory_returns() {
         stubShiftTime();
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
         when(productRepository.findAll()).thenReturn(List.of());
 

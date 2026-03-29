@@ -131,7 +131,7 @@ class PaymentControllerTest {
     @DisplayName("GET /orders/{orderId}/payments/all — returns all payments")
     void getAllPayments_returns200() throws Exception {
         Page<PaymentResponse> page = new PageImpl<>(List.of(buildPaymentResponse()));
-        when(paymentService.getAllPayments(eq(1L), any())).thenReturn(page);
+        when(paymentService.getAllPayments(any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/orders/1/payments/all"))
                 .andExpect(status().isOk());
@@ -143,7 +143,7 @@ class PaymentControllerTest {
     @DisplayName("GET /orders/{orderId}/payments/by-status — filters by status")
     void getPaymentsByStatus_returns200() throws Exception {
         Page<PaymentResponse> page = new PageImpl<>(List.of(buildPaymentResponse()));
-        when(paymentService.getPaymentsByStatus(eq(1L), eq(PaymentStatus.COMPLETED), any())).thenReturn(page);
+        when(paymentService.getPaymentsByStatus(eq(PaymentStatus.COMPLETED), any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/orders/1/payments/by-status")
                         .param("status", "COMPLETED"))
@@ -156,7 +156,7 @@ class PaymentControllerTest {
     @DisplayName("GET /orders/{orderId}/payments/by-method — filters by method")
     void getPaymentsByMethod_returns200() throws Exception {
         Page<PaymentResponse> page = new PageImpl<>(List.of(buildPaymentResponse()));
-        when(paymentService.getPaymentsByMethod(eq(1L), eq(PaymentMethod.CASH), any())).thenReturn(page);
+        when(paymentService.getPaymentsByMethod(eq(PaymentMethod.CASH), any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/orders/1/payments/by-method")
                         .param("method", "CASH"))
@@ -168,7 +168,7 @@ class PaymentControllerTest {
     @Test
     @DisplayName("GET /orders/{orderId}/payments/by-transaction — finds by transaction ID")
     void getPaymentByTransaction_returns200() throws Exception {
-        when(paymentService.getPaymentByTransactionId(1L, "TXN-001")).thenReturn(buildPaymentResponse());
+        when(paymentService.getPaymentByTransactionId("TXN-001")).thenReturn(buildPaymentResponse());
 
         mockMvc.perform(get("/api/v1/orders/1/payments/by-transaction")
                         .param("transactionId", "TXN-001"))

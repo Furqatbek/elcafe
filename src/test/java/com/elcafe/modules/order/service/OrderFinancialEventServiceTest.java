@@ -18,11 +18,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createOrder;
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createOrderItem;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +40,7 @@ class OrderFinancialEventServiceTest {
     void setUp() {
         order = createOrder(1L, OrderStatus.PREPARING);
         order.setTotal(BigDecimal.valueOf(100000));
+        when(eventRepository.getMaxSequenceNumber(anyLong())).thenReturn(Optional.of(0));
         when(eventRepository.save(any(OrderFinancialEvent.class))).thenAnswer(i -> {
             OrderFinancialEvent e = i.getArgument(0);
             e.setId(1L);
@@ -76,7 +79,7 @@ class OrderFinancialEventServiceTest {
     @Test
     @DisplayName("getOrderEventHistory returns list")
     void getOrderEventHistory_returnsList() {
-        when(eventRepository.findByOrderIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
+        when(eventRepository.findByOrderIdOrderBySequenceNumber(1L)).thenReturn(List.of());
         assertNotNull(eventService.getOrderEventHistory(1L));
     }
 
@@ -84,6 +87,6 @@ class OrderFinancialEventServiceTest {
     @DisplayName("recordDiscountApplied saves event")
     void recordDiscountApplied_savesEvent() {
         assertNotNull(eventService.recordDiscountApplied(
-                order, "COUPON", BigDecimal.valueOf(10000), "admin", "SAVE10"));
+                order, "COUPON", BigDecimal.valueOf(10000), null, "SAVE10", "admin"));
     }
 }

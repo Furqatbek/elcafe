@@ -44,11 +44,10 @@ class PayrollServiceTest {
         payroll = new PayrollEntry();
         payroll.setId(1L);
         payroll.setRestaurant(createRestaurant());
-        payroll.setEmployeeName("Ali");
-        payroll.setAmount(BigDecimal.valueOf(3000000));
-        payroll.setPeriodStart(LocalDate.now().minusDays(30));
-        payroll.setPeriodEnd(LocalDate.now());
-        payroll.setStatus(PayrollEntry.PayrollStatus.PENDING);
+        payroll.setNetPay(BigDecimal.valueOf(3000000));
+        payroll.setPayPeriodStart(LocalDate.now().minusDays(30));
+        payroll.setPayPeriodEnd(LocalDate.now());
+        payroll.setStatus(PayrollEntry.PaymentStatus.PENDING);
     }
 
     @Test
@@ -79,7 +78,7 @@ class PayrollServiceTest {
         when(payrollRepository.save(any(PayrollEntry.class))).thenAnswer(i -> i.getArgument(0));
 
         PayrollEntry result = payrollService.approvePayrollEntry(1L, "admin");
-        assertEquals(PayrollEntry.PayrollStatus.APPROVED, result.getStatus());
+        assertEquals(PayrollEntry.PaymentStatus.APPROVED, result.getStatus());
     }
 
     @Test
@@ -87,7 +86,7 @@ class PayrollServiceTest {
     void getByDateRange_returns() {
         LocalDate start = LocalDate.now().minusDays(30);
         LocalDate end = LocalDate.now();
-        when(payrollRepository.findByRestaurantIdAndPeriodStartGreaterThanEqualAndPeriodEndLessThanEqual(1L, start, end))
+        when(payrollRepository.findByRestaurant_IdAndPayPeriodStartBetween(1L, start, end))
                 .thenReturn(List.of(payroll));
         assertEquals(1, payrollService.getPayrollEntriesByDateRange(1L, start, end).size());
     }
@@ -95,7 +94,7 @@ class PayrollServiceTest {
     @Test
     @DisplayName("getTotalPayrollByDateRange — returns sum")
     void getTotalByDateRange_returnsSum() {
-        when(payrollRepository.sumAmountByRestaurantIdAndDateRange(anyLong(), any(), any()))
+        when(payrollRepository.getTotalPayrollByDateRange(anyLong(), any(), any()))
                 .thenReturn(BigDecimal.valueOf(9000000));
         assertEquals(0, BigDecimal.valueOf(9000000).compareTo(
                 payrollService.getTotalPayrollByDateRange(1L, LocalDate.now().minusDays(30), LocalDate.now())));
@@ -104,7 +103,7 @@ class PayrollServiceTest {
     @Test
     @DisplayName("getPendingPayrolls — returns pending only")
     void getPending_returns() {
-        when(payrollRepository.findByRestaurantIdAndStatus(1L, PayrollEntry.PayrollStatus.PENDING))
+        when(payrollRepository.findPendingPayrolls(1L))
                 .thenReturn(List.of(payroll));
         assertEquals(1, payrollService.getPendingPayrolls(1L).size());
     }

@@ -19,8 +19,6 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.Optional;
 
 import static com.elcafe.modules.waiter.helper.TestDataFactory.*;
@@ -55,17 +53,8 @@ class OrderEventListenerTest {
     @Test
     @DisplayName("handleOrderCreated saves audit trail")
     void handleOrderCreated_savesAuditTrail() {
-        OrderCreatedEvent event = OrderCreatedEvent.builder()
-                .orderId(1L)
-                .orderNumber("W001")
-                .waiterId(1L)
-                .waiterName("Ali")
-                .tableId(1L)
-                .tableNumber("T1")
-                .itemCount(3)
-                .totalAmount(BigDecimal.valueOf(100))
-                .eventTimestamp(LocalDateTime.now())
-                .build();
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                this, 1L, "W001", 1L, 1L, "Ali", 3);
 
         when(orderEventRepository.save(any(OrderEvent.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -83,10 +72,8 @@ class OrderEventListenerTest {
     @Test
     @DisplayName("handleOrderCreated with null orderId skips audit trail")
     void handleOrderCreated_nullOrderId_skipsAudit() {
-        OrderCreatedEvent event = OrderCreatedEvent.builder()
-                .orderId(null)
-                .orderNumber("W001")
-                .build();
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                this, null, "W001", null, null, null, 0);
 
         listener.handleOrderCreated(event);
 
@@ -98,16 +85,8 @@ class OrderEventListenerTest {
     @Test
     @DisplayName("handleOrderSubmitted saves audit trail")
     void handleOrderSubmitted_savesAuditTrail() {
-        OrderSubmittedEvent event = OrderSubmittedEvent.builder()
-                .orderId(1L)
-                .orderNumber("W001")
-                .waiterId(1L)
-                .waiterName("Ali")
-                .tableId(1L)
-                .itemCount(2)
-                .totalAmount(BigDecimal.valueOf(50))
-                .eventTimestamp(LocalDateTime.now())
-                .build();
+        OrderSubmittedEvent event = new OrderSubmittedEvent(
+                this, 1L, "W001", 1L, 1L, "Ali", BigDecimal.valueOf(50), 2);
 
         when(orderEventRepository.save(any(OrderEvent.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -121,16 +100,9 @@ class OrderEventListenerTest {
     @Test
     @DisplayName("handleOrderPaid saves audit trail and updates performance")
     void handleOrderPaid_savesAuditAndUpdatesPerformance() {
-        OrderPaidEvent event = OrderPaidEvent.builder()
-                .orderId(1L)
-                .orderNumber("W001")
-                .waiterId(1L)
-                .waiterName("Ali")
-                .amount(BigDecimal.valueOf(100))
-                .paymentMethod("CASH")
-                .transactionId("TXN-001")
-                .eventTimestamp(LocalDateTime.now())
-                .build();
+        OrderPaidEvent event = new OrderPaidEvent(
+                this, 1L, "W001", null, 1L, "Ali",
+                BigDecimal.valueOf(100), "CASH", "TXN-001");
 
         when(orderEventRepository.save(any(OrderEvent.class))).thenAnswer(i -> i.getArgument(0));
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
@@ -144,14 +116,9 @@ class OrderEventListenerTest {
     @Test
     @DisplayName("handleOrderPaid with null waiterId skips performance update")
     void handleOrderPaid_nullWaiterId_skipsPerformance() {
-        OrderPaidEvent event = OrderPaidEvent.builder()
-                .orderId(1L)
-                .orderNumber("W001")
-                .waiterId(null)
-                .amount(BigDecimal.valueOf(100))
-                .paymentMethod("CASH")
-                .eventTimestamp(LocalDateTime.now())
-                .build();
+        OrderPaidEvent event = new OrderPaidEvent(
+                this, 1L, "W001", null, null, null,
+                BigDecimal.valueOf(100), "CASH", null);
 
         when(orderEventRepository.save(any(OrderEvent.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -165,16 +132,9 @@ class OrderEventListenerTest {
     @Test
     @DisplayName("handleItemRemoved records void item for waiter performance")
     void handleItemRemoved_recordsVoidItem() {
-        OrderItemRemovedEvent event = OrderItemRemovedEvent.builder()
-                .orderId(1L)
-                .orderNumber("W001")
-                .waiterId(1L)
-                .waiterName("Ali")
-                .itemName("Espresso")
-                .itemPrice(BigDecimal.valueOf(5000))
-                .reason("Customer changed mind")
-                .eventTimestamp(LocalDateTime.now())
-                .build();
+        OrderItemRemovedEvent event = new OrderItemRemovedEvent(
+                this, 1L, "W001", null, 1L, "Ali",
+                "Espresso", "Customer changed mind", BigDecimal.valueOf(5000));
 
         when(orderEventRepository.save(any(OrderEvent.class))).thenAnswer(i -> i.getArgument(0));
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
@@ -189,12 +149,8 @@ class OrderEventListenerTest {
     @Test
     @DisplayName("handleOrderCreated catches and logs exceptions without rethrowing")
     void handleOrderCreated_exceptionCaught_doesNotRethrow() {
-        OrderCreatedEvent event = OrderCreatedEvent.builder()
-                .orderId(1L)
-                .orderNumber("W001")
-                .waiterName("Ali")
-                .eventTimestamp(LocalDateTime.now())
-                .build();
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                this, 1L, "W001", null, null, "Ali", 0);
 
         when(entityManager.getReference(eq(Order.class), eq(1L))).thenReturn(new Order());
         when(orderEventRepository.save(any())).thenThrow(new RuntimeException("DB error"));
@@ -208,17 +164,8 @@ class OrderEventListenerTest {
     @Test
     @DisplayName("Audit trail includes serialized metadata")
     void auditTrail_includesSerializedMetadata() {
-        OrderCreatedEvent event = OrderCreatedEvent.builder()
-                .orderId(1L)
-                .orderNumber("W001")
-                .waiterId(1L)
-                .waiterName("Ali")
-                .tableId(5L)
-                .tableNumber("T5")
-                .itemCount(3)
-                .totalAmount(BigDecimal.valueOf(75000))
-                .eventTimestamp(LocalDateTime.now())
-                .build();
+        OrderCreatedEvent event = new OrderCreatedEvent(
+                this, 1L, "W001", 5L, 1L, "Ali", 3);
 
         when(orderEventRepository.save(any(OrderEvent.class))).thenAnswer(i -> i.getArgument(0));
 

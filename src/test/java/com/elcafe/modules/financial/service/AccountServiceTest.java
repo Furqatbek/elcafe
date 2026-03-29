@@ -38,7 +38,7 @@ class AccountServiceTest {
         account = new Account();
         account.setId(1L);
         account.setName("Revenue");
-        account.setAccountType(Account.AccountType.REVENUE);
+        account.setType(Account.AccountType.REVENUE);
         account.setBalance(BigDecimal.ZERO);
         account.setRestaurant(createRestaurant());
     }
@@ -67,18 +67,16 @@ class AccountServiceTest {
     @Test
     @DisplayName("getAccountsByRestaurant — returns list")
     void getByRestaurant_returnsList() {
-        when(accountRepository.findByRestaurantId(1L)).thenReturn(List.of(account));
+        when(accountRepository.findByRestaurant_IdAndActiveTrue(1L)).thenReturn(List.of(account));
         assertEquals(1, accountService.getAccountsByRestaurant(1L).size());
     }
 
     @Test
     @DisplayName("getAccountsByType — returns filtered")
     void getByType_returnsFiltered() {
-        when(accountRepository.findByRestaurantIdAndAccountType(1L, Account.AccountType.REVENUE))
-                .thenReturn(Optional.of(account));
-        // This returns Optional, test the list variant
-        when(accountRepository.findByRestaurantId(1L)).thenReturn(List.of(account));
-        assertEquals(1, accountService.getAccountsByRestaurant(1L).size());
+        when(accountRepository.findByRestaurant_IdAndType(1L, Account.AccountType.REVENUE))
+                .thenReturn(List.of(account));
+        assertEquals(1, accountService.getAccountsByType(1L, Account.AccountType.REVENUE).size());
     }
 
     @Test

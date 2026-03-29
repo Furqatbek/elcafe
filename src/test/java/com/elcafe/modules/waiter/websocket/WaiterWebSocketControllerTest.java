@@ -33,7 +33,7 @@ class WaiterWebSocketControllerTest {
     @DisplayName("handleCallWaiter broadcasts call")
     void handleCallWaiter_broadcasts() {
         CallWaiterMessage msg = CallWaiterMessage.builder()
-                .tableId(1L).tableNumber("T1").build();
+                .tableId(1L).tableNumber(1).build();
         controller.handleCallWaiter(msg);
         verify(messagingTemplate).convertAndSend(anyString(), any(Object.class));
     }

@@ -30,7 +30,7 @@ class PromotionAnalyticsServiceTest {
     @Test
     @DisplayName("getDiscountAnalytics — returns analytics")
     void getDiscountAnalytics_returns() {
-        when(orderRepository.findByRestaurantIdAndCreatedAtBetween(anyLong(), any(), any()))
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
 
         var result = promotionAnalyticsService.getDiscountAnalytics(1L,
@@ -41,7 +41,7 @@ class PromotionAnalyticsServiceTest {
     @Test
     @DisplayName("getAllPromotionsPerformance — returns list")
     void getAllPromotionsPerformance_returns() {
-        when(promotionRepository.findByRestaurantId(1L)).thenReturn(List.of());
+        when(promotionRepository.findByRestaurant_IdOrderByPriorityDescCreatedAtDesc(1L)).thenReturn(List.of());
 
         var result = promotionAnalyticsService.getAllPromotionsPerformance(1L);
         assertNotNull(result);
@@ -50,7 +50,7 @@ class PromotionAnalyticsServiceTest {
     @Test
     @DisplayName("getDiscountTrends — returns daily trends")
     void getDiscountTrends_returns() {
-        when(orderRepository.findByRestaurantIdAndCreatedAtBetween(anyLong(), any(), any()))
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
 
         var result = promotionAnalyticsService.getDiscountTrends(1L,
