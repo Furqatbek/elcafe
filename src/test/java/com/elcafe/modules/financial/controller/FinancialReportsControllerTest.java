@@ -31,14 +31,14 @@ class FinancialReportsControllerTest {
 
     @Test @DisplayName("GET /profit-loss") void profitLoss() throws Exception {
         when(reportsService.generateProfitLossReport(anyLong(), any(), any()))
-                .thenReturn(new FinancialReportsService.ProfitLossReport());
+                .thenReturn(FinancialReportsService.ProfitLossReport.builder().build());
         mockMvc.perform(get("/api/v1/financial/reports/profit-loss")
                 .param("restaurantId", "1").param("startDate", "2026-03-01").param("endDate", "2026-03-31"))
                 .andExpect(status().isOk());
     }
     @Test @DisplayName("GET /balance-sheet") void balanceSheet() throws Exception {
         when(reportsService.generateBalanceSheet(anyLong(), any()))
-                .thenReturn(new FinancialReportsService.BalanceSheetReport());
+                .thenReturn(FinancialReportsService.BalanceSheetReport.builder().build());
         mockMvc.perform(get("/api/v1/financial/reports/balance-sheet")
                 .param("restaurantId", "1").param("asOfDate", "2026-03-31"))
                 .andExpect(status().isOk());

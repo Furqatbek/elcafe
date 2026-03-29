@@ -58,6 +58,6 @@ class RevenueRecordingServiceTest {
 
         recordingService.handleRevenueRecordingFailure(ex, order);
 
-        verify(alertService).sendRevenueRecordingFailureAlert(any(), any());
+        verify(alertService).alertRevenueRecordingFailure(any(), any(), any(), any(), any(), any());
     }
 }

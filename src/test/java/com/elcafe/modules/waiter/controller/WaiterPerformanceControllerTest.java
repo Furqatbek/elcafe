@@ -57,7 +57,7 @@ class WaiterPerformanceControllerTest {
     @Test
     @DisplayName("GET /waiter/{id}/today")
     void getTodayPerformance_returns200() throws Exception {
-        when(performanceService.getTodayPerformance(1L, 1L)).thenReturn(Optional.empty());
+        when(performanceService.getTodayPerformance(1L)).thenReturn(Optional.empty());
         mockMvc.perform(get("/api/v1/waiter-performance/waiter/1/today")
                         .param("restaurantId", "1"))
                 .andExpect(status().isNoContent());

@@ -40,8 +40,8 @@ class AnalyticsSummaryServiceTest {
                         .netProfit(BigDecimal.ZERO).netProfitMargin(BigDecimal.ZERO).build());
         when(operationalAnalyticsService.getOrderTimingAnalytics(any(), any(), anyLong()))
                 .thenReturn(OrderTimingAnalyticsDTO.builder()
-                        .averagePreparationTimeMinutes(BigDecimal.ZERO)
-                        .averageDeliveryTimeMinutes(BigDecimal.ZERO).build());
+                        .averagePreparationTimeMinutes(0.0)
+                        .averageDeliveryTimeMinutes(0.0).build());
         when(operationalAnalyticsService.getPeakHours(any(), any(), anyLong()))
                 .thenReturn(PeakHoursDTO.builder().peakHours(List.of()).build());
         when(customerAnalyticsService.getCustomerRetention(any(), any(), anyLong()))
@@ -50,10 +50,10 @@ class AnalyticsSummaryServiceTest {
         when(customerAnalyticsService.getCustomerLTV(anyLong()))
                 .thenReturn(CustomerLTVDTO.builder().averageCustomerLTV(BigDecimal.ZERO).build());
         when(customerAnalyticsService.getCustomerSatisfaction(any(), any(), anyLong()))
-                .thenReturn(CustomerSatisfactionDTO.builder().overallSatisfactionScore(BigDecimal.ZERO).build());
+                .thenReturn(CustomerSatisfactionDTO.builder().overallSatisfactionScore(0.0).build());
         when(inventoryAnalyticsService.getInventoryTurnover(any(), any(), anyLong()))
                 .thenReturn(InventoryTurnoverDTO.builder()
-                        .overallTurnoverRatio(BigDecimal.ZERO)
+                        .overallTurnoverRatio(0.0)
                         .ingredientTurnovers(List.of()).build());
 
         var result = summaryService.getAnalyticsSummary(LocalDate.now().minusDays(7), LocalDate.now(), 1L,

@@ -18,6 +18,7 @@ import static com.elcafe.modules.waiter.helper.TestDataFactory.createOrder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,7 +50,7 @@ class OrderTrackingServiceTest {
     @DisplayName("getRecentOrdersByPhone — returns list")
     void getRecentOrdersByPhone_returnsList() {
         Order order = createOrder(1L, OrderStatus.COMPLETED);
-        when(orderRepository.findByCustomerPhoneOrderByCreatedAtDesc("+998901111111"))
+        when(orderRepository.findByCustomerPhoneAndCreatedAtAfterWithDetails(any(), any()))
                 .thenReturn(List.of(order));
 
         List<OrderTrackingResponse> result = trackingService.getRecentOrdersByPhone("+998901111111");
