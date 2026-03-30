@@ -34,14 +34,14 @@ class PublicOrderControllerTest {
     @DisplayName("GET /{orderNumber}/status returns tracking")
     void getStatus_returns200() throws Exception {
         when(trackingService.getOrderTracking("ORD-001")).thenReturn(OrderTrackingResponse.builder().build());
-        mockMvc.perform(get("/api/public/orders/ORD-001/status")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/public/orders/ORD-001/status")).andExpect(status().isOk());
     }
 
     @Test
     @DisplayName("GET /track returns orders by phone")
     void trackByPhone_returns200() throws Exception {
         when(trackingService.getRecentOrdersByPhone("+998901111111")).thenReturn(List.of());
-        mockMvc.perform(get("/api/public/orders/track").param("phone", "+998901111111"))
+        mockMvc.perform(get("/api/v1/public/orders/track").param("phone", "+998901111111"))
                 .andExpect(status().isOk());
     }
 }
