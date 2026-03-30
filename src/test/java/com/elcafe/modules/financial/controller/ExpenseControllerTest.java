@@ -41,7 +41,8 @@ class ExpenseControllerTest {
         mockMvc.perform(get("/api/v1/financial/expenses").param("restaurantId", "1")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /{id}") void getById() throws Exception {
-        when(expenseService.getExpenseById(1L)).thenReturn(Expense.builder().id(1L).amount(BigDecimal.ZERO).build());
+        when(expenseService.getExpenseById(1L)).thenReturn(Expense.builder().id(1L).amount(BigDecimal.ZERO)
+                .restaurant(com.elcafe.modules.waiter.helper.TestDataFactory.createRestaurant()).build());
         mockMvc.perform(get("/api/v1/financial/expenses/1")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /unpaid") void getUnpaid() throws Exception {

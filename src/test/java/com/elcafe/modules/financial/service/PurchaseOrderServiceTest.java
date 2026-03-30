@@ -64,7 +64,6 @@ class PurchaseOrderServiceTest {
     @DisplayName("createPurchaseOrder — saves PO")
     void create_savesPo() {
         when(purchaseOrderRepository.save(any(PurchaseOrder.class))).thenReturn(po);
-        when(purchaseOrderRepository.count()).thenReturn(0L);
         PurchaseOrder result = purchaseOrderService.createPurchaseOrder(po, List.of());
         assertNotNull(result);
     }

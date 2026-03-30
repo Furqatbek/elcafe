@@ -63,7 +63,6 @@ class PayrollServiceTest {
     @DisplayName("createPayrollEntry — saves and returns")
     void create_saves() {
         when(payrollRepository.save(any(PayrollEntry.class))).thenReturn(payroll);
-        when(payrollRepository.count()).thenReturn(0L);
         assertNotNull(payrollService.createPayrollEntry(payroll));
     }
 

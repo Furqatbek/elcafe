@@ -27,6 +27,7 @@ class OrderEventBroadcasterTest {
     @BeforeEach
     void setUp() {
         order = createOrder(1L, OrderStatus.NEW);
+        order.setCustomer(com.elcafe.modules.waiter.helper.TestDataFactory.createCustomer());
     }
 
     @Test

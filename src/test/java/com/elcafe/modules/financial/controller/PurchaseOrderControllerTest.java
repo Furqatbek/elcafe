@@ -45,7 +45,8 @@ class PurchaseOrderControllerTest {
     }
     @Test @DisplayName("GET /{id}") void getById() throws Exception {
         when(purchaseOrderService.getPurchaseOrderById(1L)).thenReturn(
-                PurchaseOrder.builder().id(1L).totalAmount(BigDecimal.ZERO).build());
+                PurchaseOrder.builder().id(1L).totalAmount(BigDecimal.ZERO)
+                        .restaurant(com.elcafe.modules.waiter.helper.TestDataFactory.createRestaurant()).build());
         mockMvc.perform(get("/api/v1/financial/purchase-orders/1")).andExpect(status().isOk());
     }
 }
