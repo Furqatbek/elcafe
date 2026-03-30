@@ -4,8 +4,6 @@ import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.service.ExpenseService;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -42,7 +41,7 @@ class ExpenseControllerTest {
         mockMvc.perform(get("/api/v1/financial/expenses").param("restaurantId", "1")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /{id}") void getById() throws Exception {
-        when(expenseService.getExpenseById(1L)).thenReturn(new Expense());
+        when(expenseService.getExpenseById(1L)).thenReturn(Expense.builder().id(1L).amount(BigDecimal.ZERO).build());
         mockMvc.perform(get("/api/v1/financial/expenses/1")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /unpaid") void getUnpaid() throws Exception {

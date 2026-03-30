@@ -10,16 +10,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.lenient;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class DashboardControllerTest {
 
     private MockMvc mockMvc;
@@ -30,25 +33,19 @@ class DashboardControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
-    }
-
-    private void stubDashboard() {
-        when(dashboardService.getDashboard(anyLong(), any(), any())).thenReturn(new DashboardResponse());
-        when(dashboardService.getTodaySummary(anyLong())).thenReturn(new DashboardResponse());
-        when(dashboardService.getWeekSummary(anyLong())).thenReturn(new DashboardResponse());
-        when(dashboardService.getMonthSummary(anyLong())).thenReturn(new DashboardResponse());
+        DashboardResponse response = new DashboardResponse();
+        lenient().when(dashboardService.getTodaySummary(anyLong())).thenReturn(response);
+        lenient().when(dashboardService.getWeekSummary(anyLong())).thenReturn(response);
+        lenient().when(dashboardService.getMonthSummary(anyLong())).thenReturn(response);
     }
 
     @Test @DisplayName("GET /today") void today() throws Exception {
-        stubDashboard();
         mockMvc.perform(get("/api/v1/dashboard/today").param("restaurantId", "1")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /week") void week() throws Exception {
-        stubDashboard();
         mockMvc.perform(get("/api/v1/dashboard/week").param("restaurantId", "1")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /month") void month() throws Exception {
-        stubDashboard();
         mockMvc.perform(get("/api/v1/dashboard/month").param("restaurantId", "1")).andExpect(status().isOk());
     }
 }

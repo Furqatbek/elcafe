@@ -50,6 +50,8 @@ class TransactionalOrderOperationServiceTest {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
         when(inventoryService.checkIngredientAvailability(any())).thenReturn(true);
+        when(kitchenOrderService.createKitchenOrder(any())).thenReturn(
+                com.elcafe.modules.kitchen.entity.KitchenOrder.builder().id(1L).build());
 
         Order result = service.acceptOrderAndCreateKitchenOrder(1L, "admin");
 

@@ -81,6 +81,9 @@ class WaiterOrderServiceTest {
     @Mock
     private WaiterCommissionService waiterCommissionService;
 
+    @Mock
+    private com.elcafe.modules.waiter.event.OrderEventPublisher orderEventPublisher;
+
     @InjectMocks
     private WaiterOrderService waiterOrderService;
 
@@ -608,9 +611,20 @@ class WaiterOrderServiceTest {
     @DisplayName("closeOrder")
     class CloseOrderTests {
 
+        private void makeOrderPaid(Order order) {
+            order.setTotal(BigDecimal.valueOf(100));
+            order.setGrandTotal(BigDecimal.valueOf(100));
+            order.setPayments(new java.util.ArrayList<>());
+            com.elcafe.modules.order.entity.Payment payment = com.elcafe.modules.order.entity.Payment.builder()
+                    .id(1L).amount(BigDecimal.valueOf(100)).tipAmount(BigDecimal.ZERO)
+                    .refundedAmount(BigDecimal.ZERO).status(com.elcafe.modules.order.enums.PaymentStatus.COMPLETED).build();
+            order.addPayment(payment);
+        }
+
         @Test
         void closeOrder_success_setsCompleted() {
             Order order = createOrder(1L, OrderStatus.PREPARING);
+            makeOrderPaid(order);
 
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
             when(waiterRepository.findById(waiter.getId())).thenReturn(Optional.of(waiter));
@@ -625,7 +639,7 @@ class WaiterOrderServiceTest {
         @Test
         void closeOrder_setsTableToCleaning() {
             Order order = createOrder(1L, OrderStatus.PREPARING);
-            // The order already has a diningTable from createOrder()
+            makeOrderPaid(order);
 
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
             when(waiterRepository.findById(waiter.getId())).thenReturn(Optional.of(waiter));
@@ -641,6 +655,7 @@ class WaiterOrderServiceTest {
         @Test
         void closeOrder_calculatesCommission() {
             Order order = createOrder(1L, OrderStatus.PREPARING);
+            makeOrderPaid(order);
 
             WaiterCommission commission = WaiterCommission.builder()
                     .commissionAmount(BigDecimal.valueOf(2.50))
