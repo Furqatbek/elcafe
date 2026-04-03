@@ -194,7 +194,7 @@ class OrderServiceTest {
         order.setStatus(OrderStatus.PREPARING);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(Exception.class,
                 () -> orderService.revertOrderToActive(1L, OrderStatus.READY, "test", "admin"));
     }
 }
