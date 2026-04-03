@@ -5,10 +5,12 @@ import com.elcafe.modules.inventory.dto.BatchRequest;
 import com.elcafe.modules.inventory.dto.BatchResponse;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryBatch;
+import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.inventory.repository.InventoryBatchRepository;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.service.InventoryBatchService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.security.UserPrincipal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,8 +23,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.http.MediaType;
+import org.springframework.core.MethodParameter;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -59,7 +64,19 @@ class InventoryBatchControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        UserPrincipal testUser = new UserPrincipal(1L, "admin@test.com", "pass", UserRole.ADMIN, true, 1L);
+        HandlerMethodArgumentResolver authResolver = new HandlerMethodArgumentResolver() {
+            @Override
+            public boolean supportsParameter(MethodParameter parameter) {
+                return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
+            }
+            @Override
+            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                    org.springframework.web.context.request.NativeWebRequest webRequest, org.springframework.web.bind.support.WebDataBinderFactory binderFactory) {
+                return testUser;
+            }
+        };
+        mockMvc = MockMvcBuilders.standaloneSetup(controller).setCustomArgumentResolvers(authResolver).build();
 
         restaurant = new Restaurant();
         restaurant.setId(1L);
@@ -137,7 +154,17 @@ class InventoryBatchControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // write-off endpoint requires @AuthenticationPrincipal — tested via integration tests
+    @Test @DisplayName("POST /{batchId}/write-off — writes off batch")
+    void writeOff() throws Exception {
+        when(batchRepository.findById(1L)).thenReturn(Optional.of(batch));
+        doNothing().when(batchService).writeOffBatch(anyLong(), anyString(), anyString());
+
+        mockMvc.perform(post("/api/v1/inventory/batches/1/write-off")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Damaged\"}"))
+                .andExpect(status().isOk());
+        verify(batchService).writeOffBatch(eq(1L), eq("Damaged"), anyString());
+    }
 
     @Test @DisplayName("POST /mark-expired — marks expired batches")
     void markExpired() throws Exception {

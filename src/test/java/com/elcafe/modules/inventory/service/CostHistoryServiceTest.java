@@ -275,6 +275,33 @@ class CostHistoryServiceTest {
         }
 
         @Test
+        @DisplayName("getAverageCostInPeriod — delegates to repository")
+        void getAverageCostInPeriod() {
+            LocalDateTime start = LocalDateTime.now().minusDays(30);
+            LocalDateTime end = LocalDateTime.now();
+            when(costHistoryRepository.getAverageCostInPeriod(1L, start, end))
+                    .thenReturn(Optional.of(new BigDecimal("4500")));
+
+            Optional<BigDecimal> result = costHistoryService.getAverageCostInPeriod(1L, start, end);
+
+            assertThat(result).isPresent();
+            assertThat(result.get()).isEqualByComparingTo("4500");
+        }
+
+        @Test
+        @DisplayName("getAverageCostInPeriod — returns empty when no data")
+        void getAverageCostInPeriod_empty() {
+            LocalDateTime start = LocalDateTime.now().minusDays(30);
+            LocalDateTime end = LocalDateTime.now();
+            when(costHistoryRepository.getAverageCostInPeriod(1L, start, end))
+                    .thenReturn(Optional.empty());
+
+            Optional<BigDecimal> result = costHistoryService.getAverageCostInPeriod(1L, start, end);
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
         @DisplayName("getMostRecentCostChange — returns latest")
         void getMostRecentCostChange() {
             IngredientCostHistory history = IngredientCostHistory.builder().id(1L).build();

@@ -1,7 +1,11 @@
 package com.elcafe.modules.inventory.controller;
 
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.modules.auth.enums.UserRole;
+import com.elcafe.modules.inventory.dto.AddStockRequest;
+import com.elcafe.modules.inventory.dto.AdjustStockRequest;
 import com.elcafe.modules.inventory.dto.IngredientRequest;
+import com.elcafe.security.UserPrincipal;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
@@ -23,8 +27,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.core.MethodParameter;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -60,7 +67,19 @@ class InventoryIngredientControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        UserPrincipal testUser = new UserPrincipal(1L, "admin@test.com", "pass", UserRole.ADMIN, true, 1L);
+        HandlerMethodArgumentResolver authResolver = new HandlerMethodArgumentResolver() {
+            @Override
+            public boolean supportsParameter(MethodParameter parameter) {
+                return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
+            }
+            @Override
+            public Object resolveArgument(MethodParameter parameter, org.springframework.web.method.support.ModelAndViewContainer mavContainer,
+                    org.springframework.web.context.request.NativeWebRequest webRequest, org.springframework.web.bind.support.WebDataBinderFactory binderFactory) {
+                return testUser;
+            }
+        };
+        mockMvc = MockMvcBuilders.standaloneSetup(controller).setCustomArgumentResolvers(authResolver).build();
 
         restaurant = new Restaurant();
         restaurant.setId(1L);
@@ -155,7 +174,31 @@ class InventoryIngredientControllerTest {
         verify(ingredientRepository).deleteById(1L);
     }
 
-    // add-stock and adjust-stock endpoints require @AuthenticationPrincipal — tested via integration tests
+    @Test @DisplayName("POST /{id}/add-stock — adds stock")
+    void addStock() throws Exception {
+        AddStockRequest request = AddStockRequest.builder()
+                .quantity(new BigDecimal("50")).notes("Received delivery").build();
+        when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
+
+        mockMvc.perform(post("/api/v1/inventory/ingredients/1/add-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+        verify(inventoryService).addStock(eq(1L), eq(new BigDecimal("50")), eq("Received delivery"), anyString());
+    }
+
+    @Test @DisplayName("POST /{id}/adjust-stock — adjusts stock")
+    void adjustStock() throws Exception {
+        AdjustStockRequest request = AdjustStockRequest.builder()
+                .newQuantity(new BigDecimal("90")).notes("Physical count correction").build();
+        when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
+
+        mockMvc.perform(post("/api/v1/inventory/ingredients/1/adjust-stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+        verify(inventoryService).adjustStock(eq(1L), eq(new BigDecimal("90")), eq("Physical count correction"), anyString());
+    }
 
     @Test @DisplayName("GET /{id}/transactions — returns transaction history")
     void getTransactions() throws Exception {
