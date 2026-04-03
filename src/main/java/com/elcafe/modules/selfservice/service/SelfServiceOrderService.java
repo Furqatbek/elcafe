@@ -182,6 +182,7 @@ public class SelfServiceOrderService {
     /**
      * Get session by token.
      */
+    @Transactional(readOnly = true)
     public Optional<SelfServiceSession> getSession(String sessionToken) {
         return sessionRepository.findBySessionTokenAndIsActiveTrue(sessionToken);
     }
@@ -396,6 +397,7 @@ public class SelfServiceOrderService {
     /**
      * Get cart contents.
      */
+    @Transactional(readOnly = true)
     public List<CartItemResponse> getCart(String sessionToken) {
         SelfServiceSession session = getValidSession(sessionToken);
         List<SelfServiceCartItem> items = cartItemRepository.findBySessionIdOrderByAddedAtAsc(session.getId());
@@ -732,6 +734,7 @@ public class SelfServiceOrderService {
     /**
      * Get order status.
      */
+    @Transactional(readOnly = true)
     public SelfServiceOrder getOrderStatus(Long orderId) {
         return selfServiceOrderRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
@@ -740,6 +743,7 @@ public class SelfServiceOrderService {
     /**
      * Get settings for a restaurant.
      */
+    @Transactional(readOnly = true)
     public SelfServiceSettings getSettings(Long restaurantId) {
         return settingsRepository.findByRestaurantId(restaurantId)
                 .orElse(null);
@@ -833,6 +837,7 @@ public class SelfServiceOrderService {
      * Get order status with session validation to prevent IDOR attacks.
      * Only the session that created the order can access its status.
      */
+    @Transactional(readOnly = true)
     public SelfServiceOrder getOrderStatusWithSessionValidation(String sessionToken, Long orderId) {
         SelfServiceSession session = sessionRepository.findBySessionTokenAndIsActiveTrue(sessionToken)
                 .orElseThrow(() -> new RuntimeException("Session not found or expired"));
