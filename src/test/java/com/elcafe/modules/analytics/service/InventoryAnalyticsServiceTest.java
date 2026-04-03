@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -43,7 +44,10 @@ class InventoryAnalyticsServiceTest {
                 .thenReturn(new ShiftTimeService.ShiftTimeRange(
                         OffsetDateTime.now(ZoneOffset.UTC).minusDays(30), OffsetDateTime.now(ZoneOffset.UTC),
                         LocalTime.of(9, 0), LocalTime.of(23, 0)));
-        when(ingredientRepository.findAll()).thenReturn(List.of());
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
+                .thenReturn(List.of());
+        when(batchConsumptionService.calculateTotalCOGS(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(ingredientRepository.findByIsActiveTrue()).thenReturn(List.of());
         assertNotNull(inventoryAnalyticsService.getInventoryTurnover(LocalDate.now().minusDays(30), LocalDate.now(), 1L));
     }
 }
