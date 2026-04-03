@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.dto.pos;
 
+import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import lombok.AllArgsConstructor;
@@ -46,6 +47,8 @@ public class PaymentResponseDTO {
     private BigDecimal totalPaid;
     private BigDecimal remainingBalance;
     private boolean orderFullyPaid;
+    private OrderStatus orderStatus;
+    private boolean tableReleased;
     private List<PaymentSummary> allPayments;
 
     @Data

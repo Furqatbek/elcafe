@@ -271,6 +271,16 @@ public class PaymentService {
         log.info("Processing POS payment for order {}: method={}, amount={}, tip={}",
                 orderId, request.getMethod(), request.getAmount(), request.getTipAmount());
 
+        // If order is already fully paid, return current payment summary instead of error.
+        // This handles the case where the frontend retries after a successful payment
+        // (e.g., due to network timeout or UI not updating). Returning the summary
+        // allows the frontend to see the order is paid and close/release the table.
+        Order existingOrder = orderRepository.findById(orderId).orElse(null);
+        if (existingOrder != null && existingOrder.isFullyPaid()) {
+            log.info("Order {} is already fully paid, returning existing payment summary", orderId);
+            return getPOSPaymentSummary(orderId);
+        }
+
         // Check for duplicate transaction ID (idempotency)
         if (request.getTransactionId() != null) {
             Long existingOrderId = idempotencyService.getProcessedOrderForTransaction(request.getTransactionId());
@@ -454,6 +464,9 @@ public class PaymentService {
                 .totalPaid(order.getTotalPaid())
                 .remainingBalance(order.getRemainingBalance())
                 .orderFullyPaid(order.isFullyPaid())
+                .orderStatus(order.getStatus())
+                .tableReleased(order.isFullyPaid() &&
+                        (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED))
                 .allPayments(paymentSummaries)
                 .build();
     }
@@ -706,6 +719,9 @@ public class PaymentService {
                 .totalPaid(order.getTotalPaid())
                 .remainingBalance(order.getRemainingBalance())
                 .orderFullyPaid(order.isFullyPaid())
+                .orderStatus(order.getStatus())
+                .tableReleased(order.isFullyPaid() &&
+                        (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED))
                 .allPayments(paymentSummaries)
                 .build();
     }
