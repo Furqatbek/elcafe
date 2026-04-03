@@ -114,7 +114,7 @@ class OrderServiceTest {
     @SuppressWarnings("unchecked")
     void getAllOrders_returnsPage() {
         Page<Order> page = new PageImpl<>(List.of(order));
-        when(orderRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
+        when(orderRepository.findAll((Specification<Order>) any(), any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
 
         Page<Order> result = orderService.getAllOrders(PageRequest.of(0, 10));
 
@@ -128,7 +128,7 @@ class OrderServiceTest {
     @SuppressWarnings("unchecked")
     void getOrdersWithFilters_delegatesToSpec() {
         Page<Order> page = new PageImpl<>(List.of(order));
-        when(orderRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
+        when(orderRepository.findAll((Specification<Order>) any(), any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
 
         Page<Order> result = orderService.getOrdersWithFilters(
                 1L, null, null, null, null, null, true, PageRequest.of(0, 10));
