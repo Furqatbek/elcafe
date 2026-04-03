@@ -57,6 +57,29 @@ class ProductVariantServiceTest {
         assertThat(result.get(0).getName()).isEqualTo("Large");
     }
 
+    @Test @DisplayName("getVariantsByProduct paginated — returns page")
+    void getVariantsByProduct_returnsPage() {
+        when(productRepository.existsById(1L)).thenReturn(true);
+        when(productVariantRepository.findByProductId(eq(1L), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(variant)));
+
+        var result = productVariantService.getAllVariantsByProduct(1L, org.springframework.data.domain.PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+    }
+
+    @Test @DisplayName("searchVariants — searches by query")
+    void searchVariants_returnsResults() {
+        when(productRepository.existsById(1L)).thenReturn(true);
+        when(productVariantRepository.searchVariantsByProduct(eq(1L), eq("Large"), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(variant)));
+
+        var result = productVariantService.searchVariants(1L, "Large", org.springframework.data.domain.PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getName()).isEqualTo("Large");
+    }
+
     @Test @DisplayName("getInStockVariants — filters out-of-stock")
     void getActiveVariants_filtersInactive() {
         when(productRepository.existsById(1L)).thenReturn(true);
