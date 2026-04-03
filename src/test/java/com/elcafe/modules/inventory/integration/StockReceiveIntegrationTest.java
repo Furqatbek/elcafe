@@ -138,8 +138,8 @@ class StockReceiveIntegrationTest {
     void batchExpiryFromShelfLife() {
         Ingredient ing = ingredientRepository.findById(ingredient.getId()).orElseThrow();
 
-        LocalDate receivedDate = LocalDate.now();
-        LocalDate expectedExpiry = receivedDate.plusDays(30); // defaultShelfLifeDays = 30
+        LocalDate receivedDate = LocalDate.of(2026, 1, 15);
+        LocalDate expectedExpiry = LocalDate.of(2026, 2, 14); // 30 days later
 
         InventoryBatch batch = InventoryBatch.builder()
                 .ingredient(ing)
