@@ -113,6 +113,25 @@ class StockCountServiceTest {
 
             assertThat(result.getTotalItems()).isEqualTo(1);
         }
+
+        @Test @DisplayName("SPOT_CHECK type — includes specific ingredients")
+        void spotCheck() {
+            StockCountRequest request = new StockCountRequest();
+            request.setRestaurantId(1L);
+            request.setCountType(StockCount.CountType.SPOT_CHECK);
+            request.setIngredientIds(List.of(1L));
+            request.setInitiatedBy("admin");
+
+            when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+            when(ingredientRepository.findAllById(List.of(1L))).thenReturn(List.of(flour));
+            when(stockCountRepository.save(any(StockCount.class))).thenAnswer(i -> { StockCount sc = i.getArgument(0); sc.setId(1L); return sc; });
+            when(stockCountRepository.countByRestaurantIdAndCountNumberPrefix(anyLong(), anyString())).thenReturn(0L);
+
+            StockCount result = stockCountService.createStockCount(request);
+
+            assertThat(result.getCountType()).isEqualTo(StockCount.CountType.SPOT_CHECK);
+            assertThat(result.getTotalItems()).isEqualTo(1);
+        }
     }
 
     @Test @DisplayName("startStockCount — sets IN_PROGRESS")
@@ -176,6 +195,21 @@ class StockCountServiceTest {
         StockCountItem result = stockCountService.setVarianceReason(request);
 
         assertThat(result.getVarianceReason()).isEqualTo(StockCountItem.VarianceReason.SHRINKAGE);
+    }
+
+    @Test @DisplayName("submitForReview — success when all counted")
+    void submitSuccess() {
+        stockCount.setStatus(StockCount.Status.IN_PROGRESS);
+        StockCountItem counted = StockCountItem.builder()
+                .id(1L).ingredient(flour).status(StockCountItem.Status.COUNTED).build();
+        stockCount.setItems(new ArrayList<>(List.of(counted)));
+        when(stockCountRepository.findById(1L)).thenReturn(Optional.of(stockCount));
+        when(stockCountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        StockCount result = stockCountService.submitForReview(1L, "reviewer");
+
+        assertThat(result.getStatus()).isEqualTo(StockCount.Status.PENDING_REVIEW);
+        assertThat(result.getReviewedBy()).isEqualTo("reviewer");
     }
 
     @Test @DisplayName("submitForReview — requires all items counted")
@@ -255,6 +289,43 @@ class StockCountServiceTest {
         StockCount result = stockCountService.cancelStockCount(1L, "No longer needed", "admin");
 
         assertThat(result.getStatus()).isEqualTo(StockCount.Status.CANCELLED);
+    }
+
+    @Test @DisplayName("recordCount — recalculateTotals updates summary stats")
+    void recalculateTotals() {
+        StockCountItem item1 = StockCountItem.builder()
+                .id(1L).ingredient(flour)
+                .systemQuantity(new BigDecimal("100"))
+                .status(StockCountItem.Status.PENDING).build();
+        Ingredient sugar = Ingredient.builder()
+                .id(2L).name("Sugar").unit("kg")
+                .currentStock(new BigDecimal("50")).active(true).version(0L).build();
+        StockCountItem item2 = StockCountItem.builder()
+                .id(2L).ingredient(sugar)
+                .systemQuantity(new BigDecimal("50"))
+                .status(StockCountItem.Status.COUNTED)
+                .countedQuantity(new BigDecimal("48"))
+                .varianceQuantity(new BigDecimal("-2"))
+                .varianceValue(new BigDecimal("10000")).build();
+        stockCount.setStatus(StockCount.Status.IN_PROGRESS);
+        stockCount.setItems(new ArrayList<>(List.of(item1, item2)));
+        item1.setStockCount(stockCount);
+        item2.setStockCount(stockCount);
+
+        StockCountRequest.RecordCountRequest request = new StockCountRequest.RecordCountRequest();
+        request.setItemId(1L);
+        request.setCountedQuantity(new BigDecimal("95"));
+        request.setCountedBy("counter1");
+
+        when(stockCountItemRepository.findById(1L)).thenReturn(Optional.of(item1));
+        when(stockCountItemRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(stockCountRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        stockCountService.recordCount(request);
+
+        // After recalculateTotals: 2 total items, 2 counted, variance stats updated
+        assertThat(stockCount.getTotalItems()).isEqualTo(2);
+        assertThat(stockCount.getCountedItems()).isEqualTo(2);
     }
 
     @Nested @DisplayName("Query methods")

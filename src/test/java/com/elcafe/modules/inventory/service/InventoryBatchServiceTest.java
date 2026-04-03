@@ -187,6 +187,52 @@ class InventoryBatchServiceTest {
         }
     }
 
+    @Nested @DisplayName("consumeStockFEFO")
+    class ConsumeTests {
+        @Test @DisplayName("consumes from batches and reduces quantity")
+        void consumeBatch_reducesQuantity() {
+            InventoryBatch batch1 = InventoryBatch.builder()
+                    .id(1L).batchNumber("B-001").ingredient(ingredient)
+                    .quantity(new BigDecimal("30")).status(InventoryBatch.Status.ACTIVE)
+                    .expiryDate(LocalDate.now().plusDays(5)).build();
+            InventoryBatch batch2 = InventoryBatch.builder()
+                    .id(2L).batchNumber("B-002").ingredient(ingredient)
+                    .quantity(new BigDecimal("40")).status(InventoryBatch.Status.ACTIVE)
+                    .expiryDate(LocalDate.now().plusDays(10)).build();
+
+            when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
+            when(batchRepository.findActiveBatchesFEFO(1L)).thenReturn(List.of(batch1, batch2));
+            when(batchRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+            when(ingredientRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            List<InventoryBatchService.BatchConsumption> result =
+                    batchService.consumeStockFEFO(1L, new BigDecimal("50"), "Order deduction");
+
+            assertThat(result).hasSize(2);
+            assertThat(batch1.getQuantity()).isEqualByComparingTo("0");
+            assertThat(batch2.getQuantity()).isEqualByComparingTo("20");
+            verify(stockOperationService).deductStockSimple(ingredient, new BigDecimal("50"));
+        }
+
+        @Test @DisplayName("depletes batch — sets status to DEPLETED")
+        void consumeBatch_depletes() {
+            InventoryBatch singleBatch = InventoryBatch.builder()
+                    .id(1L).batchNumber("B-001").ingredient(ingredient)
+                    .quantity(new BigDecimal("20")).status(InventoryBatch.Status.ACTIVE)
+                    .expiryDate(LocalDate.now().plusDays(5)).build();
+
+            when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
+            when(batchRepository.findActiveBatchesFEFO(1L)).thenReturn(List.of(singleBatch));
+            when(batchRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+            when(ingredientRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            batchService.consumeStockFEFO(1L, new BigDecimal("20"), "Order deduction");
+
+            assertThat(singleBatch.getStatus()).isEqualTo(InventoryBatch.Status.DEPLETED);
+            assertThat(singleBatch.getQuantity()).isEqualByComparingTo("0");
+        }
+    }
+
     @Nested @DisplayName("writeOffBatch")
     class WriteOffTests {
         @Test @DisplayName("writes off batch and deducts stock")
