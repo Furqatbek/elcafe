@@ -114,7 +114,8 @@ class OrderServiceTest {
     @SuppressWarnings("unchecked")
     void getAllOrders_returnsPage() {
         Page<Order> page = new PageImpl<>(List.of(order));
-        when(orderRepository.findAll((Specification<Order>) any(), any(org.springframework.data.domain.Pageable.class))).thenReturn(page);
+        org.mockito.Mockito.doReturn(page).when(orderRepository)
+                .findAll((Specification<Order>) any(), any(org.springframework.data.domain.Pageable.class));
 
         Page<Order> result = orderService.getAllOrders(PageRequest.of(0, 10));
 
