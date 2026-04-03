@@ -7,15 +7,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: false
-        hbm2ddl.halt_on_error: false
     open-in-view: true
-    defer-datasource-initialization: true
 
   flyway:
     enabled: false
