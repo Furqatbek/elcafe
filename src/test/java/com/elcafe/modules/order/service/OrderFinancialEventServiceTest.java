@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createOrder;
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createOrderItem;
@@ -37,7 +38,7 @@ class OrderFinancialEventServiceTest {
         when(eventRepository.save(any(OrderFinancialEvent.class))).thenAnswer(i -> {
             OrderFinancialEvent e = i.getArgument(0); e.setId(1L); return e;
         });
-        when(eventRepository.getMaxSequenceNumber(anyLong())).thenReturn(0);
+        when(eventRepository.getMaxSequenceNumber(anyLong())).thenReturn(Optional.of(0));
     }
 
     @Test @DisplayName("recordOrderCreated") void recordCreated() {
