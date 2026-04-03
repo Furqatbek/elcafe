@@ -14,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -37,13 +39,15 @@ class MenuCollectionControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .build();
         dto = MenuCollectionDTO.builder().id(1L).restaurantId(1L).name("Specials")
                 .isActive(true).items(List.of()).build();
     }
 
     @Test @DisplayName("GET / — paginated") void getPaginated() throws Exception {
-        when(menuCollectionService.getMenuCollections(eq(1L), any())).thenReturn(new PageImpl<>(List.of(dto)));
+        when(menuCollectionService.getMenuCollections(eq(1L), any())).thenReturn(new PageImpl<>(List.of(dto), PageRequest.of(0, 20), 1));
         mockMvc.perform(get("/api/v1/menu-collections").param("restaurantId", "1"))
                 .andExpect(status().isOk());
     }

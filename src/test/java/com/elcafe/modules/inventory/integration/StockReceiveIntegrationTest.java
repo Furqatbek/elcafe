@@ -47,6 +47,8 @@ class StockReceiveIntegrationTest {
         restaurant.setName("Test Restaurant");
         restaurant.setAddress("123 Test St");
         restaurant.setActive(true);
+        restaurant.setAcceptingOrders(true);
+        restaurant.setRating(java.math.BigDecimal.ZERO);
         em.persist(restaurant);
 
         supplier = Supplier.builder()
@@ -148,7 +150,7 @@ class StockReceiveIntegrationTest {
                 .expiryDate(expectedExpiry)
                 .status(InventoryBatch.Status.ACTIVE)
                 .build();
-        batchRepository.save(batch);
+        batch = batchRepository.save(batch);
         em.flush();
         em.clear();
 
@@ -198,7 +200,7 @@ class StockReceiveIntegrationTest {
                 .poReference("PO-2026-001")
                 .status(InventoryBatch.Status.ACTIVE)
                 .build();
-        batchRepository.save(batch);
+        batch = batchRepository.save(batch);
         em.flush();
         em.clear();
 

@@ -24,6 +24,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -55,7 +57,9 @@ class ValuationControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .build();
     }
 
     @Nested @DisplayName("Valuation Settings")
@@ -74,6 +78,8 @@ class ValuationControllerTest {
             ValuationSettings settings = new ValuationSettings();
             settings.setId(1L);
             settings.setValuationMethod(ValuationMethod.FIFO);
+            settings.setEffectiveFrom(java.time.LocalDate.now());
+            settings.setIsActive(true);
             when(valuationService.setValuationMethod(eq(1L), eq(ValuationMethod.FIFO), eq("admin")))
                     .thenReturn(settings);
 
@@ -149,7 +155,7 @@ class ValuationControllerTest {
         @Test @DisplayName("GET /cost-history/{id}/paginated — returns paginated history")
         void getPaginated() throws Exception {
             when(costHistoryService.getCostHistoryPaginated(1L, 0, 20))
-                    .thenReturn(new PageImpl<>(List.of()));
+                    .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
             mockMvc.perform(get("/api/v1/inventory/valuation/cost-history/1/paginated"))
                     .andExpect(status().isOk());
         }
@@ -166,7 +172,8 @@ class ValuationControllerTest {
 
         @Test @DisplayName("POST /cost-history/{id} — records cost change")
         void recordCostChange() throws Exception {
-            IngredientCostHistory history = IngredientCostHistory.builder().id(1L).build();
+            IngredientCostHistory history = IngredientCostHistory.builder().id(1L)
+                    .previousCost(new BigDecimal("5000")).newCost(new BigDecimal("6000")).build();
             when(costHistoryService.recordCostChange(eq(1L), any(BigDecimal.class), any(), eq("admin")))
                     .thenReturn(history);
 

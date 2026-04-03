@@ -13,6 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -37,13 +39,15 @@ class ProductVariantControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .build();
         response = ProductVariantResponse.builder().id(1L).productId(1L).name("Large")
                 .price(new BigDecimal("35000")).inStock(true).build();
     }
 
     @Test @DisplayName("GET / — paginated") void getPaginated() throws Exception {
-        when(productVariantService.getAllVariantsByProduct(eq(1L), any())).thenReturn(new PageImpl<>(List.of(response)));
+        when(productVariantService.getAllVariantsByProduct(eq(1L), any())).thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
         mockMvc.perform(get("/api/v1/products/1/variants")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /all") void getAll() throws Exception {
@@ -56,7 +60,7 @@ class ProductVariantControllerTest {
                 .andExpect(jsonPath("$.data.name").value("Large"));
     }
     @Test @DisplayName("GET /search") void search() throws Exception {
-        when(productVariantService.searchVariants(eq(1L), eq("Large"), any())).thenReturn(new PageImpl<>(List.of(response)));
+        when(productVariantService.searchVariants(eq(1L), eq("Large"), any())).thenReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
         mockMvc.perform(get("/api/v1/products/1/variants/search").param("query", "Large"))
                 .andExpect(status().isOk());
     }

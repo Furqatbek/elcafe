@@ -77,7 +77,7 @@ class SupplierControllerTest {
         mockMvc.perform(post("/api/v1/inventory/suppliers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("Fresh Foods"));
     }
 

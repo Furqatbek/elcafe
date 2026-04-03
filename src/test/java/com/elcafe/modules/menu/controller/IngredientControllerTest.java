@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -38,13 +39,15 @@ class IngredientControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .build();
         dto = IngredientDTO.builder().id(1L).name("Flour").unit("kg")
                 .costPerUnit(new BigDecimal("5000")).isActive(true).build();
     }
 
     @Test @DisplayName("GET / — paginated list") void getAll() throws Exception {
-        when(ingredientService.getAllIngredients(any())).thenReturn(new PageImpl<>(List.of(dto)));
+        when(ingredientService.getAllIngredients(any())).thenReturn(new PageImpl<>(List.of(dto), PageRequest.of(0, 20), 1));
         mockMvc.perform(get("/api/v1/ingredients")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }
@@ -54,7 +57,7 @@ class IngredientControllerTest {
                 .andExpect(jsonPath("$.data.name").value("Flour"));
     }
     @Test @DisplayName("GET /search") void search() throws Exception {
-        when(ingredientService.searchIngredients(eq("Flour"), any(), any())).thenReturn(new PageImpl<>(List.of(dto)));
+        when(ingredientService.searchIngredients(eq("Flour"), any(), any())).thenReturn(new PageImpl<>(List.of(dto), PageRequest.of(0, 20), 1));
         mockMvc.perform(get("/api/v1/ingredients/search").param("query", "Flour"))
                 .andExpect(status().isOk());
     }
@@ -64,7 +67,7 @@ class IngredientControllerTest {
     }
     @Test @DisplayName("POST /") void create() throws Exception {
         CreateIngredientRequest req = new CreateIngredientRequest();
-        req.setName("Flour"); req.setUnit("kg");
+        req.setName("Flour"); req.setUnit("kg"); req.setCostPerUnit(new BigDecimal("5000"));
         when(ingredientService.createIngredient(any())).thenReturn(dto);
         mockMvc.perform(post("/api/v1/ingredients").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isCreated());

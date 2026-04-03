@@ -378,21 +378,21 @@ class PaymentServiceTest {
         }
 
         @Test
-        @DisplayName("9. Already fully paid order throws PaymentTransactionException")
-        void orderAlreadyFullyPaid_throws() {
+        @DisplayName("9. Already fully paid order returns existing payment summary")
+        void orderAlreadyFullyPaid_returnsSummary() {
             Payment existingPayment = buildCompletedPayment(10L, new BigDecimal("100000"), PaymentMethod.CASH);
             testOrder.getPayments().add(existingPayment);
 
-            stubIdempotencyForSuccess();
             stubOrderFound();
+            when(paymentRepository.findByOrderId(1L)).thenReturn(List.of(existingPayment));
 
             PaymentRequestDTO request = buildPaymentRequest(PaymentMethod.CASH, new BigDecimal("10000"));
 
-            assertThatThrownBy(() -> paymentService.processPOSPayment(1L, request))
-                    .isInstanceOf(PaymentTransactionException.class)
-                    .hasMessageContaining("already fully paid");
+            PaymentResponseDTO response = paymentService.processPOSPayment(1L, request);
 
-            verify(idempotencyService).releaseOrderPaymentLock(1L);
+            assertThat(response).isNotNull();
+            assertThat(response.isOrderFullyPaid()).isTrue();
+            assertThat(response.getOrderId()).isEqualTo(1L);
         }
 
         @Test

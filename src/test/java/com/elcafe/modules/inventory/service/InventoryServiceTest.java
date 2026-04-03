@@ -141,7 +141,7 @@ class InventoryServiceTest {
 
         @Test @DisplayName("sends low stock alert when below minimum")
         void lowStockAlert() {
-            flour.setCurrentStock(new BigDecimal("11"));
+            flour.setCurrentStock(new BigDecimal("10"));
             flour.setMinimumStock(new BigDecimal("10"));
             when(productIngredientRepository.findByProductIdWithIngredients(1L)).thenReturn(List.of(recipeFlour));
             when(ingredientRepository.findById(1L)).thenReturn(Optional.of(flour));

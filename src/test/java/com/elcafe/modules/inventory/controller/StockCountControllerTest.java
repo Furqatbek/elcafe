@@ -22,6 +22,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import com.elcafe.modules.restaurant.entity.Restaurant;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -50,8 +52,13 @@ class StockCountControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        Restaurant restaurant = new Restaurant();
+        restaurant.setId(1L);
+        restaurant.setName("Test Restaurant");
+
         stockCount = new StockCount();
         stockCount.setId(1L);
+        stockCount.setRestaurant(restaurant);
         stockCount.setCountNumber("SC-001");
         stockCount.setCountType(StockCount.CountType.FULL);
         stockCount.setStatus(StockCount.Status.DRAFT);
