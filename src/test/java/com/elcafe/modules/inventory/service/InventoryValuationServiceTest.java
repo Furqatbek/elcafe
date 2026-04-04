@@ -64,19 +64,19 @@ class InventoryValuationServiceTest {
     @Test @DisplayName("getValuationMethod — returns configured or default WAC")
     void getValuationMethod() {
         ValuationSettings settings = ValuationSettings.builder().valuationMethod(ValuationMethod.FIFO).isActive(true).build();
-        when(valuationSettingsRepository.findByRestaurantIdAndIsActiveTrue(1L)).thenReturn(Optional.of(settings));
+        when(valuationSettingsRepository.findByRestaurant_IdAndIsActiveTrue(1L)).thenReturn(Optional.of(settings));
         assertThat(valuationService.getValuationMethod(1L)).isEqualTo(ValuationMethod.FIFO);
     }
 
     @Test @DisplayName("getValuationMethod — defaults to WAC when no settings")
     void getValuationMethod_default() {
-        when(valuationSettingsRepository.findByRestaurantIdAndIsActiveTrue(1L)).thenReturn(Optional.empty());
+        when(valuationSettingsRepository.findByRestaurant_IdAndIsActiveTrue(1L)).thenReturn(Optional.empty());
         assertThat(valuationService.getValuationMethod(1L)).isEqualTo(ValuationMethod.WEIGHTED_AVERAGE);
     }
 
     @Test @DisplayName("setValuationMethod — saves new settings")
     void setValuationMethod() {
-        when(valuationSettingsRepository.findByRestaurantIdAndIsActiveTrue(1L)).thenReturn(Optional.empty());
+        when(valuationSettingsRepository.findByRestaurant_IdAndIsActiveTrue(1L)).thenReturn(Optional.empty());
         when(valuationSettingsRepository.save(any())).thenAnswer(i -> { ValuationSettings s = i.getArgument(0); s.setId(1L); return s; });
         ValuationSettings result = valuationService.setValuationMethod(1L, ValuationMethod.LIFO, "admin");
         assertThat(result.getValuationMethod()).isEqualTo(ValuationMethod.LIFO);
@@ -109,7 +109,7 @@ class InventoryValuationServiceTest {
 
     @Test @DisplayName("consumeWithValuation — delegates to configured method")
     void consumeWithValuation() {
-        when(valuationSettingsRepository.findByRestaurantIdAndIsActiveTrue(1L)).thenReturn(Optional.empty()); // defaults to WAC
+        when(valuationSettingsRepository.findByRestaurant_IdAndIsActiveTrue(1L)).thenReturn(Optional.empty()); // defaults to WAC
         when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
         when(batchRepository.findActiveBatchesFEFO(1L)).thenReturn(List.of(batch1, batch2));
         when(batchRepository.save(any())).thenAnswer(i -> i.getArgument(0));

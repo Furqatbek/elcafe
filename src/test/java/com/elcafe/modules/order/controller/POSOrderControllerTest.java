@@ -289,7 +289,7 @@ class POSOrderControllerTest {
 
         CreatePOSOrderRequest req = CreatePOSOrderRequest.builder()
                 .restaurantId(1L)
-                .orderType(com.elcafe.modules.order.enums.OrderType.DINE_IN)
+                .orderType(CreatePOSOrderRequest.OrderType.DINE_IN)
                 .orderSource(com.elcafe.modules.order.enums.OrderSource.WALK_IN)
                 .customerInfo(CreatePOSOrderRequest.CustomerInfo.builder().name("Test").phone("+998901111111").build())
                 .items(List.of(CreatePOSOrderRequest.OrderItemRequest.builder().productId(1L).quantity(1).price(BigDecimal.valueOf(25000)).build()))
