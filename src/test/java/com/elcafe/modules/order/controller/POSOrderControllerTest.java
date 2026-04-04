@@ -279,4 +279,182 @@ class POSOrderControllerTest {
                         .param("restaurantId", "1"))
                 .andExpect(status().isOk());
     }
+
+    // ==================== createOrder ====================
+
+    @Test
+    @DisplayName("POST / — creates POS order")
+    void createOrder_returns201() throws Exception {
+        when(posOrderService.createOrder(any())).thenReturn(buildResponse());
+
+        CreatePOSOrderRequest req = CreatePOSOrderRequest.builder()
+                .restaurantId(1L)
+                .orderType(com.elcafe.modules.order.enums.OrderType.DINE_IN)
+                .orderSource(com.elcafe.modules.order.enums.OrderSource.WALK_IN)
+                .customerInfo(CreatePOSOrderRequest.CustomerInfo.builder().name("Test").phone("+998901111111").build())
+                .items(List.of(CreatePOSOrderRequest.OrderItemRequest.builder().productId(1L).quantity(1).price(BigDecimal.valueOf(25000)).build()))
+                .build();
+
+        mockMvc.perform(post("/api/v1/pos/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated());
+    }
+
+    // ==================== kitchenStatus ====================
+
+    @Test
+    @DisplayName("GET /{orderId}/kitchen-status — returns kitchen status")
+    void getKitchenStatus_returns200() throws Exception {
+        when(posOrderService.getKitchenStatus(1L)).thenReturn(POSKitchenStatusDTO.builder().orderId(1L).build());
+
+        mockMvc.perform(get("/api/v1/pos/orders/1/kitchen-status"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== refund ====================
+
+    @Test
+    @DisplayName("POST /{orderId}/refund — processes refund")
+    void processRefund_returns200() throws Exception {
+        Order order = createOrder(1L, OrderStatus.DELIVERED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(financialSecurityService.canPerformRefund(any(), any()))
+                .thenReturn(new FinancialOperationSecurityService.RefundAuthorizationResult(true, false, null));
+        when(paymentService.processPOSRefund(eq(1L), any()))
+                .thenReturn(PaymentResponseDTO.builder().orderId(1L).build());
+
+        RefundRequestDTO req = RefundRequestDTO.builder()
+                .type(RefundRequestDTO.RefundType.FULL)
+                .reason("Customer complaint")
+                .amount(BigDecimal.valueOf(80000))
+                .build();
+
+        mockMvc.perform(post("/api/v1/pos/orders/1/refund")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== void ====================
+
+    @Test
+    @DisplayName("POST /{orderId}/void — voids order")
+    void voidOrder_returns200() throws Exception {
+        Order order = createOrder(1L, OrderStatus.PREPARING);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(financialSecurityService.canVoidOrder(any()))
+                .thenReturn(new FinancialOperationSecurityService.VoidAuthorizationResult(true, false, null));
+        when(posOrderService.getOrderById(1L)).thenReturn(buildResponse());
+
+        mockMvc.perform(post("/api/v1/pos/orders/1/void")
+                        .param("reason", "Mistake")
+                        .param("voidedBy", "MANAGER"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== tip ====================
+
+    @Test
+    @DisplayName("POST /{orderId}/tip — adds tip")
+    void addTip_returns200() throws Exception {
+        when(paymentService.addTip(eq(1L), any())).thenReturn(PaymentResponseDTO.builder().orderId(1L).build());
+
+        mockMvc.perform(post("/api/v1/pos/orders/1/tip")
+                        .param("tipAmount", "10000"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== serviceFeeAmount ====================
+
+    @Test
+    @DisplayName("POST /{orderId}/service-fee-amount — applies service fee by amount")
+    void applyServiceFeeAmount_returns200() throws Exception {
+        Order feeOrder = createOrder(1L, OrderStatus.PREPARING);
+        when(posOrderFeeService.applyServiceFeeAmount(eq(1L), any())).thenReturn(feeOrder);
+        when(posOrderService.mapToResponse(any(), any())).thenReturn(buildResponse());
+        when(posOrderService.getOrderTypeString(any())).thenReturn("DINE_IN");
+
+        mockMvc.perform(post("/api/v1/pos/orders/1/service-fee-amount")
+                        .param("serviceFeeAmount", "5000"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== applyDiscount ====================
+
+    @Test
+    @DisplayName("POST /{orderId}/discount — applies discount")
+    void applyDiscount_returns200() throws Exception {
+        Order order = createOrder(1L, OrderStatus.PREPARING);
+        when(posOrderDiscountService.applyDiscount(eq(1L), any())).thenReturn(order);
+        when(posOrderService.mapToResponse(any(), any())).thenReturn(buildResponse());
+        when(posOrderService.getOrderTypeString(any())).thenReturn("DINE_IN");
+
+        ApplyDiscountRequest req = ApplyDiscountRequest.builder()
+                .discountType(DiscountType.COUPON)
+                .couponCode("SAVE10")
+                .build();
+
+        mockMvc.perform(post("/api/v1/pos/orders/1/discount")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== validateCoupon ====================
+
+    @Test
+    @DisplayName("POST /{orderId}/validate-coupon — validates coupon")
+    void validateCoupon_returns200() throws Exception {
+        when(posOrderDiscountService.validateCoupon(eq(1L), eq("SAVE10")))
+                .thenReturn(ValidateCouponResponse.builder().valid(true).build());
+
+        mockMvc.perform(post("/api/v1/pos/orders/1/validate-coupon")
+                        .param("couponCode", "SAVE10"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== happyHour active ====================
+
+    @Test
+    @DisplayName("GET /happy-hour/active — returns active happy hour")
+    void getActiveHappyHour_returns200() throws Exception {
+        when(happyHourService.getActiveHappyHour(1L)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/pos/orders/happy-hour/active")
+                        .param("restaurantId", "1"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== happyHour preview ====================
+
+    @Test
+    @DisplayName("GET /{orderId}/happy-hour/preview — previews happy hour discount")
+    void previewHappyHour_returns200() throws Exception {
+        POSOrderResponse resp = buildResponse();
+        resp.setRestaurantId(1L);
+        when(posOrderService.getOrderById(1L)).thenReturn(resp);
+        when(happyHourService.getActiveHappyHour(1L)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/pos/orders/1/happy-hour/preview"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== happyHour apply ====================
+
+    @Test
+    @DisplayName("POST /{orderId}/happy-hour/apply — applies happy hour discount")
+    void applyHappyHour_returnsOkOrBadRequest() throws Exception {
+        POSOrderResponse resp = buildResponse();
+        resp.setRestaurantId(1L);
+        when(posOrderService.getOrderById(1L)).thenReturn(resp);
+        when(happyHourService.getActiveHappyHour(1L)).thenReturn(Optional.of(
+                ActiveHappyHourResponse.builder().id(1L).name("Happy Hour").discountPercent(BigDecimal.TEN).appliesToAll(true).build()));
+        when(posOrderDiscountService.applyDiscount(eq(1L), any())).thenReturn(createOrder(1L, OrderStatus.PREPARING));
+        when(posOrderService.mapToResponse(any(), any())).thenReturn(buildResponse());
+        when(posOrderService.getOrderTypeString(any())).thenReturn("DINE_IN");
+
+        mockMvc.perform(post("/api/v1/pos/orders/1/happy-hour/apply"))
+                .andExpect(status().isOk());
+    }
 }
