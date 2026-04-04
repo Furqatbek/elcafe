@@ -44,4 +44,11 @@ class PublicOrderControllerTest {
         mockMvc.perform(get("/api/v1/public/orders/track").param("phone", "+998901111111"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("GET /{orderNumber}/eta returns ETA info")
+    void getEta_returns200() throws Exception {
+        when(trackingService.calculateETA("ORD-001")).thenReturn(OrderTrackingResponse.ETAInfo.builder().build());
+        mockMvc.perform(get("/api/v1/public/orders/ORD-001/eta")).andExpect(status().isOk());
+    }
 }
