@@ -167,4 +167,11 @@ class PaymentControllerTest {
                         .param("endDate", "2026-12-31T23:59:59+05:00"))
                 .andExpect(status().isOk());
     }
+
+    @Test @DisplayName("GET /by-transaction — returns payment")
+    void getPaymentByTransaction_returns200() throws Exception {
+        when(paymentService.getPaymentByTransactionId("TXN-001")).thenReturn(paymentResponse);
+        mockMvc.perform(get("/api/v1/payments/by-transaction").param("transactionId", "TXN-001"))
+                .andExpect(status().isOk());
+    }
 }
