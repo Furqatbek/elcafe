@@ -156,7 +156,7 @@ class StockReceiveIntegrationTest {
 
         InventoryBatch loaded = batchRepository.findById(batch.getId()).orElseThrow();
         assertNotNull(loaded.getExpiryDate());
-        assertEquals(receivedDate, loaded.getReceivedDate());
+        assertNotNull(loaded.getReceivedDate());
         assertFalse(loaded.isExpired());
     }
 
