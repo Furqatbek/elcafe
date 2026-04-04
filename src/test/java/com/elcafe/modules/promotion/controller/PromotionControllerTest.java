@@ -145,13 +145,13 @@ class PromotionControllerTest {
     // === Analytics endpoints (5) ===
     @Test @DisplayName("GET /restaurants/{id}/promotions/analytics") void analytics() throws Exception {
         when(promotionAnalyticsService.getDiscountAnalytics(eq(1L), any(), any()))
-                .thenReturn(new PromotionAnalyticsService.DiscountAnalytics(1L, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0, List.of()));
+                .thenReturn(PromotionAnalyticsService.DiscountAnalytics.builder().restaurantId(1L).build());
         mockMvc.perform(get("/api/v1/restaurants/1/promotions/analytics")
                 .param("startDate", "2026-01-01").param("endDate", "2026-03-31")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /promotions/{id}/analytics") void promoPerformance() throws Exception {
         when(promotionAnalyticsService.getPromotionPerformance(1L))
-                .thenReturn(new PromotionAnalyticsService.PromotionPerformance(1L, "Sale", "PERCENTAGE", BigDecimal.ZERO, 0, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0));
+                .thenReturn(PromotionAnalyticsService.PromotionPerformance.builder().promotionId(1L).promotionName("Sale").build());
         mockMvc.perform(get("/api/v1/promotions/1/analytics")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /restaurants/{id}/promotions/analytics/all") void allPerformance() throws Exception {

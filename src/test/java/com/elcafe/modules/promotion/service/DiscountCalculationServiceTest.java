@@ -76,8 +76,8 @@ class DiscountCalculationServiceTest {
                 .usedCount(0).active(true).build();
 
         when(couponValidationService.validateCoupon(any()))
-                .thenReturn(ValidateCouponResponse.valid(true, "20% off", new BigDecimal("20000"),
-                        "PERCENTAGE", "SAVE20", "Summer Sale"));
+                .thenReturn(ValidateCouponResponse.valid("SAVE20", 1L, "Summer Sale",
+                        com.elcafe.modules.promotion.enums.PromotionType.PERCENTAGE, new BigDecimal("20"), new BigDecimal("20000")));
         when(couponCodeRepository.findByCodeIgnoreCase("SAVE20")).thenReturn(Optional.of(coupon));
         when(couponCodeRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         when(promotionUsageRepository.save(any())).thenAnswer(i -> i.getArgument(0));
