@@ -217,4 +217,52 @@ class ShiftManagementServiceTest {
 
         assertThat(result.getTotalElements()).isEqualTo(1);
     }
+
+    @Test @DisplayName("getPendingApprovalShifts — returns pending list")
+    void getPendingApprovalShifts_returnsList() {
+        shift.setStatus(ShiftStatus.COMPLETED);
+        when(shiftRepository.findPendingApproval(1L)).thenReturn(List.of(shift));
+
+        List<ShiftSummaryDTO> result = shiftManagementService.getPendingApprovalShifts(1L);
+
+        assertThat(result).hasSize(1);
+    }
+
+    @Test @DisplayName("updateShiftTotals — increments totals")
+    void updateShiftTotals_incrementsTotals() {
+        when(shiftRepository.findById(1L)).thenReturn(Optional.of(shift));
+        when(shiftRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        shiftManagementService.updateShiftTotals(1L, new BigDecimal("100000"),
+                new BigDecimal("60000"), new BigDecimal("40000"), new BigDecimal("10000"));
+
+        assertThat(shift.getTotalSales()).isEqualByComparingTo("100000");
+        assertThat(shift.getTotalCashSales()).isEqualByComparingTo("60000");
+        assertThat(shift.getTotalCardSales()).isEqualByComparingTo("40000");
+        assertThat(shift.getTotalTips()).isEqualByComparingTo("10000");
+        assertThat(shift.getTotalOrders()).isEqualTo(1);
+        verify(shiftRepository).save(shift);
+    }
+
+    @Test @DisplayName("recordRefund — increments totalRefunds")
+    void recordRefund_incrementsRefunds() {
+        when(shiftRepository.findById(1L)).thenReturn(Optional.of(shift));
+        when(shiftRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        shiftManagementService.recordRefund(1L, new BigDecimal("25000"));
+
+        assertThat(shift.getTotalRefunds()).isEqualByComparingTo("25000");
+        verify(shiftRepository).save(shift);
+    }
+
+    @Test @DisplayName("recordVoid — increments totalVoids")
+    void recordVoid_incrementsVoids() {
+        when(shiftRepository.findById(1L)).thenReturn(Optional.of(shift));
+        when(shiftRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        shiftManagementService.recordVoid(1L, new BigDecimal("15000"));
+
+        assertThat(shift.getTotalVoids()).isEqualByComparingTo("15000");
+        verify(shiftRepository).save(shift);
+    }
 }

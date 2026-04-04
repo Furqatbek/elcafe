@@ -21,12 +21,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -190,5 +193,57 @@ class OfflineSyncServiceTest {
 
         assertThat(result.getSuccessCount()).isEqualTo(1);
         assertThat(result.getFailureCount()).isEqualTo(0);
+    }
+
+    @Test @DisplayName("recordHeartbeat — updates device heartbeat")
+    void recordHeartbeat_success() {
+        when(posDeviceRepository.findByRestaurantIdAndDeviceId(1L, "POS-001")).thenReturn(Optional.of(device));
+        when(posDeviceRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        offlineSyncService.recordHeartbeat(1L, "POS-001");
+
+        verify(posDeviceRepository).save(device);
+    }
+
+    @Test @DisplayName("queueOfflineOrders — batch queues multiple orders")
+    void queueOfflineOrders_batch() {
+        OfflineOrderRequest req1 = new OfflineOrderRequest();
+        req1.setDeviceId("POS-001");
+        req1.setClientOrderId("CLT-010");
+        req1.setOrderData(Map.of("items", List.of()));
+
+        OfflineOrderRequest req2 = new OfflineOrderRequest();
+        req2.setDeviceId("POS-001");
+        req2.setClientOrderId("CLT-011");
+        req2.setOrderData(Map.of("items", List.of()));
+
+        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        when(offlineOrderRepository.findByRestaurantIdAndDeviceIdAndClientOrderId(anyLong(), anyString(), anyString()))
+                .thenReturn(Optional.empty());
+        when(offlineOrderRepository.save(any())).thenAnswer(i -> { OfflineOrder o = i.getArgument(0); o.setId(10L); return o; });
+
+        List<OfflineOrder> result = offlineSyncService.queueOfflineOrders(1L, List.of(req1, req2));
+
+        assertThat(result).hasSize(2);
+        verify(offlineOrderRepository, times(2)).save(any());
+    }
+
+    @Test @DisplayName("retryFailedSyncs — resets failed orders and processes pending")
+    void retryFailedSyncs_success() {
+        OfflineOrder failedOrder = OfflineOrder.builder()
+                .id(5L).restaurant(restaurant).deviceId("POS-001")
+                .clientOrderId("CLT-FAIL").orderData(Map.of("items", List.of()))
+                .syncStatus(OfflineSyncStatus.FAILED).syncAttempts(1).build();
+
+        when(offlineOrderRepository.findFailedOrdersForRetry(any(OffsetDateTime.class)))
+                .thenReturn(List.of(failedOrder));
+        when(offlineOrderRepository.findPendingForSync(eq(OfflineSyncStatus.PENDING), anyInt()))
+                .thenReturn(List.of());
+        when(offlineOrderRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        offlineSyncService.retryFailedSyncs();
+
+        assertThat(failedOrder.getSyncStatus()).isEqualTo(OfflineSyncStatus.PENDING);
+        verify(offlineOrderRepository, atLeastOnce()).save(failedOrder);
     }
 }

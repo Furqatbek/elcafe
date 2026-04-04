@@ -215,4 +215,39 @@ class TaxExemptionServiceTest {
 
         assertThat(result).isEqualByComparingTo("50000");
     }
+
+    @Test @DisplayName("setCustomerTaxExempt — marks customer exempt")
+    void setCustomerTaxExempt_success() {
+        SetCustomerTaxExemptRequest request = new SetCustomerTaxExemptRequest();
+        request.setExemptionTypeId(1L);
+        request.setExemptionNumber("EX-456");
+
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(exemptionTypeRepository.findById(1L)).thenReturn(Optional.of(exemptionType));
+        when(customerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        Customer result = taxExemptionService.setCustomerTaxExempt(1L, request);
+
+        assertThat(result.getIsTaxExempt()).isTrue();
+        assertThat(result.getTaxExemptionNumber()).isEqualTo("EX-456");
+        assertThat(result.getTaxExemptionTypeId()).isEqualTo(1L);
+        verify(customerRepository).save(customer);
+    }
+
+    @Test @DisplayName("removeCustomerTaxExempt — clears exempt fields")
+    void removeCustomerTaxExempt_success() {
+        customer.setIsTaxExempt(true);
+        customer.setTaxExemptionNumber("EX-456");
+        customer.setTaxExemptionTypeId(1L);
+
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+        when(customerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        Customer result = taxExemptionService.removeCustomerTaxExempt(1L);
+
+        assertThat(result.getIsTaxExempt()).isFalse();
+        assertThat(result.getTaxExemptionTypeId()).isNull();
+        assertThat(result.getTaxExemptionNumber()).isNull();
+        verify(customerRepository).save(customer);
+    }
 }

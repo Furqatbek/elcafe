@@ -215,4 +215,62 @@ class GiftCardServiceTest {
 
         assertThat(result.getTotalElements()).isEqualTo(1);
     }
+
+    @Test @DisplayName("reloadGiftCard — adds balance")
+    void reloadGiftCard_success() {
+        when(giftCardRepository.findByCardNumberOrBarcode(1L, "GC-TEST-001")).thenReturn(Optional.of(giftCard));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(operator));
+        when(giftCardRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        GiftCard result = giftCardService.reloadGiftCard(1L, "GC-TEST-001", new BigDecimal("50000"), 1L);
+
+        assertThat(result.getCurrentBalance()).isEqualByComparingTo("150000");
+        verify(transactionRepository).save(any(GiftCardTransaction.class));
+    }
+
+    @Test @DisplayName("refundToGiftCard — adds refund amount")
+    void refundToGiftCard_success() {
+        when(giftCardRepository.findByCardNumberOrBarcode(1L, "GC-TEST-001")).thenReturn(Optional.of(giftCard));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(operator));
+        when(giftCardRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        GiftCard result = giftCardService.refundToGiftCard(1L, "GC-TEST-001", new BigDecimal("30000"), null, 1L, "Order refund");
+
+        assertThat(result.getCurrentBalance()).isEqualByComparingTo("130000");
+        verify(transactionRepository).save(any(GiftCardTransaction.class));
+    }
+
+    @Test @DisplayName("listGiftCards — returns paginated")
+    void listGiftCards_returnsPaginated() {
+        when(giftCardRepository.findByRestaurantIdOrderByCreatedAtDesc(1L, PageRequest.of(0, 20)))
+                .thenReturn(new PageImpl<>(List.of(giftCard), PageRequest.of(0, 20), 1));
+
+        var result = giftCardService.listGiftCards(1L, PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getCardNumber()).isEqualTo("GC-TEST-001");
+    }
+
+    @Test @DisplayName("expireGiftCards — marks expired cards")
+    void expireGiftCards_marksExpired() {
+        GiftCard expiredCard = GiftCard.builder()
+                .id(2L).restaurant(restaurant).giftCardType(cardType)
+                .cardNumber("GC-EXPIRED-001").barcode("GC-EXPIRED-001")
+                .initialBalance(new BigDecimal("50000"))
+                .currentBalance(new BigDecimal("25000"))
+                .status(GiftCardStatus.ACTIVE)
+                .expiresAt(OffsetDateTime.now(ZoneOffset.UTC).minusDays(1))
+                .build();
+        when(giftCardRepository.findExpiredCards(any(OffsetDateTime.class))).thenReturn(List.of(expiredCard));
+        when(giftCardRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        giftCardService.expireGiftCards();
+
+        assertThat(expiredCard.getStatus()).isEqualTo(GiftCardStatus.EXPIRED);
+        verify(giftCardRepository, atLeastOnce()).save(expiredCard);
+        verify(transactionRepository).save(any(GiftCardTransaction.class));
+    }
 }

@@ -207,4 +207,26 @@ class CashDrawerServiceTest {
 
         assertThat(result.getOperationType()).isEqualTo(CashOperationType.DROP);
     }
+
+    @Test @DisplayName("recordPaidOut — records vendor payment")
+    void recordPaidOut_success() {
+        when(cashDrawerRepository.findById(1L)).thenReturn(Optional.of(drawer));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(operator));
+        when(operationRepository.save(any())).thenAnswer(i -> { CashDrawerOperation o = i.getArgument(0); o.setId(7L); return o; });
+
+        CashDrawerOperation result = cashDrawerService.recordPaidOut(1L, new BigDecimal("50000"), 1L, 1L, "Vendor payment");
+
+        assertThat(result.getOperationType()).isEqualTo(CashOperationType.PAID_OUT);
+    }
+
+    @Test @DisplayName("recordCashPickup — records manager pickup")
+    void recordCashPickup_success() {
+        when(cashDrawerRepository.findById(1L)).thenReturn(Optional.of(drawer));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(operator));
+        when(operationRepository.save(any())).thenAnswer(i -> { CashDrawerOperation o = i.getArgument(0); o.setId(8L); return o; });
+
+        CashDrawerOperation result = cashDrawerService.recordCashPickup(1L, new BigDecimal("200000"), 1L, 1L, "End of shift");
+
+        assertThat(result.getOperationType()).isEqualTo(CashOperationType.PICKUP);
+    }
 }
