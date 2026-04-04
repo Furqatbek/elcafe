@@ -172,4 +172,35 @@ class AuthServiceTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("incorrect");
     }
+
+    @Test @DisplayName("forgotPassword — generates reset token")
+    void forgotPassword_success() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("admin@test.com");
+        when(userRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        authService.forgotPassword(request);
+
+        verify(userRepository).save(any());
+        assertThat(user.getResetToken()).isNotNull();
+        assertThat(user.getResetTokenExpiry()).isNotNull();
+    }
+
+    @Test @DisplayName("resetPassword — resets with valid token")
+    void resetPassword_success() {
+        user.setResetToken("valid-token");
+        user.setResetTokenExpiry(java.time.LocalDateTime.now().plusHours(1));
+        ResetPasswordRequest request = new ResetPasswordRequest();
+        request.setToken("valid-token");
+        request.setNewPassword("newpass123");
+        when(userRepository.findByResetToken("valid-token")).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("newpass123")).thenReturn("$2a$newencoded");
+        when(userRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        authService.resetPassword(request);
+
+        verify(passwordEncoder).encode("newpass123");
+        assertThat(user.getResetToken()).isNull();
+    }
 }
