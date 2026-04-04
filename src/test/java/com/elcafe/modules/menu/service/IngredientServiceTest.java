@@ -128,4 +128,25 @@ class IngredientServiceTest {
 
         verify(ingredientRepository).delete(ingredient);
     }
+
+    @Test @DisplayName("searchIngredients — returns filtered page")
+    void searchIngredients_returnsPage() {
+        when(ingredientRepository.searchIngredients(eq("Flour"), any(), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(java.util.List.of(ingredient)));
+
+        var result = ingredientService.searchIngredients("Flour", null,
+                org.springframework.data.domain.PageRequest.of(0, 20));
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getName()).isEqualTo("Flour");
+    }
+
+    @Test @DisplayName("getLowStockIngredients — returns low stock list")
+    void getLowStockIngredients_returnsList() {
+        when(ingredientRepository.findLowStockIngredients()).thenReturn(java.util.List.of(ingredient));
+
+        var result = ingredientService.getLowStockIngredients();
+
+        assertThat(result).hasSize(1);
+    }
 }
