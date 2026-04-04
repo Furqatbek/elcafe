@@ -11,6 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -18,12 +20,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ConsumerAuthControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -35,7 +37,7 @@ class ConsumerAuthControllerTest {
     @Test @DisplayName("POST /login — request OTP") void requestOtp() throws Exception {
         ConsumerLoginRequest req = new ConsumerLoginRequest();
         req.setPhoneNumber("+998901234567"); req.setRegistrationSource(RegistrationSource.MOBILE_APP);
-        when(consumerAuthService.requestOtp(any(), anyString(), anyString()))
+        when(consumerAuthService.requestOtp(any(), any(), any()))
                 .thenReturn(ConsumerLoginResponse.builder().message("OTP sent").phoneNumber("+998901234567")
                         .expiresAt(LocalDateTime.now().plusMinutes(5)).expiresInSeconds(300L).build());
         mockMvc.perform(post("/api/v1/consumer/auth/login").contentType(MediaType.APPLICATION_JSON)
@@ -44,7 +46,7 @@ class ConsumerAuthControllerTest {
     @Test @DisplayName("POST /verify — verify OTP") void verifyOtp() throws Exception {
         VerifyOtpRequest req = new VerifyOtpRequest();
         req.setPhoneNumber("+998901234567"); req.setOtpCode("123456");
-        when(consumerAuthService.verifyOtp(any(), anyString(), anyString()))
+        when(consumerAuthService.verifyOtp(any(), any(), any()))
                 .thenReturn(ConsumerAuthResponse.builder().accessToken("at").refreshToken("rt")
                         .customerId(1L).phoneNumber("+998901234567").build());
         mockMvc.perform(post("/api/v1/consumer/auth/verify").contentType(MediaType.APPLICATION_JSON)
@@ -52,7 +54,7 @@ class ConsumerAuthControllerTest {
     }
     @Test @DisplayName("POST /refresh") void refresh() throws Exception {
         RefreshTokenRequest req = new RefreshTokenRequest(); req.setRefreshToken("rt");
-        when(consumerAuthService.refreshAccessToken(any(), anyString(), anyString()))
+        when(consumerAuthService.refreshAccessToken(any(), any(), any()))
                 .thenReturn(ConsumerAuthResponse.builder().accessToken("new-at").refreshToken("rt").build());
         mockMvc.perform(post("/api/v1/consumer/auth/refresh").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());

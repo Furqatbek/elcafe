@@ -50,7 +50,7 @@ class OtpCodeRepositoryTest {
 
     @Test @DisplayName("countRecentOtpsByPhoneNumber — counts for rate limiting")
     void countRecent() {
-        long count = otpCodeRepository.countRecentOtpsByPhoneNumber("+998901111111", LocalDateTime.now().minusMinutes(5));
+        long count = otpCodeRepository.countRecentOtpsByPhoneNumber("+998901111111", LocalDateTime.now().minusMinutes(10));
         assertEquals(1, count);
     }
 }

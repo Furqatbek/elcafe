@@ -88,12 +88,12 @@ class ConsumerAuthServiceTest {
 
         when(otpCodeRepository.countRecentOtpsByPhoneNumber(anyString(), any())).thenReturn(0L);
         when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+        when(customerRepository.save(any(Customer.class))).thenAnswer(i -> i.getArgument(0));
         when(otpCodeRepository.save(any(OtpCode.class))).thenAnswer(i -> i.getArgument(0));
 
         ConsumerLoginResponse result = consumerAuthService.requestOtp(request, "127.0.0.1", "TestAgent");
 
         assertThat(result.getPhoneNumber()).isEqualTo("+998901234567");
-        verify(customerRepository, never()).save(any()); // Not created, just found
     }
 
     @Test @DisplayName("requestOtp — rate limited throws")

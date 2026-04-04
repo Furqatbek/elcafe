@@ -57,6 +57,7 @@ class PromotionControllerTest {
         CreatePromotionRequest req = new CreatePromotionRequest();
         req.setName("New"); req.setPromotionType(PromotionType.PERCENTAGE);
         req.setPromotionScope(PromotionScope.ALL); req.setDiscountValue(new BigDecimal("15"));
+        req.setStartDate(java.time.LocalDateTime.now().minusDays(1));
         when(promotionService.createPromotion(eq(1L), any())).thenReturn(promoResp);
         mockMvc.perform(post("/api/v1/restaurants/1/promotions").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isCreated());
@@ -102,7 +103,7 @@ class PromotionControllerTest {
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isCreated());
     }
     @Test @DisplayName("POST /coupons/validate") void validate() throws Exception {
-        ValidateCouponRequest req = ValidateCouponRequest.builder().code("SAVE20").restaurantId(1L).build();
+        ValidateCouponRequest req = ValidateCouponRequest.builder().code("SAVE20").restaurantId(1L).orderSubtotal(new BigDecimal("100000")).build();
         when(couponValidationService.validateCoupon(any())).thenReturn(ValidateCouponResponse.invalid("test"));
         mockMvc.perform(post("/api/v1/coupons/validate").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());

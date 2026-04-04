@@ -77,7 +77,8 @@ class PromotionLifecycleIntegrationTest {
     void duplicateName() {
         promotionRepository.save(Promotion.builder().restaurant(restaurant).name("Unique")
                 .promotionType(PromotionType.PERCENTAGE).promotionScope(PromotionScope.ALL)
-                .discountValue(new BigDecimal("10")).active(true).build());
+                .discountValue(new BigDecimal("10")).active(true)
+                .startDate(LocalDateTime.now().minusDays(1)).endDate(LocalDateTime.now().plusDays(30)).build());
         em.flush(); em.clear();
 
         assertTrue(promotionRepository.existsByRestaurant_IdAndNameIgnoreCase(restaurant.getId(), "unique"));

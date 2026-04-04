@@ -50,6 +50,7 @@ class AddressControllerTest {
     }
     @Test @DisplayName("POST /") void create() throws Exception {
         CreateAddressRequest req = new CreateAddressRequest(); req.setLabel("Work");
+        req.setLatitude(41.31); req.setLongitude(69.24); req.setDisplayName("123 Main St"); req.setCity("Tashkent");
         when(addressService.createAddress(eq(1L), any())).thenReturn(resp);
         mockMvc.perform(post(BASE).contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isCreated());

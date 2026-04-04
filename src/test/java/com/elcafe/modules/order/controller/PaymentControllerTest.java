@@ -171,7 +171,7 @@ class PaymentControllerTest {
     @Test @DisplayName("GET /by-transaction — returns payment")
     void getPaymentByTransaction_returns200() throws Exception {
         when(paymentService.getPaymentByTransactionId("TXN-001")).thenReturn(samplePayment());
-        mockMvc.perform(get("/api/v1/payments/by-transaction").param("transactionId", "TXN-001"))
+        mockMvc.perform(get("/api/v1/orders/1/payments/by-transaction").param("transactionId", "TXN-001"))
                 .andExpect(status().isOk());
     }
 }

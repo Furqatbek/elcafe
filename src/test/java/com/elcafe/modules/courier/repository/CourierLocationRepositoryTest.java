@@ -33,7 +33,7 @@ class CourierLocationRepositoryTest {
         courier = CourierProfile.builder().user(user).courierType(CourierType.FULL_TIME).vehicle(CourierVehicle.MOTORCYCLE).build();
         em.persist(courier);
         em.persist(CourierLocation.builder().courier(courier).latitude(41.31).longitude(69.24).isActive(true)
-                .timestamp(LocalDateTime.now()).build());
+                .timestamp(LocalDateTime.now().plusMinutes(1)).build());
         em.persist(CourierLocation.builder().courier(courier).latitude(41.32).longitude(69.25).isActive(true)
                 .timestamp(LocalDateTime.now().minusMinutes(10)).build());
         em.flush(); em.clear();

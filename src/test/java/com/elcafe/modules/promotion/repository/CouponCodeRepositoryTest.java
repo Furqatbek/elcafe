@@ -31,7 +31,8 @@ class CouponCodeRepositoryTest {
         em.persist(restaurant);
         promotion = Promotion.builder().restaurant(restaurant).name("Sale")
                 .promotionType(PromotionType.PERCENTAGE).promotionScope(PromotionScope.ALL)
-                .discountValue(new BigDecimal("20")).active(true).build();
+                .discountValue(new BigDecimal("20")).active(true)
+                .startDate(LocalDateTime.now().minusDays(1)).endDate(LocalDateTime.now().plusDays(30)).build();
         em.persist(promotion);
         em.persist(CouponCode.builder().code("ACTIVE10").promotion(promotion).active(true)
                 .usedCount(0).validFrom(LocalDateTime.now().minusDays(1)).validUntil(LocalDateTime.now().plusDays(30)).build());

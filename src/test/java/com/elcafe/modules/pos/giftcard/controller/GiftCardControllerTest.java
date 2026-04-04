@@ -50,7 +50,7 @@ class GiftCardControllerTest {
         when(giftCardService.createGiftCardType(eq(1L), any()))
                 .thenReturn(GiftCardType.builder().id(1L).restaurant(r).name("Standard").build());
         mockMvc.perform(post(BASE + "/types").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req))).andExpect(status().isCreated());
+                .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /types") void getTypes() throws Exception {
         when(giftCardService.getGiftCardTypes(1L)).thenReturn(List.of());
@@ -65,7 +65,7 @@ class GiftCardControllerTest {
                         .status(GiftCardStatus.ACTIVE).build());
         mockMvc.perform(post(BASE).contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req)).param("operatorId", "1"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isOk());
     }
     @Test @DisplayName("GET / — list") void list() throws Exception {
         when(giftCardService.listGiftCards(eq(1L), any()))

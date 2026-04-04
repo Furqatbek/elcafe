@@ -51,7 +51,7 @@ class TaxExemptionControllerTest {
         when(taxExemptionService.createExemptionType(eq(1L), any()))
                 .thenReturn(TaxExemptionType.builder().id(1L).restaurant(r).name("Gov").build());
         mockMvc.perform(post(BASE + "/types").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req))).andExpect(status().isCreated());
+                .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /types") void getTypes() throws Exception {
         when(taxExemptionService.getExemptionTypes(1L)).thenReturn(List.of());

@@ -64,13 +64,13 @@ class InventoryValuationServiceTest {
     @Test @DisplayName("getValuationMethod — returns configured or default WAC")
     void getValuationMethod() {
         ValuationSettings settings = ValuationSettings.builder().valuationMethod(ValuationMethod.FIFO).isActive(true).build();
-        when(valuationSettingsRepository.findByRestaurant_IdAndIsActiveTrue(1L)).thenReturn(Optional.of(settings));
+        when(valuationSettingsRepository.findCurrentSettings(eq(1L), any(LocalDate.class))).thenReturn(Optional.of(settings));
         assertThat(valuationService.getValuationMethod(1L)).isEqualTo(ValuationMethod.FIFO);
     }
 
     @Test @DisplayName("getValuationMethod — defaults to WAC when no settings")
     void getValuationMethod_default() {
-        when(valuationSettingsRepository.findByRestaurant_IdAndIsActiveTrue(1L)).thenReturn(Optional.empty());
+        when(valuationSettingsRepository.findCurrentSettings(eq(1L), any(LocalDate.class))).thenReturn(Optional.empty());
         assertThat(valuationService.getValuationMethod(1L)).isEqualTo(ValuationMethod.WEIGHTED_AVERAGE);
     }
 
@@ -109,7 +109,7 @@ class InventoryValuationServiceTest {
 
     @Test @DisplayName("consumeWithValuation — delegates to configured method")
     void consumeWithValuation() {
-        when(valuationSettingsRepository.findByRestaurant_IdAndIsActiveTrue(1L)).thenReturn(Optional.empty()); // defaults to WAC
+        when(valuationSettingsRepository.findCurrentSettings(eq(1L), any(LocalDate.class))).thenReturn(Optional.empty()); // defaults to WAC
         when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
         when(batchRepository.findActiveBatchesFEFO(1L)).thenReturn(List.of(batch1, batch2));
         when(batchRepository.save(any())).thenAnswer(i -> i.getArgument(0));

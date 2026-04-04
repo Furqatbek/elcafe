@@ -54,12 +54,14 @@ class HappyHourControllerTest {
     }
     @Test @DisplayName("POST /restaurants/{id}/happy-hours") void create() throws Exception {
         HappyHourRequest req = new HappyHourRequest(); req.setName("New"); req.setDiscountPercent(new BigDecimal("15"));
+        req.setSchedules(List.of(HappyHourRequest.ScheduleRequest.builder().dayOfWeek("MON").startTime("14:00").endTime("18:00").build()));
         when(happyHourService.createHappyHour(eq(1L), any())).thenReturn(response);
         mockMvc.perform(post("/api/v1/restaurants/1/happy-hours").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());
     }
     @Test @DisplayName("PUT /happy-hours/{id}") void update() throws Exception {
-        HappyHourRequest req = new HappyHourRequest(); req.setName("Updated");
+        HappyHourRequest req = new HappyHourRequest(); req.setName("Updated"); req.setDiscountPercent(new BigDecimal("20"));
+        req.setSchedules(List.of(HappyHourRequest.ScheduleRequest.builder().dayOfWeek("MON").startTime("14:00").endTime("18:00").build()));
         when(happyHourService.updateHappyHour(eq(1L), any())).thenReturn(response);
         mockMvc.perform(put("/api/v1/happy-hours/1").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());

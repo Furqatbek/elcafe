@@ -39,7 +39,8 @@ class PromotionRepositoryTest {
                 .startDate(LocalDateTime.now().minusDays(30)).endDate(LocalDateTime.now().minusDays(1)).build());
         em.persist(Promotion.builder().restaurant(restaurant).name("Inactive")
                 .promotionType(PromotionType.FIXED_AMOUNT).promotionScope(PromotionScope.ALL)
-                .discountValue(new BigDecimal("5000")).active(false).build());
+                .discountValue(new BigDecimal("5000")).active(false)
+                .startDate(LocalDateTime.now().minusDays(1)).endDate(LocalDateTime.now().plusDays(30)).build());
         em.flush(); em.clear();
     }
 

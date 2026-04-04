@@ -48,6 +48,7 @@ class InventoryReservationServiceTest {
         ProductIngredient pi = ProductIngredient.builder().id(1L).ingredient(ingredient)
                 .quantityRequired(new BigDecimal("0.5")).optional(false).build();
         when(productIngredientRepository.findByProductIdWithIngredients(1L)).thenReturn(List.of(pi));
+        when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
         when(reservationRepository.getTotalReservedQuantity(eq(1L), any())).thenReturn(BigDecimal.ZERO);
         when(reservationRepository.save(any())).thenAnswer(i -> { InventoryReservation r = i.getArgument(0); r.setId(1L); return r; });
 
@@ -61,6 +62,7 @@ class InventoryReservationServiceTest {
         ProductIngredient pi = ProductIngredient.builder().id(1L).ingredient(ingredient)
                 .quantityRequired(new BigDecimal("5")).optional(false).build();
         when(productIngredientRepository.findByProductIdWithIngredients(1L)).thenReturn(List.of(pi));
+        when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
         when(reservationRepository.getTotalReservedQuantity(eq(1L), any())).thenReturn(BigDecimal.ZERO);
 
         assertThatThrownBy(() -> reservationService.reserveForProduct("session-1", 1L, 2))

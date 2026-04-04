@@ -18,6 +18,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,7 +34,8 @@ class PromotionUsageRepositoryTest {
         em.persist(restaurant);
         promotion = Promotion.builder().restaurant(restaurant).name("Sale")
                 .promotionType(PromotionType.PERCENTAGE).promotionScope(PromotionScope.ALL)
-                .discountValue(new BigDecimal("20")).active(true).build();
+                .discountValue(new BigDecimal("20")).active(true)
+                .startDate(LocalDateTime.now().minusDays(1)).endDate(LocalDateTime.now().plusDays(30)).build();
         em.persist(promotion);
         customer = Customer.builder().phone("+998901234567").firstName("Test").lastName("Customer").active(true).build();
         em.persist(customer);

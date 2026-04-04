@@ -4,6 +4,7 @@ import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.promotion.dto.ApplyDiscountRequest;
+import com.elcafe.modules.promotion.dto.HappyHourResponse;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.elcafe.modules.promotion.entity.CouponCode;
 import com.elcafe.modules.promotion.entity.Promotion;
@@ -93,6 +94,9 @@ class DiscountCalculationServiceTest {
         ApplyDiscountRequest req = ApplyDiscountRequest.builder()
                 .discountType(DiscountType.HAPPY_HOUR).happyHourId(1L).build();
 
+        HappyHourResponse happyHourResponse = HappyHourResponse.builder()
+                .id(1L).name("Evening").currentlyActive(true).build();
+        when(happyHourService.getHappyHour(1L)).thenReturn(happyHourResponse);
         when(happyHourService.calculateHappyHourDiscount(order)).thenReturn(new BigDecimal("15000"));
 
         BigDecimal discount = discountCalculationService.applyDiscount(order, req);

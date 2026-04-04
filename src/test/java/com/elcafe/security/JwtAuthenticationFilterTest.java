@@ -51,6 +51,7 @@ class JwtAuthenticationFilterTest {
         request.addHeader("Authorization", "Bearer valid-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("admin@test.com");
         Claims claims = Jwts.claims().subject("admin@test.com").build();
         when(jwtUtil.extractAllClaims("valid-token")).thenReturn(claims);
 
@@ -82,7 +83,7 @@ class JwtAuthenticationFilterTest {
         request.addHeader("Authorization", "Bearer bad-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        when(jwtUtil.extractAllClaims("bad-token")).thenThrow(new RuntimeException("Invalid token"));
+        when(jwtUtil.extractUsername("bad-token")).thenThrow(new RuntimeException("Invalid token"));
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -96,6 +97,8 @@ class JwtAuthenticationFilterTest {
         request.addHeader("Authorization", "Bearer consumer-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
+        when(jwtUtil.extractUsername("consumer-token")).thenReturn("+998901234567");
+        when(jwtUtil.isTokenExpired("consumer-token")).thenReturn(false);
         // Build claims with type=consumer
         Claims claims = Jwts.claims()
                 .subject("+998901234567")
