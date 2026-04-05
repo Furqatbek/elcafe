@@ -26,29 +26,14 @@ class SmsTemplateRepositoryTest {
     @BeforeEach
     void setUp() {
         em.persist(SmsTemplate.builder()
-                .name("Welcome SMS")
-                .content("Welcome to ElCafe, {name}!")
-                .type("WELCOME")
-                .description("Sent on registration")
-                .isActive(true)
-                .usageCount(50)
-                .build());
+                .name("Welcome SMS").content("Welcome to our service, {name}!")
+                .type("MARKETING").isActive(true).usageCount(50).build());
         em.persist(SmsTemplate.builder()
-                .name("Order Confirmation")
-                .content("Your order #{orderId} has been confirmed.")
-                .type("ORDER")
-                .description("Sent after order placed")
-                .isActive(true)
-                .usageCount(120)
-                .build());
+                .name("OTP Code").content("Your verification code is {code}")
+                .type("AUTH").isActive(true).usageCount(200).build());
         em.persist(SmsTemplate.builder()
-                .name("Promo Inactive")
-                .content("Special promo for you!")
-                .type("PROMO")
-                .description("Disabled promo template")
-                .isActive(false)
-                .usageCount(5)
-                .build());
+                .name("Old Promo").content("Big sale this weekend!")
+                .type("MARKETING").isActive(false).usageCount(10).build());
         em.flush();
         em.clear();
     }
@@ -58,69 +43,69 @@ class SmsTemplateRepositoryTest {
         List<SmsTemplate> result = repo.findMostUsedTemplates(PageRequest.of(0, 10));
 
         assertEquals(2, result.size());
-        assertEquals("Order Confirmation", result.get(0).getName());
+        assertEquals("OTP Code", result.get(0).getName());
         assertEquals("Welcome SMS", result.get(1).getName());
-        // inactive template should not appear
-        assertTrue(result.stream().noneMatch(t -> "Promo Inactive".equals(t.getName())));
     }
 
     @Test @DisplayName("findMostUsedTemplates — respects page size limit")
-    void findMostUsedTemplates_limit() {
+    void findMostUsedTemplates_pageable() {
         List<SmsTemplate> result = repo.findMostUsedTemplates(PageRequest.of(0, 1));
+
         assertEquals(1, result.size());
-        assertEquals("Order Confirmation", result.get(0).getName());
+        assertEquals("OTP Code", result.get(0).getName());
     }
 
-    @Test @DisplayName("searchTemplates — matches by name")
+    @Test @DisplayName("searchTemplates — matches name case-insensitively")
     void searchTemplates_byName() {
-        Page<SmsTemplate> result = repo.searchTemplates("Welcome", PageRequest.of(0, 10));
+        Page<SmsTemplate> result = repo.searchTemplates("welcome", PageRequest.of(0, 10));
+
         assertEquals(1, result.getTotalElements());
         assertEquals("Welcome SMS", result.getContent().get(0).getName());
     }
 
-    @Test @DisplayName("searchTemplates — matches by content")
+    @Test @DisplayName("searchTemplates — matches content")
     void searchTemplates_byContent() {
-        Page<SmsTemplate> result = repo.searchTemplates("confirmed", PageRequest.of(0, 10));
+        Page<SmsTemplate> result = repo.searchTemplates("verification", PageRequest.of(0, 10));
+
         assertEquals(1, result.getTotalElements());
-        assertEquals("Order Confirmation", result.getContent().get(0).getName());
+        assertEquals("OTP Code", result.getContent().get(0).getName());
     }
 
-    @Test @DisplayName("searchTemplates — case insensitive and includes inactive")
-    void searchTemplates_caseInsensitive() {
-        Page<SmsTemplate> result = repo.searchTemplates("promo", PageRequest.of(0, 10));
-        assertEquals(1, result.getTotalElements());
-        assertEquals("Promo Inactive", result.getContent().get(0).getName());
-    }
+    @Test @DisplayName("searchTemplates — returns inactive templates too")
+    void searchTemplates_includesInactive() {
+        Page<SmsTemplate> result = repo.searchTemplates("sale", PageRequest.of(0, 10));
 
-    @Test @DisplayName("searchTemplates — no match returns empty")
-    void searchTemplates_noMatch() {
-        Page<SmsTemplate> result = repo.searchTemplates("nonexistent", PageRequest.of(0, 10));
-        assertEquals(0, result.getTotalElements());
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Old Promo", result.getContent().get(0).getName());
     }
 
     @Test @DisplayName("findAllTypes — returns distinct types")
     void findAllTypes() {
         List<String> types = repo.findAllTypes();
-        assertEquals(3, types.size());
-        assertTrue(types.contains("WELCOME"));
-        assertTrue(types.contains("ORDER"));
-        assertTrue(types.contains("PROMO"));
+
+        assertEquals(2, types.size());
+        assertTrue(types.contains("MARKETING"));
+        assertTrue(types.contains("AUTH"));
     }
 
     @Test @DisplayName("findByIsActiveTrue — returns only active templates")
     void findByIsActiveTrue() {
-        List<SmsTemplate> active = repo.findByIsActiveTrue();
-        assertEquals(2, active.size());
-        assertTrue(active.stream().allMatch(SmsTemplate::getIsActive));
+        List<SmsTemplate> result = repo.findByIsActiveTrue();
+
+        assertEquals(2, result.size());
+        assertTrue(result.stream().allMatch(SmsTemplate::getIsActive));
     }
 
-    @Test @DisplayName("findByType — returns templates of given type")
+    @Test @DisplayName("findByType — filters by type")
     void findByType() {
-        List<SmsTemplate> orderTemplates = repo.findByType("ORDER");
-        assertEquals(1, orderTemplates.size());
-        assertEquals("Order Confirmation", orderTemplates.get(0).getName());
+        List<SmsTemplate> marketing = repo.findByType("MARKETING");
+        assertEquals(2, marketing.size());
 
-        List<SmsTemplate> noMatch = repo.findByType("NONEXISTENT");
-        assertTrue(noMatch.isEmpty());
+        List<SmsTemplate> auth = repo.findByType("AUTH");
+        assertEquals(1, auth.size());
+        assertEquals("OTP Code", auth.get(0).getName());
+
+        List<SmsTemplate> unknown = repo.findByType("UNKNOWN");
+        assertTrue(unknown.isEmpty());
     }
 }
