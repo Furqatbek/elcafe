@@ -58,6 +58,10 @@ class ShiftManagementControllerTest {
         shift = new EmployeeShift();
         shift.setId(1L);
         shift.setStatus(ShiftStatus.ACTIVE);
+        shift.setClockIn(OffsetDateTime.now(ZoneOffset.UTC));
+        shift.setShiftDate(LocalDate.now());
+        shift.setBreakMinutes(0);
+        shift.setBreaks(new java.util.ArrayList<>());
         summary = ShiftSummaryDTO.builder().id(1L).employeeId(1L).employeeName("Test")
                 .status(ShiftStatus.ACTIVE).shiftDate(LocalDate.now()).build();
     }
@@ -75,14 +79,17 @@ class ShiftManagementControllerTest {
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());
     }
     @Test @DisplayName("POST /{id}/break/start") void startBreak() throws Exception {
-        ShiftBreak b = ShiftBreak.builder().id(1L).breakStart(OffsetDateTime.now(ZoneOffset.UTC))
+        ShiftBreak b = ShiftBreak.builder().id(1L)
+                .breakStart(OffsetDateTime.now(ZoneOffset.UTC))
                 .breakType(BreakType.MEAL).build();
         when(shiftService.startBreak(1L, BreakType.MEAL)).thenReturn(b);
         mockMvc.perform(post(BASE + "/1/break/start").param("breakType", "MEAL"))
                 .andExpect(status().isOk());
     }
     @Test @DisplayName("POST /{id}/break/end") void endBreak() throws Exception {
-        ShiftBreak b = ShiftBreak.builder().id(1L).breakEnd(OffsetDateTime.now(ZoneOffset.UTC)).build();
+        ShiftBreak b = ShiftBreak.builder().id(1L)
+                .breakStart(OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(15))
+                .breakEnd(OffsetDateTime.now(ZoneOffset.UTC)).build();
         when(shiftService.endBreak(1L)).thenReturn(b);
         mockMvc.perform(post(BASE + "/1/break/end")).andExpect(status().isOk());
     }

@@ -7,11 +7,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class GeocodingServiceTest {
 
     @Mock private RestTemplate restTemplate;
@@ -31,11 +35,14 @@ class GeocodingServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Create service via mock builder, then inject mock RestTemplate via reflection
         RestTemplateBuilder mockBuilder = mock(RestTemplateBuilder.class);
         when(mockBuilder.setConnectTimeout(any())).thenReturn(mockBuilder);
         when(mockBuilder.setReadTimeout(any())).thenReturn(mockBuilder);
         when(mockBuilder.build()).thenReturn(restTemplate);
         geocodingService = new GeocodingService(mockBuilder);
+        // Ensure our mock RestTemplate is used (overwrite the one from builder, just in case)
+        ReflectionTestUtils.setField(geocodingService, "restTemplate", restTemplate);
     }
 
     @Test @DisplayName("reverseGeocode — returns address")

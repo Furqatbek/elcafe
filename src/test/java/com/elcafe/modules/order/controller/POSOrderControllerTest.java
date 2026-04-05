@@ -28,6 +28,8 @@ import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.elcafe.modules.promotion.enums.DiscountType;
 import com.elcafe.modules.promotion.service.HappyHourService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,7 +37,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -57,10 +62,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class POSOrderControllerTest {
 
     private MockMvc mockMvc;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Mock private POSOrderService posOrderService;
     @Mock private POSOrderItemService posOrderItemService;
@@ -79,7 +85,13 @@ class POSOrderControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        ObjectMapper jacksonMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(jacksonMapper);
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setMessageConverters(converter)
+                .build();
     }
 
     private POSOrderResponse buildResponse() {
@@ -293,6 +305,9 @@ class POSOrderControllerTest {
                 .orderSource(com.elcafe.modules.order.enums.OrderSource.WALK_IN)
                 .customerInfo(CreatePOSOrderRequest.CustomerInfo.builder().name("Test").phone("+998901111111").build())
                 .items(List.of(CreatePOSOrderRequest.OrderItemRequest.builder().productId(1L).quantity(1).price(BigDecimal.valueOf(25000)).build()))
+                .subtotal(BigDecimal.valueOf(25000))
+                .tax(BigDecimal.ZERO)
+                .total(BigDecimal.valueOf(25000))
                 .build();
 
         mockMvc.perform(post("/api/v1/pos/orders")

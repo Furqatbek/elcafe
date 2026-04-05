@@ -56,7 +56,8 @@ class CourierControllerTest {
     }
     @Test @DisplayName("POST /") void create() throws Exception {
         CreateCourierRequest req = new CreateCourierRequest();
-        req.setEmail("new@t.com"); req.setPassword("pass1234"); req.setFirstName("N"); req.setLastName("C");
+        req.setEmail("new@test.com"); req.setPassword("pass12345"); req.setFirstName("New"); req.setLastName("Courier");
+        req.setPhone("+998901234567");
         req.setCourierType(CourierType.FULL_TIME); req.setVehicle(CourierVehicle.MOTORCYCLE);
         when(courierService.createCourier(any())).thenReturn(dto);
         mockMvc.perform(post("/api/v1/couriers").contentType(MediaType.APPLICATION_JSON)
