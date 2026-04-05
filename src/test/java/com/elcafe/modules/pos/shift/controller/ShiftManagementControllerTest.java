@@ -66,6 +66,55 @@ class ShiftManagementControllerTest {
                 .status(ShiftStatus.ACTIVE).shiftDate(LocalDate.now()).build();
     }
 
+    @Test @DisplayName("POST /clock-in — clocks in employee")
+    void clockIn_returns200() throws Exception {
+        when(shiftService.clockIn(eq(1L), any())).thenReturn(shift);
+
+        ClockInRequest req = ClockInRequest.builder().employeeId(1L).build();
+
+        mockMvc.perform(post(BASE + "/clock-in")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+    }
+
+    @Test @DisplayName("POST /{id}/clock-out — clocks out employee")
+    void clockOut_returns200() throws Exception {
+        shift.setClockOut(OffsetDateTime.now(ZoneOffset.UTC));
+        shift.setStatus(ShiftStatus.COMPLETED);
+        when(shiftService.clockOut(eq(1L), any())).thenReturn(shift);
+
+        ClockOutRequest req = ClockOutRequest.builder().closingCash(java.math.BigDecimal.valueOf(50000)).build();
+
+        mockMvc.perform(post(BASE + "/1/clock-out")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk());
+    }
+
+    @Test @DisplayName("POST /{id}/break/end — ends break")
+    void endBreak_returns200() throws Exception {
+        ShiftBreak b = ShiftBreak.builder().id(1L)
+                .breakStart(OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(15))
+                .breakEnd(OffsetDateTime.now(ZoneOffset.UTC))
+                .breakType(BreakType.BREAK).build();
+        when(shiftService.endBreak(1L)).thenReturn(b);
+
+        mockMvc.perform(post(BASE + "/1/break/end"))
+                .andExpect(status().isOk());
+    }
+
+    @Test @DisplayName("POST /{id}/approve — approves shift")
+    void approveShift_returns200() throws Exception {
+        shift.setStatus(ShiftStatus.APPROVED);
+        when(shiftService.approveShift(eq(1L), eq(10L), any())).thenReturn(shift);
+
+        mockMvc.perform(post(BASE + "/1/approve")
+                        .param("managerId", "10")
+                        .param("notes", "Approved"))
+                .andExpect(status().isOk());
+    }
+
     @Test @DisplayName("POST /{id}/break/start") void startBreak() throws Exception {
         ShiftBreak b = ShiftBreak.builder().id(1L)
                 .breakStart(OffsetDateTime.now(ZoneOffset.UTC))

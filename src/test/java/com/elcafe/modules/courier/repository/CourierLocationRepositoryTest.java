@@ -46,4 +46,13 @@ class CourierLocationRepositoryTest {
         assertEquals(41.31, latest.get().getLatitude(), 0.01);
     }
 
+    @Test @DisplayName("findActiveCourierLocations — returns active locations after cutoff")
+    void activeLocations() {
+        // cutoff is now-5min; the location at now+60min is after cutoff, the one at now-10min is not
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(5);
+        List<CourierLocation> active = courierLocationRepository.findActiveCourierLocations(cutoff);
+        assertEquals(1, active.size());
+        assertEquals(41.31, active.get(0).getLatitude(), 0.01);
+    }
+
 }

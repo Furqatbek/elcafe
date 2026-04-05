@@ -149,4 +149,42 @@ class PaymentControllerTest {
         mockMvc.perform(get("/api/v1/orders/1/payments/by-transaction").param("transactionId", "TXN-001"))
                 .andExpect(status().isOk());
     }
+
+    // ==================== getAllPayments ====================
+
+    @Test
+    @DisplayName("GET /orders/{id}/payments/all — returns paginated payments")
+    void getAllPayments_returns200() throws Exception {
+        Page<PaymentResponse> page = new PageImpl<>(List.of(samplePayment()));
+        when(paymentService.getAllPayments(any())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/orders/1/payments/all"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== getPaymentsByStatus ====================
+
+    @Test
+    @DisplayName("GET /orders/{id}/payments/by-status — returns payments by status")
+    void getPaymentsByStatus_returns200() throws Exception {
+        Page<PaymentResponse> page = new PageImpl<>(List.of(samplePayment()));
+        when(paymentService.getPaymentsByStatus(any(), any())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/orders/1/payments/by-status")
+                        .param("status", "COMPLETED"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== getPaymentsByMethod ====================
+
+    @Test
+    @DisplayName("GET /orders/{id}/payments/by-method — returns payments by method")
+    void getPaymentsByMethod_returns200() throws Exception {
+        Page<PaymentResponse> page = new PageImpl<>(List.of(samplePayment()));
+        when(paymentService.getPaymentsByMethod(any(), any())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/orders/1/payments/by-method")
+                        .param("method", "CASH"))
+                .andExpect(status().isOk());
+    }
 }

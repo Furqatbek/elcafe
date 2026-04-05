@@ -101,8 +101,31 @@ class POSOrderControllerTest {
                 .items(List.of()).build();
     }
 
-    // createOrder test removed — requires full @Valid DTO with 10+ required fields
-    // Order creation is tested in POSOrderServiceTest
+    // ==================== createOrder ====================
+
+    @Test
+    @DisplayName("POST / — creates POS order")
+    void createOrder_returns201() throws Exception {
+        when(posOrderService.createOrder(any())).thenReturn(buildResponse());
+
+        CreatePOSOrderRequest req = CreatePOSOrderRequest.builder()
+                .restaurantId(1L)
+                .orderType(CreatePOSOrderRequest.OrderType.TAKEAWAY)
+                .orderSource(com.elcafe.modules.order.enums.OrderSource.WALK_IN)
+                .customerInfo(CreatePOSOrderRequest.CustomerInfo.builder()
+                        .name("John").phone("+998901234567").build())
+                .items(List.of(CreatePOSOrderRequest.OrderItemRequest.builder()
+                        .productId(1L).quantity(2).price(BigDecimal.valueOf(40000)).build()))
+                .subtotal(BigDecimal.valueOf(80000))
+                .tax(BigDecimal.ZERO)
+                .total(BigDecimal.valueOf(80000))
+                .build();
+
+        mockMvc.perform(post("/api/v1/pos/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated());
+    }
 
     // ==================== getOrder ====================
 

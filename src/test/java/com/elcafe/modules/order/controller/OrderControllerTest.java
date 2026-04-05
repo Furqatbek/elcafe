@@ -36,6 +36,7 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.util.List;
 
+import static com.elcafe.modules.order.enums.OrderSource.*;
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createOrder;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -84,9 +85,59 @@ class OrderControllerTest {
                 .build();
     }
 
-    // getAllOrders test removed — controller builds Pageable internally
-    // and calls shiftTimeService which needs complex mocking.
-    // getOrdersWithFilters is tested in OrderServiceTest.
+    // ==================== createOrder ====================
+
+    @Test
+    @DisplayName("POST /orders — creates order")
+    void createOrder_returns201() throws Exception {
+        when(restaurantRepository.findAnyActiveRestaurant()).thenReturn(java.util.Optional.of(
+                com.elcafe.modules.restaurant.entity.Restaurant.builder().id(1L).name("R").build()));
+        when(orderService.createOrder(any())).thenReturn(createOrder(1L, OrderStatus.NEW));
+
+        ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        Order body = createOrder(1L, OrderStatus.NEW);
+
+        mockMvc.perform(post("/api/v1/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(body)))
+                .andExpect(status().isCreated());
+    }
+
+    // ==================== getAllOrders ====================
+
+    @Test
+    @DisplayName("GET /orders — returns paginated orders")
+    void getAllOrders_returns200() throws Exception {
+        Page<Order> page = new PageImpl<>(List.of(createOrder(1L, OrderStatus.NEW)));
+        when(orderService.getAllOrders(any())).thenReturn(page);
+
+        mockMvc.perform(get("/api/v1/orders"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== getSelfServiceOrders ====================
+
+    @Test
+    @DisplayName("GET /orders/self-service — returns self-service orders")
+    void getSelfServiceOrders_returns200() throws Exception {
+        when(selfServiceOrderRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/api/v1/orders/self-service"))
+                .andExpect(status().isOk());
+    }
+
+    // ==================== getExternalOrders ====================
+
+    @Test
+    @DisplayName("GET /orders/external — returns external orders")
+    void getExternalOrders_returns200() throws Exception {
+        when(orderRepository.findByOrderSourceIn(any(), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        mockMvc.perform(get("/api/v1/orders/external"))
+                .andExpect(status().isOk());
+    }
 
     @Test
     @DisplayName("GET /orders/{id} — returns order")

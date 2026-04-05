@@ -48,4 +48,13 @@ class OtpCodeRepositoryTest {
         assertFalse(otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse("+998903333333", "333333").isPresent());
     }
 
+    @Test @DisplayName("countRecentOtpsByPhoneNumber — counts OTPs created after since")
+    void countRecent() {
+        LocalDateTime since = LocalDateTime.now().minusHours(1);
+        long count = otpCodeRepository.countRecentOtpsByPhoneNumber("+998901111111", since);
+        assertEquals(1, count);
+        // Phone number with no OTPs
+        assertEquals(0, otpCodeRepository.countRecentOtpsByPhoneNumber("+998999999999", since));
+    }
+
 }
