@@ -68,16 +68,20 @@ class ReferralRepositoryTest {
 
     @Test @DisplayName("findExpiredPendingReferrals — returns PENDING referrals created before expiry date")
     void findExpiredPendingReferrals() {
+        // @CreationTimestamp overrides builder values, so use native SQL to set createdAt
         Referral expired = Referral.builder().restaurant(restaurant).referralCode(referralCode)
-                .referrer(referrer).referee(referee1).status(ReferralStatus.PENDING)
-                .createdAt(LocalDateTime.now().minusDays(60)).build();
+                .referrer(referrer).referee(referee1).status(ReferralStatus.PENDING).build();
         em.persist(expired);
 
         Referral recent = Referral.builder().restaurant(restaurant).referralCode(referralCode)
-                .referrer(referrer).referee(referee2).status(ReferralStatus.PENDING)
-                .createdAt(LocalDateTime.now().minusDays(5)).build();
+                .referrer(referrer).referee(referee2).status(ReferralStatus.PENDING).build();
         em.persist(recent);
+        em.flush();
 
+        em.createNativeQuery("UPDATE referrals SET created_at = :ts WHERE id = :id")
+                .setParameter("ts", LocalDateTime.now().minusDays(60)).setParameter("id", expired.getId()).executeUpdate();
+        em.createNativeQuery("UPDATE referrals SET created_at = :ts WHERE id = :id")
+                .setParameter("ts", LocalDateTime.now().minusDays(5)).setParameter("id", recent.getId()).executeUpdate();
         em.flush(); em.clear();
 
         LocalDateTime expiryDate = LocalDateTime.now().minusDays(30);
@@ -89,13 +93,19 @@ class ReferralRepositoryTest {
 
     @Test @DisplayName("countByRestaurantIdAndCreatedAtAfter — counts referrals since a start date")
     void countByRestaurantIdAndCreatedAtAfter() {
-        em.persist(Referral.builder().restaurant(restaurant).referralCode(referralCode)
-                .referrer(referrer).referee(referee1).status(ReferralStatus.COMPLETED)
-                .createdAt(LocalDateTime.now().minusDays(3)).build());
-        em.persist(Referral.builder().restaurant(restaurant).referralCode(referralCode)
-                .referrer(referrer).referee(referee2).status(ReferralStatus.PENDING)
-                .createdAt(LocalDateTime.now().minusDays(60)).build());
+        // @CreationTimestamp overrides builder values, so use native SQL to set createdAt
+        Referral r1 = Referral.builder().restaurant(restaurant).referralCode(referralCode)
+                .referrer(referrer).referee(referee1).status(ReferralStatus.COMPLETED).build();
+        em.persist(r1);
+        Referral r2 = Referral.builder().restaurant(restaurant).referralCode(referralCode)
+                .referrer(referrer).referee(referee2).status(ReferralStatus.PENDING).build();
+        em.persist(r2);
+        em.flush();
 
+        em.createNativeQuery("UPDATE referrals SET created_at = :ts WHERE id = :id")
+                .setParameter("ts", LocalDateTime.now().minusDays(3)).setParameter("id", r1.getId()).executeUpdate();
+        em.createNativeQuery("UPDATE referrals SET created_at = :ts WHERE id = :id")
+                .setParameter("ts", LocalDateTime.now().minusDays(60)).setParameter("id", r2.getId()).executeUpdate();
         em.flush(); em.clear();
 
         LocalDateTime startDate = LocalDateTime.now().minusDays(7);

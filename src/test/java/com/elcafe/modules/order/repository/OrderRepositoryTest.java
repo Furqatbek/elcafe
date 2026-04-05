@@ -112,8 +112,10 @@ class OrderRepositoryTest {
         em.flush();
         em.clear();
 
-        Object[] stats = orderRepository.getDailyStatsForRestaurant(
+        Object[] raw = orderRepository.getDailyStatsForRestaurant(
                 restaurant.getId(), startOfDay, endOfDay);
+        // Spring Data may wrap single-row aggregate results — unwrap if needed
+        Object[] stats = (raw[0] instanceof Object[]) ? (Object[]) raw[0] : raw;
 
         assertEquals(2L, stats[0]);
         assertEquals(0, new BigDecimal("100.00").compareTo((BigDecimal) stats[1]));

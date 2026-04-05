@@ -50,7 +50,7 @@ class ReservationRepositoryTest {
                 .partySize(4)
                 .durationMinutes(60)
                 .status(status)
-                .confirmationCode("CONF-" + System.nanoTime() + "-" + seq)
+                .confirmationCode("C" + seq)
                 .reminderSent(false)
                 .depositRequired(false)
                 .depositPaid(false)
