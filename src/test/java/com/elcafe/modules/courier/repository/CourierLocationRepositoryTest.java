@@ -33,9 +33,12 @@ class CourierLocationRepositoryTest {
         courier = CourierProfile.builder().user(user).courierType(CourierType.FULL_TIME).vehicle(CourierVehicle.MOTORCYCLE).build();
         em.persist(courier);
         // Persist locations — @CreationTimestamp sets timestamp to now()
-        CourierLocation loc1 = CourierLocation.builder().courier(courier).latitude(41.31).longitude(69.24).isActive(true).build();
+        // The findActiveCourierLocations query uses MAX(id) per courier, so the location
+        // with the HIGHER id (persisted last) is the one checked against the cutoff.
+        // Persist the old-timestamp location first, then the future-timestamp location second.
         CourierLocation loc2 = CourierLocation.builder().courier(courier).latitude(41.32).longitude(69.25).isActive(true).build();
-        em.persist(loc1); em.persist(loc2);
+        CourierLocation loc1 = CourierLocation.builder().courier(courier).latitude(41.31).longitude(69.24).isActive(true).build();
+        em.persist(loc2); em.persist(loc1);
         em.flush();
         // Override timestamps via native query since @CreationTimestamp ignores builder values
         em.createNativeQuery("UPDATE courier_locations SET timestamp = :ts WHERE id = :id")

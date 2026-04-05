@@ -23,21 +23,27 @@ class OtpCodeRepositoryTest {
 
     @BeforeEach void setUp() {
         LocalDateTime now = LocalDateTime.now();
-        // Valid OTP — explicitly set createdAt since @CreationTimestamp may not fire with em.persist
+        // Valid OTP
         OtpCode otp1 = OtpCode.builder().phoneNumber("+998901111111").otpCode("111111")
                 .expiresAt(now.plusMinutes(5)).isVerified(false).attempts(0).build();
-        otp1.setCreatedAt(now);
         em.persist(otp1);
         // Expired OTP
         OtpCode otp2 = OtpCode.builder().phoneNumber("+998902222222").otpCode("222222")
                 .expiresAt(now.minusMinutes(10)).isVerified(false).attempts(0).build();
-        otp2.setCreatedAt(now);
         em.persist(otp2);
         // Verified OTP
         OtpCode otp3 = OtpCode.builder().phoneNumber("+998903333333").otpCode("333333")
                 .expiresAt(now.plusMinutes(5)).isVerified(true).attempts(1).build();
-        otp3.setCreatedAt(now);
         em.persist(otp3);
+        em.flush();
+        // Override createdAt via native SQL since @CreationTimestamp may not honor setter values
+        // and Hibernate 6.x behavior varies
+        em.createNativeQuery("UPDATE otp_codes SET created_at = :ts WHERE id = :id")
+                .setParameter("ts", now).setParameter("id", otp1.getId()).executeUpdate();
+        em.createNativeQuery("UPDATE otp_codes SET created_at = :ts WHERE id = :id")
+                .setParameter("ts", now).setParameter("id", otp2.getId()).executeUpdate();
+        em.createNativeQuery("UPDATE otp_codes SET created_at = :ts WHERE id = :id")
+                .setParameter("ts", now).setParameter("id", otp3.getId()).executeUpdate();
         em.flush(); em.clear();
     }
 
