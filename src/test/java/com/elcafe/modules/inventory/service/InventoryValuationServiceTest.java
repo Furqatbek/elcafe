@@ -77,6 +77,7 @@ class InventoryValuationServiceTest {
     @Test @DisplayName("setValuationMethod — saves new settings")
     void setValuationMethod() {
         when(valuationSettingsRepository.findByRestaurant_IdAndIsActiveTrue(1L)).thenReturn(Optional.empty());
+        when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
         when(valuationSettingsRepository.save(any())).thenAnswer(i -> { ValuationSettings s = i.getArgument(0); s.setId(1L); return s; });
         ValuationSettings result = valuationService.setValuationMethod(1L, ValuationMethod.LIFO, "admin");
         assertThat(result.getValuationMethod()).isEqualTo(ValuationMethod.LIFO);

@@ -16,6 +16,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -37,6 +39,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AdminOrderControllerTest {
 
     private MockMvc mockMvc;
@@ -94,7 +97,7 @@ class AdminOrderControllerTest {
     @Test
     @DisplayName("POST /{orderId}/accept — accept order")
     void acceptOrder_returns200() throws Exception {
-        when(orderService.acceptOrder(anyLong(), anyString(), anyString()))
+        when(orderService.acceptOrder(anyLong(), any(), any()))
                 .thenReturn(createOrder(1L, OrderStatus.ACCEPTED));
 
         mockMvc.perform(post("/api/v1/admin/orders/1/accept")

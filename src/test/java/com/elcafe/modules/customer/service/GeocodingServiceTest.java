@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,17 +31,11 @@ class GeocodingServiceTest {
 
     @BeforeEach
     void setUp() {
-        geocodingService = new GeocodingService(null) {
-            // Override to inject mock RestTemplate
-        };
-        // Use reflection to set the restTemplate field
-        try {
-            var field = GeocodingService.class.getDeclaredField("restTemplate");
-            field.setAccessible(true);
-            field.set(geocodingService, restTemplate);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        RestTemplateBuilder mockBuilder = mock(RestTemplateBuilder.class);
+        when(mockBuilder.setConnectTimeout(any())).thenReturn(mockBuilder);
+        when(mockBuilder.setReadTimeout(any())).thenReturn(mockBuilder);
+        when(mockBuilder.build()).thenReturn(restTemplate);
+        geocodingService = new GeocodingService(mockBuilder);
     }
 
     @Test @DisplayName("reverseGeocode — returns address")
