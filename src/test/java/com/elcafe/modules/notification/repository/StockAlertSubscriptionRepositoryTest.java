@@ -29,109 +29,96 @@ class StockAlertSubscriptionRepositoryTest {
     @BeforeEach
     void setUp() {
         restaurant = new Restaurant();
-        restaurant.setName("Test Restaurant");
+        restaurant.setName("Test");
         restaurant.setActive(true);
         restaurant.setAcceptingOrders(true);
-        restaurant.setPhone("+998901111111");
-        restaurant.setEmail("r1@test.com");
-        restaurant.setCity("Tashkent");
-        restaurant.setAddress("Address 1");
+        restaurant.setPhone("+998");
+        restaurant.setEmail("t@t.com");
+        restaurant.setCity("T");
+        restaurant.setAddress("A");
         restaurant.setDeliveryFee(BigDecimal.ZERO);
         em.persist(restaurant);
 
-        // sub1: active, both alerts on, lastAlertSentAt = 2 hours ago
+        // Sub 1: active, both alerts on, no previous alert
         em.persist(StockAlertSubscription.builder()
-                .restaurant(restaurant)
-                .telegramChatId(1001L)
-                .subscriberName("Stock Manager A")
-                .active(true)
-                .alertOnLowStock(true)
-                .alertOnReorder(true)
-                .lastAlertSentAt(LocalDateTime.now().minusHours(2))
-                .build());
+                .restaurant(restaurant).telegramChatId(111L)
+                .subscriberName("Alice").active(true)
+                .alertOnLowStock(true).alertOnReorder(true)
+                .lastAlertSentAt(null).build());
 
-        // sub2: active, lowStock=true, reorder=false, lastAlertSentAt = null
+        // Sub 2: active, only lowStock on, recent alert
         em.persist(StockAlertSubscription.builder()
-                .restaurant(restaurant)
-                .telegramChatId(1002L)
-                .subscriberName("Stock Manager B")
-                .active(true)
-                .alertOnLowStock(true)
-                .alertOnReorder(false)
-                .lastAlertSentAt(null)
-                .build());
+                .restaurant(restaurant).telegramChatId(222L)
+                .subscriberName("Bob").active(true)
+                .alertOnLowStock(true).alertOnReorder(false)
+                .lastAlertSentAt(LocalDateTime.now().minusMinutes(5)).build());
 
-        // sub3: active, lowStock=false, reorder=true
+        // Sub 3: inactive
         em.persist(StockAlertSubscription.builder()
-                .restaurant(restaurant)
-                .telegramChatId(1003L)
-                .subscriberName("Stock Manager C")
-                .active(true)
-                .alertOnLowStock(false)
-                .alertOnReorder(true)
-                .lastAlertSentAt(LocalDateTime.now().minusMinutes(10))
-                .build());
-
-        // sub4: inactive
-        em.persist(StockAlertSubscription.builder()
-                .restaurant(restaurant)
-                .telegramChatId(1004L)
-                .subscriberName("Stock Manager D")
-                .active(false)
-                .alertOnLowStock(true)
-                .alertOnReorder(true)
-                .lastAlertSentAt(null)
-                .build());
+                .restaurant(restaurant).telegramChatId(333L)
+                .subscriberName("Charlie").active(false)
+                .alertOnLowStock(true).alertOnReorder(true)
+                .lastAlertSentAt(null).build());
 
         em.flush();
         em.clear();
     }
 
-    @Test @DisplayName("findActiveLowStockSubscriptions — returns active with alertOnLowStock=true")
+    @Test @DisplayName("findActiveLowStockSubscriptions — returns active subs with alertOnLowStock=true")
     void findActiveLowStockSubscriptions() {
         List<StockAlertSubscription> result = repo.findActiveLowStockSubscriptions();
 
-        // sub1 (active, lowStock=true), sub2 (active, lowStock=true)
-        // sub3 (lowStock=false) and sub4 (inactive) excluded
         assertEquals(2, result.size());
         assertTrue(result.stream().allMatch(s -> s.getActive() && s.getAlertOnLowStock()));
     }
 
-    @Test @DisplayName("findActiveReorderSubscriptions — returns active with alertOnReorder=true")
+    @Test @DisplayName("findActiveReorderSubscriptions — returns active subs with alertOnReorder=true")
     void findActiveReorderSubscriptions() {
         List<StockAlertSubscription> result = repo.findActiveReorderSubscriptions();
 
-        // sub1 (active, reorder=true), sub3 (active, reorder=true)
-        // sub2 (reorder=false) and sub4 (inactive) excluded
-        assertEquals(2, result.size());
-        assertTrue(result.stream().allMatch(s -> s.getActive() && s.getAlertOnReorder()));
+        assertEquals(1, result.size());
+        assertEquals("Alice", result.get(0).getSubscriberName());
     }
 
-    @Test @DisplayName("findEligibleForAlert — filters by restaurant, active, and cooldown")
-    void findEligibleForAlert() {
-        // Cooldown = 1 hour ago. sub1 sent 2 hours ago (eligible), sub2 never sent (eligible),
-        // sub3 sent 10 min ago (NOT eligible — after cooldown), sub4 inactive (excluded)
+    @Test @DisplayName("findEligibleForAlert — returns subs with no recent alert")
+    void findEligibleForAlert_noRecentAlert() {
+        // Cooldown: 1 hour ago — Alice (null lastAlertSentAt) is eligible,
+        // Bob (5 min ago) is NOT eligible because lastAlertSentAt > cooldownTime
         LocalDateTime cooldownTime = LocalDateTime.now().minusHours(1);
-        List<StockAlertSubscription> result = repo.findEligibleForAlert(restaurant.getId(), cooldownTime);
+        List<StockAlertSubscription> result =
+                repo.findEligibleForAlert(restaurant.getId(), cooldownTime);
+
+        assertEquals(1, result.size());
+        assertEquals("Alice", result.get(0).getSubscriberName());
+    }
+
+    @Test @DisplayName("findEligibleForAlert — includes subs past cooldown period")
+    void findEligibleForAlert_pastCooldown() {
+        // Cooldown set to now — Bob's alert (5 min ago) is before now, so eligible
+        LocalDateTime cooldownTime = LocalDateTime.now();
+        List<StockAlertSubscription> result =
+                repo.findEligibleForAlert(restaurant.getId(), cooldownTime);
 
         assertEquals(2, result.size());
-        assertTrue(result.stream().anyMatch(s -> s.getTelegramChatId().equals(1001L)));
-        assertTrue(result.stream().anyMatch(s -> s.getTelegramChatId().equals(1002L)));
     }
 
-    @Test @DisplayName("findEligibleForAlert — with very recent cooldown returns all active")
-    void findEligibleForAlert_noCooldown() {
-        // Cooldown = now (all past alerts are before cooldown, so all active are eligible)
-        LocalDateTime cooldownTime = LocalDateTime.now().plusMinutes(1);
-        List<StockAlertSubscription> result = repo.findEligibleForAlert(restaurant.getId(), cooldownTime);
+    @Test @DisplayName("findEligibleForAlert — excludes inactive subscriptions")
+    void findEligibleForAlert_excludesInactive() {
+        // Even with generous cooldown, Charlie (inactive) should not appear
+        LocalDateTime cooldownTime = LocalDateTime.now().plusHours(1);
+        List<StockAlertSubscription> result =
+                repo.findEligibleForAlert(restaurant.getId(), cooldownTime);
 
-        // sub1, sub2, sub3 are all active and eligible
-        assertEquals(3, result.size());
+        assertEquals(2, result.size());
+        assertTrue(result.stream().noneMatch(s -> "Charlie".equals(s.getSubscriberName())));
     }
 
-    @Test @DisplayName("findEligibleForAlert — wrong restaurant returns empty")
-    void findEligibleForAlert_wrongRestaurant() {
-        List<StockAlertSubscription> result = repo.findEligibleForAlert(999L, LocalDateTime.now());
+    @Test @DisplayName("findEligibleForAlert — filters by restaurant")
+    void findEligibleForAlert_filtersByRestaurant() {
+        LocalDateTime cooldownTime = LocalDateTime.now().plusHours(1);
+        List<StockAlertSubscription> result =
+                repo.findEligibleForAlert(9999L, cooldownTime);
+
         assertTrue(result.isEmpty());
     }
 }

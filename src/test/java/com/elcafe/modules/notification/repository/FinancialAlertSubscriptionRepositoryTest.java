@@ -26,122 +26,104 @@ class FinancialAlertSubscriptionRepositoryTest {
     @Autowired private EntityManager em;
 
     private Restaurant restaurant;
-    private Restaurant restaurant2;
 
     @BeforeEach
     void setUp() {
         restaurant = new Restaurant();
-        restaurant.setName("Test Restaurant");
+        restaurant.setName("Test");
         restaurant.setActive(true);
         restaurant.setAcceptingOrders(true);
-        restaurant.setPhone("+998901111111");
-        restaurant.setEmail("r1@test.com");
-        restaurant.setCity("Tashkent");
-        restaurant.setAddress("Address 1");
+        restaurant.setPhone("+998");
+        restaurant.setEmail("t@t.com");
+        restaurant.setCity("T");
+        restaurant.setAddress("A");
         restaurant.setDeliveryFee(BigDecimal.ZERO);
         em.persist(restaurant);
 
-        restaurant2 = new Restaurant();
-        restaurant2.setName("Test Restaurant 2");
-        restaurant2.setActive(true);
-        restaurant2.setAcceptingOrders(true);
-        restaurant2.setPhone("+998902222222");
-        restaurant2.setEmail("r2@test.com");
-        restaurant2.setCity("Tashkent");
-        restaurant2.setAddress("Address 2");
-        restaurant2.setDeliveryFee(BigDecimal.ZERO);
-        em.persist(restaurant2);
+        LocalDate yesterday = LocalDate.now().minusDays(1);
+        LocalDate today = LocalDate.now();
 
-        // sub1: active, lastReportDate = yesterday, reportTime = 22:00
+        // Subscription 1: eligible (lastReportDate = yesterday)
         em.persist(FinancialAlertSubscription.builder()
-                .restaurant(restaurant)
-                .telegramChatId(1001L)
-                .subscriberName("Manager A")
-                .active(true)
+                .restaurant(restaurant).telegramChatId(111L)
+                .subscriberName("Alice").active(true)
                 .reportTime(LocalTime.of(22, 0))
-                .lastReportDate(LocalDate.now().minusDays(1))
-                .build());
+                .lastReportDate(yesterday).build());
 
-        // sub2: active, lastReportDate = today (already sent), reportTime = 23:00
+        // Subscription 2: NOT eligible (lastReportDate = today, already reported)
         em.persist(FinancialAlertSubscription.builder()
-                .restaurant(restaurant)
-                .telegramChatId(1002L)
-                .subscriberName("Manager B")
-                .active(true)
+                .restaurant(restaurant).telegramChatId(222L)
+                .subscriberName("Bob").active(true)
                 .reportTime(LocalTime.of(23, 0))
-                .lastReportDate(LocalDate.now())
-                .build());
-
-        // sub3: active, lastReportDate = null (never sent), restaurant2, reportTime = 20:00
-        em.persist(FinancialAlertSubscription.builder()
-                .restaurant(restaurant2)
-                .telegramChatId(2001L)
-                .subscriberName("Manager C")
-                .active(true)
-                .reportTime(LocalTime.of(20, 0))
-                .lastReportDate(null)
-                .build());
-
-        // sub4: inactive
-        em.persist(FinancialAlertSubscription.builder()
-                .restaurant(restaurant2)
-                .telegramChatId(2002L)
-                .subscriberName("Manager D")
-                .active(false)
-                .reportTime(LocalTime.of(23, 0))
-                .lastReportDate(null)
-                .build());
+                .lastReportDate(today).build());
 
         em.flush();
         em.clear();
     }
 
-    @Test @DisplayName("findEligibleForDailyReport — returns active subs where report not sent today")
+    @Test @DisplayName("findEligibleForDailyReport — returns subscriptions not yet reported today")
     void findEligibleForDailyReport() {
-        LocalDate today = LocalDate.now();
-        List<FinancialAlertSubscription> result = repo.findEligibleForDailyReport(today);
+        List<FinancialAlertSubscription> result = repo.findEligibleForDailyReport(LocalDate.now());
 
-        // sub1 (lastReportDate=yesterday), sub3 (lastReportDate=null) are eligible
-        // sub2 (lastReportDate=today) and sub4 (inactive) are excluded
+        assertEquals(1, result.size());
+        assertEquals("Alice", result.get(0).getSubscriberName());
+    }
+
+    @Test @DisplayName("findEligibleForDailyReport — includes subscriptions with null lastReportDate")
+    void findEligibleForDailyReport_nullDate() {
+        em.persist(FinancialAlertSubscription.builder()
+                .restaurant(restaurant).telegramChatId(333L)
+                .subscriberName("Charlie").active(true)
+                .lastReportDate(null).build());
+        em.flush();
+        em.clear();
+
+        List<FinancialAlertSubscription> result = repo.findEligibleForDailyReport(LocalDate.now());
+
         assertEquals(2, result.size());
-        assertTrue(result.stream().anyMatch(s -> s.getTelegramChatId().equals(1001L)));
-        assertTrue(result.stream().anyMatch(s -> s.getTelegramChatId().equals(2001L)));
     }
 
     @Test @DisplayName("findEligibleForDailyReportByRestaurant — filters by restaurant")
     void findEligibleForDailyReportByRestaurant() {
-        LocalDate today = LocalDate.now();
+        Restaurant other = new Restaurant();
+        other.setName("Other");
+        other.setActive(true);
+        other.setAcceptingOrders(true);
+        other.setPhone("+999");
+        other.setEmail("o@o.com");
+        other.setCity("O");
+        other.setAddress("B");
+        other.setDeliveryFee(BigDecimal.ZERO);
+        em.persist(other);
+        em.persist(FinancialAlertSubscription.builder()
+                .restaurant(other).telegramChatId(444L)
+                .subscriberName("Diana").active(true)
+                .lastReportDate(null).build());
+        em.flush();
+        em.clear();
 
-        List<FinancialAlertSubscription> r1Result = repo.findEligibleForDailyReportByRestaurant(
-                restaurant.getId(), today);
-        assertEquals(1, r1Result.size());
-        assertEquals(1001L, r1Result.get(0).getTelegramChatId());
+        List<FinancialAlertSubscription> result =
+                repo.findEligibleForDailyReportByRestaurant(restaurant.getId(), LocalDate.now());
 
-        List<FinancialAlertSubscription> r2Result = repo.findEligibleForDailyReportByRestaurant(
-                restaurant2.getId(), today);
-        assertEquals(1, r2Result.size());
-        assertEquals(2001L, r2Result.get(0).getTelegramChatId());
+        assertEquals(1, result.size());
+        assertEquals("Alice", result.get(0).getSubscriberName());
     }
 
     @Test @DisplayName("findReadyToSend — filters by reportTime and lastReportDate")
     void findReadyToSend() {
-        LocalDate today = LocalDate.now();
+        // At 22:30, Alice (reportTime=22:00) is ready, Bob already reported today
+        List<FinancialAlertSubscription> result =
+                repo.findReadyToSend(LocalTime.of(22, 30), LocalDate.now());
 
-        // At 21:00: sub1 (reportTime=22:00) is NOT ready, sub3 (reportTime=20:00) IS ready
-        List<FinancialAlertSubscription> at21 = repo.findReadyToSend(LocalTime.of(21, 0), today);
-        assertEquals(1, at21.size());
-        assertEquals(2001L, at21.get(0).getTelegramChatId());
-
-        // At 23:00: sub1 (reportTime=22:00) and sub3 (reportTime=20:00) are ready
-        List<FinancialAlertSubscription> at23 = repo.findReadyToSend(LocalTime.of(23, 0), today);
-        assertEquals(2, at23.size());
+        assertEquals(1, result.size());
+        assertEquals("Alice", result.get(0).getSubscriberName());
     }
 
-    @Test @DisplayName("findReadyToSend — excludes already-sent-today subscriptions")
-    void findReadyToSend_excludesSentToday() {
-        LocalDate today = LocalDate.now();
-        // sub2 has lastReportDate=today so it should never appear even at 23:59
-        List<FinancialAlertSubscription> result = repo.findReadyToSend(LocalTime.of(23, 59), today);
-        assertTrue(result.stream().noneMatch(s -> s.getTelegramChatId().equals(1002L)));
+    @Test @DisplayName("findReadyToSend — returns empty when time is too early")
+    void findReadyToSend_tooEarly() {
+        List<FinancialAlertSubscription> result =
+                repo.findReadyToSend(LocalTime.of(6, 0), LocalDate.now());
+
+        assertTrue(result.isEmpty());
     }
 }

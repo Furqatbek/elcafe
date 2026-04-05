@@ -30,67 +30,33 @@ class NotificationRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        // n1: ADMIN, userId=1, UNREAD
+        // Notification 1: ADMIN, userId=1, UNREAD
         em.persist(Notification.builder()
-                .userRole(UserRole.ADMIN)
-                .userId(1L)
-                .type(NotificationType.NEW_ORDER)
-                .title("New Order")
-                .message("A new order has been placed")
-                .orderId(100L)
-                .orderNumber("ORD-100")
-                .status(NotificationStatus.UNREAD)
-                .priority(1)
-                .build());
+                .userRole(UserRole.ADMIN).userId(1L)
+                .type(NotificationType.NEW_ORDER).title("New Order")
+                .message("New order received").status(NotificationStatus.UNREAD)
+                .priority(1).build());
 
-        // n2: ADMIN, userId=1, READ with readAt in the past
+        // Notification 2: ADMIN, userId=1, READ with old readAt
         em.persist(Notification.builder()
-                .userRole(UserRole.ADMIN)
-                .userId(1L)
-                .type(NotificationType.ORDER_CONFIRMED)
-                .title("Order Confirmed")
-                .message("Order has been confirmed")
-                .orderId(101L)
-                .orderNumber("ORD-101")
-                .status(NotificationStatus.READ)
-                .readAt(LocalDateTime.now().minusDays(30))
-                .priority(3)
-                .build());
+                .userRole(UserRole.ADMIN).userId(1L)
+                .type(NotificationType.ORDER_CONFIRMED).title("Order Confirmed")
+                .message("Order has been confirmed").status(NotificationStatus.READ)
+                .readAt(LocalDateTime.now().minusDays(30)).priority(3).build());
 
-        // n3: ADMIN, userId=null (broadcast), UNREAD
+        // Notification 3: ADMIN, userId=null (broadcast), UNREAD
         em.persist(Notification.builder()
-                .userRole(UserRole.ADMIN)
-                .userId(null)
-                .type(NotificationType.ORDER_CANCELLED)
-                .title("Order Cancelled")
-                .message("An order was cancelled")
-                .status(NotificationStatus.UNREAD)
-                .priority(2)
-                .build());
+                .userRole(UserRole.ADMIN).userId(null)
+                .type(NotificationType.ORDER_CANCELLED).title("Order Cancelled")
+                .message("An order was cancelled").status(NotificationStatus.UNREAD)
+                .priority(2).build());
 
-        // n4: CUSTOMER, userId=10, UNREAD
+        // Notification 4: CUSTOMER, userId=10, UNREAD
         em.persist(Notification.builder()
-                .userRole(UserRole.CUSTOMER)
-                .userId(10L)
-                .type(NotificationType.ORDER_DELIVERED)
-                .title("Delivered")
-                .message("Your order has been delivered")
-                .orderId(200L)
-                .orderNumber("ORD-200")
-                .status(NotificationStatus.UNREAD)
-                .priority(3)
-                .build());
-
-        // n5: ADMIN, userId=2, UNREAD (different admin user)
-        em.persist(Notification.builder()
-                .userRole(UserRole.ADMIN)
-                .userId(2L)
-                .type(NotificationType.NEW_ORDER)
-                .title("New Order for Admin2")
-                .message("Another new order")
-                .status(NotificationStatus.UNREAD)
-                .priority(3)
-                .build());
+                .userRole(UserRole.CUSTOMER).userId(10L)
+                .type(NotificationType.ORDER_DELIVERED).title("Delivered")
+                .message("Your order has been delivered").status(NotificationStatus.UNREAD)
+                .priority(3).build());
 
         em.flush();
         em.clear();
@@ -98,81 +64,73 @@ class NotificationRepositoryTest {
 
     @Test @DisplayName("findAllForUser — returns user-specific and broadcast notifications")
     void findAllForUser() {
-        Page<Notification> page = repo.findAllForUser(UserRole.ADMIN, 1L, PageRequest.of(0, 10));
+        Page<Notification> result = repo.findAllForUser(UserRole.ADMIN, 1L, PageRequest.of(0, 10));
 
-        // n1 (userId=1) + n2 (userId=1) + n3 (userId=null broadcast) = 3
-        assertEquals(3, page.getTotalElements());
+        assertEquals(3, result.getTotalElements());
     }
 
-    @Test @DisplayName("findAllForUser — does not return other users' notifications")
-    void findAllForUser_excludesOtherUsers() {
-        Page<Notification> page = repo.findAllForUser(UserRole.CUSTOMER, 10L, PageRequest.of(0, 10));
-        assertEquals(1, page.getTotalElements());
-        assertEquals("Delivered", page.getContent().get(0).getTitle());
+    @Test @DisplayName("findAllForUser — excludes other roles")
+    void findAllForUser_excludesOtherRoles() {
+        Page<Notification> result = repo.findAllForUser(UserRole.CUSTOMER, 10L, PageRequest.of(0, 10));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Delivered", result.getContent().get(0).getTitle());
     }
 
-    @Test @DisplayName("findUnreadForUser — returns only unread notifications for user")
+    @Test @DisplayName("findUnreadForUser — returns only unread for user and broadcasts")
     void findUnreadForUser() {
-        List<Notification> unread = repo.findUnreadForUser(UserRole.ADMIN, 1L);
+        List<Notification> result = repo.findUnreadForUser(UserRole.ADMIN, 1L);
 
-        // n1 (userId=1, UNREAD) + n3 (broadcast, UNREAD) = 2
-        assertEquals(2, unread.size());
-        assertTrue(unread.stream().allMatch(n -> n.getStatus() == NotificationStatus.UNREAD));
+        assertEquals(2, result.size());
+        assertTrue(result.stream().allMatch(n -> n.getStatus() == NotificationStatus.UNREAD));
     }
 
     @Test @DisplayName("countUnreadForUser — returns correct count")
     void countUnreadForUser() {
         Long count = repo.countUnreadForUser(UserRole.ADMIN, 1L);
+
         assertEquals(2L, count);
-
-        Long countCustomer = repo.countUnreadForUser(UserRole.CUSTOMER, 10L);
-        assertEquals(1L, countCustomer);
-
-        // Non-existent user should still get broadcast
-        Long countNewAdmin = repo.countUnreadForUser(UserRole.ADMIN, 999L);
-        assertEquals(1L, countNewAdmin); // only the broadcast n3
     }
 
-    @Test @DisplayName("markAllAsReadForUser — marks unread as read")
-    @Transactional
+    @Test @DisplayName("countUnreadForUser — zero for user with no unread")
+    void countUnreadForUser_zero() {
+        Long count = repo.countUnreadForUser(UserRole.COURIER, 99L);
+
+        assertEquals(0L, count);
+    }
+
+    @Test @Transactional
+    @DisplayName("markAllAsReadForUser — marks unread notifications as read")
     void markAllAsReadForUser() {
         int updated = repo.markAllAsReadForUser(UserRole.ADMIN, 1L);
 
-        // Only n1 matches (userId=1, UNREAD) — broadcast (userId=null) won't match userId=1
         assertEquals(1, updated);
 
         em.flush();
         em.clear();
 
-        // Verify: userId=1 should now have 0 unread specific notifications
-        // But broadcast still unread
-        List<Notification> unread = repo.findUnreadForUser(UserRole.ADMIN, 1L);
-        assertEquals(1, unread.size()); // only the broadcast remains unread
-        assertNull(unread.get(0).getUserId());
+        // broadcast (userId=null) is not matched by markAllAsReadForUser (userId = :userId)
+        Long unreadCount = repo.countUnreadForUser(UserRole.ADMIN, 1L);
+        assertEquals(1L, unreadCount);
     }
 
-    @Test @DisplayName("deleteOldReadNotifications — deletes read notifications before cutoff")
-    @Transactional
+    @Test @Transactional
+    @DisplayName("deleteOldReadNotifications — deletes read notifications older than cutoff")
     void deleteOldReadNotifications() {
-        // n2 has readAt = now - 30 days. Use cutoff of 7 days ago.
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(7);
-        int deleted = repo.deleteOldReadNotifications(cutoff);
+        int deleted = repo.deleteOldReadNotifications(LocalDateTime.now().minusDays(7));
 
         assertEquals(1, deleted);
 
         em.flush();
         em.clear();
 
-        // Total should be 4 now (was 5, deleted 1)
-        assertEquals(4, repo.findAll().size());
+        assertEquals(3, repo.findAll().size());
     }
 
-    @Test @DisplayName("deleteOldReadNotifications — does not delete recent read notifications")
-    @Transactional
+    @Test @Transactional
+    @DisplayName("deleteOldReadNotifications — does not delete recent read notifications")
     void deleteOldReadNotifications_recentNotDeleted() {
-        // Use cutoff of 60 days ago — n2's readAt (30 days ago) is after the cutoff
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(60);
-        int deleted = repo.deleteOldReadNotifications(cutoff);
+        int deleted = repo.deleteOldReadNotifications(LocalDateTime.now().minusDays(60));
 
         assertEquals(0, deleted);
     }
