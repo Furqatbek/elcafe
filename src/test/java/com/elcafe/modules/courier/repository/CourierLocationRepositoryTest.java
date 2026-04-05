@@ -32,10 +32,16 @@ class CourierLocationRepositoryTest {
         em.persist(user);
         courier = CourierProfile.builder().user(user).courierType(CourierType.FULL_TIME).vehicle(CourierVehicle.MOTORCYCLE).build();
         em.persist(courier);
-        em.persist(CourierLocation.builder().courier(courier).latitude(41.31).longitude(69.24).isActive(true)
-                .timestamp(LocalDateTime.now().plusMinutes(60)).build());
-        em.persist(CourierLocation.builder().courier(courier).latitude(41.32).longitude(69.25).isActive(true)
-                .timestamp(LocalDateTime.now().minusMinutes(10)).build());
+        // Persist locations — @CreationTimestamp sets timestamp to now()
+        CourierLocation loc1 = CourierLocation.builder().courier(courier).latitude(41.31).longitude(69.24).isActive(true).build();
+        CourierLocation loc2 = CourierLocation.builder().courier(courier).latitude(41.32).longitude(69.25).isActive(true).build();
+        em.persist(loc1); em.persist(loc2);
+        em.flush();
+        // Override timestamps via native query since @CreationTimestamp ignores builder values
+        em.createNativeQuery("UPDATE courier_locations SET timestamp = :ts WHERE id = :id")
+                .setParameter("ts", LocalDateTime.now().plusMinutes(60)).setParameter("id", loc1.getId()).executeUpdate();
+        em.createNativeQuery("UPDATE courier_locations SET timestamp = :ts WHERE id = :id")
+                .setParameter("ts", LocalDateTime.now().minusMinutes(10)).setParameter("id", loc2.getId()).executeUpdate();
         em.flush(); em.clear();
     }
 

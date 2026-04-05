@@ -22,15 +22,22 @@ class OtpCodeRepositoryTest {
     @Autowired private EntityManager em;
 
     @BeforeEach void setUp() {
-        // Valid OTP
-        em.persist(OtpCode.builder().phoneNumber("+998901111111").otpCode("111111")
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).isVerified(false).attempts(0).build());
+        LocalDateTime now = LocalDateTime.now();
+        // Valid OTP — explicitly set createdAt since @CreationTimestamp may not fire with em.persist
+        OtpCode otp1 = OtpCode.builder().phoneNumber("+998901111111").otpCode("111111")
+                .expiresAt(now.plusMinutes(5)).isVerified(false).attempts(0).build();
+        otp1.setCreatedAt(now);
+        em.persist(otp1);
         // Expired OTP
-        em.persist(OtpCode.builder().phoneNumber("+998902222222").otpCode("222222")
-                .expiresAt(LocalDateTime.now().minusMinutes(10)).isVerified(false).attempts(0).build());
+        OtpCode otp2 = OtpCode.builder().phoneNumber("+998902222222").otpCode("222222")
+                .expiresAt(now.minusMinutes(10)).isVerified(false).attempts(0).build();
+        otp2.setCreatedAt(now);
+        em.persist(otp2);
         // Verified OTP
-        em.persist(OtpCode.builder().phoneNumber("+998903333333").otpCode("333333")
-                .expiresAt(LocalDateTime.now().plusMinutes(5)).isVerified(true).attempts(1).build());
+        OtpCode otp3 = OtpCode.builder().phoneNumber("+998903333333").otpCode("333333")
+                .expiresAt(now.plusMinutes(5)).isVerified(true).attempts(1).build();
+        otp3.setCreatedAt(now);
+        em.persist(otp3);
         em.flush(); em.clear();
     }
 

@@ -36,6 +36,8 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.util.List;
 
+import org.springframework.data.domain.PageRequest;
+
 import static com.elcafe.modules.order.enums.OrderSource.*;
 import static com.elcafe.modules.waiter.helper.TestDataFactory.createOrder;
 import static org.mockito.ArgumentMatchers.any;
@@ -94,12 +96,26 @@ class OrderControllerTest {
                 com.elcafe.modules.restaurant.entity.Restaurant.builder().id(1L).name("R").build()));
         when(orderService.createOrder(any())).thenReturn(createOrder(1L, OrderStatus.NEW));
 
-        ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-        Order body = createOrder(1L, OrderStatus.NEW);
+        // Use minimal JSON — Order entity has computed @JsonProperty getters (fullyPaid, totalPaid,
+        // remainingBalance, tableIdList, etc.) that have no setters, so serializing the full entity
+        // and deserializing back fails with FAIL_ON_UNKNOWN_PROPERTIES.
+        String body = """
+                {
+                    "orderNumber": "W123456",
+                    "orderType": "DINE_IN",
+                    "orderSource": "WAITER",
+                    "status": "NEW",
+                    "subtotal": 0,
+                    "deliveryFee": 0,
+                    "tax": 0,
+                    "discount": 0,
+                    "total": 0
+                }
+                """;
 
         mockMvc.perform(post("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(body)))
+                        .content(body))
                 .andExpect(status().isCreated());
     }
 
@@ -108,7 +124,7 @@ class OrderControllerTest {
     @Test
     @DisplayName("GET /orders — returns paginated orders")
     void getAllOrders_returns200() throws Exception {
-        Page<Order> page = new PageImpl<>(List.of(createOrder(1L, OrderStatus.NEW)));
+        Page<Order> page = new PageImpl<>(List.of(createOrder(1L, OrderStatus.NEW)), PageRequest.of(0, 20), 1);
         when(orderService.getAllOrders(any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/orders"))
@@ -121,7 +137,7 @@ class OrderControllerTest {
     @DisplayName("GET /orders/self-service — returns self-service orders")
     void getSelfServiceOrders_returns200() throws Exception {
         when(selfServiceOrderRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
-                .thenReturn(new PageImpl<>(List.of()));
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 
         mockMvc.perform(get("/api/v1/orders/self-service"))
                 .andExpect(status().isOk());
@@ -133,7 +149,7 @@ class OrderControllerTest {
     @DisplayName("GET /orders/external — returns external orders")
     void getExternalOrders_returns200() throws Exception {
         when(orderRepository.findByOrderSourceIn(any(), any()))
-                .thenReturn(new PageImpl<>(List.of()));
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 
         mockMvc.perform(get("/api/v1/orders/external"))
                 .andExpect(status().isOk());

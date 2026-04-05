@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
@@ -155,7 +156,7 @@ class PaymentControllerTest {
     @Test
     @DisplayName("GET /orders/{id}/payments/all — returns paginated payments")
     void getAllPayments_returns200() throws Exception {
-        Page<PaymentResponse> page = new PageImpl<>(List.of(samplePayment()));
+        Page<PaymentResponse> page = new PageImpl<>(List.of(samplePayment()), PageRequest.of(0, 20), 1);
         when(paymentService.getAllPayments(any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/orders/1/payments/all"))
@@ -167,7 +168,7 @@ class PaymentControllerTest {
     @Test
     @DisplayName("GET /orders/{id}/payments/by-status — returns payments by status")
     void getPaymentsByStatus_returns200() throws Exception {
-        Page<PaymentResponse> page = new PageImpl<>(List.of(samplePayment()));
+        Page<PaymentResponse> page = new PageImpl<>(List.of(samplePayment()), PageRequest.of(0, 20), 1);
         when(paymentService.getPaymentsByStatus(any(), any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/orders/1/payments/by-status")
@@ -180,7 +181,7 @@ class PaymentControllerTest {
     @Test
     @DisplayName("GET /orders/{id}/payments/by-method — returns payments by method")
     void getPaymentsByMethod_returns200() throws Exception {
-        Page<PaymentResponse> page = new PageImpl<>(List.of(samplePayment()));
+        Page<PaymentResponse> page = new PageImpl<>(List.of(samplePayment()), PageRequest.of(0, 20), 1);
         when(paymentService.getPaymentsByMethod(any(), any())).thenReturn(page);
 
         mockMvc.perform(get("/api/v1/orders/1/payments/by-method")
