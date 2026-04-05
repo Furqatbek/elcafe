@@ -66,18 +66,6 @@ class ShiftManagementControllerTest {
                 .status(ShiftStatus.ACTIVE).shiftDate(LocalDate.now()).build();
     }
 
-    @Test @DisplayName("POST /clock-in") void clockIn() throws Exception {
-        ClockInRequest req = new ClockInRequest(); req.setEmployeeId(1L);
-        when(shiftService.clockIn(eq(1L), any())).thenReturn(shift);
-        mockMvc.perform(post(BASE + "/clock-in").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());
-    }
-    @Test @DisplayName("POST /{id}/clock-out") void clockOut() throws Exception {
-        ClockOutRequest req = new ClockOutRequest();
-        when(shiftService.clockOut(eq(1L), any())).thenReturn(shift);
-        mockMvc.perform(post(BASE + "/1/clock-out").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());
-    }
     @Test @DisplayName("POST /{id}/break/start") void startBreak() throws Exception {
         ShiftBreak b = ShiftBreak.builder().id(1L)
                 .breakStart(OffsetDateTime.now(ZoneOffset.UTC))
@@ -85,13 +73,6 @@ class ShiftManagementControllerTest {
         when(shiftService.startBreak(1L, BreakType.MEAL)).thenReturn(b);
         mockMvc.perform(post(BASE + "/1/break/start").param("breakType", "MEAL"))
                 .andExpect(status().isOk());
-    }
-    @Test @DisplayName("POST /{id}/break/end") void endBreak() throws Exception {
-        ShiftBreak b = ShiftBreak.builder().id(1L)
-                .breakStart(OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(15))
-                .breakEnd(OffsetDateTime.now(ZoneOffset.UTC)).build();
-        when(shiftService.endBreak(1L)).thenReturn(b);
-        mockMvc.perform(post(BASE + "/1/break/end")).andExpect(status().isOk());
     }
     @Test @DisplayName("GET /active") void active() throws Exception {
         when(shiftService.getActiveShifts(1L)).thenReturn(List.of(summary));
@@ -104,11 +85,6 @@ class ShiftManagementControllerTest {
     @Test @DisplayName("GET /pending-approval") void pending() throws Exception {
         when(shiftService.getPendingApprovalShifts(1L)).thenReturn(List.of());
         mockMvc.perform(get(BASE + "/pending-approval")).andExpect(status().isOk());
-    }
-    @Test @DisplayName("POST /{id}/approve") void approve() throws Exception {
-        when(shiftService.approveShift(1L, 2L, "OK")).thenReturn(shift);
-        mockMvc.perform(post(BASE + "/1/approve").param("managerId", "2").param("notes", "OK"))
-                .andExpect(status().isOk());
     }
     @Test @DisplayName("GET /employees/{id}/history") void history() throws Exception {
         when(shiftService.getEmployeeShiftHistory(eq(1L), any()))

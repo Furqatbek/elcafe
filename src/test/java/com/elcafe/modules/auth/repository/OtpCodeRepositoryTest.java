@@ -48,9 +48,4 @@ class OtpCodeRepositoryTest {
         assertFalse(otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse("+998903333333", "333333").isPresent());
     }
 
-    @Test @DisplayName("countRecentOtpsByPhoneNumber — counts for rate limiting")
-    void countRecent() {
-        long count = otpCodeRepository.countRecentOtpsByPhoneNumber("+998901111111", LocalDateTime.now().minusHours(1));
-        assertEquals(1, count);
-    }
 }

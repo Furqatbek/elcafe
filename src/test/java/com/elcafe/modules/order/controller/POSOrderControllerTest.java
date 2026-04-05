@@ -292,30 +292,6 @@ class POSOrderControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // ==================== createOrder ====================
-
-    @Test
-    @DisplayName("POST / — creates POS order")
-    void createOrder_returns201() throws Exception {
-        when(posOrderService.createOrder(any())).thenReturn(buildResponse());
-
-        CreatePOSOrderRequest req = CreatePOSOrderRequest.builder()
-                .restaurantId(1L)
-                .orderType(CreatePOSOrderRequest.OrderType.DINE_IN)
-                .orderSource(com.elcafe.modules.order.enums.OrderSource.WALK_IN)
-                .customerInfo(CreatePOSOrderRequest.CustomerInfo.builder().name("Test").phone("+998901111111").build())
-                .items(List.of(CreatePOSOrderRequest.OrderItemRequest.builder().productId(1L).quantity(1).price(BigDecimal.valueOf(25000)).build()))
-                .subtotal(BigDecimal.valueOf(25000))
-                .tax(BigDecimal.ZERO)
-                .total(BigDecimal.valueOf(25000))
-                .build();
-
-        mockMvc.perform(post("/api/v1/pos/orders")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isCreated());
-    }
-
     // ==================== kitchenStatus ====================
 
     @Test

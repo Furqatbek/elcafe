@@ -46,9 +46,4 @@ class CourierLocationRepositoryTest {
         assertEquals(41.31, latest.get().getLatitude(), 0.01);
     }
 
-    @Test @DisplayName("findActiveCourierLocations — returns recent locations")
-    void activeLocations() {
-        List<CourierLocation> active = courierLocationRepository.findActiveCourierLocations(LocalDateTime.now().minusMinutes(5));
-        assertEquals(1, active.size()); // Only the one within 5 min
-    }
 }

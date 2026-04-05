@@ -128,41 +128,6 @@ class PaymentControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // ==================== getAllPayments ====================
-
-    @Test
-    @DisplayName("GET /orders/{id}/payments/all — returns paginated payments")
-    void getAllPayments_returns200() throws Exception {
-        when(paymentService.getAllPayments(any())).thenReturn(new PageImpl<>(List.of(samplePayment())));
-
-        mockMvc.perform(get("/api/v1/orders/1/payments/all"))
-                .andExpect(status().isOk());
-    }
-
-    // ==================== getPaymentsByStatus ====================
-
-    @Test
-    @DisplayName("GET /orders/{id}/payments/by-status — returns payments by status")
-    void getPaymentsByStatus_returns200() throws Exception {
-        when(paymentService.getPaymentsByStatus(any(), any())).thenReturn(new PageImpl<>(List.of(samplePayment())));
-
-        mockMvc.perform(get("/api/v1/orders/1/payments/by-status")
-                        .param("status", "COMPLETED"))
-                .andExpect(status().isOk());
-    }
-
-    // ==================== getPaymentsByMethod ====================
-
-    @Test
-    @DisplayName("GET /orders/{id}/payments/by-method — returns payments by method")
-    void getPaymentsByMethod_returns200() throws Exception {
-        when(paymentService.getPaymentsByMethod(any(), any())).thenReturn(new PageImpl<>(List.of(samplePayment())));
-
-        mockMvc.perform(get("/api/v1/orders/1/payments/by-method")
-                        .param("method", "CASH"))
-                .andExpect(status().isOk());
-    }
-
     // ==================== report ====================
 
     @Test

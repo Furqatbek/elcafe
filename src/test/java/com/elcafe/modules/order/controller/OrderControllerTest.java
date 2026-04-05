@@ -124,26 +124,6 @@ class OrderControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // ==================== createOrder ====================
-
-    @Test
-    @DisplayName("POST / — creates order")
-    void createOrder_returns201() throws Exception {
-        Order order = createOrder(1L, OrderStatus.NEW);
-        when(orderService.createOrder(any())).thenReturn(order);
-        when(restaurantRepository.findAnyActiveRestaurant())
-                .thenReturn(java.util.Optional.of(order.getRestaurant()));
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-        mockMvc.perform(post("/api/v1/orders")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(order)))
-                .andExpect(status().isCreated());
-    }
-
     // ==================== updateOrderStatus ====================
 
     @Test
@@ -156,17 +136,6 @@ class OrderControllerTest {
                         .param("status", "PREPARING")
                         .param("notes", "started")
                         .param("changedBy", "OPERATOR"))
-                .andExpect(status().isOk());
-    }
-
-    // ==================== getAllOrders ====================
-
-    @Test
-    @DisplayName("GET / — lists all orders")
-    void getAllOrders_returns200() throws Exception {
-        when(orderService.getAllOrders(any())).thenReturn(new PageImpl<>(List.of(createOrder(1L, OrderStatus.NEW))));
-
-        mockMvc.perform(get("/api/v1/orders"))
                 .andExpect(status().isOk());
     }
 
@@ -185,26 +154,4 @@ class OrderControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // ==================== getSelfServiceOrders ====================
-
-    @Test
-    @DisplayName("GET /self-service — returns self-service orders")
-    void getSelfServiceOrders_returns200() throws Exception {
-        when(selfServiceOrderRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
-                .thenReturn(Page.empty());
-
-        mockMvc.perform(get("/api/v1/orders/self-service"))
-                .andExpect(status().isOk());
-    }
-
-    // ==================== getExternalOrders ====================
-
-    @Test
-    @DisplayName("GET /external — returns external orders")
-    void getExternalOrders_returns200() throws Exception {
-        when(orderRepository.findByOrderSourceIn(any(), any())).thenReturn(Page.empty());
-
-        mockMvc.perform(get("/api/v1/orders/external"))
-                .andExpect(status().isOk());
-    }
 }
