@@ -23,7 +23,7 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
     @Override
-    @EntityGraph(attributePaths = {"items"}, type = EntityGraph.EntityGraphType.FETCH)
+    @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)
     Page<Order> findAll(Specification<Order> spec, Pageable pageable);
 
     @Override
