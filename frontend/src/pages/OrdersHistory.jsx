@@ -251,10 +251,19 @@ export default function OrdersHistory() {
     setCurrentPage(1);
   };
 
-  // View order details
-  const handleViewOrder = (order) => {
-    setSelectedOrder(order);
-    setDetailsModalOpen(true);
+  // View order details - fetch full order with items from backend
+  const handleViewOrder = async (order) => {
+    try {
+      const response = await orderAPI.getById(order.id);
+      const fullOrder = response.data?.data || response.data;
+      setSelectedOrder(fullOrder);
+      setDetailsModalOpen(true);
+    } catch (error) {
+      console.error('Failed to load order details:', error);
+      // Fallback to list data if fetch fails
+      setSelectedOrder(order);
+      setDetailsModalOpen(true);
+    }
   };
 
   // Export to CSV

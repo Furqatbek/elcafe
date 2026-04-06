@@ -23,6 +23,9 @@ public class OrderSpecification {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
+            // Exclude soft-deleted orders
+            predicates.add(criteriaBuilder.isNull(root.get("deletedAt")));
+
             // Restaurant filter
             if (restaurantId != null) {
                 predicates.add(criteriaBuilder.equal(root.get("restaurant").get("id"), restaurantId));
