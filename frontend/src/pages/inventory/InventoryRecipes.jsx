@@ -5,6 +5,7 @@ import { useInventory } from '../../context/InventoryContext';
 import InventoryLayout from './InventoryLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
 import {
@@ -240,7 +241,12 @@ export default function InventoryRecipes() {
                         </div>
                       )}
                       <div>
-                        <div className="font-medium">{product.name}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          {product.name}
+                          {product.usesProductionBatch && (
+                            <Badge variant="outline" className="text-xs">{t('production.badge', 'Batch')}</Badge>
+                          )}
+                        </div>
                         <div className="text-sm text-muted-foreground">
                           {product.categoryName || 'Uncategorized'}
                         </div>
