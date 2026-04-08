@@ -3,6 +3,7 @@ package com.elcafe.modules.menu.service;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
+import com.elcafe.modules.inventory.repository.ProductionBatchRepository;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class ProductCostService {
 
     private final ProductRepository productRepository;
     private final InventoryProductIngredientRepository productIngredientRepository;
+    private final ProductionBatchRepository productionBatchRepository;
 
     /**
      * Recalculate and update cost price for a single product based on its ingredients.
@@ -40,14 +42,25 @@ public class ProductCostService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
 
-        BigDecimal newCostPrice = calculateCostFromIngredients(productId);
+        BigDecimal newCostPrice;
+
+        if (Boolean.TRUE.equals(product.getUsesProductionBatch())) {
+            // Use average cost per unit from production batches
+            BigDecimal avgCost = productionBatchRepository.getAverageCostPerUnit(productId);
+            newCostPrice = (avgCost != null && avgCost.compareTo(BigDecimal.ZERO) > 0)
+                    ? avgCost : product.getCostPrice();
+        } else {
+            // Existing recipe-based calculation
+            newCostPrice = calculateCostFromIngredients(productId);
+        }
 
         BigDecimal oldCostPrice = product.getCostPrice();
         product.setCostPrice(newCostPrice);
         productRepository.save(product);
 
-        log.info("Updated product {} cost price: {} -> {}",
-                product.getName(), oldCostPrice, newCostPrice);
+        log.info("Updated product {} cost price: {} -> {}{}",
+                product.getName(), oldCostPrice, newCostPrice,
+                Boolean.TRUE.equals(product.getUsesProductionBatch()) ? " (from production batches)" : "");
 
         return newCostPrice;
     }

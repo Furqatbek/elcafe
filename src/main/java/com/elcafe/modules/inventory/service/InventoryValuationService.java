@@ -31,6 +31,8 @@ public class InventoryValuationService {
     private final InventoryIngredientRepository ingredientRepository;
     private final ValuationSettingsRepository valuationSettingsRepository;
     private final BatchConsumptionRepository batchConsumptionRepository;
+    private final ProductionBatchRepository productionBatchRepository;
+    private final ProductionBatchConsumptionRepository productionBatchConsumptionRepository;
 
     /**
      * Configuration to strictly enforce expired batch prevention.
@@ -547,6 +549,31 @@ public class InventoryValuationService {
         // Delete consumption records
         batchConsumptionRepository.deleteByOrderId(orderId);
         log.info("Restored inventory and deleted {} consumption records for order {}", consumptions.size(), orderId);
+
+        // Also restore production batch consumption
+        List<ProductionBatchConsumption> pbConsumptions =
+                productionBatchConsumptionRepository.findByOrderId(orderId);
+        for (ProductionBatchConsumption pbc : pbConsumptions) {
+            try {
+                ProductionBatch batch = pbc.getProductionBatch();
+                batch.setRemainingQuantity(batch.getRemainingQuantity().add(pbc.getQuantity()));
+
+                // Reactivate batch if it was depleted
+                if (batch.getStatus() == ProductionBatch.Status.DEPLETED) {
+                    batch.setStatus(ProductionBatch.Status.SERVING);
+                }
+                productionBatchRepository.save(batch);
+                log.debug("Restored {} to production batch {}", pbc.getQuantity(), batch.getBatchNumber());
+            } catch (Exception e) {
+                log.error("Failed to restore production batch consumption {}: {}", pbc.getId(), e.getMessage());
+            }
+        }
+
+        if (!pbConsumptions.isEmpty()) {
+            productionBatchConsumptionRepository.deleteByOrderId(orderId);
+            log.info("Restored {} production batch consumption records for order {}",
+                    pbConsumptions.size(), orderId);
+        }
     }
 
     // Result classes

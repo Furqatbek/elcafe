@@ -8,6 +8,8 @@ import com.elcafe.modules.inventory.enums.ValuationMethod;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
+import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
@@ -32,8 +34,11 @@ public class InventoryService {
     private final InventoryIngredientRepository ingredientRepository;
     private final InventoryProductIngredientRepository productIngredientRepository;
     private final InventoryTransactionRepository transactionRepository;
+    private final ProductRepository productRepository;
     @Lazy
     private final InventoryValuationService valuationService;
+    @Lazy
+    private final ProductionBatchService productionBatchService;
     @Lazy
     private final OwnerNotificationService ownerNotificationService;
 
@@ -66,6 +71,25 @@ public class InventoryService {
     public void deductIngredientsForOrder(Order order) {
         log.info("Deducting ingredients for order: {}", order.getOrderNumber());
 
+        // Handle production batch items first — deduct from prepared inventory
+        for (OrderItem item : order.getItems()) {
+            try {
+                Product product = productRepository.findById(item.getProductId()).orElse(null);
+                if (product != null && Boolean.TRUE.equals(product.getUsesProductionBatch())) {
+                    productionBatchService.consumeForOrder(
+                            product.getId(), item.getQuantity(),
+                            item.getWeightAmount(), order.getId(), item.getId());
+                    log.info("Deducted from production batch for product {} in order {}",
+                            product.getName(), order.getOrderNumber());
+                }
+            } catch (Exception e) {
+                log.error("Failed to deduct from production batch for item {} in order {}: {}",
+                        item.getProductId(), order.getOrderNumber(), e.getMessage());
+                throw new RuntimeException("Production batch deduction failed: " + e.getMessage(), e);
+            }
+        }
+
+        // Calculate required raw ingredients (only for non-production-batch items)
         Map<Long, BigDecimal> requiredIngredients = calculateRequiredIngredients(order);
 
         for (Map.Entry<Long, BigDecimal> entry : requiredIngredients.entrySet()) {
@@ -183,6 +207,12 @@ public class InventoryService {
         Map<Long, BigDecimal> requiredIngredients = new HashMap<>();
 
         for (OrderItem item : order.getItems()) {
+            // Skip products that use production batch — they are handled separately
+            Product product = productRepository.findById(item.getProductId()).orElse(null);
+            if (product != null && Boolean.TRUE.equals(product.getUsesProductionBatch())) {
+                continue;
+            }
+
             List<ProductIngredient> productIngredients =
                     productIngredientRepository.findByProductIdWithIngredients(item.getProductId());
 
