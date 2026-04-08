@@ -114,6 +114,42 @@ public class ProductionBatchService {
     }
 
     /**
+     * Update an existing ingredient input
+     */
+    @Transactional
+    public ProductionBatchInput updateInput(Long batchId, Long inputId, AddInputRequest request) {
+        ProductionBatch batch = getBatchOrThrow(batchId);
+        validateBatchModifiable(batch);
+
+        ProductionBatchInput input = productionBatchInputRepository.findById(inputId)
+                .orElseThrow(() -> new RuntimeException("Production batch input not found: " + inputId));
+
+        if (!input.getProductionBatch().getId().equals(batchId)) {
+            throw new IllegalArgumentException("Input " + inputId + " does not belong to batch " + batchId);
+        }
+
+        Ingredient ingredient = ingredientRepository.findById(request.getIngredientId())
+                .orElseThrow(() -> new RuntimeException("Ingredient not found: " + request.getIngredientId()));
+
+        BigDecimal costPerUnit = ingredient.getEffectiveCost();
+        String unit = request.getUnit() != null ? request.getUnit() : ingredient.getUnit();
+
+        input.setIngredient(ingredient);
+        input.setActualQuantity(request.getActualQuantity());
+        input.setUnit(unit);
+        input.setCostPerUnit(costPerUnit);
+        input.setTotalCost(costPerUnit.multiply(request.getActualQuantity()));
+        input.setNotes(request.getNotes());
+
+        input = productionBatchInputRepository.save(input);
+
+        log.info("Updated input {} for batch {}: {} {} of {}",
+                inputId, batch.getBatchNumber(), request.getActualQuantity(), unit, ingredient.getName());
+
+        return input;
+    }
+
+    /**
      * Start production — sets status to IN_PROGRESS
      */
     @Transactional
