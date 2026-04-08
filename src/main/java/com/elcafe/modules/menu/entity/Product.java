@@ -116,6 +116,10 @@ public class Product {
     @Builder.Default
     private Boolean isAvailable = true;
 
+    @Column(name = "uses_production_batch")
+    @Builder.Default
+    private Boolean usesProductionBatch = false;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ProductVariant> variants = new ArrayList<>();
