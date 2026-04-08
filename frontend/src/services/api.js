@@ -741,6 +741,24 @@ export const valuationAPI = {
     }),
 };
 
+export const productionBatchAPI = {
+  create: (data) => api.post('/inventory/production-batches', data),
+  getByRestaurant: (restaurantId, params) =>
+    api.get(`/inventory/production-batches/restaurant/${restaurantId}`, { params }),
+  getById: (id) => api.get(`/inventory/production-batches/${id}`),
+  addInput: (id, data) => api.post(`/inventory/production-batches/${id}/inputs`, data),
+  updateInput: (id, inputId, data) =>
+    api.put(`/inventory/production-batches/${id}/inputs/${inputId}`, data),
+  start: (id) => api.post(`/inventory/production-batches/${id}/start`),
+  complete: (id, data) => api.post(`/inventory/production-batches/${id}/complete`, data),
+  recordWaste: (id, data) => api.post(`/inventory/production-batches/${id}/waste`, data),
+  getAvailable: (restaurantId) =>
+    api.get(`/inventory/production-batches/restaurant/${restaurantId}/available`),
+  getReport: (restaurantId, params) =>
+    api.get(`/inventory/production-batches/restaurant/${restaurantId}/report`, { params }),
+  delete: (id) => api.delete(`/inventory/production-batches/${id}`),
+};
+
 export const financialAlertAPI = {
   // Subscriptions
   getSubscriptions: (restaurantId) =>

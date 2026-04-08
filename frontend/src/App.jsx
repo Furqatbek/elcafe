@@ -59,6 +59,7 @@ import {
   InventorySuppliers,
   InventoryAlerts,
   InventoryValuation,
+  ProductionBatches,
 } from './pages/inventory';
 import POSApp from './pos/POSApp';
 import OrdersHistory from './pages/OrdersHistory';
@@ -156,6 +157,7 @@ function App() {
           <Route path="kitchen/suppliers" element={<InventoryWrapper><InventorySuppliers /></InventoryWrapper>} />
           <Route path="kitchen/stock-alerts" element={<InventoryWrapper><InventoryAlerts /></InventoryWrapper>} />
           <Route path="kitchen/valuation" element={<InventoryWrapper><InventoryValuation /></InventoryWrapper>} />
+          <Route path="kitchen/production" element={<InventoryWrapper><ProductionBatches /></InventoryWrapper>} />
           <Route path="kitchen/po-suggestions" element={<POSuggestions />} />
           <Route path="finance/purchase-orders" element={<AdminRoute><PurchaseOrders /></AdminRoute>} />
           <Route path="finance/expenses" element={<AdminRoute><Expenses /></AdminRoute>} />

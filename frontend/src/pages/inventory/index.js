@@ -6,4 +6,5 @@ export { default as InventoryWaste } from './InventoryWaste';
 export { default as InventorySuppliers } from './InventorySuppliers';
 export { default as InventoryAlerts } from './InventoryAlerts';
 export { default as InventoryValuation } from './InventoryValuation';
+export { default as ProductionBatches } from './ProductionBatches';
 export { default as InventoryLayout } from './InventoryLayout';

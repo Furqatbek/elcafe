@@ -19,6 +19,7 @@ import {
   Truck,
   Bell,
   Calculator,
+  ChefHat,
 } from 'lucide-react';
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/kitchen/suppliers', label: 'inventory.tabs.suppliers', icon: Truck },
   { path: '/kitchen/stock-alerts', label: 'inventory.tabs.stockAlerts', icon: Bell },
   { path: '/kitchen/valuation', label: 'inventory.tabs.valuation', icon: Calculator },
+  { path: '/kitchen/production', label: 'inventory.tabs.production', icon: ChefHat },
 ];
 
 export default function InventoryLayout({ children, title, subtitle }) {

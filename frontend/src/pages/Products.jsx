@@ -61,6 +61,7 @@ export default function Products() {
     inStock: true,
     featured: false,
     isSoldByWeight: false,
+    usesProductionBatch: false,
     weightUnit: 'KG',
     minWeight: '',
     maxWeight: '',
@@ -215,6 +216,7 @@ export default function Products() {
       inStock: true,
       featured: false,
       isSoldByWeight: false,
+      usesProductionBatch: false,
       weightUnit: 'KG',
       minWeight: '',
       maxWeight: '',
@@ -236,6 +238,7 @@ export default function Products() {
       inStock: product.available ?? true,
       featured: product.isFeatured ?? false,
       isSoldByWeight: product.isSoldByWeight ?? false,
+      usesProductionBatch: product.usesProductionBatch ?? false,
       weightUnit: product.weightUnit || 'KG',
       minWeight: product.minWeight?.toString() || '',
       maxWeight: product.maxWeight?.toString() || '',
@@ -796,6 +799,25 @@ export default function Products() {
                 )}
               </div>
 
+              {/* Production Batch toggle */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="usesProductionBatch"
+                    checked={formData.usesProductionBatch}
+                    onChange={(e) => setFormData({ ...formData, usesProductionBatch: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="usesProductionBatch" className="font-medium">
+                    {t('pages.products.usesProductionBatch', 'Uses Production Batch')}
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {t('pages.products.usesProductionBatchHint', 'Orders deduct from prepared inventory (batch-cooked items like soups) instead of raw ingredients.')}
+                </p>
+              </div>
+
               <div className="flex gap-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -1037,6 +1059,25 @@ export default function Products() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Production Batch toggle */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-usesProductionBatch"
+                    checked={formData.usesProductionBatch}
+                    onChange={(e) => setFormData({ ...formData, usesProductionBatch: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  <Label htmlFor="edit-usesProductionBatch" className="font-medium">
+                    {t('pages.products.usesProductionBatch', 'Uses Production Batch')}
+                  </Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-6">
+                  {t('pages.products.usesProductionBatchHint', 'Orders deduct from prepared inventory (batch-cooked items like soups) instead of raw ingredients.')}
+                </p>
               </div>
 
               <div className="flex gap-4">

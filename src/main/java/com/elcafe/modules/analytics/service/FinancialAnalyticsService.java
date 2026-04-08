@@ -3,6 +3,7 @@ package com.elcafe.modules.analytics.service;
 import com.elcafe.config.CacheConfig;
 import com.elcafe.modules.analytics.dto.*;
 import com.elcafe.modules.financial.service.ShiftTimeService;
+import com.elcafe.modules.inventory.repository.ProductionBatchConsumptionRepository;
 import com.elcafe.modules.inventory.service.BatchConsumptionService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
@@ -39,6 +40,7 @@ public class FinancialAnalyticsService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final BatchConsumptionService batchConsumptionService;
+    private final ProductionBatchConsumptionRepository productionBatchConsumptionRepository;
     private final ShiftTimeService shiftTimeService;
 
     /**
@@ -235,10 +237,24 @@ public class FinancialAnalyticsService {
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Include production batch COGS (prepared items like soups, stews)
+        BigDecimal productionBatchCOGS = BigDecimal.ZERO;
+        if (restaurantId != null) {
+            try {
+                productionBatchCOGS = productionBatchConsumptionRepository.getTotalConsumptionCost(
+                        restaurantId, shift.start().toLocalDateTime(), shift.end().toLocalDateTime());
+            } catch (Exception e) {
+                log.warn("Could not calculate production batch COGS for restaurant {}: {}",
+                         restaurantId, e.getMessage());
+            }
+        }
+
         // Use batch-based COGS if available and meaningful, otherwise use product-based
-        BigDecimal totalCOGS = batchBasedCOGS.compareTo(BigDecimal.ZERO) > 0
+        // Always add production batch COGS on top
+        BigDecimal rawIngredientCOGS = batchBasedCOGS.compareTo(BigDecimal.ZERO) > 0
                 ? batchBasedCOGS
                 : productBasedCOGS;
+        BigDecimal totalCOGS = rawIngredientCOGS.add(productionBatchCOGS);
 
         BigDecimal grossProfit = totalRevenue.subtract(totalCOGS);
 
