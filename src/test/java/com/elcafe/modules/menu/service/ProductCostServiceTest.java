@@ -3,6 +3,7 @@ package com.elcafe.modules.menu.service;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
+import com.elcafe.modules.inventory.repository.ProductionBatchRepository;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +32,7 @@ class ProductCostServiceTest {
 
     @Mock private ProductRepository productRepository;
     @Mock private InventoryProductIngredientRepository productIngredientRepository;
+    @Mock private ProductionBatchRepository productionBatchRepository;
     @InjectMocks private ProductCostService productCostService;
 
     private Product product;
@@ -127,6 +129,26 @@ class ProductCostServiceTest {
         int updated = productCostService.recalculateAllProductCosts();
 
         assertThat(updated).isEqualTo(1);
+    }
+
+    @Test @DisplayName("recalculateProductCost — uses production batch avg cost when flag set")
+    void recalculateProductCost_productionBatch() {
+        Product batchProduct = new Product();
+        batchProduct.setId(2L);
+        batchProduct.setName("Shurva");
+        batchProduct.setCostPrice(BigDecimal.ZERO);
+        batchProduct.setUsesProductionBatch(true);
+
+        when(productRepository.findById(2L)).thenReturn(Optional.of(batchProduct));
+        when(productionBatchRepository.getAverageCostPerUnit(2L)).thenReturn(new BigDecimal("30000"));
+        when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
+
+        BigDecimal result = productCostService.recalculateProductCost(2L);
+
+        assertThat(result).isEqualByComparingTo("30000");
+        assertThat(batchProduct.getCostPrice()).isEqualByComparingTo("30000");
+        verify(productionBatchRepository).getAverageCostPerUnit(2L);
+        verify(productIngredientRepository, never()).findByProductIdWithIngredients(2L);
     }
 
     @Test @DisplayName("getCostBreakdown — returns per-ingredient details")

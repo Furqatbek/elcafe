@@ -8,6 +8,7 @@ import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
 import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
@@ -44,7 +45,9 @@ class InventoryServiceTest {
     @Mock private InventoryIngredientRepository ingredientRepository;
     @Mock private InventoryProductIngredientRepository productIngredientRepository;
     @Mock private InventoryTransactionRepository transactionRepository;
+    @Mock private ProductRepository productRepository;
     @Mock private InventoryValuationService valuationService;
+    @Mock private ProductionBatchService productionBatchService;
     @Mock private OwnerNotificationService ownerNotificationService;
     @InjectMocks private InventoryService inventoryService;
 
@@ -73,6 +76,8 @@ class InventoryServiceTest {
         Product product = new Product();
         product.setId(1L);
         product.setName("Bread");
+        product.setUsesProductionBatch(false);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
         recipeFlour = ProductIngredient.builder()
                 .id(1L).product(product).ingredient(flour)
@@ -137,6 +142,28 @@ class InventoryServiceTest {
 
             verify(transactionRepository).save(txnCaptor.capture());
             assertThat(txnCaptor.getValue().getNotes()).contains("VALUATION_FAILED");
+        }
+
+        @Test @DisplayName("production batch product — deducts from prepared inventory")
+        void productionBatchPath() {
+            Product batchProduct = new Product();
+            batchProduct.setId(2L);
+            batchProduct.setName("Shurva");
+            batchProduct.setUsesProductionBatch(true);
+            when(productRepository.findById(2L)).thenReturn(Optional.of(batchProduct));
+            when(productionBatchService.consumeForOrder(eq(2L), eq(2), any(), eq(1L), any()))
+                    .thenReturn(new BigDecimal("60000"));
+
+            Order order = new Order();
+            order.setId(1L);
+            order.setOrderNumber("ORD-002");
+            OrderItem item = OrderItem.builder().productId(2L).quantity(2).build();
+            order.setItems(new ArrayList<>(List.of(item)));
+
+            inventoryService.deductIngredientsForOrder(order);
+
+            verify(productionBatchService).consumeForOrder(eq(2L), eq(2), any(), eq(1L), any());
+            verify(productIngredientRepository, never()).findByProductIdWithIngredients(2L);
         }
 
         @Test @DisplayName("sends low stock alert when below minimum")
