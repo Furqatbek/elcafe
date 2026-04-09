@@ -50,7 +50,7 @@ class ProductionBatchRepositoryTest {
         product.setName("Shurva");
         product.setCategory(category);
         product.setPrice(new BigDecimal("25000"));
-        product.setStatus(ProductStatus.ACTIVE);
+        product.setStatus(ProductStatus.LIVE);
         product.setUsesProductionBatch(true);
         em.persist(product);
 
