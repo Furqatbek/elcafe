@@ -595,13 +595,21 @@ export default function ProductionBatches() {
                     <Button variant="outline" onClick={() => handleStartBatch(selectedBatch.id)}>
                       <Play className="h-4 w-4 mr-2" /> {t('production.start', 'Start Production')}
                     </Button>
-                    <Button onClick={openComplete}>
+                    <Button
+                      onClick={openComplete}
+                      disabled={!selectedBatch.inputs || selectedBatch.inputs.length === 0}
+                      title={!selectedBatch.inputs || selectedBatch.inputs.length === 0 ? t('production.addInputsFirst', 'Add ingredient inputs before completing') : ''}
+                    >
                       <CheckCircle className="h-4 w-4 mr-2" /> {t('production.complete', 'Complete Batch')}
                     </Button>
                   </>
                 )}
                 {selectedBatch.status === 'IN_PROGRESS' && (
-                  <Button onClick={openComplete}>
+                  <Button
+                    onClick={openComplete}
+                    disabled={!selectedBatch.inputs || selectedBatch.inputs.length === 0}
+                    title={!selectedBatch.inputs || selectedBatch.inputs.length === 0 ? t('production.addInputsFirst', 'Add ingredient inputs before completing') : ''}
+                  >
                     <CheckCircle className="h-4 w-4 mr-2" /> {t('production.complete', 'Complete Batch')}
                   </Button>
                 )}

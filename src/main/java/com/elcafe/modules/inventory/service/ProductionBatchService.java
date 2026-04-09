@@ -383,7 +383,11 @@ public class ProductionBatchService {
      */
     @Transactional(readOnly = true)
     public ProductionBatch getBatchById(Long batchId) {
-        return getBatchOrThrow(batchId);
+        ProductionBatch batch = getBatchOrThrow(batchId);
+        // Eagerly initialize lazy collections for use outside transaction
+        batch.getInputs().size();
+        batch.getConsumptions().size();
+        return batch;
     }
 
     /**
