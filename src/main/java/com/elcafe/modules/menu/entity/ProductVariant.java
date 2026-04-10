@@ -53,4 +53,7 @@ public class ProductVariant {
     @Column(name = "is_available")
     @Builder.Default
     private Boolean isAvailable = true;
+
+    @Column(name = "batch_deduction_quantity", precision = 10, scale = 4)
+    private BigDecimal batchDeductionQuantity;
 }
