@@ -429,6 +429,74 @@ class ProductionBatchServiceTest {
         }
     }
 
+    // --- consumeForOrder (variant-based deduction) ---
+
+    @Nested @DisplayName("consumeForOrder")
+    class ConsumeForOrderTests {
+
+        @BeforeEach
+        void setUpBatch() {
+            ProductionBatch batch = createReadyBatch(new BigDecimal("100"));
+            when(batchRepository.findAvailableByProduct(10L)).thenReturn(List.of(batch));
+            when(batchRepository.findById(100L)).thenReturn(Optional.of(batch));
+        }
+
+        @Test @DisplayName("variant batchDeductionQty=5, quantity=2 → deducts 10")
+        void variantMultiplier() {
+            BigDecimal cost = service.consumeForOrder(10L, 2, null, new BigDecimal("5"), 1L, 1L);
+
+            // 10 units × 30000 cost/unit = 300000
+            assertThat(cost).isEqualByComparingTo("300000");
+            verify(consumptionRepository).save(consumptionCaptor.capture());
+            assertThat(consumptionCaptor.getValue().getQuantity()).isEqualByComparingTo("10");
+        }
+
+        @Test @DisplayName("variant batchDeductionQty=1, quantity=3 → deducts 3")
+        void variantSinglePiece() {
+            BigDecimal cost = service.consumeForOrder(10L, 3, null, new BigDecimal("1"), 1L, 1L);
+
+            assertThat(cost).isEqualByComparingTo("90000"); // 3 × 30000
+            verify(consumptionRepository).save(consumptionCaptor.capture());
+            assertThat(consumptionCaptor.getValue().getQuantity()).isEqualByComparingTo("3");
+        }
+
+        @Test @DisplayName("weightAmount takes priority over batchDeductionQty")
+        void weightOverridesVariant() {
+            BigDecimal cost = service.consumeForOrder(10L, 1, new BigDecimal("0.5"),
+                    new BigDecimal("5"), 1L, 1L);
+
+            // Weight wins: 0.5 × 30000 = 15000
+            assertThat(cost).isEqualByComparingTo("15000");
+            verify(consumptionRepository).save(consumptionCaptor.capture());
+            assertThat(consumptionCaptor.getValue().getQuantity()).isEqualByComparingTo("0.5");
+        }
+
+        @Test @DisplayName("null batchDeductionQty falls back to itemQuantity")
+        void fallbackToQuantity() {
+            BigDecimal cost = service.consumeForOrder(10L, 2, null, null, 1L, 1L);
+
+            assertThat(cost).isEqualByComparingTo("60000"); // 2 × 30000
+            verify(consumptionRepository).save(consumptionCaptor.capture());
+            assertThat(consumptionCaptor.getValue().getQuantity()).isEqualByComparingTo("2");
+        }
+
+        @Test @DisplayName("zero batchDeductionQty falls back to itemQuantity")
+        void zeroBatchDeductionFallback() {
+            BigDecimal cost = service.consumeForOrder(10L, 3, null, BigDecimal.ZERO, 1L, 1L);
+
+            assertThat(cost).isEqualByComparingTo("90000"); // 3 × 30000
+        }
+
+        @Test @DisplayName("throws when no batch available")
+        void noBatchAvailable() {
+            when(batchRepository.findAvailableByProduct(999L)).thenReturn(List.of());
+
+            assertThatThrownBy(() -> service.consumeForOrder(999L, 1, null, null, 1L, 1L))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("No available production batch");
+        }
+    }
+
     // --- recordWaste ---
 
     @Nested @DisplayName("recordWaste")

@@ -33,9 +33,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -165,6 +163,56 @@ class InventoryServiceTest {
 
             verify(productionBatchService).consumeForOrder(eq(2L), eq(2), any(), any(), eq(1L), any());
             verify(productIngredientRepository, never()).findByProductIdWithIngredients(2L);
+        }
+
+        @Test @DisplayName("production batch with variant — passes batchDeductionQuantity")
+        void productionBatchWithVariant() {
+            Product batchProduct = new Product();
+            batchProduct.setId(3L);
+            batchProduct.setName("Manti");
+            batchProduct.setUsesProductionBatch(true);
+            when(productRepository.findById(3L)).thenReturn(Optional.of(batchProduct));
+
+            com.elcafe.modules.menu.entity.ProductVariant variant =
+                    com.elcafe.modules.menu.entity.ProductVariant.builder()
+                    .id(50L).name("1 Portion").price(new BigDecimal("20000"))
+                    .batchDeductionQuantity(new BigDecimal("5")).build();
+            when(productVariantRepository.findById(50L)).thenReturn(Optional.of(variant));
+
+            when(productionBatchService.consumeForOrder(eq(3L), eq(2), any(), eq(new BigDecimal("5")), eq(1L), any()))
+                    .thenReturn(new BigDecimal("300000"));
+
+            Order order = new Order();
+            order.setId(1L);
+            order.setOrderNumber("ORD-003");
+            OrderItem item = OrderItem.builder().productId(3L).quantity(2).variantId(50L).build();
+            order.setItems(new ArrayList<>(List.of(item)));
+
+            inventoryService.deductIngredientsForOrder(order);
+
+            // Verify batchDeductionQty=5 was passed (from variant)
+            verify(productionBatchService).consumeForOrder(eq(3L), eq(2), any(), eq(new BigDecimal("5")), eq(1L), any());
+        }
+
+        @Test @DisplayName("production batch without variant — passes null batchDeductionQty")
+        void productionBatchNoVariant() {
+            Product batchProduct = new Product();
+            batchProduct.setId(2L);
+            batchProduct.setName("Shurva");
+            batchProduct.setUsesProductionBatch(true);
+            when(productRepository.findById(2L)).thenReturn(Optional.of(batchProduct));
+            when(productionBatchService.consumeForOrder(eq(2L), eq(1), any(), isNull(), eq(1L), any()))
+                    .thenReturn(new BigDecimal("30000"));
+
+            Order order = new Order();
+            order.setId(1L);
+            order.setOrderNumber("ORD-004");
+            OrderItem item = OrderItem.builder().productId(2L).quantity(1).build();
+            order.setItems(new ArrayList<>(List.of(item)));
+
+            inventoryService.deductIngredientsForOrder(order);
+
+            verify(productionBatchService).consumeForOrder(eq(2L), eq(1), any(), isNull(), eq(1L), any());
         }
 
         @Test @DisplayName("sends low stock alert when below minimum")
