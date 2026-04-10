@@ -391,6 +391,33 @@ public class ProductionBatchService {
     }
 
     /**
+     * Reload recipe inputs into a batch — clears existing inputs and re-imports from product recipe
+     */
+    @Transactional
+    public ProductionBatch reloadRecipeInputs(Long batchId) {
+        ProductionBatch batch = getBatchOrThrow(batchId);
+        validateBatchModifiable(batch);
+
+        if (batch.getProduct() == null) {
+            throw new IllegalStateException("Batch has no linked product — cannot load recipe");
+        }
+
+        // Clear existing inputs
+        List<ProductionBatchInput> existing = productionBatchInputRepository.findByProductionBatchId(batchId);
+        productionBatchInputRepository.deleteAll(existing);
+
+        // Reload from recipe
+        loadRecipeInputs(batch, batch.getProduct().getId());
+
+        // Re-fetch to return updated state
+        batch.getInputs().clear();
+        batch.getInputs().addAll(productionBatchInputRepository.findByProductionBatchId(batchId));
+
+        log.info("Reloaded recipe inputs for batch {}", batch.getBatchNumber());
+        return batch;
+    }
+
+    /**
      * Delete a DRAFT batch
      */
     @Transactional

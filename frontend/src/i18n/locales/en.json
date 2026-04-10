@@ -3892,6 +3892,7 @@
     "status": "Status",
     "preparedBy": "Prepared By",
     "loadRecipe": "Load from Recipe",
+    "reloadRecipe": "Reload from Recipe",
     "complete": "Complete Batch",
     "completeDesc": "Enter the actual output yield after cooking",
     "completeNotesPlaceholder": "e.g. Evaporation reduced from expected 10L",

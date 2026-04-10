@@ -39,6 +39,7 @@ import {
   Trash2,
   Eye,
   ArrowRight,
+  RefreshCw,
   X,
 } from 'lucide-react';
 
@@ -201,6 +202,16 @@ export default function ProductionBatches() {
       loadBatchDetail(selectedBatch.id);
     } catch (error) {
       console.error('Failed to add input:', error);
+    }
+  };
+
+  const handleReloadRecipe = async () => {
+    if (!selectedBatch) return;
+    try {
+      await productionBatchAPI.reloadRecipe(selectedBatch.id);
+      loadBatchDetail(selectedBatch.id);
+    } catch (error) {
+      console.error('Failed to reload recipe:', error);
     }
   };
 
@@ -519,9 +530,16 @@ export default function ProductionBatches() {
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium">{t('production.inputs', 'Input Ingredients')}</h4>
                   {(selectedBatch.status === 'DRAFT' || selectedBatch.status === 'IN_PROGRESS') && (
-                    <Button size="sm" variant="outline" onClick={() => { loadIngredients(); setAddInputOpen(true); }}>
-                      <Plus className="h-3 w-3 mr-1" /> {t('production.addInput', 'Add Input')}
-                    </Button>
+                    <div className="flex gap-2">
+                      {selectedBatch.productName && (
+                        <Button size="sm" variant="outline" onClick={handleReloadRecipe}>
+                          <RefreshCw className="h-3 w-3 mr-1" /> {t('production.reloadRecipe', 'Reload from Recipe')}
+                        </Button>
+                      )}
+                      <Button size="sm" variant="outline" onClick={() => { loadIngredients(); setAddInputOpen(true); }}>
+                        <Plus className="h-3 w-3 mr-1" /> {t('production.addInput', 'Add Input')}
+                      </Button>
+                    </div>
                   )}
                 </div>
                 {selectedBatch.inputs && selectedBatch.inputs.length > 0 ? (

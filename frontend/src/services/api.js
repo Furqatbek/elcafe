@@ -749,6 +749,7 @@ export const productionBatchAPI = {
   addInput: (id, data) => api.post(`/inventory/production-batches/${id}/inputs`, data),
   updateInput: (id, inputId, data) =>
     api.put(`/inventory/production-batches/${id}/inputs/${inputId}`, data),
+  reloadRecipe: (id) => api.post(`/inventory/production-batches/${id}/reload-recipe`),
   start: (id) => api.post(`/inventory/production-batches/${id}/start`),
   complete: (id, data) => api.post(`/inventory/production-batches/${id}/complete`, data),
   recordWaste: (id, data) => api.post(`/inventory/production-batches/${id}/waste`, data),

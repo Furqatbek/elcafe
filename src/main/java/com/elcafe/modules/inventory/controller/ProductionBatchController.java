@@ -117,6 +117,16 @@ public class ProductionBatchController {
         return ResponseEntity.ok(ApiResponse.success("Input updated successfully", detail));
     }
 
+    @PostMapping("/{id}/reload-recipe")
+    public ResponseEntity<ApiResponse<ProductionBatchResponse>> reloadRecipe(@PathVariable Long id) {
+        log.info("Reloading recipe inputs for production batch {}", id);
+
+        ProductionBatch batch = productionBatchService.reloadRecipeInputs(id);
+        ProductionBatchResponse response = ProductionBatchResponse.fromEntity(batch);
+
+        return ResponseEntity.ok(ApiResponse.success("Recipe inputs reloaded successfully", response));
+    }
+
     @PostMapping("/{id}/start")
     public ResponseEntity<ApiResponse<ProductionBatchResponse>> startBatch(@PathVariable Long id) {
         log.info("Starting production batch {}", id);

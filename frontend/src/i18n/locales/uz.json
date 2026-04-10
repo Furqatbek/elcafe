@@ -3697,6 +3697,7 @@
     "status": "Holat",
     "preparedBy": "Tayyorlagan",
     "loadRecipe": "Retseptdan yuklash",
+    "reloadRecipe": "Retseptdan qayta yuklash",
     "complete": "Partiyani yakunlash",
     "completeDesc": "Pishirgandan keyin haqiqiy chiqish miqdorini kiriting",
     "completeNotesPlaceholder": "masalan, Kutilgandan ko'proq bug'landi",
