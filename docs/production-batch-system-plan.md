@@ -514,3 +514,36 @@ Cost recorded: 0.5 × 34235.29 = 17117.65
 | 7 | Phase 8 | 1 new page + modify 4 existing frontend files + i18n | Frontend UI + routing + API |
 
 **Total: 16 new files + 11 modified files + ~40 tests**
+
+---
+
+## Variant-Based Batch Deduction (Extension)
+
+> See full plan: `docs/variant-batch-deduction-plan.md`
+
+Products like Manti are batch-cooked but sold in multiple ways (1 piece, 1 portion of 5 pieces, or by weight). The `batchDeductionQuantity` field on `ProductVariant` tells the system how many batch units to deduct per order unit.
+
+### Priority Rules
+
+```
+1. weightAmount (if set)           → use as-is (weight-based)
+2. variant.batchDeductionQuantity  → multiply by order quantity
+3. fallback                        → use order quantity as-is
+```
+
+### Files Added/Modified
+
+| File | Change |
+|------|--------|
+| `V112__add_batch_deduction_qty_to_variants.sql` | Migration: `batch_deduction_quantity DECIMAL(10,4)` |
+| `ProductVariant.java` | Added `batchDeductionQuantity` field |
+| `ModifyOrderItemRequest.java` | Added `variantId`, `variantName` |
+| `CreatePOSOrderRequest.java` | Added `variantId`, `variantName` |
+| `POSOrderItemService.java` | Populates variant/weight/portion on OrderItem, fixed price calc |
+| `InventoryService.java` | Looks up variant deduction qty, passes to batch service |
+| `ProductionBatchService.java` | `consumeForOrder()` accepts and uses `batchDeductionQty` |
+| `Products.jsx` | Batch deduction qty field in variant form (conditional) |
+| `posStore.js` | Tracks variantId/variantName in cart and order submission |
+| `ProductModifiersScreen.jsx` | Passes variant to cart |
+| `OrderModificationScreen.jsx` | Passes variant/weight/portion on item add |
+| `en.json`, `ru.json`, `uz.json` | i18n keys for batch deduction field |
