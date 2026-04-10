@@ -48,7 +48,11 @@ const ProductModifiersScreen = () => {
     addItemToCart(
       { ...product, price: basePrice },
       finalModifiers,
-      quantity
+      quantity,
+      {
+        variantId: selectedSize?.id || null,
+        variantName: selectedSize?.name || null,
+      }
     );
 
     // Go back to menu

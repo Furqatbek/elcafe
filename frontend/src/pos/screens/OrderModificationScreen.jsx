@@ -219,8 +219,12 @@ const OrderModificationScreen = () => {
       for (const item of pendingChanges.addedItems) {
         await posAPI.addItemToOrder(order.id, {
           productId: item.productId,
+          variantId: item.variantId || null,
+          variantName: item.variantName || null,
           quantity: item.quantity,
           price: item.price,
+          weightAmount: item.weightAmount || null,
+          portionMultiplier: item.portionMultiplier || null,
           modifiers: item.modifiers || [],
           notes: item.notes || '',
         });

@@ -78,7 +78,8 @@ export default function Products() {
     description: '',
     price: '',
     inStock: true,
-    sortOrder: 0
+    sortOrder: 0,
+    batchDeductionQuantity: '',
   });
   const [createVariantModalOpen, setCreateVariantModalOpen] = useState(false);
   const [editVariantModalOpen, setEditVariantModalOpen] = useState(false);
@@ -331,7 +332,8 @@ export default function Products() {
       description: '',
       price: '',
       inStock: true,
-      sortOrder: 0
+      sortOrder: 0,
+      batchDeductionQuantity: '',
     });
   };
 
@@ -342,7 +344,9 @@ export default function Products() {
     try {
       await productVariantAPI.create(selectedProductForVariants.id, {
         ...variantFormData,
-        price: parseFloat(variantFormData.price)
+        price: parseFloat(variantFormData.price),
+        batchDeductionQuantity: variantFormData.batchDeductionQuantity
+          ? parseFloat(variantFormData.batchDeductionQuantity) : null,
       });
       setCreateVariantModalOpen(false);
       resetVariantForm();
@@ -360,7 +364,8 @@ export default function Products() {
       description: variant.description || '',
       price: variant.price?.toString() || '',
       inStock: variant.inStock ?? true,
-      sortOrder: variant.sortOrder || 0
+      sortOrder: variant.sortOrder || 0,
+      batchDeductionQuantity: variant.batchDeductionQuantity?.toString() || '',
     });
     setEditVariantModalOpen(true);
   };
@@ -372,7 +377,9 @@ export default function Products() {
     try {
       await productVariantAPI.update(selectedProductForVariants.id, selectedVariant.id, {
         ...variantFormData,
-        price: parseFloat(variantFormData.price)
+        price: parseFloat(variantFormData.price),
+        batchDeductionQuantity: variantFormData.batchDeductionQuantity
+          ? parseFloat(variantFormData.batchDeductionQuantity) : null,
       });
       setEditVariantModalOpen(false);
       resetVariantForm();
@@ -1285,6 +1292,24 @@ export default function Products() {
                 />
                 <Label htmlFor="variant-inStock">{t('menu.inStock', 'In Stock')}</Label>
               </div>
+
+              {selectedProductForVariants?.usesProductionBatch && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <Label htmlFor="variant-batchDeductionQty">{t('pages.products.batchDeductionQuantity', 'Batch Deduction Qty')}</Label>
+                  <Input
+                    id="variant-batchDeductionQty"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={variantFormData.batchDeductionQuantity}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, batchDeductionQuantity: e.target.value })}
+                    placeholder={t('pages.products.batchDeductionPlaceholder', 'e.g. 5 for a 5-piece portion')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('pages.products.batchDeductionHint', 'How many units to deduct from the production batch per order. Leave empty to use order quantity.')}
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setCreateVariantModalOpen(false); resetVariantForm(); }}>
@@ -1367,6 +1392,24 @@ export default function Products() {
                 />
                 <Label htmlFor="edit-variant-inStock">{t('menu.inStock', 'In Stock')}</Label>
               </div>
+
+              {selectedProductForVariants?.usesProductionBatch && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <Label htmlFor="edit-variant-batchDeductionQty">{t('pages.products.batchDeductionQuantity', 'Batch Deduction Qty')}</Label>
+                  <Input
+                    id="edit-variant-batchDeductionQty"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={variantFormData.batchDeductionQuantity}
+                    onChange={(e) => setVariantFormData({ ...variantFormData, batchDeductionQuantity: e.target.value })}
+                    placeholder={t('pages.products.batchDeductionPlaceholder', 'e.g. 5 for a 5-piece portion')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('pages.products.batchDeductionHint', 'How many units to deduct from the production batch per order. Leave empty to use order quantity.')}
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setEditVariantModalOpen(false); resetVariantForm(); setSelectedVariant(null); }}>

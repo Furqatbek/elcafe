@@ -142,7 +142,7 @@ const usePOSStore = create(
       })),
 
       addItemToCart: (product, modifiers = [], quantity = 1, options = {}) => set((state) => {
-        const { weightAmount = null, portionMultiplier = null } = options;
+        const { weightAmount = null, portionMultiplier = null, variantId = null, variantName = null } = options;
         const modifierExtra = modifiers.reduce((sum, mod) => sum + mod.price, 0);
         const basePrice = product.price;
 
@@ -156,21 +156,24 @@ const usePOSStore = create(
         // Weight-based items are never merged — each weight entry is a separate line
         const isWeightItem = !!weightAmount;
 
-        // Create a unique key based on product ID, modifiers, and portion to identify duplicates
+        // Create a unique key based on product ID, modifiers, portion, and variant to identify duplicates
         const modifierKey = modifiers.map(m => `${m.id || m.name}`).sort().join(',');
         const portionKey = portionMultiplier ? portionMultiplier.toFixed(4) : 'none';
+        const variantKey = variantId ? String(variantId) : 'none';
 
-        // Check if this exact product + modifier + portion combination already exists (non-weight only)
+        // Check if this exact product + modifier + portion + variant combination already exists (non-weight only)
         const existingItemIndex = isWeightItem ? -1 : state.currentOrder.items.findIndex(item => {
           if (item.weightAmount) return false; // never merge into a weight item
           const existingModifierKey = item.modifiers.map(m => `${m.id || m.name}`).sort().join(',');
           const existingPortionKey = item.portionMultiplier ? item.portionMultiplier.toFixed(4) : 'none';
+          const existingVariantKey = item.variantId ? String(item.variantId) : 'none';
           if (product.isBundle) {
             return item.bundleId === product.bundleId && existingModifierKey === modifierKey;
           }
           return item.productId === product.id && !item.isBundle
             && existingModifierKey === modifierKey
-            && existingPortionKey === portionKey;
+            && existingPortionKey === portionKey
+            && existingVariantKey === variantKey;
         });
 
         let items;
@@ -196,6 +199,8 @@ const usePOSStore = create(
             basePrice,
             modifiers,
             quantity,
+            variantId,                              // null if no variant selected
+            variantName,                            // display name of variant
             weightAmount,                          // null for non-weight items
             weightUnit: product.weightUnit || null, // KG, G, LB, OZ
             portionMultiplier,                     // null means 1× (full)
@@ -1349,6 +1354,8 @@ const usePOSStore = create(
             },
             items: state.currentOrder.items.map(item => ({
               productId: item.productId,
+              variantId: item.variantId || null,
+              variantName: item.variantName || null,
               quantity: item.quantity,
               price: item.basePrice,
               weightAmount: item.weightAmount || null,
