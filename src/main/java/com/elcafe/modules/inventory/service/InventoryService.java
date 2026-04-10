@@ -9,7 +9,9 @@ import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.inventory.repository.InventoryTransactionRepository;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.menu.entity.Product;
+import com.elcafe.modules.menu.entity.ProductVariant;
 import com.elcafe.modules.menu.repository.ProductRepository;
+import com.elcafe.modules.menu.repository.ProductVariantRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
@@ -35,6 +37,7 @@ public class InventoryService {
     private final InventoryProductIngredientRepository productIngredientRepository;
     private final InventoryTransactionRepository transactionRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     @Lazy
     private final InventoryValuationService valuationService;
     @Lazy
@@ -76,9 +79,19 @@ public class InventoryService {
             try {
                 Product product = productRepository.findById(item.getProductId()).orElse(null);
                 if (product != null && Boolean.TRUE.equals(product.getUsesProductionBatch())) {
+                    // Look up variant's batch deduction quantity
+                    BigDecimal batchDeductionQty = null;
+                    if (item.getVariantId() != null) {
+                        ProductVariant variant = productVariantRepository.findById(item.getVariantId()).orElse(null);
+                        if (variant != null && variant.getBatchDeductionQuantity() != null) {
+                            batchDeductionQty = variant.getBatchDeductionQuantity();
+                        }
+                    }
+
                     productionBatchService.consumeForOrder(
                             product.getId(), item.getQuantity(),
-                            item.getWeightAmount(), order.getId(), item.getId());
+                            item.getWeightAmount(), batchDeductionQty,
+                            order.getId(), item.getId());
                     log.info("Deducted from production batch for product {} in order {}",
                             product.getName(), order.getOrderNumber());
                 }

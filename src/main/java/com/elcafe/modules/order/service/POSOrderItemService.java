@@ -142,9 +142,29 @@ public class POSOrderItemService {
         newItem.setProductName(product.getName());
         newItem.setQuantity(request.getQuantity());
 
+        // Variant fields
+        newItem.setVariantId(request.getVariantId());
+        newItem.setVariantName(request.getVariantName());
+
+        // Weight and portion fields
+        newItem.setWeightAmount(request.getWeightAmount());
+        if (product.getWeightUnit() != null) {
+            newItem.setWeightUnit(product.getWeightUnit());
+        }
+        if (request.getPortionMultiplier() != null) {
+            newItem.setPortionMultiplier(request.getPortionMultiplier());
+        }
+
+        // Price calculation: weight-based > portion-based > simple
         BigDecimal price = request.getPrice() != null ? request.getPrice() : product.getPrice();
         newItem.setUnitPrice(price);
-        newItem.setTotalPrice(price.multiply(BigDecimal.valueOf(request.getQuantity())));
+        if (request.getWeightAmount() != null && request.getWeightAmount().compareTo(BigDecimal.ZERO) > 0) {
+            newItem.setTotalPrice(price.multiply(request.getWeightAmount()).multiply(BigDecimal.valueOf(request.getQuantity())));
+        } else if (request.getPortionMultiplier() != null && request.getPortionMultiplier().compareTo(BigDecimal.ZERO) > 0) {
+            newItem.setTotalPrice(price.multiply(request.getPortionMultiplier()).multiply(BigDecimal.valueOf(request.getQuantity())));
+        } else {
+            newItem.setTotalPrice(price.multiply(BigDecimal.valueOf(request.getQuantity())));
+        }
         newItem.setSpecialInstructions(request.getNotes());
 
         // Add modifiers using the new structured relationship

@@ -46,6 +46,7 @@ class InventoryServiceTest {
     @Mock private InventoryProductIngredientRepository productIngredientRepository;
     @Mock private InventoryTransactionRepository transactionRepository;
     @Mock private ProductRepository productRepository;
+    @Mock private com.elcafe.modules.menu.repository.ProductVariantRepository productVariantRepository;
     @Mock private InventoryValuationService valuationService;
     @Mock private ProductionBatchService productionBatchService;
     @Mock private OwnerNotificationService ownerNotificationService;
@@ -151,7 +152,7 @@ class InventoryServiceTest {
             batchProduct.setName("Shurva");
             batchProduct.setUsesProductionBatch(true);
             when(productRepository.findById(2L)).thenReturn(Optional.of(batchProduct));
-            when(productionBatchService.consumeForOrder(eq(2L), eq(2), any(), eq(1L), any()))
+            when(productionBatchService.consumeForOrder(eq(2L), eq(2), any(), any(), eq(1L), any()))
                     .thenReturn(new BigDecimal("60000"));
 
             Order order = new Order();
@@ -162,7 +163,7 @@ class InventoryServiceTest {
 
             inventoryService.deductIngredientsForOrder(order);
 
-            verify(productionBatchService).consumeForOrder(eq(2L), eq(2), any(), eq(1L), any());
+            verify(productionBatchService).consumeForOrder(eq(2L), eq(2), any(), any(), eq(1L), any());
             verify(productIngredientRepository, never()).findByProductIdWithIngredients(2L);
         }
 

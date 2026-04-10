@@ -301,16 +301,24 @@ public class ProductionBatchService {
     }
 
     /**
-     * Consume for an order — finds the best available batch (FEFO) and deducts
+     * Consume for an order — finds the best available batch (FEFO) and deducts.
+     *
+     * Priority: weightAmount > batchDeductionQty × itemQuantity > itemQuantity
      */
     @Transactional
     public BigDecimal consumeForOrder(Long productId, Integer itemQuantity,
-                                      BigDecimal weightAmount, Long orderId, Long orderItemId) {
+                                      BigDecimal weightAmount, BigDecimal batchDeductionQty,
+                                      Long orderId, Long orderItemId) {
         // Determine the quantity to consume
         BigDecimal quantity;
         if (weightAmount != null && weightAmount.compareTo(BigDecimal.ZERO) > 0) {
+            // Weight-based: use weight directly
             quantity = weightAmount;
+        } else if (batchDeductionQty != null && batchDeductionQty.compareTo(BigDecimal.ZERO) > 0) {
+            // Variant with batch deduction: multiply by order quantity
+            quantity = batchDeductionQty.multiply(BigDecimal.valueOf(itemQuantity != null ? itemQuantity : 1));
         } else {
+            // Fallback: use order quantity as-is
             quantity = BigDecimal.valueOf(itemQuantity != null ? itemQuantity : 1);
         }
 
