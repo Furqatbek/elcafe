@@ -2,6 +2,35 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { posAPI, tablesAPI, bundleAPI, promotionAPI } from '../../services/api';
 
+// --- Customer Display Sync ---
+// Broadcasts order state to localStorage so the customer-facing display
+// (in a separate browser window) receives real-time updates via 'storage' event.
+
+const CUSTOMER_DISPLAY_KEY = 'pos_customer_display_order';
+
+function broadcastToCustomerDisplay(order, status = 'active') {
+  try {
+    localStorage.setItem(CUSTOMER_DISPLAY_KEY, JSON.stringify({
+      items: order.items || [],
+      subtotal: order.subtotal || 0,
+      tax: order.tax || 0,
+      deliveryFee: order.deliveryFee || 0,
+      serviceFee: order.serviceFee || 0,
+      serviceFeePercent: order.serviceFeePercent || 0,
+      entryFee: order.entryFee || 0,
+      discount: order.discount || 0,
+      total: order.total || 0,
+      type: order.type || null,
+      notes: order.notes || '',
+      orderNumber: order.orderNumber || null,
+      status,
+      updatedAt: Date.now(),
+    }));
+  } catch (e) {
+    // Silently ignore — localStorage may be unavailable
+  }
+}
+
 /**
  * POS Store - Centralized state management for POS operations
  * Persists cart and order data to localStorage for session recovery
@@ -1413,6 +1442,9 @@ const usePOSStore = create(
             ui: { ...s.ui, isLoading: false },
           }));
 
+          // Broadcast completed order to customer display with order number
+          broadcastToCustomerDisplay({ ...state.currentOrder, orderNumber }, 'completed');
+
           // Refresh floor plan to show updated table status (for DINE_IN orders)
           if (state.currentOrder.type === 'DINE_IN') {
             try {
@@ -1626,3 +1658,25 @@ const usePOSStore = create(
 );
 
 export default usePOSStore;
+
+// Subscribe to order changes → broadcast to customer display
+let _prevItemCount = 0;
+usePOSStore.subscribe((state) => {
+  const order = state.currentOrder;
+  const itemCount = order.items.length;
+
+  if (itemCount > 0) {
+    broadcastToCustomerDisplay(order, 'active');
+  } else if (_prevItemCount > 0 && itemCount === 0) {
+    // Items were cleared — broadcast idle (unless submitOrder already sent 'completed')
+    const stored = localStorage.getItem(CUSTOMER_DISPLAY_KEY);
+    const parsed = stored ? JSON.parse(stored) : null;
+    if (!parsed || parsed.status !== 'completed') {
+      broadcastToCustomerDisplay(order, 'idle');
+    }
+  }
+
+  _prevItemCount = itemCount;
+});
+
+export { CUSTOMER_DISPLAY_KEY };
