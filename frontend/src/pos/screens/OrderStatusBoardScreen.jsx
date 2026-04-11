@@ -23,6 +23,7 @@ export default function OrderStatusBoardScreen() {
   const [processingOrders, setProcessingOrders] = useState([]);
   const [readyOrders, setReadyOrders] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [error, setError] = useState(null);
 
   // --- Auto-fullscreen ---
   const enterFullscreen = useCallback(() => {
@@ -95,8 +96,12 @@ export default function OrderStatusBoardScreen() {
       );
 
       setLastUpdated(new Date());
+      setError(null);
     } catch (err) {
       console.error('Failed to fetch orders:', err);
+      setError(err.response?.status === 401
+        ? t('pos.orderBoard.authError', 'Please log in to the POS first')
+        : err.message);
     }
   }, [restaurantId]);
 
@@ -122,6 +127,19 @@ export default function OrderStatusBoardScreen() {
   };
 
   // --- Render ---
+
+  // Missing restaurant param
+  if (!restaurantId) {
+    return (
+      <div className="h-screen w-screen bg-gray-950 flex items-center justify-center text-white">
+        <div className="text-center">
+          <p className="text-2xl font-bold mb-2">Missing restaurant parameter</p>
+          <p className="text-gray-400">URL should be: /admin/pos/order-status?restaurant=1</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-screen bg-gray-950 flex flex-col overflow-hidden" onClick={enterFullscreen}>
       {/* Header */}
@@ -129,13 +147,16 @@ export default function OrderStatusBoardScreen() {
         <h1 className="text-2xl font-bold text-white">
           {t('pos.orderBoard.title', 'Order Status')}
         </h1>
-        <div className="flex items-center gap-4 text-gray-400 text-sm">
+        <div className="flex items-center gap-4 text-sm">
+          {error && (
+            <span className="text-red-400">{error}</span>
+          )}
           {lastUpdated && (
-            <span>{formatTime(lastUpdated.toISOString())}</span>
+            <span className="text-gray-400">{formatTime(lastUpdated.toISOString())}</span>
           )}
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span>{t('pos.orderBoard.live', 'Live')}</span>
+            <div className={`w-2 h-2 rounded-full ${error ? 'bg-red-500' : 'bg-green-500'} animate-pulse`} />
+            <span className={error ? 'text-red-400' : 'text-gray-400'}>{error ? t('pos.orderBoard.error', 'Error') : t('pos.orderBoard.live', 'Live')}</span>
           </div>
         </div>
       </div>
