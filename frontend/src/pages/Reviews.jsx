@@ -64,9 +64,9 @@ export default function Reviews() {
   const [replyText, setReplyText] = useState('');
 
   useEffect(() => {
-    restaurantAPI.getAll().then(res => {
-      const list = res.data.data || res.data || [];
-      setRestaurants(list);
+    restaurantAPI.getAll({ page: 0, size: 100 }).then(res => {
+      const list = res.data.data?.content || res.data.data || [];
+      setRestaurants(Array.isArray(list) ? list : []);
       if (list.length > 0) setSelectedRestaurant(list[0].id.toString());
     }).catch(console.error);
   }, []);
