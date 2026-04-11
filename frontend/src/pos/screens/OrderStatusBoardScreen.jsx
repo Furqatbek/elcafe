@@ -287,10 +287,6 @@ export default function OrderStatusBoardScreen() {
               </div>
             )}
           </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
