@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { Truck, ShoppingBag, UtensilsCrossed, ClipboardList, Monitor } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
-import usePOSStore from '../store/posStore';
+import usePOSStore, { POS_TERMINAL_ID } from '../store/posStore';
 
 /**
  * StartOrderScreen - Initial screen for selecting order type
@@ -16,8 +16,8 @@ const StartOrderScreen = () => {
   const handleOpenCustomerDisplay = () => {
     const restaurantId = localStorage.getItem('selectedRestaurantId') || '1';
     window.open(
-      `/admin/pos/customer-display?restaurant=${restaurantId}`,
-      'customer-display'
+      `/admin/pos/customer-display?restaurant=${restaurantId}&terminal=${POS_TERMINAL_ID}`,
+      `customer-display-${POS_TERMINAL_ID}`
     );
   };
 

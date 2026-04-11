@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { restaurantAPI } from '../../services/api';
 import CustomerAdsPanel from '../components/CustomerAdsPanel';
-
-const CUSTOMER_DISPLAY_KEY = 'pos_customer_display_order';
 import CustomerOrderPanel from '../components/CustomerOrderPanel';
 import { CheckCircle } from 'lucide-react';
 
@@ -15,7 +13,11 @@ const COMPLETED_DISPLAY_MS = 5000; // Show "Thank you" for 5 seconds
  * Runs in a separate browser window on the customer-facing monitor.
  * Auto-enters fullscreen. Syncs with POS via localStorage events.
  *
- * Route: /admin/pos/customer-display?restaurant={id}
+ * Route: /admin/pos/customer-display?restaurant={id}&terminal={terminalId}
+ *
+ * Each POS tab has a unique terminal ID (auto-generated in sessionStorage).
+ * The customer display reads it from the URL and listens to the matching
+ * localStorage key, so multiple cashiers don't interfere with each other.
  *
  * States:
  * - idle: no active order → full-screen branding
@@ -26,6 +28,8 @@ export default function CustomerDisplayScreen() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const restaurantId = searchParams.get('restaurant');
+  const terminalId = searchParams.get('terminal') || 'default';
+  const CUSTOMER_DISPLAY_KEY = `pos_customer_display_${terminalId}`;
 
   const [restaurant, setRestaurant] = useState(null);
   const [order, setOrder] = useState(null);

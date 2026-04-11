@@ -5,8 +5,20 @@ import { posAPI, tablesAPI, bundleAPI, promotionAPI } from '../../services/api';
 // --- Customer Display Sync ---
 // Broadcasts order state to localStorage so the customer-facing display
 // (in a separate browser window) receives real-time updates via 'storage' event.
+// Each POS tab gets a unique terminal ID (via sessionStorage) so multiple
+// cashiers don't overwrite each other's customer display.
 
-const CUSTOMER_DISPLAY_KEY = 'pos_customer_display_order';
+function getPosTerminalId() {
+  let id = sessionStorage.getItem('pos_terminal_id');
+  if (!id) {
+    id = 'terminal_' + Math.random().toString(36).substring(2, 8);
+    sessionStorage.setItem('pos_terminal_id', id);
+  }
+  return id;
+}
+
+const POS_TERMINAL_ID = getPosTerminalId();
+const CUSTOMER_DISPLAY_KEY = `pos_customer_display_${POS_TERMINAL_ID}`;
 
 function broadcastToCustomerDisplay(order, status = 'active') {
   try {
@@ -1694,4 +1706,4 @@ const usePOSStore = create(
 
 export default usePOSStore;
 
-export { CUSTOMER_DISPLAY_KEY };
+export { POS_TERMINAL_ID };
