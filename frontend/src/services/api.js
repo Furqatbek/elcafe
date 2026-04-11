@@ -1272,6 +1272,19 @@ export const orderTrackingAPI = {
     api.get(`/public/orders/track`, { params: { phone } }),
 };
 
+export const reviewAPI = {
+  // Public — no auth
+  submit: (data) => api.post('/public/reviews', data),
+  getByRestaurant: (restaurantId) => api.get(`/public/reviews/restaurant/${restaurantId}`),
+  getSummary: (restaurantId) => api.get(`/public/reviews/restaurant/${restaurantId}/summary`),
+  // Admin — requires auth
+  getAll: (restaurantId) => api.get(`/reviews/restaurant/${restaurantId}`),
+  getAdminSummary: (restaurantId) => api.get(`/reviews/restaurant/${restaurantId}/summary`),
+  reply: (id, data) => api.post(`/reviews/${id}/reply`, data),
+  hide: (id) => api.post(`/reviews/${id}/hide`),
+  publish: (id) => api.post(`/reviews/${id}/publish`),
+};
+
 // Instagram API
 export const instagramAPI = {
   // Config

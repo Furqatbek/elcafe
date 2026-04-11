@@ -16,6 +16,7 @@ import LinkedItems from './pages/LinkedItems';
 import Menu from './pages/Menu';
 import Categories from './pages/Categories';
 import Customers from './pages/Customers';
+import Reviews from './pages/Reviews';
 import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
 import Waiters from './pages/Waiters';
@@ -64,6 +65,7 @@ import {
 import POSApp from './pos/POSApp';
 import CustomerDisplayScreen from './pos/screens/CustomerDisplayScreen';
 import OrderStatusBoardScreen from './pos/screens/OrderStatusBoardScreen';
+import ReviewPage from './pages/customer/ReviewPage';
 import OrdersHistory from './pages/OrdersHistory';
 import SelfServiceOrders from './pages/SelfServiceOrders';
 import Profile from './pages/Profile';
@@ -118,6 +120,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/pos/customer-display" element={<CustomerDisplayScreen />} />
         <Route path="/pos/order-status" element={<OrderStatusBoardScreen />} />
+        <Route path="/review" element={<ReviewPage />} />
         <Route
           path="/"
           element={
@@ -146,6 +149,7 @@ function App() {
           <Route path="menu-collections" element={<MenuCollections />} />
           <Route path="customers" element={<Customers />} />
           <Route path="customer-segments" element={<CustomerSegments />} />
+          <Route path="reviews" element={<Reviews />} />
           <Route path="operators" element={<Operators />} />
           <Route path="employees/waiters" element={<Waiters />} />
           <Route path="employees/waiter-performance" element={<AdminRoute><WaiterPerformance /></AdminRoute>} />
