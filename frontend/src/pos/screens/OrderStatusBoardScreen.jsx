@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { kitchenAPI } from '../../services/api';
+import { kitchenAPI, orderAPI } from '../../services/api';
 import { useWebSocketNotifications } from '../../hooks/useWebSocketNotifications';
 import { ChefHat, CheckCircle, Clock } from 'lucide-react';
 
@@ -73,27 +73,27 @@ export default function OrderStatusBoardScreen() {
     };
   }, []);
 
+  const PROCESSING_STATUSES = ['NEW', 'PLACED', 'ACCEPTED', 'PREPARING'];
+  const READY_STATUSES = ['READY'];
+
   // --- Fetch orders from API ---
   const fetchOrders = useCallback(async () => {
     if (!restaurantId) return;
     try {
-      const [activeRes, readyRes] = await Promise.all([
-        kitchenAPI.getActiveOrders(restaurantId),
-        kitchenAPI.getReadyOrders(restaurantId),
-      ]);
+      // Use order API (works for all orders, not just kitchen-accepted ones)
+      const res = await orderAPI.getByRestaurant(restaurantId);
+      const orders = res.data.data || res.data || [];
 
-      const active = activeRes.data.data || activeRes.data || [];
-      const ready = readyRes.data.data || readyRes.data || [];
-
-      // Processing = PENDING + PREPARING from active orders
       setProcessingOrders(
-        active
-          .filter(o => o.status === 'PENDING' || o.status === 'PREPARING')
+        orders
+          .filter(o => PROCESSING_STATUSES.includes(o.status))
           .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''))
       );
 
       setReadyOrders(
-        ready.sort((a, b) => (b.readyAt || b.updatedAt || '').localeCompare(a.readyAt || a.updatedAt || ''))
+        orders
+          .filter(o => READY_STATUSES.includes(o.status))
+          .sort((a, b) => (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || ''))
       );
 
       setLastUpdated(new Date());
@@ -128,11 +128,11 @@ export default function OrderStatusBoardScreen() {
 
   // --- Helpers ---
   const getOrderNumber = (order) => {
-    return order.orderNumber || order.order?.orderNumber || `#${order.id}`;
+    return order.orderNumber || `#${order.id}`;
   };
 
   const getOrderType = (order) => {
-    return order.orderType || order.order?.orderType || '';
+    return order.orderType || '';
   };
 
   const formatTime = (dateStr) => {
