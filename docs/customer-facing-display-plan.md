@@ -94,12 +94,13 @@ Cashier POS (Tab 1)                    Customer Display (Tab 2)
 | # | File | Change |
 |---|------|--------|
 | 1 | `frontend/src/pos/store/posStore.js` | Sync currentOrder to localStorage on changes |
-| 2 | `frontend/src/pos/POSApp.jsx` | Add `customer-display` screen case |
-| 3 | `frontend/src/App.jsx` | Add `/admin/pos/customer-display` route |
-| 4 | `frontend/src/pos/screens/StartOrderScreen.jsx` | Add "Open Customer Display" button |
-| 5 | `frontend/src/i18n/locales/en.json` | i18n keys |
-| 6 | `frontend/src/i18n/locales/ru.json` | i18n keys |
-| 7 | `frontend/src/i18n/locales/uz.json` | i18n keys |
+| 2 | `frontend/src/App.jsx` | Add `/admin/pos/customer-display` route |
+| 3 | `frontend/src/pos/screens/StartOrderScreen.jsx` | Add "Open Customer Display" button |
+| 4 | `frontend/src/i18n/locales/en.json` | i18n keys |
+| 5 | `frontend/src/i18n/locales/ru.json` | i18n keys |
+| 6 | `frontend/src/i18n/locales/uz.json` | i18n keys |
+
+> Note: `POSApp.jsx` does NOT need modification — the customer display runs as a standalone route (Option B), not as a POS internal screen.
 
 ---
 
@@ -146,14 +147,7 @@ localStorage.setItem('pos_customer_display_order', JSON.stringify({
 // Customer display shows "Thank you! Your order number is ORD-042" for 5s, then returns to idle
 ```
 
-Also broadcast restaurant info:
-```javascript
-localStorage.setItem('pos_customer_display_restaurant', JSON.stringify({
-  id: restaurantId,
-  name: restaurantName,
-  logoUrl: restaurantLogoUrl,
-}));
-```
+Restaurant info is fetched directly by the customer display via `restaurantAPI.getById(restaurantId)` on mount — no localStorage broadcast needed for this.
 
 ---
 
@@ -301,4 +295,4 @@ The opened page auto-enters browser fullscreen via `requestFullscreen()` on moun
 | 5 | Phase 6 | i18n keys (en/ru/uz) |
 | 6 | Phase 7 | Manual testing |
 
-**Total: 3 new files + 7 modified files**
+**Total: 3 new files + 6 modified files**

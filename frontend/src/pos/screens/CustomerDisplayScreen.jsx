@@ -195,13 +195,13 @@ export default function CustomerDisplayScreen() {
   // Active state: 70/30 split
   return (
     <div className="h-screen w-screen flex" onClick={enterFullscreen}>
-      {/* 70% — Ads / Branding */}
-      <div className="w-[70%] h-full">
+      {/* 70% — Ads / Branding (60% on smaller screens) */}
+      <div className="w-[60%] lg:w-[70%] h-full">
         <CustomerAdsPanel restaurant={restaurant} />
       </div>
 
-      {/* 30% — Order Info */}
-      <div className="w-[30%] h-full border-l border-gray-800">
+      {/* 30% — Order Info (40% on smaller screens) */}
+      <div className="w-[40%] lg:w-[30%] h-full border-l border-gray-800">
         <CustomerOrderPanel order={order} />
       </div>
     </div>
