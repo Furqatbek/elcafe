@@ -126,10 +126,24 @@ posStore.subscribe(
       total: currentOrder.total,
       type: currentOrder.type,
       notes: currentOrder.notes,
+      orderNumber: currentOrder.orderNumber,
+      status: 'active',  // 'active' | 'completed' | 'idle'
       updatedAt: Date.now(),
     }));
   }
 );
+```
+
+After `submitOrder` succeeds, broadcast completion with order number:
+```javascript
+localStorage.setItem('pos_customer_display_order', JSON.stringify({
+  items: [],
+  total: 0,
+  orderNumber: response.data.orderNumber,
+  status: 'completed',
+  updatedAt: Date.now(),
+}));
+// Customer display shows "Thank you! Your order number is ORD-042" for 5s, then returns to idle
 ```
 
 Also broadcast restaurant info:
@@ -150,7 +164,7 @@ localStorage.setItem('pos_customer_display_restaurant', JSON.stringify({
 **Route:** `/admin/pos/customer-display?restaurant={id}`
 
 **Behavior:**
-- Fullscreen, no navigation chrome, no scrollbars
+- **Auto-fullscreen on mount** via `document.documentElement.requestFullscreen()` — hides browser tabs, address bar, and all chrome. Click anywhere to re-enter fullscreen if exited.
 - Listens to `storage` events for real-time order updates
 - Fetches restaurant details (name, logo) on mount
 - Auto-hides cursor after 3s of inactivity (kiosk mode)
@@ -159,7 +173,7 @@ localStorage.setItem('pos_customer_display_restaurant', JSON.stringify({
 **States:**
 1. **Idle** (no order) — full-screen branding + welcome message
 2. **Active order** — 70/30 split with live order items
-3. **Order complete** — "Thank you" animation, then back to idle
+3. **Order complete** — "Thank you! Your order number is {orderNumber}" animation, then back to idle after 5s
 
 ### CustomerAdsPanel.jsx (70% left)
 
@@ -206,10 +220,12 @@ No auth guard — this page runs on the customer-facing monitor, doesn't need lo
 
 Add a small button in the header/settings area:
 ```jsx
-<button onClick={() => window.open('/admin/pos/customer-display?restaurant=' + restaurantId, 'customer-display', 'fullscreen=yes')}>
+<button onClick={() => window.open('/admin/pos/customer-display?restaurant=' + restaurantId, 'customer-display')}>
   Open Customer Display
 </button>
 ```
+
+The opened page auto-enters browser fullscreen via `requestFullscreen()` on mount — hides tabs, address bar, and all browser chrome. If the user accidentally exits fullscreen (e.g., presses Escape), clicking anywhere on the page re-enters fullscreen.
 
 ---
 
@@ -251,6 +267,7 @@ Add a small button in the header/settings area:
   "pos.customerDisplay.discount": "Discount",
   "pos.customerDisplay.total": "Total",
   "pos.customerDisplay.thankYou": "Thank you!",
+  "pos.customerDisplay.orderNumber": "Your order number is {{orderNumber}}",
   "pos.customerDisplay.openDisplay": "Customer Display",
   "pos.customerDisplay.quantity": "×"
 }
