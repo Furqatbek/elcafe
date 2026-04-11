@@ -203,8 +203,8 @@ export default function OrderStatusBoardScreen() {
             </span>
           </div>
 
-          {/* Order Cards */}
-          <div className="flex-1 overflow-y-auto p-6">
+          {/* Order List */}
+          <div className="flex-1 overflow-y-auto px-8 py-4">
             {processingOrders.length === 0 ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center text-gray-600">
@@ -213,36 +213,29 @@ export default function OrderStatusBoardScreen() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="space-y-1">
                 {processingOrders.map((order) => (
                   <div
                     key={order.id}
-                    className={`rounded-2xl p-6 border-2 ${
+                    className={`flex items-center justify-between py-4 px-6 rounded-xl ${
                       order.status === 'PREPARING'
-                        ? 'bg-amber-500/10 border-amber-500/30 animate-pulse-slow'
-                        : 'bg-gray-800/50 border-gray-700'
+                        ? 'bg-amber-500/10 animate-pulse-slow'
+                        : 'bg-gray-800/30'
                     }`}
                   >
-                    <div className="text-4xl font-black text-white mb-2">
+                    <span className="text-5xl font-black text-white">
                       {getOrderNumber(order)}
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-400">
+                    </span>
+                    <div className="flex items-center gap-3">
                       {order.status === 'PREPARING' ? (
-                        <>
-                          <ChefHat className="w-4 h-4 text-amber-400" />
-                          <span className="text-amber-400 font-medium">
-                            {t('pos.orderBoard.preparing', 'Preparing')}
-                          </span>
-                        </>
+                        <span className="text-2xl text-amber-400 font-semibold flex items-center gap-2">
+                          <ChefHat className="w-7 h-7" />
+                          {t('pos.orderBoard.preparing', 'Preparing')}
+                        </span>
                       ) : (
-                        <>
-                          <Clock className="w-4 h-4" />
-                          <span>{t('pos.orderBoard.queued', 'In Queue')}</span>
-                        </>
-                      )}
-                      {getOrderType(order) && (
-                        <span className="ml-auto text-xs bg-gray-700 px-2 py-0.5 rounded text-gray-300">
-                          {getOrderType(order)}
+                        <span className="text-2xl text-gray-400 font-medium flex items-center gap-2">
+                          <Clock className="w-6 h-6" />
+                          {t('pos.orderBoard.queued', 'In Queue')}
                         </span>
                       )}
                     </div>
@@ -266,8 +259,8 @@ export default function OrderStatusBoardScreen() {
             </span>
           </div>
 
-          {/* Order Cards */}
-          <div className="flex-1 overflow-y-auto p-6">
+          {/* Order List */}
+          <div className="flex-1 overflow-y-auto px-8 py-4">
             {readyOrders.length === 0 ? (
               <div className="h-full flex items-center justify-center">
                 <div className="text-center text-gray-600">
@@ -276,27 +269,24 @@ export default function OrderStatusBoardScreen() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="space-y-1">
                 {readyOrders.map((order) => (
                   <div
                     key={order.id}
-                    className="rounded-2xl p-6 border-2 bg-green-500/10 border-green-500/30 animate-in zoom-in duration-500"
+                    className="flex items-center justify-between py-4 px-6 rounded-xl bg-green-500/10 animate-in slide-in-from-left duration-500"
                   >
-                    <div className="text-5xl font-black text-green-400 mb-2">
+                    <span className="text-6xl font-black text-green-400">
                       {getOrderNumber(order)}
-                    </div>
-                    <div className="flex items-center gap-2 text-green-300">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="font-medium text-lg">
-                        {t('pos.orderBoard.pickUp', 'Pick up!')}
-                      </span>
-                      {getOrderType(order) && (
-                        <span className="ml-auto text-xs bg-green-900/50 px-2 py-0.5 rounded text-green-300">
-                          {getOrderType(order)}
-                        </span>
-                      )}
-                    </div>
+                    </span>
+                    <span className="text-2xl text-green-300 font-semibold flex items-center gap-2">
+                      <CheckCircle className="w-7 h-7" />
+                      {t('pos.orderBoard.pickUp', 'Pick up!')}
+                    </span>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
                 ))}
               </div>
             )}
