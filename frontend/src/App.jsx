@@ -63,6 +63,7 @@ import {
 } from './pages/inventory';
 import POSApp from './pos/POSApp';
 import CustomerDisplayScreen from './pos/screens/CustomerDisplayScreen';
+import OrderStatusBoardScreen from './pos/screens/OrderStatusBoardScreen';
 import OrdersHistory from './pages/OrdersHistory';
 import SelfServiceOrders from './pages/SelfServiceOrders';
 import Profile from './pages/Profile';
@@ -116,6 +117,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/pos/customer-display" element={<CustomerDisplayScreen />} />
+        <Route path="/pos/order-status" element={<OrderStatusBoardScreen />} />
         <Route
           path="/"
           element={

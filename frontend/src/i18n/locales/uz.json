@@ -2432,6 +2432,18 @@
       "freshFoodSub": "Eng sifatli ingredientlardan",
       "thankVisit": "Tashrifingiz uchun rahmat!",
       "comeAgain": "Sizni yana kutamiz"
+    },
+    "orderBoard": {
+      "title": "Buyurtma holati",
+      "live": "Jonli",
+      "processing": "Tayyorlanmoqda",
+      "ready": "Tayyor",
+      "preparing": "Tayyorlanmoqda",
+      "queued": "Navbatda",
+      "pickUp": "Olib keting!",
+      "noProcessing": "Tayyorlanayotgan buyurtmalar yo'q",
+      "noReady": "Tayyor buyurtmalar yo'q",
+      "openBoard": "Buyurtmalar tablosi"
     }
   },
   "pages": {

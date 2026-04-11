@@ -2622,6 +2622,18 @@
       "freshFoodSub": "Made with the finest ingredients",
       "thankVisit": "Thank you for visiting!",
       "comeAgain": "We hope to see you again soon"
+    },
+    "orderBoard": {
+      "title": "Order Status",
+      "live": "Live",
+      "processing": "Processing",
+      "ready": "Ready",
+      "preparing": "Preparing",
+      "queued": "In Queue",
+      "pickUp": "Pick up!",
+      "noProcessing": "No orders processing",
+      "noReady": "No orders ready",
+      "openBoard": "Order Status Board"
     }
   },
   "pages": {

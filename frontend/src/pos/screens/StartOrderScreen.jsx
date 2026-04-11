@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Truck, ShoppingBag, UtensilsCrossed, ClipboardList, Monitor } from 'lucide-react';
+import { Truck, ShoppingBag, UtensilsCrossed, ClipboardList, Monitor, LayoutDashboard } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import usePOSStore, { POS_TERMINAL_ID } from '../store/posStore';
 
@@ -18,6 +18,14 @@ const StartOrderScreen = () => {
     window.open(
       `/admin/pos/customer-display?restaurant=${restaurantId}&terminal=${POS_TERMINAL_ID}`,
       `customer-display-${POS_TERMINAL_ID}`
+    );
+  };
+
+  const handleOpenOrderStatusBoard = () => {
+    const restaurantId = localStorage.getItem('selectedRestaurantId') || '1';
+    window.open(
+      `/admin/pos/order-status?restaurant=${restaurantId}`,
+      'order-status-board'
     );
   };
 
@@ -154,6 +162,15 @@ const StartOrderScreen = () => {
                 className="flex-1 sm:flex-initial"
               >
                 {t('pos.customerDisplay.openDisplay', 'Customer Display')}
+              </TouchButton>
+              <TouchButton
+                variant="secondary"
+                size="medium"
+                onClick={handleOpenOrderStatusBoard}
+                icon={<LayoutDashboard className="w-5 h-5" />}
+                className="flex-1 sm:flex-initial"
+              >
+                {t('pos.orderBoard.openBoard', 'Order Status Board')}
               </TouchButton>
             </div>
           </div>
