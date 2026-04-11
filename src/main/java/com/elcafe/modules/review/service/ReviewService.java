@@ -2,7 +2,6 @@ package com.elcafe.modules.review.service;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
-import com.elcafe.modules.review.dto.ReviewResponse;
 import com.elcafe.modules.review.dto.SubmitReviewRequest;
 import com.elcafe.modules.review.entity.Review;
 import com.elcafe.modules.review.repository.ReviewRepository;
