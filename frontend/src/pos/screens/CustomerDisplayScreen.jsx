@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { restaurantAPI } from '../../services/api';
-import { CUSTOMER_DISPLAY_KEY } from '../store/posStore';
 import CustomerAdsPanel from '../components/CustomerAdsPanel';
+
+const CUSTOMER_DISPLAY_KEY = 'pos_customer_display_order';
 import CustomerOrderPanel from '../components/CustomerOrderPanel';
 import { CheckCircle } from 'lucide-react';
 
