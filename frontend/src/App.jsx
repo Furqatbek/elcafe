@@ -115,6 +115,7 @@ function App() {
       <Toaster />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/pos/customer-display" element={<CustomerDisplayScreen />} />
         <Route
           path="/"
           element={
@@ -186,7 +187,6 @@ function App() {
           <Route path="settings/kitchen-stations" element={<AdminRoute><KitchenStations /></AdminRoute>} />
           <Route path="profile" element={<Profile />} />
           <Route path="pos" element={<POSApp />} />
-          <Route path="pos/customer-display" element={<CustomerDisplayScreen />} />
           <Route path="*" element={<Navigate to="/orders" replace />} />
         </Route>
       </Routes>
