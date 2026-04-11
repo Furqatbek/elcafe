@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { kitchenAPI } from '../../services/api';
+import { useWebSocketNotifications } from '../../hooks/useWebSocketNotifications';
 import { ChefHat, CheckCircle, Clock } from 'lucide-react';
 
-const POLL_INTERVAL = 5000; // Poll every 5 seconds
+const FALLBACK_POLL_INTERVAL = 120000; // Fallback poll every 2 minutes
 
 /**
  * OrderStatusBoardScreen — customer-facing order status display.
@@ -13,7 +14,7 @@ const POLL_INTERVAL = 5000; // Poll every 5 seconds
  *
  * Route: /admin/pos/order-status?restaurant={id}
  *
- * Auto-fullscreen, polls kitchen API for real-time order updates.
+ * Uses WebSocket for instant updates + 2-minute polling fallback.
  */
 export default function OrderStatusBoardScreen() {
   const { t } = useTranslation();
@@ -72,7 +73,7 @@ export default function OrderStatusBoardScreen() {
     };
   }, []);
 
-  // --- Poll kitchen API ---
+  // --- Fetch orders from API ---
   const fetchOrders = useCallback(async () => {
     if (!restaurantId) return;
     try {
@@ -105,11 +106,25 @@ export default function OrderStatusBoardScreen() {
     }
   }, [restaurantId]);
 
+  // WebSocket: instant refresh on order events
+  useWebSocketNotifications({
+    restaurantId: restaurantId || null,
+    enabled: !!restaurantId,
+    toastEnabled: false,
+    soundEnabled: false,
+    browserNotificationEnabled: false,
+    onOrderEvent: useCallback(() => {
+      if (restaurantId) fetchOrders();
+    }, [restaurantId, fetchOrders]),
+  });
+
+  // Initial fetch + fallback polling every 2 minutes
   useEffect(() => {
+    if (!restaurantId) return;
     fetchOrders();
-    const interval = setInterval(fetchOrders, POLL_INTERVAL);
+    const interval = setInterval(fetchOrders, FALLBACK_POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [fetchOrders]);
+  }, [restaurantId, fetchOrders]);
 
   // --- Helpers ---
   const getOrderNumber = (order) => {
