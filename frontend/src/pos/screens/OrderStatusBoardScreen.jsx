@@ -23,6 +23,7 @@ export default function OrderStatusBoardScreen() {
 
   const [processingOrders, setProcessingOrders] = useState([]);
   const [readyOrders, setReadyOrders] = useState([]);
+  const [totalFetched, setTotalFetched] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [error, setError] = useState(null);
 
@@ -83,6 +84,12 @@ export default function OrderStatusBoardScreen() {
       // Use order API (works for all orders, not just kitchen-accepted ones)
       const res = await orderAPI.getByRestaurant(restaurantId);
       const orders = res.data.data || res.data || [];
+      setTotalFetched(orders.length);
+
+      if (orders.length > 0) {
+        console.log('[OrderStatusBoard] Fetched', orders.length, 'orders. Statuses:',
+          orders.map(o => `${o.orderNumber}=${o.status}`).join(', '));
+      }
 
       setProcessingOrders(
         orders
@@ -159,9 +166,14 @@ export default function OrderStatusBoardScreen() {
     <div className="h-screen w-screen bg-gray-950 flex flex-col overflow-hidden" onClick={enterFullscreen}>
       {/* Header */}
       <div className="flex-shrink-0 bg-gray-900 border-b border-gray-800 px-8 py-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">
-          {t('pos.orderBoard.title', 'Order Status')}
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-white">
+            {t('pos.orderBoard.title', 'Order Status')}
+          </h1>
+          <span className="text-sm text-gray-500">
+            R:{restaurantId} | {totalFetched} orders
+          </span>
+        </div>
         <div className="flex items-center gap-4 text-sm">
           {error && (
             <span className="text-red-400">{error}</span>
