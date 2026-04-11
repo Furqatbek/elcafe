@@ -2414,6 +2414,24 @@
       "addToCart": "{{weight}} {{unit}} savatga qo'shish",
       "enterWeight": "Vazn kiriting",
       "maxExceeded": "Maksimal: {{max}} {{unit}}"
+    },
+    "customerDisplay": {
+      "title": "Sizning buyurtmangiz",
+      "welcome": "Xush kelibsiz",
+      "welcomeMessage": "Buyurtmangiz shu yerda ko'rinadi",
+      "items": "ta",
+      "subtotal": "Jami",
+      "serviceFee": "Xizmat haqqi",
+      "deliveryFee": "Yetkazish",
+      "discount": "Chegirma",
+      "total": "Umumiy",
+      "thankYou": "Rahmat!",
+      "orderNumber": "Buyurtma raqamingiz — {{orderNumber}}",
+      "openDisplay": "Mijoz ekrani",
+      "freshFood": "Yangi tayyorlangan",
+      "freshFoodSub": "Eng sifatli ingredientlardan",
+      "thankVisit": "Tashrifingiz uchun rahmat!",
+      "comeAgain": "Sizni yana kutamiz"
     }
   },
   "pages": {

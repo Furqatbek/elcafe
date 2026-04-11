@@ -2604,6 +2604,24 @@
       "addToCart": "Add {{weight}} {{unit}} to cart",
       "enterWeight": "Enter weight",
       "maxExceeded": "Max: {{max}} {{unit}}"
+    },
+    "customerDisplay": {
+      "title": "Your Order",
+      "welcome": "Welcome",
+      "welcomeMessage": "Your order will appear here",
+      "items": "items",
+      "subtotal": "Subtotal",
+      "serviceFee": "Service Fee",
+      "deliveryFee": "Delivery Fee",
+      "discount": "Discount",
+      "total": "Total",
+      "thankYou": "Thank you!",
+      "orderNumber": "Your order number is {{orderNumber}}",
+      "openDisplay": "Customer Display",
+      "freshFood": "Freshly Prepared",
+      "freshFoodSub": "Made with the finest ingredients",
+      "thankVisit": "Thank you for visiting!",
+      "comeAgain": "We hope to see you again soon"
     }
   },
   "pages": {

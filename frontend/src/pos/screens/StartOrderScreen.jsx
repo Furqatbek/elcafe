@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
-import { Truck, ShoppingBag, UtensilsCrossed, ClipboardList } from 'lucide-react';
+import { Truck, ShoppingBag, UtensilsCrossed, ClipboardList, Monitor } from 'lucide-react';
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
 
@@ -12,6 +12,14 @@ import usePOSStore from '../store/posStore';
 const StartOrderScreen = () => {
   const { t } = useTranslation();
   const { startNewOrder, currentOrder } = usePOSStore();
+
+  const handleOpenCustomerDisplay = () => {
+    const restaurantId = localStorage.getItem('selectedRestaurantId') || '1';
+    window.open(
+      `/admin/pos/customer-display?restaurant=${restaurantId}`,
+      'customer-display'
+    );
+  };
 
   const orderTypes = [
     {
@@ -129,14 +137,25 @@ const StartOrderScreen = () => {
               <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
               {t('pos.orders.activeOrders', 'Active Orders')}
             </h3>
-            <TouchButton
-              variant="secondary"
-              size="medium"
-              onClick={() => usePOSStore.getState().setCurrentScreen('active-orders')}
-              className="w-full sm:w-auto"
-            >
-              {t('pos.orders.viewActive', 'View Active Orders')}
-            </TouchButton>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <TouchButton
+                variant="secondary"
+                size="medium"
+                onClick={() => usePOSStore.getState().setCurrentScreen('active-orders')}
+                className="flex-1 sm:flex-initial"
+              >
+                {t('pos.orders.viewActive', 'View Active Orders')}
+              </TouchButton>
+              <TouchButton
+                variant="secondary"
+                size="medium"
+                onClick={handleOpenCustomerDisplay}
+                icon={<Monitor className="w-5 h-5" />}
+                className="flex-1 sm:flex-initial"
+              >
+                {t('pos.customerDisplay.openDisplay', 'Customer Display')}
+              </TouchButton>
+            </div>
           </div>
           <p className="text-xs sm:text-sm lg:text-base text-gray-600 mt-2">
             {t('pos.orders.activeDesc', 'Modify orders, split bills, or process payments for dine-in tables')}

@@ -2368,6 +2368,24 @@
       "addToCart": "Добавить {{weight}} {{unit}} в корзину",
       "enterWeight": "Введите вес",
       "maxExceeded": "Макс: {{max}} {{unit}}"
+    },
+    "customerDisplay": {
+      "title": "Ваш заказ",
+      "welcome": "Добро пожаловать",
+      "welcomeMessage": "Ваш заказ появится здесь",
+      "items": "позиций",
+      "subtotal": "Подытог",
+      "serviceFee": "Сервисный сбор",
+      "deliveryFee": "Доставка",
+      "discount": "Скидка",
+      "total": "Итого",
+      "thankYou": "Спасибо!",
+      "orderNumber": "Номер вашего заказа — {{orderNumber}}",
+      "openDisplay": "Экран клиента",
+      "freshFood": "Свежее приготовление",
+      "freshFoodSub": "Из лучших ингредиентов",
+      "thankVisit": "Спасибо за визит!",
+      "comeAgain": "Ждём вас снова"
     }
   },
   "pages": {

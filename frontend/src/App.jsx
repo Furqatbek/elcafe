@@ -62,6 +62,7 @@ import {
   ProductionBatches,
 } from './pages/inventory';
 import POSApp from './pos/POSApp';
+import CustomerDisplayScreen from './pos/screens/CustomerDisplayScreen';
 import OrdersHistory from './pages/OrdersHistory';
 import SelfServiceOrders from './pages/SelfServiceOrders';
 import Profile from './pages/Profile';
@@ -185,6 +186,7 @@ function App() {
           <Route path="settings/kitchen-stations" element={<AdminRoute><KitchenStations /></AdminRoute>} />
           <Route path="profile" element={<Profile />} />
           <Route path="pos" element={<POSApp />} />
+          <Route path="pos/customer-display" element={<CustomerDisplayScreen />} />
           <Route path="*" element={<Navigate to="/orders" replace />} />
         </Route>
       </Routes>
