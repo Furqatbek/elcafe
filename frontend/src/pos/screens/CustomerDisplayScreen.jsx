@@ -188,7 +188,7 @@ export default function CustomerDisplayScreen() {
   if (displayStatus === 'idle' || !order) {
     return (
       <div className="h-screen w-screen" onClick={enterFullscreen}>
-        <CustomerAdsPanel restaurant={restaurant} />
+        <CustomerAdsPanel restaurant={restaurant} restaurantId={restaurantId} />
       </div>
     );
   }
@@ -198,7 +198,7 @@ export default function CustomerDisplayScreen() {
     <div className="h-screen w-screen flex" onClick={enterFullscreen}>
       {/* 70% — Ads / Branding (60% on smaller screens) */}
       <div className="w-[60%] lg:w-[70%] h-full">
-        <CustomerAdsPanel restaurant={restaurant} />
+        <CustomerAdsPanel restaurant={restaurant} restaurantId={restaurantId} />
       </div>
 
       {/* 30% — Order Info (40% on smaller screens) */}

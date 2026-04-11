@@ -8,15 +8,16 @@ const SLIDE_INTERVAL = 6000; // 6 seconds per slide
  * CustomerAdsPanel — 70% left panel on the customer-facing display.
  * Rotates through real menu items from the database as full-screen images.
  */
-export default function CustomerAdsPanel({ restaurant }) {
+export default function CustomerAdsPanel({ restaurant, restaurantId }) {
   const { t } = useTranslation();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [menuItems, setMenuItems] = useState([]);
 
   // Load real menu items from the database
+  const rid = restaurant?.id || restaurantId;
   useEffect(() => {
-    if (!restaurant?.id) return;
-    menuAPI.getProductsByRestaurant(restaurant.id)
+    if (!rid) return;
+    menuAPI.getProductsByRestaurant(rid)
       .then((res) => {
         const products = res.data.data || res.data || [];
         const withImages = products.filter(p => p.imageUrl);
@@ -24,7 +25,7 @@ export default function CustomerAdsPanel({ restaurant }) {
         setMenuItems(shuffled);
       })
       .catch((err) => console.error('Failed to load menu items for display:', err));
-  }, [restaurant?.id]);
+  }, [rid]);
 
   // Build slides from menu items only (no welcome/thanks text slides)
   const slides = menuItems.map((item) => ({
