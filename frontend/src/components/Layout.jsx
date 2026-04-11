@@ -58,6 +58,7 @@ import {
   Stamp,
   Globe,
   Instagram,
+  Star,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -195,6 +196,7 @@ export default function Layout() {
         { label: t('nav.sub.qrCodes', 'QR Codes'), icon: QrCode, path: '/marketing/qr-codes' },
         { label: t('nav.sub.milestones', 'Milestones'), icon: Stamp, path: '/marketing/milestones' },
         { label: t('nav.sub.promotionAnalytics', 'Analytics'), icon: BarChart3, path: '/marketing/analytics' },
+        { label: t('nav.sub.reviews', 'Reviews'), icon: Star, path: '/reviews' },
       ],
     },
     {
