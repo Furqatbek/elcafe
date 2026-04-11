@@ -64,12 +64,14 @@ export default function CustomerAdsPanel({ restaurant }) {
             idx === currentSlide ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          {/* Product image — fills entire block */}
-          <img
-            src={slide.image}
-            alt={slide.title}
-            className="w-full h-full object-cover"
-          />
+          {/* Product image — original quality, centered without stretching */}
+          <div className="w-full h-full flex items-center justify-center bg-black">
+            <img
+              src={slide.image}
+              alt={slide.title}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
 
           {/* Dark gradient overlay at bottom for text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
