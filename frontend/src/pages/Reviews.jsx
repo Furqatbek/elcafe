@@ -37,6 +37,9 @@ import {
   EyeOff,
   Reply,
   TrendingUp,
+  QrCode,
+  Download,
+  Link,
 } from 'lucide-react';
 
 function StarDisplay({ rating, size = 'w-4 h-4' }) {
@@ -62,6 +65,7 @@ export default function Reviews() {
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyReview, setReplyReview] = useState(null);
   const [replyText, setReplyText] = useState('');
+  const [qrOpen, setQrOpen] = useState(false);
 
   useEffect(() => {
     restaurantAPI.getAll({ page: 0, size: 100 }).then(res => {
@@ -126,6 +130,27 @@ export default function Reviews() {
     }
   };
 
+  const reviewUrl = selectedRestaurant
+    ? `${window.location.origin}/admin/review?restaurant=${selectedRestaurant}`
+    : '';
+
+  const qrImageUrl = reviewUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(reviewUrl)}`
+    : '';
+
+  const handleDownloadQR = () => {
+    if (!qrImageUrl) return;
+    const link = document.createElement('a');
+    link.href = qrImageUrl;
+    link.download = `review-qr-restaurant-${selectedRestaurant}.png`;
+    link.click();
+  };
+
+  const handleCopyLink = () => {
+    if (!reviewUrl) return;
+    navigator.clipboard.writeText(reviewUrl);
+  };
+
   const filteredReviews = filterRating
     ? reviews.filter(r => r.rating === filterRating)
     : reviews;
@@ -140,16 +165,22 @@ export default function Reviews() {
           <h1 className="text-3xl font-bold tracking-tight">{t('review.title', 'Customer Reviews')}</h1>
           <p className="text-muted-foreground">{t('review.subtitle', 'Monitor customer feedback and respond to reviews')}</p>
         </div>
-        <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder={t('common.selectRestaurant', 'Select Restaurant')} />
-          </SelectTrigger>
-          <SelectContent>
-            {restaurants.map(r => (
-              <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setQrOpen(true)} disabled={!selectedRestaurant}>
+            <QrCode className="h-4 w-4 mr-2" />
+            {t('review.qrCode', 'Review QR Code')}
+          </Button>
+          <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder={t('common.selectRestaurant', 'Select Restaurant')} />
+            </SelectTrigger>
+            <SelectContent>
+              {restaurants.map(r => (
+                <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -327,6 +358,34 @@ export default function Reviews() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* QR Code Dialog */}
+      <Dialog open={qrOpen} onOpenChange={setQrOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('review.qrCode', 'Review QR Code')}</DialogTitle>
+            <DialogDescription>{t('review.qrCodeDesc', 'Customers scan this to leave a review')}</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4">
+            {qrImageUrl && (
+              <img src={qrImageUrl} alt="Review QR Code" className="w-64 h-64 border rounded-lg" />
+            )}
+            <div className="w-full bg-muted rounded-lg p-3 text-sm text-center break-all text-muted-foreground">
+              {reviewUrl}
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleCopyLink}>
+              <Link className="h-4 w-4 mr-2" />
+              {t('review.copyLink', 'Copy Link')}
+            </Button>
+            <Button onClick={handleDownloadQR}>
+              <Download className="h-4 w-4 mr-2" />
+              {t('review.downloadQR', 'Download QR')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reply Dialog */}
       <Dialog open={replyOpen} onOpenChange={setReplyOpen}>

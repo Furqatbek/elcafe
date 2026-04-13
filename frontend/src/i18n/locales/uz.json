@@ -3808,6 +3808,10 @@
     "anonymous": "Anonim",
     "yourReply": "Javobingiz",
     "replyPlaceholder": "Fikr-mulohazangiz uchun rahmat...",
-    "sendReply": "Javob yuborish"
+    "sendReply": "Javob yuborish",
+    "qrCode": "Sharh QR kodi",
+    "qrCodeDesc": "Mijozlar sharh qoldirish uchun skanerlaydi",
+    "copyLink": "Havolani nusxalash",
+    "downloadQR": "QR yuklab olish"
   }
 }
