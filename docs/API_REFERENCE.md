@@ -145,11 +145,20 @@ POST /api/v1/consumer/auth/login
 Content-Type: application/json
 
 {
-  "phone": "+998901234567",
+  "phoneNumber": "+998901234567",
   "firstName": "John",
-  "lastName": "Doe"
+  "lastName": "Doe",
+  "registrationSource": "MOBILE_APP"
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `phoneNumber` | string | yes | Phone number (10-20 digits, may include `+`) |
+| `firstName` | string | no | Customer first name |
+| `lastName` | string | no | Customer last name |
+| `registrationSource` | string | yes | One of: `MOBILE_APP`, `WEB`, `SELF_SERVICE`, `POS` |
+| `language` | string | no | Preferred language: `uz`, `ru`, `en` |
 
 **Response**: 200 OK
 ```json
@@ -169,7 +178,7 @@ POST /api/v1/consumer/auth/verify
 Content-Type: application/json
 
 {
-  "phone": "+998901234567",
+  "phoneNumber": "+998901234567",
   "otp": "123456"
 }
 ```
@@ -188,6 +197,41 @@ Content-Type: application/json
       "lastName": "Doe"
     }
   }
+}
+```
+
+#### Refresh Consumer Token
+```http
+POST /api/v1/consumer/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "eyJhbGci..."
+}
+```
+
+**Response**: 200 OK
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGci...(new)",
+    "refreshToken": "eyJhbGci...(new)"
+  }
+}
+```
+
+#### Consumer Logout
+```http
+POST /api/v1/consumer/auth/logout
+Authorization: Bearer eyJhbGci...
+```
+
+**Response**: 200 OK
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
 }
 ```
 
