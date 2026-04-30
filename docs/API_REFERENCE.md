@@ -19,6 +19,9 @@
 10. [Analytics](#analytics)
 11. [SMS Service](#sms-service)
 12. [File Upload](#file-upload)
+13. [Notifications](#notifications)
+14. [Push Notifications](#push-notifications)
+15. [Reviews](#reviews)
 
 ---
 
@@ -1841,6 +1844,335 @@ stompClient.subscribe('/topic/kitchen', function(message) {
 
 **API Version**: 1.0.0
 **Last Updated**: 2025-12-05
+
+---
+
+## Notifications
+
+Endpoints for managing user notifications. All require authentication.
+
+### Get Notifications
+```http
+GET /api/v1/notifications?role=CUSTOMER&userId=123&page=0&size=20
+Authorization: Bearer eyJhbGci...
+```
+
+| Param | Type | Required | Description |
+|-------|------|----------|-------------|
+| `role` | string | yes | `CUSTOMER`, `ADMIN`, `WAITER`, `COURIER` |
+| `userId` | long | no | User ID (omit for broadcast-only) |
+| `page` | int | no | Page number (default 0) |
+| `size` | int | no | Page size (default 20) |
+
+**Response**: 200 OK
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": 1,
+        "title": "Order Ready",
+        "message": "Your order #ORD-042 is ready for pickup",
+        "userRole": "CUSTOMER",
+        "userId": 123,
+        "orderId": 42,
+        "type": "ORDER_STATUS",
+        "read": false,
+        "createdAt": "2026-04-22T15:30:00"
+      }
+    ],
+    "totalElements": 5,
+    "totalPages": 1
+  }
+}
+```
+
+### Get Unread Notifications
+```http
+GET /api/v1/notifications/unread?role=CUSTOMER&userId=123
+Authorization: Bearer eyJhbGci...
+```
+
+### Get Unread Count
+```http
+GET /api/v1/notifications/unread/count?role=CUSTOMER&userId=123
+Authorization: Bearer eyJhbGci...
+```
+
+**Response**: 200 OK
+```json
+{
+  "success": true,
+  "data": { "count": 3 }
+}
+```
+
+### Get Order Notifications
+```http
+GET /api/v1/notifications/order/{orderId}
+Authorization: Bearer eyJhbGci...
+```
+
+### Mark Notification as Read
+```http
+PATCH /api/v1/notifications/{id}/read
+Authorization: Bearer eyJhbGci...
+```
+
+### Mark All as Read
+```http
+PATCH /api/v1/notifications/mark-all-read?role=CUSTOMER&userId=123
+Authorization: Bearer eyJhbGci...
+```
+
+### Archive Notification
+```http
+PATCH /api/v1/notifications/{id}/archive
+Authorization: Bearer eyJhbGci...
+```
+
+### Delete Notification
+```http
+DELETE /api/v1/notifications/{id}
+Authorization: Bearer eyJhbGci...
+```
+
+---
+
+## Push Notifications
+
+Web Push notification subscription and delivery.
+
+### Get VAPID Public Key (No Auth)
+```http
+GET /api/v1/push/vapid-key
+```
+
+**Response**: 200 OK
+```json
+{
+  "publicKey": "BEl62iUYgU..."
+}
+```
+
+### Subscribe Customer (CUSTOMER role)
+```http
+POST /api/v1/push/subscribe/customer
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": {
+    "p256dh": "BNcRdreALRFXTkOOUHK1...",
+    "auth": "tBHItJI5svbpC7htDNBe..."
+  }
+}
+```
+
+**Response**: 200 OK
+```json
+{
+  "success": true,
+  "subscriptionId": 42,
+  "message": "Successfully subscribed to push notifications"
+}
+```
+
+### Subscribe Admin User (ADMIN/MANAGER/WAITER/COURIER)
+```http
+POST /api/v1/push/subscribe/admin
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": {
+    "p256dh": "BNcRdreALRFXTkOOUHK1...",
+    "auth": "tBHItJI5svbpC7htDNBe..."
+  }
+}
+```
+
+### Unsubscribe (Authenticated)
+```http
+POST /api/v1/push/unsubscribe
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/..."
+}
+```
+
+### Check Subscription Status (Authenticated)
+```http
+GET /api/v1/push/status?endpoint=https://fcm.googleapis.com/...
+Authorization: Bearer eyJhbGci...
+```
+
+**Response**: 200 OK
+```json
+{
+  "enabled": true,
+  "totalSubscriptions": 45,
+  "subscribed": true
+}
+```
+
+### Send to Customer (ADMIN only)
+```http
+POST /api/v1/push/admin/send/customer/{customerId}
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{
+  "title": "Your order is ready!",
+  "body": "Order #ORD-042 is ready for pickup",
+  "type": "ORDER_STATUS",
+  "url": "/orders/42"
+}
+```
+
+### Broadcast to All (ADMIN only)
+```http
+POST /api/v1/push/admin/send/broadcast
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{
+  "title": "Happy Hour!",
+  "body": "50% off all drinks until 6PM",
+  "type": "PROMOTION",
+  "url": "/menu"
+}
+```
+
+### List Subscriptions (ADMIN only)
+```http
+GET /api/v1/push/admin/subscriptions
+Authorization: Bearer eyJhbGci...
+```
+
+### Get Stats (ADMIN only)
+```http
+GET /api/v1/push/admin/stats
+Authorization: Bearer eyJhbGci...
+```
+
+**Response**: 200 OK
+```json
+{
+  "totalActiveSubscriptions": 45,
+  "pushEnabled": true
+}
+```
+
+---
+
+## Reviews
+
+Customer reviews and feedback system.
+
+### Submit Review (No Auth)
+```http
+POST /api/v1/public/reviews
+Content-Type: application/json
+
+{
+  "restaurantId": 1,
+  "orderNumber": "ORD-042",
+  "customerName": "John",
+  "rating": 5,
+  "comment": "Amazing food and great service!"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `restaurantId` | long | yes | Restaurant ID |
+| `orderId` | long | no | Order ID (prevents duplicate reviews) |
+| `orderNumber` | string | no | Order number for display |
+| `customerName` | string | no | Customer name |
+| `rating` | int | yes | 1–5 stars |
+| `comment` | string | no | Review text |
+
+**Response**: 201 Created
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "orderId": null,
+    "orderNumber": "ORD-042",
+    "customerName": "John",
+    "restaurantId": 1,
+    "rating": 5,
+    "comment": "Amazing food and great service!",
+    "status": "PUBLISHED",
+    "lowRating": false,
+    "reply": null,
+    "createdAt": "2026-04-22T15:30:00"
+  }
+}
+```
+
+### Get Restaurant Reviews (No Auth)
+```http
+GET /api/v1/public/reviews/restaurant/{restaurantId}
+```
+
+### Get Review Summary (No Auth)
+```http
+GET /api/v1/public/reviews/restaurant/{restaurantId}/summary
+```
+
+**Response**: 200 OK
+```json
+{
+  "success": true,
+  "data": {
+    "averageRating": 4.2,
+    "totalReviews": 89,
+    "fiveStars": 40,
+    "fourStars": 27,
+    "threeStars": 12,
+    "twoStars": 7,
+    "oneStars": 3
+  }
+}
+```
+
+### Get All Reviews — Admin (ADMIN/OPERATOR)
+```http
+GET /api/v1/reviews/restaurant/{restaurantId}
+Authorization: Bearer eyJhbGci...
+```
+
+### Reply to Review (ADMIN/OPERATOR)
+```http
+POST /api/v1/reviews/{id}/reply
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{
+  "reply": "Thank you for your feedback!",
+  "repliedBy": "Manager"
+}
+```
+
+### Hide Review (ADMIN/OPERATOR)
+```http
+POST /api/v1/reviews/{id}/hide
+Authorization: Bearer eyJhbGci...
+```
+
+### Publish Review (ADMIN/OPERATOR)
+```http
+POST /api/v1/reviews/{id}/publish
+Authorization: Bearer eyJhbGci...
+```
 
 ---
 
