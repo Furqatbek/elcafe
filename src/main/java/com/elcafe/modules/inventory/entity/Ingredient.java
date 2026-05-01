@@ -40,6 +40,10 @@ public class Ingredient {
     @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private IngredientCategory category;
+
     @Column(nullable = false, length = 200)
     private String name;
 

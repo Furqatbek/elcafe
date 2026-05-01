@@ -14,6 +14,8 @@ public interface InventoryIngredientRepository extends JpaRepository<Ingredient,
 
     List<Ingredient> findByRestaurant_Id(Long restaurantId);
 
+    List<Ingredient> findByRestaurantIdAndCategoryId(Long restaurantId, Long categoryId);
+
     /**
      * Find all ingredients for a restaurant with supplier eagerly fetched.
      * Use this method when you need to access supplier data to avoid N+1 queries.

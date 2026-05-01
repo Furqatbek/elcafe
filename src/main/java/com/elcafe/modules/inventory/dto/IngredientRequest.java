@@ -19,6 +19,8 @@ public class IngredientRequest {
     @NotNull(message = "Restaurant ID is required")
     private Long restaurantId;
 
+    private Long categoryId;
+
     @NotBlank(message = "Name is required")
     private String name;
 

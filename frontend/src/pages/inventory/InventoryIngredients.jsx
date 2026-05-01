@@ -55,6 +55,10 @@ export default function InventoryIngredients() {
   const [filteredIngredients, setFilteredIngredients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [categories, setCategories] = useState([]);
+  const [filterCategoryId, setFilterCategoryId] = useState(null);
+  const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
@@ -83,12 +87,51 @@ export default function InventoryIngredients() {
     trackExpiry: false,
     defaultShelfLifeDays: '',
     expiryAlertDays: '7',
+    categoryId: '',
   });
+
+  // Load categories when restaurant changes
+  useEffect(() => {
+    if (selectedRestaurant) loadCategories();
+  }, [selectedRestaurant]);
+
+  const loadCategories = async () => {
+    try {
+      const res = await inventoryAPI.getIngredientCategories(selectedRestaurant);
+      setCategories(res.data.data || []);
+    } catch (e) {
+      console.error('Failed to load categories:', e);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      await inventoryAPI.createIngredientCategory({
+        restaurantId: selectedRestaurant,
+        name: newCategoryName.trim(),
+      });
+      setNewCategoryName('');
+      loadCategories();
+    } catch (e) {
+      console.error('Failed to create category:', e);
+    }
+  };
+
+  const handleDeleteCategory = async (id) => {
+    try {
+      await inventoryAPI.deleteIngredientCategory(id);
+      loadCategories();
+      if (filterCategoryId === id) setFilterCategoryId(null);
+    } catch (e) {
+      console.error('Failed to delete category:', e);
+    }
+  };
 
   // Filter ingredients
   useEffect(() => {
     filterIngredients();
-  }, [ingredients, searchTerm, filterStatus]);
+  }, [ingredients, searchTerm, filterStatus, filterCategoryId]);
 
   const filterIngredients = () => {
     let filtered = ingredients;
@@ -100,6 +143,10 @@ export default function InventoryIngredients() {
           ing.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           ing.supplierName?.toLowerCase().includes(searchTerm.toLowerCase())
       );
+    }
+
+    if (filterCategoryId) {
+      filtered = filtered.filter(ing => ing.categoryId === filterCategoryId);
     }
 
     if (filterStatus === 'low') {
@@ -139,6 +186,7 @@ export default function InventoryIngredients() {
       reorderLevel: '',
       costPerUnit: '',
       supplierId: '',
+      categoryId: '',
       sku: '',
       active: true,
       trackInventory: true,
@@ -160,6 +208,7 @@ export default function InventoryIngredients() {
       reorderLevel: ingredient.reorderLevel,
       costPerUnit: ingredient.costPerUnit || '',
       supplierId: ingredient.supplierId?.toString() || '',
+      categoryId: ingredient.categoryId?.toString() || '',
       sku: ingredient.sku || '',
       active: ingredient.active,
       trackInventory: ingredient.trackInventory,
@@ -180,6 +229,7 @@ export default function InventoryIngredients() {
         reorderLevel: parseFloat(formData.reorderLevel) || 0,
         costPerUnit: formData.costPerUnit ? parseFloat(formData.costPerUnit) : null,
         supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
+        categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
         trackExpiry: formData.trackExpiry,
         defaultShelfLifeDays: formData.defaultShelfLifeDays ? parseInt(formData.defaultShelfLifeDays) : null,
         expiryAlertDays: formData.expiryAlertDays ? parseInt(formData.expiryAlertDays) : 7,
@@ -365,6 +415,9 @@ export default function InventoryIngredients() {
                   </SelectContent>
                 </Select>
               </div>
+              <Button variant="outline" onClick={() => setCategoriesModalOpen(true)}>
+                {t('inventory.manageCategories', 'Manage Categories')}
+              </Button>
               <Button onClick={handleAddNew}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('inventory.addIngredient')}
@@ -372,6 +425,29 @@ export default function InventoryIngredients() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Category Filter Tabs */}
+        {categories.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap">
+            <Button
+              variant={filterCategoryId === null ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterCategoryId(null)}
+            >
+              {t('inventory.allCategories', 'All')}
+            </Button>
+            {categories.map(cat => (
+              <Button
+                key={cat.id}
+                variant={filterCategoryId === cat.id ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilterCategoryId(cat.id)}
+              >
+                {cat.name}
+              </Button>
+            ))}
+          </div>
+        )}
 
         {/* Ingredients Table */}
         <Card>
@@ -488,13 +564,18 @@ export default function InventoryIngredients() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sku">{t('inventory.fields.sku')}</Label>
-                <Input
-                  id="sku"
-                  value={formData.sku}
-                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  placeholder={t('inventory.placeholders.sku')}
-                />
+                <Label htmlFor="category">{t('inventory.category', 'Category')}</Label>
+                <select
+                  id="category"
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                >
+                  <option value="">{t('inventory.uncategorized', 'Uncategorized')}</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -765,6 +846,43 @@ export default function InventoryIngredients() {
               )}
             </TableBody>
           </Table>
+        </DialogContent>
+      </Dialog>
+      {/* Manage Categories Dialog */}
+      <Dialog open={categoriesModalOpen} onOpenChange={setCategoriesModalOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('inventory.manageCategories', 'Manage Categories')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {categories.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                {t('inventory.noCategories', 'No categories created yet')}
+              </p>
+            ) : (
+              <div className="border rounded-lg divide-y">
+                {categories.map(cat => (
+                  <div key={cat.id} className="flex items-center justify-between px-4 py-2.5">
+                    <span className="font-medium">{cat.name}</span>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteCategory(cat.id)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder={t('inventory.categoryNamePlaceholder', 'e.g. Packaging, Meat, Spices')}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateCategory()}
+              />
+              <Button onClick={handleCreateCategory} disabled={!newCategoryName.trim()}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </InventoryLayout>

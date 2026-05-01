@@ -535,7 +535,11 @@ export const financialAPI = {
 
 export const inventoryAPI = {
   // Ingredients CRUD
-  getIngredients: (restaurantId) => api.get('/inventory/ingredients', { params: { restaurantId } }),
+  getIngredients: (restaurantId, categoryId) => api.get('/inventory/ingredients', { params: { restaurantId, categoryId: categoryId || undefined } }),
+  getIngredientCategories: (restaurantId) => api.get('/inventory/ingredient-categories', { params: { restaurantId } }),
+  createIngredientCategory: (data) => api.post('/inventory/ingredient-categories', data),
+  updateIngredientCategory: (id, data) => api.put(`/inventory/ingredient-categories/${id}`, data),
+  deleteIngredientCategory: (id) => api.delete(`/inventory/ingredient-categories/${id}`),
   getIngredientById: (id) => api.get(`/inventory/ingredients/${id}`),
   createIngredient: (data) => api.post('/inventory/ingredients', data),
   updateIngredient: (id, data) => api.put(`/inventory/ingredients/${id}`, data),

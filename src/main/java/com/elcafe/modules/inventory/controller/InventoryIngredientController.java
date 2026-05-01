@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 public class InventoryIngredientController {
 
     private final InventoryIngredientRepository ingredientRepository;
+    private final com.elcafe.modules.inventory.repository.IngredientCategoryRepository ingredientCategoryRepository;
     private final RestaurantRepository restaurantRepository;
     private final SupplierRepository supplierRepository;
     private final InventoryService inventoryService;
@@ -47,12 +48,18 @@ public class InventoryIngredientController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<IngredientResponse>>> getIngredients(
-            @RequestParam Long restaurantId) {
+            @RequestParam Long restaurantId,
+            @RequestParam(required = false) Long categoryId) {
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(restaurantId);
-        log.info("Fetching ingredients for restaurant: {}", restaurantId);
+        log.info("Fetching ingredients for restaurant: {}, category: {}", restaurantId, categoryId);
 
-        List<Ingredient> ingredients = ingredientRepository.findByRestaurant_Id(restaurantId);
+        List<Ingredient> ingredients;
+        if (categoryId != null) {
+            ingredients = ingredientRepository.findByRestaurantIdAndCategoryId(restaurantId, categoryId);
+        } else {
+            ingredients = ingredientRepository.findByRestaurant_Id(restaurantId);
+        }
         List<IngredientResponse> responses = ingredients.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -119,8 +126,14 @@ public class InventoryIngredientController {
                     .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
         }
 
+        com.elcafe.modules.inventory.entity.IngredientCategory category = null;
+        if (request.getCategoryId() != null) {
+            category = ingredientCategoryRepository.findById(request.getCategoryId()).orElse(null);
+        }
+
         Ingredient ingredient = Ingredient.builder()
                 .restaurant(restaurant)
+                .category(category)
                 .name(request.getName())
                 .description(request.getDescription())
                 .unit(request.getUnit())
@@ -163,6 +176,11 @@ public class InventoryIngredientController {
                     .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
         }
 
+        if (request.getCategoryId() != null) {
+            ingredient.setCategory(ingredientCategoryRepository.findById(request.getCategoryId()).orElse(null));
+        } else {
+            ingredient.setCategory(null);
+        }
         ingredient.setName(request.getName());
         ingredient.setDescription(request.getDescription());
         ingredient.setUnit(request.getUnit());
@@ -332,10 +350,13 @@ public class InventoryIngredientController {
 
     private IngredientResponse mapToResponse(Ingredient ingredient) {
         Supplier supplierEntity = ingredient.getSupplierEntity();
+        com.elcafe.modules.inventory.entity.IngredientCategory cat = ingredient.getCategory();
         return IngredientResponse.builder()
                 .id(ingredient.getId())
                 .restaurantId(ingredient.getRestaurant().getId())
                 .restaurantName(ingredient.getRestaurant().getName())
+                .categoryId(cat != null ? cat.getId() : null)
+                .categoryName(cat != null ? cat.getName() : null)
                 .name(ingredient.getName())
                 .description(ingredient.getDescription())
                 .unit(ingredient.getUnit())

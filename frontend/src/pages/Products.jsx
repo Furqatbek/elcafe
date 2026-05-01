@@ -92,6 +92,8 @@ export default function Products() {
   const [packagingRules, setPackagingRules] = useState([]);
   const [addPackagingOpen, setAddPackagingOpen] = useState(false);
   const [packagingSearch, setPackagingSearch] = useState('');
+  const [packagingCategories, setPackagingCategories] = useState([]);
+  const [packagingCategoryFilter, setPackagingCategoryFilter] = useState('');
   const [packagingForm, setPackagingForm] = useState({
     packagingIngredientId: '',
     orderTypes: 'DELIVERY,TAKEAWAY',
@@ -430,11 +432,15 @@ export default function Products() {
     setSelectedProductForPackaging(product);
     setPackagingModalOpen(true);
     await loadPackagingRules(product.id);
-    // Load inventory ingredients for the dropdown
+    // Load inventory ingredients and categories for the dropdown
     if (selectedRestaurant) {
       try {
-        const res = await inventoryAPI.getIngredients(selectedRestaurant);
-        setInventoryIngredients(res.data.data || []);
+        const [ingRes, catRes] = await Promise.all([
+          inventoryAPI.getIngredients(selectedRestaurant),
+          inventoryAPI.getIngredientCategories(selectedRestaurant),
+        ]);
+        setInventoryIngredients(ingRes.data.data || []);
+        setPackagingCategories(catRes.data.data || []);
       } catch (e) {
         console.error('Failed to load ingredients:', e);
       }
@@ -1596,6 +1602,18 @@ export default function Products() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>{t('packaging.product', 'Packaging Product')} *</Label>
+              {packagingCategories.length > 0 && (
+                <select
+                  value={packagingCategoryFilter}
+                  onChange={(e) => setPackagingCategoryFilter(e.target.value)}
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-background mb-1"
+                >
+                  <option value="">{t('inventory.allCategories', 'All Categories')}</option>
+                  {packagingCategories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              )}
               <Input
                 placeholder={t('packaging.searchIngredient', 'Search ingredients...')}
                 value={packagingSearch}
@@ -1611,6 +1629,7 @@ export default function Products() {
                 <option value="">{t('packaging.selectIngredient', 'Select inventory item')}</option>
                 {inventoryIngredients
                   .filter(ing => ing.name.toLowerCase().includes(packagingSearch.toLowerCase()))
+                  .filter(ing => !packagingCategoryFilter || ing.categoryId?.toString() === packagingCategoryFilter)
                   .map((ing) => (
                     <option key={ing.id} value={ing.id}>{ing.name} ({ing.currentStock} {ing.unit})</option>
                   ))}

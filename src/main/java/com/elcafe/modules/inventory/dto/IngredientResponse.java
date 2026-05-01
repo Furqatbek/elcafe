@@ -17,6 +17,8 @@ public class IngredientResponse {
     private Long id;
     private Long restaurantId;
     private String restaurantName;
+    private Long categoryId;
+    private String categoryName;
     private String name;
     private String description;
     private String unit;
