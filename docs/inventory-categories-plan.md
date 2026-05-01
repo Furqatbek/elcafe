@@ -68,96 +68,129 @@ CREATE INDEX idx_ingredients_category ON inventory_ingredients(category);
 COMMENT ON COLUMN inventory_ingredients.category IS 'Ingredient category for filtering and grouping';
 ```
 
-#### Enum: `IngredientCategory.java`
+#### New Table: `ingredient_categories`
 
-Location: `modules/inventory/enums/`
+User-defined categories — no predefined enum. Restaurants create their own
+categories (e.g., "Packaging", "Meat", "Spices", "Cleaning Supplies").
+
+```sql
+CREATE TABLE ingredient_categories (
+    id BIGSERIAL PRIMARY KEY,
+    restaurant_id BIGINT NOT NULL REFERENCES restaurants(id),
+    name VARCHAR(100) NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX idx_ingredient_cat_name ON ingredient_categories(restaurant_id, name);
+```
+
+#### New Entity: `IngredientCategory.java`
+
+Location: `modules/inventory/entity/`
 
 ```java
-public enum IngredientCategory {
-    MEAT("Meat", "Beef, chicken, lamb, fish"),
-    DAIRY("Dairy", "Milk, cheese, butter, cream"),
-    VEGETABLE("Vegetables", "Fresh vegetables and greens"),
-    FRUIT("Fruits", "Fresh fruits"),
-    GRAIN("Grains", "Rice, flour, bread, pasta"),
-    SPICE("Spices", "Spices, herbs, seasonings"),
-    OIL("Oils & Fats", "Cooking oils, butter, margarine"),
-    BEVERAGE("Beverages", "Drinks, juices, water, soda"),
-    SAUCE("Sauces", "Sauces, dressings, condiments"),
-    PACKAGING("Packaging", "Bags, bowls, cups, utensils, napkins"),
-    CLEANING("Cleaning", "Cleaning supplies, chemicals"),
-    OTHER("Other", "Uncategorized items");
-
-    private final String label;
-    private final String description;
+@Entity
+@Table(name = "ingredient_categories")
+public class IngredientCategory {
+    Long id;
+    @ManyToOne Restaurant restaurant;
+    String name;
+    Integer sortOrder;
 }
 ```
 
 #### Entity: `Ingredient.java` — add field
 
 ```java
-@Enumerated(EnumType.STRING)
-@Column(length = 50)
-@Builder.Default
-private IngredientCategory category = IngredientCategory.OTHER;
+@ManyToOne(fetch = FetchType.LAZY)
+@JoinColumn(name = "category_id")
+private IngredientCategory category;
+```
+
+#### Migration column on ingredients:
+
+```sql
+ALTER TABLE inventory_ingredients
+    ADD COLUMN category_id BIGINT REFERENCES ingredient_categories(id);
 ```
 
 ### Phase 2: Repository
 
+#### `IngredientCategoryRepository.java` (new)
+
+```java
+List<IngredientCategory> findByRestaurantIdOrderBySortOrder(Long restaurantId);
+```
+
 #### `InventoryIngredientRepository.java` — add query
 
 ```java
-List<Ingredient> findByRestaurantIdAndCategory(Long restaurantId, IngredientCategory category);
-List<Ingredient> findByRestaurantIdAndCategoryAndActiveTrue(Long restaurantId, IngredientCategory category);
+List<Ingredient> findByRestaurantIdAndCategoryId(Long restaurantId, Long categoryId);
+List<Ingredient> findByRestaurantIdAndCategoryIdAndActiveTrue(Long restaurantId, Long categoryId);
 ```
 
 ### Phase 3: API Updates
 
+#### New: `IngredientCategoryController.java`
+
+CRUD for user-defined categories:
+
+```
+GET    /api/v1/inventory/ingredient-categories?restaurantId={id}
+POST   /api/v1/inventory/ingredient-categories
+PUT    /api/v1/inventory/ingredient-categories/{id}
+DELETE /api/v1/inventory/ingredient-categories/{id}
+```
+
 #### Modify: `InventoryIngredientController.java`
 
-Add optional `category` query parameter to the list endpoint:
+Add optional `categoryId` query parameter to the list endpoint:
 
 ```java
 @GetMapping
 public ResponseEntity<...> getIngredients(
     @RequestParam Long restaurantId,
-    @RequestParam(required = false) IngredientCategory category) {
-    // If category provided, filter by it
-}
-```
-
-Add endpoint to list available categories:
-
-```java
-@GetMapping("/categories")
-public ResponseEntity<...> getCategories() {
-    return Arrays.asList(IngredientCategory.values());
+    @RequestParam(required = false) Long categoryId) {
+    // If categoryId provided, filter by it
 }
 ```
 
 #### Modify: `IngredientRequest.java` (DTO)
 
-Add `category` field so it can be set when creating/updating ingredients.
+Add `categoryId` field so it can be set when creating/updating ingredients.
 
 ### Phase 4: Frontend — Ingredient Management
 
 #### Modify: `InventoryIngredients.jsx`
 
-1. **Category dropdown** in create/edit ingredient form
-2. **Category filter tabs** above the ingredient list (All | Meat | Dairy | ... | Packaging)
-3. **Category badge** on each ingredient row in the list
-4. **Bulk categorize** — select multiple ingredients → assign category
+1. **Category dropdown** in create/edit ingredient form (select from user-created categories)
+2. **"Manage Categories" button** — opens dialog to create/edit/delete categories
+3. **Category filter tabs** above the ingredient list (dynamically built from user's categories)
+4. **Category badge** on each ingredient row in the list
 
 ```
-┌─────────────────────────────────────────────────────┐
-│ Ingredients                    [+ Add Ingredient]    │
-├─────────────────────────────────────────────────────┤
-│ [All] [Meat] [Dairy] [Veg] [Spice] [Packaging] ... │
-├─────────────────────────────────────────────────────┤
-│ Beef (Meat)        │ 50 kg  │ Low Stock │ 80,000/kg │
-│ Flour (Grain)      │ 200 kg │ OK        │ 5,000/kg  │
-│ Plastic Bowl (Pkg) │ 300 pc │ OK        │ 200/pc    │
-│ Bag (Packaging)    │ 500 pc │ OK        │ 500/pc    │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ Ingredients            [Manage Categories] [+ Add Ingredient]│
+├─────────────────────────────────────────────────────────────┤
+│ [All] [Meat] [Spices] [Packaging] [Cleaning]  ← user-defined│
+├─────────────────────────────────────────────────────────────┤
+│ Beef (Meat)        │ 50 kg  │ Low Stock │ 80,000/kg         │
+│ Flour              │ 200 kg │ OK        │ 5,000/kg          │
+│ Plastic Bowl (Pkg) │ 300 pc │ OK        │ 200/pc            │
+│ Bag (Packaging)    │ 500 pc │ OK        │ 500/pc            │
+└─────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────┐
+│ Manage Categories            │
+│──────────────────────────────│
+│ Meat          [Edit] [Delete]│
+│ Spices        [Edit] [Delete]│
+│ Packaging     [Edit] [Delete]│
+│ Cleaning      [Edit] [Delete]│
+│                              │
+│ [+ Add Category]             │
+└──────────────────────────────┘
 ```
 
 ### Phase 5: Frontend — Packaging Rule Dropdown
@@ -186,21 +219,17 @@ When "Packaging" category is selected, only packaging items show. The search fur
 ```json
 {
   "inventory.category": "Category",
-  "inventory.categories.MEAT": "Meat",
-  "inventory.categories.DAIRY": "Dairy",
-  "inventory.categories.VEGETABLE": "Vegetables",
-  "inventory.categories.FRUIT": "Fruits",
-  "inventory.categories.GRAIN": "Grains",
-  "inventory.categories.SPICE": "Spices",
-  "inventory.categories.OIL": "Oils & Fats",
-  "inventory.categories.BEVERAGE": "Beverages",
-  "inventory.categories.SAUCE": "Sauces",
-  "inventory.categories.PACKAGING": "Packaging",
-  "inventory.categories.CLEANING": "Cleaning",
-  "inventory.categories.OTHER": "Other",
   "inventory.allCategories": "All Categories",
+  "inventory.manageCategories": "Manage Categories",
+  "inventory.addCategory": "Add Category",
+  "inventory.editCategory": "Edit Category",
+  "inventory.categoryName": "Category Name",
+  "inventory.categoryNamePlaceholder": "e.g. Packaging, Meat, Spices",
+  "inventory.noCategories": "No categories created yet",
+  "inventory.deleteCategory": "Delete Category",
+  "inventory.deleteCategoryConfirm": "Ingredients in this category will become uncategorized",
+  "inventory.uncategorized": "Uncategorized",
   "inventory.filterByCategory": "Filter by category",
-  "packaging.filterCategory": "Filter by category",
   "packaging.searchIngredient": "Search ingredients..."
 }
 ```
@@ -231,29 +260,11 @@ When "Packaging" category is selected, only packaging items show. The search fur
 
 ---
 
-## Data Migration (Optional)
+## User Flow
 
-After deploying, the admin can bulk-categorize existing ingredients. Or create a one-time migration:
-
-```sql
--- Auto-categorize common packaging items by name pattern
-UPDATE inventory_ingredients SET category = 'PACKAGING'
-WHERE LOWER(name) LIKE '%bag%' OR LOWER(name) LIKE '%bowl%'
-   OR LOWER(name) LIKE '%cup%' OR LOWER(name) LIKE '%spoon%'
-   OR LOWER(name) LIKE '%fork%' OR LOWER(name) LIKE '%napkin%'
-   OR LOWER(name) LIKE '%straw%' OR LOWER(name) LIKE '%container%'
-   OR LOWER(name) LIKE '%lid%' OR LOWER(name) LIKE '%box%';
-
--- Auto-categorize meats
-UPDATE inventory_ingredients SET category = 'MEAT'
-WHERE LOWER(name) LIKE '%beef%' OR LOWER(name) LIKE '%chicken%'
-   OR LOWER(name) LIKE '%lamb%' OR LOWER(name) LIKE '%fish%'
-   OR LOWER(name) LIKE '%meat%';
-
--- Auto-categorize spices
-UPDATE inventory_ingredients SET category = 'SPICE'
-WHERE LOWER(name) LIKE '%salt%' OR LOWER(name) LIKE '%pepper%'
-   OR LOWER(name) LIKE '%spice%' OR LOWER(name) LIKE '%herb%';
-```
-
-This is optional — can also be done manually via the admin UI.
+1. Admin goes to **Inventory → Ingredients** page
+2. Clicks **"Manage Categories"** → creates: "Packaging", "Meat", "Spices", etc.
+3. When creating/editing an ingredient, selects category from dropdown
+4. Filter tabs update dynamically from user's categories
+5. In **Products → Packaging Rules → Add**, dropdown pre-filters by category
+6. Existing ingredients with no category show as "Uncategorized"
