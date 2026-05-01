@@ -16,4 +16,4 @@ COMMENT ON TABLE ingredient_categories IS 'User-defined categories for grouping 
 ALTER TABLE inventory_ingredients
     ADD COLUMN category_id BIGINT REFERENCES ingredient_categories(id);
 
-CREATE INDEX idx_ingredients_category ON inventory_ingredients(category_id);
+CREATE INDEX IF NOT EXISTS idx_ingredients_category_id ON inventory_ingredients(category_id);
