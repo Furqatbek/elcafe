@@ -19,8 +19,8 @@ public class CreatePackagingRuleRequest {
     @NotNull(message = "Product ID is required")
     private Long productId;
 
-    @NotNull(message = "Packaging product ID is required")
-    private Long packagingProductId;
+    @NotNull(message = "Packaging ingredient ID is required")
+    private Long packagingIngredientId;
 
     @Builder.Default
     private String orderTypes = "DELIVERY,TAKEAWAY";

@@ -1,5 +1,7 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.menu.dto.CreatePackagingRuleRequest;
 import com.elcafe.modules.menu.entity.PackagingRule;
 import com.elcafe.modules.menu.entity.Product;
@@ -25,11 +27,12 @@ public class PackagingService {
 
     private final PackagingRuleRepository packagingRuleRepository;
     private final ProductRepository productRepository;
+    private final InventoryIngredientRepository ingredientRepository;
     private final RestaurantRepository restaurantRepository;
 
     /**
      * Get packaging OrderItems to auto-add for a given list of order items and order type.
-     * Handles deduplication for PER_ORDER items.
+     * Packaging items reference inventory ingredients, shown on the order as line items.
      */
     public List<OrderItem> getPackagingItems(List<OrderItem> orderItems, OrderType orderType) {
         if (orderType == OrderType.DINE_IN) {
@@ -38,7 +41,7 @@ public class PackagingService {
 
         String orderTypeStr = orderType.name();
         List<OrderItem> packagingItems = new ArrayList<>();
-        Set<Long> perOrderProductsAdded = new HashSet<>();
+        Set<Long> perOrderIngredientsAdded = new HashSet<>();
 
         for (OrderItem item : orderItems) {
             if (Boolean.TRUE.equals(item.getIsPackagingItem())) {
@@ -52,14 +55,14 @@ public class PackagingService {
                     continue;
                 }
 
-                Long packagingProductId = rule.getPackagingProduct().getId();
+                Long ingredientId = rule.getPackagingIngredient().getId();
 
-                // PER_ORDER: skip if this packaging product was already added
+                // PER_ORDER: skip if this ingredient was already added
                 if (rule.getQuantityMode() == QuantityMode.PER_ORDER) {
-                    if (perOrderProductsAdded.contains(packagingProductId)) {
+                    if (perOrderIngredientsAdded.contains(ingredientId)) {
                         continue;
                     }
-                    perOrderProductsAdded.add(packagingProductId);
+                    perOrderIngredientsAdded.add(ingredientId);
                 }
 
                 int qty;
@@ -70,14 +73,15 @@ public class PackagingService {
                     default -> qty = rule.getAutoAddQuantity();
                 }
 
-                Product packagingProduct = rule.getPackagingProduct();
+                Ingredient ingredient = rule.getPackagingIngredient();
+                BigDecimal unitCost = ingredient.getEffectiveCost();
                 BigDecimal unitPrice = Boolean.TRUE.equals(rule.getChargeToCustomer())
-                        ? packagingProduct.getPrice()
+                        ? unitCost
                         : BigDecimal.ZERO;
 
                 OrderItem packagingItem = OrderItem.builder()
-                        .productId(packagingProduct.getId())
-                        .productName(packagingProduct.getName())
+                        .productId(null)
+                        .productName(ingredient.getName())
                         .quantity(qty)
                         .unitPrice(unitPrice)
                         .totalPrice(unitPrice.multiply(BigDecimal.valueOf(qty)))
@@ -86,8 +90,21 @@ public class PackagingService {
 
                 packagingItems.add(packagingItem);
 
-                log.debug("Auto-add packaging: {}x {} for product {} ({})",
-                        qty, packagingProduct.getName(), item.getProductName(), rule.getQuantityMode());
+                // Deduct from inventory
+                try {
+                    BigDecimal deductQty = BigDecimal.valueOf(qty);
+                    if (ingredient.hasStock(deductQty)) {
+                        ingredient.deductStock(deductQty);
+                        ingredientRepository.save(ingredient);
+                        log.debug("Deducted {}x {} from inventory for packaging", qty, ingredient.getName());
+                    } else {
+                        log.warn("Insufficient stock for packaging item {}: needed {}, available {}",
+                                ingredient.getName(), qty, ingredient.getCurrentStock());
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to deduct packaging inventory for {}: {}",
+                            ingredient.getName(), e.getMessage());
+                }
             }
         }
 
@@ -115,13 +132,13 @@ public class PackagingService {
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
-        Product packagingProduct = productRepository.findById(request.getPackagingProductId())
-                .orElseThrow(() -> new RuntimeException("Packaging product not found"));
+        Ingredient ingredient = ingredientRepository.findById(request.getPackagingIngredientId())
+                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
 
         PackagingRule rule = PackagingRule.builder()
                 .restaurant(restaurant)
                 .product(product)
-                .packagingProduct(packagingProduct)
+                .packagingIngredient(ingredient)
                 .orderTypes(request.getOrderTypes())
                 .quantityMode(QuantityMode.valueOf(request.getQuantityMode()))
                 .autoAddQuantity(request.getAutoAddQuantity())
@@ -129,8 +146,8 @@ public class PackagingService {
                 .build();
 
         rule = packagingRuleRepository.save(rule);
-        log.info("Created packaging rule: {} → {} for product {}",
-                rule.getId(), packagingProduct.getName(), product.getName());
+        log.info("Created packaging rule: {} → ingredient {} for product {}",
+                rule.getId(), ingredient.getName(), product.getName());
         return rule;
     }
 
@@ -139,10 +156,10 @@ public class PackagingService {
         PackagingRule rule = packagingRuleRepository.findById(ruleId)
                 .orElseThrow(() -> new RuntimeException("Packaging rule not found"));
 
-        if (request.getPackagingProductId() != null) {
-            Product packagingProduct = productRepository.findById(request.getPackagingProductId())
-                    .orElseThrow(() -> new RuntimeException("Packaging product not found"));
-            rule.setPackagingProduct(packagingProduct);
+        if (request.getPackagingIngredientId() != null) {
+            Ingredient ingredient = ingredientRepository.findById(request.getPackagingIngredientId())
+                    .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+            rule.setPackagingIngredient(ingredient);
         }
         if (request.getOrderTypes() != null) rule.setOrderTypes(request.getOrderTypes());
         if (request.getQuantityMode() != null) rule.setQuantityMode(QuantityMode.valueOf(request.getQuantityMode()));

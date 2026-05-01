@@ -18,9 +18,10 @@ public class PackagingRuleResponse {
     private Long restaurantId;
     private Long productId;
     private String productName;
-    private Long packagingProductId;
-    private String packagingProductName;
-    private BigDecimal packagingProductPrice;
+    private Long packagingIngredientId;
+    private String packagingIngredientName;
+    private String packagingIngredientUnit;
+    private BigDecimal packagingIngredientCost;
     private String orderTypes;
     private String quantityMode;
     private Integer autoAddQuantity;
@@ -41,10 +42,11 @@ public class PackagingRuleResponse {
             builder.productId(rule.getProduct().getId())
                     .productName(rule.getProduct().getName());
         }
-        if (rule.getPackagingProduct() != null) {
-            builder.packagingProductId(rule.getPackagingProduct().getId())
-                    .packagingProductName(rule.getPackagingProduct().getName())
-                    .packagingProductPrice(rule.getPackagingProduct().getPrice());
+        if (rule.getPackagingIngredient() != null) {
+            builder.packagingIngredientId(rule.getPackagingIngredient().getId())
+                    .packagingIngredientName(rule.getPackagingIngredient().getName())
+                    .packagingIngredientUnit(rule.getPackagingIngredient().getUnit())
+                    .packagingIngredientCost(rule.getPackagingIngredient().getEffectiveCost());
         }
 
         return builder.build();

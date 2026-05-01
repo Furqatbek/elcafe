@@ -3728,6 +3728,7 @@
     "addRule": "Добавить упаковку",
     "product": "Упаковочный товар",
     "selectProduct": "Выберите упаковку",
+    "selectIngredient": "Выберите из инвентаря",
     "orderTypes": "Типы заказов",
     "delivery": "Доставка",
     "takeaway": "Самовывоз",

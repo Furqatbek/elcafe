@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.entity;
 
+import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.menu.enums.QuantityMode;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -36,8 +37,8 @@ public class PackagingRule {
     private Product product;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "packaging_product_id", nullable = false)
-    private Product packagingProduct;
+    @JoinColumn(name = "packaging_ingredient_id", nullable = false)
+    private Ingredient packagingIngredient;
 
     @Column(name = "order_types", nullable = false, length = 50)
     @Builder.Default

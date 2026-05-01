@@ -1,5 +1,7 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.menu.entity.PackagingRule;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.enums.QuantityMode;
@@ -30,36 +32,34 @@ class PackagingServiceTest {
 
     @Mock private PackagingRuleRepository packagingRuleRepository;
     @Mock private ProductRepository productRepository;
+    @Mock private InventoryIngredientRepository ingredientRepository;
     @Mock private RestaurantRepository restaurantRepository;
     @InjectMocks private PackagingService packagingService;
 
-    private Product bowl;
-    private Product spoon;
-    private Product bag;
+    private Ingredient bowl;
+    private Ingredient spoon;
+    private Ingredient bag;
 
     @BeforeEach
     void setUp() {
-        bowl = new Product();
-        bowl.setId(100L);
-        bowl.setName("Plastic Bowl");
-        bowl.setPrice(BigDecimal.ZERO);
+        bowl = Ingredient.builder().id(100L).name("Plastic Bowl").unit("pieces")
+                .costPerUnit(BigDecimal.ZERO).currentStock(new BigDecimal("1000"))
+                .trackInventory(true).active(true).version(0L).build();
 
-        spoon = new Product();
-        spoon.setId(101L);
-        spoon.setName("Spoon");
-        spoon.setPrice(BigDecimal.ZERO);
+        spoon = Ingredient.builder().id(101L).name("Spoon").unit("pieces")
+                .costPerUnit(BigDecimal.ZERO).currentStock(new BigDecimal("1000"))
+                .trackInventory(true).active(true).version(0L).build();
 
-        bag = new Product();
-        bag.setId(102L);
-        bag.setName("Bag");
-        bag.setPrice(new BigDecimal("500"));
+        bag = Ingredient.builder().id(102L).name("Bag").unit("pieces")
+                .costPerUnit(new BigDecimal("500")).currentStock(new BigDecimal("500"))
+                .trackInventory(true).active(true).version(0L).build();
     }
 
-    private PackagingRule rule(Product product, Product packaging, QuantityMode mode, int qty, boolean charge) {
+    private PackagingRule rule(Product product, Ingredient packaging, QuantityMode mode, int qty, boolean charge) {
         return PackagingRule.builder()
                 .id((long) (Math.random() * 10000))
                 .product(product)
-                .packagingProduct(packaging)
+                .packagingIngredient(packaging)
                 .orderTypes("DELIVERY,TAKEAWAY")
                 .quantityMode(mode)
                 .autoAddQuantity(qty)

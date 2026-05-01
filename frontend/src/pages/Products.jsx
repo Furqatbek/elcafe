@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { menuAPI, restaurantAPI, uploadAPI, productVariantAPI, packagingRuleAPI } from '../services/api';
+import { menuAPI, restaurantAPI, uploadAPI, productVariantAPI, packagingRuleAPI, inventoryAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -92,12 +92,13 @@ export default function Products() {
   const [packagingRules, setPackagingRules] = useState([]);
   const [addPackagingOpen, setAddPackagingOpen] = useState(false);
   const [packagingForm, setPackagingForm] = useState({
-    packagingProductId: '',
+    packagingIngredientId: '',
     orderTypes: 'DELIVERY,TAKEAWAY',
     quantityMode: 'PER_ITEM',
     autoAddQuantity: 1,
     chargeToCustomer: false,
   });
+  const [inventoryIngredients, setInventoryIngredients] = useState([]);
 
   useEffect(() => {
     loadRestaurants();
@@ -428,6 +429,15 @@ export default function Products() {
     setSelectedProductForPackaging(product);
     setPackagingModalOpen(true);
     await loadPackagingRules(product.id);
+    // Load inventory ingredients for the dropdown
+    if (selectedRestaurant) {
+      try {
+        const res = await inventoryAPI.getIngredients(selectedRestaurant);
+        setInventoryIngredients(res.data.data || []);
+      } catch (e) {
+        console.error('Failed to load ingredients:', e);
+      }
+    }
   };
 
   const loadPackagingRules = async (productId) => {
@@ -441,19 +451,19 @@ export default function Products() {
   };
 
   const handleCreatePackagingRule = async () => {
-    if (!selectedProductForPackaging || !packagingForm.packagingProductId) return;
+    if (!selectedProductForPackaging || !packagingForm.packagingIngredientId) return;
     try {
       await packagingRuleAPI.create({
         restaurantId: parseInt(selectedRestaurant),
         productId: selectedProductForPackaging.id,
-        packagingProductId: parseInt(packagingForm.packagingProductId),
+        packagingIngredientId: parseInt(packagingForm.packagingIngredientId),
         orderTypes: packagingForm.orderTypes,
         quantityMode: packagingForm.quantityMode,
         autoAddQuantity: packagingForm.autoAddQuantity,
         chargeToCustomer: packagingForm.chargeToCustomer,
       });
       setAddPackagingOpen(false);
-      setPackagingForm({ packagingProductId: '', orderTypes: 'DELIVERY,TAKEAWAY', quantityMode: 'PER_ITEM', autoAddQuantity: 1, chargeToCustomer: false });
+      setPackagingForm({ packagingIngredientId: '', orderTypes: 'DELIVERY,TAKEAWAY', quantityMode: 'PER_ITEM', autoAddQuantity: 1, chargeToCustomer: false });
       await loadPackagingRules(selectedProductForPackaging.id);
     } catch (error) {
       console.error('Failed to create packaging rule:', error);
@@ -1539,7 +1549,7 @@ export default function Products() {
                 {packagingRules.map((rule) => (
                   <div key={rule.id} className={`flex items-center justify-between px-4 py-3 ${!rule.active ? 'opacity-50' : ''}`}>
                     <div className="flex-1">
-                      <span className="font-medium">{rule.packagingProductName}</span>
+                      <span className="font-medium">{rule.packagingIngredientName}</span>
                       <div className="flex gap-2 mt-1 text-xs text-muted-foreground">
                         <span className="bg-muted px-1.5 py-0.5 rounded">
                           {rule.quantityMode === 'PER_ITEM' ? t('packaging.perItem', 'Per Item')
@@ -1548,7 +1558,7 @@ export default function Products() {
                         </span>
                         <span>Qty: {rule.autoAddQuantity}</span>
                         <span className={rule.chargeToCustomer ? 'text-orange-600' : 'text-green-600'}>
-                          {rule.chargeToCustomer ? `${rule.packagingProductPrice}` : t('packaging.free', 'Free')}
+                          {rule.chargeToCustomer ? `${rule.packagingIngredientCost || 0}` : t('packaging.free', 'Free')}
                         </span>
                         <span>{rule.orderTypes}</span>
                       </div>
@@ -1586,13 +1596,13 @@ export default function Products() {
             <div className="space-y-2">
               <Label>{t('packaging.product', 'Packaging Product')} *</Label>
               <select
-                value={packagingForm.packagingProductId}
-                onChange={(e) => setPackagingForm({ ...packagingForm, packagingProductId: e.target.value })}
+                value={packagingForm.packagingIngredientId}
+                onChange={(e) => setPackagingForm({ ...packagingForm, packagingIngredientId: e.target.value })}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               >
-                <option value="">{t('packaging.selectProduct', 'Select packaging item')}</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.price})</option>
+                <option value="">{t('packaging.selectIngredient', 'Select inventory item')}</option>
+                {inventoryIngredients.map((ing) => (
+                  <option key={ing.id} value={ing.id}>{ing.name} ({ing.currentStock} {ing.unit})</option>
                 ))}
               </select>
             </div>
@@ -1670,7 +1680,7 @@ export default function Products() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddPackagingOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
-            <Button onClick={handleCreatePackagingRule} disabled={!packagingForm.packagingProductId}>
+            <Button onClick={handleCreatePackagingRule} disabled={!packagingForm.packagingIngredientId}>
               <Plus className="h-4 w-4 mr-2" /> {t('common.add', 'Add')}
             </Button>
           </DialogFooter>

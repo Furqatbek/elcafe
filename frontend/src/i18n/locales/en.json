@@ -3969,6 +3969,7 @@
     "addRule": "Add Packaging Item",
     "product": "Packaging Product",
     "selectProduct": "Select packaging item",
+    "selectIngredient": "Select inventory item",
     "orderTypes": "Order Types",
     "delivery": "Delivery",
     "takeaway": "Takeaway",
