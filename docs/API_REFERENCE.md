@@ -2412,9 +2412,55 @@ Authorization: Bearer {token}
 
 ## Inventory Management
 
+### Ingredient Categories (ADMIN/OPERATOR)
+
+User-defined categories for grouping ingredients (e.g., Packaging, Meat, Spices).
+
+#### List Categories
+```http
+GET /api/v1/inventory/ingredient-categories?restaurantId=1
+Authorization: Bearer eyJhbGci...
+```
+
+**Response**: 200 OK
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Packaging", "sortOrder": 0 },
+    { "id": 2, "name": "Meat", "sortOrder": 1 },
+    { "id": 3, "name": "Spices", "sortOrder": 2 }
+  ]
+}
+```
+
+#### Create Category
+```http
+POST /api/v1/inventory/ingredient-categories
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{ "restaurantId": 1, "name": "Packaging" }
+```
+
+#### Update Category
+```http
+PUT /api/v1/inventory/ingredient-categories/{id}
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{ "name": "Packaging & Utensils" }
+```
+
+#### Delete Category
+```http
+DELETE /api/v1/inventory/ingredient-categories/{id}
+Authorization: Bearer eyJhbGci...
+```
+
 ### Get All Ingredients
 ```http
-GET /api/v1/inventory/ingredients?restaurantId=1
+GET /api/v1/inventory/ingredients?restaurantId=1&categoryId=1
 Authorization: Bearer {token}
 ```
 
@@ -2428,6 +2474,8 @@ Authorization: Bearer {token}
       "id": 1,
       "restaurantId": 1,
       "restaurantName": "El Cafe Downtown",
+      "categoryId": 2,
+      "categoryName": "Vegetables",
       "name": "Tomatoes",
       "description": "Fresh organic tomatoes",
       "unit": "kg",
