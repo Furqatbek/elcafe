@@ -22,6 +22,7 @@
 13. [Notifications](#notifications)
 14. [Push Notifications](#push-notifications)
 15. [Reviews](#reviews)
+16. [Packaging Rules](#packaging-rules)
 
 ---
 
@@ -2171,6 +2172,96 @@ Authorization: Bearer eyJhbGci...
 ### Publish Review (ADMIN/OPERATOR)
 ```http
 POST /api/v1/reviews/{id}/publish
+Authorization: Bearer eyJhbGci...
+```
+
+---
+
+## Packaging Rules
+
+Auto-add packaging items (bags, bowls, spoons) from inventory for delivery/takeaway orders.
+
+### List Rules by Restaurant (ADMIN/OPERATOR)
+```http
+GET /api/v1/packaging-rules/restaurant/{restaurantId}
+Authorization: Bearer eyJhbGci...
+```
+
+**Response**: 200 OK
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "restaurantId": 1,
+      "productId": 42,
+      "productName": "Soup",
+      "packagingIngredientId": 100,
+      "packagingIngredientName": "Plastic Bowl",
+      "packagingIngredientUnit": "pieces",
+      "packagingIngredientCost": 200,
+      "orderTypes": "DELIVERY,TAKEAWAY",
+      "quantityMode": "PER_ITEM",
+      "autoAddQuantity": 1,
+      "chargeToCustomer": false,
+      "active": true
+    }
+  ]
+}
+```
+
+### List Rules by Product (ADMIN/OPERATOR)
+```http
+GET /api/v1/packaging-rules/product/{productId}
+Authorization: Bearer eyJhbGci...
+```
+
+### Create Rule (ADMIN/OPERATOR)
+```http
+POST /api/v1/packaging-rules
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{
+  "restaurantId": 1,
+  "productId": 42,
+  "packagingIngredientId": 100,
+  "orderTypes": "DELIVERY,TAKEAWAY",
+  "quantityMode": "PER_ITEM",
+  "autoAddQuantity": 1,
+  "chargeToCustomer": false
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `restaurantId` | long | yes | Restaurant ID |
+| `productId` | long | yes | Trigger product (e.g., Soup) |
+| `packagingIngredientId` | long | yes | Inventory ingredient to auto-add (e.g., Plastic Bowl) |
+| `orderTypes` | string | no | `"DELIVERY,TAKEAWAY"` (default) |
+| `quantityMode` | string | no | `PER_ITEM` (default), `PER_ORDER`, `FIXED` |
+| `autoAddQuantity` | int | no | Quantity to add (default 1) |
+| `chargeToCustomer` | bool | no | Charge customer for packaging (default false) |
+
+### Update Rule (ADMIN/OPERATOR)
+```http
+PUT /api/v1/packaging-rules/{id}
+Authorization: Bearer eyJhbGci...
+Content-Type: application/json
+
+{ "quantityMode": "PER_ORDER", "autoAddQuantity": 1, "chargeToCustomer": true }
+```
+
+### Delete Rule (ADMIN/OPERATOR)
+```http
+DELETE /api/v1/packaging-rules/{id}
+Authorization: Bearer eyJhbGci...
+```
+
+### Toggle Rule (ADMIN/OPERATOR)
+```http
+POST /api/v1/packaging-rules/{id}/toggle
 Authorization: Bearer eyJhbGci...
 ```
 

@@ -28,7 +28,7 @@ System auto-adds: nothing (dine-in uses real dishes)
 ```
 Product "Soup"
   └── PackagingRule
-        ├── packagingProduct: "Plastic Bowl"
+        ├── packagingIngredient: "Plastic Bowl"
         ├── orderTypes: [DELIVERY, TAKEAWAY]
         ├── quantityMode: PER_ITEM          ← 1 bowl per soup ordered
         ├── autoAddQuantity: 1
@@ -36,7 +36,7 @@ Product "Soup"
 
 Product "Soup"
   └── PackagingRule
-        ├── packagingProduct: "Bag"
+        ├── packagingIngredient: "Bag"
         ├── orderTypes: [DELIVERY, TAKEAWAY]
         ├── quantityMode: PER_ORDER         ← 1 bag regardless of qty
         ├── autoAddQuantity: 1
@@ -63,7 +63,7 @@ Check orderType == DELIVERY or TAKEAWAY?
 For each OrderItem:
   → Query PackagingRule for this product + orderType
   → Calculate packaging quantity based on quantityMode
-  → Create OrderItem for each packaging product
+  → Create OrderItem for each packaging ingredient
   → Mark as isPackagingItem = true
   ↓
 Packaging items appear in order with:
@@ -89,7 +89,7 @@ CREATE TABLE packaging_rules (
     id BIGSERIAL PRIMARY KEY,
     restaurant_id BIGINT NOT NULL REFERENCES restaurants(id),
     product_id BIGINT NOT NULL REFERENCES products(id),
-    packaging_product_id BIGINT NOT NULL REFERENCES products(id),
+    packaging_ingredient_id BIGINT NOT NULL REFERENCES inventory_ingredients(id),
     order_types VARCHAR(50) NOT NULL DEFAULT 'DELIVERY,TAKEAWAY',
     quantity_mode VARCHAR(20) NOT NULL DEFAULT 'PER_ITEM',
     auto_add_quantity INTEGER NOT NULL DEFAULT 1,
@@ -122,7 +122,7 @@ public class PackagingRule {
     Long id;
     @ManyToOne Restaurant restaurant;
     @ManyToOne Product product;             // trigger product (Soup)
-    @ManyToOne Product packagingProduct;    // packaging item (Bowl)
+    @ManyToOne Ingredient packagingIngredient;  // inventory item (Bowl)
     String orderTypes;                      // "DELIVERY,TAKEAWAY"
     QuantityMode quantityMode;              // PER_ITEM, PER_ORDER, FIXED
     Integer autoAddQuantity;                // default 1
@@ -192,10 +192,10 @@ For each order item:
        PER_ORDER → rule.autoAddQuantity (add once, skip if already added)
        FIXED     → rule.autoAddQuantity
      - Create OrderItem:
-       productId = rule.packagingProduct.id
-       productName = rule.packagingProduct.name
+       productId = rule.packagingIngredient.id
+       productName = rule.packagingIngredient.name
        quantity = calculated quantity
-       unitPrice = chargeToCustomer ? packagingProduct.price : 0
+       unitPrice = chargeToCustomer ? packagingIngredient.price : 0
        isPackagingItem = true
 
 Deduplicate: if multiple products trigger the same PER_ORDER packaging
@@ -227,12 +227,12 @@ Same logic in `submitOrder()` for self-service orders.
 **Location:** `modules/menu/dto/`
 
 1. **`CreatePackagingRuleRequest.java`**
-   - restaurantId, productId, packagingProductId
+   - restaurantId, productId, packagingIngredientId
    - orderTypes (string: "DELIVERY,TAKEAWAY")
    - quantityMode, autoAddQuantity, chargeToCustomer
 
 2. **`PackagingRuleResponse.java`**
-   - All rule fields + productName + packagingProductName
+   - All rule fields + productName + packagingIngredientName
 
 ---
 
@@ -375,7 +375,7 @@ Cart:
 
 ## Phase 11: Inventory Integration
 
-If packaging products (bags, bowls, spoons) are also tracked in inventory:
+If packaging ingredients (bags, bowls, spoons) are also tracked in inventory:
 - They are regular `Product` entries with linked `ProductIngredient` recipes
 - When auto-added to orders, `InventoryService.deductIngredientsForOrder()` deducts them like any other product
 - This means packaging material costs flow into COGS automatically
