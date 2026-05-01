@@ -12,6 +12,7 @@ import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.order.dto.pos.POSKitchenStatusDTO;
 import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.menu.repository.ProductRepository;
+import com.elcafe.modules.menu.service.PackagingService;
 import com.elcafe.modules.bundle.entity.Bundle;
 import com.elcafe.modules.bundle.repository.BundleRepository;
 import com.elcafe.modules.notification.service.NotificationService;
@@ -77,6 +78,7 @@ public class POSOrderService {
     private final PromotionUsageRepository promotionUsageRepository;
     private final CouponCodeRepository couponCodeRepository;
     private final POSTableService posTableService;
+    private final PackagingService packagingService;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -142,6 +144,15 @@ public class POSOrderService {
                 if (tableIds != null && !tableIds.isEmpty()) {
                     posTableService.assignTablesToOrder(order, tableIds);
                 }
+            }
+        }
+
+        // Auto-add packaging items for delivery/takeaway
+        if (order.getOrderType() == OrderType.DELIVERY || order.getOrderType() == OrderType.TAKEAWAY) {
+            List<OrderItem> packagingItems = packagingService.getPackagingItems(orderItems, order.getOrderType());
+            for (OrderItem pi : packagingItems) {
+                pi.setOrder(order);
+                order.addItem(pi);
             }
         }
 

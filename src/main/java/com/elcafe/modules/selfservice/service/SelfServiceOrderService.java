@@ -9,6 +9,7 @@ import com.elcafe.modules.menu.entity.ProductVariant;
 import com.elcafe.modules.menu.repository.LinkedItemRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
 import com.elcafe.modules.menu.repository.ProductVariantRepository;
+import com.elcafe.modules.menu.service.PackagingService;
 import com.elcafe.modules.notification.service.NotificationService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
@@ -83,6 +84,7 @@ public class SelfServiceOrderService {
     @Lazy private final OrderEventBroadcaster orderEventBroadcaster;
     @Lazy private final OrderEventPublisher orderEventPublisher;
     @Lazy private final NotificationService notificationService;
+    private final PackagingService packagingService;
 
     /**
      * Session expiry time in hours.
@@ -453,6 +455,24 @@ public class SelfServiceOrderService {
         Order order = createOrder(session, customer, diningTable, orderType, subtotal, customerNotes, settings);
         List<OrderItem> orderItems = convertCartItemsToOrderItems(cartItems, order);
         order.setItems(new ArrayList<>(orderItems));
+
+        // Auto-add packaging items for takeaway
+        if (orderType == OrderType.TAKEAWAY) {
+            List<OrderItem> packagingItems = packagingService.getPackagingItems(orderItems, orderType);
+            for (OrderItem pi : packagingItems) {
+                pi.setOrder(order);
+                order.getItems().add(pi);
+            }
+            if (!packagingItems.isEmpty()) {
+                // Recalculate subtotal with packaging
+                BigDecimal packagingTotal = packagingItems.stream()
+                        .map(OrderItem::getTotalPrice)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                subtotal = subtotal.add(packagingTotal);
+                order.setSubtotal(subtotal);
+                order.setTotal(subtotal);
+            }
+        }
 
         applyCouponIfProvided(request, order, session, customer, subtotal, orderType, orderItems);
         recalculateTotalAfterDiscount(order, subtotal);
