@@ -3963,6 +3963,27 @@
       "WASTED": "Wasted"
     }
   },
+  "packaging": {
+    "title": "Packaging Rules",
+    "subtitle": "Auto-add items for delivery and takeaway orders",
+    "addRule": "Add Packaging Item",
+    "product": "Packaging Product",
+    "selectProduct": "Select packaging item",
+    "orderTypes": "Order Types",
+    "delivery": "Delivery",
+    "takeaway": "Takeaway",
+    "quantityMode": "Quantity Mode",
+    "perItem": "Per Item",
+    "perOrder": "Per Order",
+    "fixed": "Fixed",
+    "quantity": "Quantity",
+    "chargeToCustomer": "Charge to Customer",
+    "free": "Free",
+    "noRules": "No packaging rules configured",
+    "perItemHint": "Multiplied by order quantity (3 soups → 3 bowls)",
+    "perOrderHint": "Added once per order regardless of quantity",
+    "fixedHint": "Always add this exact quantity"
+  },
   "review": {
     "title": "Customer Reviews",
     "subtitle": "Monitor customer feedback and respond to reviews",

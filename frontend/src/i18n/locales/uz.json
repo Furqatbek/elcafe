@@ -3768,6 +3768,27 @@
       "WASTED": "Hisobdan chiqarilgan"
     }
   },
+  "packaging": {
+    "title": "Qadoqlash qoidalari",
+    "subtitle": "Yetkazish va olib ketish buyurtmalari uchun avtomatik qo'shish",
+    "addRule": "Qadoq qo'shish",
+    "product": "Qadoq mahsuloti",
+    "selectProduct": "Qadoqni tanlang",
+    "orderTypes": "Buyurtma turlari",
+    "delivery": "Yetkazish",
+    "takeaway": "Olib ketish",
+    "quantityMode": "Miqdor rejimi",
+    "perItem": "Har bir buyum uchun",
+    "perOrder": "Har bir buyurtma uchun",
+    "fixed": "Belgilangan",
+    "quantity": "Miqdor",
+    "chargeToCustomer": "Mijozdan undirish",
+    "free": "Bepul",
+    "noRules": "Qadoqlash qoidalari sozlanmagan",
+    "perItemHint": "Buyurtma miqdoriga ko'paytiriladi (3 sho'rva → 3 kosa)",
+    "perOrderHint": "Har bir buyurtma uchun bir marta qo'shiladi",
+    "fixedHint": "Har doim belgilangan miqdor qo'shiladi"
+  },
   "review": {
     "title": "Mijozlar sharhlari",
     "subtitle": "Mijozlar fikr-mulohazalarini kuzatish va javob berish",

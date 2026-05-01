@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { menuAPI, restaurantAPI, uploadAPI, productVariantAPI } from '../services/api';
+import { menuAPI, restaurantAPI, uploadAPI, productVariantAPI, packagingRuleAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -85,6 +85,19 @@ export default function Products() {
   const [editVariantModalOpen, setEditVariantModalOpen] = useState(false);
   const [deleteVariantDialogOpen, setDeleteVariantDialogOpen] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState(null);
+
+  // Packaging rules state
+  const [packagingModalOpen, setPackagingModalOpen] = useState(false);
+  const [selectedProductForPackaging, setSelectedProductForPackaging] = useState(null);
+  const [packagingRules, setPackagingRules] = useState([]);
+  const [addPackagingOpen, setAddPackagingOpen] = useState(false);
+  const [packagingForm, setPackagingForm] = useState({
+    packagingProductId: '',
+    orderTypes: 'DELIVERY,TAKEAWAY',
+    quantityMode: 'PER_ITEM',
+    autoAddQuantity: 1,
+    chargeToCustomer: false,
+  });
 
   useEffect(() => {
     loadRestaurants();
@@ -410,6 +423,61 @@ export default function Products() {
     }
   };
 
+  // --- Packaging Rules Handlers ---
+  const handleViewPackaging = async (product) => {
+    setSelectedProductForPackaging(product);
+    setPackagingModalOpen(true);
+    await loadPackagingRules(product.id);
+  };
+
+  const loadPackagingRules = async (productId) => {
+    try {
+      const response = await packagingRuleAPI.getByProduct(productId);
+      setPackagingRules(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load packaging rules:', error);
+      setPackagingRules([]);
+    }
+  };
+
+  const handleCreatePackagingRule = async () => {
+    if (!selectedProductForPackaging || !packagingForm.packagingProductId) return;
+    try {
+      await packagingRuleAPI.create({
+        restaurantId: parseInt(selectedRestaurant),
+        productId: selectedProductForPackaging.id,
+        packagingProductId: parseInt(packagingForm.packagingProductId),
+        orderTypes: packagingForm.orderTypes,
+        quantityMode: packagingForm.quantityMode,
+        autoAddQuantity: packagingForm.autoAddQuantity,
+        chargeToCustomer: packagingForm.chargeToCustomer,
+      });
+      setAddPackagingOpen(false);
+      setPackagingForm({ packagingProductId: '', orderTypes: 'DELIVERY,TAKEAWAY', quantityMode: 'PER_ITEM', autoAddQuantity: 1, chargeToCustomer: false });
+      await loadPackagingRules(selectedProductForPackaging.id);
+    } catch (error) {
+      console.error('Failed to create packaging rule:', error);
+    }
+  };
+
+  const handleDeletePackagingRule = async (ruleId) => {
+    try {
+      await packagingRuleAPI.delete(ruleId);
+      if (selectedProductForPackaging) await loadPackagingRules(selectedProductForPackaging.id);
+    } catch (error) {
+      console.error('Failed to delete packaging rule:', error);
+    }
+  };
+
+  const handleTogglePackagingRule = async (ruleId) => {
+    try {
+      await packagingRuleAPI.toggle(ruleId);
+      if (selectedProductForPackaging) await loadPackagingRules(selectedProductForPackaging.id);
+    } catch (error) {
+      console.error('Failed to toggle packaging rule:', error);
+    }
+  };
+
   if (loading && products.length === 0) {
     return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
   }
@@ -570,6 +638,15 @@ export default function Products() {
                   >
                     <List className="h-4 w-4 mr-1" />
                     {t('pages.products.variants', 'Variants')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 min-w-[80px]"
+                    onClick={() => handleViewPackaging(product)}
+                  >
+                    <Package className="h-4 w-4 mr-1" />
+                    {t('packaging.title', 'Packaging')}
                   </Button>
                   <Button
                     size="sm"
@@ -1438,6 +1515,163 @@ export default function Products() {
             </Button>
             <Button variant="destructive" onClick={handleConfirmDeleteVariant}>
               {t('pages.products.delete', 'Delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Packaging Rules Modal */}
+      <Dialog open={packagingModalOpen} onOpenChange={setPackagingModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t('packaging.title', 'Packaging Rules')}</DialogTitle>
+            <DialogDescription>
+              {t('packaging.subtitle', 'Auto-add items for delivery and takeaway orders')}
+              {selectedProductForPackaging && ` — ${selectedProductForPackaging.name}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {packagingRules.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                {t('packaging.noRules', 'No packaging rules configured')}
+              </p>
+            ) : (
+              <div className="border rounded-lg divide-y">
+                {packagingRules.map((rule) => (
+                  <div key={rule.id} className={`flex items-center justify-between px-4 py-3 ${!rule.active ? 'opacity-50' : ''}`}>
+                    <div className="flex-1">
+                      <span className="font-medium">{rule.packagingProductName}</span>
+                      <div className="flex gap-2 mt-1 text-xs text-muted-foreground">
+                        <span className="bg-muted px-1.5 py-0.5 rounded">
+                          {rule.quantityMode === 'PER_ITEM' ? t('packaging.perItem', 'Per Item')
+                            : rule.quantityMode === 'PER_ORDER' ? t('packaging.perOrder', 'Per Order')
+                            : t('packaging.fixed', 'Fixed')}
+                        </span>
+                        <span>Qty: {rule.autoAddQuantity}</span>
+                        <span className={rule.chargeToCustomer ? 'text-orange-600' : 'text-green-600'}>
+                          {rule.chargeToCustomer ? `${rule.packagingProductPrice}` : t('packaging.free', 'Free')}
+                        </span>
+                        <span>{rule.orderTypes}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleTogglePackagingRule(rule.id)}>
+                        {rule.active ? <ToggleRight className="h-4 w-4 text-green-600" /> : <ToggleLeft className="h-4 w-4 text-gray-400" />}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeletePackagingRule(rule.id)}>
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPackagingModalOpen(false)}>{t('common.close', 'Close')}</Button>
+            <Button onClick={() => setAddPackagingOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('packaging.addRule', 'Add Packaging Item')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Packaging Rule Dialog */}
+      <Dialog open={addPackagingOpen} onOpenChange={setAddPackagingOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('packaging.addRule', 'Add Packaging Item')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t('packaging.product', 'Packaging Product')} *</Label>
+              <select
+                value={packagingForm.packagingProductId}
+                onChange={(e) => setPackagingForm({ ...packagingForm, packagingProductId: e.target.value })}
+                className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+              >
+                <option value="">{t('packaging.selectProduct', 'Select packaging item')}</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.price})</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('packaging.orderTypes', 'Order Types')}</Label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={packagingForm.orderTypes.includes('DELIVERY')}
+                    onChange={(e) => {
+                      const types = packagingForm.orderTypes.split(',').filter(Boolean);
+                      if (e.target.checked) types.push('DELIVERY');
+                      else types.splice(types.indexOf('DELIVERY'), 1);
+                      setPackagingForm({ ...packagingForm, orderTypes: types.join(',') });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  {t('packaging.delivery', 'Delivery')}
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={packagingForm.orderTypes.includes('TAKEAWAY')}
+                    onChange={(e) => {
+                      const types = packagingForm.orderTypes.split(',').filter(Boolean);
+                      if (e.target.checked) types.push('TAKEAWAY');
+                      else types.splice(types.indexOf('TAKEAWAY'), 1);
+                      setPackagingForm({ ...packagingForm, orderTypes: types.join(',') });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  {t('packaging.takeaway', 'Takeaway')}
+                </label>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('packaging.quantityMode', 'Quantity Mode')}</Label>
+                <select
+                  value={packagingForm.quantityMode}
+                  onChange={(e) => setPackagingForm({ ...packagingForm, quantityMode: e.target.value })}
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                >
+                  <option value="PER_ITEM">{t('packaging.perItem', 'Per Item')}</option>
+                  <option value="PER_ORDER">{t('packaging.perOrder', 'Per Order')}</option>
+                  <option value="FIXED">{t('packaging.fixed', 'Fixed')}</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('packaging.quantity', 'Quantity')}</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={packagingForm.autoAddQuantity}
+                  onChange={(e) => setPackagingForm({ ...packagingForm, autoAddQuantity: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="chargeToCustomer"
+                checked={packagingForm.chargeToCustomer}
+                onChange={(e) => setPackagingForm({ ...packagingForm, chargeToCustomer: e.target.checked })}
+                className="h-4 w-4"
+              />
+              <Label htmlFor="chargeToCustomer">{t('packaging.chargeToCustomer', 'Charge to Customer')}</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {packagingForm.quantityMode === 'PER_ITEM' && t('packaging.perItemHint', 'Multiplied by order quantity (3 soups → 3 bowls)')}
+              {packagingForm.quantityMode === 'PER_ORDER' && t('packaging.perOrderHint', 'Added once per order regardless of quantity')}
+              {packagingForm.quantityMode === 'FIXED' && t('packaging.fixedHint', 'Always add this exact quantity')}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddPackagingOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
+            <Button onClick={handleCreatePackagingRule} disabled={!packagingForm.packagingProductId}>
+              <Plus className="h-4 w-4 mr-2" /> {t('common.add', 'Add')}
             </Button>
           </DialogFooter>
         </DialogContent>

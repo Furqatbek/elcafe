@@ -1272,6 +1272,15 @@ export const orderTrackingAPI = {
     api.get(`/public/orders/track`, { params: { phone } }),
 };
 
+export const packagingRuleAPI = {
+  getByRestaurant: (restaurantId) => api.get(`/packaging-rules/restaurant/${restaurantId}`),
+  getByProduct: (productId) => api.get(`/packaging-rules/product/${productId}`),
+  create: (data) => api.post('/packaging-rules', data),
+  update: (id, data) => api.put(`/packaging-rules/${id}`, data),
+  delete: (id) => api.delete(`/packaging-rules/${id}`),
+  toggle: (id) => api.post(`/packaging-rules/${id}/toggle`),
+};
+
 export const reviewAPI = {
   // Public — no auth
   submit: (data) => api.post('/public/reviews', data),
