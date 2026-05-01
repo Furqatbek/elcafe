@@ -117,6 +117,10 @@ public class OrderItem {
     @Builder.Default
     private Boolean isBundle = false;
 
+    @Column(name = "is_packaging_item")
+    @Builder.Default
+    private Boolean isPackagingItem = false;
+
     // Soft delete support - order items should never be hard deleted for audit trail
     @Column(name = "deleted_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime deletedAt;
