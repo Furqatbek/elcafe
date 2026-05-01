@@ -70,6 +70,7 @@ export default function ProductionBatches() {
   const [completeOpen, setCompleteOpen] = useState(false);
   const [wasteOpen, setWasteOpen] = useState(false);
   const [addInputOpen, setAddInputOpen] = useState(false);
+  const [ingredientSearch, setIngredientSearch] = useState('');
 
   // Selected batch for detail/actions
   const [selectedBatch, setSelectedBatch] = useState(null);
@@ -764,6 +765,12 @@ export default function ProductionBatches() {
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>{t('production.ingredient', 'Ingredient')} *</Label>
+              <Input
+                placeholder={t('packaging.searchIngredient', 'Search ingredients...')}
+                value={ingredientSearch}
+                onChange={(e) => setIngredientSearch(e.target.value)}
+                className="mb-1"
+              />
               <Select
                 value={inputForm.ingredientId}
                 onValueChange={(value) => setInputForm({ ...inputForm, ingredientId: value })}
@@ -772,7 +779,9 @@ export default function ProductionBatches() {
                   <SelectValue placeholder={t('production.selectIngredient', 'Select ingredient')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {ingredients.map((ing) => (
+                  {ingredients
+                    .filter(ing => ing.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
+                    .map((ing) => (
                     <SelectItem key={ing.id} value={ing.id.toString()}>
                       {ing.name} ({ing.currentStock} {ing.unit})
                     </SelectItem>

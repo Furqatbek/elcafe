@@ -47,6 +47,7 @@ export default function InventoryWaste() {
   const [wasteReasons, setWasteReasons] = useState([]);
   const [wasteReport, setWasteReport] = useState(null);
   const [wasteModalOpen, setWasteModalOpen] = useState(false);
+  const [ingredientSearch, setIngredientSearch] = useState('');
   const [wasteFormData, setWasteFormData] = useState({
     ingredientId: '',
     quantity: '',
@@ -317,6 +318,12 @@ export default function InventoryWaste() {
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>{t('inventory.fields.ingredient', 'Ingredient')} *</Label>
+              <Input
+                placeholder={t('packaging.searchIngredient', 'Search ingredients...')}
+                value={ingredientSearch}
+                onChange={(e) => setIngredientSearch(e.target.value)}
+                className="mb-1"
+              />
               <Select
                 value={wasteFormData.ingredientId}
                 onValueChange={(value) => setWasteFormData({ ...wasteFormData, ingredientId: value })}
@@ -325,7 +332,9 @@ export default function InventoryWaste() {
                   <SelectValue placeholder={t('inventory.waste.selectIngredient', 'Select ingredient')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {ingredients.map((ingredient) => (
+                  {ingredients
+                    .filter(ing => ing.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
+                    .map((ingredient) => (
                     <SelectItem key={ingredient.id} value={ingredient.id.toString()}>
                       {ingredient.name} ({ingredient.currentStock} {ingredient.unit})
                     </SelectItem>

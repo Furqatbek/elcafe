@@ -91,6 +91,7 @@ export default function Products() {
   const [selectedProductForPackaging, setSelectedProductForPackaging] = useState(null);
   const [packagingRules, setPackagingRules] = useState([]);
   const [addPackagingOpen, setAddPackagingOpen] = useState(false);
+  const [packagingSearch, setPackagingSearch] = useState('');
   const [packagingForm, setPackagingForm] = useState({
     packagingIngredientId: '',
     orderTypes: 'DELIVERY,TAKEAWAY',
@@ -1595,15 +1596,24 @@ export default function Products() {
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>{t('packaging.product', 'Packaging Product')} *</Label>
+              <Input
+                placeholder={t('packaging.searchIngredient', 'Search ingredients...')}
+                value={packagingSearch}
+                onChange={(e) => setPackagingSearch(e.target.value)}
+                className="mb-1"
+              />
               <select
                 value={packagingForm.packagingIngredientId}
                 onChange={(e) => setPackagingForm({ ...packagingForm, packagingIngredientId: e.target.value })}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                size={6}
               >
                 <option value="">{t('packaging.selectIngredient', 'Select inventory item')}</option>
-                {inventoryIngredients.map((ing) => (
-                  <option key={ing.id} value={ing.id}>{ing.name} ({ing.currentStock} {ing.unit})</option>
-                ))}
+                {inventoryIngredients
+                  .filter(ing => ing.name.toLowerCase().includes(packagingSearch.toLowerCase()))
+                  .map((ing) => (
+                    <option key={ing.id} value={ing.id}>{ing.name} ({ing.currentStock} {ing.unit})</option>
+                  ))}
               </select>
             </div>
             <div className="space-y-2">

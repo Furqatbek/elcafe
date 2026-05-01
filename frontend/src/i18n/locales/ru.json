@@ -3729,6 +3729,7 @@
     "product": "Упаковочный товар",
     "selectProduct": "Выберите упаковку",
     "selectIngredient": "Выберите из инвентаря",
+    "searchIngredient": "Поиск ингредиентов...",
     "orderTypes": "Типы заказов",
     "delivery": "Доставка",
     "takeaway": "Самовывоз",

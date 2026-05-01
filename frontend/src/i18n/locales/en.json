@@ -3970,6 +3970,7 @@
     "product": "Packaging Product",
     "selectProduct": "Select packaging item",
     "selectIngredient": "Select inventory item",
+    "searchIngredient": "Search ingredients...",
     "orderTypes": "Order Types",
     "delivery": "Delivery",
     "takeaway": "Takeaway",
