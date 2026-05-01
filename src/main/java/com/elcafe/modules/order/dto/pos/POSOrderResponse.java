@@ -56,6 +56,7 @@ public class POSOrderResponse {
         private BigDecimal totalPrice;
         private List<String> modifiers;
         private String notes;
+        private Boolean isPackagingItem;
     }
 
     @Data

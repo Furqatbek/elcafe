@@ -3982,7 +3982,8 @@
     "noRules": "No packaging rules configured",
     "perItemHint": "Multiplied by order quantity (3 soups → 3 bowls)",
     "perOrderHint": "Added once per order regardless of quantity",
-    "fixedHint": "Always add this exact quantity"
+    "fixedHint": "Always add this exact quantity",
+    "autoAdded": "Packaging"
   },
   "review": {
     "title": "Customer Reviews",

@@ -364,6 +364,11 @@ const OrderModificationScreen = () => {
                       <h3 className="font-semibold text-gray-900">
                         {item.productName || item.name}
                       </h3>
+                      {item.isPackagingItem && (
+                        <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                          📦 {t('packaging.autoAdded', 'Packaging')}
+                        </span>
+                      )}
                       {isNew && (
                         <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
                           {t('pos.modify.new', 'NEW')}

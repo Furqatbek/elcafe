@@ -429,6 +429,7 @@ public class POSOrderService {
                     itemResponse.setPrice(item.getUnitPrice());
                     itemResponse.setTotalPrice(item.getTotalPrice());
                     itemResponse.setNotes(item.getSpecialInstructions());
+                    itemResponse.setIsPackagingItem(Boolean.TRUE.equals(item.getIsPackagingItem()));
 
                     String addOnsDisplay = item.getAddOnsDisplay();
                     if (addOnsDisplay != null && !addOnsDisplay.isEmpty()) {

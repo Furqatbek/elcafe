@@ -3787,7 +3787,8 @@
     "noRules": "Qadoqlash qoidalari sozlanmagan",
     "perItemHint": "Buyurtma miqdoriga ko'paytiriladi (3 sho'rva → 3 kosa)",
     "perOrderHint": "Har bir buyurtma uchun bir marta qo'shiladi",
-    "fixedHint": "Har doim belgilangan miqdor qo'shiladi"
+    "fixedHint": "Har doim belgilangan miqdor qo'shiladi",
+    "autoAdded": "Qadoq"
   },
   "review": {
     "title": "Mijozlar sharhlari",
