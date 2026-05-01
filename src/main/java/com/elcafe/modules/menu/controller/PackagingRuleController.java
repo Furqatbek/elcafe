@@ -45,8 +45,8 @@ public class PackagingRuleController {
     @PostMapping
     public ResponseEntity<ApiResponse<PackagingRuleResponse>> createRule(
             @Valid @RequestBody CreatePackagingRuleRequest request) {
-        log.info("Creating packaging rule: product {} → packaging {}",
-                request.getProductId(), request.getPackagingProductId());
+        log.info("Creating packaging rule: product {} → ingredient {}",
+                request.getProductId(), request.getPackagingIngredientId());
         PackagingRule rule = packagingService.createRule(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Packaging rule created", PackagingRuleResponse.fromEntity(rule)));
