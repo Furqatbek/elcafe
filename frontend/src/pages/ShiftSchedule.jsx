@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { restaurantAPI, operatorAPI } from '../services/api';
+import { restaurantAPI, operatorAPI, waiterAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -75,8 +75,24 @@ export default function ShiftSchedule() {
       setRestaurants(Array.isArray(list) ? list : []);
       if (list.length > 0) setSelectedRestaurant(list[0].id.toString());
     }).catch(console.error);
-    operatorAPI.getAll({ page: 0, size: 100 }).then(res => {
-      setEmployees(res.data.data?.content || res.data.data || []);
+    operatorAPI.getAll({ page: 0, size: 100 }).then(async (res) => {
+      const operators = (res.data.data?.content || res.data.data || []).map(e => ({
+        ...e, _role: 'Operator',
+      }));
+      let waiters = [];
+      try {
+        const wRes = await waiterAPI.getAll({ page: 0, size: 100 });
+        waiters = (wRes.data.data?.content || wRes.data.data || []).map(w => ({
+          id: w.userId || w.id,
+          fullName: w.name || w.fullName || `Waiter #${w.id}`,
+          email: w.phone || '',
+          _role: 'Waiter',
+        }));
+      } catch (e) { /* ignore if waiter API fails */ }
+      // Merge and deduplicate by id
+      const merged = [...operators, ...waiters];
+      const unique = merged.filter((emp, idx) => merged.findIndex(e => e.id === emp.id) === idx);
+      setEmployees(unique);
     }).catch(console.error);
   }, []);
 
@@ -256,7 +272,7 @@ export default function ShiftSchedule() {
               >
                 <option value="">Select employee</option>
                 {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.fullName || emp.email}</option>
+                  <option key={emp.id} value={emp.id}>{emp.fullName || emp.email}{emp._role ? ` (${emp._role})` : ''}</option>
                 ))}
               </select>
             </div>
