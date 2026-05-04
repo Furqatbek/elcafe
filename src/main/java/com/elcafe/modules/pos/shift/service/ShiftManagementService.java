@@ -103,11 +103,14 @@ public class ShiftManagementService {
             .build();
 
         EmployeeShift savedShift = shiftRepository.save(shift);
-        log.info("Employee {} clocked in for shift at restaurant {}", employee.getId(), restaurantId);
+
+        String shiftName = employee != null ? employee.getFullName()
+                : (waiter != null ? waiter.getName() : "Unknown");
+        log.info("{} clocked in for shift at restaurant {}", shiftName, restaurantId);
 
         // Telegram notification
         try {
-            ownerNotificationService.notifyShiftOpened(restaurantId, employee.getFullName(),
+            ownerNotificationService.notifyShiftOpened(restaurantId, shiftName,
                     savedShift.getClockIn().toLocalTime().toString().substring(0, 5));
         } catch (Exception e) {
             log.warn("Failed to send shift opened notification: {}", e.getMessage());
