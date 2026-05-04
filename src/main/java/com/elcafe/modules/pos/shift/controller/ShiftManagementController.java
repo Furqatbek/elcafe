@@ -23,7 +23,7 @@ import java.util.List;
 @RequestMapping("/api/v1/restaurants/{restaurantId}/pos/shifts")
 @RequiredArgsConstructor
 @Tag(name = "Shift Management", description = "Employee shift and clock-in/out management")
-@PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR')")
+@PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'WAITER')")
 public class ShiftManagementController {
 
     private final ShiftManagementService shiftService;
