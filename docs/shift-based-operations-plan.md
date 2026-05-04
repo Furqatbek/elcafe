@@ -72,6 +72,12 @@ If active shift exists → proceed to POS as normal.
 | `POSApp.jsx` | Check for active shift before showing POS |
 | `posStore.js` | Store active shift info |
 
+### Tests
+- `POSOrderServiceTest`: order creation blocked without active shift
+- `POSOrderServiceTest`: order linked to active shift ID
+- `POSOrderServiceTest`: order succeeds with active shift
+- `ShiftManagementServiceTest`: getActiveShiftForUser returns correct shift
+
 ---
 
 ## Phase 2: Shift Dashboard (Real-Time)
@@ -118,6 +124,11 @@ If active shift exists → proceed to POS as normal.
 | `frontend/src/pages/ShiftDashboard.jsx` | Real-time shift overview |
 | Route in App.jsx | `/admin/shift-dashboard` |
 | Sidebar link | Under Operations section |
+
+### Tests
+- `ShiftManagementServiceTest`: getActiveShifts returns only ACTIVE/ON_BREAK
+- `ShiftManagementServiceTest`: overtime calculation (worked hours > threshold)
+- `ShiftManagementServiceTest`: break duration calculation
 
 ---
 
@@ -169,6 +180,12 @@ CREATE TABLE shift_schedules (
 - Employee availability preferences
 - Publish schedule (notifies employees)
 
+### Tests
+- `ShiftScheduleServiceTest`: conflict detection — same employee, overlapping times
+- `ShiftScheduleServiceTest`: copy week creates correct records
+- `ShiftScheduleServiceTest`: auto-fill from WorkingHours
+- `ShiftScheduleRepositoryTest`: find by restaurant + date range
+
 ---
 
 ## Phase 4: Shift-Based Financial Reports
@@ -209,6 +226,11 @@ LEFT JOIN orders o ON o.shift_id = es.id
 WHERE es.restaurant_id = ? AND es.shift_date = ?
 GROUP BY es.id
 ```
+
+### Tests
+- `ShiftReportServiceTest`: revenue grouped by shift returns correct totals
+- `ShiftReportServiceTest`: labor cost ratio calculation
+- `ShiftReportServiceTest`: per-employee order count and revenue
 
 ---
 
@@ -251,6 +273,12 @@ GROUP BY es.id
 6. Both employees confirm
 7. Old shift → COMPLETED, new shift → ACTIVE
 
+### Tests
+- `ShiftHandoverServiceTest`: cash variance calculation (expected vs counted)
+- `ShiftHandoverServiceTest`: open tables transferred to new shift
+- `ShiftHandoverServiceTest`: status transitions (ACTIVE → COMPLETED)
+- `ShiftHandoverServiceTest`: pending orders listed correctly
+
 ---
 
 ## Phase 6: Overtime & Labor Rules
@@ -282,6 +310,13 @@ CREATE TABLE shift_rules (
 - 🔴 Auto-clock-out if exceeded max (with notification)
 - 📊 Weekly overtime report
 - 💰 Overtime pay calculation in payroll
+
+### Tests
+- `OvertimeRuleServiceTest`: overtime detected when hours > max
+- `OvertimeRuleServiceTest`: break required after configured hours
+- `OvertimeRuleServiceTest`: auto-clock-out triggered at max
+- `OvertimeRuleServiceTest`: weekly hours accumulation across shifts
+- `OvertimeRuleServiceTest`: overtime pay multiplier applied correctly
 
 ---
 
@@ -326,6 +361,12 @@ After clock in:
 - NFC (future — employee card tap)
 - GPS verification (optional — must be at restaurant location)
 
+### Tests
+- `ShiftManagementServiceTest`: clock-in with valid PIN succeeds
+- `ShiftManagementServiceTest`: clock-in with invalid PIN rejected
+- `ShiftManagementServiceTest`: duplicate clock-in prevented (already active)
+- `ShiftManagementServiceTest`: clock-out records closing time
+
 ---
 
 ## Phase 8: Shift Notifications
@@ -344,6 +385,11 @@ After clock in:
 | End-of-day report ready | Manager/Owner | Telegram |
 | Schedule published | All affected employees | Push/Telegram |
 | Shift swap request | Target employee | Push |
+
+### Tests
+- `ShiftNotificationServiceTest`: late employee triggers manager notification
+- `ShiftNotificationServiceTest`: overtime warning fires at threshold
+- `ShiftNotificationServiceTest`: schedule publish notifies all employees
 
 ---
 
@@ -374,6 +420,12 @@ CREATE TABLE shift_swap_requests (
 3. Manager approves the swap
 4. Schedule updated automatically
 
+### Tests
+- `ShiftSwapServiceTest`: request created with PENDING status
+- `ShiftSwapServiceTest`: target accepts → status ACCEPTED
+- `ShiftSwapServiceTest`: manager approves → schedules swapped
+- `ShiftSwapServiceTest`: manager rejects → original schedule unchanged
+
 ---
 
 ## Phase 10: Shift-Based Inventory Counts
@@ -395,28 +447,35 @@ Shift End (Ali, 16:00):
 
 This ties inventory variance to specific shifts/employees — accountability.
 
+### Tests
+- `ShiftInventoryServiceTest`: start snapshot records current stock levels
+- `ShiftInventoryServiceTest`: end snapshot calculates expected vs actual
+- `ShiftInventoryServiceTest`: discrepancies flagged correctly
+
 ---
 
 ## Implementation Priority
 
-| Priority | Phase | Effort | Impact |
-|----------|-------|--------|--------|
-| 🔴 High | Phase 1: POS Enforcement | 2 days | Core — nothing works shift-based without this |
-| 🔴 High | Phase 2: Shift Dashboard | 2 days | Visibility — managers need real-time view |
-| 🟡 Medium | Phase 4: Shift Financial Reports | 2 days | Analytics — justify labor allocation |
-| 🟡 Medium | Phase 5: Shift Handover | 2 days | Operations — smooth transitions |
-| 🟡 Medium | Phase 7: Mobile Clock In | 1 day | UX — employees need easy clock in |
-| 🟡 Medium | Phase 6: Overtime Rules | 2 days | Compliance — labor law requirements |
-| 🟢 Low | Phase 3: Schedule Builder | 3 days | Planning — nice but can use spreadsheet |
-| 🟢 Low | Phase 8: Notifications | 1 day | QoL — leverages existing notification infra |
-| 🟢 Low | Phase 9: Shift Swap | 2 days | Employee happiness |
-| 🟢 Low | Phase 10: Inventory Counts | 2 days | Advanced accountability |
+| Priority | Phase | Effort (incl. tests) | Tests | Impact |
+|----------|-------|---------------------|-------|--------|
+| 🔴 High | Phase 1: POS Enforcement | 2.5 days | ~4 | Core — nothing works shift-based without this |
+| 🔴 High | Phase 2: Shift Dashboard | 2.5 days | ~3 | Visibility — managers need real-time view |
+| 🟡 Medium | Phase 4: Shift Financial Reports | 2.5 days | ~3 | Analytics — justify labor allocation |
+| 🟡 Medium | Phase 5: Shift Handover | 2.5 days | ~4 | Operations — smooth transitions |
+| 🟡 Medium | Phase 7: Mobile Clock In | 1.5 days | ~4 | UX — employees need easy clock in |
+| 🟡 Medium | Phase 6: Overtime Rules | 2.5 days | ~5 | Compliance — labor law requirements |
+| 🟢 Low | Phase 3: Schedule Builder | 3.5 days | ~4 | Planning — nice but can use spreadsheet |
+| 🟢 Low | Phase 8: Notifications | 1.5 days | ~3 | QoL — leverages existing notification infra |
+| 🟢 Low | Phase 9: Shift Swap | 2.5 days | ~4 | Employee happiness |
+| 🟢 Low | Phase 10: Inventory Counts | 2.5 days | ~3 | Advanced accountability |
 
 ---
 
 ## Summary
 
-**Total: ~19 days of development for all 10 phases**
+**Total: ~24 days of development for all 10 phases (~37 tests)**
+
+Each phase includes its own tests — written alongside the implementation, not as a separate phase.
 
 Start with Phase 1 (enforce shifts on POS) and Phase 2 (dashboard) — these form the foundation. Everything else builds on top.
 
