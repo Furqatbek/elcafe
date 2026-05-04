@@ -81,6 +81,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/restaurant/**").permitAll()
                         // Allow GET requests to restaurants and tables for all authenticated users
                         .requestMatchers(HttpMethod.GET, "/api/v1/restaurants/**").authenticated()
+                        // POS shift endpoints — open to all authenticated staff
+                        .requestMatchers("/api/v1/restaurants/*/pos/**").authenticated()
                         // Admin only endpoints
                         .requestMatchers(HttpMethod.POST, "/api/v1/restaurants/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/restaurants/**").hasRole("ADMIN")
