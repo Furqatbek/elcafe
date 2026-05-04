@@ -2416,6 +2416,13 @@
       "paid": "To'langan",
       "unpaid": "To'lanmagan"
     },
+    "shift": {
+      "noActiveShift": "Faol smena yo'q",
+      "clockInRequired": "Kassa bilan ishlashdan oldin smenani boshlash kerak",
+      "clockIn": "Smenani boshlash",
+      "clockOut": "Smenani tugatish",
+      "activeShift": "Faol smena"
+    },
     "weight": {
       "perUnit": "uchun",
       "addToCart": "{{weight}} {{unit}} savatga qo'shish",

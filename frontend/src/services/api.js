@@ -394,6 +394,12 @@ export const waiterCommissionAPI = {
   approveCommissions: (commissionIds) => api.post('/waiter-commissions/approve', commissionIds),
 };
 
+export const shiftAPI = {
+  getActive: (restaurantId) => api.get(`/restaurants/${restaurantId}/pos/shifts/active`),
+  clockIn: (restaurantId, data) => api.post(`/restaurants/${restaurantId}/pos/shifts/clock-in`, data),
+  clockOut: (restaurantId, shiftId, data) => api.post(`/restaurants/${restaurantId}/pos/shifts/${shiftId}/clock-out`, data),
+};
+
 export const posAPI = {
   createOrder: (orderData) => api.post('/pos/orders', orderData),
   getCategories: (restaurantId) => api.get('/categories', { params: { restaurantId } }),

@@ -107,6 +107,9 @@ const usePOSStore = create(
         notes: '',
       },
 
+      // Active Shift
+      activeShift: null, // { id, employeeName, clockIn, ... } or null if not clocked in
+
       // Kitchen Status (for confirmation screen polling)
       kitchenStatus: {
         orderId: null,
@@ -1065,6 +1068,8 @@ const usePOSStore = create(
       }),
 
       // Actions: UI Management
+      setActiveShift: (shift) => set({ activeShift: shift }),
+
       setCurrentScreen: (screen) => set((state) => ({
         ui: { ...state.ui, currentScreen: screen },
       })),

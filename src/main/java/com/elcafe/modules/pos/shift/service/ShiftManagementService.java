@@ -178,6 +178,13 @@ public class ShiftManagementService {
     /**
      * Get active shifts for a restaurant.
      */
+    /**
+     * Get active shift for a specific employee. Returns null if no active shift.
+     */
+    public EmployeeShift getActiveShiftForUser(Long employeeId) {
+        return shiftRepository.findActiveShiftByEmployee(employeeId).orElse(null);
+    }
+
     public List<ShiftSummaryDTO> getActiveShifts(Long restaurantId) {
         return shiftRepository.findActiveShiftsByRestaurant(restaurantId)
             .stream()

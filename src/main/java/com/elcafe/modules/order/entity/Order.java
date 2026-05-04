@@ -129,6 +129,9 @@ public class Order {
     @Column(name = "order_source")
     private OrderSource orderSource;
 
+    @Column(name = "shift_id")
+    private Long shiftId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

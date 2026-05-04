@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import usePOSStore from './store/posStore';
-import { posAPI } from '../services/api';
+import { posAPI, shiftAPI } from '../services/api';
 
 // Screens
 import StartOrderScreen from './screens/StartOrderScreen';
@@ -24,15 +24,41 @@ import SplitBillScreen from './screens/SplitBillScreen';
 const POSApp = () => {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { ui, setCurrentScreen } = usePOSStore();
+  const { ui, activeShift, setActiveShift, setCurrentScreen } = usePOSStore();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
+  const [shiftLoading, setShiftLoading] = useState(true);
+  const [clockInError, setClockInError] = useState(null);
+
+  const restaurantId = localStorage.getItem('selectedRestaurantId') || '1';
 
   // Set default restaurantId on mount if not already set
   useEffect(() => {
     if (!localStorage.getItem('selectedRestaurantId')) {
       localStorage.setItem('selectedRestaurantId', '1');
     }
+  }, []);
+
+  // Check for active shift on mount
+  useEffect(() => {
+    const checkShift = async () => {
+      try {
+        const res = await shiftAPI.getActive(restaurantId);
+        const shifts = res.data.data || [];
+        // Find shift for current user (first active shift)
+        if (shifts.length > 0) {
+          setActiveShift(shifts[0]);
+        } else {
+          setActiveShift(null);
+        }
+      } catch (e) {
+        console.error('Failed to check active shift:', e);
+        setActiveShift(null);
+      } finally {
+        setShiftLoading(false);
+      }
+    };
+    checkShift();
   }, []);
 
   // Check for pending payment order on mount
@@ -210,6 +236,46 @@ const POSApp = () => {
         return <StartOrderScreen />;
     }
   };
+
+  // Clock-in gate — show if no active shift and not loading
+  if (!shiftLoading && !activeShift) {
+    const handleClockIn = async () => {
+      setClockInError(null);
+      try {
+        const res = await shiftAPI.clockIn(restaurantId, {});
+        setActiveShift(res.data.data || res.data);
+      } catch (e) {
+        setClockInError(e.response?.data?.message || e.message);
+      }
+    };
+
+    return (
+      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="max-w-md w-full text-center p-8">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {t('pos.shift.noActiveShift', 'No Active Shift')}
+          </h1>
+          <p className="text-lg text-gray-500 mb-8">
+            {t('pos.shift.clockInRequired', 'You must clock in before using the POS')}
+          </p>
+          {clockInError && (
+            <p className="text-red-500 mb-4">{clockInError}</p>
+          )}
+          <button
+            onClick={handleClockIn}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xl font-semibold rounded-xl transition-colors"
+          >
+            {t('pos.shift.clockIn', 'Clock In')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pos-app h-screen overflow-hidden">

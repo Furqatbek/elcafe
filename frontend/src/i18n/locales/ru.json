@@ -2368,6 +2368,13 @@
       "paymentIssue": "Проблема с оплатой",
       "other": "Другое"
     },
+    "shift": {
+      "noActiveShift": "Нет активной смены",
+      "clockInRequired": "Необходимо начать смену перед работой с кассой",
+      "clockIn": "Начать смену",
+      "clockOut": "Завершить смену",
+      "activeShift": "Активная смена"
+    },
     "enterFullscreen": "Полный экран",
     "exitFullscreen": "Выход из полного экрана (ESC)",
     "weight": {

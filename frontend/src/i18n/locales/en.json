@@ -2591,6 +2591,13 @@
       "next": "Next",
       "finish": "Finish"
     },
+    "shift": {
+      "noActiveShift": "No Active Shift",
+      "clockInRequired": "You must clock in before using the POS",
+      "clockIn": "Clock In",
+      "clockOut": "Clock Out",
+      "activeShift": "Active Shift"
+    },
     "enterFullscreen": "Enter Fullscreen",
     "exitFullscreen": "Exit Fullscreen (ESC)",
     "kitchenTicket": {
