@@ -145,6 +145,7 @@ export default function Layout() {
         { label: t('nav.sub.operators'), icon: UserCog, path: '/operators' },
         { label: t('nav.sub.waiters'), icon: UserCheck, path: '/employees/waiters' },
         { label: t('nav.sub.waiterPerformance', 'Waiter Performance'), icon: Trophy, path: '/employees/waiter-performance' },
+        { label: t('nav.sub.shiftDashboard', 'Shift Dashboard'), icon: Clock, path: '/employees/shift-dashboard' },
         { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
         { label: t('nav.sub.courierMap'), icon: MapPin, path: '/courier-map' },
       ],
