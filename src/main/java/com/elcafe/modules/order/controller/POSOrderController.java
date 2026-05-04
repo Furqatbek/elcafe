@@ -57,7 +57,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/pos/orders")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
 @Tag(name = "POS Orders", description = "Point of Sale system endpoints for in-store orders")
 public class POSOrderController {
 
