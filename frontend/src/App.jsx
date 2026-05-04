@@ -23,6 +23,7 @@ import Waiters from './pages/Waiters';
 import WaiterPerformance from './pages/WaiterPerformance';
 import ShiftDashboard from './pages/ShiftDashboard';
 import ShiftSchedule from './pages/ShiftSchedule';
+import MobileClockIn from './pages/MobileClockIn';
 import Couriers from './pages/Couriers';
 import CourierMap from './pages/CourierMap';
 import MenuCollections from './pages/MenuCollections';
@@ -123,6 +124,7 @@ function App() {
         <Route path="/pos/customer-display" element={<CustomerDisplayScreen />} />
         <Route path="/pos/order-status" element={<OrderStatusBoardScreen />} />
         <Route path="/review" element={<ReviewPage />} />
+        <Route path="/shift/clock" element={<MobileClockIn />} />
         <Route
           path="/"
           element={
