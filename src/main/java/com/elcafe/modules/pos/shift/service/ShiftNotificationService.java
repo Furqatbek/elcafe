@@ -78,14 +78,14 @@ public class ShiftNotificationService {
         long notifyAtMinutes = (long) rules.getNotifyOvertimeAtHours() * 60;
 
         if (workedMinutes >= notifyAtMinutes && workedMinutes < (long) rules.getMaxShiftHours() * 60) {
-            String empName = shift.getEmployee().getFullName();
+            String empName = shift.getEmployee() != null ? shift.getEmployee().getFullName() : "Unknown";
             long remaining = (long) rules.getMaxShiftHours() * 60 - workedMinutes;
             return new ShiftNotification(
                     NotificationType.APPROACHING_OVERTIME,
                     "Approaching Overtime",
                     String.format("%s has %d minutes until max shift hours (%dh)",
                             empName, remaining, rules.getMaxShiftHours()),
-                    shift.getEmployee().getId(),
+                    shift.getEmployee() != null ? shift.getEmployee().getId() : null,
                     "EMPLOYEE"
             );
         }
@@ -97,7 +97,7 @@ public class ShiftNotificationService {
      */
     public ShiftNotification checkBreakExceeded(EmployeeShift shift, ShiftRules rules, long currentBreakMinutes) {
         if (currentBreakMinutes > rules.getMinBreakDurationMinutes() * 2) {
-            String empName = shift.getEmployee().getFullName();
+            String empName = shift.getEmployee() != null ? shift.getEmployee().getFullName() : "Unknown";
             return new ShiftNotification(
                     NotificationType.BREAK_EXCEEDED,
                     "Break Exceeded",

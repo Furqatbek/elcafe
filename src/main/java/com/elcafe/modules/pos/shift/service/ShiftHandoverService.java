@@ -64,7 +64,7 @@ public class ShiftHandoverService {
 
         return ShiftHandoverDTO.builder()
                 .outgoingShiftId(outgoingShiftId)
-                .outgoingEmployeeName(outgoing.getEmployee().getFullName())
+                .outgoingEmployeeName(outgoing.getEmployee() != null ? outgoing.getEmployee().getFullName() : (outgoing.getWaiter() != null ? outgoing.getWaiter().getName() : "Unknown"))
                 .expectedCash(expectedCash)
                 .openTables(openTables)
                 .openTableCount(openTables.size())
@@ -98,11 +98,11 @@ public class ShiftHandoverService {
         shiftRepository.save(outgoing);
 
         log.info("Shift handover completed: {} → cash variance: {}",
-                outgoing.getEmployee().getFullName(), variance);
+                outgoing.getEmployee() != null ? outgoing.getEmployee().getFullName() : (outgoing.getWaiter() != null ? outgoing.getWaiter().getName() : "Unknown"), variance);
 
         return ShiftHandoverDTO.builder()
                 .outgoingShiftId(outgoingShiftId)
-                .outgoingEmployeeName(outgoing.getEmployee().getFullName())
+                .outgoingEmployeeName(outgoing.getEmployee() != null ? outgoing.getEmployee().getFullName() : (outgoing.getWaiter() != null ? outgoing.getWaiter().getName() : "Unknown"))
                 .expectedCash(expectedCash)
                 .countedCash(countedCash)
                 .cashVariance(variance)

@@ -147,7 +147,11 @@ public class ShiftManagementService {
         }
 
         EmployeeShift savedShift = shiftRepository.save(shift);
-        log.info("Employee {} clocked out from shift {}", savedShift.getEmployee().getId(), shiftId);
+
+        String shiftName = savedShift.getEmployee() != null
+                ? savedShift.getEmployee().getFullName()
+                : (savedShift.getWaiter() != null ? savedShift.getWaiter().getName() : "Unknown");
+        log.info("{} clocked out from shift {}", shiftName, shiftId);
 
         // Telegram notification with shift summary
         try {
@@ -157,7 +161,7 @@ public class ShiftManagementService {
                     ? savedShift.getClockOut().toLocalTime().toString().substring(0, 5) : "--";
             ownerNotificationService.notifyShiftClosed(
                     savedShift.getRestaurant().getId(),
-                    savedShift.getEmployee().getFullName(),
+                    shiftName,
                     clockInTime, clockOutTime,
                     savedShift.getWorkedMinutes(),
                     savedShift.getTotalOrders() != null ? savedShift.getTotalOrders() : 0,
@@ -197,7 +201,7 @@ public class ShiftManagementService {
         shift.setStatus(ShiftStatus.ON_BREAK);
         shiftRepository.save(shift);
 
-        log.info("Employee {} started {} break", shift.getEmployee().getId(), breakType);
+        log.info("Shift {} started {} break", shiftId, breakType);
         return breakRepository.save(shiftBreak);
     }
 
@@ -217,7 +221,7 @@ public class ShiftManagementService {
         shift.endBreak();
 
         shiftRepository.save(shift);
-        log.info("Employee {} ended break", shift.getEmployee().getId());
+        log.info("Shift {} ended break", shiftId);
         return breakRepository.save(activeBreak);
     }
 

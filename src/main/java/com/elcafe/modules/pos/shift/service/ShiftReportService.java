@@ -52,8 +52,8 @@ public class ShiftReportService {
 
                     return ShiftFinancialReportDTO.ShiftRevenueEntry.builder()
                             .shiftId(shift.getId())
-                            .employeeId(shift.getEmployee().getId())
-                            .employeeName(shift.getEmployee().getFullName())
+                            .employeeId(shift.getEmployee() != null ? shift.getEmployee().getId() : (shift.getWaiter() != null ? shift.getWaiter().getId() : null))
+                            .employeeName(shift.getEmployee() != null ? shift.getEmployee().getFullName() : (shift.getWaiter() != null ? shift.getWaiter().getName() : "Unknown"))
                             .clockIn(shift.getClockIn())
                             .clockOut(shift.getClockOut())
                             .workedMinutes(workedMin)

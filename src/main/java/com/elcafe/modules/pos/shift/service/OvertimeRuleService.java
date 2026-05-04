@@ -95,7 +95,7 @@ public class OvertimeRuleService {
                 null, weekStart, weekEnd); // TODO: filter by employee properly
 
         return shifts.stream()
-                .filter(s -> s.getEmployee().getId().equals(employeeId))
+                .filter(s -> s.getEmployee() != null && s.getEmployee().getId().equals(employeeId))
                 .mapToLong(EmployeeShift::getWorkedMinutes)
                 .sum();
     }
