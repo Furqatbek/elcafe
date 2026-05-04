@@ -222,6 +222,7 @@ public class POSOrderService {
                         .build();
                 savedOrder.addPayment(payment);
                 savedOrder.setPaymentStatus(PaymentStatus.COMPLETED);
+                savedOrder.setStatus(OrderStatus.COMPLETED);
                 savedOrder = orderRepository.save(savedOrder);
                 log.info("Auto-payment recorded: {} {} for order {}",
                         method, savedOrder.getTotal(), savedOrder.getOrderNumber());
