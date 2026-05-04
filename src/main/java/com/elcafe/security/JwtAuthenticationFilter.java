@@ -64,13 +64,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     logger.debug("Processing waiter token - role: " + role + ", waiterId: " + waiterId);
 
                     if (role != null && jwtUtil.isTokenExpired(jwt) == false) {
-                        // Create UserDetails for waiter with proper role
+                        // Create UserDetails for waiter — always grant ROLE_WAITER
+                        // regardless of specific waiter role (JUNIOR_WAITER, SENIOR_WAITER, etc.)
+                        List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+                        authorities.add(new SimpleGrantedAuthority("ROLE_WAITER"));
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+
                         UserDetails waiterDetails = User.builder()
                                 .username(username)
                                 .password("") // Password not needed for token auth
-                                .authorities(Collections.singletonList(
-                                        new SimpleGrantedAuthority("ROLE_" + role)
-                                ))
+                                .authorities(authorities)
                                 .build();
 
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
