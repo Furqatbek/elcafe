@@ -88,8 +88,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/menu/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/menu/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/menu/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/financial/purchase-orders/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/financial/expenses/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/financial/purchase-orders/**").hasAnyRole("ADMIN", "OPERATOR", "WAITER")
+                        .requestMatchers("/api/v1/financial/expenses/**").hasAnyRole("ADMIN", "OPERATOR", "WAITER")
                         .requestMatchers("/api/v1/financial/payroll/**").hasRole("ADMIN")
                         // Financial reports accessible to authenticated users
                         .requestMatchers("/api/v1/financial/reports/**").authenticated()

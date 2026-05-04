@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/inventory/ingredients")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
 public class InventoryIngredientController {
 
     private final InventoryIngredientRepository ingredientRepository;
