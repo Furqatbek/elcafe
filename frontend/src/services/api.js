@@ -404,6 +404,7 @@ export const shiftAPI = {
   approve: (restaurantId, shiftId) => api.post(`/restaurants/${restaurantId}/pos/shifts/${shiftId}/approve`),
   getHistory: (restaurantId, employeeId) => api.get(`/restaurants/${restaurantId}/pos/shifts/employees/${employeeId}/history`),
   getEndOfDayReport: (restaurantId, date) => api.get(`/restaurants/${restaurantId}/pos/shifts/end-of-day/${date}`),
+  getFinancialReport: (restaurantId, date, hourlyRate) => api.get(`/shift-reports/restaurant/${restaurantId}`, { params: { date, hourlyRate } }),
 };
 
 export const posAPI = {
