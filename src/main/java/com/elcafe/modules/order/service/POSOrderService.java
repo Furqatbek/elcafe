@@ -90,20 +90,17 @@ public class POSOrderService {
 
         log.info("Creating POS order: type={}, restaurant={}", request.getOrderType(), request.getRestaurantId());
 
-        // Enforce active shift — get current user and check for active shift
+        // Get active shift — link order to shift and waiter
         Long shiftId = null;
+        com.elcafe.modules.waiter.entity.Waiter orderWaiter = null;
         try {
-            org.springframework.security.core.Authentication auth =
-                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.getPrincipal() instanceof com.elcafe.security.UserPrincipal userPrincipal) {
-                com.elcafe.modules.pos.shift.entity.EmployeeShift activeShift =
-                        shiftManagementService.getActiveShiftForUser(userPrincipal.getId());
-                if (activeShift != null) {
-                    shiftId = activeShift.getId();
-                    log.info("Order linked to shift {} for user {}", shiftId, userPrincipal.getUsername());
-                } else {
-                    log.warn("No active shift for user {} — order created without shift link", userPrincipal.getUsername());
-                }
+            com.elcafe.modules.pos.shift.entity.EmployeeShift activeShift =
+                    shiftEnforcementService.getActiveShiftForCurrentUser();
+            if (activeShift != null) {
+                shiftId = activeShift.getId();
+                orderWaiter = activeShift.getWaiter();
+                log.info("Order linked to shift {} for employee {}",
+                        shiftId, activeShift.getEmployee().getFullName());
             }
         } catch (Exception e) {
             log.warn("Could not determine active shift: {}", e.getMessage());
@@ -123,6 +120,9 @@ public class POSOrderService {
         order.setCustomer(customer);
         order.setStatus(OrderStatus.NEW);
         order.setShiftId(shiftId);
+        if (orderWaiter != null) {
+            order.setWaiter(orderWaiter);
+        }
         order.setOrderType(OrderType.valueOf(request.getOrderType().name()));
         order.setCustomerNotes(request.getOrderNotes());
 
