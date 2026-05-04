@@ -207,7 +207,29 @@ public class POSOrderService {
         // Record promotion usage for analytics if a promotion/coupon was applied
         recordPromotionUsageIfApplicable(savedOrder, request);
 
-        log.info("Order created without kitchen order - direct payment flow enabled");
+        // Auto-create payment if paymentMethod provided — one-call order + pay
+        if (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank()) {
+            try {
+                PaymentMethod method = PaymentMethod.valueOf(request.getPaymentMethod().toUpperCase());
+                com.elcafe.modules.order.entity.Payment payment = com.elcafe.modules.order.entity.Payment.builder()
+                        .order(savedOrder)
+                        .method(method)
+                        .amount(savedOrder.getTotal())
+                        .amountTendered(request.getAmountTendered())
+                        .changeDue(request.getChangeDue())
+                        .status(PaymentStatus.COMPLETED)
+                        .build();
+                savedOrder.addPayment(payment);
+                savedOrder.setPaymentStatus(PaymentStatus.COMPLETED);
+                savedOrder = orderRepository.save(savedOrder);
+                log.info("Auto-payment recorded: {} {} for order {}",
+                        method, savedOrder.getTotal(), savedOrder.getOrderNumber());
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid payment method '{}', skipping auto-payment", request.getPaymentMethod());
+            }
+        }
+
+        log.info("POS order created successfully: {}", savedOrder.getOrderNumber());
 
         // Force initialize lazy relationships
         savedOrder.getRestaurant().getName();
@@ -438,6 +460,7 @@ public class POSOrderService {
                 .discount(order.getDiscount())
                 .total(order.getTotal())
                 .paymentStatus(order.getPaymentStatus())
+                .paymentMethod(order.getPayment() != null ? order.getPayment().getMethod().name() : null)
                 .fullyPaid(order.isFullyPaid())
                 .orderNotes(order.getCustomerNotes())
                 .createdAt(order.getCreatedAt())
