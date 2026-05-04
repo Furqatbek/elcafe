@@ -21,7 +21,7 @@ import java.util.List;
 @RequestMapping("/api/v1/restaurants/{restaurantId}/pos/cash-drawers")
 @RequiredArgsConstructor
 @Tag(name = "Cash Drawer", description = "Cash drawer management and operations")
-@PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'CASHIER')")
+@PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'OPERATOR', 'CASHIER', 'WAITER')")
 public class CashDrawerController {
 
     private final CashDrawerService cashDrawerService;

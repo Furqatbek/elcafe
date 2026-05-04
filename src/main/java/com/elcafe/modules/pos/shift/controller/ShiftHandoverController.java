@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 @RestController
 @RequestMapping("/api/v1/shift-handover")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
 public class ShiftHandoverController {
 
     private final ShiftHandoverService handoverService;

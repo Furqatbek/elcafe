@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/shift-swaps")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+@PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
 public class ShiftSwapController {
 
     private final ShiftSwapService swapService;
