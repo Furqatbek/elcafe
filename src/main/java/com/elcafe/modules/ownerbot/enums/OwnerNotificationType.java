@@ -10,6 +10,8 @@ public enum OwnerNotificationType {
     ORDER_CANCELLED("❌ Заказ отменён", "Buyurtma bekor qilindi"),
     RESERVATION_CANCELLED("❌ Бронь отменена", "Band qilish bekor qilindi"),
     ORDER_READY("✅ Заказ готов", "Buyurtma tayyor"),
+    SHIFT_OPENED("🟢 Смена открыта", "Smena ochildi"),
+    SHIFT_CLOSED("🔴 Смена закрыта", "Smena yopildi"),
     SYSTEM_ALERT("⚠️ Системное", "Tizim ogohlantirishlari");
 
     private final String titleRu;
@@ -42,6 +44,8 @@ public enum OwnerNotificationType {
             case CRITICAL_ALERT -> "🚨";
             case ORDER_CANCELLED, RESERVATION_CANCELLED -> "❌";
             case ORDER_READY -> "✅";
+            case SHIFT_OPENED -> "🟢";
+            case SHIFT_CLOSED -> "🔴";
             case SYSTEM_ALERT -> "⚠️";
         };
     }

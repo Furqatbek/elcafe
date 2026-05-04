@@ -255,6 +255,57 @@ public class OwnerNotificationService {
      */
     @Async
     @Transactional
+    public void notifyShiftOpened(Long restaurantId, String employeeName, String clockInTime) {
+        List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.SHIFT_OPENED);
+
+        String message = String.format(
+            "🟢 <b>Смена открыта</b>\n\n" +
+            "👤 <b>%s</b>\n" +
+            "⏰ Начало: %s\n\n" +
+            "📍 Ресторан ID: %d",
+            employeeName, clockInTime, restaurantId
+        );
+
+        for (OwnerTelegramSubscriber subscriber : subscribers) {
+            sendNotification(subscriber, OwnerNotificationType.SHIFT_OPENED, message, "SHIFT", null);
+        }
+
+        log.info("Shift opened notification sent for {} at restaurant {}", employeeName, restaurantId);
+    }
+
+    @Async
+    @Transactional
+    public void notifyShiftClosed(Long restaurantId, String employeeName, String clockInTime,
+                                   String clockOutTime, long workedMinutes, int orderCount,
+                                   java.math.BigDecimal totalSales, java.math.BigDecimal cashVariance) {
+        List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.SHIFT_CLOSED);
+
+        long hours = workedMinutes / 60;
+        long mins = workedMinutes % 60;
+        String varianceText = cashVariance != null && cashVariance.compareTo(java.math.BigDecimal.ZERO) != 0
+            ? String.format("\n💰 Расхождение: %s", cashVariance)
+            : "\n💰 Расхождение: 0 ✓";
+
+        String message = String.format(
+            "🔴 <b>Смена закрыта</b>\n\n" +
+            "👤 <b>%s</b>\n" +
+            "⏰ %s — %s (%dч %dмин)\n" +
+            "📦 Заказов: %d\n" +
+            "💵 Выручка: %s%s",
+            employeeName, clockInTime, clockOutTime, hours, mins,
+            orderCount, totalSales != null ? totalSales : "0",
+            varianceText
+        );
+
+        for (OwnerTelegramSubscriber subscriber : subscribers) {
+            sendNotification(subscriber, OwnerNotificationType.SHIFT_CLOSED, message, "SHIFT", null);
+        }
+
+        log.info("Shift closed notification sent for {} at restaurant {}", employeeName, restaurantId);
+    }
+
+    @Async
+    @Transactional
     public void sendCriticalAlert(Long restaurantId, String title, String details) {
         List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.CRITICAL_ALERT);
 

@@ -43,6 +43,8 @@ public class ShiftManagementService {
     private final RestaurantRepository restaurantRepository;
     private final WaiterRepository waiterRepository;
     private final CashDrawerRepository cashDrawerRepository;
+    @org.springframework.context.annotation.Lazy
+    private final com.elcafe.modules.ownerbot.service.OwnerNotificationService ownerNotificationService;
 
     /**
      * Clock in an employee to start their shift.
@@ -89,8 +91,18 @@ public class ShiftManagementService {
             .status(ShiftStatus.ACTIVE)
             .build();
 
+        EmployeeShift savedShift = shiftRepository.save(shift);
         log.info("Employee {} clocked in for shift at restaurant {}", employee.getId(), restaurantId);
-        return shiftRepository.save(shift);
+
+        // Telegram notification
+        try {
+            ownerNotificationService.notifyShiftOpened(restaurantId, employee.getFullName(),
+                    savedShift.getClockIn().toLocalTime().toString().substring(0, 5));
+        } catch (Exception e) {
+            log.warn("Failed to send shift opened notification: {}", e.getMessage());
+        }
+
+        return savedShift;
     }
 
     /**
@@ -120,8 +132,28 @@ public class ShiftManagementService {
             shift.reconcile(request.getClosingCash());
         }
 
-        log.info("Employee {} clocked out from shift {}", shift.getEmployee().getId(), shiftId);
-        return shiftRepository.save(shift);
+        EmployeeShift savedShift = shiftRepository.save(shift);
+        log.info("Employee {} clocked out from shift {}", savedShift.getEmployee().getId(), shiftId);
+
+        // Telegram notification with shift summary
+        try {
+            String clockInTime = savedShift.getClockIn() != null
+                    ? savedShift.getClockIn().toLocalTime().toString().substring(0, 5) : "--";
+            String clockOutTime = savedShift.getClockOut() != null
+                    ? savedShift.getClockOut().toLocalTime().toString().substring(0, 5) : "--";
+            ownerNotificationService.notifyShiftClosed(
+                    savedShift.getRestaurant().getId(),
+                    savedShift.getEmployee().getFullName(),
+                    clockInTime, clockOutTime,
+                    savedShift.getWorkedMinutes(),
+                    savedShift.getTotalOrders() != null ? savedShift.getTotalOrders() : 0,
+                    savedShift.getTotalSales(),
+                    savedShift.getCashVariance());
+        } catch (Exception e) {
+            log.warn("Failed to send shift closed notification: {}", e.getMessage());
+        }
+
+        return savedShift;
     }
 
     /**
