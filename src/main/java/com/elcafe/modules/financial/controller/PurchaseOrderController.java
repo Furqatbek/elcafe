@@ -36,11 +36,15 @@ public class PurchaseOrderController {
     private final InventoryIngredientRepository ingredientRepository;
     private final SupplierRepository supplierRepository;
     private final ExpenseRepository expenseRepository;
+    private final com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> createPurchaseOrder(
             @Valid @RequestBody PurchaseOrderRequest request) {
+        // Enforce active shift for operators/waiters
+        shiftEnforcementService.requireActiveShift();
+
         log.info("Creating purchase order for restaurant: {}", request.getRestaurantId());
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())

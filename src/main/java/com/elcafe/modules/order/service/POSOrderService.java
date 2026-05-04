@@ -80,9 +80,13 @@ public class POSOrderService {
     private final POSTableService posTableService;
     private final PackagingService packagingService;
     private final com.elcafe.modules.pos.shift.service.ShiftManagementService shiftManagementService;
+    private final com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
+        // Enforce active shift for operators/waiters (admins exempt)
+        shiftEnforcementService.requireActiveShift();
+
         log.info("Creating POS order: type={}, restaurant={}", request.getOrderType(), request.getRestaurantId());
 
         // Enforce active shift — get current user and check for active shift

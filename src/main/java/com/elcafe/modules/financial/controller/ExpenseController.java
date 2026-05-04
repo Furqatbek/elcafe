@@ -33,11 +33,15 @@ public class ExpenseController {
     private final ExpenseService expenseService;
     private final RestaurantRepository restaurantRepository;
     private final AccountRepository accountRepository;
+    private final com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     public ResponseEntity<ApiResponse<ExpenseResponse>> createExpense(
             @Valid @RequestBody ExpenseRequest request) {
+        // Enforce active shift for operators/waiters
+        shiftEnforcementService.requireActiveShift();
+
         log.info("Creating expense for restaurant: {}", request.getRestaurantId());
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
