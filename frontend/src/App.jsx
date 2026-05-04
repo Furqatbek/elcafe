@@ -22,6 +22,7 @@ import Operators from './pages/Operators';
 import Waiters from './pages/Waiters';
 import WaiterPerformance from './pages/WaiterPerformance';
 import ShiftDashboard from './pages/ShiftDashboard';
+import ShiftSchedule from './pages/ShiftSchedule';
 import Couriers from './pages/Couriers';
 import CourierMap from './pages/CourierMap';
 import MenuCollections from './pages/MenuCollections';
@@ -155,6 +156,7 @@ function App() {
           <Route path="employees/waiters" element={<Waiters />} />
           <Route path="employees/waiter-performance" element={<AdminRoute><WaiterPerformance /></AdminRoute>} />
           <Route path="employees/shift-dashboard" element={<ShiftDashboard />} />
+          <Route path="employees/shift-schedule" element={<ShiftSchedule />} />
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />
           <Route path="kitchen" element={<KitchenDashboard />} />
