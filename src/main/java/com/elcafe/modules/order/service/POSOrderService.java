@@ -29,6 +29,7 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
+import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
