@@ -15,8 +15,7 @@ import java.time.LocalTime;
 @AllArgsConstructor
 public class ClockInRequest {
 
-    @NotNull(message = "Employee ID is required")
-    private Long employeeId;
+    private Long employeeId; // optional — waiter-only shifts don't need this
 
     private Long waiterId;
 

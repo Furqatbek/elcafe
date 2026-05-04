@@ -55,20 +55,31 @@ public class ShiftManagementService {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
             .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
 
-        // Validate employee
-        User employee = userRepository.findById(request.getEmployeeId())
-            .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
-
-        // Check if employee already has an active shift
-        Optional<EmployeeShift> activeShift = shiftRepository.findActiveShiftByEmployee(request.getEmployeeId());
-        if (activeShift.isPresent()) {
-            throw new IllegalStateException("Employee already has an active shift");
+        // Validate employee (optional — waiter-only shifts don't need a User account)
+        User employee = null;
+        if (request.getEmployeeId() != null) {
+            employee = userRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
+            Optional<EmployeeShift> activeShift = shiftRepository.findActiveShiftByEmployee(request.getEmployeeId());
+            if (activeShift.isPresent()) {
+                throw new IllegalStateException("Employee already has an active shift");
+            }
         }
 
-        // Get waiter if applicable
+        // Get waiter
         Waiter waiter = null;
         if (request.getWaiterId() != null) {
             waiter = waiterRepository.findById(request.getWaiterId()).orElse(null);
+            if (waiter != null) {
+                Optional<EmployeeShift> activeWaiterShift = shiftRepository.findActiveShiftByWaiter(waiter.getId());
+                if (activeWaiterShift.isPresent()) {
+                    throw new IllegalStateException("Waiter already has an active shift");
+                }
+            }
+        }
+
+        if (employee == null && waiter == null) {
+            throw new IllegalArgumentException("Either employeeId or waiterId is required");
         }
 
         // Get cash drawer if specified
@@ -354,10 +365,17 @@ public class ShiftManagementService {
     }
 
     private ShiftSummaryDTO toShiftSummary(EmployeeShift shift) {
+        String name = shift.getEmployee() != null
+                ? shift.getEmployee().getFullName()
+                : (shift.getWaiter() != null ? shift.getWaiter().getName() : "Unknown");
+        Long empId = shift.getEmployee() != null
+                ? shift.getEmployee().getId()
+                : (shift.getWaiter() != null ? shift.getWaiter().getId() : null);
+
         return ShiftSummaryDTO.builder()
             .id(shift.getId())
-            .employeeId(shift.getEmployee().getId())
-            .employeeName(shift.getEmployee().getFullName())
+            .employeeId(empId)
+            .employeeName(name)
             .shiftDate(shift.getShiftDate())
             .clockIn(shift.getClockIn())
             .clockOut(shift.getClockOut())
