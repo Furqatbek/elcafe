@@ -45,6 +45,8 @@ public class ShiftManagementService {
     private final CashDrawerRepository cashDrawerRepository;
     @org.springframework.context.annotation.Lazy
     private final com.elcafe.modules.ownerbot.service.OwnerNotificationService ownerNotificationService;
+    @org.springframework.context.annotation.Lazy
+    private final com.elcafe.modules.financial.service.DashboardService dashboardService;
 
     /**
      * Clock in an employee to start their shift.
@@ -159,6 +161,16 @@ public class ShiftManagementService {
                     ? savedShift.getClockIn().toLocalTime().toString().substring(0, 5) : "--";
             String clockOutTime = savedShift.getClockOut() != null
                     ? savedShift.getClockOut().toLocalTime().toString().substring(0, 5) : "--";
+
+            // Calculate today's real profit for the notification
+            java.math.BigDecimal todayProfit = java.math.BigDecimal.ZERO;
+            try {
+                var dashboard = dashboardService.getTodaySummary(savedShift.getRestaurant().getId());
+                todayProfit = dashboard.getNetProfit() != null ? dashboard.getNetProfit() : java.math.BigDecimal.ZERO;
+            } catch (Exception ex) {
+                log.warn("Could not calculate today's profit for notification: {}", ex.getMessage());
+            }
+
             ownerNotificationService.notifyShiftClosed(
                     savedShift.getRestaurant().getId(),
                     shiftName,
@@ -166,7 +178,7 @@ public class ShiftManagementService {
                     savedShift.getWorkedMinutes(),
                     savedShift.getTotalOrders() != null ? savedShift.getTotalOrders() : 0,
                     savedShift.getTotalSales(),
-                    savedShift.getCashVariance());
+                    todayProfit);
         } catch (Exception e) {
             log.warn("Failed to send shift closed notification: {}", e.getMessage());
         }
