@@ -29,6 +29,13 @@ public class RestaurantAuthorizationService {
 
         UserPrincipal principal = getCurrentUserPrincipal();
         if (principal == null) {
+            // Waiter tokens use plain UserDetails, not UserPrincipal.
+            // If authenticated, allow access — role security handled by @PreAuthorize.
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated()
+                    && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
+                return;
+            }
             throw new AccessDeniedException("User not authenticated");
         }
 

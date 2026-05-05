@@ -74,7 +74,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                         UserDetails waiterDetails = User.builder()
                                 .username(username)
-                                .password("") // Password not needed for token auth
+                                .password("{noop}token-auth") // Dummy — not used for token auth
                                 .authorities(authorities)
                                 .build();
 
