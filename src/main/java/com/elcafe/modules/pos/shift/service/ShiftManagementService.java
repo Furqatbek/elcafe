@@ -112,8 +112,9 @@ public class ShiftManagementService {
 
         // Telegram notification
         try {
+            java.time.ZoneId zone = java.time.ZoneId.systemDefault();
             ownerNotificationService.notifyShiftOpened(restaurantId, shiftName,
-                    savedShift.getClockIn().toLocalTime().toString().substring(0, 5));
+                    savedShift.getClockIn().atZoneSameInstant(zone).toLocalTime().toString().substring(0, 5));
         } catch (Exception e) {
             log.warn("Failed to send shift opened notification: {}", e.getMessage());
         }
@@ -157,10 +158,11 @@ public class ShiftManagementService {
 
         // Telegram notification with shift summary
         try {
+            java.time.ZoneId zone = java.time.ZoneId.systemDefault();
             String clockInTime = savedShift.getClockIn() != null
-                    ? savedShift.getClockIn().toLocalTime().toString().substring(0, 5) : "--";
+                    ? savedShift.getClockIn().atZoneSameInstant(zone).toLocalTime().toString().substring(0, 5) : "--";
             String clockOutTime = savedShift.getClockOut() != null
-                    ? savedShift.getClockOut().toLocalTime().toString().substring(0, 5) : "--";
+                    ? savedShift.getClockOut().atZoneSameInstant(zone).toLocalTime().toString().substring(0, 5) : "--";
 
             // Calculate today's real profit for the notification
             java.math.BigDecimal todayProfit = java.math.BigDecimal.ZERO;
