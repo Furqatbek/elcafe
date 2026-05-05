@@ -82,6 +82,7 @@ public class POSOrderService {
     private final PackagingService packagingService;
     private final com.elcafe.modules.pos.shift.service.ShiftManagementService shiftManagementService;
     private final com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
+    private final com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository employeeShiftRepository;
 
     @Transactional
     public POSOrderResponse createOrder(CreatePOSOrderRequest request) {
@@ -249,6 +250,21 @@ public class POSOrderService {
             notificationService.notifyNewOrder(savedOrder);
         } catch (Exception e) {
             log.error("Failed to send notifications for order {}", savedOrder.getOrderNumber(), e);
+        }
+
+        // Update shift sales totals
+        if (shiftId != null && savedOrder.getTotal() != null) {
+            try {
+                employeeShiftRepository.findById(shiftId).ifPresent(shift -> {
+                    shift.setTotalOrders((shift.getTotalOrders() != null ? shift.getTotalOrders() : 0) + 1);
+                    shift.setTotalSales(
+                            (shift.getTotalSales() != null ? shift.getTotalSales() : java.math.BigDecimal.ZERO)
+                                    .add(savedOrder.getTotal()));
+                    employeeShiftRepository.save(shift);
+                });
+            } catch (Exception e) {
+                log.warn("Could not update shift sales: {}", e.getMessage());
+            }
         }
 
         return mapToResponse(savedOrder, request.getOrderType().name());
