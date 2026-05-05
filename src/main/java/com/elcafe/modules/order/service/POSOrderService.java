@@ -253,13 +253,14 @@ public class POSOrderService {
         }
 
         // Update shift sales totals
-        if (shiftId != null && savedOrder.getTotal() != null) {
+        final Order finalOrder = savedOrder;
+        if (shiftId != null && finalOrder.getTotal() != null) {
             try {
                 employeeShiftRepository.findById(shiftId).ifPresent(shift -> {
                     shift.setTotalOrders((shift.getTotalOrders() != null ? shift.getTotalOrders() : 0) + 1);
                     shift.setTotalSales(
                             (shift.getTotalSales() != null ? shift.getTotalSales() : java.math.BigDecimal.ZERO)
-                                    .add(savedOrder.getTotal()));
+                                    .add(finalOrder.getTotal()));
                     employeeShiftRepository.save(shift);
                 });
             } catch (Exception e) {
