@@ -15,7 +15,6 @@ import com.elcafe.modules.ownerbot.repository.OwnerTelegramSubscriberRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,7 +37,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OwnerTelegramBotService {
 
     private final OwnerTelegramBotConfigRepository configRepository;
@@ -48,8 +46,26 @@ public class OwnerTelegramBotService {
     private final RestaurantRepository restaurantRepository;
     private final TelegramBotRegistry botRegistry;
     private final InventoryIngredientRepository ingredientRepository;
-    @org.springframework.context.annotation.Lazy
     private final DailyFinancialReportService dailyFinancialReportService;
+
+    public OwnerTelegramBotService(
+            OwnerTelegramBotConfigRepository configRepository,
+            OwnerTelegramSubscriberRepository subscriberRepository,
+            OwnerNotificationSettingsRepository settingsRepository,
+            UserRepository userRepository,
+            RestaurantRepository restaurantRepository,
+            TelegramBotRegistry botRegistry,
+            InventoryIngredientRepository ingredientRepository,
+            @org.springframework.context.annotation.Lazy DailyFinancialReportService dailyFinancialReportService) {
+        this.configRepository = configRepository;
+        this.subscriberRepository = subscriberRepository;
+        this.settingsRepository = settingsRepository;
+        this.userRepository = userRepository;
+        this.restaurantRepository = restaurantRepository;
+        this.botRegistry = botRegistry;
+        this.ingredientRepository = ingredientRepository;
+        this.dailyFinancialReportService = dailyFinancialReportService;
+    }
 
     private OwnerBot bot;
     private BotSession botSession;
@@ -101,6 +117,27 @@ public class OwnerTelegramBotService {
         botSession = botRegistry.registerBot(bot);
         if (botSession != null) {
             log.info("Owner Telegram bot registered successfully: @{}", config.getBotUsername());
+            registerCommands();
+        }
+    }
+
+    private void registerCommands() {
+        try {
+            org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands setCommands =
+                    new org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands();
+            setCommands.setCommands(List.of(
+                    new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/start", "Начать / Главное меню"),
+                    new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/menu", "Показать кнопки"),
+                    new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/report", "Финансовый отчёт"),
+                    new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/stock", "Проверить запасы"),
+                    new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/status", "Статус подключения"),
+                    new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/settings", "Настройки"),
+                    new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/help", "Справка")
+            ));
+            bot.execute(setCommands);
+            log.info("Owner bot commands registered with Telegram");
+        } catch (Exception e) {
+            log.warn("Failed to register bot commands: {}", e.getMessage());
         }
     }
 
