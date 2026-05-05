@@ -92,11 +92,11 @@ export default function Payroll() {
       setSalaryOpen(false);
       setSalaryForm({ employeeId: '', monthlySalary: '', payDay: '1', paymentMethod: 'CASH', autoApprove: true, notes: '' });
       loadSalaryConfigs();
-    } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed to create salary config'); }
+    } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
   };
 
   const handleDeleteSalary = async (id) => {
-    if (!window.confirm('Deactivate this salary config?')) return;
+    if (!window.confirm(t('payroll.confirmDeactivate'))) return;
     try {
       await financialAPI.deleteSalaryConfig(id);
       loadSalaryConfigs();
@@ -104,7 +104,7 @@ export default function Payroll() {
   };
 
   const handlePayNow = async (id) => {
-    if (!window.confirm('Process salary payment now?')) return;
+    if (!window.confirm(t('payroll.confirmPayNow'))) return;
     try {
       await financialAPI.paySalaryNow(id);
       loadSalaryConfigs();
@@ -133,7 +133,7 @@ export default function Payroll() {
       });
       setCreateOpen(false);
       loadPayrolls();
-    } catch (e) { console.error('Failed to create payroll:', e); alert(e.response?.data?.message || 'Failed'); }
+    } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
   };
 
   const handleApprove = async (id) => {
@@ -153,7 +153,7 @@ export default function Payroll() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this payroll entry?')) return;
+    if (!window.confirm(t('payroll.confirmDelete'))) return;
     try {
       await financialAPI.deletePayroll(id);
       loadPayrolls();
@@ -166,8 +166,8 @@ export default function Payroll() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Payroll</h1>
-          <p className="text-muted-foreground">Manage employee salaries and payments</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('payroll.title')}</h1>
+          <p className="text-muted-foreground">{t('payroll.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Select value={selectedRestaurant} onValueChange={setSelectedRestaurant}>
@@ -181,40 +181,38 @@ export default function Payroll() {
 
       <Tabs defaultValue="salaries">
         <TabsList>
-          <TabsTrigger value="salaries"><CalendarClock className="h-4 w-4 mr-2" /> Fixed Salaries</TabsTrigger>
-          <TabsTrigger value="history"><DollarSign className="h-4 w-4 mr-2" /> Payment History</TabsTrigger>
+          <TabsTrigger value="salaries"><CalendarClock className="h-4 w-4 mr-2" /> {t('payroll.fixedSalaries')}</TabsTrigger>
+          <TabsTrigger value="history"><DollarSign className="h-4 w-4 mr-2" /> {t('payroll.paymentHistory')}</TabsTrigger>
         </TabsList>
 
         {/* Fixed Salaries Tab */}
         <TabsContent value="salaries" className="space-y-4">
           <div className="flex justify-end">
             <Button onClick={() => setSalaryOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Add Employee Salary
+              <Plus className="h-4 w-4 mr-2" /> {t('payroll.addSalary')}
             </Button>
           </div>
           <Card>
             <CardHeader>
-              <CardTitle>Employee Fixed Salaries</CardTitle>
-              <CardDescription>
-                System auto-pays on the configured day each month
-              </CardDescription>
+              <CardTitle>{t('payroll.fixedSalariesTitle')}</CardTitle>
+              <CardDescription>{t('payroll.fixedSalariesDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Employee</TableHead>
-                    <TableHead className="text-right">Monthly Salary</TableHead>
-                    <TableHead className="text-center">Pay Day</TableHead>
-                    <TableHead className="text-center">Method</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead>Last Paid</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t('payroll.employee')}</TableHead>
+                    <TableHead className="text-right">{t('payroll.monthlySalary')}</TableHead>
+                    <TableHead className="text-center">{t('payroll.payDay')}</TableHead>
+                    <TableHead className="text-center">{t('payroll.method')}</TableHead>
+                    <TableHead className="text-center">{t('payroll.status')}</TableHead>
+                    <TableHead>{t('payroll.lastPaid')}</TableHead>
+                    <TableHead className="text-right">{t('payroll.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {salaryConfigs.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No fixed salaries configured</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t('payroll.noSalaries')}</TableCell></TableRow>
                   ) : (
                     salaryConfigs.map(sc => (
                       <TableRow key={sc.id}>
@@ -222,16 +220,16 @@ export default function Payroll() {
                           {sc.employee?.firstName} {sc.employee?.lastName || sc.employee?.email}
                         </TableCell>
                         <TableCell className="text-right font-bold">{fmt(sc.monthlySalary)}</TableCell>
-                        <TableCell className="text-center">{sc.payDay}th</TableCell>
-                        <TableCell className="text-center"><Badge variant="outline">{sc.paymentMethod}</Badge></TableCell>
+                        <TableCell className="text-center">{sc.payDay}</TableCell>
+                        <TableCell className="text-center"><Badge variant="outline">{t(`payroll.methods.${sc.paymentMethod}`)}</Badge></TableCell>
                         <TableCell className="text-center">
-                          <Badge variant={sc.active ? 'default' : 'secondary'}>{sc.active ? 'Active' : 'Inactive'}</Badge>
+                          <Badge variant={sc.active ? 'default' : 'secondary'}>{sc.active ? t('payroll.active') : t('payroll.inactive')}</Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{sc.lastPaidDate || 'Never'}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{sc.lastPaidDate || t('payroll.never')}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
                             <Button variant="outline" size="sm" onClick={() => handlePayNow(sc.id)}>
-                              <Play className="h-3 w-3 mr-1" /> Pay Now
+                              <Play className="h-3 w-3 mr-1" /> {t('payroll.payNow')}
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteSalary(sc.id)}>
                               <Trash2 className="h-4 w-4 text-red-500" />
@@ -251,22 +249,21 @@ export default function Payroll() {
         <TabsContent value="history" className="space-y-4">
           <div className="flex justify-end">
             <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" /> Manual Payroll
+              <Plus className="h-4 w-4 mr-2" /> {t('payroll.manualPayroll')}
             </Button>
           </div>
 
-          {/* Summary */}
           <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Entries</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('payroll.totalEntries')}</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent><div className="text-3xl font-bold">{payrolls.length}</div></CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Payment</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('payroll.pendingPayment')}</CardTitle>
                 <CheckCircle className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent>
@@ -277,7 +274,7 @@ export default function Payroll() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('payroll.totalPaid')}</CardTitle>
                 <CreditCard className="h-4 w-4 text-green-500" />
               </CardHeader>
               <CardContent>
@@ -288,63 +285,62 @@ export default function Payroll() {
             </Card>
           </div>
 
-          {/* Payroll Table */}
           <Card>
-        <CardHeader>
-          <CardTitle>Payroll Entries</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Period</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Gross</TableHead>
-                <TableHead className="text-right">Deductions</TableHead>
-                <TableHead className="text-right">Net Pay</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payrolls.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No payroll entries</TableCell></TableRow>
-              ) : (
-                payrolls.map(p => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.employee?.fullName || p.employee?.email || `#${p.employee?.id}`}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{p.payPeriodStart} — {p.payPeriodEnd}</TableCell>
-                    <TableCell><Badge variant="outline">{p.payrollType}</Badge></TableCell>
-                    <TableCell className="text-right">{fmt(p.grossPay)}</TableCell>
-                    <TableCell className="text-right text-red-500">{fmt(p.totalDeductions)}</TableCell>
-                    <TableCell className="text-right font-bold">{fmt(p.netPay)}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={STATUS_VARIANTS[p.status] || 'secondary'}>{p.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-1 justify-end">
-                        {p.status === 'PENDING' && (
-                          <Button variant="outline" size="sm" onClick={() => handleApprove(p.id)}>Approve</Button>
-                        )}
-                        {p.status === 'APPROVED' && (
-                          <Button variant="outline" size="sm" onClick={() => { setSelectedPayroll(p); setPayOpen(true); }}>
-                            <CreditCard className="h-3 w-3 mr-1" /> Pay
-                          </Button>
-                        )}
-                        {(p.status === 'PENDING' || p.status === 'APPROVED') && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
+            <CardHeader>
+              <CardTitle>{t('payroll.entries')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('payroll.employee')}</TableHead>
+                    <TableHead>{t('payroll.period')}</TableHead>
+                    <TableHead>{t('payroll.type')}</TableHead>
+                    <TableHead className="text-right">{t('payroll.gross')}</TableHead>
+                    <TableHead className="text-right">{t('payroll.deductions')}</TableHead>
+                    <TableHead className="text-right">{t('payroll.netPay')}</TableHead>
+                    <TableHead className="text-center">{t('payroll.status')}</TableHead>
+                    <TableHead className="text-right">{t('payroll.actions')}</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
+                </TableHeader>
+                <TableBody>
+                  {payrolls.length === 0 ? (
+                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t('payroll.noEntries')}</TableCell></TableRow>
+                  ) : (
+                    payrolls.map(p => (
+                      <TableRow key={p.id}>
+                        <TableCell className="font-medium">{p.employee?.fullName || p.employee?.email || `#${p.employee?.id}`}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{p.payPeriodStart} — {p.payPeriodEnd}</TableCell>
+                        <TableCell><Badge variant="outline">{t(`payroll.types.${p.payrollType}`)}</Badge></TableCell>
+                        <TableCell className="text-right">{fmt(p.grossPay)}</TableCell>
+                        <TableCell className="text-right text-red-500">{fmt(p.totalDeductions)}</TableCell>
+                        <TableCell className="text-right font-bold">{fmt(p.netPay)}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={STATUS_VARIANTS[p.status] || 'secondary'}>{t(`payroll.statuses.${p.status}`)}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            {p.status === 'PENDING' && (
+                              <Button variant="outline" size="sm" onClick={() => handleApprove(p.id)}>{t('payroll.approve')}</Button>
+                            )}
+                            {p.status === 'APPROVED' && (
+                              <Button variant="outline" size="sm" onClick={() => { setSelectedPayroll(p); setPayOpen(true); }}>
+                                <CreditCard className="h-3 w-3 mr-1" /> {t('payroll.pay')}
+                              </Button>
+                            )}
+                            {(p.status === 'PENDING' || p.status === 'APPROVED') && (
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)}>
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
@@ -352,90 +348,90 @@ export default function Payroll() {
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>New Payroll Entry</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('payroll.newEntry')}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Employee *</Label>
+                <Label>{t('payroll.employee')} *</Label>
                 <select value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background">
-                  <option value="">Select employee</option>
+                  <option value="">{t('payroll.selectEmployee')}</option>
                   {employees.map(e => <option key={e.id} value={e.id}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Payroll Type *</Label>
+                <Label>{t('payroll.type')} *</Label>
                 <Select value={form.payrollType} onValueChange={v => setForm({ ...form, payrollType: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="HOURLY">Hourly</SelectItem>
-                    <SelectItem value="SALARY">Salary</SelectItem>
-                    <SelectItem value="CONTRACT">Contract</SelectItem>
-                    <SelectItem value="COMMISSION">Commission</SelectItem>
-                    <SelectItem value="ADVANCE">Advance Payment</SelectItem>
+                    <SelectItem value="HOURLY">{t('payroll.types.HOURLY')}</SelectItem>
+                    <SelectItem value="SALARY">{t('payroll.types.SALARY')}</SelectItem>
+                    <SelectItem value="CONTRACT">{t('payroll.types.CONTRACT')}</SelectItem>
+                    <SelectItem value="COMMISSION">{t('payroll.types.COMMISSION')}</SelectItem>
+                    <SelectItem value="ADVANCE">{t('payroll.types.ADVANCE')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Period Start *</Label>
+                <Label>{t('payroll.periodStart')} *</Label>
                 <Input type="date" value={form.payPeriodStart} onChange={e => setForm({ ...form, payPeriodStart: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Period End *</Label>
+                <Label>{t('payroll.periodEnd')} *</Label>
                 <Input type="date" value={form.payPeriodEnd} onChange={e => setForm({ ...form, payPeriodEnd: e.target.value })} />
               </div>
             </div>
             {form.payrollType === 'HOURLY' && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Hours Worked</Label>
+                  <Label>{t('payroll.hoursWorked')}</Label>
                   <Input type="number" step="0.5" value={form.hoursWorked} onChange={e => setForm({ ...form, hoursWorked: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Hourly Rate</Label>
+                  <Label>{t('payroll.hourlyRate')}</Label>
                   <Input type="number" value={form.hourlyRate} onChange={e => setForm({ ...form, hourlyRate: e.target.value })} />
                 </div>
               </div>
             )}
             {(form.payrollType === 'SALARY' || form.payrollType === 'CONTRACT' || form.payrollType === 'ADVANCE') && (
               <div className="space-y-2">
-                <Label>Base Salary</Label>
+                <Label>{t('payroll.baseSalary')}</Label>
                 <Input type="number" value={form.baseSalary} onChange={e => setForm({ ...form, baseSalary: e.target.value })} />
               </div>
             )}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Overtime Pay</Label>
+                <Label>{t('payroll.overtimePay')}</Label>
                 <Input type="number" value={form.overtimePay} onChange={e => setForm({ ...form, overtimePay: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Bonus</Label>
+                <Label>{t('payroll.bonus')}</Label>
                 <Input type="number" value={form.bonus} onChange={e => setForm({ ...form, bonus: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Tips</Label>
+                <Label>{t('payroll.tips')}</Label>
                 <Input type="number" value={form.tips} onChange={e => setForm({ ...form, tips: e.target.value })} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Tax Deduction</Label>
+                <Label>{t('payroll.taxDeduction')}</Label>
                 <Input type="number" value={form.taxDeduction} onChange={e => setForm({ ...form, taxDeduction: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Other Deductions</Label>
+                <Label>{t('payroll.otherDeductions')}</Label>
                 <Input type="number" value={form.otherDeductions} onChange={e => setForm({ ...form, otherDeductions: e.target.value })} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Notes</Label>
+              <Label>{t('payroll.notes')}</Label>
               <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!form.employeeId || !form.payPeriodStart || !form.payPeriodEnd}>Create</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handleCreate} disabled={!form.employeeId || !form.payPeriodStart || !form.payPeriodEnd}>{t('common.create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -443,7 +439,7 @@ export default function Payroll() {
       {/* Pay Dialog */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Process Payment</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('payroll.processPayment')}</DialogTitle></DialogHeader>
           {selectedPayroll && (
             <div className="py-2 space-y-4">
               <div className="text-center">
@@ -451,30 +447,30 @@ export default function Payroll() {
                 <p className="text-3xl font-bold">{fmt(selectedPayroll.netPay)}</p>
               </div>
               <div className="space-y-2">
-                <Label>Payment Date</Label>
+                <Label>{t('payroll.paymentDate')}</Label>
                 <Input type="date" value={payForm.paymentDate} onChange={e => setPayForm({ ...payForm, paymentDate: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Payment Method</Label>
+                <Label>{t('payroll.paymentMethod')}</Label>
                 <Select value={payForm.paymentMethod} onValueChange={v => setPayForm({ ...payForm, paymentMethod: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="CASH">Cash</SelectItem>
-                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                    <SelectItem value="CHECK">Check</SelectItem>
-                    <SelectItem value="DIRECT_DEPOSIT">Direct Deposit</SelectItem>
+                    <SelectItem value="CASH">{t('payroll.methods.CASH')}</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">{t('payroll.methods.BANK_TRANSFER')}</SelectItem>
+                    <SelectItem value="CHECK">{t('payroll.methods.CHECK')}</SelectItem>
+                    <SelectItem value="DIRECT_DEPOSIT">{t('payroll.methods.DIRECT_DEPOSIT')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Transaction Ref</Label>
-                <Input value={payForm.transactionRef} onChange={e => setPayForm({ ...payForm, transactionRef: e.target.value })} placeholder="Optional" />
+                <Label>{t('payroll.transactionRef')}</Label>
+                <Input value={payForm.transactionRef} onChange={e => setPayForm({ ...payForm, transactionRef: e.target.value })} placeholder={t('payroll.optional')} />
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPayOpen(false)}>Cancel</Button>
-            <Button onClick={handlePay}><CreditCard className="h-4 w-4 mr-2" /> Pay</Button>
+            <Button variant="outline" onClick={() => setPayOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handlePay}><CreditCard className="h-4 w-4 mr-2" /> {t('payroll.pay')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -482,45 +478,45 @@ export default function Payroll() {
       {/* Salary Config Dialog */}
       <Dialog open={salaryOpen} onOpenChange={setSalaryOpen}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add Fixed Salary</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('payroll.addFixedSalary')}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
-              <Label>Employee *</Label>
+              <Label>{t('payroll.employee')} *</Label>
               <select value={salaryForm.employeeId} onChange={e => setSalaryForm({ ...salaryForm, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background">
-                <option value="">Select employee</option>
+                <option value="">{t('payroll.selectEmployee')}</option>
                 {employees.map(e => <option key={e.id} value={e.id}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Monthly Salary *</Label>
-                <Input type="number" value={salaryForm.monthlySalary} onChange={e => setSalaryForm({ ...salaryForm, monthlySalary: e.target.value })} placeholder="e.g. 5000000" />
+                <Label>{t('payroll.monthlySalary')} *</Label>
+                <Input type="number" value={salaryForm.monthlySalary} onChange={e => setSalaryForm({ ...salaryForm, monthlySalary: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Pay Day (1-28) *</Label>
+                <Label>{t('payroll.payDayLabel')} *</Label>
                 <Input type="number" min="1" max="28" value={salaryForm.payDay} onChange={e => setSalaryForm({ ...salaryForm, payDay: e.target.value })} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Payment Method</Label>
+              <Label>{t('payroll.paymentMethod')}</Label>
               <Select value={salaryForm.paymentMethod} onValueChange={v => setSalaryForm({ ...salaryForm, paymentMethod: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CASH">Cash</SelectItem>
-                  <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                  <SelectItem value="CHECK">Check</SelectItem>
-                  <SelectItem value="DIRECT_DEPOSIT">Direct Deposit</SelectItem>
+                  <SelectItem value="CASH">{t('payroll.methods.CASH')}</SelectItem>
+                  <SelectItem value="BANK_TRANSFER">{t('payroll.methods.BANK_TRANSFER')}</SelectItem>
+                  <SelectItem value="CHECK">{t('payroll.methods.CHECK')}</SelectItem>
+                  <SelectItem value="DIRECT_DEPOSIT">{t('payroll.methods.DIRECT_DEPOSIT')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Notes</Label>
-              <Input value={salaryForm.notes} onChange={e => setSalaryForm({ ...salaryForm, notes: e.target.value })} placeholder="Optional" />
+              <Label>{t('payroll.notes')}</Label>
+              <Input value={salaryForm.notes} onChange={e => setSalaryForm({ ...salaryForm, notes: e.target.value })} placeholder={t('payroll.optional')} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSalaryOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateSalary} disabled={!salaryForm.employeeId || !salaryForm.monthlySalary || !salaryForm.payDay}>Save</Button>
+            <Button variant="outline" onClick={() => setSalaryOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handleCreateSalary} disabled={!salaryForm.employeeId || !salaryForm.monthlySalary || !salaryForm.payDay}>{t('common.save')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
