@@ -527,6 +527,11 @@ export const financialAPI = {
   approvePayroll: (id, approvedBy) => api.post(`/financial/payroll/${id}/approve`, null, { params: { approvedBy } }),
   payPayroll: (id, paymentDate, paymentMethod, transactionRef) => api.post(`/financial/payroll/${id}/pay`, null, { params: { paymentDate, paymentMethod, transactionRef } }),
   deletePayroll: (id) => api.delete(`/financial/payroll/${id}`),
+  getSalaryConfigs: (restaurantId) => api.get(`/financial/salary-config/restaurant/${restaurantId}`),
+  createSalaryConfig: (data) => api.post('/financial/salary-config', data),
+  updateSalaryConfig: (id, data) => api.put(`/financial/salary-config/${id}`, data),
+  deleteSalaryConfig: (id) => api.delete(`/financial/salary-config/${id}`),
+  paySalaryNow: (id) => api.post(`/financial/salary-config/${id}/pay-now`),
 
   // Financial Reports
   getProfitLossReport: (restaurantId, startDate, endDate) =>
