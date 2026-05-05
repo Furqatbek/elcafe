@@ -100,7 +100,6 @@ export default function Restaurants() {
   if (loading) {
     return <div className="p-8">{t('common.loading')}</div>;
   }
-  }
 
   return (
     <div className="space-y-6">
