@@ -414,15 +414,12 @@ public class OwnerTelegramBotService {
                     "👤 Аккаунт: %s\n" +
                     "🏪 Ресторан: %s\n" +
                     "👔 Роль: %s\n\n" +
-                    "Теперь вы будете получать уведомления о важных событиях.\n\n" +
-                    "Команды:\n" +
-                    "/settings - Настройки уведомлений\n" +
-                    "/status - Статус подключения",
+                    "Теперь вы будете получать уведомления о важных событиях.",
                     fullName,
                     restaurant.getName(),
                     verification.role
                 );
-                sendReply(chatId, successMessage);
+                sendMenuButtons(chatId, successMessage);
 
                 log.info("Owner Telegram subscriber verified: chatId={}, userId={}, restaurant={}",
                         chatId, verification.userId, restaurant.getName());
