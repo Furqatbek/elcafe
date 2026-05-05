@@ -8,6 +8,8 @@ import com.elcafe.modules.financial.repository.SalaryConfigRepository;
 import com.elcafe.modules.financial.service.SalaryAutoPayService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
+import com.elcafe.modules.waiter.entity.Waiter;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import com.elcafe.utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,7 @@ public class SalaryConfigController {
     private final SalaryConfigRepository salaryConfigRepository;
     private final RestaurantRepository restaurantRepository;
     private final UserRepository userRepository;
+    private final WaiterRepository waiterRepository;
     private final SalaryAutoPayService salaryAutoPayService;
 
     @GetMapping("/restaurant/{restaurantId}")
@@ -42,12 +45,21 @@ public class SalaryConfigController {
     public ResponseEntity<ApiResponse<SalaryConfig>> create(@RequestBody CreateSalaryConfigRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-        User employee = userRepository.findById(request.employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        User employee = null;
+        Waiter waiter = null;
+        if ("waiter".equals(request.employeeType)) {
+            waiter = waiterRepository.findById(request.employeeId)
+                    .orElseThrow(() -> new RuntimeException("Waiter not found"));
+        } else {
+            employee = userRepository.findById(request.employeeId)
+                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+        }
 
         SalaryConfig config = SalaryConfig.builder()
                 .restaurant(restaurant)
                 .employee(employee)
+                .waiter(waiter)
                 .monthlySalary(request.monthlySalary)
                 .payDay(request.payDay)
                 .paymentMethod(request.paymentMethod != null ? request.paymentMethod : PayrollEntry.PaymentMethod.CASH)
@@ -57,8 +69,8 @@ public class SalaryConfigController {
                 .build();
 
         SalaryConfig saved = salaryConfigRepository.save(config);
-        log.info("Salary config created for employee {} at restaurant {}: {} on day {}",
-                employee.getId(), restaurant.getId(), request.monthlySalary, request.payDay);
+        log.info("Salary config created for {} {} at restaurant {}: {} on day {}",
+                request.employeeType, request.employeeId, restaurant.getId(), request.monthlySalary, request.payDay);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Salary config created", saved));
     }
@@ -99,6 +111,7 @@ public class SalaryConfigController {
     public record CreateSalaryConfigRequest(
             Long restaurantId,
             Long employeeId,
+            String employeeType,
             BigDecimal monthlySalary,
             Integer payDay,
             PayrollEntry.PaymentMethod paymentMethod,

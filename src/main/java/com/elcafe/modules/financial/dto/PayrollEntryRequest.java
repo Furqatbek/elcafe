@@ -22,6 +22,8 @@ public class PayrollEntryRequest {
     @NotNull(message = "Employee ID is required")
     private Long employeeId;
 
+    private String employeeType; // "user" or "waiter"
+
     @NotNull(message = "Pay period start is required")
     private LocalDate payPeriodStart;
 

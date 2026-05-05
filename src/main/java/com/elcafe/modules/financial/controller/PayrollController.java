@@ -9,6 +9,8 @@ import com.elcafe.modules.financial.entity.PayrollEntry;
 import com.elcafe.modules.financial.service.PayrollService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
+import com.elcafe.modules.waiter.entity.Waiter;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import com.elcafe.utils.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,17 +35,35 @@ public class PayrollController {
     private final PayrollService payrollService;
     private final RestaurantRepository restaurantRepository;
     private final UserRepository userRepository;
+    private final WaiterRepository waiterRepository;
 
     @GetMapping("/employees")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getStaffEmployees() {
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+
         List<User> staff = userRepository.findByRoleNotInAndActiveTrue(
                 List.of(UserRole.CUSTOMER));
-        List<Map<String, Object>> result = staff.stream().map(u -> Map.<String, Object>of(
-                "id", u.getId(),
-                "fullName", (u.getFirstName() != null ? u.getFirstName() : "") + " " + (u.getLastName() != null ? u.getLastName() : ""),
-                "email", u.getEmail() != null ? u.getEmail() : "",
-                "role", u.getRole().name()
-        )).toList();
+        for (User u : staff) {
+            result.add(Map.of(
+                    "id", u.getId(),
+                    "fullName", (u.getFirstName() != null ? u.getFirstName() : "") + " " + (u.getLastName() != null ? u.getLastName() : ""),
+                    "email", u.getEmail() != null ? u.getEmail() : "",
+                    "role", u.getRole().name(),
+                    "type", "user"
+            ));
+        }
+
+        List<Waiter> waiters = waiterRepository.findByActiveTrueOrderByNameAsc();
+        for (Waiter w : waiters) {
+            result.add(Map.of(
+                    "id", w.getId(),
+                    "fullName", w.getName() != null ? w.getName() : "",
+                    "email", w.getEmail() != null ? w.getEmail() : "",
+                    "role", w.getRole().name(),
+                    "type", "waiter"
+            ));
+        }
+
         return ResponseEntity.ok(ApiResponse.success("Staff employees retrieved", result));
     }
 
@@ -122,12 +142,21 @@ public class PayrollController {
     private PayrollEntry mapToEntity(PayrollEntryRequest req) {
         Restaurant restaurant = restaurantRepository.findById(req.getRestaurantId())
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-        User employee = userRepository.findById(req.getEmployeeId())
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        User employee = null;
+        Waiter waiter = null;
+        if ("waiter".equals(req.getEmployeeType())) {
+            waiter = waiterRepository.findById(req.getEmployeeId())
+                    .orElseThrow(() -> new RuntimeException("Waiter not found"));
+        } else {
+            employee = userRepository.findById(req.getEmployeeId())
+                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+        }
 
         return PayrollEntry.builder()
                 .restaurant(restaurant)
                 .employee(employee)
+                .waiter(waiter)
                 .payrollType(req.getPayrollType())
                 .payPeriodStart(req.getPayPeriodStart())
                 .payPeriodEnd(req.getPayPeriodEnd())

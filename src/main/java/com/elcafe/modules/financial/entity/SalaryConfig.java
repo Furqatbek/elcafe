@@ -2,6 +2,7 @@ package com.elcafe.modules.financial.entity;
 
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.waiter.entity.Waiter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -18,9 +19,7 @@ import java.time.OffsetDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "salary_configs", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"restaurant_id", "employee_id"})
-})
+@Table(name = "salary_configs")
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class SalaryConfig {
@@ -35,9 +34,14 @@ public class SalaryConfig {
     private Restaurant restaurant;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "resetToken", "resetTokenExpiry"})
     private User employee;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "waiter_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Waiter waiter;
 
     @Column(name = "monthly_salary", nullable = false, precision = 12, scale = 2)
     private BigDecimal monthlySalary;

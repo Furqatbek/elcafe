@@ -78,11 +78,18 @@ export default function Payroll() {
     } catch (e) { console.error('Failed to load salary configs:', e); }
   };
 
+  const parseEmployeeKey = (key) => {
+    const [type, id] = key.split(':');
+    return { type, id: parseInt(id) };
+  };
+
   const handleCreateSalary = async () => {
     try {
+      const { type, id } = parseEmployeeKey(salaryForm.employeeId);
       await financialAPI.createSalaryConfig({
         restaurantId: parseInt(selectedRestaurant),
-        employeeId: parseInt(salaryForm.employeeId),
+        employeeId: id,
+        employeeType: type,
         monthlySalary: parseFloat(salaryForm.monthlySalary),
         payDay: parseInt(salaryForm.payDay),
         paymentMethod: salaryForm.paymentMethod,
@@ -114,9 +121,11 @@ export default function Payroll() {
 
   const handleCreate = async () => {
     try {
+      const { type, id } = parseEmployeeKey(form.employeeId);
       await financialAPI.createPayroll({
         restaurantId: parseInt(selectedRestaurant),
-        employeeId: parseInt(form.employeeId),
+        employeeId: id,
+        employeeType: type,
         payrollType: form.payrollType,
         payPeriodStart: form.payPeriodStart,
         payPeriodEnd: form.payPeriodEnd,
@@ -217,7 +226,7 @@ export default function Payroll() {
                     salaryConfigs.map(sc => (
                       <TableRow key={sc.id}>
                         <TableCell className="font-medium">
-                          {sc.employee?.firstName} {sc.employee?.lastName || sc.employee?.email}
+                          {sc.waiter ? sc.waiter.name : `${sc.employee?.firstName || ''} ${sc.employee?.lastName || sc.employee?.email || ''}`}
                         </TableCell>
                         <TableCell className="text-right font-bold">{fmt(sc.monthlySalary)}</TableCell>
                         <TableCell className="text-center">{sc.payDay}</TableCell>
@@ -310,7 +319,7 @@ export default function Payroll() {
                   ) : (
                     payrolls.map(p => (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.employee?.fullName || p.employee?.email || `#${p.employee?.id}`}</TableCell>
+                        <TableCell className="font-medium">{p.waiter?.name || p.employee?.fullName || p.employee?.email || '—'}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{p.payPeriodStart} — {p.payPeriodEnd}</TableCell>
                         <TableCell><Badge variant="outline">{t(`payroll.types.${p.payrollType}`)}</Badge></TableCell>
                         <TableCell className="text-right">{fmt(p.grossPay)}</TableCell>
@@ -356,7 +365,7 @@ export default function Payroll() {
                 <Label>{t('payroll.employee')} *</Label>
                 <select value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background">
                   <option value="">{t('payroll.selectEmployee')}</option>
-                  {employees.map(e => <option key={e.id} value={e.id}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
+                  {employees.map(e => <option key={`${e.type}:${e.id}`} value={`${e.type}:${e.id}`}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
                 </select>
               </div>
               <div className="space-y-2">
@@ -485,7 +494,7 @@ export default function Payroll() {
               <Label>{t('payroll.employee')} *</Label>
               <select value={salaryForm.employeeId} onChange={e => setSalaryForm({ ...salaryForm, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background">
                 <option value="">{t('payroll.selectEmployee')}</option>
-                {employees.map(e => <option key={e.id} value={e.id}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
+                {employees.map(e => <option key={`${e.type}:${e.id}`} value={`${e.type}:${e.id}`}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
               </select>
             </div>
             <div className="grid grid-cols-2 gap-4">

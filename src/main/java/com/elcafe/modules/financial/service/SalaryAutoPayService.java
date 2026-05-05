@@ -61,12 +61,15 @@ public class SalaryAutoPayService {
         LocalDate periodEnd = paymentDate.minusDays(1);
 
         // Calculate unpaid advances for this employee in this period
-        BigDecimal advanceDeduction = calculateUnpaidAdvances(
-                config.getRestaurant().getId(), config.getEmployee().getId(), periodStart, periodEnd);
+        Long empId = config.getEmployee() != null ? config.getEmployee().getId() : null;
+        BigDecimal advanceDeduction = empId != null
+                ? calculateUnpaidAdvances(config.getRestaurant().getId(), empId, periodStart, periodEnd)
+                : BigDecimal.ZERO;
 
         PayrollEntry entry = PayrollEntry.builder()
                 .restaurant(config.getRestaurant())
                 .employee(config.getEmployee())
+                .waiter(config.getWaiter())
                 .payrollType(PayrollEntry.PayrollType.SALARY)
                 .payPeriodStart(periodStart)
                 .payPeriodEnd(periodEnd)
@@ -87,10 +90,11 @@ public class SalaryAutoPayService {
         config.setLastPaidDate(paymentDate);
         salaryConfigRepository.save(config);
 
-        log.info("Salary processed for employee {} ({}): {} - advances {} = net on {}",
-                config.getEmployee().getId(),
-                config.getEmployee().getEmail(),
-                config.getMonthlySalary(), advanceDeduction, paymentDate);
+        String employeeName = config.getEmployee() != null
+                ? config.getEmployee().getEmail()
+                : config.getWaiter() != null ? config.getWaiter().getName() : "unknown";
+        log.info("Salary processed for {}: {} - advances {} = net on {}",
+                employeeName, config.getMonthlySalary(), advanceDeduction, paymentDate);
     }
 
     private BigDecimal calculateUnpaidAdvances(Long restaurantId, Long employeeId,
