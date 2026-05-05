@@ -246,6 +246,7 @@ export default function Payroll() {
                     <SelectItem value="SALARY">Salary</SelectItem>
                     <SelectItem value="CONTRACT">Contract</SelectItem>
                     <SelectItem value="COMMISSION">Commission</SelectItem>
+                    <SelectItem value="ADVANCE">Advance Payment</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -272,7 +273,7 @@ export default function Payroll() {
                 </div>
               </div>
             )}
-            {(form.payrollType === 'SALARY' || form.payrollType === 'CONTRACT') && (
+            {(form.payrollType === 'SALARY' || form.payrollType === 'CONTRACT' || form.payrollType === 'ADVANCE') && (
               <div className="space-y-2">
                 <Label>Base Salary</Label>
                 <Input type="number" value={form.baseSalary} onChange={e => setForm({ ...form, baseSalary: e.target.value })} />

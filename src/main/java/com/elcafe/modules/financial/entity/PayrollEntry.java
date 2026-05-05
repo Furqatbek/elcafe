@@ -186,7 +186,8 @@ public class PayrollEntry {
         HOURLY,
         SALARY,
         CONTRACT,
-        COMMISSION
+        COMMISSION,
+        ADVANCE
     }
 
     public enum PaymentStatus {
