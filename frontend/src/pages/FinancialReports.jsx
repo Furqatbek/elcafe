@@ -160,6 +160,11 @@ const FinancialReports = () => {
             <div className="text-2xl font-bold text-green-900">
               {formatCurrency(profitLossReport.totalRevenue)}
             </div>
+            {profitLossReport.totalDiscounts > 0 && (
+              <div className="text-xs text-green-700 mt-1">
+                {t('finance.reports.grossRevenue', 'Gross')}: {formatCurrency(profitLossReport.grossRevenue)} | {t('finance.reports.discounts', 'Discounts')}: -{formatCurrency(profitLossReport.totalDiscounts)}
+              </div>
+            )}
           </div>
 
           <div className="bg-red-50 p-4 rounded-lg border border-red-200">
@@ -203,14 +208,59 @@ const FinancialReports = () => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               <tr className="bg-green-50">
-                <td className="px-6 py-4 font-semibold text-green-900">{t('finance.reports.revenue').toUpperCase()}</td>
+                <td className="px-6 py-4 font-semibold text-green-900">{t('finance.reports.revenue', 'REVENUE').toUpperCase()}</td>
                 <td className="px-6 py-4 text-right font-semibold text-green-900">
-                  {formatCurrency(profitLossReport.totalRevenue)}
+                  {formatCurrency(profitLossReport.grossRevenue)}
                 </td>
               </tr>
 
+              {profitLossReport.salesRevenue > 0 && (
+                <tr>
+                  <td className="px-6 py-3 pl-12 text-sm text-gray-700">{t('finance.reports.salesRevenue', 'Sales')}</td>
+                  <td className="px-6 py-3 text-right text-sm text-gray-700">{formatCurrency(profitLossReport.salesRevenue)}</td>
+                </tr>
+              )}
+              {profitLossReport.serviceFeeRevenue > 0 && (
+                <tr>
+                  <td className="px-6 py-3 pl-12 text-sm text-gray-700">{t('finance.reports.serviceFeeRevenue', 'Service Fees')}</td>
+                  <td className="px-6 py-3 text-right text-sm text-gray-700">{formatCurrency(profitLossReport.serviceFeeRevenue)}</td>
+                </tr>
+              )}
+              {profitLossReport.deliveryFeeRevenue > 0 && (
+                <tr>
+                  <td className="px-6 py-3 pl-12 text-sm text-gray-700">{t('finance.reports.deliveryFeeRevenue', 'Delivery Fees')}</td>
+                  <td className="px-6 py-3 text-right text-sm text-gray-700">{formatCurrency(profitLossReport.deliveryFeeRevenue)}</td>
+                </tr>
+              )}
+              {profitLossReport.tipRevenue > 0 && (
+                <tr>
+                  <td className="px-6 py-3 pl-12 text-sm text-gray-700">{t('finance.reports.tipRevenue', 'Tips')}</td>
+                  <td className="px-6 py-3 text-right text-sm text-gray-700">{formatCurrency(profitLossReport.tipRevenue)}</td>
+                </tr>
+              )}
+
+              {profitLossReport.totalDiscounts > 0 && (
+                <>
+                  <tr className="bg-orange-50">
+                    <td className="px-6 py-3 font-medium text-orange-900">{t('finance.reports.discounts', 'DISCOUNTS')}</td>
+                    <td className="px-6 py-3 text-right font-medium text-orange-900">-{formatCurrency(profitLossReport.totalDiscounts)}</td>
+                  </tr>
+                  {profitLossReport.discountsByType && Object.entries(profitLossReport.discountsByType).map(([type, amount]) => (
+                    <tr key={type}>
+                      <td className="px-6 py-2 pl-12 text-sm text-gray-600">{t(`finance.reports.discountType.${type}`, type.replace(/_/g, ' '))}</td>
+                      <td className="px-6 py-2 text-right text-sm text-gray-600">-{formatCurrency(amount)}</td>
+                    </tr>
+                  ))}
+                </>
+              )}
+
+              <tr className="bg-green-100">
+                <td className="px-6 py-3 font-semibold text-green-900">{t('finance.reports.netRevenue', 'NET REVENUE')}</td>
+                <td className="px-6 py-3 text-right font-semibold text-green-900">{formatCurrency(profitLossReport.totalRevenue)}</td>
+              </tr>
+
               <tr className="bg-red-50">
-                <td className="px-6 py-4 font-semibold text-red-900">{t('finance.reports.expenses').toUpperCase()}</td>
+                <td className="px-6 py-4 font-semibold text-red-900">{t('finance.reports.expenses', 'EXPENSES').toUpperCase()}</td>
                 <td className="px-6 py-4 text-right font-semibold text-red-900">
                   {formatCurrency(profitLossReport.totalExpenses)}
                 </td>
@@ -244,6 +294,18 @@ const FinancialReports = () => {
                   {formatCurrency(profitLossReport.netIncome)}
                 </td>
               </tr>
+
+              {profitLossReport.orderCount > 0 && (
+                <tr className="bg-gray-50">
+                  <td className="px-6 py-3 text-sm text-gray-600">{t('finance.reports.orderCount', 'Total Orders')}</td>
+                  <td className="px-6 py-3 text-right text-sm text-gray-600">
+                    {profitLossReport.orderCount}
+                    {profitLossReport.discountedOrderCount > 0 && (
+                      <span className="ml-2 text-orange-600">({profitLossReport.discountedOrderCount} {t('finance.reports.withDiscounts', 'with discounts')})</span>
+                    )}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
