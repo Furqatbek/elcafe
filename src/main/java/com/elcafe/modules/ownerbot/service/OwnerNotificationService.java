@@ -1,5 +1,6 @@
 package com.elcafe.modules.ownerbot.service;
 
+import com.elcafe.modules.financial.dto.DashboardResponse;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationLog;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationSettings;
@@ -219,34 +220,42 @@ public class OwnerNotificationService {
     }
 
     /**
-     * Send daily sales report
+     * Send daily sales report using dashboard data
      */
     @Async
     @Transactional
-    public void sendDailySalesReport(Long restaurantId, String restaurantName,
-                                      int totalOrders, BigDecimal totalRevenue,
-                                      int reservations, BigDecimal avgOrderValue) {
+    public void sendDailySalesReport(Long restaurantId, String restaurantName, DashboardResponse dashboard) {
         List<OwnerTelegramSubscriber> subscribers = subscriberRepository
                 .findActiveSubscribersWithSettings(restaurantId);
 
-        String message = String.format(
-            "📊 <b>Ежедневный отчёт</b>\n" +
-            "🏪 %s\n" +
-            "📅 %s\n\n" +
-            "═══════════════════\n\n" +
-            "📦 <b>Заказы:</b> %d\n" +
-            "💰 <b>Выручка:</b> %s UZS\n" +
-            "📈 <b>Средний чек:</b> %s UZS\n" +
-            "📅 <b>Бронирований:</b> %d\n\n" +
-            "═══════════════════\n\n" +
-            "Хорошего вечера! 🌙",
-            restaurantName,
-            LocalDateTime.now().format(DATE_FORMAT),
-            totalOrders,
-            CURRENCY_FORMAT.format(totalRevenue),
-            CURRENCY_FORMAT.format(avgOrderValue),
-            reservations
-        );
+        BigDecimal totalRevenue = dashboard.getTotalIncome() != null ? dashboard.getTotalIncome() : BigDecimal.ZERO;
+        BigDecimal totalExpenses = dashboard.getTotalExpenses() != null ? dashboard.getTotalExpenses() : BigDecimal.ZERO;
+        BigDecimal netProfit = dashboard.getNetProfit() != null ? dashboard.getNetProfit() : BigDecimal.ZERO;
+        BigDecimal payroll = dashboard.getTotalPayroll() != null ? dashboard.getTotalPayroll() : BigDecimal.ZERO;
+        long totalOrders = dashboard.getOrderStats() != null && dashboard.getOrderStats().getTotalOrders() != null
+                ? dashboard.getOrderStats().getTotalOrders() : 0;
+        BigDecimal avgOrderValue = dashboard.getOrderStats() != null && dashboard.getOrderStats().getAverageOrderValue() != null
+                ? dashboard.getOrderStats().getAverageOrderValue() : BigDecimal.ZERO;
+        String profitEmoji = netProfit.compareTo(BigDecimal.ZERO) >= 0 ? "📈" : "📉";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("📊 <b>Ежедневный отчёт</b>\n🏪 %s\n📅 %s\n\n",
+                restaurantName, LocalDateTime.now().format(DATE_FORMAT)));
+        sb.append(String.format("📦 <b>Заказы:</b> %d\n", totalOrders));
+        sb.append(String.format("💰 <b>Выручка:</b> %,.2f\n", totalRevenue));
+        sb.append(String.format("🧾 <b>Средний чек:</b> %,.2f\n\n", avgOrderValue));
+        sb.append(String.format("💸 <b>Расходы:</b> %,.2f\n", totalExpenses));
+        if (payroll.compareTo(BigDecimal.ZERO) > 0) {
+            sb.append(String.format("   👥 Зарплата: %,.2f\n", payroll));
+        }
+        sb.append(String.format("\n%s <b>Чистая прибыль:</b> %,.2f\n\n", profitEmoji, netProfit));
+
+        if (dashboard.getProfitMargin() != null) {
+            sb.append(String.format("📊 Маржа: %.1f%%\n\n", dashboard.getProfitMargin()));
+        }
+        sb.append(String.format("⏰ %s", LocalDateTime.now().format(DATETIME_FORMAT)));
+
+        String message = sb.toString();
 
         for (OwnerTelegramSubscriber subscriber : subscribers) {
             if (subscriber.canReceiveNotification("DAILY_REPORT")) {
