@@ -50,7 +50,6 @@ public class OwnerTelegramBotService {
     private final InventoryIngredientRepository ingredientRepository;
     @org.springframework.context.annotation.Lazy
     private final DailyFinancialReportService dailyFinancialReportService;
-    private final OwnerNotificationService ownerNotificationService;
 
     private OwnerBot bot;
     private BotSession botSession;
@@ -498,8 +497,32 @@ public class OwnerTelegramBotService {
             }
             try {
                 Long restaurantId = subOpt.get().getRestaurant().getId();
-                dailyFinancialReportService.triggerReportForRestaurant(restaurantId);
-                sendReply(chatId, "📊 Финансовый отчёт отправлен!");
+                String restaurantName = subOpt.get().getRestaurant().getName();
+                var metrics = dailyFinancialReportService.calculateDailyMetrics(restaurantId, java.time.LocalDate.now());
+
+                long hours = 0, mins = 0;
+                StringBuilder sb = new StringBuilder();
+                sb.append("📊 <b>Финансовый отчёт за сегодня</b>\n\n");
+                sb.append(String.format("🏪 <b>%s</b>\n", restaurantName));
+                sb.append(String.format("📅 %s\n\n", java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"))));
+                sb.append(String.format("💰 <b>Выручка:</b> %,.2f\n", metrics.totalRevenue()));
+                sb.append(String.format("📦 Заказов: %d\n\n", metrics.orderCount()));
+
+                if (metrics.salesRevenue().compareTo(java.math.BigDecimal.ZERO) > 0)
+                    sb.append(String.format("   🍽 Продажи: %,.2f\n", metrics.salesRevenue()));
+                if (metrics.serviceFeeRevenue().compareTo(java.math.BigDecimal.ZERO) > 0)
+                    sb.append(String.format("   🔧 Сервисный сбор: %,.2f\n", metrics.serviceFeeRevenue()));
+                if (metrics.tipRevenue().compareTo(java.math.BigDecimal.ZERO) > 0)
+                    sb.append(String.format("   💵 Чаевые: %,.2f\n", metrics.tipRevenue()));
+
+                sb.append(String.format("\n💸 <b>Расходы:</b> %,.2f\n", metrics.totalExpenses()));
+                if (metrics.totalPayroll().compareTo(java.math.BigDecimal.ZERO) > 0)
+                    sb.append(String.format("   👥 Зарплата: %,.2f\n", metrics.totalPayroll()));
+
+                String profitEmoji = metrics.netIncome().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
+                sb.append(String.format("\n%s <b>Чистая прибыль:</b> %,.2f", profitEmoji, metrics.netIncome()));
+
+                sendReply(chatId, sb.toString());
             } catch (Exception e) {
                 log.error("Failed to send report via bot command: {}", e.getMessage());
                 sendReply(chatId, "❌ Ошибка при формировании отчёта: " + e.getMessage());
@@ -533,8 +556,13 @@ public class OwnerTelegramBotService {
                 if (belowThreshold.isEmpty()) {
                     sendReply(chatId, "✅ Все запасы в норме! Нет товаров с низким уровнем.");
                 } else {
-                    ownerNotificationService.notifyLowStockBatch(restaurantId, belowThreshold);
-                    sendReply(chatId, String.format("⚠️ Найдено %d товаров с низким запасом. Уведомление отправлено.", belowThreshold.size()));
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(String.format("📦 <b>Низкий уровень запасов (%d)</b>\n\n", belowThreshold.size()));
+                    for (String[] item : belowThreshold) {
+                        sb.append(String.format("⚠️ <b>%s</b>: %s (мин: %s)\n", item[0], item[1], item[2]));
+                    }
+                    sb.append("\n⚠️ Рекомендуется пополнить запасы");
+                    sendReply(chatId, sb.toString());
                 }
             } catch (Exception e) {
                 log.error("Failed to check stock via bot command: {}", e.getMessage());
