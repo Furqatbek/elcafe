@@ -1,6 +1,7 @@
 package com.elcafe.modules.financial.controller;
 
 import com.elcafe.modules.auth.entity.User;
+import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.financial.dto.PayrollEntryRequest;
 import com.elcafe.modules.financial.dto.PayrollEntryResponse;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -31,6 +33,19 @@ public class PayrollController {
     private final PayrollService payrollService;
     private final RestaurantRepository restaurantRepository;
     private final UserRepository userRepository;
+
+    @GetMapping("/employees")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getStaffEmployees() {
+        List<User> staff = userRepository.findByRoleNotInAndActiveTrue(
+                List.of(UserRole.CUSTOMER));
+        List<Map<String, Object>> result = staff.stream().map(u -> Map.<String, Object>of(
+                "id", u.getId(),
+                "fullName", (u.getFirstName() != null ? u.getFirstName() : "") + " " + (u.getLastName() != null ? u.getLastName() : ""),
+                "email", u.getEmail() != null ? u.getEmail() : "",
+                "role", u.getRole().name()
+        )).toList();
+        return ResponseEntity.ok(ApiResponse.success("Staff employees retrieved", result));
+    }
 
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<ApiResponse<List<PayrollEntry>>> getByRestaurant(

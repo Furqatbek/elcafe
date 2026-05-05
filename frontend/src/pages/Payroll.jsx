@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { financialAPI, restaurantAPI, operatorAPI } from '../services/api';
+import { financialAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -46,8 +46,8 @@ export default function Payroll() {
       setRestaurants(Array.isArray(list) ? list : []);
       if (list.length > 0) setSelectedRestaurant(list[0].id.toString());
     }).catch(console.error);
-    operatorAPI.getAll({ page: 0, size: 100 }).then(res => {
-      setEmployees(res.data.data?.content || res.data.data || []);
+    financialAPI.getPayrollEmployees().then(res => {
+      setEmployees(res.data.data || []);
     }).catch(console.error);
   }, []);
 
@@ -234,7 +234,7 @@ export default function Payroll() {
                 <Label>Employee *</Label>
                 <select value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background">
                   <option value="">Select employee</option>
-                  {employees.map(e => <option key={e.id} value={e.id}>{e.fullName || e.email}</option>)}
+                  {employees.map(e => <option key={e.id} value={e.id}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
                 </select>
               </div>
               <div className="space-y-2">

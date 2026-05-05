@@ -518,6 +518,7 @@ export const financialAPI = {
   deleteExpense: (id) => api.delete(`/financial/expenses/${id}`),
 
   // Payroll
+  getPayrollEmployees: () => api.get('/financial/payroll/employees'),
   getPayroll: (restaurantId) => api.get(`/financial/payroll/restaurant/${restaurantId}`),
   getPayrollByRange: (restaurantId, startDate, endDate) => api.get(`/financial/payroll/restaurant/${restaurantId}/range`, { params: { startDate, endDate } }),
   getPayrollByEmployee: (employeeId) => api.get(`/financial/payroll/employee/${employeeId}`),
