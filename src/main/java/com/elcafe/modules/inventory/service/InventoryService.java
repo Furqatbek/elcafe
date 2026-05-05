@@ -76,6 +76,7 @@ public class InventoryService {
 
         // Handle production batch items first — deduct from prepared inventory
         for (OrderItem item : order.getItems()) {
+            if (item.getProductId() == null) continue;
             try {
                 Product product = productRepository.findById(item.getProductId()).orElse(null);
                 if (product != null && Boolean.TRUE.equals(product.getUsesProductionBatch())) {
@@ -220,7 +221,7 @@ public class InventoryService {
         Map<Long, BigDecimal> requiredIngredients = new HashMap<>();
 
         for (OrderItem item : order.getItems()) {
-            // Skip products that use production batch — they are handled separately
+            if (item.getProductId() == null) continue;
             Product product = productRepository.findById(item.getProductId()).orElse(null);
             if (product != null && Boolean.TRUE.equals(product.getUsesProductionBatch())) {
                 continue;

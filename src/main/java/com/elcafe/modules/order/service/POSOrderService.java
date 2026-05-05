@@ -189,6 +189,7 @@ public class POSOrderService {
         if (!inventoryService.checkIngredientAvailability(savedOrder)) {
             List<String> allMissing = new java.util.ArrayList<>();
             for (OrderItem item : savedOrder.getItems()) {
+                if (item.getProductId() == null) continue;
                 List<String> missing = inventoryService.getMissingIngredients(
                         item.getProductId(), item.getQuantity());
                 allMissing.addAll(missing);
