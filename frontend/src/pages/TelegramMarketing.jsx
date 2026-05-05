@@ -900,10 +900,24 @@ export default function TelegramMarketing() {
                   <Save className="mr-2 h-4 w-4" />
                   {savingConfig ? t('common.saving') : t('common.save')}
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Owner Bot Configuration */}
+                {editingCustomerBotId && (
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      if (!window.confirm(t('telegram.settings.confirmStopBot', 'Stop this bot and clear its configuration?'))) return;
+                      try {
+                        await telegramAPI.deleteCustomerBotConfig(editingCustomerBotId);
+                        setEditingCustomerBotId(null);
+                        setCustomerBotForm({ botToken: '', botUsername: '', webhookUrl: '', isActive: true, welcomeMessage: '' });
+                        loadBotConfigs();
+                        alert(t('telegram.settings.botStopped', 'Bot stopped and configuration cleared'));
+                      } catch (e) { console.error(e); alert('Failed to stop bot'); }
+                    }}
+                    className="w-full"
+                  >
+                    {t('telegram.settings.stopBot', 'Stop Bot & Clear Config')}
+                  </Button>
+                )}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -967,6 +981,24 @@ export default function TelegramMarketing() {
                   <Save className="mr-2 h-4 w-4" />
                   {savingConfig ? t('common.saving') : t('common.save')}
                 </Button>
+                {editingOwnerBotId && (
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      if (!window.confirm(t('telegram.settings.confirmStopBot', 'Stop this bot and clear its configuration?'))) return;
+                      try {
+                        await telegramAPI.deleteOwnerBotConfig(editingOwnerBotId);
+                        setEditingOwnerBotId(null);
+                        setOwnerBotForm({ botToken: '', botUsername: '', welcomeMessage: '', isActive: true, autoVerifyOwners: false });
+                        loadBotConfigs();
+                        alert(t('telegram.settings.botStopped', 'Bot stopped and configuration cleared'));
+                      } catch (e) { console.error(e); alert('Failed to stop bot'); }
+                    }}
+                    className="w-full"
+                  >
+                    {t('telegram.settings.stopBot', 'Stop Bot & Clear Config')}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </div>
