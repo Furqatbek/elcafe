@@ -26,12 +26,20 @@ import java.util.Locale;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OwnerNotificationService {
 
     private final OwnerTelegramBotService botService;
     private final OwnerTelegramSubscriberRepository subscriberRepository;
     private final OwnerNotificationLogRepository logRepository;
+
+    public OwnerNotificationService(
+            @org.springframework.context.annotation.Lazy OwnerTelegramBotService botService,
+            OwnerTelegramSubscriberRepository subscriberRepository,
+            OwnerNotificationLogRepository logRepository) {
+        this.botService = botService;
+        this.subscriberRepository = subscriberRepository;
+        this.logRepository = logRepository;
+    }
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");

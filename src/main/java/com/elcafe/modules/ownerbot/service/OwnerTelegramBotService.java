@@ -50,7 +50,6 @@ public class OwnerTelegramBotService {
     private final InventoryIngredientRepository ingredientRepository;
     @org.springframework.context.annotation.Lazy
     private final DailyFinancialReportService dailyFinancialReportService;
-    @org.springframework.context.annotation.Lazy
     private final OwnerNotificationService ownerNotificationService;
 
     private OwnerBot bot;
