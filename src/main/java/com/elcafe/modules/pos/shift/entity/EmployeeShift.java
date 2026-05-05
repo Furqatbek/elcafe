@@ -165,7 +165,7 @@ public class EmployeeShift {
 
     public void clockOut() {
         this.clockOut = OffsetDateTime.now();
-        this.status = ShiftStatus.COMPLETED;
+        this.status = ShiftStatus.APPROVED;
         calculateTotalBreakMinutes();
     }
 
