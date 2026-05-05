@@ -31,14 +31,17 @@ public class OwnerNotificationService {
     private final OwnerTelegramBotService botService;
     private final OwnerTelegramSubscriberRepository subscriberRepository;
     private final OwnerNotificationLogRepository logRepository;
+    private final com.elcafe.modules.financial.service.DashboardService dashboardService;
 
     public OwnerNotificationService(
             @org.springframework.context.annotation.Lazy OwnerTelegramBotService botService,
             OwnerTelegramSubscriberRepository subscriberRepository,
-            OwnerNotificationLogRepository logRepository) {
+            OwnerNotificationLogRepository logRepository,
+            @org.springframework.context.annotation.Lazy com.elcafe.modules.financial.service.DashboardService dashboardService) {
         this.botService = botService;
         this.subscriberRepository = subscriberRepository;
         this.logRepository = logRepository;
+        this.dashboardService = dashboardService;
     }
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
@@ -294,7 +297,7 @@ public class OwnerNotificationService {
     @Transactional
     public void notifyShiftClosed(Long restaurantId, String employeeName, String clockInTime,
                                    String clockOutTime, long workedMinutes, int orderCount,
-                                   java.math.BigDecimal totalSales, java.math.BigDecimal todayProfit) {
+                                   java.math.BigDecimal totalSales) {
         List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.SHIFT_CLOSED);
 
         if (subscribers.isEmpty()) {
@@ -302,10 +305,18 @@ public class OwnerNotificationService {
             return;
         }
 
+        java.math.BigDecimal todayProfit = java.math.BigDecimal.ZERO;
+        try {
+            var dashboard = dashboardService.getTodaySummary(restaurantId);
+            todayProfit = dashboard.getNetProfit() != null ? dashboard.getNetProfit() : java.math.BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("Could not calculate today's profit for shift notification: {}", e.getMessage());
+        }
+
         long hours = workedMinutes / 60;
         long mins = workedMinutes % 60;
-        String profitEmoji = todayProfit != null && todayProfit.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
-        String profitText = todayProfit != null ? String.format("%,.2f", todayProfit) : "0";
+        String profitEmoji = todayProfit.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
+        String profitText = String.format("%,.2f", todayProfit);
 
         String message = String.format(
             "🔴 <b>Смена закрыта</b>\n\n" +
