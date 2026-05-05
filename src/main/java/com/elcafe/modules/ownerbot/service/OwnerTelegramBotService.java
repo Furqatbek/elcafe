@@ -3,12 +3,14 @@ package com.elcafe.modules.ownerbot.service;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.notification.config.TelegramBotRegistry;
+import com.elcafe.modules.notification.service.DailyFinancialReportService;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationSettings;
 import com.elcafe.modules.ownerbot.entity.OwnerTelegramBotConfig;
 import com.elcafe.modules.ownerbot.entity.OwnerTelegramSubscriber;
 import com.elcafe.modules.ownerbot.repository.OwnerNotificationSettingsRepository;
 import com.elcafe.modules.ownerbot.repository.OwnerTelegramBotConfigRepository;
 import com.elcafe.modules.ownerbot.repository.OwnerTelegramSubscriberRepository;
+import com.elcafe.modules.ownerbot.scheduler.LowStockAlertScheduler;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import jakarta.annotation.PostConstruct;
@@ -44,6 +46,10 @@ public class OwnerTelegramBotService {
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
     private final TelegramBotRegistry botRegistry;
+    @org.springframework.context.annotation.Lazy
+    private final DailyFinancialReportService dailyFinancialReportService;
+    @org.springframework.context.annotation.Lazy
+    private final LowStockAlertScheduler lowStockAlertScheduler;
 
     private OwnerBot bot;
     private BotSession botSession;
@@ -250,6 +256,12 @@ public class OwnerTelegramBotService {
                 handleSettingsCommand(chatId);
             } else if (messageText.equals("/help")) {
                 handleHelpCommand(chatId);
+            } else if (messageText.equals("/report")) {
+                handleReportCommand(chatId);
+            } else if (messageText.equals("/stock")) {
+                handleStockCommand(chatId);
+            } else if (messageText.equals("/menu")) {
+                handleMenuCommand(chatId);
             } else if (messageText.matches("^\\d{6}$")) {
                 // Verification code
                 handleVerificationCode(chatId, telegramUser, messageText);
@@ -266,15 +278,11 @@ public class OwnerTelegramBotService {
                 OwnerTelegramSubscriber subscriber = existingOpt.get();
                 String welcomeBack = String.format(
                     "👋 <b>С возвращением, %s!</b>\n\n" +
-                    "Вы уже подключены к ресторану <b>%s</b>.\n\n" +
-                    "Команды:\n" +
-                    "/status - Статус подключения\n" +
-                    "/settings - Настройки уведомлений\n" +
-                    "/help - Справка",
+                    "Вы подключены к ресторану <b>%s</b>.",
                     subscriber.getDisplayName(),
                     subscriber.getRestaurant() != null ? subscriber.getRestaurant().getName() : "N/A"
                 );
-                sendReply(chatId, welcomeBack);
+                sendMenuButtons(chatId, welcomeBack);
             } else {
                 // New user or unverified
                 OwnerTelegramSubscriber subscriber = existingOpt.orElse(
@@ -458,29 +466,129 @@ public class OwnerTelegramBotService {
             updateLastInteraction(chatId);
 
             String helpMessage =
-                "📚 <b>Jangirovs Owner Bot - Справка</b>\n\n" +
+                "📚 <b>Owner Bot - Справка</b>\n\n" +
                 "Этот бот отправляет уведомления владельцам и менеджерам ресторанов.\n\n" +
                 "<b>Команды:</b>\n" +
                 "/start - Начать/перезапустить бот\n" +
+                "/menu - Показать кнопки действий\n" +
+                "/report - Финансовый отчёт за сегодня\n" +
+                "/stock - Проверить низкие запасы\n" +
                 "/status - Статус подключения\n" +
                 "/settings - Настройки уведомлений\n" +
                 "/help - Эта справка\n\n" +
-                "<b>Типы уведомлений:</b>\n" +
+                "<b>Автоматические уведомления:</b>\n" +
                 "🆕 Новые заказы\n" +
                 "📅 Новые бронирования\n" +
+                "🟢 Сотрудник начал смену\n" +
+                "🔴 Сотрудник закончил смену\n" +
                 "📦 Низкий уровень запасов\n" +
                 "⭐ Отзывы клиентов\n" +
                 "📊 Ежедневные отчёты\n" +
-                "🚨 Критические оповещения\n\n" +
-                "Вопросы? Обратитесь в поддержку.";
+                "🚨 Критические оповещения";
             sendReply(chatId, helpMessage);
         }
 
+        private void handleReportCommand(Long chatId) {
+            updateLastInteraction(chatId);
+            Optional<OwnerTelegramSubscriber> subOpt = subscriberRepository.findByTelegramUserId(chatId);
+            if (subOpt.isEmpty() || !subOpt.get().getIsVerified() || subOpt.get().getRestaurant() == null) {
+                sendReply(chatId, "❌ Сначала подключитесь к ресторану через /start");
+                return;
+            }
+            try {
+                Long restaurantId = subOpt.get().getRestaurant().getId();
+                dailyFinancialReportService.triggerReportForRestaurant(restaurantId);
+                sendReply(chatId, "📊 Финансовый отчёт отправлен!");
+            } catch (Exception e) {
+                log.error("Failed to send report via bot command: {}", e.getMessage());
+                sendReply(chatId, "❌ Ошибка при формировании отчёта: " + e.getMessage());
+            }
+        }
+
+        private void handleStockCommand(Long chatId) {
+            updateLastInteraction(chatId);
+            Optional<OwnerTelegramSubscriber> subOpt = subscriberRepository.findByTelegramUserId(chatId);
+            if (subOpt.isEmpty() || !subOpt.get().getIsVerified() || subOpt.get().getRestaurant() == null) {
+                sendReply(chatId, "❌ Сначала подключитесь к ресторану через /start");
+                return;
+            }
+            try {
+                lowStockAlertScheduler.checkLowStockForRestaurant(subOpt.get().getRestaurant());
+                sendReply(chatId, "📦 Проверка запасов запущена! Если есть товары с низким уровнем — вы получите уведомление.");
+            } catch (Exception e) {
+                log.error("Failed to check stock via bot command: {}", e.getMessage());
+                sendReply(chatId, "❌ Ошибка при проверке запасов: " + e.getMessage());
+            }
+        }
+
+        private void handleMenuCommand(Long chatId) {
+            updateLastInteraction(chatId);
+            Optional<OwnerTelegramSubscriber> subOpt = subscriberRepository.findByTelegramUserId(chatId);
+            if (subOpt.isEmpty() || !subOpt.get().getIsVerified()) {
+                sendReply(chatId, "❌ Сначала подключитесь к ресторану через /start");
+                return;
+            }
+            sendMenuButtons(chatId, "📋 <b>Выберите действие:</b>");
+        }
+
+        private void sendMenuButtons(Long chatId, String text) {
+            try {
+                SendMessage msg = new SendMessage();
+                msg.setChatId(chatId.toString());
+                msg.setText(text);
+                msg.setParseMode("HTML");
+
+                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+                List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+
+                InlineKeyboardButton reportBtn = new InlineKeyboardButton();
+                reportBtn.setText("📊 Финансовый отчёт");
+                reportBtn.setCallbackData("cmd_report");
+
+                InlineKeyboardButton stockBtn = new InlineKeyboardButton();
+                stockBtn.setText("📦 Проверить запасы");
+                stockBtn.setCallbackData("cmd_stock");
+
+                keyboard.add(List.of(reportBtn, stockBtn));
+
+                InlineKeyboardButton statusBtn = new InlineKeyboardButton();
+                statusBtn.setText("ℹ️ Статус");
+                statusBtn.setCallbackData("cmd_status");
+
+                InlineKeyboardButton settingsBtn = new InlineKeyboardButton();
+                settingsBtn.setText("⚙️ Настройки");
+                settingsBtn.setCallbackData("cmd_settings");
+
+                keyboard.add(List.of(statusBtn, settingsBtn));
+
+                markup.setKeyboard(keyboard);
+                msg.setReplyMarkup(markup);
+                execute(msg);
+            } catch (TelegramApiException e) {
+                log.error("Failed to send menu to chatId {}: {}", chatId, e.getMessage());
+            }
+        }
+
         private void handleCallbackQuery(Update update) {
-            // Handle inline button callbacks if needed
             String callbackData = update.getCallbackQuery().getData();
             Long chatId = update.getCallbackQuery().getMessage().getChatId();
-            // Implement callback handling as needed
+
+            try {
+                org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery answer =
+                        new org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery();
+                answer.setCallbackQueryId(update.getCallbackQuery().getId());
+                execute(answer);
+            } catch (TelegramApiException e) {
+                log.warn("Failed to answer callback query: {}", e.getMessage());
+            }
+
+            switch (callbackData) {
+                case "cmd_report" -> handleReportCommand(chatId);
+                case "cmd_stock" -> handleStockCommand(chatId);
+                case "cmd_status" -> handleStatusCommand(chatId);
+                case "cmd_settings" -> handleSettingsCommand(chatId);
+                default -> sendReply(chatId, "Неизвестная команда");
+            }
         }
 
         private void updateLastInteraction(Long chatId) {

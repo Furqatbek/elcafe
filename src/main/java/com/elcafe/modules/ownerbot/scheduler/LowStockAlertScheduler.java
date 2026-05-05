@@ -45,7 +45,7 @@ public class LowStockAlertScheduler {
         }
     }
 
-    private void checkLowStockForRestaurant(Restaurant restaurant) {
+    public void checkLowStockForRestaurant(Restaurant restaurant) {
         List<Ingredient> lowStockItems = ingredientRepository.findLowStockIngredients(restaurant.getId());
 
         // Collect all below-threshold items first, then send one batched async notification.
