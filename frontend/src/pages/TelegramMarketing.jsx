@@ -918,6 +918,10 @@ export default function TelegramMarketing() {
                     {t('telegram.settings.stopBot', 'Stop Bot & Clear Config')}
                   </Button>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Owner Bot Configuration */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
