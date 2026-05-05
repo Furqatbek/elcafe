@@ -271,12 +271,15 @@ public class OwnerNotificationService {
             return;
         }
 
+        String restaurantName = subscribers.get(0).getRestaurant() != null
+                ? subscribers.get(0).getRestaurant().getName() : "ID: " + restaurantId;
+
         String message = String.format(
             "🟢 <b>Смена открыта</b>\n\n" +
             "👤 <b>%s</b>\n" +
             "⏰ Начало: %s\n\n" +
-            "📍 Ресторан ID: %d",
-            employeeName, clockInTime, restaurantId
+            "📍 %s",
+            employeeName, clockInTime, restaurantName
         );
 
         for (OwnerTelegramSubscriber subscriber : subscribers) {
