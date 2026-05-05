@@ -37,15 +37,14 @@ public class PayrollEntry {
     @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "employee_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "resetToken", "resetTokenExpiry"})
     private User employee;
 
-    /**
-     * Optional waiter reference for waiter-specific payroll entries
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "waiter_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Waiter waiter;
 
     @Column(nullable = false, length = 50)

@@ -319,7 +319,7 @@ export default function Payroll() {
                   ) : (
                     payrolls.map(p => (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.waiter?.name || p.employee?.fullName || p.employee?.email || '—'}</TableCell>
+                        <TableCell className="font-medium">{p.waiter?.name || p.employee?.fullName || ((p.employee?.firstName || '') + ' ' + (p.employee?.lastName || '')).trim() || p.employee?.email || '—'}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{p.payPeriodStart} — {p.payPeriodEnd}</TableCell>
                         <TableCell><Badge variant="outline">{t(`payroll.types.${p.payrollType}`)}</Badge></TableCell>
                         <TableCell className="text-right">{fmt(p.grossPay)}</TableCell>
