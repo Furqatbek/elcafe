@@ -2,6 +2,8 @@ package com.elcafe.modules.ownerbot.service;
 
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
+import com.elcafe.modules.inventory.entity.Ingredient;
+import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.notification.config.TelegramBotRegistry;
 import com.elcafe.modules.notification.service.DailyFinancialReportService;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationSettings;
@@ -10,7 +12,6 @@ import com.elcafe.modules.ownerbot.entity.OwnerTelegramSubscriber;
 import com.elcafe.modules.ownerbot.repository.OwnerNotificationSettingsRepository;
 import com.elcafe.modules.ownerbot.repository.OwnerTelegramBotConfigRepository;
 import com.elcafe.modules.ownerbot.repository.OwnerTelegramSubscriberRepository;
-import com.elcafe.modules.ownerbot.scheduler.LowStockAlertScheduler;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import jakarta.annotation.PostConstruct;
@@ -46,10 +47,11 @@ public class OwnerTelegramBotService {
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
     private final TelegramBotRegistry botRegistry;
+    private final InventoryIngredientRepository ingredientRepository;
     @org.springframework.context.annotation.Lazy
     private final DailyFinancialReportService dailyFinancialReportService;
     @org.springframework.context.annotation.Lazy
-    private final LowStockAlertScheduler lowStockAlertScheduler;
+    private final OwnerNotificationService ownerNotificationService;
 
     private OwnerBot bot;
     private BotSession botSession;
@@ -513,8 +515,28 @@ public class OwnerTelegramBotService {
                 return;
             }
             try {
-                lowStockAlertScheduler.checkLowStockForRestaurant(subOpt.get().getRestaurant());
-                sendReply(chatId, "📦 Проверка запасов запущена! Если есть товары с низким уровнем — вы получите уведомление.");
+                Long restaurantId = subOpt.get().getRestaurant().getId();
+                List<Ingredient> lowStockItems = ingredientRepository.findLowStockIngredients(restaurantId);
+
+                List<String[]> belowThreshold = new java.util.ArrayList<>();
+                for (Ingredient ingredient : lowStockItems) {
+                    java.math.BigDecimal threshold = ingredient.getMinimumStock() != null
+                            ? ingredient.getMinimumStock() : java.math.BigDecimal.TEN;
+                    if (ingredient.getCurrentStock().compareTo(threshold) < 0) {
+                        belowThreshold.add(new String[]{
+                                ingredient.getName(),
+                                String.valueOf(ingredient.getCurrentStock().intValue()),
+                                String.valueOf(threshold.intValue())
+                        });
+                    }
+                }
+
+                if (belowThreshold.isEmpty()) {
+                    sendReply(chatId, "✅ Все запасы в норме! Нет товаров с низким уровнем.");
+                } else {
+                    ownerNotificationService.notifyLowStockBatch(restaurantId, belowThreshold);
+                    sendReply(chatId, String.format("⚠️ Найдено %d товаров с низким запасом. Уведомление отправлено.", belowThreshold.size()));
+                }
             } catch (Exception e) {
                 log.error("Failed to check stock via bot command: {}", e.getMessage());
                 sendReply(chatId, "❌ Ошибка при проверке запасов: " + e.getMessage());
