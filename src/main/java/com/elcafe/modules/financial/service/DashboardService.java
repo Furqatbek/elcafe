@@ -102,12 +102,11 @@ public class DashboardService {
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Fetch payroll (using shift-extended date range)
-        List<PayrollEntry> payrollEntries = payrollRepository.findByRestaurant_IdAndPayPeriodEndBetween(
-                restaurantId, startDate, expenseEndDate);
+        // Fetch payroll paid within the date range (using payment date, not pay period)
+        List<PayrollEntry> payrollEntries = payrollRepository.findByRestaurant_IdAndPaymentDateBetweenAndStatus(
+                restaurantId, startDate, expenseEndDate, PayrollEntry.PaymentStatus.PAID);
 
         BigDecimal totalPayroll = payrollEntries.stream()
-                .filter(p -> p.getStatus() == PayrollEntry.PaymentStatus.PAID)
                 .map(PayrollEntry::getNetPay)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
