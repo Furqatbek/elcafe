@@ -42,7 +42,7 @@ public class OrderItem {
     @ToString.Exclude
     private Order order;
 
-    @Column(nullable = false)
+    @Column
     private Long productId;
 
     @Column(nullable = false, length = 200)
