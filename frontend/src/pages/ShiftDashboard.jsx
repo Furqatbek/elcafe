@@ -56,10 +56,11 @@ export default function ShiftDashboard() {
         shiftAPI.getActive(selectedRestaurant),
         shiftAPI.getByDate(selectedRestaurant, new Date().toISOString().split('T')[0]),
       ]);
-      const active = activeRes.data.data || [];
-      const today = todayRes.data.data || [];
-      setActiveShifts(active);
-      setCompletedShifts(today.filter(s => s.status === 'COMPLETED' || s.status === 'APPROVED'));
+      const active = activeRes.data.data || activeRes.data || [];
+      const today = todayRes.data.data || todayRes.data || [];
+      console.log('[ShiftDashboard] Active:', active.length, 'Today:', today.length);
+      setActiveShifts(Array.isArray(active) ? active : []);
+      setCompletedShifts((Array.isArray(today) ? today : []).filter(s => s.status === 'COMPLETED' || s.status === 'APPROVED'));
     } catch (e) {
       console.error('Failed to load shifts:', e);
     }
