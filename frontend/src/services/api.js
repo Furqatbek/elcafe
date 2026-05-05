@@ -517,6 +517,16 @@ export const financialAPI = {
   recordExpensePayment: (id, paymentDate, recordedBy) => api.post(`/financial/expenses/${id}/pay`, null, { params: { paymentDate, recordedBy } }),
   deleteExpense: (id) => api.delete(`/financial/expenses/${id}`),
 
+  // Payroll
+  getPayroll: (restaurantId) => api.get(`/financial/payroll/restaurant/${restaurantId}`),
+  getPayrollByRange: (restaurantId, startDate, endDate) => api.get(`/financial/payroll/restaurant/${restaurantId}/range`, { params: { startDate, endDate } }),
+  getPayrollByEmployee: (employeeId) => api.get(`/financial/payroll/employee/${employeeId}`),
+  getPendingPayroll: (restaurantId) => api.get(`/financial/payroll/restaurant/${restaurantId}/pending`),
+  createPayroll: (data) => api.post('/financial/payroll', data),
+  approvePayroll: (id, approvedBy) => api.post(`/financial/payroll/${id}/approve`, null, { params: { approvedBy } }),
+  payPayroll: (id, paymentDate, paymentMethod, transactionRef) => api.post(`/financial/payroll/${id}/pay`, null, { params: { paymentDate, paymentMethod, transactionRef } }),
+  deletePayroll: (id) => api.delete(`/financial/payroll/${id}`),
+
   // Financial Reports
   getProfitLossReport: (restaurantId, startDate, endDate) =>
     api.get('/financial/reports/profit-loss', { params: { restaurantId, startDate, endDate } }),

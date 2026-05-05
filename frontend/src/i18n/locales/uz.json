@@ -107,7 +107,9 @@
       "instagramMarketing": "Instagram",
       "ordersHistory": "Buyurtmalar tarixi",
       "milestones": "Yutuqlar",
-      "externalOrders": "Onlayn buyurtmalar"
+      "externalOrders": "Onlayn buyurtmalar",
+      "payroll": "Ish haqi",
+      "financialAlerts": "Moliyaviy ogohlantirishlar"
     }
   },
   "externalOrders": {

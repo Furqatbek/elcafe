@@ -110,7 +110,9 @@
       "instagramMarketing": "Instagram",
       "ordersHistory": "Orders History",
       "milestones": "Milestones",
-      "externalOrders": "Online Orders"
+      "externalOrders": "Online Orders",
+      "payroll": "Payroll",
+      "financialAlerts": "Financial Alerts"
     }
   },
   "externalOrders": {

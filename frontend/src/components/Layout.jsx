@@ -212,6 +212,7 @@ export default function Layout() {
         { label: t('nav.sub.financialReports'), icon: BarChart3, path: '/finance/reports' },
         { label: t('nav.sub.pricing'), icon: Calculator, path: '/finance/pricing' },
         { label: t('nav.sub.financialAlerts'), icon: Bell, path: '/finance/alerts' },
+        { label: t('nav.sub.payroll'), icon: Users, path: '/finance/payroll' },
       ],
     },
     {

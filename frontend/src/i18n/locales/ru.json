@@ -107,7 +107,9 @@
       "instagramMarketing": "Instagram",
       "ordersHistory": "История заказов",
       "milestones": "Достижения",
-      "externalOrders": "Онлайн заказы"
+      "externalOrders": "Онлайн заказы",
+      "payroll": "Зарплата",
+      "financialAlerts": "Финансовые уведомления"
     }
   },
   "externalOrders": {

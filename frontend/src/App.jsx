@@ -43,6 +43,7 @@ import { receiptTemplateAPI } from './services/api';
 import KitchenStations from './pages/KitchenStations';
 import PricingDashboard from './pages/PricingDashboard';
 import FinancialAlerts from './pages/FinancialAlerts';
+import Payroll from './pages/Payroll';
 import Promotions from './pages/Promotions';
 import CouponCodes from './pages/CouponCodes';
 import HappyHours from './pages/HappyHours';
@@ -178,6 +179,7 @@ function App() {
           <Route path="finance/reports" element={<AdminRoute><FinancialReports /></AdminRoute>} />
           <Route path="finance/pricing" element={<AdminRoute><PricingDashboard /></AdminRoute>} />
           <Route path="finance/alerts" element={<AdminRoute><FinancialAlerts /></AdminRoute>} />
+          <Route path="finance/payroll" element={<AdminRoute><Payroll /></AdminRoute>} />
           <Route path="marketing/promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
           <Route path="marketing/coupons" element={<AdminRoute><CouponCodes /></AdminRoute>} />
           <Route path="marketing/happy-hours" element={<AdminRoute><HappyHours /></AdminRoute>} />
