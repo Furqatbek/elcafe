@@ -138,6 +138,7 @@ public class DailyFinancialReportService {
             plReport.getTipRevenue() != null ? plReport.getTipRevenue() : BigDecimal.ZERO,
             plReport.getTotalRevenue() != null ? plReport.getTotalRevenue() : BigDecimal.ZERO,
             plReport.getTotalExpenses() != null ? plReport.getTotalExpenses() : BigDecimal.ZERO,
+            plReport.getTotalPayroll() != null ? plReport.getTotalPayroll() : BigDecimal.ZERO,
             plReport.getNetIncome() != null ? plReport.getNetIncome() : BigDecimal.ZERO
         );
     }
@@ -221,7 +222,11 @@ public class DailyFinancialReportService {
         }
 
         if (subscription.getAlertDailyExpenses()) {
-            sb.append(String.format("💸 <b>Расходы:</b> %s\n\n", formatCurrency(metrics.totalExpenses())));
+            sb.append(String.format("💸 <b>Расходы:</b> %s\n", formatCurrency(metrics.totalExpenses())));
+            if (metrics.totalPayroll().compareTo(BigDecimal.ZERO) > 0) {
+                sb.append(String.format("   👥 Зарплата: %s\n", formatCurrency(metrics.totalPayroll())));
+            }
+            sb.append("\n");
         }
 
         if (subscription.getAlertDailyProfit()) {
@@ -309,6 +314,7 @@ public class DailyFinancialReportService {
             Map.entry("totalRevenue", metrics.totalRevenue()),
             // Expenses and net income (same as P&L report)
             Map.entry("totalExpenses", metrics.totalExpenses()),
+            Map.entry("totalPayroll", metrics.totalPayroll()),
             Map.entry("netIncome", metrics.netIncome())
         );
     }
@@ -332,6 +338,7 @@ public class DailyFinancialReportService {
         BigDecimal totalRevenue,
         // Expenses and net income (same as P&L report)
         BigDecimal totalExpenses,
+        BigDecimal totalPayroll,
         BigDecimal netIncome
     ) {}
 }

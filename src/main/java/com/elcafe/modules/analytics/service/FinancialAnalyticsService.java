@@ -2,6 +2,7 @@ package com.elcafe.modules.analytics.service;
 
 import com.elcafe.config.CacheConfig;
 import com.elcafe.modules.analytics.dto.*;
+import com.elcafe.modules.financial.repository.PayrollEntryRepository;
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.inventory.repository.ProductionBatchConsumptionRepository;
 import com.elcafe.modules.inventory.service.BatchConsumptionService;
@@ -41,6 +42,7 @@ public class FinancialAnalyticsService {
     private final ProductRepository productRepository;
     private final BatchConsumptionService batchConsumptionService;
     private final ProductionBatchConsumptionRepository productionBatchConsumptionRepository;
+    private final PayrollEntryRepository payrollEntryRepository;
     private final ShiftTimeService shiftTimeService;
 
     /**
@@ -295,7 +297,9 @@ public class FinancialAnalyticsService {
         BigDecimal grossProfit = cogsAnalytics.getGrossProfit();
         BigDecimal grossProfitMargin = cogsAnalytics.getGrossProfitMargin();
 
-        BigDecimal totalLaborCost = laborCosts != null ? laborCosts : BigDecimal.ZERO;
+        BigDecimal totalLaborCost = laborCosts != null && laborCosts.compareTo(BigDecimal.ZERO) > 0
+                ? laborCosts
+                : fetchPayrollCosts(restaurantId, startDate, endDate);
         BigDecimal totalOperatingExpenses = otherOperatingExpenses != null ? otherOperatingExpenses : BigDecimal.ZERO;
 
         BigDecimal cogsAndLaborCost = totalCOGS.add(totalLaborCost);
@@ -445,5 +449,10 @@ public class FinancialAnalyticsService {
                 .filter(order -> order.getPayment() != null && order.getPayment().getMethod() == method)
                 .map(Order::getTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private BigDecimal fetchPayrollCosts(Long restaurantId, LocalDate startDate, LocalDate endDate) {
+        BigDecimal payroll = payrollEntryRepository.getTotalPaidPayrollByPaymentDate(restaurantId, startDate, endDate);
+        return payroll != null ? payroll : BigDecimal.ZERO;
     }
 }

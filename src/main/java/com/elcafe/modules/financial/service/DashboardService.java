@@ -143,6 +143,7 @@ public class DashboardService {
                 .shiftTimeInfo(shiftTimeInfo)
                 .totalIncome(totalIncome)
                 .totalExpenses(totalExpenses)
+                .totalPayroll(totalPayroll)
                 .netProfit(netProfit)
                 .profitMargin(profitMargin)
                 .orderStats(buildOrderStats(activeOrders, completedOrders, ordersForSoldItems))

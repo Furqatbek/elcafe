@@ -295,6 +295,11 @@ export default function Dashboard() {
             <div className="text-2xl font-bold text-red-600">
               {loading ? '...' : formatCurrency(dashboardData?.totalExpenses)}
             </div>
+            {dashboardData?.totalPayroll > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('dashboard.payroll', 'Payroll')}: {formatCurrency(dashboardData.totalPayroll)}
+              </p>
+            )}
             {dashboardData?.comparison && (
               <div className="flex items-center gap-1 mt-1">
                 {getTrendIcon(-dashboardData.comparison.expenseChange)}

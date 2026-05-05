@@ -21,6 +21,7 @@ public class DashboardResponse {
     // Summary
     private BigDecimal totalIncome;
     private BigDecimal totalExpenses;
+    private BigDecimal totalPayroll;
     private BigDecimal netProfit;
     private BigDecimal profitMargin; // percentage
 
