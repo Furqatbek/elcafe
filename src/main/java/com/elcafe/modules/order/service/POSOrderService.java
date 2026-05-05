@@ -100,8 +100,10 @@ public class POSOrderService {
             if (activeShift != null) {
                 shiftId = activeShift.getId();
                 orderWaiter = activeShift.getWaiter();
-                log.info("Order linked to shift {} for employee {}",
-                        shiftId, activeShift.getEmployee().getFullName());
+                String name = activeShift.getEmployee() != null
+                        ? activeShift.getEmployee().getFullName()
+                        : (activeShift.getWaiter() != null ? activeShift.getWaiter().getName() : "unknown");
+                log.info("Order linked to shift {} for {}", shiftId, name);
             }
         } catch (Exception e) {
             log.warn("Could not determine active shift: {}", e.getMessage());
