@@ -3,6 +3,8 @@ package com.elcafe.modules.ownerbot.controller;
 import com.elcafe.modules.ownerbot.dto.OwnerBotConfigRequest;
 import com.elcafe.modules.ownerbot.dto.OwnerBotConfigResponse;
 import com.elcafe.modules.ownerbot.service.OwnerTelegramBotConfigService;
+import com.elcafe.modules.ownerbot.service.OwnerTelegramBotService;
+import com.elcafe.utils.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,7 @@ import java.util.List;
 public class OwnerTelegramBotConfigController {
 
     private final OwnerTelegramBotConfigService configService;
+    private final OwnerTelegramBotService botService;
 
     @GetMapping
     public ResponseEntity<List<OwnerBotConfigResponse>> getAllConfigs() {
@@ -73,5 +76,13 @@ public class OwnerTelegramBotConfigController {
         log.info("Deleting Owner Telegram bot config: {}", id);
         configService.deleteConfig(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/generate-code")
+    public ResponseEntity<ApiResponse<String>> generateVerificationCode(
+            @RequestParam Long userId,
+            @RequestParam Long restaurantId) {
+        String code = botService.generateVerificationCode(userId, restaurantId);
+        return ResponseEntity.ok(ApiResponse.success("Verification code generated", code));
     }
 }

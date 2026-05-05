@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { telegramAPI } from '../services/api';
+import { telegramAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -101,6 +101,9 @@ export default function TelegramMarketing() {
     isActive: true,
   });
 
+  // Restaurants
+  const [restaurants, setRestaurants] = useState([]);
+
   // Bot configs state
   const [customerBotConfigs, setCustomerBotConfigs] = useState([]);
   const [ownerBotConfigs, setOwnerBotConfigs] = useState([]);
@@ -132,6 +135,10 @@ export default function TelegramMarketing() {
       loadTemplates();
     } else if (activeTab === 'settings') {
       loadBotConfigs();
+      restaurantAPI.getAll({ page: 0, size: 100 }).then(res => {
+        const list = res.data.data?.content || res.data.data || [];
+        setRestaurants(Array.isArray(list) ? list : []);
+      }).catch(console.error);
     }
   }, [activeTab]);
 
@@ -1006,6 +1013,49 @@ export default function TelegramMarketing() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Connect to Owner Bot */}
+          {editingOwnerBotId && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  🔗 {t('telegram.settings.connectToBot', 'Connect to Owner Bot')}
+                </CardTitle>
+                <CardDescription>
+                  {t('telegram.settings.connectDescription', 'Generate a code, then send it to the owner bot in Telegram to receive notifications')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2 items-center">
+                  <select
+                    id="connectRestaurant"
+                    className="flex-1 border rounded-md px-3 py-2 text-sm bg-background"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>{t('telegram.settings.selectRestaurant', 'Select restaurant')}</option>
+                    {restaurants.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                  <Button onClick={async () => {
+                    const restaurantSelect = document.getElementById('connectRestaurant');
+                    const restaurantId = restaurantSelect?.value;
+                    if (!restaurantId) { alert(t('telegram.settings.selectRestaurant', 'Select a restaurant first')); return; }
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    if (!user?.id) { alert('User not found'); return; }
+                    try {
+                      const res = await telegramAPI.generateOwnerBotCode(user.id, restaurantId);
+                      const code = res.data?.data || res.data;
+                      alert(t('telegram.settings.codeGenerated', 'Your verification code:') + '\n\n' + code + '\n\n' + t('telegram.settings.sendCodeToBot', 'Send this code to the owner bot in Telegram'));
+                    } catch (e) { console.error(e); alert(e.response?.data?.message || 'Failed to generate code'); }
+                  }}>
+                    {t('telegram.settings.generateCode', 'Generate Code')}
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t('telegram.settings.connectSteps', '1. Click "Generate Code" → 2. Open owner bot in Telegram → 3. Send /start → 4. Send the 6-digit code')}
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 

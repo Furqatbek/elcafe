@@ -1112,6 +1112,7 @@ export const telegramAPI = {
   updateOwnerBotConfig: (id, data) => api.put(`/telegram/owner-config/${id}`, data),
   toggleOwnerBotConfig: (id) => api.patch(`/telegram/owner-config/${id}/toggle`),
   deleteOwnerBotConfig: (id) => api.delete(`/telegram/owner-config/${id}`),
+  generateOwnerBotCode: (userId, restaurantId) => api.post('/telegram/owner-config/generate-code', null, { params: { userId, restaurantId } }),
 };
 
 // QR Code / Self-Service API
