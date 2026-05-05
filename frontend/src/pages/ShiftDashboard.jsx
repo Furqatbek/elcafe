@@ -125,6 +125,15 @@ export default function ShiftDashboard() {
     }
   };
 
+  const handleApprove = async (shiftId) => {
+    try {
+      await shiftAPI.approve(selectedRestaurant, shiftId);
+      loadShifts();
+    } catch (e) {
+      console.error('Failed to approve shift:', e);
+    }
+  };
+
   // Stats
   const activeCount = activeShifts.filter(s => s.status === 'ACTIVE').length;
   const onBreakCount = activeShifts.filter(s => s.status === 'ON_BREAK').length;
@@ -281,6 +290,7 @@ export default function ShiftDashboard() {
                   <TableHead>{t('shift.dashboard.orders', 'Orders')}</TableHead>
                   <TableHead>{t('shift.dashboard.sales', 'Sales')}</TableHead>
                   <TableHead className="text-center">{t('shift.dashboard.status', 'Status')}</TableHead>
+                  <TableHead className="text-right">{t('common.actions', 'Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -301,6 +311,14 @@ export default function ShiftDashboard() {
                           ? t('shift.dashboard.approved', 'Approved')
                           : t('shift.dashboard.pending', 'Pending')}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {shift.status !== 'APPROVED' && (
+                        <Button variant="outline" size="sm" onClick={() => handleApprove(shift.id)}>
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          {t('shift.dashboard.approve', 'Approve')}
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
