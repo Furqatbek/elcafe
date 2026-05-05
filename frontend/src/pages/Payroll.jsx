@@ -228,7 +228,8 @@ export default function Payroll() {
                         <TableCell className="text-sm text-muted-foreground">{sc.lastPaidDate || t('payroll.never')}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
-                            <Button variant="outline" size="sm" onClick={() => handlePayNow(sc.id)}>
+                            <Button variant="outline" size="sm" onClick={() => handlePayNow(sc.id)}
+                              disabled={sc.lastPaidDate && new Date(sc.lastPaidDate).getMonth() === new Date().getMonth() && new Date(sc.lastPaidDate).getFullYear() === new Date().getFullYear()}>
                               <Play className="h-3 w-3 mr-1" /> {t('payroll.payNow')}
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteSalary(sc.id)}>

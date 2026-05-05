@@ -2,6 +2,7 @@ package com.elcafe.modules.financial.service;
 
 import com.elcafe.modules.financial.entity.PayrollEntry;
 import com.elcafe.modules.financial.entity.SalaryConfig;
+import com.elcafe.modules.financial.repository.PayrollEntryRepository;
 import com.elcafe.modules.financial.repository.SalaryConfigRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ import java.util.List;
 public class SalaryAutoPayService {
 
     private final SalaryConfigRepository salaryConfigRepository;
+    private final PayrollEntryRepository payrollEntryRepository;
     private final PayrollService payrollService;
 
     @Scheduled(cron = "0 0 8 * * *")
@@ -38,7 +40,7 @@ public class SalaryAutoPayService {
 
         for (SalaryConfig config : dueConfigs) {
             try {
-                processPayment(config, today);
+                processPayment(config, LocalDate.now());
             } catch (Exception e) {
                 log.error("Failed to process salary for employee {} at restaurant {}: {}",
                         config.getEmployee().getId(), config.getRestaurant().getId(), e.getMessage());
@@ -48,8 +50,19 @@ public class SalaryAutoPayService {
 
     @Transactional
     public void processPayment(SalaryConfig config, LocalDate paymentDate) {
+        // Prevent double payment in same month
+        if (config.getLastPaidDate() != null
+                && config.getLastPaidDate().getMonth() == paymentDate.getMonth()
+                && config.getLastPaidDate().getYear() == paymentDate.getYear()) {
+            throw new IllegalStateException("Salary already paid this month (last paid: " + config.getLastPaidDate() + ")");
+        }
+
         LocalDate periodStart = paymentDate.minusMonths(1).withDayOfMonth(config.getPayDay());
         LocalDate periodEnd = paymentDate.minusDays(1);
+
+        // Calculate unpaid advances for this employee in this period
+        BigDecimal advanceDeduction = calculateUnpaidAdvances(
+                config.getRestaurant().getId(), config.getEmployee().getId(), periodStart, periodEnd);
 
         PayrollEntry entry = PayrollEntry.builder()
                 .restaurant(config.getRestaurant())
@@ -58,7 +71,10 @@ public class SalaryAutoPayService {
                 .payPeriodStart(periodStart)
                 .payPeriodEnd(periodEnd)
                 .baseSalary(config.getMonthlySalary())
-                .notes("Auto-generated fixed salary payment")
+                .otherDeductions(advanceDeduction)
+                .notes(advanceDeduction.compareTo(BigDecimal.ZERO) > 0
+                        ? "Auto-generated. Advance deducted: " + advanceDeduction
+                        : "Auto-generated fixed salary payment")
                 .build();
 
         PayrollEntry saved = payrollService.createPayrollEntry(entry);
@@ -71,9 +87,25 @@ public class SalaryAutoPayService {
         config.setLastPaidDate(paymentDate);
         salaryConfigRepository.save(config);
 
-        log.info("Salary processed for employee {} ({}): {} on {}",
+        log.info("Salary processed for employee {} ({}): {} - advances {} = net on {}",
                 config.getEmployee().getId(),
                 config.getEmployee().getEmail(),
-                config.getMonthlySalary(), paymentDate);
+                config.getMonthlySalary(), advanceDeduction, paymentDate);
+    }
+
+    private BigDecimal calculateUnpaidAdvances(Long restaurantId, Long employeeId,
+                                                LocalDate periodStart, LocalDate periodEnd) {
+        List<PayrollEntry> advances = payrollEntryRepository
+                .findByRestaurant_IdAndPayPeriodStartBetween(restaurantId, periodStart, periodEnd)
+                .stream()
+                .filter(p -> p.getEmployee().getId().equals(employeeId))
+                .filter(p -> p.getPayrollType() == PayrollEntry.PayrollType.ADVANCE)
+                .filter(p -> p.getStatus() == PayrollEntry.PaymentStatus.PAID)
+                .toList();
+
+        return advances.stream()
+                .map(PayrollEntry::getNetPay)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
