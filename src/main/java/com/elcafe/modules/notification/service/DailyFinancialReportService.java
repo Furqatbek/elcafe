@@ -6,6 +6,7 @@ import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.notification.config.FinancialAlertConfig;
 import com.elcafe.modules.notification.entity.FinancialAlertSubscription;
 import com.elcafe.modules.notification.repository.FinancialAlertSubscriptionRepository;
+import com.elcafe.modules.ownerbot.service.OwnerTelegramBotService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,15 +30,29 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class DailyFinancialReportService {
 
     private final FinancialAlertConfig alertConfig;
-    private final TelegramBotService telegramBotService;
+    private final OwnerTelegramBotService ownerBotService;
     private final FinancialAlertSubscriptionRepository subscriptionRepository;
     private final FinancialReportsService financialReportsService;
     private final RestaurantRepository restaurantRepository;
     private final ShiftTimeService shiftTimeService;
+
+    public DailyFinancialReportService(
+            FinancialAlertConfig alertConfig,
+            @org.springframework.context.annotation.Lazy OwnerTelegramBotService ownerBotService,
+            FinancialAlertSubscriptionRepository subscriptionRepository,
+            FinancialReportsService financialReportsService,
+            RestaurantRepository restaurantRepository,
+            ShiftTimeService shiftTimeService) {
+        this.alertConfig = alertConfig;
+        this.ownerBotService = ownerBotService;
+        this.subscriptionRepository = subscriptionRepository;
+        this.financialReportsService = financialReportsService;
+        this.restaurantRepository = restaurantRepository;
+        this.shiftTimeService = shiftTimeService;
+    }
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
@@ -166,7 +181,7 @@ public class DailyFinancialReportService {
         try {
             String message = formatDailyReport(subscription, metrics);
 
-            Integer messageId = telegramBotService.sendMessage(subscription.getTelegramChatId(), message);
+            Integer messageId = ownerBotService.sendMessage(subscription.getTelegramChatId(), message);
 
             if (messageId != null) {
                 subscription.setLastReportSentAt(LocalDateTime.now());
