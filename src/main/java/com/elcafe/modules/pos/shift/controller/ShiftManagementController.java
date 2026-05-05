@@ -89,7 +89,7 @@ public class ShiftManagementController {
     public ResponseEntity<EmployeeShift> approveShift(
             @PathVariable Long restaurantId,
             @PathVariable Long shiftId,
-            @RequestParam Long managerId,
+            @RequestParam(required = false) Long managerId,
             @RequestParam(required = false) String notes) {
         return ResponseEntity.ok(shiftService.approveShift(shiftId, managerId, notes));
     }

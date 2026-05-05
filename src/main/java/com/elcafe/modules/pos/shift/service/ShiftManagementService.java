@@ -270,12 +270,13 @@ public class ShiftManagementService {
         EmployeeShift shift = shiftRepository.findById(shiftId)
             .orElseThrow(() -> new IllegalArgumentException("Shift not found"));
 
-        if (shift.getStatus() != ShiftStatus.COMPLETED) {
-            throw new IllegalStateException("Can only approve completed shifts");
+        if (shift.getStatus() == ShiftStatus.APPROVED) {
+            return shift;
         }
 
-        User manager = userRepository.findById(managerId)
-            .orElseThrow(() -> new IllegalArgumentException("Manager not found"));
+        User manager = managerId != null
+            ? userRepository.findById(managerId).orElse(null)
+            : null;
 
         shift.approve(manager, notes);
         log.info("Shift {} approved by manager {}", shiftId, managerId);
