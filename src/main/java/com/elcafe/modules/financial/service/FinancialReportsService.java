@@ -2,6 +2,7 @@ package com.elcafe.modules.financial.service;
 
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.entity.Expense;
+import com.elcafe.modules.financial.entity.PayrollEntry;
 import com.elcafe.modules.financial.entity.Transaction;
 import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.repository.ExpenseRepository;
@@ -135,9 +136,16 @@ public class FinancialReportsService {
                         Collectors.reducing(BigDecimal.ZERO, Expense::getTotalAmount, BigDecimal::add)
                 ));
 
-        log.info("P&L: Total expenses: {}, categories: {}", totalExpenses, expensesByCategory.keySet());
+        // Calculate payroll costs (paid within the date range)
+        BigDecimal totalPayroll = payrollRepository.getTotalPaidPayrollByPaymentDate(
+                restaurantId, startDate, expenseEndDate);
+        if (totalPayroll == null) totalPayroll = BigDecimal.ZERO;
 
-        BigDecimal netIncome = totalRevenue.subtract(totalExpenses);
+        log.info("P&L: Total expenses: {}, payroll: {}, categories: {}",
+                totalExpenses, totalPayroll, expensesByCategory.keySet());
+
+        BigDecimal totalCosts = totalExpenses.add(totalPayroll);
+        BigDecimal netIncome = totalRevenue.subtract(totalCosts);
 
         // Count orders with discounts
         long discountedOrderCount = completedOrders.stream()
@@ -159,6 +167,7 @@ public class FinancialReportsService {
                 .discountedOrderCount((int) discountedOrderCount)
                 .totalRevenue(totalRevenue)
                 .totalExpenses(totalExpenses)
+                .totalPayroll(totalPayroll)
                 .expensesByCategory(expensesByCategory)
                 .netIncome(netIncome)
                 .build();
@@ -397,6 +406,7 @@ public class FinancialReportsService {
         private BigDecimal totalRevenue;
         // Expenses
         private BigDecimal totalExpenses;
+        private BigDecimal totalPayroll;
         private Map<String, BigDecimal> expensesByCategory;
         // Net income
         private BigDecimal netIncome;

@@ -61,4 +61,12 @@ public interface PayrollEntryRepository extends JpaRepository<PayrollEntry, Long
            "AND pe.status = 'PAID' " +
            "GROUP BY pe.employee.id, pe.employee.email")
     List<Object[]> getPayrollByEmployee(Long restaurantId, LocalDate startDate, LocalDate endDate);
+
+    @Query("SELECT COALESCE(SUM(pe.netPay), 0) FROM FinancialPayrollEntry pe WHERE pe.restaurant.id = :restaurantId " +
+           "AND pe.paymentDate BETWEEN :startDate AND :endDate " +
+           "AND pe.status = 'PAID'")
+    BigDecimal getTotalPaidPayrollByPaymentDate(Long restaurantId, LocalDate startDate, LocalDate endDate);
+
+    List<PayrollEntry> findByRestaurant_IdAndPaymentDateBetweenAndStatus(
+            Long restaurantId, LocalDate startDate, LocalDate endDate, PayrollEntry.PaymentStatus status);
 }

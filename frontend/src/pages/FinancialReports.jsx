@@ -168,8 +168,13 @@ const FinancialReports = () => {
               <TrendingDown className="text-red-600" size={20} />
             </div>
             <div className="text-2xl font-bold text-red-900">
-              {formatCurrency(profitLossReport.totalExpenses)}
+              {formatCurrency((profitLossReport.totalExpenses || 0) + (profitLossReport.totalPayroll || 0))}
             </div>
+            {profitLossReport.totalPayroll > 0 && (
+              <div className="text-xs text-red-700 mt-1">
+                {t('finance.reports.payroll', 'Payroll')}: {formatCurrency(profitLossReport.totalPayroll)}
+              </div>
+            )}
           </div>
 
           <div className={`p-4 rounded-lg border ${profitLossReport.netIncome >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-red-50 border-red-200'}`}>
@@ -221,6 +226,17 @@ const FinancialReports = () => {
                   </td>
                 </tr>
               ))}
+
+              {profitLossReport.totalPayroll > 0 && (
+                <tr>
+                  <td className="px-6 py-3 pl-12 text-sm text-gray-700">
+                    {t('finance.reports.payroll', 'Payroll')}
+                  </td>
+                  <td className="px-6 py-3 text-right text-sm text-gray-700">
+                    {formatCurrency(profitLossReport.totalPayroll)}
+                  </td>
+                </tr>
+              )}
 
               <tr className={`font-bold ${profitLossReport.netIncome >= 0 ? 'bg-blue-50' : 'bg-red-50'}`}>
                 <td className="px-6 py-4 text-lg">{t('finance.reports.netIncome').toUpperCase()}</td>
