@@ -266,6 +266,11 @@ public class OwnerNotificationService {
     public void notifyShiftOpened(Long restaurantId, String employeeName, String clockInTime) {
         List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.SHIFT_OPENED);
 
+        if (subscribers.isEmpty()) {
+            log.warn("No eligible subscribers for SHIFT_OPENED at restaurant {}. Check owner bot subscriber setup.", restaurantId);
+            return;
+        }
+
         String message = String.format(
             "🟢 <b>Смена открыта</b>\n\n" +
             "👤 <b>%s</b>\n" +
@@ -278,7 +283,8 @@ public class OwnerNotificationService {
             sendNotification(subscriber, OwnerNotificationType.SHIFT_OPENED, message, "SHIFT", null);
         }
 
-        log.info("Shift opened notification sent for {} at restaurant {}", employeeName, restaurantId);
+        log.info("Shift opened notification sent for {} at restaurant {} to {} subscribers",
+                employeeName, restaurantId, subscribers.size());
     }
 
     @Async
@@ -287,6 +293,11 @@ public class OwnerNotificationService {
                                    String clockOutTime, long workedMinutes, int orderCount,
                                    java.math.BigDecimal totalSales, java.math.BigDecimal cashVariance) {
         List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.SHIFT_CLOSED);
+
+        if (subscribers.isEmpty()) {
+            log.warn("No eligible subscribers for SHIFT_CLOSED at restaurant {}. Check owner bot subscriber setup.", restaurantId);
+            return;
+        }
 
         long hours = workedMinutes / 60;
         long mins = workedMinutes % 60;
@@ -374,10 +385,13 @@ public class OwnerNotificationService {
                 .build();
 
         try {
+            log.info("Sending {} to telegramUserId {} via owner bot", type, subscriber.getTelegramUserId());
             Integer messageId = botService.sendMessage(subscriber.getTelegramUserId(), message);
             if (messageId != null) {
+                log.info("Successfully sent {} to telegramUserId {}, messageId={}", type, subscriber.getTelegramUserId(), messageId);
                 logEntry.markSent(messageId);
             } else {
+                log.warn("Owner bot returned null for {} to telegramUserId {} - bot not ready?", type, subscriber.getTelegramUserId());
                 logEntry.markFailed("Bot not ready or failed to send");
             }
         } catch (Exception e) {

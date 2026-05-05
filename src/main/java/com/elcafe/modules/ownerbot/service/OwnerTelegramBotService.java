@@ -153,7 +153,7 @@ public class OwnerTelegramBotService {
      */
     public Integer sendMessage(Long chatId, String message) {
         if (!isReady()) {
-            log.debug("Owner bot is disabled or not initialized");
+            log.warn("Owner bot is not ready, skipping message to chatId: {}", chatId);
             return null;
         }
 
