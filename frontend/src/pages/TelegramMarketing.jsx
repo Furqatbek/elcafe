@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { telegramAPI, restaurantAPI } from '../services/api';
+import PasswordInput from '../components/PasswordInput';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -863,8 +864,7 @@ export default function TelegramMarketing() {
 
                 <div className="space-y-2">
                   <Label>{t('telegram.settings.botToken')}</Label>
-                  <Input
-                    type="password"
+                  <PasswordInput
                     value={customerBotForm.botToken}
                     onChange={(e) => setCustomerBotForm({ ...customerBotForm, botToken: e.target.value })}
                     placeholder={customerBotConfigs.length > 0 && customerBotConfigs[0].hasToken ? '********' : t('telegram.settings.enterToken')}
@@ -949,8 +949,7 @@ export default function TelegramMarketing() {
 
                 <div className="space-y-2">
                   <Label>{t('telegram.settings.botToken')}</Label>
-                  <Input
-                    type="password"
+                  <PasswordInput
                     value={ownerBotForm.botToken}
                     onChange={(e) => setOwnerBotForm({ ...ownerBotForm, botToken: e.target.value })}
                     placeholder={ownerBotConfigs.length > 0 && ownerBotConfigs[0].hasToken ? '********' : t('telegram.settings.enterToken')}

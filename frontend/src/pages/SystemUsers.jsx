@@ -16,6 +16,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
 import { Plus, Pencil, Trash2, ShieldCheck } from 'lucide-react';
+import PasswordInput from '../components/PasswordInput';
 
 const ROLES = ['ADMIN', 'OWNER', 'MANAGER', 'OPERATOR'];
 
@@ -175,7 +176,7 @@ export default function SystemUsers() {
             )}
             <div className="space-y-2">
               <Label>{editingUser ? t('systemUsers.newPassword', 'New Password (leave empty to keep)') : t('systemUsers.password', 'Password')} *</Label>
-              <Input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+              <PasswordInput value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
