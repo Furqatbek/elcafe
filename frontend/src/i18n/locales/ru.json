@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "El Cafe - Доставка из ресторанов",
+    "name": "Qahvoon - Доставка из ресторанов",
     "tagline": "Управляйте доставкой из вашего ресторана"
   },
   "auth": {
@@ -25,7 +25,7 @@
     "createAccount": "Создать аккаунт",
     "enterCredentials": "Введите свои данные для входа",
     "fillDetails": "Заполните данные для создания аккаунта",
-    "demoCredentials": "Демо: admin@elcafe.com / Admin123!"
+    "demoCredentials": "Демо: admin@qahvoon.uz / Admin123!"
   },
   "nav": {
     "dashboard": "Главная",
@@ -149,7 +149,7 @@
   },
   "dashboard": {
     "title": "Главная",
-    "welcome": "Добро пожаловать в El Cafe",
+    "welcome": "Добро пожаловать в Qahvoon",
     "overview": "Обзор",
     "financialOverview": "Финансовый обзор и аналитика",
     "selectRestaurant": "Выберите ресторан",
@@ -1571,7 +1571,7 @@
     }
   },
   "login": {
-    "demoCredentials": "Демо: admin@elcafe.com / Admin123!"
+    "demoCredentials": "Демо: admin@qahvoon.uz / Admin123!"
   },
   "inventory": {
     "title": "Управление запасами",

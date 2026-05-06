@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "El Cafe - Restaurant Delivery",
+    "name": "Qahvoon - Restaurant Delivery",
     "tagline": "Manage your restaurant delivery operations"
   },
   "auth": {
@@ -25,7 +25,7 @@
     "createAccount": "Create Account",
     "enterCredentials": "Enter your credentials to access your account",
     "fillDetails": "Fill in your details to create an account",
-    "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
+    "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -152,7 +152,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welcome to El Cafe",
+    "welcome": "Welcome to Qahvoon",
     "overview": "Overview",
     "financialOverview": "Financial overview and analytics",
     "selectRestaurant": "Select restaurant",
@@ -1574,7 +1574,7 @@
     }
   },
   "login": {
-    "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
+    "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
   },
   "inventory": {
     "title": "Inventory Management",

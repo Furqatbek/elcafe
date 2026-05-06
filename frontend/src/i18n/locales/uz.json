@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "El Cafe - Restoran yetkazib berish",
+    "name": "Qahvoon - Restoran yetkazib berish",
     "tagline": "Restoraningiz yetkazib berish xizmatini boshqaring"
   },
   "auth": {
@@ -25,7 +25,7 @@
     "createAccount": "Akkount yaratish",
     "enterCredentials": "Kirishingiz uchun ma'lumotlaringizni kiriting",
     "fillDetails": "Akkount yaratish uchun ma'lumotlarni to'ldiring",
-    "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
+    "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
   },
   "nav": {
     "dashboard": "Bosh sahifa",
@@ -149,7 +149,7 @@
   },
   "dashboard": {
     "title": "Bosh sahifa",
-    "welcome": "El Cafe ga xush kelibsiz",
+    "welcome": "Qahvoon ga xush kelibsiz",
     "overview": "Umumiy ko'rinish",
     "financialOverview": "Moliyaviy ko'rinish va tahlil",
     "selectRestaurant": "Restoranni tanlang",
@@ -1571,7 +1571,7 @@
     }
   },
   "login": {
-    "demoCredentials": "Demo: admin@elcafe.com / Admin123!"
+    "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
   },
   "inventory": {
     "title": "Inventar boshqaruvi",
