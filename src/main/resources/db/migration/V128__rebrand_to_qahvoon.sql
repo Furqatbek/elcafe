@@ -16,7 +16,7 @@ UPDATE telegram_templates SET content = REPLACE(content, 'jangirovs.uz', 'qahvoo
 UPDATE telegram_templates SET buttons_config = REPLACE(buttons_config::text, 'jangirovs.uz', 'qahvoon.uz')::jsonb WHERE buttons_config::text LIKE '%jangirovs.uz%';
 
 -- Update telegram bot commands
-UPDATE telegram_bot_commands SET response = REPLACE(response, 'jangirovs.uz', 'qahvoon.uz') WHERE response LIKE '%jangirovs.uz%';
+UPDATE telegram_bot_commands SET custom_response = REPLACE(custom_response, 'jangirovs.uz', 'qahvoon.uz') WHERE custom_response LIKE '%jangirovs.uz%';
 
 -- Update SMS templates
 UPDATE sms_templates SET content = REPLACE(content, 'Jangirovs', 'Qahvoon') WHERE content LIKE '%Jangirovs%';
