@@ -237,6 +237,13 @@ export const customerAPI = {
   filterActivity: (filterData) => api.post('/customers/activity/filter', filterData),
 };
 
+export const systemUserAPI = {
+  getAll: () => api.get('/system-users'),
+  create: (data) => api.post('/system-users', data),
+  update: (id, data) => api.put(`/system-users/${id}`, data),
+  delete: (id) => api.delete(`/system-users/${id}`),
+};
+
 export const operatorAPI = {
   getAll: (params) => api.get('/operators', { params }),
   getById: (id) => api.get(`/operators/${id}`),

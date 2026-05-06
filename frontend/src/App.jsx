@@ -19,6 +19,7 @@ import Customers from './pages/Customers';
 import Reviews from './pages/Reviews';
 import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
+import SystemUsers from './pages/SystemUsers';
 import Waiters from './pages/Waiters';
 import WaiterPerformance from './pages/WaiterPerformance';
 import ShiftDashboard from './pages/ShiftDashboard';
@@ -156,6 +157,7 @@ function App() {
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="reviews" element={<Reviews />} />
           <Route path="operators" element={<Operators />} />
+          <Route path="system-users" element={<AdminRoute><SystemUsers /></AdminRoute>} />
           <Route path="employees/waiters" element={<Waiters />} />
           <Route path="employees/waiter-performance" element={<AdminRoute><WaiterPerformance /></AdminRoute>} />
           <Route path="employees/shift-dashboard" element={<ShiftDashboard />} />

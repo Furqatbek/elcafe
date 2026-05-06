@@ -221,6 +221,7 @@ export default function Layout() {
       icon: Settings,
       path: '/settings/printers',
       subItems: [
+        { label: t('nav.sub.systemUsers', 'System Users'), icon: UserCog, path: '/system-users' },
         { label: t('nav.sub.printers'), icon: Printer, path: '/settings/printers' },
         { label: t('nav.sub.receiptTemplate', 'Chek Shabloni'), icon: Receipt, path: '/settings/receipt-template' },
         { label: t('nav.sub.kitchenStations', 'Kitchen Stations'), icon: ChefHat, path: '/settings/kitchen-stations' },
