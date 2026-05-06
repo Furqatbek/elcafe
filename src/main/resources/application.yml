@@ -1,14 +1,14 @@
 # ===== BRANDING CONFIGURATION =====
 # Change these values to rebrand the entire platform
 branding:
-  name: ${BRAND_NAME:El Cafe}
-  short-name: ${BRAND_SHORT_NAME:ElCafe}
+  name: ${BRAND_NAME:Qahvoon}
+  short-name: ${BRAND_SHORT_NAME:Qahvoon}
   tagline: ${BRAND_TAGLINE:Restaurant Delivery}
   description: ${BRAND_DESCRIPTION:Restaurant Delivery Control Service}
-  domain: ${BRAND_DOMAIN:elcafe.com}
-  api-url: ${BRAND_API_URL:https://api.elcafe.com}
-  support-email: ${BRAND_SUPPORT_EMAIL:support@elcafe.com}
-  team-name: ${BRAND_TEAM_NAME:ElCafe Team}
+  domain: ${BRAND_DOMAIN:qahvoon.uz}
+  api-url: ${BRAND_API_URL:https://www.qahvoon.uz}
+  support-email: ${BRAND_SUPPORT_EMAIL:support@qahvoon.uz}
+  team-name: ${BRAND_TEAM_NAME:Qahvoon Team}
 
 spring:
   application:

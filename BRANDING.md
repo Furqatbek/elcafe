@@ -36,16 +36,16 @@ The central branding configuration for the frontend. All values can be overridde
 **Supported variables:**
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_BRAND_NAME` | Primary brand name | El Cafe |
-| `VITE_BRAND_SHORT_NAME` | Short name (no spaces) | ElCafe |
+| `VITE_BRAND_NAME` | Primary brand name | Qahvoon |
+| `VITE_BRAND_SHORT_NAME` | Short name (no spaces) | Qahvoon |
 | `VITE_BRAND_TAGLINE` | Short tagline | Restaurant Delivery |
 | `VITE_BRAND_DESCRIPTION` | Full description | Restaurant Delivery Control Service |
-| `VITE_BRAND_DOMAIN` | Main domain | elcafe.com |
-| `VITE_BRAND_API_URL` | Production API URL | https://api.elcafe.com |
-| `VITE_BRAND_WEBSITE_URL` | Main website URL | https://elcafe.com |
-| `VITE_BRAND_SUPPORT_EMAIL` | Support email | support@elcafe.com |
-| `VITE_BRAND_ADMIN_EMAIL` | Admin email | admin@elcafe.com |
-| `VITE_BRAND_DEMO_EMAIL` | Demo login email | admin@elcafe.com |
+| `VITE_BRAND_DOMAIN` | Main domain | qahvoon.uz |
+| `VITE_BRAND_API_URL` | Production API URL | https://api.qahvoon.uz |
+| `VITE_BRAND_WEBSITE_URL` | Main website URL | https://qahvoon.uz |
+| `VITE_BRAND_SUPPORT_EMAIL` | Support email | support@qahvoon.uz |
+| `VITE_BRAND_ADMIN_EMAIL` | Admin email | admin@qahvoon.uz |
+| `VITE_BRAND_DEMO_EMAIL` | Demo login email | admin@qahvoon.uz |
 | `VITE_BRAND_DEMO_PASSWORD` | Demo login password | Admin123! |
 | `VITE_BRAND_COLOR_PRIMARY` | Primary brand color | #2563eb |
 | `VITE_BRAND_COLOR_PRIMARY_DARK` | Dark variant | #1d4ed8 |
@@ -53,7 +53,7 @@ The central branding configuration for the frontend. All values can be overridde
 | `VITE_BRAND_COLOR_ACCENT` | Accent color | #f59e0b |
 | `VITE_BRAND_LOGO_MAIN` | Main logo path | /logo.svg |
 | `VITE_BRAND_LOGO_ICON` | Favicon path | /vite.svg |
-| `VITE_BRAND_COMPANY_NAME` | Legal company name | ElCafe Inc. |
+| `VITE_BRAND_COMPANY_NAME` | Legal company name | Qahvoon Inc. |
 
 ### Backend (`src/main/resources/application.yml`)
 
@@ -62,14 +62,14 @@ Backend branding configuration under the `branding:` section. All values can be 
 **Supported variables:**
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `BRAND_NAME` | Primary brand name | El Cafe |
-| `BRAND_SHORT_NAME` | Short name | ElCafe |
+| `BRAND_NAME` | Primary brand name | Qahvoon |
+| `BRAND_SHORT_NAME` | Short name | Qahvoon |
 | `BRAND_TAGLINE` | Short tagline | Restaurant Delivery |
 | `BRAND_DESCRIPTION` | Full description | Restaurant Delivery Control Service |
-| `BRAND_DOMAIN` | Main domain | elcafe.com |
-| `BRAND_API_URL` | Production API URL | https://api.elcafe.com |
-| `BRAND_SUPPORT_EMAIL` | Support email | support@elcafe.com |
-| `BRAND_TEAM_NAME` | Team name for docs | ElCafe Team |
+| `BRAND_DOMAIN` | Main domain | qahvoon.uz |
+| `BRAND_API_URL` | Production API URL | https://api.qahvoon.uz |
+| `BRAND_SUPPORT_EMAIL` | Support email | support@qahvoon.uz |
+| `BRAND_TEAM_NAME` | Team name for docs | Qahvoon Team |
 
 ## Usage in Code
 
@@ -79,10 +79,10 @@ Backend branding configuration under the `branding:` section. All values can be 
 import branding from '@/config/branding';
 
 // Use branding values
-console.log(branding.name);           // "El Cafe"
-console.log(branding.fullName);       // "El Cafe - Restaurant Delivery"
+console.log(branding.name);           // "Qahvoon"
+console.log(branding.fullName);       // "Qahvoon - Restaurant Delivery"
 console.log(branding.colors.primary); // "#2563eb"
-console.log(branding.titles.admin);   // "El Cafe - Control Panel"
+console.log(branding.titles.admin);   // "Qahvoon - Control Panel"
 
 // Or use named exports
 import { name, supportEmail, colors } from '@/config/branding';
@@ -98,10 +98,10 @@ import { useTranslation } from 'react-i18next';
 const { t } = useTranslation();
 
 // Access branding via translations
-t('app.name');              // "El Cafe - Restaurant Delivery"
-t('app.brandName');         // "El Cafe"
-t('branding.supportEmail'); // "support@elcafe.com"
-t('branding.copyright');    // "© 2024 ElCafe Inc."
+t('app.name');              // "Qahvoon - Restaurant Delivery"
+t('app.brandName');         // "Qahvoon"
+t('branding.supportEmail'); // "support@qahvoon.uz"
+t('branding.copyright');    // "© 2024 Qahvoon Inc."
 ```
 
 ### Backend (Spring)

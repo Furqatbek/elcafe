@@ -45,7 +45,7 @@ Edit the `.env` file:
 
 ```env
 # ElCafe server WebSocket URL
-SERVER_URL=wss://www.jangirovs.uz/ws-print-agent
+SERVER_URL=wss://www.qahvoon.uz/ws-print-agent
 
 # Your restaurant ID (from admin panel)
 RESTAURANT_ID=1
@@ -56,7 +56,7 @@ PRINTER_IP=192.168.1.100
 PRINTER_PORT=9100
 ```
 
-> **Note:** The server is at `https://www.jangirovs.uz`, API at `/api/v1`, WebSocket at `/ws-print-agent`.
+> **Note:** The server is at `https://www.qahvoon.uz`, API at `/api/v1`, WebSocket at `/ws-print-agent`.
 
 ---
 
@@ -190,7 +190,7 @@ If you have multiple printers (e.g., one for drinks, one for food):
 
 | Setting | Example | Description |
 |---------|---------|-------------|
-| `SERVER_URL` | `wss://www.jangirovs.uz/ws-print-agent` | ElCafe WebSocket server |
+| `SERVER_URL` | `wss://www.qahvoon.uz/ws-print-agent` | ElCafe WebSocket server |
 | `RESTAURANT_ID` | `1` | Your restaurant ID |
 | `PRINTER_TYPE` | `network` | Use `network` or `usb` |
 | `PRINTER_IP` | `192.168.1.100` | Your printer's IP |

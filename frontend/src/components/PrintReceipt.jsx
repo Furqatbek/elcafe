@@ -148,11 +148,11 @@ export const generateReceiptHTML = (order, tmpl = {}) => {
     const brandName    = tmpl.restaurantName || 'Jangirov\'s';
     const tagline      = tmpl.tagline || '';
     const phone        = tmpl.phone || '+998770049909';
-    const website      = tmpl.website || 'www.jangirovs.uz';
+    const website      = tmpl.website || 'www.qahvoon.uz';
     const footerMsg    = tmpl.footerMessage || '*** RAHMAT! ***';
     const currency     = tmpl.currency || 'UZS';
     const showQr       = tmpl.showQrCode !== false;
-    const qrUrl        = tmpl.qrUrl || 'https://jangirovs.uz/order/menu/1/TAKEAWAY';
+    const qrUrl        = tmpl.qrUrl || 'https://qahvoon.uz/order/menu/1/TAKEAWAY';
     const qrTitle      = tmpl.qrTitle || 'ONLINE BUYURTMA';
     const qrSubtitle   = tmpl.qrSubtitle || 'Skanerlang va buyurtma bering';
     const paperWidth   = tmpl.paperWidthMm || 58;

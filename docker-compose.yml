@@ -64,8 +64,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-default_jwt_secret_change_in_production}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       # QR Code URL - used for generating QR code links
-      SELFSERVICE_BASE_URL: ${SELFSERVICE_BASE_URL:-https://jangirovs.uz/order}
-      FILE_BASE_URL: ${FILE_BASE_URL:-https://jangirovs.uz/uploads}
+      SELFSERVICE_BASE_URL: ${SELFSERVICE_BASE_URL:-https://qahvoon.uz/order}
+      FILE_BASE_URL: ${FILE_BASE_URL:-https://qahvoon.uz/uploads}
     ports:
       - "8080:8080"
     networks:

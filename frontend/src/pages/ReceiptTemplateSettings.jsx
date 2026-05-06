@@ -26,11 +26,11 @@ const DEFAULT_TEMPLATE = {
   restaurantName: "Jangirov's",
   tagline: '',
   phone: '+998770049909',
-  website: 'www.jangirovs.uz',
+  website: 'www.qahvoon.uz',
   footerMessage: '*** RAHMAT! ***',
   currency: 'UZS',
   showQrCode: true,
-  qrUrl: 'https://jangirovs.uz/order/menu/1/TAKEAWAY',
+  qrUrl: 'https://qahvoon.uz/order/menu/1/TAKEAWAY',
   qrTitle: 'ONLINE BUYURTMA',
   qrSubtitle: 'Skanerlang va buyurtma bering',
   paperWidthMm: 58,
@@ -155,7 +155,7 @@ const ReceiptTemplateSettings = () => {
               <Input value={form.phone} onChange={set('phone')} placeholder="+998770049909" maxLength={50} />
             </Field>
             <Field label="Veb-sayt">
-              <Input value={form.website} onChange={set('website')} placeholder="www.jangirovs.uz" maxLength={100} />
+              <Input value={form.website} onChange={set('website')} placeholder="www.qahvoon.uz" maxLength={100} />
             </Field>
             <Field label="Rahmat matni">
               <Input value={form.footerMessage} onChange={set('footerMessage')} placeholder="*** RAHMAT! ***" maxLength={200} />
@@ -182,7 +182,7 @@ const ReceiptTemplateSettings = () => {
             {form.showQrCode !== false && (
               <>
                 <Field label="QR URL" hint="Mijozlar skaner qilganda ochadigan havola">
-                  <Input value={form.qrUrl} onChange={set('qrUrl')} placeholder="https://jangirovs.uz/menu" maxLength={500} />
+                  <Input value={form.qrUrl} onChange={set('qrUrl')} placeholder="https://qahvoon.uz/menu" maxLength={500} />
                 </Field>
                 <Field label="QR sarlavhasi">
                   <Input value={form.qrTitle} onChange={set('qrTitle')} placeholder="ONLINE BUYURTMA" maxLength={100} />

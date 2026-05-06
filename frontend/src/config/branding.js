@@ -13,23 +13,23 @@ const env = (key, fallback) => import.meta.env[key] || fallback;
 
 const branding = {
   // ===== COMPANY/PLATFORM IDENTITY =====
-  name: env('VITE_BRAND_NAME', 'Jangirovs'),
-  shortName: env('VITE_BRAND_SHORT_NAME', 'Jangirovs'),
+  name: env('VITE_BRAND_NAME', 'Qahvoon'),
+  shortName: env('VITE_BRAND_SHORT_NAME', 'Qahvoon'),
   tagline: env('VITE_BRAND_TAGLINE', 'Restaurant Delivery'),
   description: env('VITE_BRAND_DESCRIPTION', 'Restaurant Delivery Control Service'),
 
   // ===== CONTACT INFORMATION =====
-  supportEmail: env('VITE_BRAND_SUPPORT_EMAIL', 'islombek.j@jangirovs.uz'),
-  adminEmail: env('VITE_BRAND_ADMIN_EMAIL', 'islombek.j@jangirovs.uz'),
+  supportEmail: env('VITE_BRAND_SUPPORT_EMAIL', 'support@qahvoon.uz'),
+  adminEmail: env('VITE_BRAND_ADMIN_EMAIL', 'admin@qahvoon.uz'),
 
   // ===== DOMAIN & URLs =====
-  domain: env('VITE_BRAND_DOMAIN', 'jangirovs.uz'),
-  apiUrl: env('VITE_BRAND_API_URL', 'https://www.jangirovs.uz'),
-  websiteUrl: env('VITE_BRAND_WEBSITE_URL', 'https://www.jangirovs.uz'),
+  domain: env('VITE_BRAND_DOMAIN', 'qahvoon.uz'),
+  apiUrl: env('VITE_BRAND_API_URL', 'https://www.qahvoon.uz'),
+  websiteUrl: env('VITE_BRAND_WEBSITE_URL', 'https://www.qahvoon.uz'),
 
   // ===== DEMO CREDENTIALS (for login page hint) =====
   demo: {
-    email: env('VITE_BRAND_DEMO_EMAIL', 'admin@jangirovs.uz'),
+    email: env('VITE_BRAND_DEMO_EMAIL', 'admin@qahvoon.uz'),
     password: env('VITE_BRAND_DEMO_PASSWORD', 'Admin123!'),
   },
 
@@ -59,7 +59,7 @@ const branding = {
 
   // ===== LEGAL =====
   legal: {
-    companyName: env('VITE_BRAND_COMPANY_NAME', 'Jangirovs Inc.'),
+    companyName: env('VITE_BRAND_COMPANY_NAME', 'Qahvoon'),
     copyrightYear: new Date().getFullYear(),
   },
 };
