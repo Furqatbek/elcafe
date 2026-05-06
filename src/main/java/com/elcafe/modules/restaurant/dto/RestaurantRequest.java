@@ -62,9 +62,8 @@ public class RestaurantRequest {
     @Schema(description = "Website", example = "https://elcafe.com")
     private String website;
 
-    @NotNull(message = "Active status is required")
     @Schema(description = "Restaurant active status")
-    private Boolean active;
+    private Boolean active = true;
 
     @Schema(description = "Accepting orders status")
     private Boolean acceptingOrders;
