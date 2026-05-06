@@ -8,7 +8,7 @@ UPDATE users SET email = 'operator@qahvoon.uz' WHERE email = 'operator@jangirovs
 UPDATE restaurants SET name = 'Qahvoon', email = 'info@qahvoon.uz' WHERE email = 'info@jangirovs.uz';
 
 -- Update QR code URLs
-UPDATE qr_codes SET url = REPLACE(url, 'jangirovs.uz', 'qahvoon.uz') WHERE url LIKE '%jangirovs.uz%';
+UPDATE qr_codes SET short_url = REPLACE(short_url, 'jangirovs.uz', 'qahvoon.uz') WHERE short_url LIKE '%jangirovs.uz%';
 
 -- Update telegram marketing templates
 UPDATE telegram_message_templates SET content = REPLACE(content, 'Jangirovs', 'Qahvoon') WHERE content LIKE '%Jangirovs%';
