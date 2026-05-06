@@ -102,26 +102,26 @@ services:
       retries: 3
 
   # Customer Website (React)
-  website-frontend:
-    build:
-      context: ./template-smith-forge
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: /api/v1
-        VITE_RESTAURANT_ID: ${VITE_RESTAURANT_ID:-1}
-    container_name: elcafe-website-frontend
-    restart: unless-stopped
-    environment:
-      TZ: Asia/Tashkent
-    depends_on:
-      - backend
-    networks:
-      - elcafe-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # website-frontend:
+  #   build:
+  #     context: ./template-smith-forge
+  #     dockerfile: Dockerfile
+  #     args:
+  #       VITE_API_BASE_URL: /api/v1
+  #       VITE_RESTAURANT_ID: ${VITE_RESTAURANT_ID:-1}
+  #   container_name: elcafe-website-frontend
+  #   restart: unless-stopped
+  #   environment:
+  #     TZ: Asia/Tashkent
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - elcafe-network
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
 
   # Main Reverse Proxy (NGINX)
   nginx-proxy:
@@ -133,7 +133,6 @@ services:
     depends_on:
       - backend
       - frontend
-      - website-frontend
     ports:
       - "80:80"
       - "443:443"
