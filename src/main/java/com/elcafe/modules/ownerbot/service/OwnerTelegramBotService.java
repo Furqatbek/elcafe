@@ -682,6 +682,11 @@ public class OwnerTelegramBotService {
                 handleSalesWaiterSelected(chatId, callbackData);
             } else if (callbackData.startsWith("sales_shift_")) {
                 handleSalesShiftSelected(chatId, callbackData);
+            } else if (callbackData.startsWith("sales_wp_")) {
+                handleSalesCommandPage(chatId, Integer.parseInt(callbackData.replace("sales_wp_", "")));
+            } else if (callbackData.startsWith("sales_sp_")) {
+                String[] parts = callbackData.replace("sales_sp_", "").split("_");
+                handleSalesWaiterPage(chatId, parts[0], Integer.parseInt(parts[1]));
             } else {
                 switch (callbackData) {
                     case "cmd_report" -> handleReportCommand(chatId);
@@ -694,7 +699,13 @@ public class OwnerTelegramBotService {
             }
         }
 
+        private static final int PAGE_SIZE = 5;
+
         private void handleSalesCommand(Long chatId) {
+            handleSalesCommandPage(chatId, 0);
+        }
+
+        private void handleSalesCommandPage(Long chatId, int page) {
             updateLastInteraction(chatId);
             Optional<OwnerTelegramSubscriber> subOpt = subscriberRepository.findByTelegramUserId(chatId);
             if (subOpt.isEmpty() || !subOpt.get().getIsVerified() || subOpt.get().getRestaurant() == null) {
@@ -710,19 +721,41 @@ public class OwnerTelegramBotService {
                     return;
                 }
 
+                int totalPages = (waiters.size() + PAGE_SIZE - 1) / PAGE_SIZE;
+                int fromIdx = page * PAGE_SIZE;
+                int toIdx = Math.min(fromIdx + PAGE_SIZE, waiters.size());
+                List<com.elcafe.modules.waiter.entity.Waiter> pageItems = waiters.subList(fromIdx, toIdx);
+
                 SendMessage msg = new SendMessage();
                 msg.setChatId(chatId.toString());
-                msg.setText("🧾 <b>Продажи по сменам</b>\n\nВыберите официанта:");
+                msg.setText(String.format("🧾 <b>Продажи по сменам</b>\n\nВыберите официанта (%d/%d):", page + 1, totalPages));
                 msg.setParseMode("HTML");
 
                 InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
                 List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
-                for (com.elcafe.modules.waiter.entity.Waiter w : waiters) {
+                for (com.elcafe.modules.waiter.entity.Waiter w : pageItems) {
                     InlineKeyboardButton btn = new InlineKeyboardButton();
                     btn.setText("👤 " + w.getName());
                     btn.setCallbackData("sales_waiter_" + w.getId());
                     keyboard.add(List.of(btn));
                 }
+
+                // Pagination buttons
+                List<InlineKeyboardButton> navRow = new ArrayList<>();
+                if (page > 0) {
+                    InlineKeyboardButton prev = new InlineKeyboardButton();
+                    prev.setText("◀️ Назад");
+                    prev.setCallbackData("sales_wp_" + (page - 1));
+                    navRow.add(prev);
+                }
+                if (page < totalPages - 1) {
+                    InlineKeyboardButton next = new InlineKeyboardButton();
+                    next.setText("Вперёд ▶️");
+                    next.setCallbackData("sales_wp_" + (page + 1));
+                    navRow.add(next);
+                }
+                if (!navRow.isEmpty()) keyboard.add(navRow);
+
                 markup.setKeyboard(keyboard);
                 msg.setReplyMarkup(markup);
                 execute(msg);
@@ -733,8 +766,12 @@ public class OwnerTelegramBotService {
         }
 
         private void handleSalesWaiterSelected(Long chatId, String callbackData) {
+            handleSalesWaiterPage(chatId, callbackData.replace("sales_waiter_", ""), 0);
+        }
+
+        private void handleSalesWaiterPage(Long chatId, String waiterIdStr, int page) {
             try {
-                Long waiterId = Long.parseLong(callbackData.replace("sales_waiter_", ""));
+                Long waiterId = Long.parseLong(waiterIdStr);
                 com.elcafe.modules.waiter.entity.Waiter waiter = waiterRepository2.findById(waiterId).orElse(null);
                 if (waiter == null) { sendReply(chatId, "Официант не найден"); return; }
 
@@ -746,18 +783,20 @@ public class OwnerTelegramBotService {
                     return;
                 }
 
-                // Show last 10 shifts
-                List<com.elcafe.modules.pos.shift.entity.EmployeeShift> recent = shifts.size() > 10 ? shifts.subList(0, 10) : shifts;
+                int totalPages = (shifts.size() + PAGE_SIZE - 1) / PAGE_SIZE;
+                int fromIdx = page * PAGE_SIZE;
+                int toIdx = Math.min(fromIdx + PAGE_SIZE, shifts.size());
+                List<com.elcafe.modules.pos.shift.entity.EmployeeShift> pageItems = shifts.subList(fromIdx, toIdx);
 
                 SendMessage msg = new SendMessage();
                 msg.setChatId(chatId.toString());
-                msg.setText(String.format("👤 <b>%s</b>\n\nВыберите смену:", waiter.getName()));
+                msg.setText(String.format("👤 <b>%s</b>\n\nВыберите смену (%d/%d):", waiter.getName(), page + 1, totalPages));
                 msg.setParseMode("HTML");
 
                 java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd.MM HH:mm");
                 InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
                 List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
-                for (var s : recent) {
+                for (var s : pageItems) {
                     String clockIn = s.getClockIn() != null ? s.getClockIn().format(fmt) : "--";
                     String clockOut = s.getClockOut() != null ? s.getClockOut().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "...";
                     String label = clockIn + "—" + clockOut + " | " + (s.getTotalOrders() != null ? s.getTotalOrders() : 0) + " зак.";
@@ -766,6 +805,23 @@ public class OwnerTelegramBotService {
                     btn.setCallbackData("sales_shift_" + s.getId());
                     keyboard.add(List.of(btn));
                 }
+
+                // Pagination buttons
+                List<InlineKeyboardButton> navRow = new ArrayList<>();
+                if (page > 0) {
+                    InlineKeyboardButton prev = new InlineKeyboardButton();
+                    prev.setText("◀️ Назад");
+                    prev.setCallbackData("sales_sp_" + waiterId + "_" + (page - 1));
+                    navRow.add(prev);
+                }
+                if (page < totalPages - 1) {
+                    InlineKeyboardButton next = new InlineKeyboardButton();
+                    next.setText("Вперёд ▶️");
+                    next.setCallbackData("sales_sp_" + waiterId + "_" + (page + 1));
+                    navRow.add(next);
+                }
+                if (!navRow.isEmpty()) keyboard.add(navRow);
+
                 markup.setKeyboard(keyboard);
                 msg.setReplyMarkup(markup);
                 execute(msg);
