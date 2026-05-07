@@ -3,7 +3,7 @@ package com.elcafe.modules.pos.shift.service;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.financial.entity.Expense;
-import com.elcafe.modules.financial.repository.ExpenseRepository;
+import com.elcafe.modules.financial.service.ExpenseService;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
@@ -38,7 +38,7 @@ public class EmployeeConsumptionService {
     private final ProductRepository productRepository;
     private final WaiterRepository waiterRepository;
     private final UserRepository userRepository;
-    private final ExpenseRepository expenseRepository;
+    private final ExpenseService expenseService;
     private final InventoryService inventoryService;
     @org.springframework.context.annotation.Lazy
     private final OwnerNotificationService ownerNotificationService;
@@ -72,7 +72,7 @@ public class EmployeeConsumptionService {
         String consumerName = waiter != null ? waiter.getName()
                 : (employee != null ? employee.getFullName() : "Unknown");
 
-        // Create expense record
+        // Create expense record via service (generates expense number)
         Expense expense = Expense.builder()
                 .restaurant(restaurant)
                 .category(Expense.ExpenseCategory.OTHER)
@@ -81,7 +81,7 @@ public class EmployeeConsumptionService {
                 .expenseDate(LocalDate.now())
                 .paymentStatus(Expense.PaymentStatus.PAID)
                 .build();
-        expense = expenseRepository.save(expense);
+        expense = expenseService.createExpense(expense);
 
         // Create consumption record
         EmployeeConsumption consumption = EmployeeConsumption.builder()
