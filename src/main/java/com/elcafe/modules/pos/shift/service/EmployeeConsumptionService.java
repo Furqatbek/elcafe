@@ -80,7 +80,6 @@ public class EmployeeConsumptionService {
                 .totalAmount(totalCost)
                 .expenseDate(LocalDate.now())
                 .paymentStatus(Expense.PaymentStatus.PAID)
-                .paidBy(consumerName)
                 .build();
         expense = expenseRepository.save(expense);
 
