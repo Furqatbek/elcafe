@@ -45,6 +45,7 @@ import KitchenStations from './pages/KitchenStations';
 import PricingDashboard from './pages/PricingDashboard';
 import FinancialAlerts from './pages/FinancialAlerts';
 import Payroll from './pages/Payroll';
+import EmployeeConsumption from './pages/EmployeeConsumption';
 import Promotions from './pages/Promotions';
 import CouponCodes from './pages/CouponCodes';
 import HappyHours from './pages/HappyHours';
@@ -161,6 +162,7 @@ function App() {
           <Route path="employees/waiters" element={<Waiters />} />
           <Route path="employees/waiter-performance" element={<AdminRoute><WaiterPerformance /></AdminRoute>} />
           <Route path="employees/shift-dashboard" element={<ShiftDashboard />} />
+          <Route path="employees/consumption" element={<EmployeeConsumption />} />
           <Route path="employees/shift-schedule" element={<ShiftSchedule />} />
           <Route path="couriers" element={<Couriers />} />
           <Route path="courier-map" element={<CourierMap />} />

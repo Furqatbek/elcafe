@@ -51,6 +51,7 @@ public class OwnerTelegramBotService {
     private final com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository shiftRepository;
     private final com.elcafe.modules.order.repository.OrderRepository orderRepository;
     private final com.elcafe.modules.financial.service.DashboardService dashboardService;
+    private final com.elcafe.modules.pos.shift.repository.EmployeeConsumptionRepository consumptionRepository;
 
     public OwnerTelegramBotService(
             OwnerTelegramBotConfigRepository configRepository,
@@ -64,7 +65,8 @@ public class OwnerTelegramBotService {
             com.elcafe.modules.waiter.repository.WaiterRepository waiterRepository2,
             com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository shiftRepository,
             com.elcafe.modules.order.repository.OrderRepository orderRepository,
-            @org.springframework.context.annotation.Lazy com.elcafe.modules.financial.service.DashboardService dashboardService) {
+            @org.springframework.context.annotation.Lazy com.elcafe.modules.financial.service.DashboardService dashboardService,
+            com.elcafe.modules.pos.shift.repository.EmployeeConsumptionRepository consumptionRepository) {
         this.configRepository = configRepository;
         this.subscriberRepository = subscriberRepository;
         this.settingsRepository = settingsRepository;
@@ -77,6 +79,7 @@ public class OwnerTelegramBotService {
         this.shiftRepository = shiftRepository;
         this.orderRepository = orderRepository;
         this.dashboardService = dashboardService;
+        this.consumptionRepository = consumptionRepository;
     }
 
     private OwnerBot bot;
@@ -940,6 +943,18 @@ public class OwnerTelegramBotService {
                         }
                     }
                     sb.append(String.format("\n💰 <b>Общий итого: %,.2f</b>", totalRevenue));
+                }
+
+                // Employee consumption section
+                var consumptions = consumptionRepository.findByEmployeeShift_IdOrderByConsumedAtDesc(shiftId);
+                if (!consumptions.isEmpty()) {
+                    java.math.BigDecimal consumptionTotal = java.math.BigDecimal.ZERO;
+                    sb.append("\n\n🍽 <b>Потребление сотрудника:</b>\n");
+                    for (var c : consumptions) {
+                        sb.append(String.format("  • %s × %d = %,.2f\n", c.getProductName(), c.getQuantity(), c.getTotalCost()));
+                        consumptionTotal = consumptionTotal.add(c.getTotalCost());
+                    }
+                    sb.append(String.format("  <b>Итого потребление: %,.2f</b>", consumptionTotal));
                 }
 
                 sendReply(chatId, sb.toString());

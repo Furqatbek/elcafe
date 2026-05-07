@@ -217,6 +217,24 @@ public class InventoryService {
     /**
      * Calculate total required ingredients for an order
      */
+    public void deductIngredientsForProduct(Long restaurantId, Long productId, int quantity) {
+        List<ProductIngredient> productIngredients =
+                productIngredientRepository.findByProductIdWithIngredients(productId);
+
+        for (ProductIngredient pi : productIngredients) {
+            if (pi.getOptional()) continue;
+            Ingredient ingredient = pi.getIngredient();
+            BigDecimal totalNeeded = pi.getQuantityRequired().multiply(BigDecimal.valueOf(quantity));
+            ingredient.setCurrentStock(ingredient.getCurrentStock().subtract(totalNeeded));
+            ingredientRepository.save(ingredient);
+            checkAndNotifyLowStock(ingredient, restaurantId);
+        }
+        log.info("Inventory deducted for product {} x{}", productId, quantity);
+    }
+
+    /**
+     * Calculate required ingredients for an order.
+     */
     private Map<Long, BigDecimal> calculateRequiredIngredients(Order order) {
         Map<Long, BigDecimal> requiredIngredients = new HashMap<>();
 

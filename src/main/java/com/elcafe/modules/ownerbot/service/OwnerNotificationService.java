@@ -304,6 +304,29 @@ public class OwnerNotificationService {
 
     @Async
     @Transactional
+    public void notifyEmployeeConsumption(Long restaurantId, String employeeName,
+                                           String productName, int quantity, BigDecimal totalCost) {
+        List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.SHIFT_OPENED);
+
+        if (subscribers.isEmpty()) return;
+
+        String message = String.format(
+            "🍽 <b>Потребление сотрудника</b>\n\n" +
+            "👤 %s\n" +
+            "📦 %s × %d\n" +
+            "💰 Стоимость: %,.2f\n" +
+            "⏰ %s",
+            employeeName, productName, quantity, totalCost,
+            java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+        );
+
+        for (OwnerTelegramSubscriber subscriber : subscribers) {
+            sendNotification(subscriber, OwnerNotificationType.SHIFT_OPENED, message, "CONSUMPTION", null);
+        }
+    }
+
+    @Async
+    @Transactional
     public void notifyShiftClosed(Long restaurantId, String employeeName, String clockInTime,
                                    String clockOutTime, long workedMinutes, int orderCount,
                                    java.math.BigDecimal totalSales,
