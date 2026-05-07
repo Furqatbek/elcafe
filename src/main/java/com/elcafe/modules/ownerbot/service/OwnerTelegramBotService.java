@@ -47,6 +47,9 @@ public class OwnerTelegramBotService {
     private final TelegramBotRegistry botRegistry;
     private final InventoryIngredientRepository ingredientRepository;
     private final DailyFinancialReportService dailyFinancialReportService;
+    private final com.elcafe.modules.waiter.repository.WaiterRepository waiterRepository2;
+    private final com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository shiftRepository;
+    private final com.elcafe.modules.order.repository.OrderRepository orderRepository;
 
     public OwnerTelegramBotService(
             OwnerTelegramBotConfigRepository configRepository,
@@ -56,7 +59,10 @@ public class OwnerTelegramBotService {
             RestaurantRepository restaurantRepository,
             TelegramBotRegistry botRegistry,
             InventoryIngredientRepository ingredientRepository,
-            @org.springframework.context.annotation.Lazy DailyFinancialReportService dailyFinancialReportService) {
+            @org.springframework.context.annotation.Lazy DailyFinancialReportService dailyFinancialReportService,
+            com.elcafe.modules.waiter.repository.WaiterRepository waiterRepository2,
+            com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository shiftRepository,
+            com.elcafe.modules.order.repository.OrderRepository orderRepository) {
         this.configRepository = configRepository;
         this.subscriberRepository = subscriberRepository;
         this.settingsRepository = settingsRepository;
@@ -65,6 +71,9 @@ public class OwnerTelegramBotService {
         this.botRegistry = botRegistry;
         this.ingredientRepository = ingredientRepository;
         this.dailyFinancialReportService = dailyFinancialReportService;
+        this.waiterRepository2 = waiterRepository2;
+        this.shiftRepository = shiftRepository;
+        this.orderRepository = orderRepository;
     }
 
     private OwnerBot bot;
@@ -130,6 +139,7 @@ public class OwnerTelegramBotService {
                     new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/menu", "Показать кнопки"),
                     new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/report", "Финансовый отчёт"),
                     new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/stock", "Проверить запасы"),
+                    new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/sales", "Продажи по сменам"),
                     new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/status", "Статус подключения"),
                     new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/settings", "Настройки"),
                     new org.telegram.telegrambots.meta.api.objects.commands.BotCommand("/help", "Справка")
@@ -299,6 +309,8 @@ public class OwnerTelegramBotService {
                 handleStockCommand(chatId);
             } else if (messageText.equals("/menu")) {
                 handleMenuCommand(chatId);
+            } else if (messageText.equals("/sales")) {
+                handleSalesCommand(chatId);
             } else if (messageText.matches("^\\d{6}$")) {
                 // Verification code
                 handleVerificationCode(chatId, telegramUser, messageText);
@@ -507,6 +519,7 @@ public class OwnerTelegramBotService {
                 "/menu - Показать кнопки действий\n" +
                 "/report - Финансовый отчёт за сегодня\n" +
                 "/stock - Проверить низкие запасы\n" +
+                "/sales - Продажи по сменам\n" +
                 "/status - Статус подключения\n" +
                 "/settings - Настройки уведомлений\n" +
                 "/help - Эта справка\n\n" +
@@ -634,15 +647,15 @@ public class OwnerTelegramBotService {
 
                 keyboard.add(List.of(reportBtn, stockBtn));
 
+                InlineKeyboardButton salesBtn = new InlineKeyboardButton();
+                salesBtn.setText("🧾 Продажи по сменам");
+                salesBtn.setCallbackData("cmd_sales");
+
                 InlineKeyboardButton statusBtn = new InlineKeyboardButton();
                 statusBtn.setText("ℹ️ Статус");
                 statusBtn.setCallbackData("cmd_status");
 
-                InlineKeyboardButton settingsBtn = new InlineKeyboardButton();
-                settingsBtn.setText("⚙️ Настройки");
-                settingsBtn.setCallbackData("cmd_settings");
-
-                keyboard.add(List.of(statusBtn, settingsBtn));
+                keyboard.add(List.of(salesBtn, statusBtn));
 
                 markup.setKeyboard(keyboard);
                 msg.setReplyMarkup(markup);
@@ -665,12 +678,158 @@ public class OwnerTelegramBotService {
                 log.warn("Failed to answer callback query: {}", e.getMessage());
             }
 
-            switch (callbackData) {
-                case "cmd_report" -> handleReportCommand(chatId);
-                case "cmd_stock" -> handleStockCommand(chatId);
-                case "cmd_status" -> handleStatusCommand(chatId);
-                case "cmd_settings" -> handleSettingsCommand(chatId);
-                default -> sendReply(chatId, "Неизвестная команда");
+            if (callbackData.startsWith("sales_waiter_")) {
+                handleSalesWaiterSelected(chatId, callbackData);
+            } else if (callbackData.startsWith("sales_shift_")) {
+                handleSalesShiftSelected(chatId, callbackData);
+            } else {
+                switch (callbackData) {
+                    case "cmd_report" -> handleReportCommand(chatId);
+                    case "cmd_stock" -> handleStockCommand(chatId);
+                    case "cmd_status" -> handleStatusCommand(chatId);
+                    case "cmd_settings" -> handleSettingsCommand(chatId);
+                    case "cmd_sales" -> handleSalesCommand(chatId);
+                    default -> sendReply(chatId, "Неизвестная команда");
+                }
+            }
+        }
+
+        private void handleSalesCommand(Long chatId) {
+            updateLastInteraction(chatId);
+            Optional<OwnerTelegramSubscriber> subOpt = subscriberRepository.findByTelegramUserId(chatId);
+            if (subOpt.isEmpty() || !subOpt.get().getIsVerified() || subOpt.get().getRestaurant() == null) {
+                sendReply(chatId, "❌ Сначала подключитесь к ресторану через /start");
+                return;
+            }
+            try {
+                List<com.elcafe.modules.waiter.entity.Waiter> waiters =
+                        waiterRepository2.findByActiveTrueOrderByNameAsc();
+
+                if (waiters.isEmpty()) {
+                    sendReply(chatId, "Нет активных официантов");
+                    return;
+                }
+
+                SendMessage msg = new SendMessage();
+                msg.setChatId(chatId.toString());
+                msg.setText("🧾 <b>Продажи по сменам</b>\n\nВыберите официанта:");
+                msg.setParseMode("HTML");
+
+                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+                List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+                for (com.elcafe.modules.waiter.entity.Waiter w : waiters) {
+                    InlineKeyboardButton btn = new InlineKeyboardButton();
+                    btn.setText("👤 " + w.getName());
+                    btn.setCallbackData("sales_waiter_" + w.getId());
+                    keyboard.add(List.of(btn));
+                }
+                markup.setKeyboard(keyboard);
+                msg.setReplyMarkup(markup);
+                execute(msg);
+            } catch (Exception e) {
+                log.error("Failed to handle /sales: {}", e.getMessage());
+                sendReply(chatId, "❌ Ошибка: " + e.getMessage());
+            }
+        }
+
+        private void handleSalesWaiterSelected(Long chatId, String callbackData) {
+            try {
+                Long waiterId = Long.parseLong(callbackData.replace("sales_waiter_", ""));
+                com.elcafe.modules.waiter.entity.Waiter waiter = waiterRepository2.findById(waiterId).orElse(null);
+                if (waiter == null) { sendReply(chatId, "Официант не найден"); return; }
+
+                List<com.elcafe.modules.pos.shift.entity.EmployeeShift> shifts =
+                        shiftRepository.findByWaiterIdOrderByDateDesc(waiterId);
+
+                if (shifts.isEmpty()) {
+                    sendReply(chatId, "У " + waiter.getName() + " нет смен");
+                    return;
+                }
+
+                // Show last 10 shifts
+                List<com.elcafe.modules.pos.shift.entity.EmployeeShift> recent = shifts.size() > 10 ? shifts.subList(0, 10) : shifts;
+
+                SendMessage msg = new SendMessage();
+                msg.setChatId(chatId.toString());
+                msg.setText(String.format("👤 <b>%s</b>\n\nВыберите смену:", waiter.getName()));
+                msg.setParseMode("HTML");
+
+                java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd.MM HH:mm");
+                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+                List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+                for (var s : recent) {
+                    String clockIn = s.getClockIn() != null ? s.getClockIn().format(fmt) : "--";
+                    String label = clockIn + " | " + (s.getTotalOrders() != null ? s.getTotalOrders() : 0) + " заказов | " + s.getStatus();
+                    InlineKeyboardButton btn = new InlineKeyboardButton();
+                    btn.setText(label);
+                    btn.setCallbackData("sales_shift_" + s.getId());
+                    keyboard.add(List.of(btn));
+                }
+                markup.setKeyboard(keyboard);
+                msg.setReplyMarkup(markup);
+                execute(msg);
+            } catch (Exception e) {
+                log.error("Failed to load waiter shifts: {}", e.getMessage());
+                sendReply(chatId, "❌ Ошибка: " + e.getMessage());
+            }
+        }
+
+        private void handleSalesShiftSelected(Long chatId, String callbackData) {
+            try {
+                Long shiftId = Long.parseLong(callbackData.replace("sales_shift_", ""));
+                com.elcafe.modules.pos.shift.entity.EmployeeShift shift = shiftRepository.findById(shiftId).orElse(null);
+                if (shift == null) { sendReply(chatId, "Смена не найдена"); return; }
+
+                List<com.elcafe.modules.order.entity.Order> orders = orderRepository.findByShiftIdWithItems(shiftId);
+
+                String waiterName = shift.getWaiter() != null ? shift.getWaiter().getName()
+                        : (shift.getEmployee() != null ? shift.getEmployee().getFullName() : "—");
+                java.time.ZoneId zone = java.time.ZoneId.systemDefault();
+                String clockIn = shift.getClockIn() != null
+                        ? shift.getClockIn().atZoneSameInstant(zone).format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")) : "--";
+                String clockOut = shift.getClockOut() != null
+                        ? shift.getClockOut().atZoneSameInstant(zone).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "...";
+
+                StringBuilder sb = new StringBuilder();
+                sb.append(String.format("🧾 <b>Продажи за смену</b>\n\n👤 %s\n⏰ %s — %s\n📦 Заказов: %d\n\n",
+                        waiterName, clockIn, clockOut, orders.size()));
+
+                // Aggregate items
+                Map<String, int[]> items = new java.util.LinkedHashMap<>();
+                java.math.BigDecimal totalRevenue = java.math.BigDecimal.ZERO;
+                for (var order : orders) {
+                    for (var item : order.getItems()) {
+                        if (item.isDeleted() || Boolean.TRUE.equals(item.getIsPackagingItem())) continue;
+                        String key = item.getProductName() + (item.getVariantName() != null ? " (" + item.getVariantName() + ")" : "");
+                        int[] data = items.computeIfAbsent(key, k -> new int[]{0, 0});
+                        data[0] += item.getQuantity();
+                        data[1] += item.getTotalPrice() != null ? item.getTotalPrice().intValue() : 0;
+                    }
+                    if (order.getTotal() != null) totalRevenue = totalRevenue.add(order.getTotal());
+                }
+
+                if (items.isEmpty()) {
+                    sb.append("Нет проданных товаров");
+                } else {
+                    sb.append("<b>Товары:</b>\n");
+                    int i = 1;
+                    for (var entry : items.entrySet()) {
+                        sb.append(String.format("%d. %s × %d = %,d\n", i++, entry.getKey(), entry.getValue()[0], entry.getValue()[1]));
+                    }
+                    sb.append(String.format("\n💰 <b>Итого: %,.2f</b>", totalRevenue));
+
+                    if (shift.getTotalCashSales() != null && shift.getTotalCashSales().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        sb.append(String.format("\n💵 Наличные: %,.2f", shift.getTotalCashSales()));
+                    }
+                    if (shift.getTotalCardSales() != null && shift.getTotalCardSales().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        sb.append(String.format("\n💳 Карта: %,.2f", shift.getTotalCardSales()));
+                    }
+                }
+
+                sendReply(chatId, sb.toString());
+            } catch (Exception e) {
+                log.error("Failed to load shift sales: {}", e.getMessage());
+                sendReply(chatId, "❌ Ошибка: " + e.getMessage());
             }
         }
 
