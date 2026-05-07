@@ -77,6 +77,7 @@ public class EmployeeConsumptionService {
                 .restaurant(restaurant)
                 .category(Expense.ExpenseCategory.OTHER)
                 .description("Employee consumption: " + consumerName + " - " + product.getName() + " x" + quantity)
+                .amount(totalCost)
                 .totalAmount(totalCost)
                 .expenseDate(LocalDate.now())
                 .paymentStatus(Expense.PaymentStatus.PAID)
