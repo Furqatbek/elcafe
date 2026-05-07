@@ -759,7 +759,8 @@ public class OwnerTelegramBotService {
                 List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
                 for (var s : recent) {
                     String clockIn = s.getClockIn() != null ? s.getClockIn().format(fmt) : "--";
-                    String label = clockIn + " | " + (s.getTotalOrders() != null ? s.getTotalOrders() : 0) + " заказов | " + s.getStatus();
+                    String clockOut = s.getClockOut() != null ? s.getClockOut().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "...";
+                    String label = clockIn + "—" + clockOut + " | " + (s.getTotalOrders() != null ? s.getTotalOrders() : 0) + " зак.";
                     InlineKeyboardButton btn = new InlineKeyboardButton();
                     btn.setText(label);
                     btn.setCallbackData("sales_shift_" + s.getId());
