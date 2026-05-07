@@ -68,7 +68,9 @@ public class EmployeeConsumptionService {
         }
 
         BigDecimal costPrice = product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO;
+        BigDecimal sellingPrice = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
         BigDecimal totalCost = costPrice.multiply(BigDecimal.valueOf(quantity));
+        BigDecimal totalPrice = sellingPrice.multiply(BigDecimal.valueOf(quantity));
         String consumerName = waiter != null ? waiter.getName()
                 : (employee != null ? employee.getFullName() : "Unknown");
 
@@ -77,8 +79,8 @@ public class EmployeeConsumptionService {
                 .restaurant(restaurant)
                 .category(Expense.ExpenseCategory.OTHER)
                 .description("Employee consumption: " + consumerName + " - " + product.getName() + " x" + quantity)
-                .amount(totalCost)
-                .totalAmount(totalCost)
+                .amount(totalPrice)
+                .totalAmount(totalPrice)
                 .expenseDate(LocalDate.now())
                 .paymentStatus(Expense.PaymentStatus.PAID)
                 .approvedBy("System")
@@ -95,8 +97,8 @@ public class EmployeeConsumptionService {
                 .product(product)
                 .productName(product.getName())
                 .quantity(quantity)
-                .costPrice(costPrice)
-                .totalCost(totalCost)
+                .costPrice(sellingPrice)
+                .totalCost(totalPrice)
                 .expense(expense)
                 .notes(notes)
                 .consumedAt(OffsetDateTime.now())
@@ -114,7 +116,7 @@ public class EmployeeConsumptionService {
         // Telegram notification
         try {
             ownerNotificationService.notifyEmployeeConsumption(
-                    restaurantId, consumerName, product.getName(), quantity, totalCost);
+                    restaurantId, consumerName, product.getName(), quantity, totalPrice);
         } catch (Exception e) {
             log.warn("Failed to send consumption notification: {}", e.getMessage());
         }
