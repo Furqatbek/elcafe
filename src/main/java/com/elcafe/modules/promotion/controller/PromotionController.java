@@ -59,6 +59,18 @@ public class PromotionController {
         return ResponseEntity.ok(promotions);
     }
 
+    @PostMapping("/restaurants/{restaurantId}/promotions/check-cart")
+    public ResponseEntity<List<CartDiscountResult>> checkCart(
+            @PathVariable Long restaurantId,
+            @RequestBody CheckCartRequest request) {
+        return ResponseEntity.ok(promotionService.checkCartPromotions(restaurantId, request.items()));
+    }
+
+    public record CheckCartRequest(List<CartItem> items) {}
+    public record CartItem(Long productId, int quantity, java.math.BigDecimal unitPrice) {}
+    public record CartDiscountResult(Long promotionId, String promotionName, String type,
+                                      java.math.BigDecimal discountAmount, String description) {}
+
     @GetMapping("/promotions/{promotionId}")
     public ResponseEntity<PromotionResponse> getPromotion(@PathVariable Long promotionId) {
         PromotionResponse response = promotionService.getPromotion(promotionId);
