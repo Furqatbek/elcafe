@@ -619,9 +619,9 @@ export default function OrdersHistory() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {order.payments && order.payments.length > 0
-                          ? order.payments.map(p => p.method).filter(Boolean).join(', ') || '—'
-                          : '—'}
+                        {order.payment?.method || (order.payments && order.payments.length > 0
+                          ? order.payments.map(p => p.method).filter(Boolean).join(', ')
+                          : '—')}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {(order.total || 0).toLocaleString()}
