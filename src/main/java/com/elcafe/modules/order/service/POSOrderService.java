@@ -256,6 +256,7 @@ public class POSOrderService {
 
         // Update shift sales totals
         final Order finalOrder = savedOrder;
+        final String paymentMethodName = request.getPaymentMethod();
         if (shiftId != null && finalOrder.getTotal() != null) {
             try {
                 employeeShiftRepository.findById(shiftId).ifPresent(shift -> {
@@ -264,22 +265,17 @@ public class POSOrderService {
                             (shift.getTotalSales() != null ? shift.getTotalSales() : java.math.BigDecimal.ZERO)
                                     .add(finalOrder.getTotal()));
 
-                    // Track by payment method
-                    String method = null;
-                    if (finalOrder.getPayment() != null && finalOrder.getPayment().getMethod() != null) {
-                        method = finalOrder.getPayment().getMethod().name();
-                    } else if (finalOrder.getPayments() != null && !finalOrder.getPayments().isEmpty()) {
-                        method = finalOrder.getPayments().get(0).getMethod() != null
-                                ? finalOrder.getPayments().get(0).getMethod().name() : null;
-                    }
-                    if ("CASH".equals(method)) {
-                        shift.setTotalCashSales(
-                                (shift.getTotalCashSales() != null ? shift.getTotalCashSales() : java.math.BigDecimal.ZERO)
-                                        .add(finalOrder.getTotal()));
-                    } else if (method != null) {
-                        shift.setTotalCardSales(
-                                (shift.getTotalCardSales() != null ? shift.getTotalCardSales() : java.math.BigDecimal.ZERO)
-                                        .add(finalOrder.getTotal()));
+                    // Track by payment method from request (not from entity — avoids lazy loading issues)
+                    if (paymentMethodName != null && !paymentMethodName.isBlank()) {
+                        if ("CASH".equalsIgnoreCase(paymentMethodName)) {
+                            shift.setTotalCashSales(
+                                    (shift.getTotalCashSales() != null ? shift.getTotalCashSales() : java.math.BigDecimal.ZERO)
+                                            .add(finalOrder.getTotal()));
+                        } else {
+                            shift.setTotalCardSales(
+                                    (shift.getTotalCardSales() != null ? shift.getTotalCardSales() : java.math.BigDecimal.ZERO)
+                                            .add(finalOrder.getTotal()));
+                        }
                     }
 
                     employeeShiftRepository.save(shift);
