@@ -404,6 +404,46 @@ public class ShiftManagementService {
             .build();
     }
 
+    public void resendShiftToTelegram(Long shiftId) {
+        EmployeeShift shift = shiftRepository.findById(shiftId)
+                .orElseThrow(() -> new IllegalArgumentException("Shift not found"));
+
+        String shiftName = shift.getEmployee() != null
+                ? shift.getEmployee().getFullName()
+                : (shift.getWaiter() != null ? shift.getWaiter().getName() : "Unknown");
+
+        java.time.ZoneId zone = java.time.ZoneId.systemDefault();
+        String clockInTime = shift.getClockIn() != null
+                ? shift.getClockIn().atZoneSameInstant(zone).toLocalTime().toString().substring(0, 5) : "--";
+        String clockOutTime = shift.getClockOut() != null
+                ? shift.getClockOut().atZoneSameInstant(zone).toLocalTime().toString().substring(0, 5) : "--";
+
+        List<com.elcafe.modules.order.entity.Order> shiftOrders =
+                orderRepository.findByShiftIdWithItems(shift.getId());
+        java.math.BigDecimal totalSales = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal cashSales = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal cardSales = java.math.BigDecimal.ZERO;
+        int orderCount = 0;
+        for (var o : shiftOrders) {
+            if (o.getTotal() == null) continue;
+            totalSales = totalSales.add(o.getTotal());
+            orderCount++;
+            var p = o.getPayment();
+            if (p != null && p.getMethod() != null) {
+                if (p.getMethod().name().equals("CASH")) cashSales = cashSales.add(o.getTotal());
+                else cardSales = cardSales.add(o.getTotal());
+            }
+        }
+
+        ownerNotificationService.notifyShiftClosed(
+                shift.getRestaurant().getId(),
+                shiftName, clockInTime, clockOutTime,
+                shift.getWorkedMinutes(), orderCount,
+                totalSales, cashSales, cardSales);
+
+        log.info("Resent shift {} report to Telegram", shiftId);
+    }
+
     private ShiftSummaryDTO toShiftSummary(EmployeeShift shift) {
         String name = shift.getEmployee() != null
                 ? shift.getEmployee().getFullName()

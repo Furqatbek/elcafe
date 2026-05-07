@@ -24,6 +24,7 @@ import {
   Coffee,
   AlertTriangle,
   CheckCircle,
+  Send,
   Users,
   Timer,
   UserCheck,
@@ -131,6 +132,16 @@ export default function ShiftDashboard() {
       loadShifts();
     } catch (e) {
       console.error('Failed to approve shift:', e);
+    }
+  };
+
+  const handleResendTelegram = async (shiftId) => {
+    try {
+      await shiftAPI.resendTelegram(selectedRestaurant, shiftId);
+      alert(t('shift.dashboard.telegramSent', 'Shift report sent to Telegram'));
+    } catch (e) {
+      console.error('Failed to resend:', e);
+      alert('Failed to send');
     }
   };
 
@@ -321,12 +332,17 @@ export default function ShiftDashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {shift.status !== 'APPROVED' && (
-                        <Button variant="outline" size="sm" onClick={() => handleApprove(shift.id)}>
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          {t('shift.dashboard.approve', 'Approve')}
+                      <div className="flex gap-1 justify-end">
+                        {shift.status !== 'APPROVED' && (
+                          <Button variant="outline" size="sm" onClick={() => handleApprove(shift.id)}>
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            {t('shift.dashboard.approve', 'Approve')}
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => handleResendTelegram(shift.id)} title={t('shift.dashboard.sendTelegram', 'Send to Telegram')}>
+                          <Send className="h-3 w-3" />
                         </Button>
-                      )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

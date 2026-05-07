@@ -94,6 +94,15 @@ public class ShiftManagementController {
         return ResponseEntity.ok(shiftService.approveShift(shiftId, managerId, notes));
     }
 
+    @PostMapping("/{shiftId}/resend-telegram")
+    @Operation(summary = "Resend shift report to Telegram owner bot")
+    public ResponseEntity<java.util.Map<String, String>> resendTelegram(
+            @PathVariable Long restaurantId,
+            @PathVariable Long shiftId) {
+        shiftService.resendShiftToTelegram(shiftId);
+        return ResponseEntity.ok(java.util.Map.of("message", "Shift report sent to Telegram"));
+    }
+
     @GetMapping("/employees/{employeeId}/history")
     @Operation(summary = "Get shift history for an employee")
     public ResponseEntity<Page<ShiftSummaryDTO>> getEmployeeHistory(

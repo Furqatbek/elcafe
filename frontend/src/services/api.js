@@ -409,6 +409,7 @@ export const shiftAPI = {
   startBreak: (restaurantId, shiftId) => api.post(`/restaurants/${restaurantId}/pos/shifts/${shiftId}/break/start`),
   endBreak: (restaurantId, shiftId) => api.post(`/restaurants/${restaurantId}/pos/shifts/${shiftId}/break/end`),
   approve: (restaurantId, shiftId) => api.post(`/restaurants/${restaurantId}/pos/shifts/${shiftId}/approve`),
+  resendTelegram: (restaurantId, shiftId) => api.post(`/restaurants/${restaurantId}/pos/shifts/${shiftId}/resend-telegram`),
   getHistory: (restaurantId, employeeId) => api.get(`/restaurants/${restaurantId}/pos/shifts/employees/${employeeId}/history`),
   getEndOfDayReport: (restaurantId, date) => api.get(`/restaurants/${restaurantId}/pos/shifts/end-of-day/${date}`),
   getFinancialReport: (restaurantId, date, hourlyRate) => api.get(`/shift-reports/restaurant/${restaurantId}`, { params: { date, hourlyRate } }),
