@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class DashboardService {
 
     private final OrderRepository orderRepository;
@@ -151,7 +150,7 @@ public class DashboardService {
                 .expensesByCategory(calculateExpensesByCategory(expenses, totalPayroll))
                 .dailyStats(calculateDailyStats(restaurantId, completedOrders, expenses, startDate, endDate))
                 .soldItems(calculateSoldItems(ordersForSoldItems))
-                .comparison(calculatePeriodComparison(restaurantId, startDate, endDate, totalIncome, totalExpenses, activeOrders.size()))
+                .comparison(safeCalculateComparison(restaurantId, startDate, endDate, totalIncome, totalExpenses, activeOrders.size()))
                 .inventoryAlerts(calculateInventoryAlerts(restaurantId))
                 .build();
     }
@@ -364,6 +363,23 @@ public class DashboardService {
         }
 
         return soldItems;
+    }
+
+    private DashboardResponse.PeriodComparison safeCalculateComparison(
+            Long restaurantId, LocalDate startDate, LocalDate endDate,
+            BigDecimal currentIncome, BigDecimal currentExpenses, int currentOrderCount) {
+        try {
+            return calculatePeriodComparison(restaurantId, startDate, endDate, currentIncome, currentExpenses, currentOrderCount);
+        } catch (Exception e) {
+            log.warn("Failed to calculate period comparison: {}", e.getMessage());
+            return DashboardResponse.PeriodComparison.builder()
+                    .incomeChange(BigDecimal.ZERO)
+                    .expenseChange(BigDecimal.ZERO)
+                    .profitChange(BigDecimal.ZERO)
+                    .orderCountChange(0L)
+                    .trend("STABLE")
+                    .build();
+        }
     }
 
     private DashboardResponse.PeriodComparison calculatePeriodComparison(
