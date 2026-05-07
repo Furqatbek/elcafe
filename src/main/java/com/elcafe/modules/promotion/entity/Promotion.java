@@ -66,7 +66,7 @@ public class Promotion {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "free_product_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "variants", "ingredients", "linkedItems", "addOnGroups", "category"})
     private Product freeProduct;
 
     @Column(name = "start_date", nullable = false)
