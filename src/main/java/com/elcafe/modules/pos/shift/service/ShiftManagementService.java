@@ -55,6 +55,15 @@ public class ShiftManagementService {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
             .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
 
+        // Auto-detect user from security context if not provided
+        if (request.getEmployeeId() == null && request.getWaiterId() == null) {
+            org.springframework.security.core.Authentication auth =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof com.elcafe.security.UserPrincipal up) {
+                request.setEmployeeId(up.getId());
+            }
+        }
+
         // Validate employee (optional — waiter-only shifts don't need a User account)
         User employee = null;
         if (request.getEmployeeId() != null) {
