@@ -847,40 +847,65 @@ public class OwnerTelegramBotService {
                 String clockOut = shift.getClockOut() != null
                         ? shift.getClockOut().atZoneSameInstant(zone).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "...";
 
-                StringBuilder sb = new StringBuilder();
-                sb.append(String.format("🧾 <b>Продажи за смену</b>\n\n👤 %s\n⏰ %s — %s\n📦 Заказов: %d\n\n",
-                        waiterName, clockIn, clockOut, orders.size()));
-
-                // Aggregate items
-                Map<String, int[]> items = new java.util.LinkedHashMap<>();
+                // Aggregate by payment method
+                Map<String, java.math.BigDecimal> revenueByMethod = new java.util.LinkedHashMap<>();
+                Map<String, Map<String, int[]>> itemsByMethod = new java.util.LinkedHashMap<>();
                 java.math.BigDecimal totalRevenue = java.math.BigDecimal.ZERO;
+                int totalOrderCount = 0;
+
                 for (var order : orders) {
+                    String method = "Другое";
+                    if (order.getPayment() != null && order.getPayment().getMethod() != null) {
+                        method = switch (order.getPayment().getMethod().name()) {
+                            case "CASH" -> "Наличные";
+                            case "CARD" -> "Карта";
+                            case "MOBILE_PAYMENT" -> "Мобильный";
+                            default -> order.getPayment().getMethod().name();
+                        };
+                    } else if (order.getPayments() != null && !order.getPayments().isEmpty()
+                            && order.getPayments().get(0).getMethod() != null) {
+                        method = switch (order.getPayments().get(0).getMethod().name()) {
+                            case "CASH" -> "Наличные";
+                            case "CARD" -> "Карта";
+                            case "MOBILE_PAYMENT" -> "Мобильный";
+                            default -> order.getPayments().get(0).getMethod().name();
+                        };
+                    }
+
+                    java.math.BigDecimal orderTotal = order.getTotal() != null ? order.getTotal() : java.math.BigDecimal.ZERO;
+                    revenueByMethod.merge(method, orderTotal, java.math.BigDecimal::add);
+                    totalRevenue = totalRevenue.add(orderTotal);
+                    totalOrderCount++;
+
+                    Map<String, int[]> methodItems = itemsByMethod.computeIfAbsent(method, k -> new java.util.LinkedHashMap<>());
                     for (var item : order.getItems()) {
                         if (item.isDeleted() || Boolean.TRUE.equals(item.getIsPackagingItem())) continue;
                         String key = item.getProductName() + (item.getVariantName() != null ? " (" + item.getVariantName() + ")" : "");
-                        int[] data = items.computeIfAbsent(key, k -> new int[]{0, 0});
+                        int[] data = methodItems.computeIfAbsent(key, k -> new int[]{0, 0});
                         data[0] += item.getQuantity();
                         data[1] += item.getTotalPrice() != null ? item.getTotalPrice().intValue() : 0;
                     }
-                    if (order.getTotal() != null) totalRevenue = totalRevenue.add(order.getTotal());
                 }
 
-                if (items.isEmpty()) {
-                    sb.append("Нет проданных товаров");
-                } else {
-                    sb.append("<b>Товары:</b>\n");
-                    int i = 1;
-                    for (var entry : items.entrySet()) {
-                        sb.append(String.format("%d. %s × %d = %,d\n", i++, entry.getKey(), entry.getValue()[0], entry.getValue()[1]));
-                    }
-                    sb.append(String.format("\n💰 <b>Итого: %,.2f</b>", totalRevenue));
+                StringBuilder sb = new StringBuilder();
+                sb.append(String.format("🧾 <b>Продажи за смену</b>\n\n👤 %s\n⏰ %s — %s\n📦 Заказов: %d\n",
+                        waiterName, clockIn, clockOut, totalOrderCount));
 
-                    if (shift.getTotalCashSales() != null && shift.getTotalCashSales().compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        sb.append(String.format("\n💵 Наличные: %,.2f", shift.getTotalCashSales()));
+                if (itemsByMethod.isEmpty()) {
+                    sb.append("\nНет проданных товаров");
+                } else {
+                    for (var methodEntry : itemsByMethod.entrySet()) {
+                        String method = methodEntry.getKey();
+                        String emoji = method.equals("Наличные") ? "💵" : method.equals("Карта") ? "💳" : "💰";
+                        java.math.BigDecimal methodTotal = revenueByMethod.getOrDefault(method, java.math.BigDecimal.ZERO);
+
+                        sb.append(String.format("\n%s <b>%s: %,.2f</b>\n", emoji, method, methodTotal));
+                        int i = 1;
+                        for (var itemEntry : methodEntry.getValue().entrySet()) {
+                            sb.append(String.format("  %d. %s × %d = %,d\n", i++, itemEntry.getKey(), itemEntry.getValue()[0], itemEntry.getValue()[1]));
+                        }
                     }
-                    if (shift.getTotalCardSales() != null && shift.getTotalCardSales().compareTo(java.math.BigDecimal.ZERO) > 0) {
-                        sb.append(String.format("\n💳 Карта: %,.2f", shift.getTotalCardSales()));
-                    }
+                    sb.append(String.format("\n💰 <b>Общий итого: %,.2f</b>", totalRevenue));
                 }
 
                 sendReply(chatId, sb.toString());
