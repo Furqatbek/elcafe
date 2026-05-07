@@ -83,6 +83,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/restaurants/**").authenticated()
                         // POS shift endpoints — open to all authenticated staff
                         .requestMatchers("/api/v1/restaurants/*/pos/**").authenticated()
+                        // Employee consumptions — open to all authenticated staff
+                        .requestMatchers("/api/v1/restaurants/*/employee-consumptions/**").authenticated()
                         // Admin only endpoints
                         .requestMatchers(HttpMethod.POST, "/api/v1/restaurants/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/restaurants/**").hasRole("ADMIN")
