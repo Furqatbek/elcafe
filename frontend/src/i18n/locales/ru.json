@@ -3399,6 +3399,8 @@
     "customer": "Клиент",
     "type": "Тип",
     "payment": "Оплата",
+    "paymentMethod": "Способ оплаты",
+    "paymentStatus": "Статус оплаты",
     "total": "Итого",
     "page": "Страница",
     "orderDetails": "Детали заказа",

@@ -3445,6 +3445,8 @@
     "customer": "Mijoz",
     "type": "Turi",
     "payment": "To'lov",
+    "paymentMethod": "To'lov usuli",
+    "paymentStatus": "To'lov holati",
     "total": "Jami",
     "page": "Sahifa",
     "orderDetails": "Buyurtma tafsilotlari",

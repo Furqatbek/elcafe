@@ -3640,6 +3640,8 @@
     "customer": "Customer",
     "type": "Type",
     "payment": "Payment",
+    "paymentMethod": "Method",
+    "paymentStatus": "Payment Status",
     "total": "Total",
     "page": "Page",
     "orderDetails": "Order Details",
