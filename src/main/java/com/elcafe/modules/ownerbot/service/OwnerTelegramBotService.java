@@ -962,8 +962,11 @@ public class OwnerTelegramBotService {
                     java.math.BigDecimal consumptionTotal = java.math.BigDecimal.ZERO;
                     sb.append("\n\n🍽 <b>Потребление сотрудника:</b>\n");
                     for (var c : consumptions) {
-                        sb.append(String.format("  • %s × %d = %,.2f\n", c.getProductName(), c.getQuantity(), c.getTotalCost()));
-                        consumptionTotal = consumptionTotal.add(c.getTotalCost());
+                        java.math.BigDecimal price = c.getProduct() != null && c.getProduct().getPrice() != null
+                                ? c.getProduct().getPrice().multiply(java.math.BigDecimal.valueOf(c.getQuantity()))
+                                : c.getTotalCost();
+                        sb.append(String.format("  • %s × %d = %,.2f\n", c.getProductName(), c.getQuantity(), price));
+                        consumptionTotal = consumptionTotal.add(price);
                     }
                     sb.append(String.format("  <b>Итого потребление: %,.2f</b>", consumptionTotal));
                 }
