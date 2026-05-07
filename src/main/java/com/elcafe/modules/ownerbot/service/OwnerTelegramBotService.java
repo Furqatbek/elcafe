@@ -50,6 +50,7 @@ public class OwnerTelegramBotService {
     private final com.elcafe.modules.waiter.repository.WaiterRepository waiterRepository2;
     private final com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository shiftRepository;
     private final com.elcafe.modules.order.repository.OrderRepository orderRepository;
+    private final com.elcafe.modules.financial.service.DashboardService dashboardService;
 
     public OwnerTelegramBotService(
             OwnerTelegramBotConfigRepository configRepository,
@@ -62,7 +63,8 @@ public class OwnerTelegramBotService {
             @org.springframework.context.annotation.Lazy DailyFinancialReportService dailyFinancialReportService,
             com.elcafe.modules.waiter.repository.WaiterRepository waiterRepository2,
             com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository shiftRepository,
-            com.elcafe.modules.order.repository.OrderRepository orderRepository) {
+            com.elcafe.modules.order.repository.OrderRepository orderRepository,
+            @org.springframework.context.annotation.Lazy com.elcafe.modules.financial.service.DashboardService dashboardService) {
         this.configRepository = configRepository;
         this.subscriberRepository = subscriberRepository;
         this.settingsRepository = settingsRepository;
@@ -74,6 +76,7 @@ public class OwnerTelegramBotService {
         this.waiterRepository2 = waiterRepository2;
         this.shiftRepository = shiftRepository;
         this.orderRepository = orderRepository;
+        this.dashboardService = dashboardService;
     }
 
     private OwnerBot bot;
@@ -545,29 +548,60 @@ public class OwnerTelegramBotService {
             try {
                 Long restaurantId = subOpt.get().getRestaurant().getId();
                 String restaurantName = subOpt.get().getRestaurant().getName();
-                var metrics = dailyFinancialReportService.calculateDailyMetrics(restaurantId, java.time.LocalDate.now());
+                var data = dashboardService.getTodaySummary(restaurantId);
 
-                long hours = 0, mins = 0;
                 StringBuilder sb = new StringBuilder();
                 sb.append("📊 <b>Финансовый отчёт за сегодня</b>\n\n");
                 sb.append(String.format("🏪 <b>%s</b>\n", restaurantName));
                 sb.append(String.format("📅 %s\n\n", java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"))));
-                sb.append(String.format("💰 <b>Выручка:</b> %,.2f\n", metrics.totalRevenue()));
-                sb.append(String.format("📦 Заказов: %d\n\n", metrics.orderCount()));
 
-                if (metrics.salesRevenue().compareTo(java.math.BigDecimal.ZERO) > 0)
-                    sb.append(String.format("   🍽 Продажи: %,.2f\n", metrics.salesRevenue()));
-                if (metrics.serviceFeeRevenue().compareTo(java.math.BigDecimal.ZERO) > 0)
-                    sb.append(String.format("   🔧 Сервисный сбор: %,.2f\n", metrics.serviceFeeRevenue()));
-                if (metrics.tipRevenue().compareTo(java.math.BigDecimal.ZERO) > 0)
-                    sb.append(String.format("   💵 Чаевые: %,.2f\n", metrics.tipRevenue()));
+                long orderCount = data.getOrderStats() != null && data.getOrderStats().getTotalOrders() != null
+                        ? data.getOrderStats().getTotalOrders() : 0;
+                java.math.BigDecimal totalIncome = data.getTotalIncome() != null ? data.getTotalIncome() : java.math.BigDecimal.ZERO;
 
-                sb.append(String.format("\n💸 <b>Расходы:</b> %,.2f\n", metrics.totalExpenses()));
-                if (metrics.totalPayroll().compareTo(java.math.BigDecimal.ZERO) > 0)
-                    sb.append(String.format("   👥 Зарплата: %,.2f\n", metrics.totalPayroll()));
+                sb.append(String.format("💰 <b>Выручка:</b> %,.2f\n", totalIncome));
+                sb.append(String.format("📦 Заказов: %d\n\n", orderCount));
 
-                String profitEmoji = metrics.netIncome().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
-                sb.append(String.format("\n%s <b>Чистая прибыль:</b> %,.2f", profitEmoji, metrics.netIncome()));
+                // Revenue by payment method
+                if (data.getIncomeByPaymentMethod() != null && !data.getIncomeByPaymentMethod().isEmpty()) {
+                    sb.append("<b>По способу оплаты:</b>\n");
+                    for (var entry : data.getIncomeByPaymentMethod().entrySet()) {
+                        String emoji = switch (entry.getKey()) {
+                            case "CASH" -> "💵";
+                            case "CARD" -> "💳";
+                            case "MOBILE_PAYMENT" -> "📱";
+                            default -> "💰";
+                        };
+                        String label = switch (entry.getKey()) {
+                            case "CASH" -> "Наличные";
+                            case "CARD" -> "Карта";
+                            case "MOBILE_PAYMENT" -> "Мобильный";
+                            default -> entry.getKey();
+                        };
+                        sb.append(String.format("   %s %s: %,.2f\n", emoji, label, entry.getValue()));
+                    }
+                    sb.append("\n");
+                }
+
+                // Expenses
+                java.math.BigDecimal totalExpenses = data.getTotalExpenses() != null ? data.getTotalExpenses() : java.math.BigDecimal.ZERO;
+                java.math.BigDecimal totalPayroll = data.getTotalPayroll() != null ? data.getTotalPayroll() : java.math.BigDecimal.ZERO;
+                sb.append(String.format("💸 <b>Расходы:</b> %,.2f\n", totalExpenses));
+                if (totalPayroll.compareTo(java.math.BigDecimal.ZERO) > 0)
+                    sb.append(String.format("   👥 Зарплата: %,.2f\n", totalPayroll));
+
+                // COGS
+                java.math.BigDecimal totalCOGS = data.getTotalCOGS() != null ? data.getTotalCOGS() : java.math.BigDecimal.ZERO;
+                if (totalCOGS.compareTo(java.math.BigDecimal.ZERO) > 0)
+                    sb.append(String.format("   📦 Себестоимость: %,.2f\n", totalCOGS));
+
+                // Net profit
+                java.math.BigDecimal netProfit = data.getNetProfit() != null ? data.getNetProfit() : java.math.BigDecimal.ZERO;
+                String profitEmoji = netProfit.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
+                sb.append(String.format("\n%s <b>Чистая прибыль:</b> %,.2f", profitEmoji, netProfit));
+
+                if (data.getProfitMargin() != null)
+                    sb.append(String.format("\n📊 Маржа: %.1f%%", data.getProfitMargin()));
 
                 sendReply(chatId, sb.toString());
             } catch (Exception e) {
