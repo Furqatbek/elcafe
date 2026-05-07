@@ -7,10 +7,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -24,6 +21,8 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = {"rule", "promotionProducts", "couponCodes", "restaurant", "freeProduct"})
+@EqualsAndHashCode(exclude = {"rule", "promotionProducts", "couponCodes", "restaurant", "freeProduct"})
 @Entity
 @Table(name = "promotions")
 @EntityListeners(AuditingEntityListener.class)
