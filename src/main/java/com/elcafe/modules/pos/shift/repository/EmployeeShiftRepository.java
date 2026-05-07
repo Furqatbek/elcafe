@@ -30,7 +30,7 @@ public interface EmployeeShiftRepository extends JpaRepository<EmployeeShift, Lo
     @Query("SELECT s FROM EmployeeShift s WHERE s.waiter.id = :waiterId AND s.status = 'ACTIVE'")
     Optional<EmployeeShift> findActiveShiftByWaiter(@Param("waiterId") Long waiterId);
 
-    @Query("SELECT s FROM EmployeeShift s WHERE s.restaurant.id = :restaurantId AND s.status = 'ACTIVE'")
+    @Query("SELECT s FROM EmployeeShift s WHERE s.restaurant.id = :restaurantId AND s.status IN ('ACTIVE', 'ON_BREAK')")
     List<EmployeeShift> findActiveShiftsByRestaurant(@Param("restaurantId") Long restaurantId);
 
     @Query("SELECT s FROM EmployeeShift s WHERE s.restaurant.id = :restaurantId " +
