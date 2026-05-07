@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 public class StockAlertService {
 
     private final StockAlertConfig alertConfig;
-    private final TelegramBotService telegramBotService;
+    private final com.elcafe.modules.ownerbot.service.OwnerTelegramBotService ownerBotService;
     private final InventoryIngredientRepository ingredientRepository;
     private final InventoryBatchRepository batchRepository;
     private final StockAlertSubscriptionRepository subscriptionRepository;
@@ -99,7 +99,7 @@ public class StockAlertService {
             // Send low stock alert
             if (subscription.getAlertOnLowStock() && !lowStockItems.isEmpty()) {
                 String itemsList = formatIngredientsList(lowStockItems);
-                boolean sent = telegramBotService.sendStockAlert(
+                boolean sent = ownerBotService.sendStockAlert(
                     subscription.getTelegramChatId(),
                     restaurant.getName(),
                     "LOW_STOCK",
@@ -111,7 +111,7 @@ public class StockAlertService {
             // Send reorder alert
             if (subscription.getAlertOnReorder() && !reorderOnlyItems.isEmpty()) {
                 String itemsList = formatIngredientsList(reorderOnlyItems);
-                boolean sent = telegramBotService.sendStockAlert(
+                boolean sent = ownerBotService.sendStockAlert(
                     subscription.getTelegramChatId(),
                     restaurant.getName(),
                     "REORDER",
@@ -170,7 +170,7 @@ public class StockAlertService {
         for (StockAlertSubscription subscription : subscriptions) {
             if (subscription.getAlertOnLowStock() && !lowStockItems.isEmpty()) {
                 String itemsList = formatIngredientsList(lowStockItems);
-                telegramBotService.sendStockAlert(
+                ownerBotService.sendStockAlert(
                     subscription.getTelegramChatId(),
                     restaurant.getName(),
                     "LOW_STOCK",
@@ -180,7 +180,7 @@ public class StockAlertService {
 
             if (subscription.getAlertOnReorder() && !reorderItems.isEmpty()) {
                 String itemsList = formatIngredientsList(reorderItems);
-                telegramBotService.sendStockAlert(
+                ownerBotService.sendStockAlert(
                     subscription.getTelegramChatId(),
                     restaurant.getName(),
                     "REORDER",
@@ -285,7 +285,7 @@ public class StockAlertService {
             // Send expired batch alert (CRITICAL)
             if (!expiredBatches.isEmpty()) {
                 String batchList = formatBatchExpiryList(expiredBatches);
-                boolean sent = telegramBotService.sendStockAlert(
+                boolean sent = ownerBotService.sendStockAlert(
                     subscription.getTelegramChatId(),
                     restaurant.getName(),
                     "EXPIRED_BATCHES",
@@ -300,7 +300,7 @@ public class StockAlertService {
             // Send expiring soon alert (WARNING)
             if (!expiringBatches.isEmpty()) {
                 String batchList = formatBatchExpiryList(expiringBatches);
-                boolean sent = telegramBotService.sendStockAlert(
+                boolean sent = ownerBotService.sendStockAlert(
                     subscription.getTelegramChatId(),
                     restaurant.getName(),
                     "EXPIRING_SOON",

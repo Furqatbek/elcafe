@@ -174,6 +174,16 @@ public class OwnerTelegramBotService {
      * Restart the bot with new configuration from database.
      * Called when configuration is updated via frontend.
      */
+    public boolean sendStockAlert(Long chatId, String restaurantName, String alertType, String items) {
+        String emoji = alertType.equals("LOW_STOCK") ? "🔴" : "🟡";
+        String title = alertType.equals("LOW_STOCK") ? "Низкий уровень запасов" : "Требуется заказ";
+        String message = String.format(
+                "%s <b>%s</b>\n\n🏪 <b>%s</b>\n\n%s\n\n⏰ %s",
+                emoji, title, restaurantName, items,
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")));
+        return sendMessage(chatId, message) != null;
+    }
+
     public void restartBot() {
         log.info("Restarting Owner Telegram bot with new configuration...");
         initializeBot();
