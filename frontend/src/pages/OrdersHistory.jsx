@@ -583,6 +583,7 @@ export default function OrdersHistory() {
                     <TableHead>{t('ordersHistory.type', 'Type')}</TableHead>
                     <TableHead>{t('ordersHistory.status', 'Status')}</TableHead>
                     <TableHead>{t('ordersHistory.payment', 'Payment')}</TableHead>
+                    <TableHead>{t('ordersHistory.paymentMethod', 'Method')}</TableHead>
                     <TableHead className="text-right">{t('ordersHistory.total', 'Total')}</TableHead>
                     <TableHead className="text-center">{t('common.actions', 'Actions')}</TableHead>
                   </TableRow>
@@ -616,6 +617,11 @@ export default function OrdersHistory() {
                         <Badge className={paymentStatusColors[order.paymentStatus] || 'bg-gray-100'}>
                           {order.paymentStatus || t('common.na', 'N/A')}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {order.payments && order.payments.length > 0
+                          ? order.payments.map(p => p.method).filter(Boolean).join(', ') || '—'
+                          : '—'}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {(order.total || 0).toLocaleString()}
