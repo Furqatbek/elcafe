@@ -42,6 +42,7 @@ public class ShiftManagementService {
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
     private final WaiterRepository waiterRepository;
+    private final com.elcafe.modules.order.repository.OrderRepository orderRepository;
     private final CashDrawerRepository cashDrawerRepository;
     @org.springframework.context.annotation.Lazy
     private final com.elcafe.modules.ownerbot.service.OwnerNotificationService ownerNotificationService;
@@ -171,15 +172,33 @@ public class ShiftManagementService {
             String clockOutTime = savedShift.getClockOut() != null
                     ? savedShift.getClockOut().atZoneSameInstant(zone).toLocalTime().toString().substring(0, 5) : "--";
 
+            // Calculate from actual orders for accuracy
+            List<com.elcafe.modules.order.entity.Order> shiftOrders =
+                    orderRepository.findByShiftIdWithItems(savedShift.getId());
+            java.math.BigDecimal totalSales = java.math.BigDecimal.ZERO;
+            java.math.BigDecimal cashSales = java.math.BigDecimal.ZERO;
+            java.math.BigDecimal cardSales = java.math.BigDecimal.ZERO;
+            int orderCount = 0;
+            for (var o : shiftOrders) {
+                if (o.getTotal() == null) continue;
+                totalSales = totalSales.add(o.getTotal());
+                orderCount++;
+                var p = o.getPayment();
+                if (p != null && p.getMethod() != null) {
+                    if (p.getMethod().name().equals("CASH")) cashSales = cashSales.add(o.getTotal());
+                    else cardSales = cardSales.add(o.getTotal());
+                }
+            }
+
             ownerNotificationService.notifyShiftClosed(
                     savedShift.getRestaurant().getId(),
                     shiftName,
                     clockInTime, clockOutTime,
                     savedShift.getWorkedMinutes(),
-                    savedShift.getTotalOrders() != null ? savedShift.getTotalOrders() : 0,
-                    savedShift.getTotalSales(),
-                    savedShift.getTotalCashSales(),
-                    savedShift.getTotalCardSales());
+                    orderCount,
+                    totalSales,
+                    cashSales,
+                    cardSales);
         } catch (Exception e) {
             log.warn("Failed to send shift closed notification: {}", e.getMessage());
         }
@@ -393,6 +412,27 @@ public class ShiftManagementService {
                 ? shift.getEmployee().getId()
                 : (shift.getWaiter() != null ? shift.getWaiter().getId() : null);
 
+        // Calculate from actual orders instead of cached counters
+        List<com.elcafe.modules.order.entity.Order> orders = orderRepository.findByShiftIdWithItems(shift.getId());
+        java.math.BigDecimal totalSales = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal cashSales = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal cardSales = java.math.BigDecimal.ZERO;
+        int orderCount = 0;
+
+        for (var order : orders) {
+            if (order.getTotal() == null) continue;
+            totalSales = totalSales.add(order.getTotal());
+            orderCount++;
+            var payment = order.getPayment();
+            if (payment != null && payment.getMethod() != null) {
+                if (payment.getMethod().name().equals("CASH")) {
+                    cashSales = cashSales.add(order.getTotal());
+                } else {
+                    cardSales = cardSales.add(order.getTotal());
+                }
+            }
+        }
+
         return ShiftSummaryDTO.builder()
             .id(shift.getId())
             .employeeId(empId)
@@ -403,10 +443,10 @@ public class ShiftManagementService {
             .status(shift.getStatus())
             .workedMinutes(shift.getWorkedMinutes())
             .breakMinutes(shift.getBreakMinutes())
-            .totalSales(shift.getTotalSales())
-            .totalCashSales(shift.getTotalCashSales())
-            .totalCardSales(shift.getTotalCardSales())
-            .totalOrders(shift.getTotalOrders())
+            .totalSales(totalSales)
+            .totalCashSales(cashSales)
+            .totalCardSales(cardSales)
+            .totalOrders(orderCount)
             .cashVariance(shift.getCashVariance())
             .build();
     }
