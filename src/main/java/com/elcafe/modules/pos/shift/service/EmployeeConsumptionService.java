@@ -81,6 +81,8 @@ public class EmployeeConsumptionService {
                 .totalAmount(totalCost)
                 .expenseDate(LocalDate.now())
                 .paymentStatus(Expense.PaymentStatus.PAID)
+                .approvedBy("System")
+                .approvedAt(java.time.LocalDateTime.now())
                 .build();
         expense = expenseService.createExpense(expense);
 
