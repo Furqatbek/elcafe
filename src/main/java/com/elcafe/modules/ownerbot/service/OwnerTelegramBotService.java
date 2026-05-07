@@ -840,12 +840,13 @@ public class OwnerTelegramBotService {
                 msg.setText(String.format("👤 <b>%s</b>\n\nВыберите смену (%d/%d):", waiter.getName(), page + 1, totalPages));
                 msg.setParseMode("HTML");
 
+                java.time.ZoneId zone = java.time.ZoneId.systemDefault();
                 java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd.MM HH:mm");
                 InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
                 List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
                 for (var s : pageItems) {
-                    String clockIn = s.getClockIn() != null ? s.getClockIn().format(fmt) : "--";
-                    String clockOut = s.getClockOut() != null ? s.getClockOut().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "...";
+                    String clockIn = s.getClockIn() != null ? s.getClockIn().atZoneSameInstant(zone).format(fmt) : "--";
+                    String clockOut = s.getClockOut() != null ? s.getClockOut().atZoneSameInstant(zone).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "...";
                     String label = clockIn + "—" + clockOut + " | " + (s.getTotalOrders() != null ? s.getTotalOrders() : 0) + " зак.";
                     InlineKeyboardButton btn = new InlineKeyboardButton();
                     btn.setText(label);
