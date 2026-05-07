@@ -20,6 +20,7 @@ public class DashboardResponse {
 
     // Summary
     private BigDecimal totalIncome;
+    private BigDecimal totalCOGS;
     private BigDecimal totalExpenses;
     private BigDecimal totalPayroll;
     private BigDecimal netProfit;

@@ -113,8 +113,14 @@ public class DashboardService {
         // Add payroll to total expenses
         totalExpenses = totalExpenses.add(totalPayroll);
 
-        // Calculate net profit
-        BigDecimal netProfit = totalIncome.subtract(totalExpenses);
+        // Calculate COGS (cost of goods sold) from completed orders
+        BigDecimal totalCOGS = calculateCOGS(completedOrders);
+
+        // Calculate net profit: revenue - COGS - expenses - payroll
+        BigDecimal netProfit = totalIncome.subtract(totalCOGS).subtract(totalExpenses);
+
+        log.info("Dashboard: income={}, COGS={}, expenses={} (payroll={}), netProfit={}",
+                totalIncome, totalCOGS, totalExpenses, totalPayroll, netProfit);
 
         // Calculate profit margin
         BigDecimal profitMargin = BigDecimal.ZERO;
@@ -140,6 +146,7 @@ public class DashboardService {
                 .endDate(endDate)
                 .shiftTimeInfo(shiftTimeInfo)
                 .totalIncome(totalIncome)
+                .totalCOGS(totalCOGS)
                 .totalExpenses(totalExpenses)
                 .totalPayroll(totalPayroll)
                 .netProfit(netProfit)
@@ -301,6 +308,26 @@ public class DashboardService {
         }
 
         return dailyStats;
+    }
+
+    private BigDecimal calculateCOGS(List<Order> completedOrders) {
+        BigDecimal totalCOGS = BigDecimal.ZERO;
+        for (Order order : completedOrders) {
+            for (OrderItem item : order.getItems()) {
+                if (item.isDeleted() || item.getProductId() == null) continue;
+                try {
+                    Product product = productRepository.findById(item.getProductId()).orElse(null);
+                    if (product != null && product.getCostPrice() != null
+                            && product.getCostPrice().compareTo(BigDecimal.ZERO) > 0) {
+                        totalCOGS = totalCOGS.add(
+                                product.getCostPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+                    }
+                } catch (Exception e) {
+                    log.debug("Could not get cost for product {}: {}", item.getProductId(), e.getMessage());
+                }
+            }
+        }
+        return totalCOGS;
     }
 
     private List<DashboardResponse.SoldItem> calculateSoldItems(List<Order> orders) {
