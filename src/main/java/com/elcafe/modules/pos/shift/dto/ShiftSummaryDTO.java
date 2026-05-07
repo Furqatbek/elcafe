@@ -26,6 +26,8 @@ public class ShiftSummaryDTO {
     private long workedMinutes;
     private Integer breakMinutes;
     private BigDecimal totalSales;
+    private BigDecimal totalCashSales;
+    private BigDecimal totalCardSales;
     private Integer totalOrders;
     private BigDecimal cashVariance;
 }

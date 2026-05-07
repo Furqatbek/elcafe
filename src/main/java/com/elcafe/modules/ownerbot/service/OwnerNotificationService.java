@@ -306,7 +306,9 @@ public class OwnerNotificationService {
     @Transactional
     public void notifyShiftClosed(Long restaurantId, String employeeName, String clockInTime,
                                    String clockOutTime, long workedMinutes, int orderCount,
-                                   java.math.BigDecimal totalSales) {
+                                   java.math.BigDecimal totalSales,
+                                   java.math.BigDecimal totalCashSales,
+                                   java.math.BigDecimal totalCardSales) {
         List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.SHIFT_CLOSED);
 
         if (subscribers.isEmpty()) {
@@ -327,15 +329,21 @@ public class OwnerNotificationService {
         String profitEmoji = todayProfit.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
         String profitText = String.format("%,.2f", todayProfit);
 
+        String cashText = totalCashSales != null && totalCashSales.compareTo(java.math.BigDecimal.ZERO) > 0
+                ? String.format("\n💵 Наличные: %,.2f", totalCashSales) : "";
+        String cardText = totalCardSales != null && totalCardSales.compareTo(java.math.BigDecimal.ZERO) > 0
+                ? String.format("\n💳 Карта: %,.2f", totalCardSales) : "";
+
         String message = String.format(
             "🔴 <b>Смена закрыта</b>\n\n" +
             "👤 <b>%s</b>\n" +
             "⏰ %s — %s (%dч %dмин)\n" +
             "📦 Заказов: %d\n" +
-            "💵 Выручка: %s\n" +
+            "💰 Выручка: %s%s%s\n" +
             "%s Чистая прибыль: %s",
             employeeName, clockInTime, clockOutTime, hours, mins,
             orderCount, totalSales != null ? String.format("%,.2f", totalSales) : "0",
+            cashText, cardText,
             profitEmoji, profitText
         );
 

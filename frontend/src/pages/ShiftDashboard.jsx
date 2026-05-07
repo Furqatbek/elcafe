@@ -210,6 +210,8 @@ export default function ShiftDashboard() {
                   <TableHead>{t('shift.dashboard.duration', 'Duration')}</TableHead>
                   <TableHead>{t('shift.dashboard.orders', 'Orders')}</TableHead>
                   <TableHead>{t('shift.dashboard.sales', 'Sales')}</TableHead>
+                  <TableHead>{t('shift.dashboard.cashSales', 'Cash')}</TableHead>
+                  <TableHead>{t('shift.dashboard.cardSales', 'Card')}</TableHead>
                   <TableHead className="text-center">{t('shift.dashboard.status', 'Status')}</TableHead>
                   <TableHead className="text-right">{t('common.actions', 'Actions')}</TableHead>
                 </TableRow>
@@ -235,6 +237,8 @@ export default function ShiftDashboard() {
                       </TableCell>
                       <TableCell>{shift.totalOrders || 0}</TableCell>
                       <TableCell>{shift.totalSales ? Number(shift.totalSales).toLocaleString() : '0'}</TableCell>
+                      <TableCell>{shift.totalCashSales ? Number(shift.totalCashSales).toLocaleString() : '0'}</TableCell>
+                      <TableCell>{shift.totalCardSales ? Number(shift.totalCardSales).toLocaleString() : '0'}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant={shift.status === 'ON_BREAK' ? 'outline' : 'default'}>
                           {shift.status === 'ON_BREAK'
@@ -289,6 +293,8 @@ export default function ShiftDashboard() {
                   <TableHead>{t('shift.dashboard.duration', 'Duration')}</TableHead>
                   <TableHead>{t('shift.dashboard.orders', 'Orders')}</TableHead>
                   <TableHead>{t('shift.dashboard.sales', 'Sales')}</TableHead>
+                  <TableHead>{t('shift.dashboard.cashSales', 'Cash')}</TableHead>
+                  <TableHead>{t('shift.dashboard.cardSales', 'Card')}</TableHead>
                   <TableHead className="text-center">{t('shift.dashboard.status', 'Status')}</TableHead>
                   <TableHead className="text-right">{t('common.actions', 'Actions')}</TableHead>
                 </TableRow>
@@ -305,6 +311,8 @@ export default function ShiftDashboard() {
                     <TableCell>{formatDuration(shift.workedMinutes)}</TableCell>
                     <TableCell>{shift.totalOrders || 0}</TableCell>
                     <TableCell>{shift.totalSales ? Number(shift.totalSales).toLocaleString() : '0'}</TableCell>
+                      <TableCell>{shift.totalCashSales ? Number(shift.totalCashSales).toLocaleString() : '0'}</TableCell>
+                      <TableCell>{shift.totalCardSales ? Number(shift.totalCardSales).toLocaleString() : '0'}</TableCell>
                     <TableCell className="text-center">
                       <Badge variant={shift.status === 'APPROVED' ? 'default' : 'secondary'}>
                         {shift.status === 'APPROVED'

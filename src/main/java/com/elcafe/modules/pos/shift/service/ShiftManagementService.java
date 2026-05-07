@@ -177,7 +177,9 @@ public class ShiftManagementService {
                     clockInTime, clockOutTime,
                     savedShift.getWorkedMinutes(),
                     savedShift.getTotalOrders() != null ? savedShift.getTotalOrders() : 0,
-                    savedShift.getTotalSales());
+                    savedShift.getTotalSales(),
+                    savedShift.getTotalCashSales(),
+                    savedShift.getTotalCardSales());
         } catch (Exception e) {
             log.warn("Failed to send shift closed notification: {}", e.getMessage());
         }
@@ -402,6 +404,8 @@ public class ShiftManagementService {
             .workedMinutes(shift.getWorkedMinutes())
             .breakMinutes(shift.getBreakMinutes())
             .totalSales(shift.getTotalSales())
+            .totalCashSales(shift.getTotalCashSales())
+            .totalCardSales(shift.getTotalCardSales())
             .totalOrders(shift.getTotalOrders())
             .cashVariance(shift.getCashVariance())
             .build();

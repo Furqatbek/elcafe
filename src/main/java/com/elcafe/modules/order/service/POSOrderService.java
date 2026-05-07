@@ -263,6 +263,25 @@ public class POSOrderService {
                     shift.setTotalSales(
                             (shift.getTotalSales() != null ? shift.getTotalSales() : java.math.BigDecimal.ZERO)
                                     .add(finalOrder.getTotal()));
+
+                    // Track by payment method
+                    String method = null;
+                    if (finalOrder.getPayment() != null && finalOrder.getPayment().getMethod() != null) {
+                        method = finalOrder.getPayment().getMethod().name();
+                    } else if (finalOrder.getPayments() != null && !finalOrder.getPayments().isEmpty()) {
+                        method = finalOrder.getPayments().get(0).getMethod() != null
+                                ? finalOrder.getPayments().get(0).getMethod().name() : null;
+                    }
+                    if ("CASH".equals(method)) {
+                        shift.setTotalCashSales(
+                                (shift.getTotalCashSales() != null ? shift.getTotalCashSales() : java.math.BigDecimal.ZERO)
+                                        .add(finalOrder.getTotal()));
+                    } else if (method != null) {
+                        shift.setTotalCardSales(
+                                (shift.getTotalCardSales() != null ? shift.getTotalCardSales() : java.math.BigDecimal.ZERO)
+                                        .add(finalOrder.getTotal()));
+                    }
+
                     employeeShiftRepository.save(shift);
                 });
             } catch (Exception e) {
