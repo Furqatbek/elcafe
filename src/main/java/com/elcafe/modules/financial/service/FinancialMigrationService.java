@@ -160,7 +160,7 @@ public class FinancialMigrationService {
     private ExpenseSyncResult syncHistoricalExpenses(Long restaurantId) {
         log.info("Syncing historical expenses for restaurant: {}", restaurantId);
 
-        List<Expense> allExpenses = expenseRepository.findByRestaurant_Id(restaurantId);
+        List<Expense> allExpenses = expenseRepository.findByRestaurant_IdOrderByCreatedAtDesc(restaurantId);
 
         int processed = 0;
         int skipped = 0;
