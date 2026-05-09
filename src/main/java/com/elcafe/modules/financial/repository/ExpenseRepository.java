@@ -15,9 +15,9 @@ import java.util.Optional;
 @Repository
 public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
-    List<Expense> findByRestaurant_Id(Long restaurantId);
+    List<Expense> findByRestaurant_IdOrderByCreatedAtDesc(Long restaurantId);
 
-    Page<Expense> findByRestaurant_Id(Long restaurantId, Pageable pageable);
+    Page<Expense> findByRestaurant_IdOrderByCreatedAtDesc(Long restaurantId, Pageable pageable);
 
     Optional<Expense> findByExpenseNumber(String expenseNumber);
 

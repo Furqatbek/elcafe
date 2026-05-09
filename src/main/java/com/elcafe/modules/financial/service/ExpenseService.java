@@ -113,7 +113,7 @@ public class ExpenseService {
     }
 
     public List<Expense> getExpensesByRestaurant(Long restaurantId) {
-        return expenseRepository.findByRestaurant_Id(restaurantId);
+        return expenseRepository.findByRestaurant_IdOrderByCreatedAtDesc(restaurantId);
     }
 
     public List<Expense> getExpensesByCategory(Long restaurantId, Expense.ExpenseCategory category) {
@@ -254,7 +254,7 @@ public class ExpenseService {
 
     private String generateExpenseNumber(Long restaurantId) {
         String datePrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
-        long count = expenseRepository.findByRestaurant_Id(restaurantId).stream()
+        long count = expenseRepository.findByRestaurant_IdOrderByCreatedAtDesc(restaurantId).stream()
                 .filter(exp -> exp.getExpenseNumber().startsWith("EXP-" + datePrefix))
                 .count();
         return String.format("EXP-%s-%04d", datePrefix, count + 1);
