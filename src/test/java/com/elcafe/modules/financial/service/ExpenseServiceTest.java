@@ -77,7 +77,7 @@ class ExpenseServiceTest {
     @Test
     @DisplayName("getExpensesByRestaurant — returns list")
     void getExpensesByRestaurant_returnsList() {
-        when(expenseRepository.findByRestaurant_Id(1L)).thenReturn(List.of(expense));
+        when(expenseRepository.findByRestaurant_IdOrderByCreatedAtDesc(1L)).thenReturn(List.of(expense));
         assertEquals(1, expenseService.getExpensesByRestaurant(1L).size());
     }
 

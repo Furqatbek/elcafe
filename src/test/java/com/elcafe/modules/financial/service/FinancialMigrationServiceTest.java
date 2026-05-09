@@ -42,7 +42,7 @@ class FinancialMigrationServiceTest {
         when(restaurantRepository.findById(1L)).thenReturn(Optional.of(createRestaurant()));
         when(accountRepository.existsByRestaurant_Id(1L)).thenReturn(true);
         when(orderRepository.findByRestaurant_IdAndStatus(anyLong(), any())).thenReturn(List.of());
-        when(expenseRepository.findByRestaurant_Id(1L)).thenReturn(List.of());
+        when(expenseRepository.findByRestaurant_IdOrderByCreatedAtDesc(1L)).thenReturn(List.of());
 
         var result = migrationService.syncRestaurantFinancialData(1L);
         assertNotNull(result);
@@ -55,7 +55,7 @@ class FinancialMigrationServiceTest {
         when(restaurantRepository.findById(anyLong())).thenReturn(Optional.of(createRestaurant()));
         when(accountRepository.existsByRestaurant_Id(anyLong())).thenReturn(true);
         when(orderRepository.findByRestaurant_IdAndStatus(anyLong(), any())).thenReturn(List.of());
-        when(expenseRepository.findByRestaurant_Id(anyLong())).thenReturn(List.of());
+        when(expenseRepository.findByRestaurant_IdOrderByCreatedAtDesc(anyLong())).thenReturn(List.of());
 
         List<FinancialMigrationService.MigrationResult> results = migrationService.syncAllRestaurants();
         assertNotNull(results);
