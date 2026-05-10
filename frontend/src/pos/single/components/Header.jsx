@@ -1,10 +1,12 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, X } from 'lucide-react';
 import Button from './Button';
 import usePosStore from '../store';
 import { TYPE_CHIP, TYPE_CHIP_COLORS, MONEY_STYLE } from '../theme';
 
-export default function Header({ theme, themeKey, cashierName = 'Cashier' }) {
+export default function Header({ theme, themeKey, cashierName }) {
+  const { t } = useTranslation();
   const tickets = usePosStore((s) => s.tickets);
   const activeId = usePosStore((s) => s.activeId);
   const setActive = usePosStore((s) => s.setActive);
@@ -43,8 +45,8 @@ export default function Header({ theme, themeKey, cashierName = 'Cashier' }) {
           eC
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>elCafé POS</span>
-          <span style={{ fontSize: 12, color: theme.textMuted }}>{cashierName}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>{t('pos.single.brand')}</span>
+          <span style={{ fontSize: 12, color: theme.textMuted }}>{cashierName || t('pos.single.cashier')}</span>
         </div>
       </div>
 
@@ -70,7 +72,7 @@ export default function Header({ theme, themeKey, cashierName = 'Cashier' }) {
       >
         {tickets.length === 0 && (
           <span style={{ fontSize: 13, color: theme.textMuted, fontStyle: 'italic' }}>
-            No open tickets — start one →
+            {t('pos.single.noActiveTickets')}
           </span>
         )}
         {tickets.map((t) => {
@@ -146,7 +148,7 @@ export default function Header({ theme, themeKey, cashierName = 'Cashier' }) {
                   display: 'flex',
                   borderRadius: 4,
                 }}
-                title="Close ticket"
+                title={t('pos.single.closeTicket')}
               >
                 <X size={14} />
               </button>
@@ -157,13 +159,13 @@ export default function Header({ theme, themeKey, cashierName = 'Cashier' }) {
 
       <div style={{ display: 'flex', gap: 8 }}>
         <Button theme={theme} size="md" onClick={() => newTicket('dinein')}>
-          <Plus size={16} /> Dine-in
+          <Plus size={16} /> {t('pos.single.newDinein')}
         </Button>
         <Button theme={theme} size="md" onClick={() => newTicket('takeaway')}>
-          <Plus size={16} /> Takeaway
+          <Plus size={16} /> {t('pos.single.newTakeaway')}
         </Button>
         <Button theme={theme} size="md" onClick={() => newTicket('delivery')}>
-          <Plus size={16} /> Delivery
+          <Plus size={16} /> {t('pos.single.newDelivery')}
         </Button>
       </div>
     </div>

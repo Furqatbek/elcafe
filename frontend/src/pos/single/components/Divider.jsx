@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import usePosStore from '../store';
 
 export default function Divider({ theme }) {
+  const { t } = useTranslation();
   const setCartWidth = usePosStore((s) => s.setCartWidth);
   const dragging = useRef(false);
 
@@ -42,7 +44,7 @@ export default function Divider({ theme }) {
         position: 'relative',
         zIndex: 5,
       }}
-      title="Drag to resize"
+      title={t('pos.single.dragToResize')}
     >
       <div
         style={{

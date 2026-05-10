@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { posAPI, tablesAPI, shiftAPI } from '../../services/api';
 import Header from './components/Header';
 import CategoriesRail from './components/CategoriesRail';
@@ -12,6 +13,7 @@ import usePosStore, { productHasModifiers } from './store';
 const THEME_KEY = 'blue';
 
 export default function SinglePagePOS() {
+  const { t } = useTranslation();
   const themeKey = THEME_KEY;
   const tickets = usePosStore((s) => s.tickets);
   const activeId = usePosStore((s) => s.activeId);
@@ -121,9 +123,9 @@ export default function SinglePagePOS() {
 
   const handleCharged = (result) => {
     if (result?.orderNumber) {
-      setToast(`Order #${result.orderNumber} created`);
+      setToast(t('pos.single.orderCreated', { number: result.orderNumber }));
     } else {
-      setToast('Order created');
+      setToast(t('pos.single.orderCreatedNoNum'));
     }
   };
 
@@ -180,7 +182,7 @@ export default function SinglePagePOS() {
   };
 
   if (shiftLoading) {
-    return <CenteredMessage theme={theme} text="Checking shift…" />;
+    return <CenteredMessage theme={theme} text={t('pos.single.checkingShift')} />;
   }
 
   if (!activeShift) {
@@ -208,9 +210,9 @@ export default function SinglePagePOS() {
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>No Active Shift</div>
+          <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>{t('pos.single.noActiveShift')}</div>
           <div style={{ fontSize: 14, color: theme.textMuted, marginBottom: 20 }}>
-            You must clock in before using the POS.
+            {t('pos.single.noActiveShiftHint')}
           </div>
           {clockInError && (
             <div style={{ color: theme.danger, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
@@ -225,7 +227,7 @@ export default function SinglePagePOS() {
             disabled={clockingIn}
             style={{ width: '100%' }}
           >
-            {clockingIn ? 'Clocking in…' : 'Clock In'}
+            {clockingIn ? t('pos.single.clockingIn') : t('pos.single.clockIn')}
           </Button>
         </div>
       </div>
@@ -274,7 +276,7 @@ export default function SinglePagePOS() {
               fontWeight: 600,
             }}
           >
-            <span>Density</span>
+            <span>{t('pos.single.density')}</span>
             {['compact', 'balanced', 'spacious'].map((d) => (
               <button
                 key={d}
@@ -292,10 +294,10 @@ export default function SinglePagePOS() {
                   fontSize: 12,
                 }}
               >
-                {d}
+                {t(`pos.single.density${d.charAt(0).toUpperCase()}${d.slice(1)}`)}
               </button>
             ))}
-            <span style={{ marginLeft: 8 }}>Cols</span>
+            <span style={{ marginLeft: 8 }}>{t('pos.single.cols')}</span>
             <input
               type="range"
               min={3}
@@ -311,7 +313,7 @@ export default function SinglePagePOS() {
               <span style={{ marginLeft: 'auto', color: theme.danger, fontWeight: 700 }}>{error}</span>
             )}
             {loading && !error && (
-              <span style={{ marginLeft: 'auto', color: theme.textMuted }}>Loading menu…</span>
+              <span style={{ marginLeft: 'auto', color: theme.textMuted }}>{t('pos.single.loadingMenu')}</span>
             )}
           </div>
 

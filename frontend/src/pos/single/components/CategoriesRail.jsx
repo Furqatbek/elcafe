@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import { categoryColorFor } from '../theme';
 
@@ -11,6 +12,7 @@ export default function CategoriesRail({
   search,
   onSearch,
 }) {
+  const { t } = useTranslation();
   const counts = React.useMemo(() => {
     const m = {};
     for (const p of products) {
@@ -46,7 +48,7 @@ export default function CategoriesRail({
           <input
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            placeholder="Search items…"
+            placeholder={t('pos.single.search')}
             style={{
               width: '100%',
               height: 40,
@@ -66,7 +68,7 @@ export default function CategoriesRail({
         <CategoryRow
           theme={theme}
           color={theme.primary}
-          name="All items"
+          name={t('pos.single.allItems')}
           count={products.length}
           active={!selected}
           onClick={() => onSelect(null)}

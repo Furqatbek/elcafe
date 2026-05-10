@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Minus, Trash2 } from 'lucide-react';
 import { fmtMoney, MONEY_STYLE } from '../theme';
 import { lineTotal } from '../store';
 
 export default function CartLine({ theme, line, onSetQty, onRemove, onSetNote }) {
+  const { t } = useTranslation();
   const [editingQty, setEditingQty] = useState(false);
   const [qtyDraft, setQtyDraft] = useState(String(line.qty));
   const [editingNote, setEditingNote] = useState(false);
@@ -71,7 +73,7 @@ export default function CartLine({ theme, line, onSetQty, onRemove, onSetNote })
                 setEditingNote(false);
               }
             }}
-            placeholder="Note…"
+            placeholder={`${t('pos.single.addNote').replace(/^\+\s*/, '')}…`}
             style={{
               marginTop: 4,
               width: '100%',
@@ -100,7 +102,7 @@ export default function CartLine({ theme, line, onSetQty, onRemove, onSetNote })
               textAlign: 'left',
             }}
           >
-            {line.note ? `“${line.note}”` : '+ note'}
+            {line.note ? `“${line.note}”` : t('pos.single.addNote')}
           </button>
         )}
       </div>
@@ -113,7 +115,7 @@ export default function CartLine({ theme, line, onSetQty, onRemove, onSetNote })
           <button
             onClick={() => onSetQty(line.qty - 1)}
             style={iconBtn(theme)}
-            title="Decrease"
+            title={t('pos.single.decrease')}
           >
             <Minus size={14} />
           </button>
@@ -166,7 +168,7 @@ export default function CartLine({ theme, line, onSetQty, onRemove, onSetNote })
                 cursor: 'pointer',
                 ...MONEY_STYLE,
               }}
-              title="Tap to edit"
+              title={t('pos.single.tapToEdit')}
             >
               {line.qty}
             </button>
@@ -174,14 +176,14 @@ export default function CartLine({ theme, line, onSetQty, onRemove, onSetNote })
           <button
             onClick={() => onSetQty(line.qty + 1)}
             style={iconBtn(theme)}
-            title="Increase"
+            title={t('pos.single.increase')}
           >
             <Plus size={14} />
           </button>
           <button
             onClick={onRemove}
             style={{ ...iconBtn(theme), color: theme.danger }}
-            title="Remove"
+            title={t('pos.single.remove')}
           >
             <Trash2 size={14} />
           </button>

@@ -1,10 +1,12 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Minus, X } from 'lucide-react';
 import Button from './Button';
 import { fmtMoney, MONEY_STYLE } from '../theme';
 import usePosStore, { getModifierGroups, draftTotal } from '../store';
 
 export default function ModifierEditor({ theme }) {
+  const { t } = useTranslation();
   const draft = usePosStore((s) => s.modifierDraft);
   const cancel = usePosStore((s) => s.cancelModifierDraft);
   const patch = usePosStore((s) => s.patchModifierDraft);
@@ -41,7 +43,7 @@ export default function ModifierEditor({ theme }) {
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>{draft.product.name}</span>
           <span style={{ fontSize: 11, fontWeight: 600, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Customize
+            {t('pos.single.customize')}
           </span>
         </div>
         <button
@@ -58,7 +60,7 @@ export default function ModifierEditor({ theme }) {
             alignItems: 'center',
             justifyContent: 'center',
           }}
-          title="Cancel (Esc)"
+          title={t('pos.single.cancelEsc')}
         >
           <X size={14} />
         </button>
@@ -71,10 +73,10 @@ export default function ModifierEditor({ theme }) {
               {g.name}
             </span>
             {g.required && (
-              <span style={{ fontSize: 10, color: theme.danger, fontWeight: 700 }}>REQUIRED</span>
+              <span style={{ fontSize: 10, color: theme.danger, fontWeight: 700 }}>{t('pos.single.required')}</span>
             )}
             {g.multi && (
-              <span style={{ fontSize: 10, color: theme.textMuted, fontWeight: 700 }}>MULTI</span>
+              <span style={{ fontSize: 10, color: theme.textMuted, fontWeight: 700 }}>{t('pos.single.multi')}</span>
             )}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -117,7 +119,7 @@ export default function ModifierEditor({ theme }) {
         <input
           value={draft.note}
           onChange={(e) => patch({ note: e.target.value })}
-          placeholder="Note (e.g. no sugar)"
+          placeholder={t('pos.single.modifierNotePh')}
           style={{
             width: '100%',
             height: 36,
@@ -164,7 +166,7 @@ export default function ModifierEditor({ theme }) {
           onClick={onAdd}
           style={{ flex: 1 }}
         >
-          Add · {fmtMoney(draftTotal(draft))}
+          {t('pos.single.addLine')} · {fmtMoney(draftTotal(draft))}
         </Button>
       </div>
     </div>

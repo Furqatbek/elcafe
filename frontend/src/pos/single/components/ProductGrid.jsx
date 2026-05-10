@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import ProductTile from './ProductTile';
 import { categoryColorFor } from '../theme';
 import usePosStore, { productHasModifiers } from '../store';
@@ -13,6 +14,7 @@ export default function ProductGrid({
   cols,
   onSelectProduct,
 }) {
+  const { t } = useTranslation();
   const tickets = usePosStore((s) => s.tickets);
   const activeId = usePosStore((s) => s.activeId);
   const active = tickets.find((t) => t.id === activeId);
@@ -93,7 +95,7 @@ export default function ProductGrid({
             fontSize: 14,
           }}
         >
-          No items match your filters.
+          {t('pos.single.noMatches')}
         </div>
       ) : (
         <div

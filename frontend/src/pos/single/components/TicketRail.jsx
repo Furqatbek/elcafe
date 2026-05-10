@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pause, Edit3 } from 'lucide-react';
 import Button from './Button';
 import TypeSegments from './TypeSegments';
@@ -6,10 +7,11 @@ import TypeFields from './TypeFields';
 import CartLine from './CartLine';
 import ModifierEditor from './ModifierEditor';
 import PaymentBlock from './PaymentBlock';
-import { fmtMoney, MONEY_STYLE, TYPE_CHIP } from '../theme';
+import { fmtMoney, MONEY_STYLE } from '../theme';
 import usePosStore, { ticketSubtotal, ticketTotal } from '../store';
 
 export default function TicketRail({ theme, ticket, tables, width, restaurantId, onCharged }) {
+  const { t } = useTranslation();
   const setType = usePosStore((s) => s.setType);
   const patchActive = usePosStore((s) => s.patchActive);
   const pauseActive = usePosStore((s) => s.pauseActive);
@@ -39,7 +41,7 @@ export default function TicketRail({ theme, ticket, tables, width, restaurantId,
           fontSize: 14,
         }}
       >
-        No active ticket. Use the buttons in the header to start one.
+        {t('pos.single.noActiveTicket')}
       </div>
     );
   }
@@ -47,7 +49,10 @@ export default function TicketRail({ theme, ticket, tables, width, restaurantId,
   const subtotal = ticketSubtotal(ticket);
   const total = ticketTotal(ticket);
   const itemCount = ticket.items.reduce((s, it) => s + it.qty, 0);
-  const chip = TYPE_CHIP[ticket.type];
+  const typeLabelKey =
+    ticket.type === 'dinein' ? 'pos.single.typeDinein'
+      : ticket.type === 'takeaway' ? 'pos.single.typeTakeaway'
+        : 'pos.single.typeDelivery';
   const inPayment = !!ticket.paymentOpen;
 
   return (
@@ -118,7 +123,7 @@ export default function TicketRail({ theme, ticket, tables, width, restaurantId,
                   whiteSpace: 'nowrap',
                   minWidth: 0,
                 }}
-                title="Edit label"
+                title={t('pos.single.editLabel')}
               >
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {ticket.label}
@@ -128,7 +133,7 @@ export default function TicketRail({ theme, ticket, tables, width, restaurantId,
             )}
           </div>
           <Button theme={theme} size="sm" variant="outline" onClick={pauseActive}>
-            <Pause size={12} /> Pause
+            <Pause size={12} /> {t('pos.single.pause')}
           </Button>
         </div>
 
@@ -152,7 +157,7 @@ export default function TicketRail({ theme, ticket, tables, width, restaurantId,
               padding: 24,
             }}
           >
-            Tap a product to start the ticket.
+            {t('pos.single.tapToStart')}
           </div>
         ) : (
           ticket.items.map((line) => (
@@ -189,8 +194,10 @@ export default function TicketRail({ theme, ticket, tables, width, restaurantId,
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: theme.textMuted }}>
-            <span>{itemCount} item{itemCount === 1 ? '' : 's'} · {chip?.label}</span>
-            <span style={MONEY_STYLE}>Subtotal {fmtMoney(subtotal)}</span>
+            <span>
+              {t('pos.single.items', { count: itemCount })} · {t(typeLabelKey)}
+            </span>
+            <span style={MONEY_STYLE}>{t('pos.single.subtotalLabel')} {fmtMoney(subtotal)}</span>
           </div>
           <Button
             theme={theme}
@@ -200,7 +207,7 @@ export default function TicketRail({ theme, ticket, tables, width, restaurantId,
             onClick={() => setPaymentMode(true)}
             style={{ width: '100%' }}
           >
-            Pay · <span style={MONEY_STYLE}>{fmtMoney(total)}</span>
+            {t('pos.single.pay')} · <span style={MONEY_STYLE}>{fmtMoney(total)}</span>
           </Button>
         </div>
       )}

@@ -1,12 +1,14 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const TYPES = [
-  { key: 'dinein', label: 'Dine-in' },
-  { key: 'takeaway', label: 'Takeaway' },
-  { key: 'delivery', label: 'Delivery' },
+  { key: 'dinein', i18nKey: 'pos.single.typeDinein' },
+  { key: 'takeaway', i18nKey: 'pos.single.typeTakeaway' },
+  { key: 'delivery', i18nKey: 'pos.single.typeDelivery' },
 ];
 
 export default function TypeSegments({ theme, value, onChange }) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -19,12 +21,12 @@ export default function TypeSegments({ theme, value, onChange }) {
         padding: 4,
       }}
     >
-      {TYPES.map((t) => {
-        const active = value === t.key;
+      {TYPES.map((seg) => {
+        const active = value === seg.key;
         return (
           <button
-            key={t.key}
-            onClick={() => onChange(t.key)}
+            key={seg.key}
+            onClick={() => onChange(seg.key)}
             style={{
               height: 36,
               borderRadius: 8,
@@ -37,7 +39,7 @@ export default function TypeSegments({ theme, value, onChange }) {
               boxShadow: active ? '0 1px 2px rgba(0,0,0,.08)' : 'none',
             }}
           >
-            {t.label}
+            {t(seg.i18nKey)}
           </button>
         );
       })}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import usePosStore from '../store';
 
 function inputStyle(theme) {
@@ -28,6 +29,7 @@ function labelStyle(theme) {
 }
 
 export default function TypeFields({ theme, ticket, tables = [] }) {
+  const { t } = useTranslation();
   const patchActive = usePosStore((s) => s.patchActive);
   const tickets = usePosStore((s) => s.tickets);
 
@@ -36,15 +38,15 @@ export default function TypeFields({ theme, ticket, tables = [] }) {
   // Tables occupied by other open tickets (compare by displayed table number)
   const occupied = new Set(
     tickets
-      .filter((t) => t.id !== ticket.id && t.type === 'dinein' && t.table != null)
-      .map((t) => String(t.table))
+      .filter((other) => other.id !== ticket.id && other.type === 'dinein' && other.table != null)
+      .map((other) => String(other.table))
   );
 
   if (ticket.type === 'dinein') {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px', gap: 8 }}>
         <div>
-          <label style={labelStyle(theme)}>Table</label>
+          <label style={labelStyle(theme)}>{t('pos.single.table')}</label>
           <select
             value={ticket.table || ''}
             onChange={(e) => {
@@ -53,32 +55,35 @@ export default function TypeFields({ theme, ticket, tables = [] }) {
                 patchActive({ table: null, tableId: null });
                 return;
               }
-              const t = tables.find((row) => String(row.id) === value);
+              const row = tables.find((r) => String(r.id) === value);
               patchActive({
-                table: t?.tableNumber ?? t?.number ?? value,
-                tableId: t?.id ?? null,
+                table: row?.tableNumber ?? row?.number ?? value,
+                tableId: row?.id ?? null,
               });
             }}
             disabled={tables.length === 0}
             style={inputStyle(theme)}
           >
             <option value="">
-              {tables.length === 0 ? 'No tables configured' : 'Select table…'}
+              {tables.length === 0
+                ? t('pos.single.noTablesConfigured')
+                : t('pos.single.selectTable')}
             </option>
-            {tables.map((t) => {
-              const tid = String(t.id);
-              const num = t.tableNumber ?? t.number ?? t.id;
-              const dis = occupied.has(String(t.tableNumber ?? t.number ?? t.id));
+            {tables.map((row) => {
+              const tid = String(row.id);
+              const num = row.tableNumber ?? row.number ?? row.id;
+              const dis = occupied.has(String(row.tableNumber ?? row.number ?? row.id));
               return (
                 <option key={tid} value={tid} disabled={dis}>
-                  Table {num}{dis ? ' (busy)' : ''}
+                  {t('pos.single.tableLabel', { n: num })}
+                  {dis ? ` ${t('pos.single.tableBusy')}` : ''}
                 </option>
               );
             })}
           </select>
         </div>
         <div>
-          <label style={labelStyle(theme)}>Guests</label>
+          <label style={labelStyle(theme)}>{t('pos.single.guests')}</label>
           <input
             type="number"
             min={1}
@@ -98,20 +103,20 @@ export default function TypeFields({ theme, ticket, tables = [] }) {
     return (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <div>
-          <label style={labelStyle(theme)}>Name</label>
+          <label style={labelStyle(theme)}>{t('pos.single.name')}</label>
           <input
             value={c.name}
             onChange={(e) => set({ name: e.target.value })}
-            placeholder="Customer name"
+            placeholder={t('pos.single.namePh')}
             style={inputStyle(theme)}
           />
         </div>
         <div>
-          <label style={labelStyle(theme)}>Phone</label>
+          <label style={labelStyle(theme)}>{t('pos.single.phone')}</label>
           <input
             value={c.phone}
             onChange={(e) => set({ phone: e.target.value })}
-            placeholder="Phone"
+            placeholder={t('pos.single.phonePh')}
             style={inputStyle(theme)}
           />
         </div>
@@ -126,30 +131,30 @@ export default function TypeFields({ theme, ticket, tables = [] }) {
       <div style={{ display: 'grid', gap: 8 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div>
-            <label style={labelStyle(theme)}>Name</label>
+            <label style={labelStyle(theme)}>{t('pos.single.name')}</label>
             <input
               value={c.name}
               onChange={(e) => set({ name: e.target.value })}
-              placeholder="Customer name"
+              placeholder={t('pos.single.namePh')}
               style={inputStyle(theme)}
             />
           </div>
           <div>
-            <label style={labelStyle(theme)}>Phone</label>
+            <label style={labelStyle(theme)}>{t('pos.single.phone')}</label>
             <input
               value={c.phone}
               onChange={(e) => set({ phone: e.target.value })}
-              placeholder="Phone"
+              placeholder={t('pos.single.phonePh')}
               style={inputStyle(theme)}
             />
           </div>
         </div>
         <div>
-          <label style={labelStyle(theme)}>Address</label>
+          <label style={labelStyle(theme)}>{t('pos.single.address')}</label>
           <input
             value={c.address || ''}
             onChange={(e) => set({ address: e.target.value })}
-            placeholder="Delivery address"
+            placeholder={t('pos.single.addressPh')}
             style={inputStyle(theme)}
           />
         </div>

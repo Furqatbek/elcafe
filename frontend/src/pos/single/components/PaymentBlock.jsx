@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft } from 'lucide-react';
 import Button from './Button';
 import { fmtMoney, MONEY_STYLE } from '../theme';
@@ -8,6 +9,7 @@ const TAX_RATE = 0.12;
 const QUICK_TENDERS = [50000, 100000, 200000, 500000];
 
 export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCharged }) {
+  const { t } = useTranslation();
   const setPayment = usePosStore((s) => s.setPayment);
   const charge = usePosStore((s) => s.chargeActive);
   const clearError = usePosStore((s) => s.clearSubmitError);
@@ -56,15 +58,19 @@ export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCh
           padding: 0,
         }}
       >
-        <ChevronLeft size={14} /> back to ticket
+        <ChevronLeft size={14} /> {t('pos.single.back')}
       </button>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <Row theme={theme} label="Subtotal" value={fmtMoney(subtotal)} />
-        <Row theme={theme} label={`Tax ${Math.round(TAX_RATE * 100)}%`} value={fmtMoney(tax)} />
+        <Row theme={theme} label={t('pos.single.subtotalLabel')} value={fmtMoney(subtotal)} />
         <Row
           theme={theme}
-          label="Total"
+          label={t('pos.single.tax', { percent: Math.round(TAX_RATE * 100) })}
+          value={fmtMoney(tax)}
+        />
+        <Row
+          theme={theme}
+          label={t('pos.single.total')}
           value={fmtMoney(total)}
           bold
           large
@@ -84,6 +90,10 @@ export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCh
       >
         {['cash', 'card', 'mobile'].map((m) => {
           const active = method === m;
+          const labelKey =
+            m === 'cash' ? 'pos.single.methodCash'
+              : m === 'card' ? 'pos.single.methodCard'
+                : 'pos.single.methodMobile';
           return (
             <button
               key={m}
@@ -101,7 +111,7 @@ export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCh
                 boxShadow: active ? '0 1px 2px rgba(0,0,0,.08)' : 'none',
               }}
             >
-              {m}
+              {t(labelKey)}
             </button>
           );
         })}
@@ -127,7 +137,7 @@ export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCh
               size="md"
               onClick={() => setPayment({ tendered: total })}
             >
-              Exact
+              {t('pos.single.exact')}
             </Button>
           </div>
 
@@ -137,7 +147,7 @@ export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCh
               min={0}
               value={tendered || ''}
               onChange={(e) => setPayment({ tendered: Number(e.target.value) || 0 })}
-              placeholder="Cash received"
+              placeholder={t('pos.single.cashReceived')}
               style={{
                 width: '100%',
                 height: 44,
@@ -154,7 +164,7 @@ export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCh
             />
           </div>
 
-          <Row theme={theme} label="Change" value={fmtMoney(change)} muted={change === 0} />
+          <Row theme={theme} label={t('pos.single.change')} value={fmtMoney(change)} muted={change === 0} />
         </>
       )}
 
@@ -171,7 +181,6 @@ export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCh
             fontWeight: 600,
             cursor: 'pointer',
           }}
-          title="Click to dismiss"
         >
           {submitError}
         </div>
@@ -185,7 +194,9 @@ export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCh
         onClick={handleCharge}
         style={{ width: '100%' }}
       >
-        {submitting ? 'Charging…' : `Charge ${fmtMoney(total)}`}
+        {submitting
+          ? t('pos.single.charging')
+          : t('pos.single.charge', { amount: fmtMoney(total) })}
       </Button>
     </div>
   );
