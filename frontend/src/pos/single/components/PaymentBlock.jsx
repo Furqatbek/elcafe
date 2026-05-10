@@ -8,7 +8,7 @@ import usePosStore, { ticketSubtotal, ticketTax, ticketTotal } from '../store';
 const TAX_RATE = 0.12;
 const QUICK_TENDERS = [50000, 100000, 200000, 500000];
 
-export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCharged }) {
+export default function PaymentBlock({ theme, ticket, restaurantId, restaurantCity, onBack, onCharged }) {
   const { t } = useTranslation();
   const setPayment = usePosStore((s) => s.setPayment);
   const charge = usePosStore((s) => s.chargeActive);
@@ -27,7 +27,7 @@ export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCh
     total > 0 && !submitting && (method !== 'cash' || tendered >= total);
 
   const handleCharge = async () => {
-    const result = await charge(restaurantId);
+    const result = await charge(restaurantId, { restaurantCity });
     if (result.success && onCharged) onCharged(result);
   };
 

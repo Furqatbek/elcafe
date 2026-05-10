@@ -10,7 +10,7 @@ import PaymentBlock from './PaymentBlock';
 import { fmtMoney, MONEY_STYLE } from '../theme';
 import usePosStore, { ticketSubtotal, ticketTotal } from '../store';
 
-export default function TicketRail({ theme, ticket, tables, width, restaurantId, onCharged }) {
+export default function TicketRail({ theme, ticket, tables, width, restaurantId, restaurantCity, onCharged }) {
   const { t } = useTranslation();
   const setType = usePosStore((s) => s.setType);
   const patchActive = usePosStore((s) => s.patchActive);
@@ -179,6 +179,7 @@ export default function TicketRail({ theme, ticket, tables, width, restaurantId,
           theme={theme}
           ticket={ticket}
           restaurantId={restaurantId}
+          restaurantCity={restaurantCity}
           onBack={() => setPaymentMode(false)}
           onCharged={onCharged}
         />

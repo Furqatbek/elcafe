@@ -258,11 +258,12 @@ const usePosStore = create(
       // a confirmation. The active ticket is the source of truth for the
       // payload; persisted state stays untouched on failure so the cashier
       // can retry.
-      chargeActive: async (restaurantId) => {
+      chargeActive: async (restaurantId, opts = {}) => {
         const state = get();
         const ticket = state.tickets.find((t) => t.id === state.activeId);
         if (!ticket) return { success: false, error: 'No active ticket' };
         if (!ticket.items.length) return { success: false, error: 'Ticket is empty' };
+        const restaurantCity = (opts.restaurantCity || '').trim();
 
         const subtotal = ticketSubtotal(ticket);
         const tax = ticketTax(ticket);
@@ -316,10 +317,25 @@ const usePosStore = create(
             tableIds: ticket.tableId ? [ticket.tableId] : [],
             guestCount: ticket.guests || 1,
           };
-        } else if (orderType === 'DELIVERY' && customer.address) {
+        } else if (orderType === 'DELIVERY') {
+          // Backend requires both street and city to be non-blank. The POS
+          // collects a single address line, so we send it as `street` and
+          // fall back to the restaurant's own city for `city`. If the
+          // restaurant has no city configured we reuse the address text so
+          // the @NotBlank validation still passes.
+          const street = (customer.address || '').trim();
+          if (!street) {
+            const msg = 'Delivery address is required';
+            set((s) => ({
+              tickets: s.tickets.map((tk) =>
+                tk.id === ticket.id ? { ...tk, submitError: msg } : tk
+              ),
+            }));
+            return { success: false, error: msg };
+          }
           payload.deliveryInfo = {
-            street: customer.address,
-            city: '',
+            street,
+            city: restaurantCity || street,
             state: null,
             zipCode: null,
             deliveryInstructions: null,

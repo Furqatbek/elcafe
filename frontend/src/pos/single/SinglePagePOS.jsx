@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { posAPI, tablesAPI, shiftAPI } from '../../services/api';
+import { posAPI, tablesAPI, shiftAPI, restaurantAPI } from '../../services/api';
 import Header from './components/Header';
 import CategoriesRail from './components/CategoriesRail';
 import ProductGrid from './components/ProductGrid';
@@ -34,6 +34,7 @@ export default function SinglePagePOS() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [tables, setTables] = useState([]);
+  const [restaurant, setRestaurant] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -90,15 +91,17 @@ export default function SinglePagePOS() {
       setLoading(true);
       setError(null);
       try {
-        const [catsRes, prodsRes, tablesRes] = await Promise.all([
+        const [catsRes, prodsRes, tablesRes, restRes] = await Promise.all([
           posAPI.getCategories(restaurantId),
           posAPI.getProducts(restaurantId),
           tablesAPI.getAll(restaurantId).catch(() => ({ data: { data: [] } })),
+          restaurantAPI.getById(restaurantId).catch(() => ({ data: { data: null } })),
         ]);
         if (cancel) return;
         setCategories(catsRes.data?.data || catsRes.data || []);
         setProducts(prodsRes.data?.data || prodsRes.data || []);
         setTables(tablesRes.data?.data || tablesRes.data || []);
+        setRestaurant(restRes.data?.data || restRes.data || null);
       } catch (e) {
         if (!cancel) setError(e?.response?.data?.message || e.message || 'Failed to load menu');
       } finally {
@@ -336,6 +339,7 @@ export default function SinglePagePOS() {
           tables={tables}
           width={cartWidth}
           restaurantId={restaurantId}
+          restaurantCity={restaurant?.city || ''}
           onCharged={handleCharged}
         />
       </div>
