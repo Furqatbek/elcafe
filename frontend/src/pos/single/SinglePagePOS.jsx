@@ -9,8 +9,10 @@ import Button from './components/Button';
 import { THEMES } from './theme';
 import usePosStore, { productHasModifiers } from './store';
 
+const THEME_KEY = 'blue';
+
 export default function SinglePagePOS() {
-  const themeKey = usePosStore((s) => s.theme);
+  const themeKey = THEME_KEY;
   const tickets = usePosStore((s) => s.tickets);
   const activeId = usePosStore((s) => s.activeId);
   const setActive = usePosStore((s) => s.setActive);

@@ -10,7 +10,6 @@ export default function Header({ theme, themeKey, cashierName = 'Cashier' }) {
   const setActive = usePosStore((s) => s.setActive);
   const closeTicket = usePosStore((s) => s.closeTicket);
   const newTicket = usePosStore((s) => s.newTicket);
-  const setTheme = usePosStore((s) => s.setTheme);
   const themeOpt = TYPE_CHIP_COLORS[themeKey] || TYPE_CHIP_COLORS.blue;
 
   return (
@@ -166,27 +165,6 @@ export default function Header({ theme, themeKey, cashierName = 'Cashier' }) {
         <Button theme={theme} size="md" onClick={() => newTicket('delivery')}>
           <Plus size={16} /> Delivery
         </Button>
-
-        <select
-          value={themeKey}
-          onChange={(e) => setTheme(e.target.value)}
-          style={{
-            height: 40,
-            borderRadius: 10,
-            border: `1px solid ${theme.border}`,
-            background: theme.surface,
-            color: theme.text,
-            padding: '0 10px',
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-          title="Theme"
-        >
-          <option value="blue">Blue</option>
-          <option value="warm">Warm</option>
-          <option value="dark">Dark</option>
-        </select>
       </div>
     </div>
   );

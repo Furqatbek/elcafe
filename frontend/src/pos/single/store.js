@@ -58,7 +58,6 @@ const usePosStore = create(
       modifierDraft: null, // { productId, product, qty, modifiers, note } when editing
       density: 'balanced', // 'compact' | 'balanced' | 'spacious'
       gridCols: 5,
-      theme: 'blue', // 'blue' | 'warm' | 'dark'
       cartWidth: 340,
 
       newTicket: (type = 'dinein', label) => {
@@ -365,7 +364,6 @@ const usePosStore = create(
 
       setDensity: (density) => set({ density }),
       setGridCols: (n) => set({ gridCols: Math.max(3, Math.min(8, n)) }),
-      setTheme: (theme) => set({ theme }),
       setCartWidth: (w) => set({ cartWidth: Math.max(280, Math.min(420, w)) }),
     }),
     {
@@ -376,7 +374,6 @@ const usePosStore = create(
         parked: s.parked,
         density: s.density,
         gridCols: s.gridCols,
-        theme: s.theme,
         cartWidth: s.cartWidth,
       }),
     }
