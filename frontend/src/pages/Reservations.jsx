@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { reservationAPI, tablesAPI } from '../services/api';
+import { useCurrentRestaurantId } from '../utils/restaurant';
 import { useNotificationStore } from '../store/notificationStore';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -89,13 +90,13 @@ export default function Reservations() {
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // For now, hardcode restaurant ID (should come from auth context)
-  const restaurantId = 1;
+  const restaurantId = useCurrentRestaurantId();
 
   useEffect(() => {
+    if (!restaurantId) return;
     loadReservations();
     loadTables();
-  }, [currentMonth]);
+  }, [currentMonth, restaurantId]);
 
   // Auto-refresh reservations every 30 seconds for real-time updates
   useEffect(() => {

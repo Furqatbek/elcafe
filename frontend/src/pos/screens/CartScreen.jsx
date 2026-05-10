@@ -6,6 +6,7 @@ import TouchButton from '../components/TouchButton';
 import CartItem from '../components/CartItem';
 import CouponInput from '../components/CouponInput';
 import usePOSStore from '../store/posStore';
+import { useCurrentRestaurantId } from '../../utils/restaurant';
 
 /**
  * CartScreen - Order review and summary
@@ -26,7 +27,7 @@ const CartScreen = () => {
   const [availabilityWarnings, setAvailabilityWarnings] = useState([]);
   const [isValidating, setIsValidating] = useState(false);
 
-  const restaurantId = 1; // TODO: Add restaurant selector
+  const restaurantId = useCurrentRestaurantId();
 
   // Validate cart availability when items change
   useEffect(() => {
@@ -35,6 +36,7 @@ const CartScreen = () => {
         setAvailabilityWarnings([]);
         return;
       }
+      if (!restaurantId) return;
 
       setIsValidating(true);
       const warnings = [];
@@ -248,7 +250,7 @@ const CartScreen = () => {
               </div>
               <div className="p-4 space-y-4">
                 {/* Coupon Input */}
-                <CouponInput restaurantId={restaurantId} />
+                <CouponInput />
 
                 {/* Price Breakdown */}
                 <div className="space-y-2 bg-gray-50 rounded-lg p-3">
@@ -358,7 +360,7 @@ const CartScreen = () => {
                 <h3 className="text-sm font-semibold text-gray-600 uppercase mb-3">
                   {t('pos.cart.discount', 'Discount')}
                 </h3>
-                <CouponInput restaurantId={restaurantId} />
+                <CouponInput />
               </div>
 
               {/* Price Breakdown */}

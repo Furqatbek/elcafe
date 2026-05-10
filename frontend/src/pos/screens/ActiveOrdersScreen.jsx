@@ -15,6 +15,7 @@ import {
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
 import { posAPI } from '../../services/api';
+import { useCurrentRestaurantId } from '../../utils/restaurant';
 
 /**
  * ActiveOrdersScreen - Shows all open dine-in orders
@@ -29,10 +30,11 @@ const ActiveOrdersScreen = () => {
   const [error, setError] = useState(null);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
 
-  const restaurantId = 1; // TODO: Get from context or settings
+  const restaurantId = useCurrentRestaurantId();
 
   // Fetch open dine-in orders
   const fetchOrders = async () => {
+    if (!restaurantId) return;
     setLoading(true);
     setError(null);
 
@@ -49,7 +51,8 @@ const ActiveOrdersScreen = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurantId]);
 
   const handleSelectOrder = (order) => {
     setSelectedOrderId(order.id === selectedOrderId ? null : order.id);

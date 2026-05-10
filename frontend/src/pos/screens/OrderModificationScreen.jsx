@@ -15,6 +15,7 @@ import {
 import TouchButton from '../components/TouchButton';
 import usePOSStore from '../store/posStore';
 import { posAPI } from '../../services/api';
+import { useCurrentRestaurantId } from '../../utils/restaurant';
 
 /**
  * OrderModificationScreen - Modify an existing order
@@ -55,10 +56,11 @@ const OrderModificationScreen = () => {
     };
   }, []);
 
-  const restaurantId = 1;
+  const restaurantId = useCurrentRestaurantId();
 
   // Load menu if not already loaded
   useEffect(() => {
+    if (!restaurantId) return;
     const loadMenu = async () => {
       if (!menu.categories.length || !menu.products.length) {
         setLoading(true);
@@ -70,7 +72,7 @@ const OrderModificationScreen = () => {
       }
     };
     loadMenu();
-  }, []);
+  }, [restaurantId]);
 
   // Filter products for adding
   const filteredProducts = menu.products.filter(product => {

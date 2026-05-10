@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { promotionAPI } from '../services/api';
+import { useCurrentRestaurantId } from '../utils/restaurant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -17,6 +18,7 @@ import {
 
 export default function PromotionAnalytics() {
   const { t } = useTranslation();
+  const restaurantId = useCurrentRestaurantId();
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -31,14 +33,14 @@ export default function PromotionAnalytics() {
   });
 
   useEffect(() => {
+    if (!restaurantId) return;
     loadAnalytics();
-  }, []);
+  }, [restaurantId, dateRange.startDate, dateRange.endDate]);
 
   const loadAnalytics = async () => {
+    if (!restaurantId) return;
     setLoading(true);
     try {
-      const restaurantId = 1; // Default restaurant
-
       const [analyticsRes, performanceRes, trendsRes, couponsRes] = await Promise.all([
         promotionAPI.getDiscountAnalytics(restaurantId, dateRange.startDate, dateRange.endDate),
         promotionAPI.getAllPromotionsPerformance(restaurantId),

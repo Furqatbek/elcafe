@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { analyticsAPI } from '../services/api';
+import { useCurrentRestaurantId } from '../utils/restaurant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -16,6 +17,7 @@ import {
 
 export default function FinancialAnalytics() {
   const { t } = useTranslation();
+  const restaurantId = useCurrentRestaurantId();
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -31,16 +33,18 @@ export default function FinancialAnalytics() {
   });
 
   useEffect(() => {
+    if (!restaurantId) return;
     loadAnalytics();
-  }, []);
+  }, [restaurantId, dateRange.startDate, dateRange.endDate]);
 
   const loadAnalytics = async () => {
+    if (!restaurantId) return;
     setLoading(true);
     try {
       const params = {
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
-        restaurantId: 1, // Default restaurant
+        restaurantId,
       };
 
       const [dailyRevenueRes, salesByCategoryRes, cogsRes, profitabilityRes, marginsRes] =

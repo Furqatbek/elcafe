@@ -6,6 +6,7 @@ import ProductCard from '../components/ProductCard';
 import TouchButton from '../components/TouchButton';
 import WeightInputModal from '../components/WeightInputModal';
 import usePOSStore from '../store/posStore';
+import { useCurrentRestaurantId } from '../../utils/restaurant';
 
 // Special category ID for combos/bundles
 const BUNDLES_CATEGORY_ID = 'bundles';
@@ -34,10 +35,11 @@ const MenuSelectionScreen = () => {
   const [loading, setLoading] = useState(true);
   const [weightModalProduct, setWeightModalProduct] = useState(null);
 
-  const restaurantId = 1; // TODO: Add restaurant selector if multiple restaurants
+  const restaurantId = useCurrentRestaurantId();
 
   // Fetch menu data from backend
   useEffect(() => {
+    if (!restaurantId) return;
     const loadMenu = async () => {
       try {
         setLoading(true);
@@ -66,7 +68,7 @@ const MenuSelectionScreen = () => {
         checkAllProductsAvailability(menu.products, restaurantId);
       }
     }
-  }, []);
+  }, [restaurantId]);
 
   // Check if bundles category is selected
   const isBundlesSelected = ui.selectedCategory === BUNDLES_CATEGORY_ID;

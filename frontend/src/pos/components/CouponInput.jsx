@@ -7,9 +7,11 @@ import usePOSStore from '../store/posStore';
 
 /**
  * CouponInput - POS component for applying coupon codes
- * Shows coupon input field and applied discount
+ * Shows coupon input field and applied discount.
+ * The restaurant context comes from the active POS order in the store —
+ * no prop is required.
  */
-const CouponInput = ({ restaurantId = 1 }) => {
+const CouponInput = () => {
   const { t } = useTranslation();
   const { currentOrder, validateCoupon, applyDiscount, removeDiscount, addFreeItem } = usePOSStore();
   const [couponInput, setCouponInput] = useState('');
