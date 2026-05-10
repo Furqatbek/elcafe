@@ -59,8 +59,17 @@ export default function SinglePagePOS() {
     const check = async () => {
       try {
         const res = await shiftAPI.getActive(restaurantId);
-        const list = res.data?.data || [];
-        if (!cancel) setActiveShift(list[0] || null);
+        // The backend returns List<ShiftSummaryDTO> directly (no { data: [...] }
+        // envelope), but tolerate both shapes in case other endpoints wrap.
+        const body = res.data;
+        const list = Array.isArray(body)
+          ? body
+          : Array.isArray(body?.data)
+            ? body.data
+            : body && typeof body === 'object'
+              ? [body.data || body]
+              : [];
+        if (!cancel) setActiveShift(list.find(Boolean) || null);
       } catch (e) {
         if (!cancel) setActiveShift(null);
       } finally {
@@ -159,7 +168,10 @@ export default function SinglePagePOS() {
     setClockInError(null);
     try {
       const res = await shiftAPI.clockIn(restaurantId, {});
-      setActiveShift(res.data?.data || res.data || {});
+      // Backend returns EmployeeShift directly; fall through to the wrapped
+      // shape just in case.
+      const shift = res.data?.data || res.data || {};
+      setActiveShift(shift);
     } catch (e) {
       setClockInError(e.response?.data?.message || e.message || 'Failed to clock in');
     } finally {
