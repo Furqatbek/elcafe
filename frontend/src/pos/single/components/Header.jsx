@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, X } from 'lucide-react';
 import Button from './Button';
 import usePosStore from '../store';
+import branding from '../../../config/branding';
 import { TYPE_CHIP, TYPE_CHIP_COLORS, MONEY_STYLE } from '../theme';
 
 export default function Header({ theme, themeKey, cashierName }) {
@@ -27,27 +28,13 @@ export default function Header({ theme, themeKey, cashierName }) {
         padding: '0 16px',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            background: theme.primary,
-            color: '#fff',
-            fontWeight: 800,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 16,
-          }}
-        >
-          eC
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>{t('pos.single.brand')}</span>
-          <span style={{ fontSize: 12, color: theme.textMuted }}>{cashierName || t('pos.single.cashier')}</span>
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: theme.text }}>
+          {branding.shortName || branding.name}
+        </span>
+        <span style={{ fontSize: 12, color: theme.textMuted }}>
+          {cashierName || t('pos.single.cashier')}
+        </span>
       </div>
 
       <div

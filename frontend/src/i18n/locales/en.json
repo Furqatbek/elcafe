@@ -2654,7 +2654,6 @@
       "openBoard": "Order Status Board"
     },
     "single": {
-      "brand": "elCafé POS",
       "cashier": "Cashier",
       "noActiveTickets": "No open tickets — start one →",
       "newDinein": "Dine-in",

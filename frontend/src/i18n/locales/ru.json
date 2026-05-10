@@ -2418,7 +2418,6 @@
       "openBoard": "Табло заказов"
     },
     "single": {
-      "brand": "elCafé POS",
       "cashier": "Кассир",
       "noActiveTickets": "Нет открытых заказов — создайте новый →",
       "newDinein": "В зале",
