@@ -420,7 +420,12 @@
       "courierAssigned": "Courier Assigned",
       "onDelivery": "On Delivery",
       "delivered": "Delivered",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "AVAILABLE": "Open",
+      "OCCUPIED": "Occupied",
+      "RESERVED": "Reserved",
+      "CLEANING": "Cleaning",
+      "OUT_OF_SERVICE": "Out"
     },
     "total": "Total",
     "subtotal": "Subtotal",
@@ -605,7 +610,106 @@
     "noAvailableTables": "No available tables",
     "tableChanged": "Order moved to new table successfully",
     "changeTableError": "Failed to change table: ",
-    "moveToTable": "Move to Table"
+    "moveToTable": "Move to Table",
+    "searchPlaceholder": "Jump to table…  press / to focus",
+    "needRelease": "{{n}} need release",
+    "releaseShort": "release",
+    "floorN": "Floor {{n}}",
+    "tableLabel": "Table {{n}}",
+    "tableShort": "Tbl",
+    "capN": "cap. {{n}}",
+    "guests": "guests",
+    "paid": "PAID",
+    "reservedShort": "Reserved",
+    "etaIn": "ETA {{m}}m",
+    "noItems": "No items yet",
+    "loading": "Loading…",
+    "tile": {
+      "seatsN": "{{n}} seats"
+    },
+    "field": {
+      "name": "Name",
+      "eta": "ETA",
+      "guests": "Guests",
+      "waiter": "Waiter"
+    },
+    "empty": {
+      "openReady": "Open and ready",
+      "openReadyHint": "Use the Seat guests action below to start a new dine-in order on this table.",
+      "cleaningHint": "Mark the table available once it is ready for guests.",
+      "outHint": "Mark the table available to bring it back into service.",
+      "noMatch": "No tables match “{{q}}”",
+      "noTables": "No tables configured"
+    },
+    "stat": {
+      "total": "Total",
+      "open": "Open",
+      "occupied": "Occupied",
+      "reserved": "Reserved"
+    },
+    "payment": {
+      "subtotal": "Subtotal",
+      "tax": "Tax {{percent}}%",
+      "total": "Total",
+      "cash": "Cash",
+      "card": "Card",
+      "mobile": "Mobile",
+      "exact": "Exact",
+      "cashReceived": "Cash received",
+      "short": "Short by",
+      "change": "Change",
+      "charge": "Charge {{amount}}",
+      "back": "Back to order"
+    },
+    "action": {
+      "seat": "Seat guests",
+      "editOrder": "Edit order",
+      "changeTable": "Change table",
+      "cancelOrder": "Cancel order",
+      "charge": "Charge {{amount}}",
+      "release": "Release table",
+      "markAvailable": "Mark available",
+      "moveOrder": "Move order"
+    },
+    "confirm": {
+      "releaseTitle": "Release table?",
+      "releaseMsg": "This closes the order and frees the table for new guests.",
+      "cancelTitle": "Cancel this order?",
+      "cancelMsg": "The order will be voided and the table freed. This cannot be undone.",
+      "changeTableTitle": "Move order to another table?",
+      "pickTable": "Pick a free table…"
+    },
+    "toast": {
+      "paymentProcessed": "Payment processed",
+      "tableReleased": "Table released",
+      "orderCancelled": "Order cancelled",
+      "orderMoved": "Order moved to T{{n}}",
+      "tableAvailable": "Table available",
+      "noFreeTables": "No free tables to move to",
+      "pickFirst": "Pick a table first"
+    },
+    "error": {
+      "kind": {
+        "network": "Network",
+        "server": "Server",
+        "timeout": "Timeout",
+        "conflict": "Conflict",
+        "permission": "Permission",
+        "validation": "Validation"
+      },
+      "opLabel": "Operation",
+      "codeLabel": "HTTP code",
+      "timeLabel": "Time",
+      "copy": "Copy details",
+      "retry": "Try again"
+    },
+    "errorMsg": {
+      "payment": "Payment failed.",
+      "release": "Release failed.",
+      "cancel": "Cancel failed.",
+      "move": "Move failed.",
+      "markAvailable": "Update failed."
+    }
   },
   "tables": {
     "title": "Tables",

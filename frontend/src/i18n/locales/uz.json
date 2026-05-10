@@ -405,7 +405,12 @@
       "courierAssigned": "Kuryer tayinlangan",
       "onDelivery": "Yo'lda",
       "delivered": "Yetkazildi",
-      "cancelled": "Bekor qilindi"
+      "cancelled": "Bekor qilindi",
+      "AVAILABLE": "Bo'sh",
+      "OCCUPIED": "Band",
+      "RESERVED": "Bron",
+      "CLEANING": "Tozalanmoqda",
+      "OUT_OF_SERVICE": "Ishlamayapti"
     },
     "total": "Jami",
     "subtotal": "Oraliq jami",
@@ -590,7 +595,106 @@
     "noAvailableTables": "Bo'sh stollar yo'q",
     "tableChanged": "Buyurtma muvaffaqiyatli yangi stolga ko'chirildi",
     "changeTableError": "Stolni almashtirib bo'lmadi: ",
-    "moveToTable": "Stolga ko'chirish"
+    "moveToTable": "Stolga ko'chirish",
+    "searchPlaceholder": "Stolni qidirish…  / tugmasini bosing",
+    "needRelease": "{{n}} ta bo'shatish kerak",
+    "releaseShort": "bo'shatish",
+    "floorN": "{{n}}-qavat",
+    "tableLabel": "{{n}}-stol",
+    "tableShort": "Stol",
+    "capN": "{{n}} kishilik",
+    "guests": "mehmon",
+    "paid": "TO'LANDI",
+    "reservedShort": "Bron",
+    "etaIn": "{{m}} daqiqadan keyin",
+    "noItems": "Hali pozitsiyalar yo'q",
+    "loading": "Yuklanmoqda…",
+    "tile": {
+      "seatsN": "{{n}} joy"
+    },
+    "field": {
+      "name": "Ism",
+      "eta": "Vaqt",
+      "guests": "Mehmonlar",
+      "waiter": "Ofitsiant"
+    },
+    "empty": {
+      "openReady": "Bo'sh va tayyor",
+      "openReadyHint": "Yangi buyurtmani boshlash uchun «Mehmonlarni qabul qilish» tugmasini bosing.",
+      "cleaningHint": "Stol tayyor bo'lganda uni bo'sh deb belgilang.",
+      "outHint": "Stolni qaytadan ishga tushirish uchun bo'sh deb belgilang.",
+      "noMatch": "«{{q}}» bo'yicha stollar topilmadi",
+      "noTables": "Stollar sozlanmagan"
+    },
+    "stat": {
+      "total": "Jami",
+      "open": "Bo'sh",
+      "occupied": "Band",
+      "reserved": "Bron"
+    },
+    "payment": {
+      "subtotal": "Summa",
+      "tax": "Soliq {{percent}}%",
+      "total": "Jami",
+      "cash": "Naqd",
+      "card": "Karta",
+      "mobile": "O'tkazma",
+      "exact": "Aniq",
+      "cashReceived": "Olingan naqd",
+      "short": "Yetishmayapti",
+      "change": "Qaytim",
+      "charge": "{{amount}} to'lash",
+      "back": "Buyurtmaga qaytish"
+    },
+    "action": {
+      "seat": "Mehmonlarni qabul qilish",
+      "editOrder": "Tahrirlash",
+      "changeTable": "Stolni almashtirish",
+      "cancelOrder": "Buyurtmani bekor qilish",
+      "charge": "{{amount}} to'lash",
+      "release": "Stolni bo'shatish",
+      "markAvailable": "Bo'sh deb belgilash",
+      "moveOrder": "Buyurtmani ko'chirish"
+    },
+    "confirm": {
+      "releaseTitle": "Stolni bo'shatasizmi?",
+      "releaseMsg": "Buyurtma yopiladi va stol yangi mehmonlar uchun bo'shaydi.",
+      "cancelTitle": "Buyurtmani bekor qilasizmi?",
+      "cancelMsg": "Buyurtma bekor qilinadi va stol bo'shaydi. Bu amalni qaytarib bo'lmaydi.",
+      "changeTableTitle": "Buyurtmani boshqa stolga ko'chirasizmi?",
+      "pickTable": "Bo'sh stol tanlang…"
+    },
+    "toast": {
+      "paymentProcessed": "To'lov amalga oshirildi",
+      "tableReleased": "Stol bo'shatildi",
+      "orderCancelled": "Buyurtma bekor qilindi",
+      "orderMoved": "Buyurtma {{n}}-stolga ko'chirildi",
+      "tableAvailable": "Stol bo'sh",
+      "noFreeTables": "Bo'sh stollar yo'q",
+      "pickFirst": "Avval stolni tanlang"
+    },
+    "error": {
+      "kind": {
+        "network": "Tarmoq",
+        "server": "Server",
+        "timeout": "Vaqt tugadi",
+        "conflict": "Konflikt",
+        "permission": "Ruxsat yo'q",
+        "validation": "Tekshiruv"
+      },
+      "opLabel": "Amal",
+      "codeLabel": "HTTP kodi",
+      "timeLabel": "Vaqt",
+      "copy": "Ma'lumotni nusxa olish",
+      "retry": "Qayta urinib ko'ring"
+    },
+    "errorMsg": {
+      "payment": "To'lov amalga oshmadi.",
+      "release": "Stolni bo'shatib bo'lmadi.",
+      "cancel": "Buyurtmani bekor qilib bo'lmadi.",
+      "move": "Ko'chirib bo'lmadi.",
+      "markAvailable": "Yangilab bo'lmadi."
+    }
   },
   "tables": {
     "title": "Stollar",

@@ -405,7 +405,12 @@
       "courierAssigned": "Назначен курьер",
       "onDelivery": "В пути",
       "delivered": "Доставлен",
-      "cancelled": "Отменен"
+      "cancelled": "Отменен",
+      "AVAILABLE": "Свободен",
+      "OCCUPIED": "Занят",
+      "RESERVED": "Бронь",
+      "CLEANING": "Уборка",
+      "OUT_OF_SERVICE": "Не работает"
     },
     "total": "Итого",
     "subtotal": "Промежуточный итог",
@@ -590,7 +595,106 @@
     "noAvailableTables": "Нет свободных столов",
     "tableChanged": "Заказ успешно перемещён на новый стол",
     "changeTableError": "Не удалось сменить стол: ",
-    "moveToTable": "Переместить"
+    "moveToTable": "Переместить",
+    "searchPlaceholder": "Найти стол…  нажмите / для фокуса",
+    "needRelease": "{{n}} ждут освобождения",
+    "releaseShort": "освободить",
+    "floorN": "Этаж {{n}}",
+    "tableLabel": "Стол {{n}}",
+    "tableShort": "Стол",
+    "capN": "места {{n}}",
+    "guests": "гостей",
+    "paid": "ОПЛ.",
+    "reservedShort": "Бронь",
+    "etaIn": "ч/з {{m}} мин",
+    "noItems": "Позиций ещё нет",
+    "loading": "Загрузка…",
+    "tile": {
+      "seatsN": "{{n}} мест"
+    },
+    "field": {
+      "name": "Имя",
+      "eta": "Время",
+      "guests": "Гостей",
+      "waiter": "Официант"
+    },
+    "empty": {
+      "openReady": "Свободен и готов",
+      "openReadyHint": "Используйте «Принять гостей», чтобы открыть новый заказ для этого стола.",
+      "cleaningHint": "Сделайте стол свободным, когда он готов принять гостей.",
+      "outHint": "Сделайте стол свободным, чтобы вернуть его в работу.",
+      "noMatch": "Столы по запросу «{{q}}» не найдены",
+      "noTables": "Столы не настроены"
+    },
+    "stat": {
+      "total": "Всего",
+      "open": "Свободно",
+      "occupied": "Занято",
+      "reserved": "Бронь"
+    },
+    "payment": {
+      "subtotal": "Сумма",
+      "tax": "Налог {{percent}}%",
+      "total": "Итого",
+      "cash": "Наличные",
+      "card": "Карта",
+      "mobile": "Перевод",
+      "exact": "Точно",
+      "cashReceived": "Получено наличными",
+      "short": "Не хватает",
+      "change": "Сдача",
+      "charge": "Оплатить {{amount}}",
+      "back": "Назад к заказу"
+    },
+    "action": {
+      "seat": "Принять гостей",
+      "editOrder": "Редактировать",
+      "changeTable": "Сменить стол",
+      "cancelOrder": "Отменить заказ",
+      "charge": "Оплатить {{amount}}",
+      "release": "Освободить стол",
+      "markAvailable": "Сделать свободным",
+      "moveOrder": "Переместить заказ"
+    },
+    "confirm": {
+      "releaseTitle": "Освободить стол?",
+      "releaseMsg": "Заказ закроется, стол станет доступен для новых гостей.",
+      "cancelTitle": "Отменить заказ?",
+      "cancelMsg": "Заказ будет аннулирован, стол освобождён. Это действие нельзя отменить.",
+      "changeTableTitle": "Переместить заказ на другой стол?",
+      "pickTable": "Выберите свободный стол…"
+    },
+    "toast": {
+      "paymentProcessed": "Оплата проведена",
+      "tableReleased": "Стол освобождён",
+      "orderCancelled": "Заказ отменён",
+      "orderMoved": "Заказ перемещён на стол {{n}}",
+      "tableAvailable": "Стол свободен",
+      "noFreeTables": "Нет свободных столов",
+      "pickFirst": "Сначала выберите стол"
+    },
+    "error": {
+      "kind": {
+        "network": "Сеть",
+        "server": "Сервер",
+        "timeout": "Таймаут",
+        "conflict": "Конфликт",
+        "permission": "Нет доступа",
+        "validation": "Проверка"
+      },
+      "opLabel": "Операция",
+      "codeLabel": "HTTP код",
+      "timeLabel": "Время",
+      "copy": "Скопировать данные",
+      "retry": "Повторить"
+    },
+    "errorMsg": {
+      "payment": "Не удалось провести оплату.",
+      "release": "Не удалось освободить стол.",
+      "cancel": "Не удалось отменить заказ.",
+      "move": "Не удалось переместить.",
+      "markAvailable": "Не удалось обновить."
+    }
   },
   "tables": {
     "title": "Столы",
