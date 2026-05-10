@@ -69,6 +69,7 @@ import {
   ProductionBatches,
 } from './pages/inventory';
 import POSApp from './pos/POSApp';
+import SinglePagePOS from './pos/single/SinglePagePOS';
 import CustomerDisplayScreen from './pos/screens/CustomerDisplayScreen';
 import OrderStatusBoardScreen from './pos/screens/OrderStatusBoardScreen';
 import ReviewPage from './pages/customer/ReviewPage';
@@ -204,7 +205,8 @@ function App() {
           <Route path="settings/receipt-template" element={<AdminRoute><ReceiptTemplateSettings /></AdminRoute>} />
           <Route path="settings/kitchen-stations" element={<AdminRoute><KitchenStations /></AdminRoute>} />
           <Route path="profile" element={<Profile />} />
-          <Route path="pos" element={<POSApp />} />
+          <Route path="pos" element={<SinglePagePOS />} />
+          <Route path="pos/legacy" element={<POSApp />} />
           <Route path="*" element={<Navigate to="/orders" replace />} />
         </Route>
       </Routes>
