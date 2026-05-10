@@ -2,9 +2,9 @@ import React from 'react';
 import { fmtMoney, MONEY_STYLE } from '../theme';
 
 const DENSITY = {
-  compact: { minHeight: 84, font: 13, padTop: 10 },
-  balanced: { minHeight: 110, font: 14, padTop: 12 },
-  spacious: { minHeight: 140, font: 16, padTop: 16 },
+  compact: { minHeight: 84, font: 13, padTop: 10, thumb: 36 },
+  balanced: { minHeight: 110, font: 14, padTop: 12, thumb: 48 },
+  spacious: { minHeight: 140, font: 16, padTop: 16, thumb: 64 },
 };
 
 export default function ProductTile({
@@ -18,6 +18,9 @@ export default function ProductTile({
   onClick,
 }) {
   const d = DENSITY[density] || DENSITY.balanced;
+  const imageUrl = product.imageUrl;
+  const [imgError, setImgError] = React.useState(false);
+  const showImage = !!imageUrl && !imgError;
 
   return (
     <button
@@ -31,9 +34,11 @@ export default function ProductTile({
         cursor: 'pointer',
         textAlign: 'left',
         padding: `${d.padTop}px 12px 10px 18px`,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
+        display: 'grid',
+        gridTemplateColumns: showImage ? `1fr ${d.thumb}px` : '1fr',
+        gridTemplateRows: '1fr auto',
+        columnGap: 10,
+        rowGap: 6,
         overflow: 'hidden',
         transition: 'transform 80ms ease, border-color 120ms ease',
       }}
@@ -64,12 +69,41 @@ export default function ProductTile({
           display: '-webkit-box',
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
+          alignSelf: 'flex-start',
         }}
       >
         {product.name}
       </span>
 
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+      {showImage && (
+        <img
+          src={imageUrl}
+          alt=""
+          loading="lazy"
+          onError={() => setImgError(true)}
+          style={{
+            gridRow: '1 / span 2',
+            gridColumn: 2,
+            alignSelf: 'center',
+            width: d.thumb,
+            height: d.thumb,
+            objectFit: 'cover',
+            borderRadius: 8,
+            background: theme.surfaceAlt,
+            border: `1px solid ${theme.border}`,
+          }}
+        />
+      )}
+
+      <div
+        style={{
+          gridColumn: 1,
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          gap: 6,
+        }}
+      >
         <span
           style={{
             fontSize: d.font,
@@ -118,6 +152,7 @@ export default function ProductTile({
             ...MONEY_STYLE,
             transform: burst ? 'scale(1.25)' : 'scale(1)',
             transition: 'transform 220ms cubic-bezier(.34,1.56,.64,1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,.25)',
           }}
         >
           {qty}
