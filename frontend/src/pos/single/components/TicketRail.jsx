@@ -9,7 +9,7 @@ import PaymentBlock from './PaymentBlock';
 import { fmtMoney, MONEY_STYLE, TYPE_CHIP } from '../theme';
 import usePosStore, { ticketSubtotal, ticketTotal } from '../store';
 
-export default function TicketRail({ theme, ticket, tables, width }) {
+export default function TicketRail({ theme, ticket, tables, width, restaurantId, onCharged }) {
   const setType = usePosStore((s) => s.setType);
   const patchActive = usePosStore((s) => s.patchActive);
   const pauseActive = usePosStore((s) => s.pauseActive);
@@ -170,7 +170,13 @@ export default function TicketRail({ theme, ticket, tables, width }) {
 
       {/* Footer: subtotal + Pay, OR PaymentBlock */}
       {inPayment ? (
-        <PaymentBlock theme={theme} ticket={ticket} onBack={() => setPaymentMode(false)} />
+        <PaymentBlock
+          theme={theme}
+          ticket={ticket}
+          restaurantId={restaurantId}
+          onBack={() => setPaymentMode(false)}
+          onCharged={onCharged}
+        />
       ) : (
         <div
           style={{

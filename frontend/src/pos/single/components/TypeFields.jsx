@@ -33,10 +33,10 @@ export default function TypeFields({ theme, ticket, tables = [] }) {
 
   if (!ticket) return null;
 
-  // Tables occupied by other tickets
+  // Tables occupied by other open tickets (compare by displayed table number)
   const occupied = new Set(
     tickets
-      .filter((t) => t.id !== ticket.id && t.type === 'dinein' && t.table)
+      .filter((t) => t.id !== ticket.id && t.type === 'dinein' && t.table != null)
       .map((t) => String(t.table))
   );
 
@@ -47,30 +47,34 @@ export default function TypeFields({ theme, ticket, tables = [] }) {
           <label style={labelStyle(theme)}>Table</label>
           <select
             value={ticket.table || ''}
-            onChange={(e) => patchActive({ table: e.target.value || null })}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (!value) {
+                patchActive({ table: null, tableId: null });
+                return;
+              }
+              const t = tables.find((row) => String(row.id) === value);
+              patchActive({
+                table: t?.tableNumber ?? t?.number ?? value,
+                tableId: t?.id ?? null,
+              });
+            }}
+            disabled={tables.length === 0}
             style={inputStyle(theme)}
           >
-            <option value="">Select table…</option>
+            <option value="">
+              {tables.length === 0 ? 'No tables configured' : 'Select table…'}
+            </option>
             {tables.map((t) => {
-              const tid = String(t.id ?? t.tableNumber ?? t.number);
+              const tid = String(t.id);
               const num = t.tableNumber ?? t.number ?? t.id;
-              const dis = occupied.has(tid);
+              const dis = occupied.has(String(t.tableNumber ?? t.number ?? t.id));
               return (
                 <option key={tid} value={tid} disabled={dis}>
                   Table {num}{dis ? ' (busy)' : ''}
                 </option>
               );
             })}
-            {tables.length === 0 &&
-              [1, 2, 3, 4, 5, 6, 7, 8].map((n) => {
-                const tid = String(n);
-                const dis = occupied.has(tid);
-                return (
-                  <option key={n} value={tid} disabled={dis}>
-                    Table {n}{dis ? ' (busy)' : ''}
-                  </option>
-                );
-              })}
           </select>
         </div>
         <div>

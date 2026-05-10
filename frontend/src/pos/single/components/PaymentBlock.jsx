@@ -7,9 +7,10 @@ import usePosStore, { ticketSubtotal, ticketTax, ticketTotal } from '../store';
 const TAX_RATE = 0.12;
 const QUICK_TENDERS = [50000, 100000, 200000, 500000];
 
-export default function PaymentBlock({ theme, ticket, onBack }) {
+export default function PaymentBlock({ theme, ticket, restaurantId, onBack, onCharged }) {
   const setPayment = usePosStore((s) => s.setPayment);
   const charge = usePosStore((s) => s.chargeActive);
+  const clearError = usePosStore((s) => s.clearSubmitError);
 
   const subtotal = ticketSubtotal(ticket);
   const tax = ticketTax(ticket, TAX_RATE);
@@ -17,8 +18,16 @@ export default function PaymentBlock({ theme, ticket, onBack }) {
   const method = ticket.payment?.method || 'cash';
   const tendered = ticket.payment?.tendered || 0;
   const change = method === 'cash' ? Math.max(0, tendered - total) : 0;
+  const submitting = !!ticket.submitting;
+  const submitError = ticket.submitError;
 
-  const canCharge = total > 0 && (method !== 'cash' || tendered >= total);
+  const canCharge =
+    total > 0 && !submitting && (method !== 'cash' || tendered >= total);
+
+  const handleCharge = async () => {
+    const result = await charge(restaurantId);
+    if (result.success && onCharged) onCharged(result);
+  };
 
   return (
     <div
@@ -149,15 +158,34 @@ export default function PaymentBlock({ theme, ticket, onBack }) {
         </>
       )}
 
+      {submitError && (
+        <div
+          onClick={clearError}
+          style={{
+            background: theme.dangerSoft,
+            color: theme.danger,
+            border: `1px solid ${theme.danger}`,
+            borderRadius: 8,
+            padding: '8px 10px',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+          title="Click to dismiss"
+        >
+          {submitError}
+        </div>
+      )}
+
       <Button
         theme={theme}
         variant="success"
         size="xl"
         disabled={!canCharge}
-        onClick={charge}
+        onClick={handleCharge}
         style={{ width: '100%' }}
       >
-        Charge {fmtMoney(total)}
+        {submitting ? 'Charging…' : `Charge ${fmtMoney(total)}`}
       </Button>
     </div>
   );

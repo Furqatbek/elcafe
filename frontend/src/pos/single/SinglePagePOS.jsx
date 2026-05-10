@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { posAPI, tablesAPI } from '../../services/api';
+import { posAPI, tablesAPI, shiftAPI } from '../../services/api';
 import Header from './components/Header';
 import CategoriesRail from './components/CategoriesRail';
 import ProductGrid from './components/ProductGrid';
 import TicketRail from './components/TicketRail';
 import Divider from './components/Divider';
+import Button from './components/Button';
 import { THEMES } from './theme';
 import usePosStore, { productHasModifiers } from './store';
 
@@ -33,29 +34,58 @@ export default function SinglePagePOS() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  // Shift gating
+  const [shiftLoading, setShiftLoading] = useState(true);
+  const [activeShift, setActiveShift] = useState(null);
+  const [clockingIn, setClockingIn] = useState(false);
+  const [clockInError, setClockInError] = useState(null);
 
   const restaurantId = localStorage.getItem('selectedRestaurantId') || '1';
 
+  // Set default restaurantId on mount if not already set
   useEffect(() => {
+    if (!localStorage.getItem('selectedRestaurantId')) {
+      localStorage.setItem('selectedRestaurantId', '1');
+    }
+  }, []);
+
+  // Active-shift check (matches the legacy POS's clock-in gate)
+  useEffect(() => {
+    let cancel = false;
+    const check = async () => {
+      try {
+        const res = await shiftAPI.getActive(restaurantId);
+        const list = res.data?.data || [];
+        if (!cancel) setActiveShift(list[0] || null);
+      } catch (e) {
+        if (!cancel) setActiveShift(null);
+      } finally {
+        if (!cancel) setShiftLoading(false);
+      }
+    };
+    check();
+    return () => { cancel = true; };
+  }, [restaurantId]);
+
+  // Load menu + tables from the real backend.
+  useEffect(() => {
+    if (!activeShift) return;
     let cancel = false;
     const load = async () => {
       setLoading(true);
+      setError(null);
       try {
-        const [catsRes, prodsRes] = await Promise.all([
+        const [catsRes, prodsRes, tablesRes] = await Promise.all([
           posAPI.getCategories(restaurantId),
           posAPI.getProducts(restaurantId),
+          tablesAPI.getAll(restaurantId).catch(() => ({ data: { data: [] } })),
         ]);
         if (cancel) return;
-        const cats = catsRes.data?.data || catsRes.data || [];
-        const prods = prodsRes.data?.data || prodsRes.data || [];
-        setCategories(cats);
-        setProducts(prods);
-        try {
-          const tRes = await tablesAPI.getAll(restaurantId);
-          if (!cancel) setTables(tRes.data?.data || tRes.data || []);
-        } catch {
-          /* tables optional */
-        }
+        setCategories(catsRes.data?.data || catsRes.data || []);
+        setProducts(prodsRes.data?.data || prodsRes.data || []);
+        setTables(tablesRes.data?.data || tablesRes.data || []);
       } catch (e) {
         if (!cancel) setError(e?.response?.data?.message || e.message || 'Failed to load menu');
       } finally {
@@ -63,23 +93,13 @@ export default function SinglePagePOS() {
       }
     };
     load();
-    return () => {
-      cancel = true;
-    };
-  }, [restaurantId]);
-
-  // Seed an initial ticket if none exists once tickets are loaded
-  useEffect(() => {
-    if (!loading && tickets.length === 0) {
-      newTicket('dinein');
-    }
-  }, [loading]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => { cancel = true; };
+  }, [restaurantId, activeShift]);
 
   const active = tickets.find((t) => t.id === activeId);
 
   const onSelectProduct = (product) => {
     if (productHasModifiers(product)) {
-      // Make sure ticket isn't in payment mode
       if (active?.paymentOpen) setPaymentMode(false);
       openDraft(product);
     } else {
@@ -87,6 +107,21 @@ export default function SinglePagePOS() {
       addItem(product, [], 1);
     }
   };
+
+  const handleCharged = (result) => {
+    if (result?.orderNumber) {
+      setToast(`Order #${result.orderNumber} created`);
+    } else {
+      setToast('Order created');
+    }
+  };
+
+  // Auto-dismiss the toast
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   // Hotkeys
   useEffect(() => {
@@ -117,6 +152,72 @@ export default function SinglePagePOS() {
     return () => window.removeEventListener('keydown', onKey);
   }, [tickets, active, newTicket, setActive, setPaymentMode, cancelDraft]);
 
+  const handleClockIn = async () => {
+    setClockingIn(true);
+    setClockInError(null);
+    try {
+      const res = await shiftAPI.clockIn(restaurantId, {});
+      setActiveShift(res.data?.data || res.data || {});
+    } catch (e) {
+      setClockInError(e.response?.data?.message || e.message || 'Failed to clock in');
+    } finally {
+      setClockingIn(false);
+    }
+  };
+
+  if (shiftLoading) {
+    return <CenteredMessage theme={theme} text="Checking shift…" />;
+  }
+
+  if (!activeShift) {
+    return (
+      <div
+        style={{
+          height: '100vh',
+          width: '100vw',
+          background: theme.bg,
+          color: theme.text,
+          fontFamily: '"Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            background: theme.surface,
+            border: `1px solid ${theme.border}`,
+            borderRadius: 12,
+            padding: 32,
+            maxWidth: 380,
+            width: '100%',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>No Active Shift</div>
+          <div style={{ fontSize: 14, color: theme.textMuted, marginBottom: 20 }}>
+            You must clock in before using the POS.
+          </div>
+          {clockInError && (
+            <div style={{ color: theme.danger, fontSize: 13, fontWeight: 600, marginBottom: 12 }}>
+              {clockInError}
+            </div>
+          )}
+          <Button
+            theme={theme}
+            variant="primary"
+            size="xl"
+            onClick={handleClockIn}
+            disabled={clockingIn}
+            style={{ width: '100%' }}
+          >
+            {clockingIn ? 'Clocking in…' : 'Clock In'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -144,7 +245,6 @@ export default function SinglePagePOS() {
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Density / cols toolbar */}
           <div
             style={{
               height: 40,
@@ -196,7 +296,7 @@ export default function SinglePagePOS() {
             {error && (
               <span style={{ marginLeft: 'auto', color: theme.danger, fontWeight: 700 }}>{error}</span>
             )}
-            {loading && (
+            {loading && !error && (
               <span style={{ marginLeft: 'auto', color: theme.textMuted }}>Loading menu…</span>
             )}
           </div>
@@ -214,8 +314,56 @@ export default function SinglePagePOS() {
         </div>
 
         <Divider theme={theme} />
-        <TicketRail theme={theme} ticket={active} tables={tables} width={cartWidth} />
+        <TicketRail
+          theme={theme}
+          ticket={active}
+          tables={tables}
+          width={cartWidth}
+          restaurantId={restaurantId}
+          onCharged={handleCharged}
+        />
       </div>
+
+      {toast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: theme.success,
+            color: '#fff',
+            padding: '12px 20px',
+            borderRadius: 10,
+            fontWeight: 700,
+            fontSize: 14,
+            boxShadow: '0 8px 24px rgba(0,0,0,.18)',
+            zIndex: 50,
+          }}
+        >
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CenteredMessage({ theme, text }) {
+  return (
+    <div
+      style={{
+        height: '100vh',
+        width: '100vw',
+        background: theme.bg,
+        color: theme.textMuted,
+        fontFamily: '"Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 14,
+      }}
+    >
+      {text}
     </div>
   );
 }

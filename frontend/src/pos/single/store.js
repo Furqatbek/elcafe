@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { posAPI } from '../../services/api';
 
 const STORAGE_KEY = 'pos-single-page-store-v1';
 
@@ -253,13 +254,114 @@ const usePosStore = create(
           ),
         })),
 
-      chargeActive: () =>
-        set((s) => {
-          // Closes the ticket on charge — for now, just remove from tickets
-          const tickets = s.tickets.filter((t) => t.id !== s.activeId);
+      // Submits the active ticket to the backend, closing it on success.
+      // Returns { success, orderNumber?, error? } so the caller can show
+      // a confirmation. The active ticket is the source of truth for the
+      // payload; persisted state stays untouched on failure so the cashier
+      // can retry.
+      chargeActive: async (restaurantId) => {
+        const state = get();
+        const ticket = state.tickets.find((t) => t.id === state.activeId);
+        if (!ticket) return { success: false, error: 'No active ticket' };
+        if (!ticket.items.length) return { success: false, error: 'Ticket is empty' };
+
+        const subtotal = ticketSubtotal(ticket);
+        const tax = ticketTax(ticket);
+        const total = ticketTotal(ticket);
+        const method = ticket.payment?.method || 'cash';
+        const tendered = ticket.payment?.tendered || 0;
+        const change = method === 'cash' ? Math.max(0, tendered - total) : 0;
+
+        const orderType =
+          ticket.type === 'dinein' ? 'DINE_IN'
+            : ticket.type === 'takeaway' ? 'TAKEAWAY'
+              : 'DELIVERY';
+
+        const customer = ticket.customer || {};
+        const payload = {
+          restaurantId,
+          orderType,
+          orderSource: 'WALK_IN',
+          customerInfo: {
+            name: customer.name || (orderType === 'DINE_IN' ? 'Walk-in' : ''),
+            phone: customer.phone || '',
+            email: null,
+          },
+          items: ticket.items.map((line) => {
+            const sizeMod = (line.modifiers || []).find((m) => m.groupId === 'size');
+            return {
+              productId: line.productId,
+              variantId: sizeMod ? sizeMod.optionId : null,
+              variantName: sizeMod ? sizeMod.name.replace(/^[^:]+:\s*/, '') : null,
+              quantity: line.qty,
+              price: lineUnitPrice(line),
+              modifiers: (line.modifiers || [])
+                .filter((m) => m.groupId !== 'size')
+                .map((m) => ({ name: m.name, price: m.delta || 0 })),
+              notes: line.note || null,
+            };
+          }),
+          orderNotes: ticket.note || null,
+          paymentMethod: method.toUpperCase(),
+          subtotal,
+          tax,
+          deliveryFee: 0,
+          total,
+          amountTendered: method === 'cash' ? tendered : total,
+          changeDue: change,
+        };
+
+        if (orderType === 'DINE_IN') {
+          payload.dineInInfo = {
+            tableNumber: ticket.table != null ? Number(ticket.table) || ticket.table : null,
+            tableIds: ticket.tableId ? [ticket.tableId] : [],
+            guestCount: ticket.guests || 1,
+          };
+        } else if (orderType === 'DELIVERY' && customer.address) {
+          payload.deliveryInfo = {
+            street: customer.address,
+            city: '',
+            state: null,
+            zipCode: null,
+            deliveryInstructions: null,
+          };
+        }
+
+        // Mark the ticket as submitting so the UI can disable the button.
+        set((s) => ({
+          tickets: s.tickets.map((t) =>
+            t.id === ticket.id ? { ...t, submitting: true, submitError: null } : t
+          ),
+        }));
+
+        try {
+          const response = await posAPI.createOrder(payload);
+          const data = response.data?.data || {};
+          const tickets = get().tickets.filter((t) => t.id !== ticket.id);
           const activeId = tickets[0] ? tickets[0].id : null;
-          return { tickets, activeId, modifierDraft: null };
-        }),
+          set({ tickets, activeId, modifierDraft: null });
+          return { success: true, orderNumber: data.orderNumber, orderId: data.id };
+        } catch (error) {
+          const errorMessage =
+            error.response?.data?.message ||
+            error.response?.data?.errors?.reason ||
+            error.message ||
+            'Failed to create order';
+          set((s) => ({
+            tickets: s.tickets.map((t) =>
+              t.id === ticket.id ? { ...t, submitting: false, submitError: errorMessage } : t
+            ),
+          }));
+          return { success: false, error: errorMessage };
+        }
+      },
+
+      clearSubmitError: () =>
+        set((s) => ({
+          tickets: s.tickets.map((t) =>
+            t.id === s.activeId ? { ...t, submitError: null } : t
+          ),
+        })),
 
       setDensity: (density) => set({ density }),
       setGridCols: (n) => set({ gridCols: Math.max(3, Math.min(8, n)) }),
