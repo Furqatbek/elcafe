@@ -669,7 +669,9 @@
       "charge": "Charge {{amount}}",
       "release": "Release table",
       "markAvailable": "Mark available",
-      "moveOrder": "Move order"
+      "moveOrder": "Move order",
+      "addItem": "Add item",
+      "removeItem": "Remove"
     },
     "confirm": {
       "releaseTitle": "Release table?",
@@ -677,7 +679,9 @@
       "cancelTitle": "Cancel this order?",
       "cancelMsg": "The order will be voided and the table freed. This cannot be undone.",
       "changeTableTitle": "Move order to another table?",
-      "pickTable": "Pick a free table…"
+      "pickTable": "Pick a free table…",
+      "removeItemTitle": "Remove item?",
+      "removeItemMsg": "This removes “{{name}}” from the order."
     },
     "toast": {
       "paymentProcessed": "Payment processed",
@@ -686,8 +690,19 @@
       "orderMoved": "Order moved to T{{n}}",
       "tableAvailable": "Table available",
       "noFreeTables": "No free tables to move to",
-      "pickFirst": "Pick a table first"
+      "pickFirst": "Pick a table first",
+      "itemRemoved": "Item removed",
+      "itemAdded": "{{name}} added"
     },
+    "picker": {
+      "searchPlaceholder": "Search products…",
+      "noMatch": "No products match “{{q}}”",
+      "noProducts": "No products available"
+    },
+    "itemDecrease": "Decrease",
+    "itemIncrease": "Increase",
+    "itemRemove": "Remove",
+    "itemFallback": "this item",
     "error": {
       "kind": {
         "network": "Network",
@@ -708,7 +723,10 @@
       "release": "Release failed.",
       "cancel": "Cancel failed.",
       "move": "Move failed.",
-      "markAvailable": "Update failed."
+      "markAvailable": "Update failed.",
+      "updateQty": "Could not update quantity.",
+      "removeItem": "Could not remove the item.",
+      "addItem": "Could not add the item."
     }
   },
   "tables": {

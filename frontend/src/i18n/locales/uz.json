@@ -654,7 +654,9 @@
       "charge": "{{amount}} to'lash",
       "release": "Stolni bo'shatish",
       "markAvailable": "Bo'sh deb belgilash",
-      "moveOrder": "Buyurtmani ko'chirish"
+      "moveOrder": "Buyurtmani ko'chirish",
+      "addItem": "Pozitsiya qo'shish",
+      "removeItem": "O'chirish"
     },
     "confirm": {
       "releaseTitle": "Stolni bo'shatasizmi?",
@@ -662,7 +664,9 @@
       "cancelTitle": "Buyurtmani bekor qilasizmi?",
       "cancelMsg": "Buyurtma bekor qilinadi va stol bo'shaydi. Bu amalni qaytarib bo'lmaydi.",
       "changeTableTitle": "Buyurtmani boshqa stolga ko'chirasizmi?",
-      "pickTable": "Bo'sh stol tanlang…"
+      "pickTable": "Bo'sh stol tanlang…",
+      "removeItemTitle": "Pozitsiyani o'chirasizmi?",
+      "removeItemMsg": "«{{name}}» buyurtmadan o'chiriladi."
     },
     "toast": {
       "paymentProcessed": "To'lov amalga oshirildi",
@@ -671,8 +675,19 @@
       "orderMoved": "Buyurtma {{n}}-stolga ko'chirildi",
       "tableAvailable": "Stol bo'sh",
       "noFreeTables": "Bo'sh stollar yo'q",
-      "pickFirst": "Avval stolni tanlang"
+      "pickFirst": "Avval stolni tanlang",
+      "itemRemoved": "Pozitsiya o'chirildi",
+      "itemAdded": "{{name}} qo'shildi"
     },
+    "picker": {
+      "searchPlaceholder": "Mahsulotlarni qidirish…",
+      "noMatch": "«{{q}}» bo'yicha mahsulotlar topilmadi",
+      "noProducts": "Mahsulotlar yo'q"
+    },
+    "itemDecrease": "Kamaytirish",
+    "itemIncrease": "Oshirish",
+    "itemRemove": "O'chirish",
+    "itemFallback": "bu pozitsiyani",
     "error": {
       "kind": {
         "network": "Tarmoq",
@@ -693,7 +708,10 @@
       "release": "Stolni bo'shatib bo'lmadi.",
       "cancel": "Buyurtmani bekor qilib bo'lmadi.",
       "move": "Ko'chirib bo'lmadi.",
-      "markAvailable": "Yangilab bo'lmadi."
+      "markAvailable": "Yangilab bo'lmadi.",
+      "updateQty": "Miqdorni o'zgartirib bo'lmadi.",
+      "removeItem": "Pozitsiyani o'chirib bo'lmadi.",
+      "addItem": "Pozitsiyani qo'shib bo'lmadi."
     }
   },
   "tables": {

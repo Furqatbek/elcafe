@@ -6,7 +6,7 @@ import {
   useRef,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { orderAPI, posAPI, tablesAPI, restaurantAPI } from '../services/api';
+import { orderAPI, posAPI, tablesAPI, restaurantAPI, menuAPI } from '../services/api';
 import { useWebSocketNotifications } from '../hooks/useWebSocketNotifications';
 import { useToast } from '../hooks/useToast';
 import { useCurrentRestaurantId } from '../utils/restaurant';
@@ -17,6 +17,8 @@ import {
   ArrowRightLeft,
   AlertTriangle,
   Loader2,
+  Plus,
+  Minus,
   Trash2,
   CreditCard,
   Banknote,
@@ -984,14 +986,154 @@ function Row({ label, value, muted, bold, large }) {
 /* TableDetailDrawer                                                          */
 /* -------------------------------------------------------------------------- */
 
+function ProductPicker({ products, loading, busyAction, onPick, onClose, t }) {
+  const [query, setQuery] = useState('');
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter((p) => {
+      const hay = `${p.name || ''} ${p.categoryName || ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [products, query]);
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: SURFACE,
+        zIndex: 5,
+        display: 'flex',
+        flexDirection: 'column',
+        animation: 'orders-fade-in 160ms ease',
+      }}
+    >
+      <header
+        style={{
+          padding: 12,
+          borderBottom: `1px solid ${BORDER}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+        }}
+      >
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search
+            size={14}
+            style={{
+              position: 'absolute',
+              left: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: MUTED,
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('orders.picker.searchPlaceholder', 'Search products…')}
+            style={{
+              width: '100%',
+              height: 36,
+              paddingLeft: 32,
+              paddingRight: 10,
+              borderRadius: 8,
+              border: `1px solid ${BORDER}`,
+              background: PAGE_BG,
+              color: TEXT,
+              fontSize: 14,
+              outline: 'none',
+            }}
+          />
+        </div>
+        <button
+          onClick={onClose}
+          aria-label={t('common.close', 'Close')}
+          style={{ ...iconBtnStyle(), width: 36, height: 36 }}
+        >
+          <X size={14} />
+        </button>
+      </header>
+
+      <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: MUTED }}>
+            <Loader2 size={18} className="orders-spin" />
+            <div style={{ marginTop: 6, fontSize: 12 }}>{t('orders.loading', 'Loading…')}</div>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: MUTED, fontSize: 13 }}>
+            {query
+              ? t('orders.picker.noMatch', 'No products match “{{q}}”', { q: query })
+              : t('orders.picker.noProducts', 'No products available')}
+          </div>
+        ) : (
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {filtered.map((p) => {
+              const busy = busyAction === `ADD_ITEM_${p.id}`;
+              return (
+                <li key={p.id}>
+                  <button
+                    onClick={() => onPick(p)}
+                    disabled={busy}
+                    style={{
+                      display: 'flex',
+                      width: '100%',
+                      gap: 10,
+                      alignItems: 'center',
+                      padding: '10px 12px',
+                      background: PAGE_BG,
+                      border: `1px solid ${BORDER}`,
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      opacity: busy ? 0.6 : 1,
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.3 }}>
+                        {p.name}
+                      </div>
+                      {p.categoryName && (
+                        <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
+                          {p.categoryName}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, ...MONEY, whiteSpace: 'nowrap' }}>
+                      {fmtMoney(p.price || 0)}
+                    </span>
+                    {busy && <Loader2 size={14} className="orders-spin" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function TableDetailDrawer({
   vm,
   open,
   onClose,
   onAction,
   busyAction,
+  busyItemId,
   paymentMode,
   setPaymentMode,
+  pickerOpen,
+  setPickerOpen,
+  products,
+  productsLoading,
   flashItemId,
   t,
 }) {
@@ -1129,12 +1271,19 @@ function TableDetailDrawer({
               t={t}
             />
           ) : (
-            <DrawerBody vm={vm} flashItemId={flashItemId} t={t} />
+            <DrawerBody
+              vm={vm}
+              flashItemId={flashItemId}
+              busyItemId={busyItemId}
+              onItemAction={onAction}
+              onOpenAddItem={() => setPickerOpen(true)}
+              t={t}
+            />
           )}
         </div>
 
         {/* Action bar */}
-        {!paymentMode && (
+        {!paymentMode && !pickerOpen && (
           <DrawerActionBar
             vm={vm}
             onAction={onAction}
@@ -1143,12 +1292,24 @@ function TableDetailDrawer({
             t={t}
           />
         )}
+
+        {/* Product picker overlay (in-drawer, slides over body) */}
+        {pickerOpen && (
+          <ProductPicker
+            products={products}
+            loading={productsLoading}
+            busyAction={busyAction}
+            onPick={(product) => onAction('ADD_ITEM', { product })}
+            onClose={() => setPickerOpen(false)}
+            t={t}
+          />
+        )}
       </aside>
     </>
   );
 }
 
-function DrawerBody({ vm, flashItemId, t }) {
+function DrawerBody({ vm, flashItemId, busyItemId, onItemAction, onOpenAddItem, t }) {
   if (vm.status === 'AVAILABLE') {
     return (
       <div style={emptyBodyStyle()}>
@@ -1220,47 +1381,113 @@ function DrawerBody({ vm, flashItemId, t }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {vm.items.map((it) => {
             const flash = flashItemId === it.id;
+            const busy = busyItemId === it.id;
             return (
               <div
                 key={it.id}
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '34px 1fr auto',
-                  gap: 8,
-                  alignItems: 'flex-start',
                   padding: 10,
                   background: flash ? '#fef9c3' : PAGE_BG,
                   border: `1px solid ${flash ? '#facc15' : BORDER}`,
                   borderRadius: 8,
                   transition: 'background 400ms ease, border-color 400ms ease',
+                  opacity: busy ? 0.65 : 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
                 }}
               >
-                <span style={{ fontSize: 13, fontWeight: 800, color: TEXT, ...MONEY }}>
-                  {it.qty}×
-                </span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.3 }}>
-                    {it.name}
-                    {it.variant ? <span style={{ color: MUTED }}> · {it.variant}</span> : null}
-                  </div>
-                  {it.note && (
-                    <div style={{ fontSize: 11, color: '#9a3412', fontStyle: 'italic', marginTop: 2 }}>
-                      {it.note}
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, lineHeight: 1.3 }}>
+                      {it.name}
+                      {it.variant ? <span style={{ color: MUTED }}> · {it.variant}</span> : null}
                     </div>
-                  )}
+                    {it.note && (
+                      <div style={{ fontSize: 11, color: '#9a3412', fontStyle: 'italic', marginTop: 2 }}>
+                        {it.note}
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, ...MONEY, whiteSpace: 'nowrap' }}>
+                    {fmtMoney(it.lineTotal)}
+                  </span>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: TEXT, ...MONEY }}>
-                  {fmtMoney(it.lineTotal)}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <button
+                    onClick={() => onItemAction('UPDATE_QTY', { itemId: it.id, qty: Math.max(0, (it.qty || 1) - 1) })}
+                    disabled={busy}
+                    title={t('orders.itemDecrease', 'Decrease')}
+                    style={iconBtnStyle()}
+                  >
+                    <Minus size={13} />
+                  </button>
+                  <span
+                    style={{
+                      minWidth: 36,
+                      textAlign: 'center',
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: TEXT,
+                      ...MONEY,
+                    }}
+                  >
+                    {it.qty}
+                  </span>
+                  <button
+                    onClick={() => onItemAction('UPDATE_QTY', { itemId: it.id, qty: (it.qty || 1) + 1 })}
+                    disabled={busy}
+                    title={t('orders.itemIncrease', 'Increase')}
+                    style={iconBtnStyle()}
+                  >
+                    <Plus size={13} />
+                  </button>
+                  <span style={{ flex: 1 }} />
+                  <button
+                    onClick={() => onItemAction('REMOVE_ITEM', { itemId: it.id })}
+                    disabled={busy}
+                    title={t('orders.itemRemove', 'Remove')}
+                    style={{ ...iconBtnStyle(), color: '#b91c1c' }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
             );
           })}
+          <button
+            onClick={onOpenAddItem}
+            style={{
+              ...btnStyle('outline'),
+              justifyContent: 'flex-start',
+              fontWeight: 600,
+              borderStyle: 'dashed',
+              color: MUTED,
+            }}
+          >
+            <Plus size={14} />
+            {t('orders.action.addItem', 'Add item')}
+          </button>
         </div>
       ) : (
-        <div style={{ ...emptyBodyStyle(), padding: 12 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: MUTED }}>
-            {t('orders.noItems', 'No items yet')}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ ...emptyBodyStyle(), padding: 12, minHeight: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: MUTED }}>
+              {t('orders.noItems', 'No items yet')}
+            </div>
           </div>
+          <button
+            onClick={onOpenAddItem}
+            style={{
+              ...btnStyle('outline'),
+              justifyContent: 'center',
+              fontWeight: 600,
+              borderStyle: 'dashed',
+            }}
+          >
+            <Plus size={14} />
+            {t('orders.action.addItem', 'Add item')}
+          </button>
         </div>
       )}
 
@@ -1419,6 +1646,22 @@ function DoorIcon() {
 /* Button style helper                                                        */
 /* -------------------------------------------------------------------------- */
 
+function iconBtnStyle() {
+  return {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    border: `1px solid ${BORDER}`,
+    background: SURFACE,
+    color: TEXT,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'background 120ms ease',
+  };
+}
+
 function btnStyle(variant) {
   const base = {
     height: 40,
@@ -1471,6 +1714,10 @@ const ORDERS_GLOBAL_STYLES = `
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+@keyframes orders-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .orders-tile-pulse {
   animation: orders-pulse-ring 1.6s infinite;
 }
@@ -1501,12 +1748,18 @@ export default function Orders() {
 
   const [selectedId, setSelectedId] = useState(null);
   const [paymentMode, setPaymentMode] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [busyAction, setBusyAction] = useState(null);
+  const [busyItemId, setBusyItemId] = useState(null);
   const [flashItemId, _setFlashItemId] = useState(null);
 
   const [confirm, setConfirm] = useState(null); // { title, message, danger, onConfirm, busy }
   const [errorState, setErrorState] = useState(null); // { error, retry }
   const [retrying, setRetrying] = useState(false);
+
+  // Lazy product cache for the in-drawer Add item picker
+  const [productsByRestaurant, setProductsByRestaurant] = useState({});
+  const [productsLoading, setProductsLoading] = useState(false);
 
   const tablesRef = useRef(tables);
   const ordersRef = useRef(ordersByTable);
@@ -1581,7 +1834,7 @@ export default function Orders() {
 
   /* WebSocket + polling fallback --------------------------------------- */
 
-  const anyModalOpen = paymentMode || !!confirm || !!errorState;
+  const anyModalOpen = paymentMode || pickerOpen || !!confirm || !!errorState;
 
   useWebSocketNotifications({
     restaurantId: restaurantId || null,
@@ -1703,6 +1956,89 @@ export default function Orders() {
       return next;
     });
   };
+
+  const recomputeTotals = (order) => {
+    const subtotal = (order.items || []).reduce(
+      (s, it) => s + (it.totalPrice ?? (it.unitPrice || 0) * (it.quantity || 0)),
+      0
+    );
+    const tax = subtotal * TAX_RATE;
+    return { ...order, subtotal, tax, total: subtotal + tax };
+  };
+  const patchOrderItem = (orderId, itemId, patch) => {
+    setOrdersByTable((prev) => {
+      const next = {};
+      for (const k of Object.keys(prev)) {
+        next[k] = prev[k].map((o) => {
+          if (o.id !== orderId) return o;
+          const items = (o.items || []).map((it) =>
+            it.id === itemId ? { ...it, ...patch } : it
+          );
+          return recomputeTotals({ ...o, items });
+        });
+      }
+      return next;
+    });
+  };
+  const patchOrderRemoveItem = (orderId, itemId) => {
+    setOrdersByTable((prev) => {
+      const next = {};
+      for (const k of Object.keys(prev)) {
+        next[k] = prev[k].map((o) => {
+          if (o.id !== orderId) return o;
+          const items = (o.items || []).filter((it) => it.id !== itemId);
+          return recomputeTotals({ ...o, items });
+        });
+      }
+      return next;
+    });
+  };
+  const patchOrderAddItem = (orderId, product) => {
+    setOrdersByTable((prev) => {
+      const next = {};
+      for (const k of Object.keys(prev)) {
+        next[k] = prev[k].map((o) => {
+          if (o.id !== orderId) return o;
+          const tempId = `tmp_${Date.now()}_${product.id}`;
+          const newItem = {
+            id: tempId,
+            productName: product.name,
+            quantity: 1,
+            unitPrice: product.price || 0,
+            totalPrice: product.price || 0,
+          };
+          const items = [...(o.items || []), newItem];
+          return recomputeTotals({ ...o, items });
+        });
+      }
+      return next;
+    });
+  };
+
+  // Lazy product loader for the in-drawer picker. Cached per restaurant so
+  // repeated openings don't re-hit the API. Triggered on picker open.
+  const ensureProductsLoaded = useCallback(async () => {
+    if (!restaurantId) return;
+    if (productsByRestaurant[restaurantId]) return;
+    setProductsLoading(true);
+    try {
+      const res = await menuAPI.getProductsByRestaurant(restaurantId);
+      const list = res.data?.data || res.data || [];
+      setProductsByRestaurant((prev) => ({ ...prev, [restaurantId]: list }));
+    } catch (e) {
+      // Silent — the empty list and a "No products available" message in
+      // the picker is informative enough; mutation paths still surface
+      // the ErrorModal via callApi.
+      // eslint-disable-next-line no-console
+      console.warn('[orders] menu load failed', e);
+    } finally {
+      setProductsLoading(false);
+    }
+  }, [restaurantId, productsByRestaurant]);
+
+  useEffect(() => {
+    if (pickerOpen) ensureProductsLoaded();
+  }, [pickerOpen, ensureProductsLoaded]);
 
   // Action dispatcher used by the drawer
   const doAction = (action, payload) => {
@@ -1884,6 +2220,95 @@ export default function Orders() {
         break;
       }
 
+      case 'UPDATE_QTY': {
+        const orderId = selected.orderId;
+        const { itemId, qty } = payload || {};
+        if (!orderId || !itemId) return;
+        // 0 → delegate to remove (with confirmation)
+        if (qty <= 0) {
+          doAction('REMOVE_ITEM', { itemId });
+          return;
+        }
+        const prevOrder = (ordersRef.current[selected.id] || []).find((o) => o.id === orderId);
+        const prevItem = prevOrder?.items?.find((i) => i.id === itemId);
+        const prevQty = prevItem?.quantity ?? 1;
+        const unitPrice = prevItem?.unitPrice ?? 0;
+        setBusyItemId(itemId);
+        runOp(`UPDATE_QTY_${itemId}`, {
+          op: 'updateItemQuantity',
+          fn: () => posAPI.updateItemQuantity(orderId, itemId, qty),
+          fallbackMessages: { server: t('orders.errorMsg.updateQty', 'Update failed.') },
+          optimistic: () =>
+            patchOrderItem(orderId, itemId, { quantity: qty, totalPrice: unitPrice * qty }),
+          revert: () =>
+            patchOrderItem(orderId, itemId, { quantity: prevQty, totalPrice: unitPrice * prevQty }),
+          onSuccess: () => setBusyItemId(null),
+          onFailure: () => setBusyItemId(null),
+        });
+        break;
+      }
+
+      case 'REMOVE_ITEM': {
+        const orderId = selected.orderId;
+        const { itemId } = payload || {};
+        if (!orderId || !itemId) return;
+        const prevOrder = (ordersRef.current[selected.id] || []).find((o) => o.id === orderId);
+        const prevItem = prevOrder?.items?.find((i) => i.id === itemId);
+        if (!prevItem) return;
+        setConfirm({
+          title: t('orders.confirm.removeItemTitle', 'Remove item?'),
+          message: t('orders.confirm.removeItemMsg', 'This removes “{{name}}” from the order.', {
+            name: prevItem.productName || prevItem.name || t('orders.itemFallback', 'this item'),
+          }),
+          danger: true,
+          confirmLabel: t('orders.action.removeItem', 'Remove'),
+          onConfirm: async () => {
+            setConfirm((c) => (c ? { ...c, busy: true } : c));
+            setBusyItemId(itemId);
+            await runOp(`REMOVE_ITEM_${itemId}`, {
+              op: 'removeItemFromOrder',
+              fn: () => posAPI.removeItemFromOrder(orderId, itemId),
+              successToast: t('orders.toast.itemRemoved', 'Item removed'),
+              fallbackMessages: { server: t('orders.errorMsg.removeItem', 'Remove failed.') },
+              optimistic: () => patchOrderRemoveItem(orderId, itemId),
+              revert: () => loadAll('background'),
+              onSuccess: () => {
+                setConfirm(null);
+                setBusyItemId(null);
+              },
+              onFailure: () => {
+                setConfirm(null);
+                setBusyItemId(null);
+              },
+            });
+          },
+        });
+        break;
+      }
+
+      case 'ADD_ITEM': {
+        const orderId = selected.orderId;
+        const { product } = payload || {};
+        if (!orderId || !product) return;
+        runOp(`ADD_ITEM_${product.id}`, {
+          op: 'addItemToOrder',
+          fn: () => posAPI.addItemToOrder(orderId, {
+            productId: product.id,
+            quantity: 1,
+            specialInstructions: '',
+          }),
+          successToast: t('orders.toast.itemAdded', '{{name}} added', { name: product.name }),
+          fallbackMessages: { server: t('orders.errorMsg.addItem', 'Could not add item.') },
+          optimistic: () => patchOrderAddItem(orderId, product),
+          revert: () => loadAll('background'),
+          onSuccess: () => {
+            // Stay in the picker so the cashier can add more in one go.
+            // Closing it is one tap away.
+          },
+        });
+        break;
+      }
+
       case 'MARK_AVAILABLE': {
         runOp('MARK_AVAILABLE', {
           op: 'updateTableStatus',
@@ -2057,11 +2482,17 @@ export default function Orders() {
           onClose={() => {
             setSelectedId(null);
             setPaymentMode(false);
+            setPickerOpen(false);
           }}
           onAction={doAction}
           busyAction={busyAction}
+          busyItemId={busyItemId}
           paymentMode={paymentMode}
           setPaymentMode={setPaymentMode}
+          pickerOpen={pickerOpen}
+          setPickerOpen={setPickerOpen}
+          products={(restaurantId && productsByRestaurant[restaurantId]) || []}
+          productsLoading={productsLoading}
           flashItemId={flashItemId}
           t={t}
         />
