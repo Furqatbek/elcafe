@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { financialAPI, inventoryAPI, restaurantAPI, supplierAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { getCurrentRestaurantId } from '../utils/restaurant';
 import { Plus, Trash2, Check, Package, Link as LinkIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -24,7 +25,7 @@ const PurchaseOrders = () => {
   const [filterStatus, setFilterStatus] = useState('all');
 
   const [formData, setFormData] = useState({
-    restaurantId: '',
+    restaurantId: getCurrentRestaurantId() || '',
     supplierId: '',
     supplierName: '',
     supplierContact: '',

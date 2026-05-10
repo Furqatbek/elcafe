@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { menuCollectionAPI, restaurantAPI, menuAPI } from '../services/api';
 import { formatDate } from '../utils/dateUtils';
+import { getCurrentRestaurantId } from '../utils/restaurant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -50,7 +51,7 @@ export default function MenuCollections() {
 
   // Form state for creating collections
   const [formData, setFormData] = useState({
-    restaurantId: '',
+    restaurantId: getCurrentRestaurantId() || '',
     name: '',
     description: '',
     imageUrl: '',
@@ -173,7 +174,7 @@ export default function MenuCollections() {
 
   const resetForm = () => {
     setFormData({
-      restaurantId: '',
+      restaurantId: getCurrentRestaurantId() || '',
       name: '',
       description: '',
       imageUrl: '',

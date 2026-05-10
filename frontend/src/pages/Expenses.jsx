@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { getCurrentRestaurantId } from '../utils/restaurant';
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2, Check, Link as LinkIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -24,7 +25,7 @@ const Expenses = () => {
   });
 
   const [formData, setFormData] = useState({
-    restaurantId: 1,
+    restaurantId: getCurrentRestaurantId() || '',
     expenseDate: new Date().toISOString().split('T')[0],
     category: 'SUPPLIES',
     description: '',
@@ -242,7 +243,10 @@ const Expenses = () => {
         <h1 className="text-2xl font-bold">{t('finance.expenses.title')}</h1>
         <button
           onClick={() => {
-            setFormData(prev => ({ ...prev, restaurantId: selectedRestaurant || 1 }));
+            setFormData(prev => ({
+              ...prev,
+              restaurantId: selectedRestaurant || getCurrentRestaurantId() || prev.restaurantId,
+            }));
             setShowModal(true);
           }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

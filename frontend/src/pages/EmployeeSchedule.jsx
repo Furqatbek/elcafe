@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { workingHoursAPI, restaurantAPI, operatorAPI } from '../services/api';
+import { getCurrentRestaurantId } from '../utils/restaurant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -50,7 +51,7 @@ export default function EmployeeSchedule() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [formData, setFormData] = useState({
-    restaurantId: '',
+    restaurantId: getCurrentRestaurantId() || '',
     userId: '',
     dayOfWeek: 'MONDAY',
     startTime: '09:00',
@@ -209,7 +210,7 @@ export default function EmployeeSchedule() {
 
   const resetForm = () => {
     setFormData({
-      restaurantId: '',
+      restaurantId: getCurrentRestaurantId() || '',
       userId: '',
       dayOfWeek: 'MONDAY',
       startTime: '09:00',

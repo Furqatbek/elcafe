@@ -41,6 +41,7 @@ import FinancialReports from './pages/FinancialReports';
 import PrinterSettings from './pages/PrinterSettings';
 import ReceiptTemplateSettings from './pages/ReceiptTemplateSettings';
 import { receiptTemplateAPI } from './services/api';
+import { resolveCurrentRestaurantId } from './utils/restaurant';
 import KitchenStations from './pages/KitchenStations';
 import PricingDashboard from './pages/PricingDashboard';
 import FinancialAlerts from './pages/FinancialAlerts';
@@ -100,23 +101,21 @@ function InventoryWrapper({ children }) {
 }
 
 function App() {
-  // Set default restaurantId on app load if not already set
+  // Load receipt template once on startup so PrintReceipt can use it.
+  // The restaurant id is resolved via the auth user → localStorage →
+  // /restaurants/active fallback chain; if none of them yield an id we
+  // skip the call rather than guessing restaurant 1.
   useEffect(() => {
-    if (!localStorage.getItem('selectedRestaurantId')) {
-      localStorage.setItem('selectedRestaurantId', '1');
-    }
-  }, []);
-
-  // Load receipt template once on startup so PrintReceipt can use it
-  useEffect(() => {
-    const restaurantId = Number(localStorage.getItem('selectedRestaurantId')) || 1;
-    receiptTemplateAPI.getTemplate(restaurantId)
-      .then(res => {
-        if (res.data?.data) {
-          localStorage.setItem('receiptTemplate', JSON.stringify(res.data.data));
-        }
-      })
-      .catch(() => {}); // Silently ignore — PrintReceipt falls back to built-in defaults
+    resolveCurrentRestaurantId().then((restaurantId) => {
+      if (!restaurantId) return;
+      receiptTemplateAPI.getTemplate(restaurantId)
+        .then(res => {
+          if (res.data?.data) {
+            localStorage.setItem('receiptTemplate', JSON.stringify(res.data.data));
+          }
+        })
+        .catch(() => {}); // Silently ignore — PrintReceipt falls back to built-in defaults
+    });
   }, []);
 
   return (

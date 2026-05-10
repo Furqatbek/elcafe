@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { tablesAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { getCurrentRestaurantId } from '../utils/restaurant';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Users, Grid, GitMerge, GitBranch } from 'lucide-react';
 
@@ -19,7 +20,7 @@ const Tables = () => {
   const [selectedTables, setSelectedTables] = useState([]);
 
   const [formData, setFormData] = useState({
-    restaurantId: '',
+    restaurantId: getCurrentRestaurantId() || '',
     tableNumber: '',
     tableName: '',
     capacity: 4,
