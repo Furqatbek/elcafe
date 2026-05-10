@@ -62,15 +62,15 @@ export default function Header({ theme, themeKey, cashierName }) {
             {t('pos.single.noActiveTickets')}
           </span>
         )}
-        {tickets.map((t) => {
-          const isActive = t.id === activeId;
-          const chip = TYPE_CHIP[t.type] || TYPE_CHIP.dinein;
-          const chipColors = themeOpt[t.type];
-          const itemCount = t.items.reduce((s, it) => s + it.qty, 0);
+        {tickets.map((tk) => {
+          const isActive = tk.id === activeId;
+          const chip = TYPE_CHIP[tk.type] || TYPE_CHIP.dinein;
+          const chipColors = themeOpt[tk.type];
+          const itemCount = tk.items.reduce((s, it) => s + it.qty, 0);
           return (
             <div
-              key={t.id}
-              onClick={() => setActive(t.id)}
+              key={tk.id}
+              onClick={() => setActive(tk.id)}
               role="button"
               style={{
                 height: 44,
@@ -103,7 +103,7 @@ export default function Header({ theme, themeKey, cashierName }) {
                 {chip.code}
               </span>
               <span style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {t.label}
+                {tk.label}
               </span>
               {itemCount > 0 && (
                 <span
@@ -124,7 +124,7 @@ export default function Header({ theme, themeKey, cashierName }) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  closeTicket(t.id);
+                  closeTicket(tk.id);
                 }}
                 style={{
                   background: 'transparent',
