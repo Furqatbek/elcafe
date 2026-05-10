@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { orderAPI, restaurantAPI, menuAPI, tablesAPI, posAPI } from '../services/api';
 import { useOrderNotifications, requestNotificationPermission } from '../hooks/useOrderNotifications';
@@ -78,7 +77,6 @@ const orderStatusColors = {
 
 export default function Orders() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   // Core state
   const [restaurants, setRestaurants] = useState([]);
@@ -407,10 +405,10 @@ export default function Orders() {
       return;
     }
 
-    // Navigate to POS with table pre-selected
+    // Open POS in a new tab so it gets the full screen without admin sidebars.
     localStorage.setItem('selectedRestaurantId', selectedRestaurantId);
     localStorage.setItem('preselectedTableId', selectedTable.id.toString());
-    navigate('/pos?screen=tables');
+    window.open('/admin/pos', '_blank', 'noopener,noreferrer');
   };
 
   // Open payment modal

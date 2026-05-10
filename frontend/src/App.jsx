@@ -127,6 +127,22 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/pos/customer-display" element={<CustomerDisplayScreen />} />
         <Route path="/pos/order-status" element={<OrderStatusBoardScreen />} />
+        <Route
+          path="/pos"
+          element={
+            <PrivateRoute>
+              <SinglePagePOS />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/pos/legacy"
+          element={
+            <PrivateRoute>
+              <POSApp />
+            </PrivateRoute>
+          }
+        />
         <Route path="/review" element={<ReviewPage />} />
         <Route path="/shift/clock" element={<MobileClockIn />} />
         <Route
@@ -205,8 +221,6 @@ function App() {
           <Route path="settings/receipt-template" element={<AdminRoute><ReceiptTemplateSettings /></AdminRoute>} />
           <Route path="settings/kitchen-stations" element={<AdminRoute><KitchenStations /></AdminRoute>} />
           <Route path="profile" element={<Profile />} />
-          <Route path="pos" element={<SinglePagePOS />} />
-          <Route path="pos/legacy" element={<POSApp />} />
           <Route path="*" element={<Navigate to="/orders" replace />} />
         </Route>
       </Routes>
