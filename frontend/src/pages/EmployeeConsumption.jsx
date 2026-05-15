@@ -21,7 +21,14 @@ import { Plus, UtensilsCrossed } from 'lucide-react';
 const consumptionAPI = {
   record: (restaurantId, data) => api.post(`/restaurants/${restaurantId}/employee-consumptions`, data),
   getByDate: (restaurantId, from, to) => api.get(`/restaurants/${restaurantId}/employee-consumptions`, { params: { from, to } }),
+  previewAllowance: (restaurantId, params) =>
+    api.get(`/restaurants/${restaurantId}/consumption-allowances/preview`, { params }),
 };
+
+function fmtMoney(n) {
+  const v = Math.round(Number(n) || 0);
+  return v.toLocaleString('en-US').replace(/,/g, ' ');
+}
 
 export default function EmployeeConsumption() {
   const { t } = useTranslation();
@@ -36,6 +43,38 @@ export default function EmployeeConsumption() {
     to: new Date().toISOString().split('T')[0],
   });
   const [form, setForm] = useState({ productId: '', quantity: '1', employeeKey: '', notes: '' });
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Fetch the allowance preview whenever the dialog is open and the
+  // form has enough data to evaluate. Debounce-ish via a short cleanup.
+  useEffect(() => {
+    if (!dialogOpen || !selectedRestaurant || !form.productId || !form.employeeKey) {
+      setPreview(null);
+      return undefined;
+    }
+    const [type, id] = form.employeeKey.split(':');
+    const quantity = parseInt(form.quantity || '1', 10) || 1;
+    let cancelled = false;
+    setPreviewLoading(true);
+    const handle = setTimeout(async () => {
+      try {
+        const params = {
+          productId: parseInt(form.productId, 10),
+          quantity,
+        };
+        if (type === 'user') params.employeeId = parseInt(id, 10);
+        if (type === 'waiter') params.waiterId = parseInt(id, 10);
+        const res = await consumptionAPI.previewAllowance(selectedRestaurant, params);
+        if (!cancelled) setPreview(res.data?.data || null);
+      } catch (e) {
+        if (!cancelled) setPreview(null);
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    }, 200);
+    return () => { cancelled = true; clearTimeout(handle); };
+  }, [dialogOpen, selectedRestaurant, form.productId, form.quantity, form.employeeKey]);
 
   useEffect(() => {
     restaurantAPI.getAll({ page: 0, size: 100 }).then(res => {
@@ -188,13 +227,84 @@ export default function EmployeeConsumption() {
                 <Input value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder={t('consumption.optional', 'Optional')} />
               </div>
             </div>
+
+            <AllowancePreview preview={preview} loading={previewLoading} t={t} />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={handleRecord} disabled={!form.employeeKey || !form.productId}>{t('consumption.record', 'Record')}</Button>
+            <Button onClick={handleRecord} disabled={!form.employeeKey || !form.productId}>
+              {preview?.overLimit
+                ? t('consumption.recordAndCharge', 'Record · charge {{amount}}', {
+                    amount: fmtMoney(preview.chargedAmount),
+                  })
+                : t('consumption.record', 'Record')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function AllowancePreview({ preview, loading, t }) {
+  if (loading) {
+    return (
+      <div className="text-xs text-muted-foreground italic">
+        {t('consumption.allowance.checking', 'Checking allowance…')}
+      </div>
+    );
+  }
+  if (!preview) return null;
+  if (!preview.hasAllowance) {
+    return (
+      <div className="text-xs text-muted-foreground">
+        {t('consumption.allowance.none', 'No allowance configured — this consumption is on the house.')}
+      </div>
+    );
+  }
+
+  const remainCount = preview.remainingCount;
+  const remainAmount = preview.remainingAmount;
+  const periodLabel = t(`consumption.period.${preview.period}`, preview.period);
+
+  if (preview.overLimit) {
+    return (
+      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm">
+        <div className="font-semibold text-red-800">
+          {t('consumption.allowance.overLimit', 'Over allowance — {{amount}} will be charged to the employee', {
+            amount: fmtMoney(preview.chargedAmount),
+          })}
+        </div>
+        <div className="mt-1 text-xs text-red-700">
+          {t('consumption.allowance.willDeduct', 'Will be deducted from the next salary as an advance.')}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
+      <div className="font-medium text-emerald-800">
+        {t('consumption.allowance.withinLimit', 'Within {{period}} allowance', { period: periodLabel })}
+      </div>
+      <div className="mt-1 grid grid-cols-2 gap-2 text-xs text-emerald-700">
+        {preview.limitCount != null && (
+          <div>
+            {t('consumption.allowance.itemsLeft', '{{remain}} of {{limit}} items left', {
+              remain: remainCount ?? 0,
+              limit: preview.limitCount,
+            })}
+          </div>
+        )}
+        {preview.limitAmount != null && (
+          <div>
+            {t('consumption.allowance.amountLeft', '{{remain}} of {{limit}} left', {
+              remain: fmtMoney(remainAmount ?? 0),
+              limit: fmtMoney(preview.limitAmount),
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -148,6 +148,7 @@ export default function Layout() {
         { label: t('nav.sub.shiftDashboard', 'Shift Dashboard'), icon: Clock, path: '/employees/shift-dashboard' },
         { label: t('nav.sub.shiftSchedule', 'Shift Schedule'), icon: Calendar, path: '/employees/shift-schedule' },
         { label: t('nav.sub.consumption', 'Consumption'), icon: Utensils, path: '/employees/consumption' },
+        { label: t('nav.sub.consumptionAllowances', 'Consumption allowances'), icon: Utensils, path: '/employees/consumption-allowances' },
         { label: t('nav.sub.couriers'), icon: Truck, path: '/couriers' },
         { label: t('nav.sub.courierMap'), icon: MapPin, path: '/courier-map' },
       ],

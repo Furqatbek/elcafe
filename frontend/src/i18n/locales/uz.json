@@ -1061,7 +1061,9 @@
       "5": "Ju",
       "6": "Sh",
       "7": "Ya"
-    }
+    },
+    "active": "Faol",
+    "inactive": "Nofaol"
   },
   "validation": {
     "required": "Bu maydon majburiy",
@@ -4176,5 +4178,53 @@
     "payWhen": "Qachon to'lanadi",
     "payDailyHint": "Har bir ish kuni oxirida",
     "payPerShiftHint": "Har bir yopilgan smenadan keyin"
+  },
+  "consumption": {
+    "record": "Yozish",
+    "recordAndCharge": "Yozish · {{amount}} hisobga olish",
+    "period": {
+      "PER_SHIFT": "smena uchun",
+      "DAILY": "kuniga",
+      "WEEKLY": "haftaga",
+      "MONTHLY": "oyiga"
+    },
+    "allowance": {
+      "checking": "Cheklov tekshirilmoqda…",
+      "none": "Cheklov o'rnatilmagan — bu iste'mol oshxona hisobidan.",
+      "overLimit": "Cheklovdan oshib ketdi — {{amount}} xodimdan hisobga olinadi",
+      "willDeduct": "Keyingi maoshdan avans sifatida ushlab qolinadi.",
+      "withinLimit": "Cheklov ichida ({{period}})",
+      "itemsLeft": "{{limit}} dan {{remain}} qoldi",
+      "amountLeft": "{{limit}} dan {{remain}} qoldi"
+    }
+  },
+  "allowances": {
+    "title": "Iste'mol cheklovlari",
+    "subtitle": "Xodimlarning bepul iste'molini cheklash. Oshib ketgan miqdor avtomatik tarzda maoshdan ushlab qolinadi.",
+    "listTitle": "Sozlangan cheklovlar",
+    "listDesc": "Eng aniq qoida ustun: xodim/ofitsiant > umumiy; aniq kategoriya > har qanday kategoriya.",
+    "add": "Cheklov qo'shish",
+    "addTitle": "Cheklov qo'shish",
+    "editTitle": "Cheklovni tahrirlash",
+    "empty": "Cheklovlar yo'q.",
+    "anyCategory": "Har qanday kategoriya",
+    "confirmDelete": "Ushbu cheklovni o'chirasizmi?",
+    "errors": { "noCap": "Donalik yoki summa cheklovini (yoki ikkalasini) ko'rsating." },
+    "subject": {
+      "restaurant": "Barcha xodimlar",
+      "employee": "Aniq xodim",
+      "waiter": "Aniq ofitsiant"
+    },
+    "col": {
+      "subject": "Kim", "category": "Kategoriya", "period": "Davr",
+      "items": "Dona", "amount": "Summa", "status": "Holat", "actions": "Amallar"
+    },
+    "form": {
+      "subject": "Kimga", "employee": "Xodim", "waiter": "Ofitsiant",
+      "pickEmployee": "Xodimni tanlang…", "pickWaiter": "Ofitsiantni tanlang…",
+      "category": "Kategoriya (ixtiyoriy)", "period": "Davr",
+      "limitCount": "Donalik cheklovi", "limitAmount": "Summa cheklovi",
+      "notes": "Izoh", "optional": "Ixtiyoriy"
+    }
   }
 }

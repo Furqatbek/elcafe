@@ -69,6 +69,22 @@ public class EmployeeConsumption {
     @Builder.Default
     private BigDecimal totalCost = BigDecimal.ZERO;
 
+    /**
+     * True when part or all of this consumption was over the employee's
+     * configured allowance and therefore charged back via a PayrollEntry
+     * advance. False (the default) means the company absorbed the cost.
+     */
+    @Column(name = "charged_to_employee", nullable = false)
+    @Builder.Default
+    private Boolean chargedToEmployee = false;
+
+    /**
+     * Portion of totalCost that was billed to the employee as a salary
+     * advance. Mirrors the netPay on the matching ADVANCE PayrollEntry.
+     */
+    @Column(name = "charged_amount", precision = 12, scale = 2)
+    private BigDecimal chargedAmount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "expense_id")
     private Expense expense;

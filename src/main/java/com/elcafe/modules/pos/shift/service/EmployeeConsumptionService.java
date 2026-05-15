@@ -3,7 +3,9 @@ package com.elcafe.modules.pos.shift.service;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.financial.entity.Expense;
+import com.elcafe.modules.financial.entity.PayrollEntry;
 import com.elcafe.modules.financial.service.ExpenseService;
+import com.elcafe.modules.financial.service.PayrollService;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
@@ -44,6 +46,8 @@ public class EmployeeConsumptionService {
     private final ExpenseService expenseService;
     private final InventoryService inventoryService;
     private final PackagingService packagingService;
+    private final ConsumptionLimitService consumptionLimitService;
+    private final PayrollService payrollService;
     @org.springframework.context.annotation.Lazy
     private final OwnerNotificationService ownerNotificationService;
 
@@ -87,6 +91,12 @@ public class EmployeeConsumptionService {
         String consumerName = waiter != null ? waiter.getName()
                 : (employee != null ? employee.getFullName() : "Unknown");
 
+        // Evaluate against the configured allowance (if any). The decision
+        // tells us how much of this consumption is free vs charged back to
+        // the employee as a salary advance.
+        ConsumptionLimitService.Decision limit =
+                consumptionLimitService.evaluate(restaurantId, employee, waiter, product, quantity);
+
         // Create expense record via service (generates expense number)
         Expense expense = Expense.builder()
                 .restaurant(restaurant)
@@ -113,10 +123,49 @@ public class EmployeeConsumptionService {
                 .costPrice(sellingPrice)
                 .totalCost(totalPrice)
                 .expense(expense)
+                .chargedToEmployee(limit.overLimit())
+                .chargedAmount(limit.chargedAmount())
                 .notes(notes)
                 .consumedAt(OffsetDateTime.now())
                 .build();
         consumption = consumptionRepository.save(consumption);
+
+        // If part or all of this consumption exceeded the configured
+        // allowance, post the overflow as an ADVANCE payroll entry so
+        // the next salary run nets it out automatically. The expense on
+        // the company books is still totalPrice — the restaurant pays
+        // up front and recoups via salary, mirroring how cash advances
+        // already work in calculateUnpaidAdvances.
+        if (limit.overLimit() && limit.chargedAmount().signum() > 0) {
+            try {
+                LocalDate today = LocalDate.now();
+                String chargeNote = String.format(
+                        "Consumption over allowance: %s × %d (charged %s of %s)",
+                        product.getName(), quantity, limit.chargedAmount(), totalPrice);
+                PayrollEntry advance = PayrollEntry.builder()
+                        .restaurant(restaurant)
+                        .employee(employee)
+                        .waiter(waiter)
+                        .payrollType(PayrollEntry.PayrollType.ADVANCE)
+                        .payPeriodStart(today)
+                        .payPeriodEnd(today)
+                        .baseSalary(limit.chargedAmount())
+                        .notes(chargeNote)
+                        .build();
+                PayrollEntry saved = payrollService.createPayrollEntry(advance);
+                // The advance is "given" to the employee immediately
+                // (they got the product) so mark it paid right away.
+                payrollService.approvePayrollEntry(saved.getId(), "System");
+                payrollService.processPayment(saved.getId(), today, null, null);
+                log.info("Charged {} to {} for over-allowance consumption (consumption {})",
+                        limit.chargedAmount(), consumerName, consumption.getId());
+            } catch (Exception e) {
+                // Don't unwind the whole consumption if advance posting
+                // fails — log and let the operator reconcile manually.
+                log.error("Failed to post salary advance for over-allowance consumption {}: {}",
+                        consumption.getId(), e.getMessage());
+            }
+        }
 
         // Deduct recipe ingredients. Any failure rolls back the consumption
         // record and the expense via the surrounding @Transactional — we

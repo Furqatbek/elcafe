@@ -425,7 +425,9 @@
       "5": "Fri",
       "6": "Sat",
       "7": "Sun"
-    }
+    },
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "orders": {
     "title": "Orders",
@@ -4371,5 +4373,69 @@
     "payWhen": "Paid",
     "payDailyHint": "End of each working day",
     "payPerShiftHint": "After each clocked shift"
+  },
+  "consumption": {
+    "record": "Record",
+    "recordAndCharge": "Record · charge {{amount}}",
+    "qty": "Quantity",
+    "notes": "Notes",
+    "optional": "Optional",
+    "period": {
+      "PER_SHIFT": "per shift",
+      "DAILY": "daily",
+      "WEEKLY": "weekly",
+      "MONTHLY": "monthly"
+    },
+    "allowance": {
+      "checking": "Checking allowance…",
+      "none": "No allowance configured — this consumption is on the house.",
+      "overLimit": "Over allowance — {{amount}} will be charged to the employee",
+      "willDeduct": "Will be deducted from the next salary as an advance.",
+      "withinLimit": "Within {{period}} allowance",
+      "itemsLeft": "{{remain}} of {{limit}} items left",
+      "amountLeft": "{{remain}} of {{limit}} left"
+    }
+  },
+  "allowances": {
+    "title": "Consumption Allowances",
+    "subtitle": "Cap free employee consumption per day or shift. Overflow is auto-charged to the next salary.",
+    "listTitle": "Configured allowances",
+    "listDesc": "Most specific rule wins: employee/waiter > restaurant-wide; category-specific > any category.",
+    "add": "Add allowance",
+    "addTitle": "Add allowance",
+    "editTitle": "Edit allowance",
+    "empty": "No allowances configured.",
+    "anyCategory": "Any category",
+    "confirmDelete": "Delete this allowance?",
+    "errors": {
+      "noCap": "Set an item cap, a money cap, or both."
+    },
+    "subject": {
+      "restaurant": "All employees",
+      "employee": "Specific employee",
+      "waiter": "Specific waiter"
+    },
+    "col": {
+      "subject": "Subject",
+      "category": "Category",
+      "period": "Period",
+      "items": "Items",
+      "amount": "Amount",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "form": {
+      "subject": "Applies to",
+      "employee": "Employee",
+      "waiter": "Waiter",
+      "pickEmployee": "Pick employee…",
+      "pickWaiter": "Pick waiter…",
+      "category": "Category (optional)",
+      "period": "Period",
+      "limitCount": "Items cap",
+      "limitAmount": "Money cap",
+      "notes": "Notes",
+      "optional": "Optional"
+    }
   }
 }
