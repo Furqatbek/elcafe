@@ -2727,11 +2727,17 @@
       "errors": {
         "nameRequired": "Ism majburiy",
         "pinCodeRequired": "PIN kod majburiy",
-        "pinMust4Digits": "PIN 4 raqamdan iborat bo'lishi kerak"
+        "pinMust4Digits": "PIN 4 raqamdan iborat bo'lishi kerak",
+        "disableFailed": "Ofitsiantni o'chirib bo'lmadi",
+        "enableFailed": "Ofitsiantni yoqib bo'lmadi"
       },
       "showingWaiters": "{{total}} dan {{count}} ta ko'rsatilmoqda",
       "confirmDeletion": "O'chirishni tasdiqlang",
-      "deleteConfirmationMessage": "\"{{name}}\" ofitsiantni o'chirishga ishonchingiz komilmi? Bu amalni bekor qilib bo'lmaydi."
+      "deleteConfirmationMessage": "\"{{name}}\" ofitsiantni o'chirishga ishonchingiz komilmi? Bu amalni bekor qilib bo'lmaydi.",
+      "disable": "O'chirish",
+      "enable": "Yoqish",
+      "confirmDisable": "Ofitsiantni o'chirib qo'yasizmi?",
+      "disableConfirmationMessage": "«{{name}}» POS va ofitsiantlar ro'yxatidan yashiriladi. Smena, oylik va komissiya tarixi saqlanadi va keyinroq qaytadan yoqishingiz mumkin."
     },
     "customers": {
       "id": "ID",

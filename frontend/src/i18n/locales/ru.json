@@ -2683,11 +2683,17 @@
       "errors": {
         "nameRequired": "Имя обязательно",
         "pinCodeRequired": "PIN-код обязателен",
-        "pinMust4Digits": "PIN должен состоять из 4 цифр"
+        "pinMust4Digits": "PIN должен состоять из 4 цифр",
+        "disableFailed": "Не удалось отключить официанта",
+        "enableFailed": "Не удалось включить официанта"
       },
       "showingWaiters": "Показано {{count}} из {{total}} официантов",
       "confirmDeletion": "Подтверждение удаления",
-      "deleteConfirmationMessage": "Вы уверены, что хотите удалить официанта \"{{name}}\"? Это действие нельзя отменить."
+      "deleteConfirmationMessage": "Вы уверены, что хотите удалить официанта \"{{name}}\"? Это действие нельзя отменить.",
+      "disable": "Отключить",
+      "enable": "Включить",
+      "confirmDisable": "Отключить официанта?",
+      "disableConfirmationMessage": "«{{name}}» больше не будет отображаться в POS и списках официантов. История смен, зарплаты и комиссий сохранится; вы сможете снова включить его позже."
     },
     "customers": {
       "id": "ID",

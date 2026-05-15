@@ -2917,11 +2917,17 @@
       "errors": {
         "nameRequired": "Name is required",
         "pinCodeRequired": "PIN code is required",
-        "pinMust4Digits": "PIN must be 4 digits"
+        "pinMust4Digits": "PIN must be 4 digits",
+        "disableFailed": "Error disabling waiter",
+        "enableFailed": "Error enabling waiter"
       },
       "showingWaiters": "Showing {{count}} of {{total}} waiters",
       "confirmDeletion": "Confirm Deletion",
-      "deleteConfirmationMessage": "Are you sure you want to delete waiter \"{{name}}\"? This action cannot be undone."
+      "deleteConfirmationMessage": "Are you sure you want to delete waiter \"{{name}}\"? This action cannot be undone.",
+      "disable": "Disable",
+      "enable": "Enable",
+      "confirmDisable": "Disable waiter?",
+      "disableConfirmationMessage": "“{{name}}” will be hidden from the POS and waiter lists. Shift, payroll and commission history is preserved and you can re-enable them later."
     },
     "customers": {
       "id": "ID",

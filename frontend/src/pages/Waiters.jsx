@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Search, Plus, Edit, Trash2, X, Eye, EyeOff, Key } from 'lucide-react';
+import { Search, Plus, Edit, X, Eye, EyeOff, Key, Power, PowerOff } from 'lucide-react';
 import { waiterAPI } from '../services/api';
 
 export default function Waiters() {
@@ -240,22 +240,40 @@ export default function Waiters() {
     }
   };
 
-  const handleDeleteClick = (waiter) => {
+  // Disable opens a confirm dialog (irreversible-feeling action, even though
+  // it's just a soft-delete on the backend). Enable is one click — no
+  // need for a confirmation to flip a waiter back on.
+  const handleDisableClick = (waiter) => {
     setWaiterToDelete(waiter);
     setShowDeleteModal(true);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDisableConfirm = async () => {
     if (!waiterToDelete) return;
-
     try {
       await waiterAPI.delete(waiterToDelete.id);
       setShowDeleteModal(false);
       setWaiterToDelete(null);
       loadWaiters();
     } catch (error) {
-      console.error('Error deleting waiter:', error);
-      alert(t('pages.waiters.errors.deleteFailed', 'Error deleting waiter') + ': ' + (error.response?.data?.message || error.message));
+      console.error('Error disabling waiter:', error);
+      alert(
+        t('pages.waiters.errors.disableFailed', 'Error disabling waiter') +
+          ': ' + (error.response?.data?.message || error.message)
+      );
+    }
+  };
+
+  const handleEnable = async (waiter) => {
+    try {
+      await waiterAPI.update(waiter.id, { active: true });
+      loadWaiters();
+    } catch (error) {
+      console.error('Error enabling waiter:', error);
+      alert(
+        t('pages.waiters.errors.enableFailed', 'Error enabling waiter') +
+          ': ' + (error.response?.data?.message || error.message)
+      );
     }
   };
 
@@ -471,13 +489,23 @@ export default function Waiters() {
                             >
                               <Edit className="h-5 w-5" />
                             </button>
-                            <button
-                              onClick={() => handleDeleteClick(waiter)}
-                              className="text-red-600 hover:text-red-900"
-                              title={t('pages.waiters.delete', 'Delete')}
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </button>
+                            {waiter.active ? (
+                              <button
+                                onClick={() => handleDisableClick(waiter)}
+                                className="text-red-600 hover:text-red-900"
+                                title={t('pages.waiters.disable', 'Disable')}
+                              >
+                                <PowerOff className="h-5 w-5" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleEnable(waiter)}
+                                className="text-green-600 hover:text-green-900"
+                                title={t('pages.waiters.enable', 'Enable')}
+                              >
+                                <Power className="h-5 w-5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -814,14 +842,20 @@ export default function Waiters() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Disable Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('pages.waiters.confirmDeletion', 'Confirm Deletion')}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {t('pages.waiters.confirmDisable', 'Disable waiter?')}
+              </h3>
               <p className="text-gray-600 mb-6">
-                {t('pages.waiters.deleteConfirmationMessage', 'Are you sure you want to delete waiter "{{name}}"? This action cannot be undone.', { name: waiterToDelete?.name })}
+                {t(
+                  'pages.waiters.disableConfirmationMessage',
+                  '“{{name}}” will be hidden from the POS and waiter lists. Shift, payroll and commission history is preserved and you can re-enable them later.',
+                  { name: waiterToDelete?.name }
+                )}
               </p>
               <div className="flex justify-end gap-3">
                 <button
@@ -831,10 +865,10 @@ export default function Waiters() {
                   {t('pages.waiters.cancel', 'Cancel')}
                 </button>
                 <button
-                  onClick={handleDeleteConfirm}
+                  onClick={handleDisableConfirm}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                 >
-                  {t('pages.waiters.delete', 'Delete')}
+                  {t('pages.waiters.disable', 'Disable')}
                 </button>
               </div>
             </div>
