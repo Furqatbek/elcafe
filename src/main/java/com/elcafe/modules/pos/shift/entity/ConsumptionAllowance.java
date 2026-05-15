@@ -48,6 +48,24 @@ public class ConsumptionAllowance {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Waiter waiter;
 
+    /**
+     * Optional role-scope: when non-null the rule applies to every
+     * employee or waiter whose role string matches this value
+     * (case-insensitive). employee_id, waiter_id and role are
+     * mutually exclusive — the DB check constraint guarantees it.
+     */
+    @Column(length = 50)
+    private String role;
+
+    /**
+     * When false the over-limit overflow is recorded on the consumption
+     * row but no PayrollEntry advance is posted automatically — the
+     * operator handles billing manually. Defaults true.
+     */
+    @Column(name = "bill_overflow", nullable = false)
+    @Builder.Default
+    private Boolean billOverflow = true;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Period period;
@@ -73,11 +91,19 @@ public class ConsumptionAllowance {
     @Column(name = "updated_at", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime updatedAt;
 
-    /** Score the rule's specificity for tie-breaking at lookup time. */
+    /**
+     * Score the rule's specificity for tie-breaking at lookup time.
+     * Higher = wins: an exact subject is more specific than a role
+     * scope, and a category-specific rule beats an any-category one
+     * at the same subject level.
+     */
     public int specificity() {
-        int subject = (employee != null || waiter != null) ? 2 : 0;
-        int cat = category != null ? 1 : 0;
-        return subject * 2 + cat;
+        int subjectScore;
+        if (employee != null || waiter != null) subjectScore = 4;
+        else if (role != null && !role.isBlank()) subjectScore = 2;
+        else subjectScore = 0;
+        int categoryScore = category != null ? 1 : 0;
+        return subjectScore + categoryScore;
     }
 
     public enum Period {

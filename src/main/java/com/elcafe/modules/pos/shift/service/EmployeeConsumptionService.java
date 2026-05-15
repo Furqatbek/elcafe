@@ -131,12 +131,18 @@ public class EmployeeConsumptionService {
         consumption = consumptionRepository.save(consumption);
 
         // If part or all of this consumption exceeded the configured
-        // allowance, post the overflow as an ADVANCE payroll entry so
-        // the next salary run nets it out automatically. The expense on
-        // the company books is still totalPrice — the restaurant pays
-        // up front and recoups via salary, mirroring how cash advances
-        // already work in calculateUnpaidAdvances.
-        if (limit.overLimit() && limit.chargedAmount().signum() > 0) {
+        // allowance AND the allowance is in auto-bill mode, post the
+        // overflow as an ADVANCE payroll entry so the next salary run
+        // nets it out automatically. The expense on the company books
+        // is still totalPrice — the restaurant pays up front and
+        // recoups via salary, mirroring how cash advances already
+        // work in calculateUnpaidAdvances.
+        //
+        // When the matching allowance has billOverflow=false the
+        // consumption row is still stamped charged_to_employee +
+        // charged_amount so reports show the overflow, but no advance
+        // is auto-posted — operators handle that manually.
+        if (limit.shouldAutoCharge() && limit.chargedAmount().signum() > 0) {
             try {
                 LocalDate today = LocalDate.now();
                 String chargeNote = String.format(
@@ -215,6 +221,80 @@ public class EmployeeConsumptionService {
                 restaurantId,
                 from.atStartOfDay(zone).toOffsetDateTime(),
                 to.plusDays(1).atStartOfDay(zone).toOffsetDateTime());
+    }
+
+    /**
+     * Per-consumer aggregates for the usage dashboard. Groups the
+     * recorded consumptions inside [from, to] by employee or waiter
+     * and rolls them up to total items, total cost, charged-to-employee
+     * cost and the most recent consumption timestamp.
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<ConsumerUsage> consumerUsage(Long restaurantId, LocalDate from, LocalDate to) {
+        List<EmployeeConsumption> all = getByRestaurantAndDateRange(restaurantId, from, to);
+        java.util.Map<String, ConsumerUsage.Builder> bucket = new java.util.LinkedHashMap<>();
+        for (EmployeeConsumption c : all) {
+            String key;
+            String subjectType;
+            Long subjectId;
+            String name;
+            if (c.getEmployee() != null) {
+                subjectType = "employee";
+                subjectId = c.getEmployee().getId();
+                key = "u:" + subjectId;
+                String full = c.getEmployee().getFullName();
+                name = (full == null || full.isBlank()) ? c.getEmployee().getEmail() : full;
+            } else if (c.getWaiter() != null) {
+                subjectType = "waiter";
+                subjectId = c.getWaiter().getId();
+                key = "w:" + subjectId;
+                name = c.getWaiter().getName();
+            } else {
+                continue;
+            }
+            ConsumerUsage.Builder b = bucket.computeIfAbsent(key,
+                    k -> new ConsumerUsage.Builder(subjectType, subjectId, name));
+            b.itemsCount += c.getQuantity() != null ? c.getQuantity() : 0;
+            b.totalCost = b.totalCost.add(c.getTotalCost() != null ? c.getTotalCost() : BigDecimal.ZERO);
+            if (Boolean.TRUE.equals(c.getChargedToEmployee()) && c.getChargedAmount() != null) {
+                b.chargedAmount = b.chargedAmount.add(c.getChargedAmount());
+                b.chargedItems += c.getQuantity() != null ? c.getQuantity() : 0;
+            }
+            if (c.getConsumedAt() != null && (b.lastConsumed == null
+                    || c.getConsumedAt().isAfter(b.lastConsumed))) {
+                b.lastConsumed = c.getConsumedAt();
+            }
+        }
+        return bucket.values().stream().map(ConsumerUsage.Builder::build).toList();
+    }
+
+    public record ConsumerUsage(
+            String subjectType,
+            Long subjectId,
+            String name,
+            int itemsCount,
+            int chargedItems,
+            BigDecimal totalCost,
+            BigDecimal chargedAmount,
+            OffsetDateTime lastConsumed
+    ) {
+        static class Builder {
+            final String subjectType;
+            final Long subjectId;
+            final String name;
+            int itemsCount = 0;
+            int chargedItems = 0;
+            BigDecimal totalCost = BigDecimal.ZERO;
+            BigDecimal chargedAmount = BigDecimal.ZERO;
+            OffsetDateTime lastConsumed;
+            Builder(String type, Long id, String name) {
+                this.subjectType = type; this.subjectId = id; this.name = name;
+            }
+            ConsumerUsage build() {
+                return new ConsumerUsage(subjectType, subjectId, name,
+                        itemsCount, chargedItems, totalCost, chargedAmount, lastConsumed);
+            }
+        }
     }
 
     public List<EmployeeConsumption> getByShift(Long shiftId) {

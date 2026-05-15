@@ -205,6 +205,85 @@ class ConsumptionLimitServiceTest {
     }
 
     @Test
+    @DisplayName("role-scoped rule applies to every employee with that role name")
+    void roleScopedRule() {
+        employee.setRole(com.elcafe.modules.auth.enums.UserRole.WAITER);
+        ConsumptionAllowance roleRule = ConsumptionAllowance.builder()
+                .id(11L)
+                .restaurant(restaurant)
+                .role("WAITER")
+                .period(Period.DAILY)
+                .limitCount(2)
+                .billOverflow(true)
+                .active(true)
+                .build();
+        when(allowanceRepository.findByRestaurant_IdAndActiveTrue(RESTAURANT_ID))
+                .thenReturn(List.of(roleRule));
+        when(consumptionRepository
+                .findByRestaurant_IdAndConsumedAtBetweenOrderByConsumedAtDesc(anyLong(), any(), any()))
+                .thenReturn(List.of());
+
+        var d = service.evaluate(RESTAURANT_ID, employee, null, latte, 3);
+
+        assertThat(d.allowance().getId()).isEqualTo(11L);
+        assertThat(d.overLimit()).isTrue();
+        assertThat(d.chargedAmount()).isEqualByComparingTo("20000");
+        assertThat(d.shouldAutoCharge()).isTrue();
+    }
+
+    @Test
+    @DisplayName("exact subject beats role beats restaurant-wide on specificity")
+    void specificityOrdering() {
+        employee.setRole(com.elcafe.modules.auth.enums.UserRole.WAITER);
+        ConsumptionAllowance shopWide = rule(Period.DAILY, 10, null, null, null, null);
+        ConsumptionAllowance forRole = ConsumptionAllowance.builder()
+                .id(20L)
+                .restaurant(restaurant)
+                .role("WAITER")
+                .period(Period.DAILY)
+                .limitCount(5)
+                .billOverflow(true)
+                .active(true)
+                .build();
+        ConsumptionAllowance forEmp = rule(Period.DAILY, 1, null, null, employee, null);
+        when(allowanceRepository.findByRestaurant_IdAndActiveTrue(RESTAURANT_ID))
+                .thenReturn(List.of(shopWide, forRole, forEmp));
+        when(consumptionRepository
+                .findByRestaurant_IdAndConsumedAtBetweenOrderByConsumedAtDesc(anyLong(), any(), any()))
+                .thenReturn(List.of());
+
+        var d = service.evaluate(RESTAURANT_ID, employee, null, latte, 1);
+
+        // forEmp wins (exact subject), so the much tighter limit of 1 applies.
+        assertThat(d.allowance().getId()).isEqualTo(forEmp.getId());
+    }
+
+    @Test
+    @DisplayName("preview-only mode flags overflow but does not auto-charge")
+    void previewOnlyMode() {
+        ConsumptionAllowance manual = ConsumptionAllowance.builder()
+                .id(30L)
+                .restaurant(restaurant)
+                .employee(employee)
+                .period(Period.DAILY)
+                .limitCount(1)
+                .billOverflow(false)
+                .active(true)
+                .build();
+        when(allowanceRepository.findByRestaurant_IdAndActiveTrue(RESTAURANT_ID))
+                .thenReturn(List.of(manual));
+        when(consumptionRepository
+                .findByRestaurant_IdAndConsumedAtBetweenOrderByConsumedAtDesc(anyLong(), any(), any()))
+                .thenReturn(List.of());
+
+        var d = service.evaluate(RESTAURANT_ID, employee, null, latte, 2);
+
+        assertThat(d.overLimit()).isTrue();
+        assertThat(d.shouldAutoCharge()).isFalse();
+        assertThat(d.chargedAmount()).isEqualByComparingTo("20000");
+    }
+
+    @Test
     @DisplayName("any-category rule applies when no category-specific rule exists")
     void anyCategoryRuleApplies() {
         ConsumptionAllowance any = rule(Period.DAILY, 2, null, null, null, null);

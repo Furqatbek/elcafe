@@ -21,6 +21,7 @@ import { Plus, UtensilsCrossed } from 'lucide-react';
 const consumptionAPI = {
   record: (restaurantId, data) => api.post(`/restaurants/${restaurantId}/employee-consumptions`, data),
   getByDate: (restaurantId, from, to) => api.get(`/restaurants/${restaurantId}/employee-consumptions`, { params: { from, to } }),
+  usage: (restaurantId, from, to) => api.get(`/restaurants/${restaurantId}/employee-consumptions/usage`, { params: { from, to } }),
   previewAllowance: (restaurantId, params) =>
     api.get(`/restaurants/${restaurantId}/consumption-allowances/preview`, { params }),
 };
@@ -35,6 +36,7 @@ export default function EmployeeConsumption() {
   const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState('');
   const [consumptions, setConsumptions] = useState([]);
+  const [usage, setUsage] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [products, setProducts] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -100,8 +102,13 @@ export default function EmployeeConsumption() {
 
   const loadConsumptions = async () => {
     try {
-      const res = await consumptionAPI.getByDate(selectedRestaurant, dateRange.from, dateRange.to);
-      setConsumptions(res.data.data || []);
+      const [listRes, usageRes] = await Promise.all([
+        consumptionAPI.getByDate(selectedRestaurant, dateRange.from, dateRange.to),
+        consumptionAPI.usage(selectedRestaurant, dateRange.from, dateRange.to)
+          .catch(() => ({ data: { data: [] } })),
+      ]);
+      setConsumptions(listRes.data.data || []);
+      setUsage(usageRes.data?.data || []);
     } catch (e) { console.error(e); }
   };
 
@@ -199,6 +206,8 @@ export default function EmployeeConsumption() {
         </CardContent>
       </Card>
 
+      <UsageCard usage={usage} t={t} />
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{t('consumption.recordTitle', 'Record Consumption')}</DialogTitle></DialogHeader>
@@ -234,15 +243,86 @@ export default function EmployeeConsumption() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleRecord} disabled={!form.employeeKey || !form.productId}>
               {preview?.overLimit
-                ? t('consumption.recordAndCharge', 'Record · charge {{amount}}', {
-                    amount: fmtMoney(preview.chargedAmount),
-                  })
+                ? (preview.willAutoCharge !== false
+                    ? t('consumption.recordAndCharge', 'Record · charge {{amount}}', {
+                        amount: fmtMoney(preview.chargedAmount),
+                      })
+                    : t('consumption.recordOverLimit', 'Record · over by {{amount}}', {
+                        amount: fmtMoney(preview.chargedAmount),
+                      }))
                 : t('consumption.record', 'Record')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function UsageCard({ usage, t }) {
+  if (!usage || usage.length === 0) return null;
+  const totals = usage.reduce(
+    (acc, u) => ({
+      items: acc.items + (u.itemsCount || 0),
+      cost: acc.cost + Number(u.totalCost || 0),
+      charged: acc.charged + Number(u.chargedAmount || 0),
+    }),
+    { items: 0, cost: 0, charged: 0 }
+  );
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('consumption.usage.title', 'Usage by consumer')}</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {t('consumption.usage.subtitle',
+            '{{items}} items · {{cost}} so\'m total · {{charged}} so\'m charged back',
+            {
+              items: totals.items,
+              cost: fmtMoney(totals.cost),
+              charged: fmtMoney(totals.charged),
+            })}
+        </p>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('consumption.usage.col.name', 'Consumer')}</TableHead>
+              <TableHead className="text-center">{t('consumption.usage.col.type', 'Type')}</TableHead>
+              <TableHead className="text-right">{t('consumption.usage.col.items', 'Items')}</TableHead>
+              <TableHead className="text-right">{t('consumption.usage.col.cost', 'Cost')}</TableHead>
+              <TableHead className="text-right">{t('consumption.usage.col.charged', 'Charged')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {usage.map(u => (
+              <TableRow key={`${u.subjectType}:${u.subjectId}`}>
+                <TableCell className="font-medium">{u.name || '—'}</TableCell>
+                <TableCell className="text-center">
+                  <Badge variant="outline">
+                    {t(`consumption.usage.type.${u.subjectType}`, u.subjectType)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {u.itemsCount}
+                  {u.chargedItems > 0 && (
+                    <span className="text-xs text-red-700 ml-1">
+                      ({u.chargedItems} {t('consumption.usage.chargedShort', 'charged')})
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{fmtMoney(u.totalCost)}</TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {Number(u.chargedAmount) > 0
+                    ? <span className="text-red-700 font-semibold">{fmtMoney(u.chargedAmount)}</span>
+                    : '—'}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -268,15 +348,28 @@ function AllowancePreview({ preview, loading, t }) {
   const periodLabel = t(`consumption.period.${preview.period}`, preview.period);
 
   if (preview.overLimit) {
+    const autoCharge = preview.willAutoCharge !== false;
+    const tone = autoCharge
+      ? 'border-red-200 bg-red-50 text-red-800'
+      : 'border-amber-200 bg-amber-50 text-amber-900';
+    const subTone = autoCharge ? 'text-red-700' : 'text-amber-800';
     return (
-      <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm">
-        <div className="font-semibold text-red-800">
-          {t('consumption.allowance.overLimit', 'Over allowance — {{amount}} will be charged to the employee', {
-            amount: fmtMoney(preview.chargedAmount),
-          })}
+      <div className={`rounded-md border p-3 text-sm ${tone}`}>
+        <div className="font-semibold">
+          {autoCharge
+            ? t('consumption.allowance.overLimit',
+                'Over allowance — {{amount}} will be charged to the employee',
+                { amount: fmtMoney(preview.chargedAmount) })
+            : t('consumption.allowance.overLimitManual',
+                'Over allowance — {{amount}} is over the cap (manual settlement)',
+                { amount: fmtMoney(preview.chargedAmount) })}
         </div>
-        <div className="mt-1 text-xs text-red-700">
-          {t('consumption.allowance.willDeduct', 'Will be deducted from the next salary as an advance.')}
+        <div className={`mt-1 text-xs ${subTone}`}>
+          {autoCharge
+            ? t('consumption.allowance.willDeduct',
+                'Will be deducted from the next salary as an advance.')
+            : t('consumption.allowance.previewOnly',
+                'Flagged on the consumption row; no salary advance will be posted automatically.')}
         </div>
       </div>
     );

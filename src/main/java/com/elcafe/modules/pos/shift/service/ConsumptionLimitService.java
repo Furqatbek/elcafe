@@ -55,14 +55,13 @@ public class ConsumptionLimitService {
                                                   User employee,
                                                   Waiter waiter,
                                                   Category category) {
-        Long empId = employee != null ? employee.getId() : null;
-        Long wtrId = waiter != null ? waiter.getId() : null;
         Long catId = category != null ? category.getId() : null;
 
         return allowanceRepository.findByRestaurant_IdAndActiveTrue(restaurantId).stream()
-                .filter(a -> subjectMatches(a, empId, wtrId))
+                .filter(a -> subjectMatches(a, employee, waiter))
                 .filter(a -> categoryMatches(a, catId))
-                .max(Comparator.comparingInt(ConsumptionAllowance::specificity));
+                .max(Comparator.comparingInt(ConsumptionAllowance::specificity)
+                        .thenComparing(ConsumptionAllowance::getId, Comparator.nullsLast(Long::compareTo)));
     }
 
     /**
@@ -130,13 +129,17 @@ public class ConsumptionLimitService {
                 ? null
                 : allowance.getLimitAmount().subtract(usage.amount()).subtract(freeAmount).max(BigDecimal.ZERO);
 
+        boolean overLimit = chargedAmount.signum() > 0;
+        boolean shouldAutoCharge = overLimit && Boolean.TRUE.equals(allowance.getBillOverflow());
+
         return new Decision(
                 allowance,
                 usage,
                 lineTotal,
                 freeAmount,
                 chargedAmount,
-                chargedAmount.signum() > 0,
+                overLimit,
+                shouldAutoCharge,
                 remainingCount,
                 remainingAmount
         );
@@ -146,13 +149,31 @@ public class ConsumptionLimitService {
     /* Helpers                                                          */
     /* ---------------------------------------------------------------- */
 
-    private boolean subjectMatches(ConsumptionAllowance a, Long empId, Long wtrId) {
+    private boolean subjectMatches(ConsumptionAllowance a, User employee, Waiter waiter) {
         Long ruleEmp = a.getEmployee() != null ? a.getEmployee().getId() : null;
         Long ruleWtr = a.getWaiter() != null ? a.getWaiter().getId() : null;
-        if (ruleEmp == null && ruleWtr == null) return true; // restaurant-wide
-        if (ruleEmp != null && ruleEmp.equals(empId)) return true;
-        if (ruleWtr != null && ruleWtr.equals(wtrId)) return true;
-        return false;
+        String ruleRole = a.getRole();
+
+        // Role-scoped rule: applies if the subject's role name matches.
+        if (ruleRole != null && !ruleRole.isBlank()) {
+            String roleName = subjectRoleName(employee, waiter);
+            return roleName != null && roleName.equalsIgnoreCase(ruleRole.trim());
+        }
+        // Exact-subject rule.
+        if (ruleEmp != null) return employee != null && ruleEmp.equals(employee.getId());
+        if (ruleWtr != null) return waiter != null && ruleWtr.equals(waiter.getId());
+        // Restaurant-wide rule.
+        return true;
+    }
+
+    private String subjectRoleName(User employee, Waiter waiter) {
+        if (employee != null && employee.getRole() != null) {
+            return employee.getRole().name();
+        }
+        if (waiter != null && waiter.getRole() != null) {
+            return waiter.getRole().name();
+        }
+        return null;
     }
 
     private boolean categoryMatches(ConsumptionAllowance a, Long catId) {
@@ -274,13 +295,14 @@ public class ConsumptionLimitService {
             BigDecimal freeAmount,
             BigDecimal chargedAmount,
             boolean overLimit,
+            boolean shouldAutoCharge,
             Integer remainingCount,
             BigDecimal remainingAmount
     ) {
         public static Decision unlimited(BigDecimal lineTotal) {
             return new Decision(null, new Usage(0, BigDecimal.ZERO),
                     lineTotal, lineTotal, BigDecimal.ZERO,
-                    false, null, null);
+                    false, false, null, null);
         }
     }
 }

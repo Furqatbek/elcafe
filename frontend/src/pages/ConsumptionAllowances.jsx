@@ -26,16 +26,20 @@ const allowanceAPI = {
 
 const EMPTY_FORM = {
   id: null,
-  subject: 'restaurant', // 'restaurant' | 'employee' | 'waiter'
+  subject: 'restaurant', // 'restaurant' | 'employee' | 'waiter' | 'role'
   employeeId: '',
   waiterId: '',
+  role: 'WAITER',
   categoryId: '',
   period: 'DAILY',
   limitCount: '',
   limitAmount: '',
+  billOverflow: true,
   notes: '',
   active: true,
 };
+
+const ROLE_OPTIONS = ['WAITER', 'HEAD_WAITER', 'OPERATOR', 'ADMIN'];
 
 function fmt(n) {
   if (n == null) return '—';
@@ -85,13 +89,18 @@ export default function ConsumptionAllowances() {
   const openEdit = (a) => {
     setForm({
       id: a.id,
-      subject: a.employee ? 'employee' : a.waiter ? 'waiter' : 'restaurant',
+      subject: a.employee ? 'employee'
+        : a.waiter ? 'waiter'
+        : a.role ? 'role'
+        : 'restaurant',
       employeeId: a.employee?.id?.toString() || '',
       waiterId: a.waiter?.id?.toString() || '',
+      role: a.role || 'WAITER',
       categoryId: a.category?.id?.toString() || '',
       period: a.period || 'DAILY',
       limitCount: a.limitCount?.toString() || '',
       limitAmount: a.limitAmount?.toString() || '',
+      billOverflow: a.billOverflow !== false,
       notes: a.notes || '',
       active: a.active !== false,
     });
@@ -106,9 +115,11 @@ export default function ConsumptionAllowances() {
           ? parseInt(form.employeeId, 10) : null,
         waiterId: form.subject === 'waiter' && form.waiterId
           ? parseInt(form.waiterId, 10) : null,
+        role: form.subject === 'role' ? form.role : null,
         period: form.period,
         limitCount: form.limitCount ? parseInt(form.limitCount, 10) : null,
         limitAmount: form.limitAmount ? parseFloat(form.limitAmount) : null,
+        billOverflow: form.billOverflow,
         notes: form.notes || null,
         active: form.active,
       };
@@ -145,6 +156,7 @@ export default function ConsumptionAllowances() {
       return `${a.employee.firstName || ''} ${a.employee.lastName || a.employee.email || ''}`.trim() || a.employee.email;
     }
     if (a.waiter) return a.waiter.name;
+    if (a.role) return t(`allowances.role.${a.role}`, t('allowances.subject.role', 'Role: {{role}}', { role: a.role }));
     return t('allowances.subject.restaurant', 'All employees');
   };
 
@@ -188,13 +200,14 @@ export default function ConsumptionAllowances() {
                 <TableHead className="text-center">{t('allowances.col.period', 'Period')}</TableHead>
                 <TableHead className="text-right">{t('allowances.col.items', 'Items')}</TableHead>
                 <TableHead className="text-right">{t('allowances.col.amount', 'Amount')}</TableHead>
+                <TableHead className="text-center">{t('allowances.col.mode', 'On overflow')}</TableHead>
                 <TableHead className="text-center">{t('allowances.col.status', 'Status')}</TableHead>
                 <TableHead className="text-right">{t('allowances.col.actions', 'Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {allowances.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   {t('allowances.empty', 'No allowances configured.')}
                 </TableCell></TableRow>
               ) : allowances.map(a => (
@@ -206,6 +219,13 @@ export default function ConsumptionAllowances() {
                   </TableCell>
                   <TableCell className="text-right">{a.limitCount ?? '—'}</TableCell>
                   <TableCell className="text-right">{fmt(a.limitAmount)}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={a.billOverflow === false ? 'secondary' : 'destructive'}>
+                      {a.billOverflow === false
+                        ? t('allowances.mode.previewOnly', 'Manual')
+                        : t('allowances.mode.autoBill', 'Auto-bill')}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-center">
                     <Badge variant={a.active ? 'default' : 'secondary'}>
                       {a.active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
@@ -242,11 +262,28 @@ export default function ConsumptionAllowances() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="restaurant">{t('allowances.subject.restaurant', 'All employees')}</SelectItem>
+                  <SelectItem value="role">{t('allowances.subject.roleScope', 'By role')}</SelectItem>
                   <SelectItem value="employee">{t('allowances.subject.employee', 'Specific employee')}</SelectItem>
                   <SelectItem value="waiter">{t('allowances.subject.waiter', 'Specific waiter')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {form.subject === 'role' && (
+              <div className="space-y-2">
+                <Label>{t('allowances.form.role', 'Role')}</Label>
+                <Select value={form.role} onValueChange={v => setForm({ ...form, role: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map(r => (
+                      <SelectItem key={r} value={r}>
+                        {t(`allowances.role.${r}`, r)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {form.subject === 'employee' && (
               <div className="space-y-2">
@@ -329,6 +366,24 @@ export default function ConsumptionAllowances() {
               <Input value={form.notes}
                 onChange={e => setForm({ ...form, notes: e.target.value })}
                 placeholder={t('allowances.form.optional', 'Optional')} />
+            </div>
+
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <input id="billOverflow" type="checkbox"
+                  checked={form.billOverflow}
+                  onChange={e => setForm({ ...form, billOverflow: e.target.checked })} />
+                <Label htmlFor="billOverflow" className="font-medium">
+                  {t('allowances.form.billOverflow', 'Auto-charge overflow to salary')}
+                </Label>
+              </div>
+              <p className="text-xs text-amber-800 leading-snug">
+                {form.billOverflow
+                  ? t('allowances.form.billOverflowHint',
+                      'Over-limit amounts are posted as a salary advance and deducted on the next payroll run.')
+                  : t('allowances.form.previewOnlyHint',
+                      'Preview-only: over-limit amounts are flagged on the consumption row but no advance is posted automatically.')}
+              </p>
             </div>
 
             <div className="flex items-center gap-2">

@@ -41,6 +41,16 @@ public class EmployeeConsumptionController {
                 consumptionService.getByRestaurantAndDateRange(restaurantId, from, to)));
     }
 
+    @GetMapping("/usage")
+    public ResponseEntity<ApiResponse<List<EmployeeConsumptionService.ConsumerUsage>>> usage(
+            @PathVariable Long restaurantId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Consumption usage",
+                consumptionService.consumerUsage(restaurantId, from, to)));
+    }
+
     @GetMapping("/shift/{shiftId}")
     public ResponseEntity<ApiResponse<List<EmployeeConsumption>>> getByShift(
             @PathVariable Long restaurantId,

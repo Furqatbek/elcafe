@@ -4182,6 +4182,7 @@
   "consumption": {
     "record": "Yozish",
     "recordAndCharge": "Yozish · {{amount}} hisobga olish",
+    "recordOverLimit": "Yozish · {{amount}} ortiqcha",
     "period": {
       "PER_SHIFT": "smena uchun",
       "DAILY": "kuniga",
@@ -4192,10 +4193,28 @@
       "checking": "Cheklov tekshirilmoqda…",
       "none": "Cheklov o'rnatilmagan — bu iste'mol oshxona hisobidan.",
       "overLimit": "Cheklovdan oshib ketdi — {{amount}} xodimdan hisobga olinadi",
+      "overLimitManual": "Cheklovdan oshib ketdi — {{amount}} ortiqcha (qo'lda hal qilish)",
       "willDeduct": "Keyingi maoshdan avans sifatida ushlab qolinadi.",
+      "previewOnly": "Iste'mol yozuvida belgilangan; avans avtomatik tarzda yaratilmaydi.",
       "withinLimit": "Cheklov ichida ({{period}})",
       "itemsLeft": "{{limit}} dan {{remain}} qoldi",
       "amountLeft": "{{limit}} dan {{remain}} qoldi"
+    },
+    "usage": {
+      "title": "Iste'mol bo'yicha",
+      "subtitle": "{{items}} ta · jami {{cost}} so'm · {{charged}} so'm ushlab qolingan",
+      "chargedShort": "ushlandi",
+      "col": {
+        "name": "Xodim",
+        "type": "Tur",
+        "items": "Donalar",
+        "cost": "Narxi",
+        "charged": "Ushlangan"
+      },
+      "type": {
+        "employee": "Xodim",
+        "waiter": "Ofitsiant"
+      }
     }
   },
   "allowances": {
@@ -4213,17 +4232,34 @@
     "subject": {
       "restaurant": "Barcha xodimlar",
       "employee": "Aniq xodim",
-      "waiter": "Aniq ofitsiant"
+      "waiter": "Aniq ofitsiant",
+      "roleScope": "Rol bo'yicha",
+      "role": "Rol: {{role}}"
+    },
+    "role": {
+      "WAITER": "Ofitsiantlar",
+      "HEAD_WAITER": "Bosh ofitsiantlar",
+      "OPERATOR": "Operatorlar",
+      "ADMIN": "Adminlar"
+    },
+    "mode": {
+      "autoBill": "Avtomatik",
+      "previewOnly": "Qo'lda"
     },
     "col": {
       "subject": "Kim", "category": "Kategoriya", "period": "Davr",
-      "items": "Dona", "amount": "Summa", "status": "Holat", "actions": "Amallar"
+      "items": "Dona", "amount": "Summa", "mode": "Oshib ketganda",
+      "status": "Holat", "actions": "Amallar"
     },
     "form": {
       "subject": "Kimga", "employee": "Xodim", "waiter": "Ofitsiant",
+      "role": "Rol",
       "pickEmployee": "Xodimni tanlang…", "pickWaiter": "Ofitsiantni tanlang…",
       "category": "Kategoriya (ixtiyoriy)", "period": "Davr",
       "limitCount": "Donalik cheklovi", "limitAmount": "Summa cheklovi",
+      "billOverflow": "Ortiqcha summani maoshdan avtomatik ushlab qolish",
+      "billOverflowHint": "Ortiqcha summa avans sifatida hisobga olinadi va keyingi maoshdan ushlab qolinadi.",
+      "previewOnlyHint": "Faqat ogohlantirish: ortiqcha summa yozuvda belgilanadi, avans avtomatik yaratilmaydi.",
       "notes": "Izoh", "optional": "Ixtiyoriy"
     }
   }

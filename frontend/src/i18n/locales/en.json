@@ -4377,6 +4377,7 @@
   "consumption": {
     "record": "Record",
     "recordAndCharge": "Record · charge {{amount}}",
+    "recordOverLimit": "Record · over by {{amount}}",
     "qty": "Quantity",
     "notes": "Notes",
     "optional": "Optional",
@@ -4390,10 +4391,28 @@
       "checking": "Checking allowance…",
       "none": "No allowance configured — this consumption is on the house.",
       "overLimit": "Over allowance — {{amount}} will be charged to the employee",
+      "overLimitManual": "Over allowance — {{amount}} is over the cap (manual settlement)",
       "willDeduct": "Will be deducted from the next salary as an advance.",
+      "previewOnly": "Flagged on the consumption row; no salary advance will be posted automatically.",
       "withinLimit": "Within {{period}} allowance",
       "itemsLeft": "{{remain}} of {{limit}} items left",
       "amountLeft": "{{remain}} of {{limit}} left"
+    },
+    "usage": {
+      "title": "Usage by consumer",
+      "subtitle": "{{items}} items · {{cost}} so'm total · {{charged}} so'm charged back",
+      "chargedShort": "charged",
+      "col": {
+        "name": "Consumer",
+        "type": "Type",
+        "items": "Items",
+        "cost": "Cost",
+        "charged": "Charged"
+      },
+      "type": {
+        "employee": "Employee",
+        "waiter": "Waiter"
+      }
     }
   },
   "allowances": {
@@ -4413,7 +4432,19 @@
     "subject": {
       "restaurant": "All employees",
       "employee": "Specific employee",
-      "waiter": "Specific waiter"
+      "waiter": "Specific waiter",
+      "roleScope": "By role",
+      "role": "Role: {{role}}"
+    },
+    "role": {
+      "WAITER": "Waiters",
+      "HEAD_WAITER": "Head waiters",
+      "OPERATOR": "Operators",
+      "ADMIN": "Admins"
+    },
+    "mode": {
+      "autoBill": "Auto-bill",
+      "previewOnly": "Manual"
     },
     "col": {
       "subject": "Subject",
@@ -4421,6 +4452,7 @@
       "period": "Period",
       "items": "Items",
       "amount": "Amount",
+      "mode": "On overflow",
       "status": "Status",
       "actions": "Actions"
     },
@@ -4428,12 +4460,16 @@
       "subject": "Applies to",
       "employee": "Employee",
       "waiter": "Waiter",
+      "role": "Role",
       "pickEmployee": "Pick employee…",
       "pickWaiter": "Pick waiter…",
       "category": "Category (optional)",
       "period": "Period",
       "limitCount": "Items cap",
       "limitAmount": "Money cap",
+      "billOverflow": "Auto-charge overflow to salary",
+      "billOverflowHint": "Over-limit amounts are posted as a salary advance and deducted on the next payroll run.",
+      "previewOnlyHint": "Preview-only: over-limit amounts are flagged on the consumption row but no advance is posted automatically.",
       "notes": "Notes",
       "optional": "Optional"
     }

@@ -123,8 +123,15 @@ public class ConsumptionAllowanceController {
                     .orElseThrow(() -> new IllegalArgumentException("Waiter not found"))
                 : null;
 
-        if (employee != null && waiter != null) {
-            throw new IllegalArgumentException("Allowance cannot target both an employee and a waiter");
+        String role = req.role() != null ? req.role().trim() : null;
+        if (role != null && role.isEmpty()) role = null;
+        int subjects = 0;
+        if (employee != null) subjects++;
+        if (waiter != null) subjects++;
+        if (role != null) subjects++;
+        if (subjects > 1) {
+            throw new IllegalArgumentException(
+                    "Allowance can target at most one of employee, waiter, or role");
         }
         if (req.limitCount() == null && req.limitAmount() == null) {
             throw new IllegalArgumentException("At least one of limitCount or limitAmount must be set");
@@ -135,9 +142,11 @@ public class ConsumptionAllowanceController {
         a.setCategory(category);
         a.setEmployee(employee);
         a.setWaiter(waiter);
+        a.setRole(role);
         a.setPeriod(req.period());
         a.setLimitCount(req.limitCount());
         a.setLimitAmount(req.limitAmount());
+        a.setBillOverflow(req.billOverflow() == null ? Boolean.TRUE : req.billOverflow());
         a.setNotes(req.notes());
         a.setActive(req.active() == null ? Boolean.TRUE : req.active());
         return a;
@@ -147,9 +156,11 @@ public class ConsumptionAllowanceController {
             Long categoryId,
             Long employeeId,
             Long waiterId,
+            String role,
             ConsumptionAllowance.Period period,
             Integer limitCount,
             BigDecimal limitAmount,
+            Boolean billOverflow,
             Boolean active,
             String notes
     ) {}
@@ -157,6 +168,7 @@ public class ConsumptionAllowanceController {
     public record PreviewResponse(
             boolean hasAllowance,
             boolean overLimit,
+            boolean willAutoCharge,
             BigDecimal lineTotal,
             BigDecimal freeAmount,
             BigDecimal chargedAmount,
@@ -170,13 +182,14 @@ public class ConsumptionAllowanceController {
     ) {
         static PreviewResponse from(ConsumptionLimitService.Decision d) {
             if (d.allowance() == null) {
-                return new PreviewResponse(false, false, d.lineTotal(),
+                return new PreviewResponse(false, false, false, d.lineTotal(),
                         d.lineTotal(), BigDecimal.ZERO,
                         null, null, null, null, null, null, null);
             }
             return new PreviewResponse(
                     true,
                     d.overLimit(),
+                    d.shouldAutoCharge(),
                     d.lineTotal(),
                     d.freeAmount(),
                     d.chargedAmount(),
