@@ -56,12 +56,28 @@ public class SalaryConfigController {
                     .orElseThrow(() -> new RuntimeException("Employee not found"));
         }
 
+        SalaryConfig.PayFrequency frequency = request.payFrequency != null
+                ? request.payFrequency
+                : SalaryConfig.PayFrequency.MONTHLY;
+
+        // baseAmount is the canonical amount. For backward compatibility
+        // with clients that only know monthlySalary, fall back to that.
+        BigDecimal baseAmount = request.baseAmount != null
+                ? request.baseAmount
+                : request.monthlySalary;
+        BigDecimal monthlySalary = frequency == SalaryConfig.PayFrequency.MONTHLY
+                ? (request.monthlySalary != null ? request.monthlySalary : request.baseAmount)
+                : null;
+
         SalaryConfig config = SalaryConfig.builder()
                 .restaurant(restaurant)
                 .employee(employee)
                 .waiter(waiter)
-                .monthlySalary(request.monthlySalary)
+                .payFrequency(frequency)
+                .baseAmount(baseAmount)
+                .monthlySalary(monthlySalary)
                 .payDay(request.payDay)
+                .payDayOfWeek(request.payDayOfWeek)
                 .paymentMethod(request.paymentMethod != null ? request.paymentMethod : PayrollEntry.PaymentMethod.CASH)
                 .autoApprove(request.autoApprove != null ? request.autoApprove : true)
                 .active(true)
@@ -69,8 +85,9 @@ public class SalaryConfigController {
                 .build();
 
         SalaryConfig saved = salaryConfigRepository.save(config);
-        log.info("Salary config created for {} {} at restaurant {}: {} on day {}",
-                request.employeeType, request.employeeId, restaurant.getId(), request.monthlySalary, request.payDay);
+        log.info("Salary config created for {} {} at restaurant {}: {} {} (payDay={}, dow={})",
+                request.employeeType, request.employeeId, restaurant.getId(),
+                baseAmount, frequency, request.payDay, request.payDayOfWeek);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Salary config created", saved));
     }
@@ -80,8 +97,17 @@ public class SalaryConfigController {
         SalaryConfig config = salaryConfigRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Salary config not found"));
 
-        if (request.monthlySalary != null) config.setMonthlySalary(request.monthlySalary);
+        if (request.payFrequency != null) config.setPayFrequency(request.payFrequency);
+        if (request.baseAmount != null) config.setBaseAmount(request.baseAmount);
+        if (request.monthlySalary != null) {
+            config.setMonthlySalary(request.monthlySalary);
+            if (request.baseAmount == null
+                    && config.getPayFrequency() == SalaryConfig.PayFrequency.MONTHLY) {
+                config.setBaseAmount(request.monthlySalary);
+            }
+        }
         if (request.payDay != null) config.setPayDay(request.payDay);
+        if (request.payDayOfWeek != null) config.setPayDayOfWeek(request.payDayOfWeek);
         if (request.paymentMethod != null) config.setPaymentMethod(request.paymentMethod);
         if (request.autoApprove != null) config.setAutoApprove(request.autoApprove);
         if (request.active != null) config.setActive(request.active);
@@ -112,16 +138,22 @@ public class SalaryConfigController {
             Long restaurantId,
             Long employeeId,
             String employeeType,
+            SalaryConfig.PayFrequency payFrequency,
+            BigDecimal baseAmount,
             BigDecimal monthlySalary,
             Integer payDay,
+            Integer payDayOfWeek,
             PayrollEntry.PaymentMethod paymentMethod,
             Boolean autoApprove,
             String notes
     ) {}
 
     public record UpdateSalaryConfigRequest(
+            SalaryConfig.PayFrequency payFrequency,
+            BigDecimal baseAmount,
             BigDecimal monthlySalary,
             Integer payDay,
+            Integer payDayOfWeek,
             PayrollEntry.PaymentMethod paymentMethod,
             Boolean autoApprove,
             Boolean active,

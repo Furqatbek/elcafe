@@ -400,7 +400,32 @@
     "minutes": "minutes",
     "search": "Search",
     "clear": "Clear",
-    "sending": "Sending..."
+    "sending": "Sending...",
+    "weekdays": {
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday",
+      "7": "Sunday",
+      "MON": "Monday",
+      "TUE": "Tuesday",
+      "WED": "Wednesday",
+      "THU": "Thursday",
+      "FRI": "Friday",
+      "SAT": "Saturday",
+      "SUN": "Sunday"
+    },
+    "weekdaysShort": {
+      "1": "Mon",
+      "2": "Tue",
+      "3": "Wed",
+      "4": "Thu",
+      "5": "Fri",
+      "6": "Sat",
+      "7": "Sun"
+    }
   },
   "orders": {
     "title": "Orders",
@@ -4325,6 +4350,26 @@
       "BANK_TRANSFER": "Bank Transfer",
       "CHECK": "Check",
       "DIRECT_DEPOSIT": "Direct Deposit"
-    }
+    },
+    "frequencies": {
+      "DAILY": "Daily",
+      "WEEKLY": "Weekly",
+      "BIWEEKLY": "Biweekly",
+      "MONTHLY": "Monthly",
+      "PER_SHIFT": "Per shift",
+      "HOURLY": "Hourly"
+    },
+    "amount": {
+      "daily": "Daily rate",
+      "weekly": "Weekly amount",
+      "biweekly": "Biweekly amount",
+      "monthly": "Monthly amount",
+      "perShift": "Per-shift rate"
+    },
+    "payFrequency": "Pay frequency",
+    "payDayOfWeekLabel": "Pay day of week",
+    "payWhen": "Paid",
+    "payDailyHint": "End of each working day",
+    "payPerShiftHint": "After each clocked shift"
   }
 }

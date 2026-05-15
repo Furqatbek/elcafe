@@ -43,11 +43,40 @@ public class SalaryConfig {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Waiter waiter;
 
-    @Column(name = "monthly_salary", nullable = false, precision = 12, scale = 2)
+    @Column(name = "monthly_salary", precision = 12, scale = 2)
     private BigDecimal monthlySalary;
 
-    @Column(name = "pay_day", nullable = false)
+    /**
+     * Canonical pay amount per period. Semantics depend on payFrequency:
+     *   MONTHLY    — total amount for one month (mirrors monthlySalary)
+     *   WEEKLY     — total amount for one week
+     *   BIWEEKLY   — total amount for two weeks
+     *   DAILY      — amount per working day
+     *   PER_SHIFT  — amount per shift worked
+     *   HOURLY     — amount per hour clocked
+     * Legacy MONTHLY rows are backfilled from monthlySalary by V131.
+     */
+    @Column(name = "base_amount", precision = 12, scale = 2)
+    private BigDecimal baseAmount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pay_frequency", nullable = false, length = 20)
+    @Builder.Default
+    private PayFrequency payFrequency = PayFrequency.MONTHLY;
+
+    /**
+     * Day of the month the salary is auto-paid (1..28). Used only for
+     * MONTHLY configs; ignored for DAILY / PER_SHIFT / HOURLY.
+     */
+    @Column(name = "pay_day")
     private Integer payDay;
+
+    /**
+     * Day of the week the salary is auto-paid (1=Monday..7=Sunday). Used
+     * only for WEEKLY / BIWEEKLY configs; ignored otherwise.
+     */
+    @Column(name = "pay_day_of_week")
+    private Integer payDayOfWeek;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", length = 20)
@@ -75,4 +104,23 @@ public class SalaryConfig {
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime updatedAt;
+
+    /**
+     * Returns the canonical pay amount per period, falling back to
+     * monthlySalary for legacy rows that pre-date base_amount.
+     */
+    public BigDecimal effectiveBaseAmount() {
+        if (baseAmount != null) return baseAmount;
+        if (monthlySalary != null) return monthlySalary;
+        return BigDecimal.ZERO;
+    }
+
+    public enum PayFrequency {
+        DAILY,
+        WEEKLY,
+        BIWEEKLY,
+        MONTHLY,
+        PER_SHIFT,
+        HOURLY
+    }
 }

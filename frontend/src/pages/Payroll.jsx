@@ -42,7 +42,8 @@ export default function Payroll() {
     bonus: '', tips: '', commission: '', taxDeduction: '', otherDeductions: '', notes: '',
   });
   const [salaryForm, setSalaryForm] = useState({
-    employeeId: '', monthlySalary: '', payDay: '1', paymentMethod: 'CASH', autoApprove: true, notes: '',
+    employeeId: '', payFrequency: 'MONTHLY', baseAmount: '', payDay: '1',
+    payDayOfWeek: '1', paymentMethod: 'CASH', autoApprove: true, notes: '',
   });
   const [payForm, setPayForm] = useState({ paymentDate: new Date().toISOString().split('T')[0], paymentMethod: 'CASH', transactionRef: '' });
 
@@ -86,18 +87,32 @@ export default function Payroll() {
   const handleCreateSalary = async () => {
     try {
       const { type, id } = parseEmployeeKey(salaryForm.employeeId);
+      const freq = salaryForm.payFrequency;
+      const baseAmountNum = parseFloat(salaryForm.baseAmount);
+      // Send baseAmount as the canonical value. For MONTHLY we also
+      // populate monthlySalary so older list views that still read it
+      // keep showing the right number; for other frequencies the legacy
+      // column stays null.
       await financialAPI.createSalaryConfig({
         restaurantId: parseInt(selectedRestaurant),
         employeeId: id,
         employeeType: type,
-        monthlySalary: parseFloat(salaryForm.monthlySalary),
-        payDay: parseInt(salaryForm.payDay),
+        payFrequency: freq,
+        baseAmount: baseAmountNum,
+        monthlySalary: freq === 'MONTHLY' ? baseAmountNum : null,
+        payDay: freq === 'MONTHLY' ? parseInt(salaryForm.payDay) : null,
+        payDayOfWeek: (freq === 'WEEKLY' || freq === 'BIWEEKLY')
+          ? parseInt(salaryForm.payDayOfWeek)
+          : null,
         paymentMethod: salaryForm.paymentMethod,
         autoApprove: salaryForm.autoApprove,
         notes: salaryForm.notes || null,
       });
       setSalaryOpen(false);
-      setSalaryForm({ employeeId: '', monthlySalary: '', payDay: '1', paymentMethod: 'CASH', autoApprove: true, notes: '' });
+      setSalaryForm({
+        employeeId: '', payFrequency: 'MONTHLY', baseAmount: '', payDay: '1',
+        payDayOfWeek: '1', paymentMethod: 'CASH', autoApprove: true, notes: '',
+      });
       loadSalaryConfigs();
     } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
   };
@@ -117,6 +132,24 @@ export default function Payroll() {
       loadSalaryConfigs();
       loadPayrolls();
     } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
+  };
+
+  // Pay-now is disabled once a config has already been paid for the
+  // current period — month for MONTHLY, calendar day otherwise. Matches
+  // the backend's per-frequency double-payment guard.
+  const isPayNowDisabled = (sc) => {
+    if (!sc.lastPaidDate) return false;
+    const last = new Date(sc.lastPaidDate);
+    const today = new Date();
+    const freq = sc.payFrequency || 'MONTHLY';
+    if (freq === 'MONTHLY') {
+      return last.getMonth() === today.getMonth()
+          && last.getFullYear() === today.getFullYear();
+    }
+    // Daily / weekly / biweekly / per-shift: same day-or-after means
+    // already paid for the most recent period.
+    return last.toDateString() === today.toDateString()
+        || last >= new Date(today.toDateString());
   };
 
   const handleCreate = async () => {
@@ -211,7 +244,8 @@ export default function Payroll() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t('payroll.employee')}</TableHead>
-                    <TableHead className="text-right">{t('payroll.monthlySalary')}</TableHead>
+                    <TableHead className="text-center">{t('payroll.payFrequency', 'Frequency')}</TableHead>
+                    <TableHead className="text-right">{t('payroll.amount', 'Amount')}</TableHead>
                     <TableHead className="text-center">{t('payroll.payDay')}</TableHead>
                     <TableHead className="text-center">{t('payroll.method')}</TableHead>
                     <TableHead className="text-center">{t('payroll.status')}</TableHead>
@@ -221,15 +255,26 @@ export default function Payroll() {
                 </TableHeader>
                 <TableBody>
                   {salaryConfigs.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t('payroll.noSalaries')}</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t('payroll.noSalaries')}</TableCell></TableRow>
                   ) : (
-                    salaryConfigs.map(sc => (
+                    salaryConfigs.map(sc => {
+                      const freq = sc.payFrequency || 'MONTHLY';
+                      const amount = sc.baseAmount != null ? sc.baseAmount : sc.monthlySalary;
+                      const payWhen =
+                        freq === 'MONTHLY' ? (sc.payDay ?? '—')
+                        : freq === 'WEEKLY' || freq === 'BIWEEKLY'
+                          ? t(`common.weekdaysShort.${sc.payDayOfWeek}`, String(sc.payDayOfWeek ?? '—'))
+                          : '—';
+                      return (
                       <TableRow key={sc.id}>
                         <TableCell className="font-medium">
                           {sc.waiter ? sc.waiter.name : `${sc.employee?.firstName || ''} ${sc.employee?.lastName || sc.employee?.email || ''}`}
                         </TableCell>
-                        <TableCell className="text-right font-bold">{fmt(sc.monthlySalary)}</TableCell>
-                        <TableCell className="text-center">{sc.payDay}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">{t(`payroll.frequencies.${freq}`, freq)}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-bold">{fmt(amount)}</TableCell>
+                        <TableCell className="text-center">{payWhen}</TableCell>
                         <TableCell className="text-center"><Badge variant="outline">{t(`payroll.methods.${sc.paymentMethod}`)}</Badge></TableCell>
                         <TableCell className="text-center">
                           <Badge variant={sc.active ? 'default' : 'secondary'}>{sc.active ? t('payroll.active') : t('payroll.inactive')}</Badge>
@@ -237,8 +282,12 @@ export default function Payroll() {
                         <TableCell className="text-sm text-muted-foreground">{sc.lastPaidDate || t('payroll.never')}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-1 justify-end">
-                            <Button variant="outline" size="sm" onClick={() => handlePayNow(sc.id)}
-                              disabled={sc.lastPaidDate && new Date(sc.lastPaidDate).getMonth() === new Date().getMonth() && new Date(sc.lastPaidDate).getFullYear() === new Date().getFullYear()}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePayNow(sc.id)}
+                              disabled={isPayNowDisabled(sc)}
+                            >
                               <Play className="h-3 w-3 mr-1" /> {t('payroll.payNow')}
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteSalary(sc.id)}>
@@ -247,7 +296,8 @@ export default function Payroll() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -497,15 +547,69 @@ export default function Payroll() {
                 {employees.map(e => <option key={`${e.type}:${e.id}`} value={`${e.type}:${e.id}`}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
               </select>
             </div>
+            <div className="space-y-2">
+              <Label>{t('payroll.payFrequency', 'Pay frequency')} *</Label>
+              <Select value={salaryForm.payFrequency} onValueChange={v => setSalaryForm({ ...salaryForm, payFrequency: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="DAILY">{t('payroll.frequencies.DAILY', 'Daily')}</SelectItem>
+                  <SelectItem value="PER_SHIFT">{t('payroll.frequencies.PER_SHIFT', 'Per shift')}</SelectItem>
+                  <SelectItem value="WEEKLY">{t('payroll.frequencies.WEEKLY', 'Weekly')}</SelectItem>
+                  <SelectItem value="BIWEEKLY">{t('payroll.frequencies.BIWEEKLY', 'Biweekly')}</SelectItem>
+                  <SelectItem value="MONTHLY">{t('payroll.frequencies.MONTHLY', 'Monthly')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t('payroll.monthlySalary')} *</Label>
-                <Input type="number" value={salaryForm.monthlySalary} onChange={e => setSalaryForm({ ...salaryForm, monthlySalary: e.target.value })} />
+                <Label>
+                  {salaryForm.payFrequency === 'MONTHLY'
+                    && t('payroll.amount.monthly', 'Monthly amount')}
+                  {salaryForm.payFrequency === 'WEEKLY'
+                    && t('payroll.amount.weekly', 'Weekly amount')}
+                  {salaryForm.payFrequency === 'BIWEEKLY'
+                    && t('payroll.amount.biweekly', 'Biweekly amount')}
+                  {salaryForm.payFrequency === 'DAILY'
+                    && t('payroll.amount.daily', 'Daily rate')}
+                  {salaryForm.payFrequency === 'PER_SHIFT'
+                    && t('payroll.amount.perShift', 'Per-shift rate')}
+                  {' *'}
+                </Label>
+                <Input type="number" value={salaryForm.baseAmount} onChange={e => setSalaryForm({ ...salaryForm, baseAmount: e.target.value })} />
               </div>
-              <div className="space-y-2">
-                <Label>{t('payroll.payDayLabel')} *</Label>
-                <Input type="number" min="1" max="28" value={salaryForm.payDay} onChange={e => setSalaryForm({ ...salaryForm, payDay: e.target.value })} />
-              </div>
+              {salaryForm.payFrequency === 'MONTHLY' && (
+                <div className="space-y-2">
+                  <Label>{t('payroll.payDayLabel')} *</Label>
+                  <Input type="number" min="1" max="28" value={salaryForm.payDay} onChange={e => setSalaryForm({ ...salaryForm, payDay: e.target.value })} />
+                </div>
+              )}
+              {(salaryForm.payFrequency === 'WEEKLY' || salaryForm.payFrequency === 'BIWEEKLY') && (
+                <div className="space-y-2">
+                  <Label>{t('payroll.payDayOfWeekLabel', 'Pay day of week')} *</Label>
+                  <Select value={salaryForm.payDayOfWeek} onValueChange={v => setSalaryForm({ ...salaryForm, payDayOfWeek: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">{t('common.weekdays.MON', 'Monday')}</SelectItem>
+                      <SelectItem value="2">{t('common.weekdays.TUE', 'Tuesday')}</SelectItem>
+                      <SelectItem value="3">{t('common.weekdays.WED', 'Wednesday')}</SelectItem>
+                      <SelectItem value="4">{t('common.weekdays.THU', 'Thursday')}</SelectItem>
+                      <SelectItem value="5">{t('common.weekdays.FRI', 'Friday')}</SelectItem>
+                      <SelectItem value="6">{t('common.weekdays.SAT', 'Saturday')}</SelectItem>
+                      <SelectItem value="7">{t('common.weekdays.SUN', 'Sunday')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {(salaryForm.payFrequency === 'DAILY' || salaryForm.payFrequency === 'PER_SHIFT') && (
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">{t('payroll.payWhen', 'Paid')}</Label>
+                  <div className="text-sm py-2 text-muted-foreground">
+                    {salaryForm.payFrequency === 'DAILY'
+                      ? t('payroll.payDailyHint', 'End of each working day')
+                      : t('payroll.payPerShiftHint', 'After each clocked shift')}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>{t('payroll.paymentMethod')}</Label>
@@ -526,7 +630,18 @@ export default function Payroll() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSalaryOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={handleCreateSalary} disabled={!salaryForm.employeeId || !salaryForm.monthlySalary || !salaryForm.payDay}>{t('common.save')}</Button>
+            <Button
+              onClick={handleCreateSalary}
+              disabled={
+                !salaryForm.employeeId ||
+                !salaryForm.baseAmount ||
+                (salaryForm.payFrequency === 'MONTHLY' && !salaryForm.payDay) ||
+                ((salaryForm.payFrequency === 'WEEKLY' || salaryForm.payFrequency === 'BIWEEKLY')
+                  && !salaryForm.payDayOfWeek)
+              }
+            >
+              {t('common.save')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

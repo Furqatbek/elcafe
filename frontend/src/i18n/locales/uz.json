@@ -1036,7 +1036,32 @@
     "minutes": "daqiqa",
     "search": "Qidirish",
     "clear": "Tozalash",
-    "sending": "Yuborilmoqda..."
+    "sending": "Yuborilmoqda...",
+    "weekdays": {
+      "1": "Dushanba",
+      "2": "Seshanba",
+      "3": "Chorshanba",
+      "4": "Payshanba",
+      "5": "Juma",
+      "6": "Shanba",
+      "7": "Yakshanba",
+      "MON": "Dushanba",
+      "TUE": "Seshanba",
+      "WED": "Chorshanba",
+      "THU": "Payshanba",
+      "FRI": "Juma",
+      "SAT": "Shanba",
+      "SUN": "Yakshanba"
+    },
+    "weekdaysShort": {
+      "1": "Du",
+      "2": "Se",
+      "3": "Ch",
+      "4": "Pa",
+      "5": "Ju",
+      "6": "Sh",
+      "7": "Ya"
+    }
   },
   "validation": {
     "required": "Bu maydon majburiy",
@@ -4130,6 +4155,26 @@
       "BANK_TRANSFER": "Bank o'tkazmasi",
       "CHECK": "Chek",
       "DIRECT_DEPOSIT": "To'g'ridan-to'g'ri o'tkazma"
-    }
+    },
+    "frequencies": {
+      "DAILY": "Har kuni",
+      "WEEKLY": "Har hafta",
+      "BIWEEKLY": "Ikki haftada bir",
+      "MONTHLY": "Har oy",
+      "PER_SHIFT": "Smena uchun",
+      "HOURLY": "Soatbay"
+    },
+    "amount": {
+      "daily": "Kunlik stavka",
+      "weekly": "Haftalik summa",
+      "biweekly": "Ikki haftalik summa",
+      "monthly": "Oylik summa",
+      "perShift": "Smena uchun stavka"
+    },
+    "payFrequency": "To'lov chastotasi",
+    "payDayOfWeekLabel": "To'lov haftaning kuni",
+    "payWhen": "Qachon to'lanadi",
+    "payDailyHint": "Har bir ish kuni oxirida",
+    "payPerShiftHint": "Har bir yopilgan smenadan keyin"
   }
 }
