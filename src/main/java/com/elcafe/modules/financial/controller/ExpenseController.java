@@ -6,6 +6,7 @@ import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.service.ExpenseService;
+import com.elcafe.modules.order.service.IdempotencyService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.utils.ApiResponse;
@@ -20,7 +21,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDate;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,16 +38,51 @@ public class ExpenseController {
     private final RestaurantRepository restaurantRepository;
     private final AccountRepository accountRepository;
     private final com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
+    private final IdempotencyService idempotencyService;
+
+    /** Window for the server-derived fingerprint key when the client sends no header. */
+    private static final long FINGERPRINT_WINDOW_SECONDS = 60L;
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     public ResponseEntity<ApiResponse<ExpenseResponse>> createExpense(
-            @Valid @RequestBody ExpenseRequest request) {
+            @Valid @RequestBody ExpenseRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         // Enforce active shift for operators/waiters
         shiftEnforcementService.requireActiveShift();
 
         log.info("Creating expense for restaurant: {}", request.getRestaurantId());
 
+        // The mobile app retries on flaky restaurant Wi-Fi, which produced
+        // duplicate expense rows. Route every create through the existing
+        // IdempotencyService:
+        //   * if the client sent an Idempotency-Key header, use it;
+        //   * otherwise derive a per-user 60s fingerprint of the payload so
+        //     naive retries still collide and return the original result.
+        String key = (idempotencyKey != null && !idempotencyKey.isBlank())
+                ? idempotencyKey
+                : buildFingerprintKey(request);
+
+        IdempotencyService.IdempotentResult<ExpenseResponse> idemResult =
+                idempotencyService.executeIdempotently(
+                        key,
+                        "EXPENSE_CREATE",
+                        request,
+                        () -> performCreate(request),
+                        ExpenseResponse.class);
+
+        ExpenseResponse body = idemResult.result();
+        String message = idemResult.fromCache()
+                ? "Expense already created (duplicate request ignored)"
+                : "Expense created successfully";
+
+        // We keep the 201 status on cache hits too — the resource exists either
+        // way, and changing the status code would break clients that branch on it.
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(message, body));
+    }
+
+    private ExpenseResponse performCreate(ExpenseRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
@@ -69,10 +108,44 @@ public class ExpenseController {
                 .attachmentUrl(request.getAttachmentUrl())
                 .build();
 
-        Expense createdExpense = expenseService.createExpense(expense);
+        return mapToResponse(expenseService.createExpense(expense));
+    }
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Expense created successfully", mapToResponse(createdExpense)));
+    /**
+     * Build a deterministic idempotency key from the payload + caller +
+     * a 60-second time bucket, used when the client sent no header. A
+     * waiter double-submitting the same expense within the bucket collides;
+     * legitimate re-entry minutes later does not.
+     */
+    private String buildFingerprintKey(ExpenseRequest request) {
+        String user = "anon";
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null) {
+            user = auth.getName();
+        }
+        long bucket = System.currentTimeMillis() / 1000L / FINGERPRINT_WINDOW_SECONDS;
+
+        String raw = String.join("|",
+                "EXPENSE_CREATE",
+                String.valueOf(request.getRestaurantId()),
+                user,
+                String.valueOf(request.getExpenseDate()),
+                String.valueOf(request.getCategory()),
+                String.valueOf(request.getAmount()),
+                String.valueOf(request.getDescription()),
+                String.valueOf(request.getVendor()),
+                String.valueOf(bucket));
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(raw.getBytes(StandardCharsets.UTF_8));
+            // Hex-encoded SHA-256 is 64 chars — fits inside the column's
+            // VARCHAR(255). Prefix it so it's distinguishable from any
+            // header-supplied key.
+            return "exp-fp-" + HexFormat.of().formatHex(hash);
+        } catch (Exception e) {
+            // SHA-256 should never be missing — fall back to a coarse key.
+            return "exp-fp-" + raw.hashCode();
+        }
     }
 
     @GetMapping
