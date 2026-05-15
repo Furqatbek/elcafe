@@ -55,6 +55,90 @@ public class SalaryAutoPayService {
     }
 
     /**
+     * Fire-on-clock-out hook for PER_SHIFT configs. Creates a single
+     * PayrollEntry for the just-closed shift (period = [shiftDate,
+     * shiftDate], amount = config.baseAmount × 1) and flips the shift's
+     * paidForSalary flag so the 08:00 batcher won't pay it again. No-op
+     * for non-PER_SHIFT configs and for shifts that are already marked
+     * paid.
+     *
+     * Designed to be called from inside the clock-out transaction. If
+     * any payroll write fails the whole clock-out rolls back — that's
+     * intentional, an unpaid shift is a louder bug than a blocked
+     * clock-out and the cashier can retry.
+     */
+    @Transactional
+    public void processClockOut(EmployeeShift shift) {
+        if (shift == null || Boolean.TRUE.equals(shift.getPaidForSalary())) return;
+        if (shift.getClockOut() == null) return;
+
+        Long restaurantId = shift.getRestaurant() != null ? shift.getRestaurant().getId() : null;
+        if (restaurantId == null) return;
+
+        List<SalaryConfig> configs = salaryConfigRepository
+                .findByRestaurant_IdAndActiveTrue(restaurantId)
+                .stream()
+                .filter(c -> c.getPayFrequency() == PayFrequency.PER_SHIFT)
+                .filter(c -> matchesShiftSubject(c, shift))
+                .toList();
+
+        if (configs.isEmpty()) return;
+
+        Period period = new Period(shift.getShiftDate(), shift.getShiftDate());
+        for (SalaryConfig config : configs) {
+            BigDecimal base = config.effectiveBaseAmount();
+            if (base.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            Long empId = config.getEmployee() != null ? config.getEmployee().getId() : null;
+            BigDecimal advanceDeduction = empId != null
+                    ? calculateUnpaidAdvances(restaurantId, empId, period.start, period.end)
+                    : BigDecimal.ZERO;
+
+            PayrollEntry entry = PayrollEntry.builder()
+                    .restaurant(config.getRestaurant())
+                    .employee(config.getEmployee())
+                    .waiter(config.getWaiter())
+                    .payrollType(PayrollEntry.PayrollType.SALARY)
+                    .payPeriodStart(period.start)
+                    .payPeriodEnd(period.end)
+                    .baseSalary(base)
+                    .otherDeductions(advanceDeduction)
+                    .notes("Auto-generated PER_SHIFT payout for shift " + shift.getId()
+                            + " (" + shift.getShiftDate() + ")")
+                    .build();
+
+            PayrollEntry saved = payrollService.createPayrollEntry(entry);
+            if (Boolean.TRUE.equals(config.getAutoApprove())) {
+                payrollService.approvePayrollEntry(saved.getId(), "System");
+                payrollService.processPayment(saved.getId(), shift.getShiftDate(),
+                        config.getPaymentMethod(), null);
+            }
+
+            // Keep the config cursor in sync so the cron sees the period
+            // as already settled.
+            if (config.getLastPaidDate() == null || config.getLastPaidDate().isBefore(period.end)) {
+                config.setLastPaidDate(period.end);
+                salaryConfigRepository.save(config);
+            }
+        }
+
+        shift.setPaidForSalary(true);
+        shiftRepository.save(shift);
+        log.info("PER_SHIFT auto-payout fired for shift {} ({} configs paid)",
+                shift.getId(), configs.size());
+    }
+
+    private boolean matchesShiftSubject(SalaryConfig config, EmployeeShift shift) {
+        Long cfgEmp = config.getEmployee() != null ? config.getEmployee().getId() : null;
+        Long cfgWtr = config.getWaiter() != null ? config.getWaiter().getId() : null;
+        Long shEmp = shift.getEmployee() != null ? shift.getEmployee().getId() : null;
+        Long shWtr = shift.getWaiter() != null ? shift.getWaiter().getId() : null;
+        if (cfgEmp != null && cfgEmp.equals(shEmp)) return true;
+        if (cfgWtr != null && cfgWtr.equals(shWtr)) return true;
+        return false;
+    }
+
+    /**
      * Manual "pay now" trigger from the admin UI. Bypasses the
      * isDueToday check (operators may want to pay early) but still
      * applies the same per-frequency period and double-payment guards.
@@ -105,6 +189,16 @@ public class SalaryAutoPayService {
         if (Boolean.TRUE.equals(config.getAutoApprove())) {
             payrollService.approvePayrollEntry(saved.getId(), "System");
             payrollService.processPayment(saved.getId(), paymentDate, config.getPaymentMethod(), null);
+        }
+
+        // For shift-driven frequencies, flip the paidForSalary flag on every
+        // shift the entry covers so the fire-on-clock-out hook never
+        // re-settles them and the next batcher pass ignores them.
+        if (freq == PayFrequency.DAILY || freq == PayFrequency.PER_SHIFT) {
+            for (EmployeeShift s : matchingShiftsInPeriod(config, period)) {
+                s.setPaidForSalary(true);
+                shiftRepository.save(s);
+            }
         }
 
         config.setLastPaidDate(period.end);
@@ -206,17 +300,24 @@ public class SalaryAutoPayService {
     }
 
     private long countShiftsInPeriod(SalaryConfig config, Period period) {
+        return matchingShiftsInPeriod(config, period).size();
+    }
+
+    private List<EmployeeShift> matchingShiftsInPeriod(SalaryConfig config, Period period) {
         List<EmployeeShift> all = shiftRepository.findByRestaurantAndDateRange(
                 config.getRestaurant().getId(), period.start, period.end);
         Long empId = config.getEmployee() != null ? config.getEmployee().getId() : null;
         Long waiterId = config.getWaiter() != null ? config.getWaiter().getId() : null;
         return all.stream().filter(s -> {
+            // Skip shifts already settled by the fire-on-clock-out hook so
+            // the batcher never double-pays.
+            if (Boolean.TRUE.equals(s.getPaidForSalary())) return false;
             boolean empMatch = empId != null && s.getEmployee() != null
                     && empId.equals(s.getEmployee().getId());
             boolean waiterMatch = waiterId != null && s.getWaiter() != null
                     && waiterId.equals(s.getWaiter().getId());
             return empMatch || waiterMatch;
-        }).count();
+        }).toList();
     }
 
     private boolean alreadyPaidForPeriod(SalaryConfig config, Period period) {

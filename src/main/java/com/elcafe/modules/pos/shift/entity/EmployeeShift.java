@@ -134,6 +134,16 @@ public class EmployeeShift {
     @Builder.Default
     private BigDecimal totalVoids = BigDecimal.ZERO;
 
+    /**
+     * Marks the shift as already settled for payroll purposes. Set by the
+     * fire-on-clock-out hook for PER_SHIFT salary configs and by the daily
+     * batcher for DAILY / PER_SHIFT configs that get paid via the cron.
+     * Stops both code paths from double-paying the same shift.
+     */
+    @Column(name = "paid_for_salary", nullable = false)
+    @Builder.Default
+    private Boolean paidForSalary = false;
+
     // Approvals
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "approved_by")

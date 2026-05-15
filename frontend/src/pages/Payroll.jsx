@@ -549,6 +549,9 @@ export default function Payroll() {
             </div>
             <div className="space-y-2">
               <Label>{t('payroll.payFrequency', 'Pay frequency')} *</Label>
+              {/* HOURLY is omitted from the picker until the scheduler can
+                  aggregate clocked hours. The label stays in i18n so existing
+                  HOURLY rows (if any) still render correctly in the list. */}
               <Select value={salaryForm.payFrequency} onValueChange={v => setSalaryForm({ ...salaryForm, payFrequency: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>

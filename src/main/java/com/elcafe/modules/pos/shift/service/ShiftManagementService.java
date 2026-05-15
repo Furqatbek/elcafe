@@ -46,6 +46,10 @@ public class ShiftManagementService {
     private final CashDrawerRepository cashDrawerRepository;
     @org.springframework.context.annotation.Lazy
     private final com.elcafe.modules.ownerbot.service.OwnerNotificationService ownerNotificationService;
+    // Lazy so the financial → shift dependency direction stays one-way and
+    // Spring can break the bean-creation cycle.
+    @org.springframework.context.annotation.Lazy
+    private final com.elcafe.modules.financial.service.SalaryAutoPayService salaryAutoPayService;
 
     /**
      * Clock in an employee to start their shift.
@@ -158,6 +162,11 @@ public class ShiftManagementService {
         }
 
         EmployeeShift savedShift = shiftRepository.save(shift);
+
+        // Fire PER_SHIFT salary auto-payouts if any active config matches
+        // this employee/waiter. Failures here roll back the whole clock-out
+        // (intentional — an unpaid shift is louder than a blocked clock-out).
+        salaryAutoPayService.processClockOut(savedShift);
 
         String shiftName = savedShift.getEmployee() != null
                 ? savedShift.getEmployee().getFullName()
