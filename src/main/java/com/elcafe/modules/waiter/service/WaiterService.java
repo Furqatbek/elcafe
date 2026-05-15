@@ -170,18 +170,35 @@ public class WaiterService {
     /**
      * Delete waiter
      */
+    /**
+     * Soft-delete a waiter.
+     *
+     * Waiters accumulate financial history (shifts, consumptions, commissions,
+     * payroll, orders) — a hard delete either blocks on FK constraints or
+     * destroys that history via CASCADE. We mark the row inactive instead,
+     * which removes the waiter from POS-facing endpoints (those use the
+     * findByActiveTrue* repository methods) and preserves every linked row.
+     *
+     * Table assignments are unassigned as a side effect so a freed waiter
+     * doesn't leave ghost assignments behind.
+     */
     @Transactional
     public void deleteWaiter(Long id) {
         Waiter waiter = waiterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + id));
 
-        // Unassign from all tables first
+        // Unassign from all tables first so freed seats become reusable.
         List<WaiterTable> assignments = waiterTableRepository.findByWaiterIdAndActiveTrue(id);
         assignments.forEach(WaiterTable::unassign);
         waiterTableRepository.saveAll(assignments);
 
-        waiterRepository.delete(waiter);
-        log.info("Deleted waiter: {}", waiter.getName());
+        if (Boolean.FALSE.equals(waiter.getActive())) {
+            log.info("Waiter {} already inactive — no change", waiter.getName());
+            return;
+        }
+        waiter.setActive(false);
+        waiterRepository.save(waiter);
+        log.info("Soft-deleted waiter: {}", waiter.getName());
     }
 
     /**
