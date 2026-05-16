@@ -79,6 +79,10 @@ public class POSOrderService {
     private final PromotionUsageRepository promotionUsageRepository;
     private final CouponCodeRepository couponCodeRepository;
     private final POSTableService posTableService;
+    // Lazy because RevenueService depends on services that, transitively,
+    // depend on order code — avoid a startup-time circular reference.
+    @org.springframework.context.annotation.Lazy
+    private final com.elcafe.modules.financial.service.RevenueService revenueService;
     private final PackagingService packagingService;
     private final com.elcafe.modules.pos.shift.service.ShiftManagementService shiftManagementService;
     private final com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
@@ -230,6 +234,18 @@ public class POSOrderService {
                 savedOrder = orderRepository.save(savedOrder);
                 log.info("Auto-payment recorded: {} {} for order {}",
                         method, savedOrder.getTotal(), savedOrder.getOrderNumber());
+
+                // POS orders are born COMPLETED, so they never hit the
+                // OrderService.updateStatus transition that journals revenue.
+                // Post the double-entry inline; failures must not roll back
+                // the order/payment (RevenueService itself swallows + logs
+                // its own errors, but we wrap defensively too).
+                try {
+                    revenueService.recordOrderRevenue(savedOrder);
+                } catch (Exception e) {
+                    log.error("Failed to record revenue for POS order {}: {}",
+                            savedOrder.getOrderNumber(), e.getMessage());
+                }
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid payment method '{}', skipping auto-payment", request.getPaymentMethod());
             }

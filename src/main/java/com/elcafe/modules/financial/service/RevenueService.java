@@ -8,6 +8,8 @@ import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.entity.Payment;
+import com.elcafe.modules.order.enums.PaymentMethod;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,24 @@ public class RevenueService {
     private final AccountRepository accountRepository;
     private final JournalEntryRepository journalEntryRepository;
     private final InventoryProductIngredientRepository productIngredientRepository;
+
+    /**
+     * Pick the asset account that the order's revenue should debit, based
+     * on how the customer paid. Cash settles to the CASH account; cards,
+     * online wallets, mobile pay, gift cards and bank transfers all settle
+     * through the BANK account (they ultimately deposit there). Falls back
+     * to CASH if no payment is attached yet (legacy/manual rows).
+     */
+    private Account pickRevenueDestinationAccount(Order order, Long restaurantId) {
+        Account.AccountCategory category = Account.AccountCategory.CASH;
+        Payment payment = order.getPayment();
+        if (payment != null && payment.getMethod() != null
+                && payment.getMethod() != PaymentMethod.CASH) {
+            category = Account.AccountCategory.BANK;
+        }
+        return accountRepository.findByRestaurant_IdAndCategory(restaurantId, category)
+                .stream().findFirst().orElse(null);
+    }
 
     /**
      * Record revenue from a completed order
@@ -48,17 +68,16 @@ public class RevenueService {
                     ? order.getCompletedAt().toLocalDate()
                     : (order.getCreatedAt() != null ? order.getCreatedAt().toLocalDate() : LocalDate.now());
 
-            // Find revenue and cash accounts
+            // Find revenue and settlement accounts (cash vs bank depending
+            // on how the customer paid).
             Account salesAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.SALES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
-                    restaurantId, Account.AccountCategory.CASH
-            ).stream().findFirst().orElse(null);
+            Account cashAccount = pickRevenueDestinationAccount(order, restaurantId);
 
             if (salesAccount != null && cashAccount != null) {
-                // Debit: Cash, Credit: Sales Revenue
+                // Debit: Cash / Bank (per payment method), Credit: Sales Revenue
                 journalService.createJournalEntry(
                         restaurantId,
                         orderDate,
@@ -111,9 +130,7 @@ public class RevenueService {
                     restaurantId, Account.AccountCategory.SERVICE_FEES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
-                    restaurantId, Account.AccountCategory.CASH
-            ).stream().findFirst().orElse(null);
+            Account cashAccount = pickRevenueDestinationAccount(order, restaurantId);
 
             if (serviceFeeAccount != null && cashAccount != null) {
                 // Debit: Cash, Credit: Service Fees Revenue
@@ -148,9 +165,7 @@ public class RevenueService {
                     restaurantId, Account.AccountCategory.DELIVERY_FEES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
-                    restaurantId, Account.AccountCategory.CASH
-            ).stream().findFirst().orElse(null);
+            Account cashAccount = pickRevenueDestinationAccount(order, restaurantId);
 
             if (deliveryFeeAccount != null && cashAccount != null) {
                 // Debit: Cash, Credit: Delivery Fees Revenue
@@ -325,17 +340,16 @@ public class RevenueService {
         try {
             Long restaurantId = order.getRestaurant().getId();
 
-            // Find revenue and cash accounts
+            // Find revenue and settlement accounts (refund the same channel
+            // the customer originally paid through).
             Account salesAccount = accountRepository.findByRestaurant_IdAndCategory(
                     restaurantId, Account.AccountCategory.SALES
             ).stream().findFirst().orElse(null);
 
-            Account cashAccount = accountRepository.findByRestaurant_IdAndCategory(
-                    restaurantId, Account.AccountCategory.CASH
-            ).stream().findFirst().orElse(null);
+            Account cashAccount = pickRevenueDestinationAccount(order, restaurantId);
 
             if (salesAccount != null && cashAccount != null) {
-                // Debit: Sales Revenue (reversal), Credit: Cash (refund)
+                // Debit: Sales Revenue (reversal), Credit: Cash / Bank (refund)
                 journalService.createJournalEntry(
                         restaurantId,
                         LocalDate.now(),
