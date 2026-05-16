@@ -513,12 +513,12 @@ export default function CustomerSegments() {
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border rounded-md"
                   >
-                    <option value="ADMIN_PANEL">{t('customers.sources.adminPanel')}</option>
-                    <option value="TELEGRAM_BOT">{t('customers.sources.telegramBot')}</option>
+                    <option value="ADMIN_PANEL">{t('customers.sources.adminpanel')}</option>
+                    <option value="TELEGRAM_BOT">{t('customers.sources.telegrambot')}</option>
                     <option value="WEBSITE">{t('customers.sources.website')}</option>
-                    <option value="MOBILE_APP">{t('customers.sources.mobileApp')}</option>
-                    <option value="PHONE_CALL">{t('customers.sources.phoneCall')}</option>
-                    <option value="WALK_IN">{t('customers.sources.walkIn')}</option>
+                    <option value="MOBILE_APP">{t('customers.sources.mobileapp')}</option>
+                    <option value="PHONE_CALL">{t('customers.sources.phonecall')}</option>
+                    <option value="WALK_IN">{t('customers.sources.walkin')}</option>
                     <option value="OTHER">{t('customers.sources.other')}</option>
                   </select>
                 </div>
@@ -609,12 +609,12 @@ export default function CustomerSegments() {
             className="px-3 py-2 border rounded-md text-sm bg-white"
           >
             <option value="all">{t('customers.allSources')}</option>
-            <option value="ADMIN_PANEL">{t('customers.sources.adminPanel')}</option>
-            <option value="TELEGRAM_BOT">{t('customers.sources.telegramBot')}</option>
+            <option value="ADMIN_PANEL">{t('customers.sources.adminpanel')}</option>
+            <option value="TELEGRAM_BOT">{t('customers.sources.telegrambot')}</option>
             <option value="WEBSITE">{t('customers.sources.website')}</option>
-            <option value="MOBILE_APP">{t('customers.sources.mobileApp')}</option>
-            <option value="PHONE_CALL">{t('customers.sources.phoneCall')}</option>
-            <option value="WALK_IN">{t('customers.sources.walkIn')}</option>
+            <option value="MOBILE_APP">{t('customers.sources.mobileapp')}</option>
+            <option value="PHONE_CALL">{t('customers.sources.phonecall')}</option>
+            <option value="WALK_IN">{t('customers.sources.walkin')}</option>
             <option value="OTHER">{t('customers.sources.other')}</option>
           </select>
         </div>
