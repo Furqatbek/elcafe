@@ -503,7 +503,13 @@ export default function Payroll() {
           {selectedPayroll && (
             <div className="py-2 space-y-4">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">{selectedPayroll.employee?.fullName}</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedPayroll.waiter?.name
+                    || selectedPayroll.employee?.fullName
+                    || `${selectedPayroll.employee?.firstName || ''} ${selectedPayroll.employee?.lastName || ''}`.trim()
+                    || selectedPayroll.employee?.email
+                    || '—'}
+                </p>
                 <p className="text-3xl font-bold">{fmt(selectedPayroll.netPay)}</p>
               </div>
               <div className="space-y-2">
