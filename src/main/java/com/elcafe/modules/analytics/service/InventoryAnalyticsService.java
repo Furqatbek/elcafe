@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -76,10 +77,13 @@ public class InventoryAnalyticsService {
             }
         }
 
-        // Fall back to product-based COGS if no batch data
+        // Fall back to product-based COGS if no batch data. Skip items
+        // without a productId (synthetic packaging/addon lines) — JPA's
+        // findById(null) throws IllegalArgumentException.
         if (totalCOGS.compareTo(BigDecimal.ZERO) == 0) {
             totalCOGS = orders.stream()
                     .flatMap(order -> order.getItems().stream())
+                    .filter(item -> item.getProductId() != null)
                     .map(item -> {
                         Product product = productRepository.findById(item.getProductId()).orElse(null);
                         if (product != null && product.getCostPrice() != null) {
@@ -219,10 +223,13 @@ public class InventoryAnalyticsService {
     private Map<Long, BigDecimal> calculateIngredientUsage(List<Order> orders) {
         Map<Long, BigDecimal> ingredientUsage = new HashMap<>();
 
-        // Collect all product IDs from orders to batch load
+        // Collect all product IDs from orders to batch load. Filter nulls —
+        // findAllById on an iterable containing null will trip the same
+        // Spring Data assertion that fails on findById(null).
         Set<Long> productIds = orders.stream()
                 .flatMap(order -> order.getItems().stream())
                 .map(OrderItem::getProductId)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         // Batch load all products
@@ -231,6 +238,7 @@ public class InventoryAnalyticsService {
 
         orders.stream()
                 .flatMap(order -> order.getItems().stream())
+                .filter(item -> item.getProductId() != null)
                 .forEach(item -> {
                     Product product = productsMap.get(item.getProductId());
                     if (product != null && product.getIngredients() != null) {
