@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { menuAPI, restaurantAPI, uploadAPI, productVariantAPI, packagingRuleAPI, inventoryAPI } from '../services/api';
+import { menuAPI, restaurantAPI, uploadAPI, productVariantAPI, packagingRuleAPI, inventoryAPI, recipesAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -33,7 +33,9 @@ import {
   ToggleLeft,
   ToggleRight,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  Calculator,
+  Loader2
 } from 'lucide-react';
 
 export default function Products() {
@@ -68,6 +70,28 @@ export default function Products() {
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [recalcRunning, setRecalcRunning] = useState(false);
+
+  const handleRecalculateCosts = async () => {
+    if (recalcRunning) return;
+    if (!window.confirm(t('pages.products.recalcConfirm',
+        'Recalculate cost_price for every product from its recipe / production batches? Values that exceed 10x the selling price will be refused and logged.'))) {
+      return;
+    }
+    setRecalcRunning(true);
+    try {
+      const res = await recipesAPI.recalculateAllCosts();
+      const updated = res.data?.data ?? 0;
+      // Refresh the product list so the new costPrice shows up in the table.
+      await loadProducts();
+      alert(t('pages.products.recalcDone', { defaultValue: 'Recalculated. Updated {{count}} products.', count: updated }));
+    } catch (e) {
+      console.error('Recalculate costs failed:', e);
+      alert(e.response?.data?.message || t('pages.products.recalcFailed', 'Recalculation failed'));
+    } finally {
+      setRecalcRunning(false);
+    }
+  };
 
   // Variant management state
   const [variantsModalOpen, setVariantsModalOpen] = useState(false);
@@ -508,6 +532,18 @@ export default function Products() {
           <p className="text-muted-foreground mt-1">{t('pages.products.subtitle', 'Browse all food items')}</p>
         </div>
         <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={handleRecalculateCosts}
+            disabled={recalcRunning}
+            title={t('pages.products.recalcTooltip',
+                'Rebuilds cost_price from recipe ingredients / production batches. Runaway values (>10x selling price) are refused.')}
+          >
+            {recalcRunning
+              ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              : <Calculator className="h-4 w-4 mr-2" />}
+            {t('pages.products.recalcCosts', 'Recalculate Costs')}
+          </Button>
           <Button onClick={() => setCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('pages.products.newProduct', 'New Product')}
