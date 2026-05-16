@@ -73,10 +73,11 @@ public class SalaryConfig {
 
     /**
      * Day of the week the salary is auto-paid (1=Monday..7=Sunday). Used
-     * only for WEEKLY / BIWEEKLY configs; ignored otherwise. Stored as
-     * SMALLINT in Postgres to match V131's column definition.
+     * only for WEEKLY / BIWEEKLY configs; ignored otherwise. V135 widens
+     * the underlying column to INTEGER so this plain JPA mapping
+     * validates cleanly.
      */
-    @Column(name = "pay_day_of_week", columnDefinition = "SMALLINT")
+    @Column(name = "pay_day_of_week")
     private Integer payDayOfWeek;
 
     @Enumerated(EnumType.STRING)
