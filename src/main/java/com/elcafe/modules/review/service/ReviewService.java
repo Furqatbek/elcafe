@@ -1,5 +1,6 @@
 package com.elcafe.modules.review.service;
 
+import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.review.dto.SubmitReviewRequest;
@@ -22,6 +23,10 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final RestaurantRepository restaurantRepository;
+    // Lazy because OwnerNotificationService transitively pulls in many
+    // financial services that aren't ready at startup before reviews are.
+    @org.springframework.context.annotation.Lazy
+    private final OwnerNotificationService ownerNotificationService;
 
     @Transactional
     public Review submitReview(SubmitReviewRequest request) {
@@ -52,6 +57,21 @@ public class ReviewService {
 
         log.info("Review submitted: rating={} for restaurant={} order={}",
                 request.getRating(), request.getRestaurantId(), request.getOrderNumber());
+
+        // Fan out to the owner-bot subscribers. The notification path is
+        // @Async on the other side; failures inside it must not roll back
+        // the review submission so we swallow + log here too.
+        try {
+            ownerNotificationService.notifyCustomerReview(
+                    request.getRestaurantId(),
+                    request.getCustomerName(),
+                    request.getRating(),
+                    request.getComment(),
+                    review.getId());
+        } catch (Exception e) {
+            log.error("Failed to dispatch review notification for review {}: {}",
+                    review.getId(), e.getMessage());
+        }
 
         return review;
     }
