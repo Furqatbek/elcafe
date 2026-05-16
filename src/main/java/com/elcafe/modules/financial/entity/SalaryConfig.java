@@ -73,9 +73,10 @@ public class SalaryConfig {
 
     /**
      * Day of the week the salary is auto-paid (1=Monday..7=Sunday). Used
-     * only for WEEKLY / BIWEEKLY configs; ignored otherwise.
+     * only for WEEKLY / BIWEEKLY configs; ignored otherwise. Stored as
+     * SMALLINT in Postgres to match V131's column definition.
      */
-    @Column(name = "pay_day_of_week")
+    @Column(name = "pay_day_of_week", columnDefinition = "SMALLINT")
     private Integer payDayOfWeek;
 
     @Enumerated(EnumType.STRING)
