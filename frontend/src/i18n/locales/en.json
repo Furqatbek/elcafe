@@ -450,6 +450,20 @@
       "to": "To",
       "today": "Today",
       "noCompletedInRange": "No completed shifts in this range."
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "ON_BREAK": "On break",
+      "COMPLETED": "Completed",
+      "APPROVED": "Approved",
+      "DISPUTED": "Disputed"
+    },
+    "breakTypes": {
+      "BREAK": "Break",
+      "MEAL": "Meal",
+      "RESTROOM": "Restroom",
+      "SMOKING": "Smoking",
+      "OTHER": "Other"
     }
   },
   "orders": {
@@ -484,7 +498,20 @@
     "discount": "Discount",
     "items": "Items",
     "delivery": "Delivery",
-    "payment": "Payment",
+    "payment": {
+      "subtotal": "Subtotal",
+      "tax": "Tax {{percent}}%",
+      "total": "Total",
+      "cash": "Cash",
+      "card": "Card",
+      "mobile": "Mobile",
+      "exact": "Exact",
+      "cashReceived": "Cash received",
+      "short": "Short by",
+      "change": "Change",
+      "charge": "Charge {{amount}}",
+      "back": "Back to order"
+    },
     "notes": "Notes",
     "createdAt": "Created At",
     "updatedAt": "Updated At",
@@ -499,19 +526,31 @@
       "COURIER_ASSIGNED": "Courier Assigned",
       "ON_DELIVERY": "On Delivery",
       "DELIVERED": "Delivered",
-      "CANCELLED": "Cancelled"
+      "CANCELLED": "Cancelled",
+      "PENDING": "Pending",
+      "PLACED": "Placed",
+      "REJECTED": "Rejected",
+      "PICKED_UP": "Picked up",
+      "COMPLETED": "Completed"
     },
     "paymentMethods": {
       "CASH": "Cash",
       "CARD": "Card",
       "ONLINE": "Online",
-      "WALLET": "Wallet"
+      "WALLET": "Wallet",
+      "CREDIT_CARD": "Credit card",
+      "DEBIT_CARD": "Debit card",
+      "MOBILE_PAYMENT": "Mobile payment",
+      "GIFT_CARD": "Gift card",
+      "LOYALTY_POINTS": "Loyalty points"
     },
     "paymentStatus": {
       "PENDING": "Pending",
       "COMPLETED": "Completed",
       "FAILED": "Failed",
-      "REFUNDED": "Refunded"
+      "REFUNDED": "Refunded",
+      "PROCESSING": "Processing",
+      "PARTIALLY_REFUNDED": "Partially refunded"
     },
     "deliveryInfo": {
       "address": "Delivery Address",
@@ -602,7 +641,7 @@
     "print": "Print",
     "addItem": "Add Item",
     "pay": "Pay",
-    "paid": "Paid",
+    "paid": "PAID",
     "addItemToOrder": "Add Item to Order",
     "category": "Category",
     "allCategories": "All",
@@ -635,7 +674,7 @@
     "editOrder": "Edit Order",
     "editOrderDesc": "Add, remove, or modify items in this order",
     "currentItems": "Current Items",
-    "noItems": "No items in this order",
+    "noItems": "No items yet",
     "addNewItem": "Add New Item",
     "confirmRemoveItem": "Are you sure you want to remove this item?",
     "updateItemError": "Failed to update item quantity",
@@ -668,11 +707,8 @@
     "tableLabel": "Table {{n}}",
     "tableShort": "Tbl",
     "capN": "cap. {{n}}",
-    "guests": "guests",
-    "paid": "PAID",
     "reservedShort": "Reserved",
     "etaIn": "ETA {{m}}m",
-    "noItems": "No items yet",
     "loading": "Loading…",
     "tile": {
       "seatsN": "{{n}} seats"
@@ -696,20 +732,6 @@
       "open": "Open",
       "occupied": "Occupied",
       "reserved": "Reserved"
-    },
-    "payment": {
-      "subtotal": "Subtotal",
-      "tax": "Tax {{percent}}%",
-      "total": "Total",
-      "cash": "Cash",
-      "card": "Card",
-      "mobile": "Mobile",
-      "exact": "Exact",
-      "cashReceived": "Cash received",
-      "short": "Short by",
-      "change": "Change",
-      "charge": "Charge {{amount}}",
-      "back": "Back to order"
     },
     "action": {
       "seat": "Seat guests",
@@ -777,6 +799,24 @@
       "updateQty": "Could not update quantity.",
       "removeItem": "Could not remove the item.",
       "addItem": "Could not add the item."
+    },
+    "orderSources": {
+      "TELEGRAM_BOT": "Telegram bot",
+      "WEBSITE": "Website",
+      "ADMIN_PANEL": "Admin panel",
+      "MOBILE_APP": "Mobile app",
+      "PHONE_CALL": "Phone call",
+      "WALK_IN": "Walk-in",
+      "WAITER": "Waiter",
+      "SELF_SERVICE": "Self-service"
+    },
+    "splitModes": {
+      "ITEMS": "By items",
+      "EVEN": "Evenly"
+    },
+    "refundTypes": {
+      "FULL": "Full",
+      "PARTIAL": "Partial"
     }
   },
   "tables": {
@@ -893,7 +933,65 @@
       "DRAFT": "Draft",
       "LIVE": "Live"
     },
-    "completeMenuDescription": "Complete menu with categories and products"
+    "completeMenuDescription": "Complete menu with categories and products",
+    "productStatus": {
+      "DRAFT": "Draft",
+      "LIVE": "Live"
+    },
+    "ingredientCategories": {
+      "DAIRY": "Dairy",
+      "MEAT": "Meat",
+      "POULTRY": "Poultry",
+      "SEAFOOD": "Seafood",
+      "VEGETABLES": "Vegetables",
+      "FRUITS": "Fruits",
+      "GRAINS": "Grains",
+      "PASTA": "Pasta",
+      "BREAD": "Bread",
+      "CHEESE": "Cheese",
+      "SPICES": "Spices",
+      "HERBS": "Herbs",
+      "CONDIMENTS": "Condiments",
+      "SAUCES": "Sauces",
+      "OILS": "Oils",
+      "BEVERAGES": "Beverages",
+      "SWEETS": "Sweets",
+      "NUTS": "Nuts",
+      "LEGUMES": "Legumes",
+      "OTHER": "Other"
+    },
+    "itemTypes": {
+      "BURGER": "Burger",
+      "PIZZA": "Pizza",
+      "PASTA": "Pasta",
+      "SALAD": "Salad",
+      "SOUP": "Soup",
+      "APPETIZER": "Appetizer",
+      "MAIN_COURSE": "Main course",
+      "DESSERT": "Dessert",
+      "DRINK": "Drink",
+      "BEVERAGE": "Beverage",
+      "COFFEE": "Coffee",
+      "TEA": "Tea",
+      "JUICE": "Juice",
+      "SMOOTHIE": "Smoothie",
+      "COCKTAIL": "Cocktail",
+      "SIDE_DISH": "Side dish",
+      "SANDWICH": "Sandwich",
+      "WRAP": "Wrap",
+      "SUSHI": "Sushi",
+      "SEAFOOD": "Seafood",
+      "VEGETARIAN": "Vegetarian",
+      "VEGAN": "Vegan",
+      "OTHER": "Other"
+    },
+    "linkTypes": {
+      "RECOMMENDED": "Recommended",
+      "FREQUENTLY_BOUGHT_TOGETHER": "Frequently bought together",
+      "SIMILAR": "Similar",
+      "UPSELL": "Upsell",
+      "COMPLEMENTARY": "Complementary"
+    }
   },
   "menuCollections": {
     "title": "Menu Collections",
@@ -982,7 +1080,16 @@
       "mobileapp": "Mobile App",
       "phonecall": "Phone Call",
       "walkin": "Walk-in",
-      "other": "Other"
+      "other": "Other",
+      "TELEGRAM_BOT": "Telegram bot",
+      "WEBSITE": "Website",
+      "ADMIN_PANEL": "Admin panel",
+      "MOBILE_APP": "Mobile app",
+      "PHONE_CALL": "Phone call",
+      "WALK_IN": "Walk-in",
+      "RESERVATION": "Reservation",
+      "QR_ORDER": "QR order",
+      "OTHER": "Other"
     },
     "exportHeaders": {
       "firstName": "First Name",
@@ -1070,14 +1177,23 @@
       "full_time": "Full Time",
       "part_time": "Part Time",
       "freelance": "Freelance",
-      "contractor": "Contractor"
+      "contractor": "Contractor",
+      "FULL_TIME": "Full-time",
+      "PART_TIME": "Part-time",
+      "FREELANCE": "Freelance",
+      "CONTRACTOR": "Contractor"
     },
     "vehicles": {
       "bicycle": "Bicycle",
       "motorcycle": "Motorcycle",
       "scooter": "Scooter",
       "car": "Car",
-      "on_foot": "On Foot"
+      "on_foot": "On Foot",
+      "BICYCLE": "Bicycle",
+      "MOTORCYCLE": "Motorcycle",
+      "SCOOTER": "Scooter",
+      "CAR": "Car",
+      "ON_FOOT": "On foot"
     },
     "validation": {
       "emailRequired": "Email is required",
@@ -1089,7 +1205,13 @@
     },
     "generatePasswordTitle": "Generate secure password",
     "generate": "Generate",
-    "passwordCopied": "Password copied to clipboard"
+    "passwordCopied": "Password copied to clipboard",
+    "statuses": {
+      "OFFLINE": "Offline",
+      "ONLINE": "Online",
+      "ON_DELIVERY": "On delivery",
+      "BUSY": "Busy"
+    }
   },
   "courier": {
     "status": {
@@ -1261,6 +1383,13 @@
       "HANDLE_PAYMENTS": "Handle Payments",
       "APPLY_DISCOUNTS": "Apply Discounts",
       "REFUND_ORDERS": "Refund Orders"
+    },
+    "commissionStatus": {
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "PROCESSED": "Processed",
+      "PAID": "Paid",
+      "CANCELLED": "Cancelled"
     }
   },
   "waiterPerformance": {
@@ -2325,6 +2454,52 @@
           "generate": "Generate Report"
         }
       }
+    },
+    "valuationMethods": {
+      "FIFO": "FIFO",
+      "LIFO": "LIFO",
+      "WEIGHTED_AVERAGE": "Weighted average",
+      "FEFO": "FEFO"
+    },
+    "wasteReasons": {
+      "EXPIRED": "Expired",
+      "SPOILED": "Spoiled",
+      "DAMAGED": "Damaged",
+      "PREPARATION": "Preparation",
+      "OVER_PRODUCTION": "Over-production",
+      "CUSTOMER_RETURN": "Customer return",
+      "QUALITY_ISSUE": "Quality issue",
+      "CONTAMINATION": "Contamination",
+      "THEFT": "Theft",
+      "OTHER": "Other"
+    },
+    "varianceReasons": {
+      "THEFT": "Theft",
+      "DAMAGE": "Damage",
+      "SPOILAGE": "Spoilage",
+      "COUNTING_ERROR": "Counting error",
+      "SYSTEM_ERROR": "System error",
+      "UNRECORDED_USAGE": "Unrecorded usage",
+      "UNRECORDED_RECEIPT": "Unrecorded receipt",
+      "SHRINKAGE": "Shrinkage",
+      "OTHER": "Other"
+    },
+    "countTypes": {
+      "FULL": "Full count",
+      "CYCLE": "Cycle count",
+      "SPOT_CHECK": "Spot check"
+    },
+    "countStatus": {
+      "DRAFT": "Draft",
+      "IN_PROGRESS": "In progress",
+      "PENDING_REVIEW": "Pending review",
+      "APPROVED": "Approved",
+      "CANCELLED": "Cancelled"
+    },
+    "urgency": {
+      "CRITICAL": "Critical",
+      "HIGH": "High",
+      "MEDIUM": "Medium"
     }
   },
   "linkedItems": {
@@ -3050,7 +3225,35 @@
     "ofRevenue": "of revenue",
     "avgPrice": "Avg Price",
     "avgMargin": "Avg Margin",
-    "profit": "Profit"
+    "profit": "Profit",
+    "profitabilityStatus": {
+      "EXCELLENT": "Excellent",
+      "HEALTHY": "Healthy",
+      "ACCEPTABLE": "Acceptable",
+      "NEEDS_ATTENTION": "Needs attention",
+      "CRITICAL": "Critical"
+    },
+    "recommendationTypes": {
+      "INCREASE": "Increase price",
+      "DECREASE": "Decrease price",
+      "MAINTAIN": "Maintain price",
+      "REVIEW": "Review",
+      "DISCONTINUE": "Discontinue"
+    },
+    "menuClasses": {
+      "STAR": "Star",
+      "PLOW_HORSE": "Plow horse",
+      "PUZZLE": "Puzzle",
+      "DOG": "Dog"
+    },
+    "strategies": {
+      "COST_PLUS": "Cost-plus",
+      "COMPETITION_BASED": "Competition-based",
+      "VALUE_BASED": "Value-based",
+      "DEMAND_BASED": "Demand-based",
+      "BUNDLE": "Bundle",
+      "PSYCHOLOGICAL": "Psychological"
+    }
   },
   "marketing": {
     "promotions": {
@@ -3245,6 +3448,12 @@
       "createError": "Failed to create promotion",
       "updateError": "Failed to update promotion",
       "deleteError": "Failed to delete promotion"
+    },
+    "discountTypes": {
+      "PROMOTION": "Promotion",
+      "COUPON": "Coupon",
+      "MANUAL": "Manual",
+      "HAPPY_HOUR": "Happy hour"
     }
   },
   "coupons": {
@@ -3603,6 +3812,36 @@
       "saveTemplate": "Failed to save template",
       "toggleTemplate": "Failed to toggle template",
       "deleteTemplate": "Failed to delete template"
+    },
+    "campaignStatus": {
+      "DRAFT": "Draft",
+      "SCHEDULED": "Scheduled",
+      "SENDING": "Sending",
+      "PAUSED": "Paused",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "automationTriggers": {
+      "WELCOME": "Welcome",
+      "BIRTHDAY": "Birthday",
+      "INACTIVE_CUSTOMER": "Inactive customer",
+      "FIRST_ORDER": "First order",
+      "ORDER_COMPLETED": "Order completed",
+      "LOYALTY_MILESTONE": "Loyalty milestone",
+      "REFERRAL_SIGNUP": "Referral signup",
+      "REFERRAL_REWARD": "Referral reward",
+      "CART_ABANDONED": "Cart abandoned",
+      "REVIEW_REQUEST": "Review request"
+    },
+    "targetAudiences": {
+      "ALL": "All customers",
+      "SEGMENT": "Segment",
+      "CUSTOM": "Custom",
+      "BIRTHDAY_TODAY": "Birthday today",
+      "INACTIVE": "Inactive customers",
+      "NEW_CUSTOMERS": "New customers",
+      "LOYAL_CUSTOMERS": "Loyal customers",
+      "HIGH_VALUE": "High-value customers"
     }
   },
   "telegram": {
@@ -3830,7 +4069,36 @@
     "enabled": "Notifications enabled",
     "disabled": "Notifications disabled",
     "unsupported": "Push notifications are not supported in this browser",
-    "permissionDenied": "Notification permission denied"
+    "permissionDenied": "Notification permission denied",
+    "notificationStatus": {
+      "PENDING": "Pending",
+      "SENT": "Sent",
+      "DELIVERED": "Delivered",
+      "CLICKED": "Clicked",
+      "CLOSED": "Closed",
+      "FAILED": "Failed",
+      "EXPIRED": "Expired"
+    },
+    "campaignStatus": {
+      "DRAFT": "Draft",
+      "SCHEDULED": "Scheduled",
+      "SENDING": "Sending",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "FAILED": "Failed"
+    },
+    "notificationTypes": {
+      "ORDER_STATUS": "Order status",
+      "PROMOTION": "Promotion",
+      "CAMPAIGN": "Campaign",
+      "REMINDER": "Reminder",
+      "WELCOME": "Welcome",
+      "BIRTHDAY": "Birthday",
+      "LOYALTY": "Loyalty",
+      "REFERRAL": "Referral",
+      "SYSTEM": "System",
+      "CUSTOM": "Custom"
+    }
   },
   "qrCodes": {
     "title": "QR Codes",
@@ -4128,7 +4396,24 @@
     "depositPercent": "Or Percentage (%)",
     "notesTitle": "Notes for Customers",
     "notesPlaceholder": "Special instructions or policies to display to customers...",
-    "noSettings": "Failed to load settings"
+    "noSettings": "Failed to load settings",
+    "status": {
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
+      "DEPOSIT_PENDING": "Deposit pending",
+      "CANCELLED": "Cancelled",
+      "NO_SHOW": "No-show",
+      "COMPLETED": "Completed",
+      "SEATED": "Seated"
+    },
+    "sources": {
+      "WEBSITE": "Website",
+      "MOBILE_APP": "Mobile app",
+      "PHONE_CALL": "Phone call",
+      "WALK_IN": "Walk-in",
+      "ADMIN_PANEL": "Admin panel",
+      "TELEGRAM_BOT": "Telegram bot"
+    }
   },
   "milestones": {
     "title": "Loyalty Milestones",
@@ -4517,6 +4802,119 @@
       "previewOnlyHint": "Preview-only: over-limit amounts are flagged on the consumption row but no advance is posted automatically.",
       "notes": "Notes",
       "optional": "Optional"
+    }
+  },
+  "expenses": {
+    "categories": {
+      "RENT": "Rent",
+      "UTILITIES": "Utilities",
+      "SUPPLIES": "Supplies",
+      "INVENTORY": "Inventory",
+      "COST_OF_GOODS_SOLD": "Cost of goods sold",
+      "MARKETING": "Marketing",
+      "INSURANCE": "Insurance",
+      "MAINTENANCE": "Maintenance",
+      "EQUIPMENT": "Equipment",
+      "LICENSES": "Licenses & permits",
+      "TAXES": "Taxes",
+      "DELIVERY_COSTS": "Delivery costs",
+      "PROFESSIONAL_FEES": "Professional fees",
+      "BANK_FEES": "Bank fees",
+      "OTHER": "Other"
+    },
+    "paymentMethods": {
+      "CASH": "Cash",
+      "CARD": "Card",
+      "BANK_TRANSFER": "Bank transfer",
+      "CHECK": "Check",
+      "OTHER": "Other"
+    },
+    "paymentStatus": {
+      "UNPAID": "Unpaid",
+      "PAID": "Paid",
+      "PARTIALLY_PAID": "Partially paid"
+    }
+  },
+  "purchaseOrders": {
+    "status": {
+      "DRAFT": "Draft",
+      "PENDING_APPROVAL": "Pending approval",
+      "APPROVED": "Approved",
+      "ORDERED": "Ordered",
+      "PARTIALLY_RECEIVED": "Partially received",
+      "RECEIVED": "Received",
+      "CANCELLED": "Cancelled"
+    },
+    "paymentStatus": {
+      "UNPAID": "Unpaid",
+      "PARTIALLY_PAID": "Partially paid",
+      "PAID": "Paid"
+    }
+  },
+  "giftCard": {
+    "status": {
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "REDEEMED": "Redeemed",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled",
+      "SUSPENDED": "Suspended"
+    },
+    "transactions": {
+      "PURCHASE": "Purchase",
+      "RELOAD": "Reload",
+      "REDEMPTION": "Redemption",
+      "REFUND": "Refund",
+      "ADJUSTMENT": "Adjustment",
+      "EXPIRATION": "Expiration",
+      "TRANSFER_IN": "Transfer in",
+      "TRANSFER_OUT": "Transfer out"
+    }
+  },
+  "telegramMarketing": {
+    "targetAudiences": {
+      "ALL": "All subscribers",
+      "ACTIVE": "Active subscribers",
+      "INACTIVE": "Inactive subscribers",
+      "LINKED_CUSTOMERS": "Linked customers",
+      "CUSTOM": "Custom"
+    },
+    "triggers": {
+      "BOT_START": "Bot started",
+      "NEW_SUBSCRIBER": "New subscriber",
+      "INACTIVE_USER": "Inactive user",
+      "BIRTHDAY": "Birthday",
+      "REFERRAL_REWARD": "Referral reward",
+      "ORDER_STATUS": "Order status",
+      "LOYALTY_MILESTONE": "Loyalty milestone"
+    }
+  },
+  "loyalty": {
+    "rewardTypes": {
+      "FREE_ITEM": "Free item",
+      "DISCOUNT_PERCENTAGE": "Percentage discount",
+      "DISCOUNT_FIXED": "Fixed discount",
+      "BONUS_POINTS": "Bonus points"
+    }
+  },
+  "referrals": {
+    "status": {
+      "PENDING": "Pending",
+      "COMPLETED": "Completed",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled"
+    },
+    "rewardTypes": {
+      "BONUS_POINTS": "Bonus points",
+      "DISCOUNT_AMOUNT": "Discount amount",
+      "DISCOUNT_PERCENT": "Discount percent",
+      "FREE_ITEM": "Free item"
+    }
+  },
+  "reviews": {
+    "status": {
+      "PUBLISHED": "Published",
+      "HIDDEN": "Hidden"
     }
   }
 }

@@ -429,7 +429,20 @@
     "discount": "Chegirma",
     "items": "Mahsulotlar",
     "delivery": "Yetkazib berish",
-    "payment": "To'lov",
+    "payment": {
+      "subtotal": "Summa",
+      "tax": "Soliq {{percent}}%",
+      "total": "Jami",
+      "cash": "Naqd",
+      "card": "Karta",
+      "mobile": "O'tkazma",
+      "exact": "Aniq",
+      "cashReceived": "Olingan naqd",
+      "short": "Yetishmayapti",
+      "change": "Qaytim",
+      "charge": "{{amount}} to'lash",
+      "back": "Buyurtmaga qaytish"
+    },
     "notes": "Izohlar",
     "createdAt": "Yaratilgan",
     "updatedAt": "Yangilangan",
@@ -444,19 +457,31 @@
       "COURIER_ASSIGNED": "Kuryer tayinlandi",
       "ON_DELIVERY": "Yetkazilmoqda",
       "DELIVERED": "Yetkazildi",
-      "CANCELLED": "Bekor qilindi"
+      "CANCELLED": "Bekor qilindi",
+      "PENDING": "Kutilmoqda",
+      "PLACED": "Joylashtirildi",
+      "REJECTED": "Rad etildi",
+      "PICKED_UP": "Olib ketildi",
+      "COMPLETED": "Yakunlandi"
     },
     "paymentMethods": {
       "CASH": "Naqd",
       "CARD": "Karta",
       "ONLINE": "Onlayn",
-      "WALLET": "Hamyon"
+      "WALLET": "Hamyon",
+      "CREDIT_CARD": "Kredit karta",
+      "DEBIT_CARD": "Debet karta",
+      "MOBILE_PAYMENT": "Mobil to'lov",
+      "GIFT_CARD": "Sovg'a kartasi",
+      "LOYALTY_POINTS": "Sodiqlik ballari"
     },
     "paymentStatus": {
       "PENDING": "Kutilmoqda",
       "COMPLETED": "Yakunlandi",
       "FAILED": "Muvaffaqiyatsiz",
-      "REFUNDED": "Qaytarildi"
+      "REFUNDED": "Qaytarildi",
+      "PROCESSING": "Qayta ishlanmoqda",
+      "PARTIALLY_REFUNDED": "Qisman qaytarildi"
     },
     "deliveryInfo": {
       "address": "Yetkazib berish manzili",
@@ -547,7 +572,7 @@
     "print": "Chop etish",
     "addItem": "Qo'shish",
     "pay": "To'lash",
-    "paid": "To'langan",
+    "paid": "TO'LANDI",
     "addItemToOrder": "Buyurtmaga mahsulot qo'shish",
     "category": "Kategoriya",
     "allCategories": "Hammasi",
@@ -580,7 +605,7 @@
     "editOrder": "Buyurtmani tahrirlash",
     "editOrderDesc": "Ushbu buyurtmaga mahsulot qo'shing, o'chiring yoki o'zgartiring",
     "currentItems": "Joriy mahsulotlar",
-    "noItems": "Bu buyurtmada mahsulotlar yo'q",
+    "noItems": "Hali pozitsiyalar yo'q",
     "addNewItem": "Yangi mahsulot qo'shish",
     "confirmRemoveItem": "Ushbu mahsulotni o'chirishga ishonchingiz komilmi?",
     "updateItemError": "Miqdorni o'zgartirib bo'lmadi",
@@ -613,11 +638,8 @@
     "tableLabel": "{{n}}-stol",
     "tableShort": "Stol",
     "capN": "{{n}} kishilik",
-    "guests": "mehmon",
-    "paid": "TO'LANDI",
     "reservedShort": "Bron",
     "etaIn": "{{m}} daqiqadan keyin",
-    "noItems": "Hali pozitsiyalar yo'q",
     "loading": "Yuklanmoqda…",
     "tile": {
       "seatsN": "{{n}} joy"
@@ -641,20 +663,6 @@
       "open": "Bo'sh",
       "occupied": "Band",
       "reserved": "Bron"
-    },
-    "payment": {
-      "subtotal": "Summa",
-      "tax": "Soliq {{percent}}%",
-      "total": "Jami",
-      "cash": "Naqd",
-      "card": "Karta",
-      "mobile": "O'tkazma",
-      "exact": "Aniq",
-      "cashReceived": "Olingan naqd",
-      "short": "Yetishmayapti",
-      "change": "Qaytim",
-      "charge": "{{amount}} to'lash",
-      "back": "Buyurtmaga qaytish"
     },
     "action": {
       "seat": "Mehmonlarni qabul qilish",
@@ -722,6 +730,24 @@
       "updateQty": "Miqdorni o'zgartirib bo'lmadi.",
       "removeItem": "Pozitsiyani o'chirib bo'lmadi.",
       "addItem": "Pozitsiyani qo'shib bo'lmadi."
+    },
+    "orderSources": {
+      "TELEGRAM_BOT": "Telegram bot",
+      "WEBSITE": "Veb-sayt",
+      "ADMIN_PANEL": "Admin paneli",
+      "MOBILE_APP": "Mobil ilova",
+      "PHONE_CALL": "Telefon qo'ng'irog'i",
+      "WALK_IN": "O'zi keldi",
+      "WAITER": "Ofitsiant",
+      "SELF_SERVICE": "O'z-o'zini xizmat ko'rsatish"
+    },
+    "splitModes": {
+      "ITEMS": "Pozitsiyalar bo'yicha",
+      "EVEN": "Teng bo'lish"
+    },
+    "refundTypes": {
+      "FULL": "To'liq",
+      "PARTIAL": "Qisman"
     }
   },
   "tables": {
@@ -838,7 +864,65 @@
       "DRAFT": "Qoralama",
       "LIVE": "Nashr etilgan"
     },
-    "completeMenuDescription": "Kategoriyalar va mahsulotlar bilan to'liq menyu"
+    "completeMenuDescription": "Kategoriyalar va mahsulotlar bilan to'liq menyu",
+    "productStatus": {
+      "DRAFT": "Qoralama",
+      "LIVE": "Faol"
+    },
+    "ingredientCategories": {
+      "DAIRY": "Sut mahsulotlari",
+      "MEAT": "Go'sht",
+      "POULTRY": "Parranda go'shti",
+      "SEAFOOD": "Dengiz mahsulotlari",
+      "VEGETABLES": "Sabzavotlar",
+      "FRUITS": "Mevalar",
+      "GRAINS": "Donlar",
+      "PASTA": "Makaron",
+      "BREAD": "Non",
+      "CHEESE": "Pishloq",
+      "SPICES": "Ziravorlar",
+      "HERBS": "O'tlar",
+      "CONDIMENTS": "Ziravor qo'shimchalari",
+      "SAUCES": "Souslar",
+      "OILS": "Yog'lar",
+      "BEVERAGES": "Ichimliklar",
+      "SWEETS": "Shirinliklar",
+      "NUTS": "Yong'oqlar",
+      "LEGUMES": "Dukkaklilar",
+      "OTHER": "Boshqa"
+    },
+    "itemTypes": {
+      "BURGER": "Burger",
+      "PIZZA": "Pitsa",
+      "PASTA": "Makaron",
+      "SALAD": "Salat",
+      "SOUP": "Sho'rva",
+      "APPETIZER": "Gazak",
+      "MAIN_COURSE": "Asosiy taom",
+      "DESSERT": "Shirinlik",
+      "DRINK": "Ichimlik",
+      "BEVERAGE": "Ichimlik",
+      "COFFEE": "Kofe",
+      "TEA": "Choy",
+      "JUICE": "Sharbat",
+      "SMOOTHIE": "Smuzi",
+      "COCKTAIL": "Kokteyl",
+      "SIDE_DISH": "Garnir",
+      "SANDWICH": "Sendvich",
+      "WRAP": "Rol",
+      "SUSHI": "Sushi",
+      "SEAFOOD": "Dengiz mahsulotlari",
+      "VEGETARIAN": "Vegeterian",
+      "VEGAN": "Vegan",
+      "OTHER": "Boshqa"
+    },
+    "linkTypes": {
+      "RECOMMENDED": "Tavsiya etiladi",
+      "FREQUENTLY_BOUGHT_TOGETHER": "Tez-tez birga sotib olinadi",
+      "SIMILAR": "O'xshash",
+      "UPSELL": "Premium muqobil",
+      "COMPLEMENTARY": "Qo'shimcha"
+    }
   },
   "customers": {
     "title": "Mijozlar",
@@ -896,7 +980,16 @@
       "mobileapp": "Mobil ilova",
       "phonecall": "Telefon qo'ng'irog'i",
       "walkin": "Shaxsiy tashrif",
-      "other": "Boshqa"
+      "other": "Boshqa",
+      "TELEGRAM_BOT": "Telegram bot",
+      "WEBSITE": "Veb-sayt",
+      "ADMIN_PANEL": "Admin paneli",
+      "MOBILE_APP": "Mobil ilova",
+      "PHONE_CALL": "Telefon qo'ng'irog'i",
+      "WALK_IN": "O'zi keldi",
+      "RESERVATION": "Bron",
+      "QR_ORDER": "QR buyurtma",
+      "OTHER": "Boshqa"
     },
     "exportHeaders": {
       "firstName": "Ism",
@@ -1015,14 +1108,23 @@
       "full_time": "To'liq vaqt",
       "part_time": "Qisman vaqt",
       "freelance": "Frilanser",
-      "contractor": "Pudratchi"
+      "contractor": "Pudratchi",
+      "FULL_TIME": "To'liq stavka",
+      "PART_TIME": "Yarim stavka",
+      "FREELANCE": "Frilanser",
+      "CONTRACTOR": "Shartnomali ishchi"
     },
     "vehicles": {
       "bicycle": "Velosiped",
       "motorcycle": "Mototsikl",
       "scooter": "Skuter",
       "car": "Avtomobil",
-      "on_foot": "Piyoda"
+      "on_foot": "Piyoda",
+      "BICYCLE": "Velosiped",
+      "MOTORCYCLE": "Mototsikl",
+      "SCOOTER": "Skuter",
+      "CAR": "Avtomobil",
+      "ON_FOOT": "Piyoda"
     },
     "validation": {
       "emailRequired": "Email majburiy",
@@ -1034,7 +1136,13 @@
     },
     "generatePasswordTitle": "Xavfsiz parol yaratish",
     "generate": "Yaratish",
-    "passwordCopied": "Parol nusxalandi"
+    "passwordCopied": "Parol nusxalandi",
+    "statuses": {
+      "OFFLINE": "Oflayn",
+      "ONLINE": "Onlayn",
+      "ON_DELIVERY": "Yetkazib berishda",
+      "BUSY": "Band"
+    }
   },
   "common": {
     "cancel": "Bekor qilish",
@@ -1089,6 +1197,20 @@
       "to": "Gacha",
       "today": "Bugun",
       "noCompletedInRange": "Tanlangan oraliqda tugatilgan smenalar yo'q."
+    },
+    "status": {
+      "ACTIVE": "Faol",
+      "ON_BREAK": "Tanaffusda",
+      "COMPLETED": "Yakunlandi",
+      "APPROVED": "Tasdiqlangan",
+      "DISPUTED": "Bahsli"
+    },
+    "breakTypes": {
+      "BREAK": "Tanaffus",
+      "MEAL": "Ovqat tanaffusi",
+      "RESTROOM": "Hojatxona",
+      "SMOKING": "Chekish",
+      "OTHER": "Boshqa"
     }
   },
   "validation": {
@@ -1261,6 +1383,13 @@
       "HANDLE_PAYMENTS": "To'lovlarni amalga oshirish",
       "APPLY_DISCOUNTS": "Chegirmalarni qo'llash",
       "REFUND_ORDERS": "Buyurtmalarni qaytarish"
+    },
+    "commissionStatus": {
+      "PENDING": "Kutilmoqda",
+      "APPROVED": "Tasdiqlangan",
+      "PROCESSED": "Qayta ishlangan",
+      "PAID": "To'langan",
+      "CANCELLED": "Bekor qilingan"
     }
   },
   "waiterPerformance": {
@@ -2263,6 +2392,52 @@
       "errors": {
         "saveFailed": "Baholash sozlamalarini saqlab bo'lmadi"
       }
+    },
+    "valuationMethods": {
+      "FIFO": "FIFO",
+      "LIFO": "LIFO",
+      "WEIGHTED_AVERAGE": "O'rtacha vaznli",
+      "FEFO": "FEFO"
+    },
+    "wasteReasons": {
+      "EXPIRED": "Muddati tugagan",
+      "SPOILED": "Buzilgan",
+      "DAMAGED": "Zararlangan",
+      "PREPARATION": "Tayyorlash",
+      "OVER_PRODUCTION": "Ortiqcha ishlab chiqarish",
+      "CUSTOMER_RETURN": "Mijoz qaytargan",
+      "QUALITY_ISSUE": "Sifat muammosi",
+      "CONTAMINATION": "Ifloslanish",
+      "THEFT": "O'g'irlik",
+      "OTHER": "Boshqa"
+    },
+    "varianceReasons": {
+      "THEFT": "O'g'irlik",
+      "DAMAGE": "Shikastlanish",
+      "SPOILAGE": "Buzilish",
+      "COUNTING_ERROR": "Sanash xatosi",
+      "SYSTEM_ERROR": "Tizim xatosi",
+      "UNRECORDED_USAGE": "Qayd qilinmagan foydalanish",
+      "UNRECORDED_RECEIPT": "Qayd qilinmagan qabul",
+      "SHRINKAGE": "Kamayish",
+      "OTHER": "Boshqa"
+    },
+    "countTypes": {
+      "FULL": "To'liq inventarizatsiya",
+      "CYCLE": "Tsiklik sanash",
+      "SPOT_CHECK": "Tanlab tekshirish"
+    },
+    "countStatus": {
+      "DRAFT": "Qoralama",
+      "IN_PROGRESS": "Jarayonda",
+      "PENDING_REVIEW": "Ko'rib chiqish kutilmoqda",
+      "APPROVED": "Tasdiqlangan",
+      "CANCELLED": "Bekor qilindi"
+    },
+    "urgency": {
+      "CRITICAL": "Tanqidiy",
+      "HIGH": "Yuqori",
+      "MEDIUM": "O'rta"
     }
   },
   "linkedItems": {
@@ -2863,7 +3038,35 @@
     "ofRevenue": "daromaddan",
     "avgPrice": "O'rt. narx",
     "avgMargin": "O'rt. marja",
-    "profit": "Foyda"
+    "profit": "Foyda",
+    "profitabilityStatus": {
+      "EXCELLENT": "A'lo",
+      "HEALTHY": "Sog'lom",
+      "ACCEPTABLE": "Maqbul",
+      "NEEDS_ATTENTION": "E'tibor talab qiladi",
+      "CRITICAL": "Tanqidiy"
+    },
+    "recommendationTypes": {
+      "INCREASE": "Narxni oshirish",
+      "DECREASE": "Narxni pasaytirish",
+      "MAINTAIN": "Narxni saqlash",
+      "REVIEW": "Ko'rib chiqish",
+      "DISCONTINUE": "Sotuvdan olib tashlash"
+    },
+    "menuClasses": {
+      "STAR": "Yulduz",
+      "PLOW_HORSE": "Ish oti",
+      "PUZZLE": "Topishmoq",
+      "DOG": "It"
+    },
+    "strategies": {
+      "COST_PLUS": "Tannarx ustiga",
+      "COMPETITION_BASED": "Raqobatga asoslangan",
+      "VALUE_BASED": "Qiymatga asoslangan",
+      "DEMAND_BASED": "Talabga asoslangan",
+      "BUNDLE": "Komplekt",
+      "PSYCHOLOGICAL": "Psixologik"
+    }
   },
   "marketing": {
     "promotions": {
@@ -3053,6 +3256,12 @@
       "createError": "Aksiyani yaratib bo'lmadi",
       "updateError": "Aksiyani yangilab bo'lmadi",
       "deleteError": "Aksiyani o'chirib bo'lmadi"
+    },
+    "discountTypes": {
+      "PROMOTION": "Aksiya",
+      "COUPON": "Kupon",
+      "MANUAL": "Qo'lda qo'yilgan",
+      "HAPPY_HOUR": "Baxtli soat"
     }
   },
   "coupons": {
@@ -3411,6 +3620,36 @@
       "saveTemplate": "Shablonni saqlab bo'lmadi",
       "toggleTemplate": "Shablonni almashtira bo'lmadi",
       "deleteTemplate": "Shablonni o'chirib bo'lmadi"
+    },
+    "campaignStatus": {
+      "DRAFT": "Qoralama",
+      "SCHEDULED": "Rejalashtirilgan",
+      "SENDING": "Yuborilmoqda",
+      "PAUSED": "To'xtatilgan",
+      "COMPLETED": "Yakunlangan",
+      "CANCELLED": "Bekor qilingan"
+    },
+    "automationTriggers": {
+      "WELCOME": "Salomlashish",
+      "BIRTHDAY": "Tug'ilgan kun",
+      "INACTIVE_CUSTOMER": "Faol bo'lmagan mijoz",
+      "FIRST_ORDER": "Birinchi buyurtma",
+      "ORDER_COMPLETED": "Buyurtma yakunlandi",
+      "LOYALTY_MILESTONE": "Sodiqlik bosqichi",
+      "REFERRAL_SIGNUP": "Referral ro'yxatdan o'tish",
+      "REFERRAL_REWARD": "Referral mukofoti",
+      "CART_ABANDONED": "Tashlab ketilgan savatcha",
+      "REVIEW_REQUEST": "Sharh so'rovi"
+    },
+    "targetAudiences": {
+      "ALL": "Barcha mijozlar",
+      "SEGMENT": "Segment",
+      "CUSTOM": "Maxsus",
+      "BIRTHDAY_TODAY": "Bugungi tug'ilgan kun",
+      "INACTIVE": "Faol bo'lmagan mijozlar",
+      "NEW_CUSTOMERS": "Yangi mijozlar",
+      "LOYAL_CUSTOMERS": "Sodiq mijozlar",
+      "HIGH_VALUE": "Yuqori qiymatli mijozlar"
     }
   },
   "telegram": {
@@ -3638,7 +3877,36 @@
     "enabled": "Bildirishnomalar yoqildi",
     "disabled": "Bildirishnomalar o'chirildi",
     "unsupported": "Push-bildirishnomalar bu brauzerda qo'llab-quvvatlanmaydi",
-    "permissionDenied": "Bildirishnomaga ruxsat berilmadi"
+    "permissionDenied": "Bildirishnomaga ruxsat berilmadi",
+    "notificationStatus": {
+      "PENDING": "Kutilmoqda",
+      "SENT": "Yuborildi",
+      "DELIVERED": "Yetkazildi",
+      "CLICKED": "Bosildi",
+      "CLOSED": "Yopildi",
+      "FAILED": "Muvaffaqiyatsiz",
+      "EXPIRED": "Muddati tugagan"
+    },
+    "campaignStatus": {
+      "DRAFT": "Qoralama",
+      "SCHEDULED": "Rejalashtirilgan",
+      "SENDING": "Yuborilmoqda",
+      "COMPLETED": "Yakunlangan",
+      "CANCELLED": "Bekor qilingan",
+      "FAILED": "Muvaffaqiyatsiz"
+    },
+    "notificationTypes": {
+      "ORDER_STATUS": "Buyurtma holati",
+      "PROMOTION": "Aksiya",
+      "CAMPAIGN": "Kampaniya",
+      "REMINDER": "Eslatma",
+      "WELCOME": "Salomlashish",
+      "BIRTHDAY": "Tug'ilgan kun",
+      "LOYALTY": "Sodiqlik",
+      "REFERRAL": "Referral",
+      "SYSTEM": "Tizim",
+      "CUSTOM": "Maxsus"
+    }
   },
   "qrCodes": {
     "title": "QR kodlar",
@@ -3936,7 +4204,24 @@
     "depositPercent": "Yoki foiz (%)",
     "notesTitle": "Mijozlar uchun eslatmalar",
     "notesPlaceholder": "Mijozlarga ko'rsatiladigan maxsus ko'rsatmalar...",
-    "noSettings": "Sozlamalarni yuklashda xatolik"
+    "noSettings": "Sozlamalarni yuklashda xatolik",
+    "status": {
+      "PENDING": "Kutilmoqda",
+      "CONFIRMED": "Tasdiqlangan",
+      "DEPOSIT_PENDING": "Depozit kutilmoqda",
+      "CANCELLED": "Bekor qilindi",
+      "NO_SHOW": "Kelmadi",
+      "COMPLETED": "Yakunlandi",
+      "SEATED": "Joylashtirildi"
+    },
+    "sources": {
+      "WEBSITE": "Veb-sayt",
+      "MOBILE_APP": "Mobil ilova",
+      "PHONE_CALL": "Telefon qo'ng'irog'i",
+      "WALK_IN": "O'zi keldi",
+      "ADMIN_PANEL": "Admin paneli",
+      "TELEGRAM_BOT": "Telegram bot"
+    }
   },
   "milestones": {
     "title": "Sadoqat yutuqlari",
@@ -4279,7 +4564,9 @@
     "empty": "Cheklovlar yo'q.",
     "anyCategory": "Har qanday kategoriya",
     "confirmDelete": "Ushbu cheklovni o'chirasizmi?",
-    "errors": { "noCap": "Donalik yoki summa cheklovini (yoki ikkalasini) ko'rsating." },
+    "errors": {
+      "noCap": "Donalik yoki summa cheklovini (yoki ikkalasini) ko'rsating."
+    },
     "subject": {
       "restaurant": "Barcha xodimlar",
       "employee": "Aniq xodim",
@@ -4298,20 +4585,144 @@
       "previewOnly": "Qo'lda"
     },
     "col": {
-      "subject": "Kim", "category": "Kategoriya", "period": "Davr",
-      "items": "Dona", "amount": "Summa", "mode": "Oshib ketganda",
-      "status": "Holat", "actions": "Amallar"
+      "subject": "Kim",
+      "category": "Kategoriya",
+      "period": "Davr",
+      "items": "Dona",
+      "amount": "Summa",
+      "mode": "Oshib ketganda",
+      "status": "Holat",
+      "actions": "Amallar"
     },
     "form": {
-      "subject": "Kimga", "employee": "Xodim", "waiter": "Ofitsiant",
+      "subject": "Kimga",
+      "employee": "Xodim",
+      "waiter": "Ofitsiant",
       "role": "Rol",
-      "pickEmployee": "Xodimni tanlang…", "pickWaiter": "Ofitsiantni tanlang…",
-      "category": "Kategoriya (ixtiyoriy)", "period": "Davr",
-      "limitCount": "Donalik cheklovi", "limitAmount": "Summa cheklovi",
+      "pickEmployee": "Xodimni tanlang…",
+      "pickWaiter": "Ofitsiantni tanlang…",
+      "category": "Kategoriya (ixtiyoriy)",
+      "period": "Davr",
+      "limitCount": "Donalik cheklovi",
+      "limitAmount": "Summa cheklovi",
       "billOverflow": "Ortiqcha summani maoshdan avtomatik ushlab qolish",
       "billOverflowHint": "Ortiqcha summa avans sifatida hisobga olinadi va keyingi maoshdan ushlab qolinadi.",
       "previewOnlyHint": "Faqat ogohlantirish: ortiqcha summa yozuvda belgilanadi, avans avtomatik yaratilmaydi.",
-      "notes": "Izoh", "optional": "Ixtiyoriy"
+      "notes": "Izoh",
+      "optional": "Ixtiyoriy"
+    }
+  },
+  "expenses": {
+    "categories": {
+      "RENT": "Ijara",
+      "UTILITIES": "Kommunal xizmatlar",
+      "SUPPLIES": "Sarflanadigan materiallar",
+      "INVENTORY": "Inventar",
+      "COST_OF_GOODS_SOLD": "Sotilgan tovarlar tannarxi",
+      "MARKETING": "Marketing",
+      "INSURANCE": "Sug'urta",
+      "MAINTENANCE": "Ta'mirlash",
+      "EQUIPMENT": "Uskunalar",
+      "LICENSES": "Litsenziyalar va ruxsatlar",
+      "TAXES": "Soliqlar",
+      "DELIVERY_COSTS": "Yetkazib berish xarajatlari",
+      "PROFESSIONAL_FEES": "Professional xizmatlar",
+      "BANK_FEES": "Bank to'lovlari",
+      "OTHER": "Boshqa"
+    },
+    "paymentMethods": {
+      "CASH": "Naqd",
+      "CARD": "Karta",
+      "BANK_TRANSFER": "Bank o'tkazmasi",
+      "CHECK": "Chek",
+      "OTHER": "Boshqa"
+    },
+    "paymentStatus": {
+      "UNPAID": "To'lanmagan",
+      "PAID": "To'langan",
+      "PARTIALLY_PAID": "Qisman to'langan"
+    }
+  },
+  "purchaseOrders": {
+    "status": {
+      "DRAFT": "Qoralama",
+      "PENDING_APPROVAL": "Tasdiqlash kutilmoqda",
+      "APPROVED": "Tasdiqlangan",
+      "ORDERED": "Buyurtma berildi",
+      "PARTIALLY_RECEIVED": "Qisman qabul qilindi",
+      "RECEIVED": "Qabul qilindi",
+      "CANCELLED": "Bekor qilindi"
+    },
+    "paymentStatus": {
+      "UNPAID": "To'lanmagan",
+      "PARTIALLY_PAID": "Qisman to'langan",
+      "PAID": "To'langan"
+    }
+  },
+  "giftCard": {
+    "status": {
+      "PENDING": "Kutilmoqda",
+      "ACTIVE": "Faol",
+      "REDEEMED": "Foydalanilgan",
+      "EXPIRED": "Muddati tugagan",
+      "CANCELLED": "Bekor qilingan",
+      "SUSPENDED": "To'xtatilgan"
+    },
+    "transactions": {
+      "PURCHASE": "Sotib olish",
+      "RELOAD": "To'ldirish",
+      "REDEMPTION": "Foydalanish",
+      "REFUND": "Qaytarish",
+      "ADJUSTMENT": "Tuzatish",
+      "EXPIRATION": "Muddati tugashi",
+      "TRANSFER_IN": "Kiruvchi o'tkazma",
+      "TRANSFER_OUT": "Chiquvchi o'tkazma"
+    }
+  },
+  "telegramMarketing": {
+    "targetAudiences": {
+      "ALL": "Barcha obunachilar",
+      "ACTIVE": "Faol obunachilar",
+      "INACTIVE": "Faol bo'lmagan obunachilar",
+      "LINKED_CUSTOMERS": "Bog'langan mijozlar",
+      "CUSTOM": "Maxsus"
+    },
+    "triggers": {
+      "BOT_START": "Bot ishga tushirildi",
+      "NEW_SUBSCRIBER": "Yangi obunachi",
+      "INACTIVE_USER": "Faol bo'lmagan foydalanuvchi",
+      "BIRTHDAY": "Tug'ilgan kun",
+      "REFERRAL_REWARD": "Referral mukofoti",
+      "ORDER_STATUS": "Buyurtma holati",
+      "LOYALTY_MILESTONE": "Sodiqlik bosqichi"
+    }
+  },
+  "loyalty": {
+    "rewardTypes": {
+      "FREE_ITEM": "Bepul mahsulot",
+      "DISCOUNT_PERCENTAGE": "Foizli chegirma",
+      "DISCOUNT_FIXED": "Belgilangan chegirma",
+      "BONUS_POINTS": "Bonus ballari"
+    }
+  },
+  "referrals": {
+    "status": {
+      "PENDING": "Kutilmoqda",
+      "COMPLETED": "Yakunlangan",
+      "EXPIRED": "Muddati tugagan",
+      "CANCELLED": "Bekor qilingan"
+    },
+    "rewardTypes": {
+      "BONUS_POINTS": "Bonus ballari",
+      "DISCOUNT_AMOUNT": "Chegirma summasi",
+      "DISCOUNT_PERCENT": "Foizli chegirma",
+      "FREE_ITEM": "Bepul mahsulot"
+    }
+  },
+  "reviews": {
+    "status": {
+      "PUBLISHED": "Chop etilgan",
+      "HIDDEN": "Yashirilgan"
     }
   }
 }

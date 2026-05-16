@@ -429,7 +429,20 @@
     "discount": "Скидка",
     "items": "Позиции",
     "delivery": "Доставка",
-    "payment": "Оплата",
+    "payment": {
+      "subtotal": "Сумма",
+      "tax": "Налог {{percent}}%",
+      "total": "Итого",
+      "cash": "Наличные",
+      "card": "Карта",
+      "mobile": "Перевод",
+      "exact": "Точно",
+      "cashReceived": "Получено наличными",
+      "short": "Не хватает",
+      "change": "Сдача",
+      "charge": "Оплатить {{amount}}",
+      "back": "Назад к заказу"
+    },
     "notes": "Заметки",
     "createdAt": "Создано",
     "updatedAt": "Обновлено",
@@ -444,19 +457,31 @@
       "COURIER_ASSIGNED": "Назначен курьер",
       "ON_DELIVERY": "В доставке",
       "DELIVERED": "Доставлен",
-      "CANCELLED": "Отменен"
+      "CANCELLED": "Отменен",
+      "PENDING": "Ожидает",
+      "PLACED": "Размещён",
+      "REJECTED": "Отклонён",
+      "PICKED_UP": "Забран",
+      "COMPLETED": "Завершён"
     },
     "paymentMethods": {
       "CASH": "Наличные",
       "CARD": "Карта",
       "ONLINE": "Онлайн",
-      "WALLET": "Кошелек"
+      "WALLET": "Кошелек",
+      "CREDIT_CARD": "Кредитная карта",
+      "DEBIT_CARD": "Дебетовая карта",
+      "MOBILE_PAYMENT": "Мобильный платеж",
+      "GIFT_CARD": "Подарочная карта",
+      "LOYALTY_POINTS": "Бонусные баллы"
     },
     "paymentStatus": {
       "PENDING": "Ожидается",
       "COMPLETED": "Завершен",
       "FAILED": "Не удался",
-      "REFUNDED": "Возвращен"
+      "REFUNDED": "Возвращен",
+      "PROCESSING": "Обрабатывается",
+      "PARTIALLY_REFUNDED": "Частично возвращён"
     },
     "deliveryInfo": {
       "address": "Адрес доставки",
@@ -547,7 +572,7 @@
     "print": "Печать",
     "addItem": "Добавить",
     "pay": "Оплатить",
-    "paid": "Оплачено",
+    "paid": "ОПЛ.",
     "addItemToOrder": "Добавить позицию в заказ",
     "category": "Категория",
     "allCategories": "Все",
@@ -580,7 +605,7 @@
     "editOrder": "Редактировать заказ",
     "editOrderDesc": "Добавляйте, удаляйте или изменяйте позиции в этом заказе",
     "currentItems": "Текущие позиции",
-    "noItems": "В этом заказе нет позиций",
+    "noItems": "Позиций ещё нет",
     "addNewItem": "Добавить новую позицию",
     "confirmRemoveItem": "Вы уверены, что хотите удалить эту позицию?",
     "updateItemError": "Не удалось изменить количество",
@@ -613,11 +638,8 @@
     "tableLabel": "Стол {{n}}",
     "tableShort": "Стол",
     "capN": "места {{n}}",
-    "guests": "гостей",
-    "paid": "ОПЛ.",
     "reservedShort": "Бронь",
     "etaIn": "ч/з {{m}} мин",
-    "noItems": "Позиций ещё нет",
     "loading": "Загрузка…",
     "tile": {
       "seatsN": "{{n}} мест"
@@ -641,20 +663,6 @@
       "open": "Свободно",
       "occupied": "Занято",
       "reserved": "Бронь"
-    },
-    "payment": {
-      "subtotal": "Сумма",
-      "tax": "Налог {{percent}}%",
-      "total": "Итого",
-      "cash": "Наличные",
-      "card": "Карта",
-      "mobile": "Перевод",
-      "exact": "Точно",
-      "cashReceived": "Получено наличными",
-      "short": "Не хватает",
-      "change": "Сдача",
-      "charge": "Оплатить {{amount}}",
-      "back": "Назад к заказу"
     },
     "action": {
       "seat": "Принять гостей",
@@ -722,6 +730,24 @@
       "updateQty": "Не удалось изменить количество.",
       "removeItem": "Не удалось удалить позицию.",
       "addItem": "Не удалось добавить позицию."
+    },
+    "orderSources": {
+      "TELEGRAM_BOT": "Telegram-бот",
+      "WEBSITE": "Сайт",
+      "ADMIN_PANEL": "Админ-панель",
+      "MOBILE_APP": "Мобильное приложение",
+      "PHONE_CALL": "Телефонный звонок",
+      "WALK_IN": "Самостоятельный визит",
+      "WAITER": "Официант",
+      "SELF_SERVICE": "Самообслуживание"
+    },
+    "splitModes": {
+      "ITEMS": "По позициям",
+      "EVEN": "Поровну"
+    },
+    "refundTypes": {
+      "FULL": "Полный",
+      "PARTIAL": "Частичный"
     }
   },
   "tables": {
@@ -838,7 +864,65 @@
       "DRAFT": "Черновик",
       "LIVE": "Опубликован"
     },
-    "completeMenuDescription": "Полное меню с категориями и продуктами"
+    "completeMenuDescription": "Полное меню с категориями и продуктами",
+    "productStatus": {
+      "DRAFT": "Черновик",
+      "LIVE": "Опубликовано"
+    },
+    "ingredientCategories": {
+      "DAIRY": "Молочные продукты",
+      "MEAT": "Мясо",
+      "POULTRY": "Птица",
+      "SEAFOOD": "Морепродукты",
+      "VEGETABLES": "Овощи",
+      "FRUITS": "Фрукты",
+      "GRAINS": "Крупы",
+      "PASTA": "Макароны",
+      "BREAD": "Хлеб",
+      "CHEESE": "Сыр",
+      "SPICES": "Специи",
+      "HERBS": "Травы",
+      "CONDIMENTS": "Приправы",
+      "SAUCES": "Соусы",
+      "OILS": "Масла",
+      "BEVERAGES": "Напитки",
+      "SWEETS": "Сладости",
+      "NUTS": "Орехи",
+      "LEGUMES": "Бобовые",
+      "OTHER": "Прочее"
+    },
+    "itemTypes": {
+      "BURGER": "Бургер",
+      "PIZZA": "Пицца",
+      "PASTA": "Паста",
+      "SALAD": "Салат",
+      "SOUP": "Суп",
+      "APPETIZER": "Закуска",
+      "MAIN_COURSE": "Основное блюдо",
+      "DESSERT": "Десерт",
+      "DRINK": "Напиток",
+      "BEVERAGE": "Напиток",
+      "COFFEE": "Кофе",
+      "TEA": "Чай",
+      "JUICE": "Сок",
+      "SMOOTHIE": "Смузи",
+      "COCKTAIL": "Коктейль",
+      "SIDE_DISH": "Гарнир",
+      "SANDWICH": "Сэндвич",
+      "WRAP": "Ролл",
+      "SUSHI": "Суши",
+      "SEAFOOD": "Морепродукты",
+      "VEGETARIAN": "Вегетарианское",
+      "VEGAN": "Веганское",
+      "OTHER": "Прочее"
+    },
+    "linkTypes": {
+      "RECOMMENDED": "Рекомендуется",
+      "FREQUENTLY_BOUGHT_TOGETHER": "Часто покупают вместе",
+      "SIMILAR": "Похожие",
+      "UPSELL": "Премиум-альтернатива",
+      "COMPLEMENTARY": "Дополняющие"
+    }
   },
   "customers": {
     "title": "Клиенты",
@@ -896,7 +980,16 @@
       "mobileapp": "Мобильное приложение",
       "phonecall": "Телефонный звонок",
       "walkin": "Личное посещение",
-      "other": "Другое"
+      "other": "Другое",
+      "TELEGRAM_BOT": "Telegram-бот",
+      "WEBSITE": "Сайт",
+      "ADMIN_PANEL": "Админ-панель",
+      "MOBILE_APP": "Мобильное приложение",
+      "PHONE_CALL": "Телефонный звонок",
+      "WALK_IN": "Самостоятельный визит",
+      "RESERVATION": "Бронирование",
+      "QR_ORDER": "QR-заказ",
+      "OTHER": "Прочее"
     },
     "exportHeaders": {
       "firstName": "Имя",
@@ -1015,14 +1108,23 @@
       "full_time": "Полный рабочий день",
       "part_time": "Неполный рабочий день",
       "freelance": "Фриланс",
-      "contractor": "Подрядчик"
+      "contractor": "Подрядчик",
+      "FULL_TIME": "Полная занятость",
+      "PART_TIME": "Частичная занятость",
+      "FREELANCE": "Фриланс",
+      "CONTRACTOR": "Контрактник"
     },
     "vehicles": {
       "bicycle": "Велосипед",
       "motorcycle": "Мотоцикл",
       "scooter": "Скутер",
       "car": "Автомобиль",
-      "on_foot": "Пешком"
+      "on_foot": "Пешком",
+      "BICYCLE": "Велосипед",
+      "MOTORCYCLE": "Мотоцикл",
+      "SCOOTER": "Скутер",
+      "CAR": "Автомобиль",
+      "ON_FOOT": "Пешком"
     },
     "validation": {
       "emailRequired": "Email обязателен",
@@ -1034,7 +1136,13 @@
     },
     "generatePasswordTitle": "Создать безопасный пароль",
     "generate": "Создать",
-    "passwordCopied": "Пароль скопирован в буфер обмена"
+    "passwordCopied": "Пароль скопирован в буфер обмена",
+    "statuses": {
+      "OFFLINE": "Не в сети",
+      "ONLINE": "В сети",
+      "ON_DELIVERY": "На доставке",
+      "BUSY": "Занят"
+    }
   },
   "common": {
     "cancel": "Отмена",
@@ -1089,6 +1197,20 @@
       "to": "По",
       "today": "Сегодня",
       "noCompletedInRange": "В выбранном диапазоне завершённых смен нет."
+    },
+    "status": {
+      "ACTIVE": "Активна",
+      "ON_BREAK": "На перерыве",
+      "COMPLETED": "Завершена",
+      "APPROVED": "Утверждена",
+      "DISPUTED": "Оспорена"
+    },
+    "breakTypes": {
+      "BREAK": "Перерыв",
+      "MEAL": "Обеденный перерыв",
+      "RESTROOM": "Туалет",
+      "SMOKING": "Перекур",
+      "OTHER": "Прочее"
     }
   },
   "validation": {
@@ -1261,6 +1383,13 @@
       "HANDLE_PAYMENTS": "Обработка платежей",
       "APPLY_DISCOUNTS": "Применение скидок",
       "REFUND_ORDERS": "Возврат заказов"
+    },
+    "commissionStatus": {
+      "PENDING": "Ожидает",
+      "APPROVED": "Утверждено",
+      "PROCESSED": "Обработано",
+      "PAID": "Оплачено",
+      "CANCELLED": "Отменено"
     }
   },
   "waiterPerformance": {
@@ -2263,6 +2392,52 @@
       "errors": {
         "saveFailed": "Не удалось сохранить настройки оценки"
       }
+    },
+    "valuationMethods": {
+      "FIFO": "FIFO",
+      "LIFO": "LIFO",
+      "WEIGHTED_AVERAGE": "Средневзвешенная стоимость",
+      "FEFO": "FEFO"
+    },
+    "wasteReasons": {
+      "EXPIRED": "Просрочен",
+      "SPOILED": "Испорчен",
+      "DAMAGED": "Повреждён",
+      "PREPARATION": "Подготовка",
+      "OVER_PRODUCTION": "Перепроизводство",
+      "CUSTOMER_RETURN": "Возврат клиентом",
+      "QUALITY_ISSUE": "Проблема качества",
+      "CONTAMINATION": "Загрязнение",
+      "THEFT": "Кража",
+      "OTHER": "Прочее"
+    },
+    "varianceReasons": {
+      "THEFT": "Кража",
+      "DAMAGE": "Повреждение",
+      "SPOILAGE": "Порча",
+      "COUNTING_ERROR": "Ошибка подсчёта",
+      "SYSTEM_ERROR": "Системная ошибка",
+      "UNRECORDED_USAGE": "Незарегистрированное использование",
+      "UNRECORDED_RECEIPT": "Незарегистрированное поступление",
+      "SHRINKAGE": "Усушка/недостача",
+      "OTHER": "Прочее"
+    },
+    "countTypes": {
+      "FULL": "Полная инвентаризация",
+      "CYCLE": "Циклический подсчёт",
+      "SPOT_CHECK": "Выборочная проверка"
+    },
+    "countStatus": {
+      "DRAFT": "Черновик",
+      "IN_PROGRESS": "В процессе",
+      "PENDING_REVIEW": "Ожидает проверки",
+      "APPROVED": "Утверждено",
+      "CANCELLED": "Отменено"
+    },
+    "urgency": {
+      "CRITICAL": "Критично",
+      "HIGH": "Высокий",
+      "MEDIUM": "Средний"
     }
   },
   "linkedItems": {
@@ -2819,7 +2994,35 @@
     "ofRevenue": "от выручки",
     "avgPrice": "Сред. цена",
     "avgMargin": "Сред. маржа",
-    "profit": "Прибыль"
+    "profit": "Прибыль",
+    "profitabilityStatus": {
+      "EXCELLENT": "Отличная",
+      "HEALTHY": "Здоровая",
+      "ACCEPTABLE": "Приемлемая",
+      "NEEDS_ATTENTION": "Требует внимания",
+      "CRITICAL": "Критическая"
+    },
+    "recommendationTypes": {
+      "INCREASE": "Повысить цену",
+      "DECREASE": "Снизить цену",
+      "MAINTAIN": "Сохранить цену",
+      "REVIEW": "Проверить",
+      "DISCONTINUE": "Снять с продажи"
+    },
+    "menuClasses": {
+      "STAR": "Звезда",
+      "PLOW_HORSE": "Рабочая лошадка",
+      "PUZZLE": "Загадка",
+      "DOG": "Собака"
+    },
+    "strategies": {
+      "COST_PLUS": "Затраты плюс",
+      "COMPETITION_BASED": "На основе конкурентов",
+      "VALUE_BASED": "На основе ценности",
+      "DEMAND_BASED": "На основе спроса",
+      "BUNDLE": "Комбо",
+      "PSYCHOLOGICAL": "Психологическое"
+    }
   },
   "marketing": {
     "promotions": {
@@ -3009,6 +3212,12 @@
       "createError": "Не удалось создать акцию",
       "updateError": "Не удалось обновить акцию",
       "deleteError": "Не удалось удалить акцию"
+    },
+    "discountTypes": {
+      "PROMOTION": "Акция",
+      "COUPON": "Купон",
+      "MANUAL": "Ручная скидка",
+      "HAPPY_HOUR": "Счастливый час"
     }
   },
   "coupons": {
@@ -3367,6 +3576,36 @@
       "saveTemplate": "Не удалось сохранить шаблон",
       "toggleTemplate": "Не удалось переключить шаблон",
       "deleteTemplate": "Не удалось удалить шаблон"
+    },
+    "campaignStatus": {
+      "DRAFT": "Черновик",
+      "SCHEDULED": "Запланирована",
+      "SENDING": "Отправляется",
+      "PAUSED": "Приостановлена",
+      "COMPLETED": "Завершена",
+      "CANCELLED": "Отменена"
+    },
+    "automationTriggers": {
+      "WELCOME": "Приветствие",
+      "BIRTHDAY": "День рождения",
+      "INACTIVE_CUSTOMER": "Неактивный клиент",
+      "FIRST_ORDER": "Первый заказ",
+      "ORDER_COMPLETED": "Заказ завершён",
+      "LOYALTY_MILESTONE": "Достижение по программе лояльности",
+      "REFERRAL_SIGNUP": "Регистрация по реферальной ссылке",
+      "REFERRAL_REWARD": "Реферальное вознаграждение",
+      "CART_ABANDONED": "Брошенная корзина",
+      "REVIEW_REQUEST": "Запрос отзыва"
+    },
+    "targetAudiences": {
+      "ALL": "Все клиенты",
+      "SEGMENT": "Сегмент",
+      "CUSTOM": "Пользовательский",
+      "BIRTHDAY_TODAY": "День рождения сегодня",
+      "INACTIVE": "Неактивные клиенты",
+      "NEW_CUSTOMERS": "Новые клиенты",
+      "LOYAL_CUSTOMERS": "Лояльные клиенты",
+      "HIGH_VALUE": "Ценные клиенты"
     }
   },
   "telegram": {
@@ -3594,7 +3833,36 @@
     "enabled": "Уведомления включены",
     "disabled": "Уведомления отключены",
     "unsupported": "Push-уведомления не поддерживаются в этом браузере",
-    "permissionDenied": "Разрешение на уведомления отклонено"
+    "permissionDenied": "Разрешение на уведомления отклонено",
+    "notificationStatus": {
+      "PENDING": "Ожидает",
+      "SENT": "Отправлено",
+      "DELIVERED": "Доставлено",
+      "CLICKED": "Открыто",
+      "CLOSED": "Закрыто",
+      "FAILED": "Ошибка",
+      "EXPIRED": "Истекло"
+    },
+    "campaignStatus": {
+      "DRAFT": "Черновик",
+      "SCHEDULED": "Запланирована",
+      "SENDING": "Отправляется",
+      "COMPLETED": "Завершена",
+      "CANCELLED": "Отменена",
+      "FAILED": "Ошибка"
+    },
+    "notificationTypes": {
+      "ORDER_STATUS": "Статус заказа",
+      "PROMOTION": "Акция",
+      "CAMPAIGN": "Кампания",
+      "REMINDER": "Напоминание",
+      "WELCOME": "Приветствие",
+      "BIRTHDAY": "День рождения",
+      "LOYALTY": "Лояльность",
+      "REFERRAL": "Реферал",
+      "SYSTEM": "Система",
+      "CUSTOM": "Пользовательское"
+    }
   },
   "qrCodes": {
     "title": "QR-коды",
@@ -3892,7 +4160,24 @@
     "depositPercent": "Или процент (%)",
     "notesTitle": "Примечания для клиентов",
     "notesPlaceholder": "Особые инструкции или правила для отображения клиентам...",
-    "noSettings": "Не удалось загрузить настройки"
+    "noSettings": "Не удалось загрузить настройки",
+    "status": {
+      "PENDING": "Ожидает",
+      "CONFIRMED": "Подтверждено",
+      "DEPOSIT_PENDING": "Ожидает депозита",
+      "CANCELLED": "Отменено",
+      "NO_SHOW": "Не явился",
+      "COMPLETED": "Завершено",
+      "SEATED": "Размещён"
+    },
+    "sources": {
+      "WEBSITE": "Сайт",
+      "MOBILE_APP": "Мобильное приложение",
+      "PHONE_CALL": "Телефонный звонок",
+      "WALK_IN": "Самостоятельный визит",
+      "ADMIN_PANEL": "Админ-панель",
+      "TELEGRAM_BOT": "Telegram-бот"
+    }
   },
   "milestones": {
     "title": "Программа лояльности",
@@ -4235,7 +4520,9 @@
     "empty": "Лимиты не настроены.",
     "anyCategory": "Любая категория",
     "confirmDelete": "Удалить этот лимит?",
-    "errors": { "noCap": "Укажите лимит по количеству, по сумме или оба." },
+    "errors": {
+      "noCap": "Укажите лимит по количеству, по сумме или оба."
+    },
     "subject": {
       "restaurant": "Все сотрудники",
       "employee": "Конкретный сотрудник",
@@ -4254,20 +4541,144 @@
       "previewOnly": "Вручную"
     },
     "col": {
-      "subject": "Кому", "category": "Категория", "period": "Период",
-      "items": "Шт.", "amount": "Сумма", "mode": "При превышении",
-      "status": "Статус", "actions": "Действия"
+      "subject": "Кому",
+      "category": "Категория",
+      "period": "Период",
+      "items": "Шт.",
+      "amount": "Сумма",
+      "mode": "При превышении",
+      "status": "Статус",
+      "actions": "Действия"
     },
     "form": {
-      "subject": "Применяется к", "employee": "Сотрудник", "waiter": "Официант",
+      "subject": "Применяется к",
+      "employee": "Сотрудник",
+      "waiter": "Официант",
       "role": "Роль",
-      "pickEmployee": "Выберите сотрудника…", "pickWaiter": "Выберите официанта…",
-      "category": "Категория (необязательно)", "period": "Период",
-      "limitCount": "Лимит штук", "limitAmount": "Лимит суммы",
+      "pickEmployee": "Выберите сотрудника…",
+      "pickWaiter": "Выберите официанта…",
+      "category": "Категория (необязательно)",
+      "period": "Период",
+      "limitCount": "Лимит штук",
+      "limitAmount": "Лимит суммы",
       "billOverflow": "Автоматически удерживать превышение из зарплаты",
       "billOverflowHint": "Сумма превышения проводится как аванс и удерживается на следующей зарплате.",
       "previewOnlyHint": "Только предупреждение: превышение отмечается в записи, но аванс автоматически не создаётся.",
-      "notes": "Примечание", "optional": "Необязательно"
+      "notes": "Примечание",
+      "optional": "Необязательно"
+    }
+  },
+  "expenses": {
+    "categories": {
+      "RENT": "Аренда",
+      "UTILITIES": "Коммунальные услуги",
+      "SUPPLIES": "Расходные материалы",
+      "INVENTORY": "Запасы",
+      "COST_OF_GOODS_SOLD": "Себестоимость продаж",
+      "MARKETING": "Маркетинг",
+      "INSURANCE": "Страхование",
+      "MAINTENANCE": "Обслуживание",
+      "EQUIPMENT": "Оборудование",
+      "LICENSES": "Лицензии и разрешения",
+      "TAXES": "Налоги",
+      "DELIVERY_COSTS": "Расходы на доставку",
+      "PROFESSIONAL_FEES": "Профессиональные услуги",
+      "BANK_FEES": "Банковские комиссии",
+      "OTHER": "Прочее"
+    },
+    "paymentMethods": {
+      "CASH": "Наличные",
+      "CARD": "Карта",
+      "BANK_TRANSFER": "Банковский перевод",
+      "CHECK": "Чек",
+      "OTHER": "Прочее"
+    },
+    "paymentStatus": {
+      "UNPAID": "Не оплачено",
+      "PAID": "Оплачено",
+      "PARTIALLY_PAID": "Частично оплачено"
+    }
+  },
+  "purchaseOrders": {
+    "status": {
+      "DRAFT": "Черновик",
+      "PENDING_APPROVAL": "Ожидает утверждения",
+      "APPROVED": "Утверждён",
+      "ORDERED": "Заказан",
+      "PARTIALLY_RECEIVED": "Частично получен",
+      "RECEIVED": "Получен",
+      "CANCELLED": "Отменён"
+    },
+    "paymentStatus": {
+      "UNPAID": "Не оплачено",
+      "PARTIALLY_PAID": "Частично оплачено",
+      "PAID": "Оплачено"
+    }
+  },
+  "giftCard": {
+    "status": {
+      "PENDING": "Ожидает",
+      "ACTIVE": "Активна",
+      "REDEEMED": "Использована",
+      "EXPIRED": "Истекла",
+      "CANCELLED": "Отменена",
+      "SUSPENDED": "Приостановлена"
+    },
+    "transactions": {
+      "PURCHASE": "Покупка",
+      "RELOAD": "Пополнение",
+      "REDEMPTION": "Использование",
+      "REFUND": "Возврат",
+      "ADJUSTMENT": "Корректировка",
+      "EXPIRATION": "Истечение срока",
+      "TRANSFER_IN": "Перевод входящий",
+      "TRANSFER_OUT": "Перевод исходящий"
+    }
+  },
+  "telegramMarketing": {
+    "targetAudiences": {
+      "ALL": "Все подписчики",
+      "ACTIVE": "Активные подписчики",
+      "INACTIVE": "Неактивные подписчики",
+      "LINKED_CUSTOMERS": "Привязанные клиенты",
+      "CUSTOM": "Пользовательский"
+    },
+    "triggers": {
+      "BOT_START": "Запуск бота",
+      "NEW_SUBSCRIBER": "Новый подписчик",
+      "INACTIVE_USER": "Неактивный пользователь",
+      "BIRTHDAY": "День рождения",
+      "REFERRAL_REWARD": "Реферальное вознаграждение",
+      "ORDER_STATUS": "Статус заказа",
+      "LOYALTY_MILESTONE": "Достижение по программе лояльности"
+    }
+  },
+  "loyalty": {
+    "rewardTypes": {
+      "FREE_ITEM": "Бесплатный товар",
+      "DISCOUNT_PERCENTAGE": "Процентная скидка",
+      "DISCOUNT_FIXED": "Фиксированная скидка",
+      "BONUS_POINTS": "Бонусные баллы"
+    }
+  },
+  "referrals": {
+    "status": {
+      "PENDING": "Ожидает",
+      "COMPLETED": "Завершено",
+      "EXPIRED": "Истекло",
+      "CANCELLED": "Отменено"
+    },
+    "rewardTypes": {
+      "BONUS_POINTS": "Бонусные баллы",
+      "DISCOUNT_AMOUNT": "Сумма скидки",
+      "DISCOUNT_PERCENT": "Процентная скидка",
+      "FREE_ITEM": "Бесплатный товар"
+    }
+  },
+  "reviews": {
+    "status": {
+      "PUBLISHED": "Опубликован",
+      "HIDDEN": "Скрыт"
     }
   }
 }
