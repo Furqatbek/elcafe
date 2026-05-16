@@ -72,10 +72,13 @@ export default function TypeFields({ theme, ticket, tables = [] }) {
             {tables.map((row) => {
               const tid = String(row.id);
               const num = row.tableNumber ?? row.number ?? row.id;
-              const dis = occupied.has(String(row.tableNumber ?? row.number ?? row.id));
+              // Prefer the human-set table name; fall back to the
+              // number so tables without a configured name still render.
+              const display = row.tableName || t('pos.single.tableLabel', { n: num });
+              const dis = occupied.has(String(num));
               return (
                 <option key={tid} value={tid} disabled={dis}>
-                  {t('pos.single.tableLabel', { n: num })}
+                  {display}
                   {dis ? ` ${t('pos.single.tableBusy')}` : ''}
                 </option>
               );

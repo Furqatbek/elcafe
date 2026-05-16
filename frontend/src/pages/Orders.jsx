@@ -494,14 +494,21 @@ function TableTile({ vm, onClick, t }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <span
           style={{
-            fontSize: 16,
+            fontSize: 13,
             fontWeight: 700,
             color: conf.text,
             ...MONEY,
-            lineHeight: 1,
+            lineHeight: 1.15,
+            // The tile is compact — clip long names rather than blow the
+            // header out, the full label is always available in the drawer.
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: 'calc(100% - 14px)',
           }}
+          title={vm.label}
         >
-          {vm.num}
+          {vm.label}
         </span>
         <StatusDot status={vm.status} />
       </div>
@@ -1185,10 +1192,12 @@ function TableDetailDrawer({
         >
           <div
             style={{
-              width: 56,
+              minWidth: 56,
+              maxWidth: 88,
               height: 56,
               flexShrink: 0,
               borderRadius: 12,
+              padding: '0 8px',
               background: conf.bg,
               border: `1px solid ${conf.border}`,
               display: 'flex',
@@ -1196,9 +1205,24 @@ function TableDetailDrawer({
               alignItems: 'center',
               justifyContent: 'center',
               color: conf.text,
+              overflow: 'hidden',
             }}
+            title={vm.label}
           >
-            <span style={{ fontSize: 20, fontWeight: 800, ...MONEY, lineHeight: 1 }}>{vm.num}</span>
+            <span
+              style={{
+                fontSize: 15,
+                fontWeight: 800,
+                lineHeight: 1.1,
+                textAlign: 'center',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: '100%',
+              }}
+            >
+              {vm.label}
+            </span>
             <span style={{ fontSize: 9, fontWeight: 700, marginTop: 2, opacity: 0.75, textTransform: 'uppercase' }}>
               {t('orders.tableShort', 'Tbl')}
             </span>
@@ -2178,12 +2202,16 @@ export default function Orders() {
               }}
             >
               <option value="">{t('orders.confirm.pickTable', 'Pick a free table…')}</option>
-              {candidates.map((tt) => (
-                <option key={tt.id} value={tt.id}>
-                  {t('orders.tableLabel', 'Table {{n}}', { n: tt.tableNumber })}
-                  {tt.section ? ` · ${tt.section}` : ''}
-                </option>
-              ))}
+              {candidates.map((tt) => {
+                // Prefer the human-set name; fall back to the number so
+                // tables without a configured name still render.
+                const display = tt.tableName || tt.tableNumber;
+                return (
+                  <option key={tt.id} value={tt.id}>
+                    {display}{tt.section ? ` · ${tt.section}` : ''}
+                  </option>
+                );
+              })}
             </select>
           ),
           danger: false,
@@ -2202,7 +2230,9 @@ export default function Orders() {
             await runOp('CHANGE_TABLE', {
               op: 'changeTable',
               fn: () => posAPI.changeTable(orderId, newId),
-              successToast: t('orders.toast.orderMoved', 'Order moved to T{{n}}', { n: newTable?.tableNumber || '?' }),
+              successToast: t('orders.toast.orderMoved', 'Order moved to {{name}}', {
+                name: newTable?.tableName || newTable?.tableNumber || '?',
+              }),
               fallbackMessages: { server: t('orders.errorMsg.move', 'Move failed.') },
               optimistic: () => {
                 patchTable(selected.id, { status: 'AVAILABLE' });

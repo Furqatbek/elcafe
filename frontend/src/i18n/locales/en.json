@@ -737,7 +737,7 @@
       "paymentProcessed": "Payment processed",
       "tableReleased": "Table released",
       "orderCancelled": "Order cancelled",
-      "orderMoved": "Order moved to T{{n}}",
+      "orderMoved": "Order moved to {{name}}",
       "tableAvailable": "Table available",
       "noFreeTables": "No free tables to move to",
       "pickFirst": "Pick a table first",

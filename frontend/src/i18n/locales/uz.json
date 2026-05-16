@@ -682,7 +682,7 @@
       "paymentProcessed": "To'lov amalga oshirildi",
       "tableReleased": "Stol bo'shatildi",
       "orderCancelled": "Buyurtma bekor qilindi",
-      "orderMoved": "Buyurtma {{n}}-stolga ko'chirildi",
+      "orderMoved": "Buyurtma {{name}} stolga ko'chirildi",
       "tableAvailable": "Stol bo'sh",
       "noFreeTables": "Bo'sh stollar yo'q",
       "pickFirst": "Avval stolni tanlang",

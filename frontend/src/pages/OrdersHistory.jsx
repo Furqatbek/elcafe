@@ -598,7 +598,10 @@ export default function OrdersHistory() {
                         {order.createdAt ? format(new Date(order.createdAt), 'dd/MM/yyyy HH:mm') : '-'}
                       </TableCell>
                       <TableCell>
-                        {order.diningTable?.tableNumber || order.tableIds || '-'}
+                        {order.diningTable?.tableName
+                          || order.diningTable?.tableNumber
+                          || order.tableIds
+                          || '-'}
                       </TableCell>
                       <TableCell>
                         {order.waiter?.username || order.waiter?.name || '-'}
@@ -735,7 +738,10 @@ export default function OrdersHistory() {
                 <div>
                   <Label className="text-muted-foreground">{t('ordersHistory.table', 'Table')}</Label>
                   <p className="mt-1 font-medium">
-                    {selectedOrder.diningTable?.tableNumber || selectedOrder.tableIds || 'N/A'}
+                    {selectedOrder.diningTable?.tableName
+                      || selectedOrder.diningTable?.tableNumber
+                      || selectedOrder.tableIds
+                      || 'N/A'}
                     {selectedOrder.guestCount && ` (${selectedOrder.guestCount} guests)`}
                   </p>
                 </div>

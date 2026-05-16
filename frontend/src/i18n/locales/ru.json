@@ -682,7 +682,7 @@
       "paymentProcessed": "Оплата проведена",
       "tableReleased": "Стол освобождён",
       "orderCancelled": "Заказ отменён",
-      "orderMoved": "Заказ перемещён на стол {{n}}",
+      "orderMoved": "Заказ перемещён на стол {{name}}",
       "tableAvailable": "Стол свободен",
       "noFreeTables": "Нет свободных столов",
       "pickFirst": "Сначала выберите стол",
