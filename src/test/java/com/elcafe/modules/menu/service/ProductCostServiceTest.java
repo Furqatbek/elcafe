@@ -84,6 +84,26 @@ class ProductCostServiceTest {
         verify(productRepository).save(product);
     }
 
+    @Test @DisplayName("recalculateProductCost — refuses a cost more than 10x selling price")
+    void recalculateProductCost_refusesInsaneCost() {
+        // Selling price 25_000, sane cost ≤ 250_000; but a bad batch yield
+        // pushes the calculated cost to 2_600_000.
+        product.setPrice(new BigDecimal("25000"));
+        product.setCostPrice(new BigDecimal("8000"));
+        product.setUsesProductionBatch(true);
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        when(productionBatchRepository.getAverageCostPerUnit(1L))
+                .thenReturn(new BigDecimal("2600000"));
+
+        BigDecimal result = productCostService.recalculateProductCost(1L);
+
+        // Keeps the old cost and refuses to persist the runaway value.
+        assertThat(result).isEqualByComparingTo("8000");
+        assertThat(product.getCostPrice()).isEqualByComparingTo("8000");
+        verify(productRepository, never()).save(any(Product.class));
+    }
+
     @Test @DisplayName("calculateCostFromIngredients — sums ingredient costs")
     void calculateCostFromIngredients_sumsCosts() {
         when(productIngredientRepository.findByProductIdWithIngredients(1L))

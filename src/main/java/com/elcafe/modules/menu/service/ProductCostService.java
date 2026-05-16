@@ -32,6 +32,17 @@ public class ProductCostService {
     private final ProductionBatchRepository productionBatchRepository;
 
     /**
+     * Cap: a recalculated cost more than this multiple of the product's
+     * selling price is treated as a data bug (bad batch yield, bogus
+     * ingredient unit cost) and refused. We saw 4 drinks come back with
+     * cost_price ~2.6M each — way past any sane gross margin — which made
+     * the monthly P&L deeply negative. Refusing the write keeps the old
+     * (presumably correct) value and surfaces an ERROR log entry instead
+     * of silently destroying the dashboard.
+     */
+    private static final BigDecimal MAX_COST_TO_PRICE_MULTIPLIER = new BigDecimal("10");
+
+    /**
      * Recalculate and update cost price for a single product based on its ingredients.
      *
      * @param productId The product ID to update
@@ -55,6 +66,13 @@ public class ProductCostService {
         }
 
         BigDecimal oldCostPrice = product.getCostPrice();
+        if (!isCostPriceSane(product, newCostPrice)) {
+            log.error("Refusing to update cost_price for product {} ({}): new={} exceeds {}x selling price {}." +
+                            " Keeping old cost_price={}. Likely cause: bad production batch yield or ingredient unit cost.",
+                    product.getId(), product.getName(), newCostPrice,
+                    MAX_COST_TO_PRICE_MULTIPLIER, product.getPrice(), oldCostPrice);
+            return oldCostPrice != null ? oldCostPrice : BigDecimal.ZERO;
+        }
         product.setCostPrice(newCostPrice);
         productRepository.save(product);
 
@@ -63,6 +81,22 @@ public class ProductCostService {
                 Boolean.TRUE.equals(product.getUsesProductionBatch()) ? " (from production batches)" : "");
 
         return newCostPrice;
+    }
+
+    /**
+     * Reject obviously-broken cost values that would torch the P&L. Returns
+     * true when the new cost is acceptable. We only police the upper bound
+     * relative to selling price; if a product has no selling price we can't
+     * judge and let the write through.
+     */
+    private boolean isCostPriceSane(Product product, BigDecimal newCostPrice) {
+        if (newCostPrice == null) return true;
+        BigDecimal sellingPrice = product.getPrice();
+        if (sellingPrice == null || sellingPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            return true;
+        }
+        BigDecimal ceiling = sellingPrice.multiply(MAX_COST_TO_PRICE_MULTIPLIER);
+        return newCostPrice.compareTo(ceiling) <= 0;
     }
 
     /**
@@ -161,6 +195,13 @@ public class ProductCostService {
             // Only update if cost changed
             if (product.getCostPrice() == null ||
                 product.getCostPrice().compareTo(newCostPrice) != 0) {
+
+                if (!isCostPriceSane(product, newCostPrice)) {
+                    log.error("Bulk recalc: refusing cost_price update for product {} ({}): new={} exceeds {}x selling price {}.",
+                            product.getId(), product.getName(), newCostPrice,
+                            MAX_COST_TO_PRICE_MULTIPLIER, product.getPrice());
+                    continue;
+                }
 
                 product.setCostPrice(newCostPrice);
                 productRepository.save(product);
