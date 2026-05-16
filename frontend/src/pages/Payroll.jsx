@@ -16,6 +16,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Switch } from '../components/ui/switch';
 import { Plus, DollarSign, CheckCircle, CreditCard, Trash2, CalendarClock, Play } from 'lucide-react';
 
 const STATUS_VARIANTS = {
@@ -631,6 +632,22 @@ export default function Payroll() {
                   <SelectItem value="DIRECT_DEPOSIT">{t('payroll.methods.DIRECT_DEPOSIT')}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="flex items-start justify-between gap-4 rounded-md border px-3 py-2">
+              <div className="space-y-1">
+                <Label className="cursor-pointer" htmlFor="salary-auto-approve">
+                  {t('payroll.autoApprove', 'Auto-approve & pay')}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('payroll.autoApproveHint',
+                    'When on, the system auto-creates a PAID entry. When off, entries land as PENDING for manual review.')}
+                </p>
+              </div>
+              <Switch
+                id="salary-auto-approve"
+                checked={salaryForm.autoApprove}
+                onCheckedChange={(checked) => setSalaryForm({ ...salaryForm, autoApprove: checked })}
+              />
             </div>
             <div className="space-y-2">
               <Label>{t('payroll.notes')}</Label>

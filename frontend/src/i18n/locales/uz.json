@@ -4156,6 +4156,8 @@
     "taxDeduction": "Soliq",
     "otherDeductions": "Boshqa ushlanmalar",
     "notes": "Izohlar",
+    "autoApprove": "Avtomatik tasdiqlash va to'lash",
+    "autoApproveHint": "Yoqilganda tizim avtomatik ravishda TO'LANGAN holatda yozuv yaratadi. O'chirilganda yozuvlar qo'lda tekshirish uchun KUTILMOQDA holatida saqlanadi.",
     "processPayment": "To'lovni amalga oshirish",
     "paymentDate": "To'lov sanasi",
     "paymentMethod": "To'lov usuli",
