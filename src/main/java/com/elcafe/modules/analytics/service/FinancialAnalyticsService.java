@@ -349,9 +349,13 @@ public class FinancialAnalyticsService {
 
         List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
-        // Group order items by product
+        // Group order items by product. Skip items with a null productId —
+        // packaging-only or "addon" lines like the synthetic ZeroMax 500ml
+        // row carry no product reference and would otherwise NPE inside
+        // Collectors.groupingBy (which rejects null keys).
         Map<Long, List<OrderItem>> itemsByProduct = orders.stream()
                 .flatMap(order -> order.getItems().stream())
+                .filter(item -> item.getProductId() != null)
                 .collect(Collectors.groupingBy(OrderItem::getProductId));
 
         // Batch load all products to avoid N+1 queries
@@ -365,7 +369,7 @@ public class FinancialAnalyticsService {
                     Long productId = entry.getKey();
                     List<OrderItem> items = entry.getValue();
                     Product product = productsMap.get(productId);
-                    if (product != null && product.getCostPrice() != null) {
+                    if (product != null && product.getCostPrice() != null && product.getPrice() != null) {
                         BigDecimal margin = product.getPrice().subtract(product.getCostPrice());
                         int totalSold = items.stream().mapToInt(OrderItem::getQuantity).sum();
                         return margin.multiply(BigDecimal.valueOf(totalSold));
@@ -384,7 +388,7 @@ public class FinancialAnalyticsService {
                         return null;
                     }
 
-                    BigDecimal sellingPrice = product.getPrice();
+                    BigDecimal sellingPrice = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
                     BigDecimal costPrice = product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO;
                     BigDecimal contributionMargin = sellingPrice.subtract(costPrice);
 
