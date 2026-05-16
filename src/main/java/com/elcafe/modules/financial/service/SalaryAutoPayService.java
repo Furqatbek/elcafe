@@ -44,7 +44,7 @@ public class SalaryAutoPayService {
         for (SalaryConfig config : candidates) {
             if (!isDueToday(config, today)) continue;
             try {
-                processPayment(config, today);
+                processPayment(config, today, false);
                 processed++;
             } catch (Exception e) {
                 log.error("Salary payment failed for config {} ({}): {}",
@@ -145,6 +145,18 @@ public class SalaryAutoPayService {
      */
     @Transactional
     public void processPayment(SalaryConfig config, LocalDate paymentDate) {
+        processPayment(config, paymentDate, true);
+    }
+
+    /**
+     * @param manual  true when triggered by the admin "Pay Now" button. The
+     *                cron passes false so empty-period configs get silently
+     *                advanced; the manual path instead surfaces an error and
+     *                leaves the cursor alone so the operator can retry once
+     *                the employee actually clocks a shift.
+     */
+    @Transactional
+    public void processPayment(SalaryConfig config, LocalDate paymentDate, boolean manual) {
         PayFrequency freq = config.getPayFrequency() != null
                 ? config.getPayFrequency()
                 : PayFrequency.MONTHLY;
@@ -157,12 +169,19 @@ public class SalaryAutoPayService {
 
         BigDecimal baseAmount = computeBaseAmount(freq, config, period);
         if (baseAmount.compareTo(BigDecimal.ZERO) <= 0 && freq != PayFrequency.MONTHLY) {
+            if (manual) {
+                // Tell the operator what's going on instead of silently
+                // doing nothing and disabling the button — they explicitly
+                // asked to pay and the result was no PayrollEntry, which
+                // looks like the system swallowed the action.
+                throw new IllegalStateException(
+                        "Nothing to pay for " + period.start + " — " + period.end
+                                + ": no clocked shifts in this period.");
+            }
             log.info("Skipping {} payment for config {} — nothing to pay ({} earned in period)",
                     freq, config.getId(), baseAmount);
-            // Still mark as "paid" for this period so we don't keep re-evaluating;
-            // alternative is to leave lastPaidDate alone and re-try tomorrow. The
-            // safer choice is to advance the cursor so the operator doesn't see
-            // ghost rows piling up.
+            // For the cron path, advance the cursor so we don't keep
+            // re-evaluating the same empty period on every run.
             config.setLastPaidDate(period.end);
             salaryConfigRepository.save(config);
             return;

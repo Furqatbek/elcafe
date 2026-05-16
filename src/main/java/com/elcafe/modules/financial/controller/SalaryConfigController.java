@@ -130,7 +130,15 @@ public class SalaryConfigController {
     public ResponseEntity<ApiResponse<Void>> payNow(@PathVariable Long id) {
         SalaryConfig config = salaryConfigRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Salary config not found"));
-        salaryAutoPayService.processPayment(config, LocalDate.now());
+        try {
+            salaryAutoPayService.processPayment(config, LocalDate.now());
+        } catch (IllegalStateException e) {
+            // Surface "already paid this period" and "nothing to pay (no
+            // shifts)" guards as a 400 so the UI's alert() shows the
+            // explanation instead of a generic 500.
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
+        }
         return ResponseEntity.ok(ApiResponse.success("Salary payment processed", null));
     }
 

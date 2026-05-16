@@ -179,10 +179,31 @@ class SalaryAutoPayServiceTest {
             when(shiftRepository.findByRestaurantAndDateRange(RESTAURANT_ID, yesterday, yesterday))
                     .thenReturn(List.of());
 
-            service.processPayment(cfg, today);
+            // Cron path (manual=false) silently advances the cursor.
+            service.processPayment(cfg, today, false);
 
             verify(payrollService, never()).createPayrollEntry(any());
             assertThat(cfg.getLastPaidDate()).isEqualTo(yesterday);
+        }
+
+        @Test
+        @DisplayName("manual Pay Now surfaces an error when no shift was worked instead of silently advancing")
+        void manualPayNowThrowsWhenNothingToPay() {
+            SalaryConfig cfg = configWith(PayFrequency.DAILY, new BigDecimal("80000"), null, null);
+            LocalDate today = LocalDate.of(2026, 4, 10);
+            LocalDate yesterday = today.minusDays(1);
+
+            when(shiftRepository.findByRestaurantAndDateRange(RESTAURANT_ID, yesterday, yesterday))
+                    .thenReturn(List.of());
+
+            assertThatThrownBy(() -> service.processPayment(cfg, today))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Nothing to pay");
+
+            verify(payrollService, never()).createPayrollEntry(any());
+            // Cursor must NOT advance — the operator should be able to
+            // retry once the employee clocks a shift.
+            assertThat(cfg.getLastPaidDate()).isNull();
         }
 
         @Test
@@ -195,7 +216,7 @@ class SalaryAutoPayServiceTest {
             when(shiftRepository.findByRestaurantAndDateRange(RESTAURANT_ID, yesterday, yesterday))
                     .thenReturn(List.of(shift(yesterday, true)));
 
-            service.processPayment(cfg, today);
+            service.processPayment(cfg, today, false);
 
             verify(payrollService, never()).createPayrollEntry(any());
         }
@@ -317,11 +338,11 @@ class SalaryAutoPayServiceTest {
     class HourlyTests {
 
         @Test
-        @DisplayName("manual processPayment is a no-op until clocked-hour aggregation is wired up")
+        @DisplayName("cron-driven processPayment is a no-op until clocked-hour aggregation is wired up")
         void hourlyDoesNotAutoPay() {
             SalaryConfig cfg = configWith(PayFrequency.HOURLY, new BigDecimal("30000"), null, null);
 
-            service.processPayment(cfg, LocalDate.of(2026, 4, 10));
+            service.processPayment(cfg, LocalDate.of(2026, 4, 10), false);
 
             // computeBaseAmount returns ZERO for HOURLY → service short-circuits,
             // advances cursor, no payroll entry written.
