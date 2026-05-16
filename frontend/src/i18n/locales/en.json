@@ -427,7 +427,12 @@
       "7": "Sun"
     },
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "close": "Close",
+    "confirm": "Confirm",
+    "refresh": "Refresh",
+    "back": "Back",
+    "error": "Error"
   },
   "orders": {
     "title": "Orders",
@@ -4375,10 +4380,24 @@
     "payPerShiftHint": "After each clocked shift"
   },
   "consumption": {
+    "title": "Employee Consumption",
+    "subtitle": "Track what employees consume during shifts",
+    "list": "Consumption Log",
+    "recordTitle": "Record Consumption",
     "record": "Record",
     "recordAndCharge": "Record · charge {{amount}}",
     "recordOverLimit": "Record · over by {{amount}}",
+    "employee": "Employee",
+    "selectEmployee": "Select employee",
+    "product": "Product",
+    "selectProduct": "Select product",
     "qty": "Quantity",
+    "cost": "Cost",
+    "totalCost": "Total",
+    "time": "Time",
+    "from": "From",
+    "to": "To",
+    "noRecords": "No consumption records",
     "notes": "Notes",
     "optional": "Optional",
     "period": {

@@ -1063,7 +1063,12 @@
       "7": "Ya"
     },
     "active": "Faol",
-    "inactive": "Nofaol"
+    "inactive": "Nofaol",
+    "close": "Yopish",
+    "confirm": "Tasdiqlash",
+    "refresh": "Yangilash",
+    "back": "Orqaga",
+    "error": "Xato"
   },
   "validation": {
     "required": "Bu maydon majburiy",
@@ -4180,9 +4185,26 @@
     "payPerShiftHint": "Har bir yopilgan smenadan keyin"
   },
   "consumption": {
+    "title": "Xodimlar iste'moli",
+    "subtitle": "Smena davomida xodimlar iste'molini kuzatish",
+    "list": "Iste'mol jurnali",
+    "recordTitle": "Iste'molni yozish",
     "record": "Yozish",
     "recordAndCharge": "Yozish · {{amount}} hisobga olish",
     "recordOverLimit": "Yozish · {{amount}} ortiqcha",
+    "employee": "Xodim",
+    "selectEmployee": "Xodimni tanlang",
+    "product": "Mahsulot",
+    "selectProduct": "Mahsulotni tanlang",
+    "qty": "Miqdor",
+    "cost": "Narxi",
+    "totalCost": "Jami",
+    "time": "Vaqt",
+    "from": "Dan",
+    "to": "Gacha",
+    "noRecords": "Iste'mol yozuvlari yo'q",
+    "notes": "Izohlar",
+    "optional": "Ixtiyoriy",
     "period": {
       "PER_SHIFT": "smena uchun",
       "DAILY": "kuniga",
