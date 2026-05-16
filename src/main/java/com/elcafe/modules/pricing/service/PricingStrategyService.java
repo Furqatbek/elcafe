@@ -443,11 +443,9 @@ public class PricingStrategyService {
     }
 
     private Map<Long, Long> calculateSalesByProduct(List<Order> orders) {
-        // Skip items without a productId (synthetic packaging/addon lines);
-        // groupingBy rejects null keys.
-        return orders.stream()
-                .flatMap(order -> order.getItems().stream())
-                .filter(item -> item.getProductId() != null)
+        // OrderItem.productItemsOf skips bundle/packaging rows whose
+        // productId is null by design (see OrderItem.productId javadoc).
+        return OrderItem.productItemsOf(orders)
                 .collect(Collectors.groupingBy(
                         OrderItem::getProductId,
                         Collectors.summingLong(OrderItem::getQuantity)
@@ -455,9 +453,7 @@ public class PricingStrategyService {
     }
 
     private Map<Long, BigDecimal> calculateRevenueByProduct(List<Order> orders) {
-        return orders.stream()
-                .flatMap(order -> order.getItems().stream())
-                .filter(item -> item.getProductId() != null)
+        return OrderItem.productItemsOf(orders)
                 .collect(Collectors.groupingBy(
                         OrderItem::getProductId,
                         Collectors.reducing(BigDecimal.ZERO,

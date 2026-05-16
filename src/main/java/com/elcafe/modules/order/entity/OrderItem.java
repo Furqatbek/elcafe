@@ -14,8 +14,12 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Data
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
@@ -42,6 +46,16 @@ public class OrderItem {
     @ToString.Exclude
     private Order order;
 
+    /**
+     * Nullable. Bundle items ({@code isBundle = true}) reference a bundle
+     * via {@code bundleId} instead of a product, and packaging line items
+     * ({@code isPackagingItem = true}) are auto-calculated decorations
+     * (cups, lids, takeaway containers) that contribute to the order
+     * total but don't tie back to a product. Analytics code that groups
+     * by productId must use {@link #groupByProductId} / {@link #productIds}
+     * or otherwise filter nulls — Collectors.groupingBy and JPA's
+     * findById both reject null keys/ids.
+     */
     @Column
     private Long productId;
 
@@ -239,5 +253,37 @@ public class OrderItem {
     public void restore() {
         this.deletedAt = null;
         this.deletedBy = null;
+    }
+
+    // ---------------------------------------------------------------
+    // Analytics helpers. Use these in any code that groups/aggregates
+    // by productId so the bundle and packaging line items (productId =
+    // null) don't trip Collectors.groupingBy or JPA findById.
+    // ---------------------------------------------------------------
+
+    /** True when this row references a Product (i.e. not a bundle/packaging line). */
+    public boolean hasProductId() {
+        return productId != null;
+    }
+
+    /**
+     * Stream of items across all orders that point at a real product.
+     * Bundle items (no productId, has bundleId) and packaging items
+     * (auto-decorations like cups/lids/ZeroMax cups) are skipped.
+     */
+    public static Stream<OrderItem> productItemsOf(Collection<? extends Order> orders) {
+        return orders.stream()
+                .flatMap(o -> o.getItems().stream())
+                .filter(OrderItem::hasProductId);
+    }
+
+    /** Group product-referencing items by productId. Safe for Collectors.groupingBy. */
+    public static Map<Long, List<OrderItem>> groupByProductId(Collection<? extends Order> orders) {
+        return productItemsOf(orders).collect(Collectors.groupingBy(OrderItem::getProductId));
+    }
+
+    /** Distinct productIds across these orders' items — safe to feed to productRepository.findAllById. */
+    public static Set<Long> productIds(Collection<? extends Order> orders) {
+        return productItemsOf(orders).map(OrderItem::getProductId).collect(Collectors.toSet());
     }
 }

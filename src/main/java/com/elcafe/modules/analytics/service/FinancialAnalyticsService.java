@@ -120,13 +120,9 @@ public class FinancialAnalyticsService {
                 .map(Order::getTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Group order items by product and category. Skip items without a
-        // productId (packaging/addon lines) — groupingBy rejects null keys
-        // and findAllById would also trip on a null in the set.
-        Map<Long, List<OrderItem>> itemsByProduct = orders.stream()
-                .flatMap(order -> order.getItems().stream())
-                .filter(item -> item.getProductId() != null)
-                .collect(Collectors.groupingBy(OrderItem::getProductId));
+        // OrderItem.groupByProductId already filters bundle/packaging
+        // rows (productId == null) — see OrderItem.productId javadoc.
+        Map<Long, List<OrderItem>> itemsByProduct = OrderItem.groupByProductId(orders);
 
         // Get all products
         Set<Long> productIds = itemsByProduct.keySet();
@@ -352,14 +348,9 @@ public class FinancialAnalyticsService {
 
         List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
 
-        // Group order items by product. Skip items with a null productId —
-        // packaging-only or "addon" lines like the synthetic ZeroMax 500ml
-        // row carry no product reference and would otherwise NPE inside
-        // Collectors.groupingBy (which rejects null keys).
-        Map<Long, List<OrderItem>> itemsByProduct = orders.stream()
-                .flatMap(order -> order.getItems().stream())
-                .filter(item -> item.getProductId() != null)
-                .collect(Collectors.groupingBy(OrderItem::getProductId));
+        // OrderItem.groupByProductId already filters bundle/packaging
+        // rows (productId == null) — see OrderItem.productId javadoc.
+        Map<Long, List<OrderItem>> itemsByProduct = OrderItem.groupByProductId(orders);
 
         // Batch load all products to avoid N+1 queries
         Set<Long> productIds = itemsByProduct.keySet();

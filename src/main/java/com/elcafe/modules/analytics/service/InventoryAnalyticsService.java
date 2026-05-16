@@ -77,13 +77,11 @@ public class InventoryAnalyticsService {
             }
         }
 
-        // Fall back to product-based COGS if no batch data. Skip items
-        // without a productId (synthetic packaging/addon lines) — JPA's
-        // findById(null) throws IllegalArgumentException.
+        // Fall back to product-based COGS if no batch data. Use the
+        // product-referencing items only (productItemsOf skips bundle/
+        // packaging rows that have null productId).
         if (totalCOGS.compareTo(BigDecimal.ZERO) == 0) {
-            totalCOGS = orders.stream()
-                    .flatMap(order -> order.getItems().stream())
-                    .filter(item -> item.getProductId() != null)
+            totalCOGS = OrderItem.productItemsOf(orders)
                     .map(item -> {
                         Product product = productRepository.findById(item.getProductId()).orElse(null);
                         if (product != null && product.getCostPrice() != null) {
@@ -223,22 +221,15 @@ public class InventoryAnalyticsService {
     private Map<Long, BigDecimal> calculateIngredientUsage(List<Order> orders) {
         Map<Long, BigDecimal> ingredientUsage = new HashMap<>();
 
-        // Collect all product IDs from orders to batch load. Filter nulls —
-        // findAllById on an iterable containing null will trip the same
-        // Spring Data assertion that fails on findById(null).
-        Set<Long> productIds = orders.stream()
-                .flatMap(order -> order.getItems().stream())
-                .map(OrderItem::getProductId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        // OrderItem.productIds / productItemsOf skip bundle/packaging rows
+        // — see OrderItem.productId javadoc for why.
+        Set<Long> productIds = OrderItem.productIds(orders);
 
         // Batch load all products
         Map<Long, Product> productsMap = productRepository.findAllById(productIds).stream()
                 .collect(Collectors.toMap(Product::getId, p -> p));
 
-        orders.stream()
-                .flatMap(order -> order.getItems().stream())
-                .filter(item -> item.getProductId() != null)
+        OrderItem.productItemsOf(orders)
                 .forEach(item -> {
                     Product product = productsMap.get(item.getProductId());
                     if (product != null && product.getIngredients() != null) {
