@@ -294,6 +294,19 @@ public class ShiftManagementService {
     }
 
     /**
+     * Get shifts inside an inclusive [startDate, endDate] window. Backs
+     * the dashboard's date-range picker.
+     */
+    public List<ShiftSummaryDTO> getShiftsByDateRange(Long restaurantId,
+                                                      LocalDate startDate,
+                                                      LocalDate endDate) {
+        return shiftRepository.findByRestaurantAndDateRange(restaurantId, startDate, endDate)
+            .stream()
+            .map(this::toShiftSummary)
+            .collect(Collectors.toList());
+    }
+
+    /**
      * Get shifts pending approval.
      */
     public List<ShiftSummaryDTO> getPendingApprovalShifts(Long restaurantId) {

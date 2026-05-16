@@ -1070,6 +1070,17 @@
     "back": "Orqaga",
     "error": "Xato"
   },
+  "shift": {
+    "dashboard": {
+      "completedInRange": "Tugatilgan smenalar",
+      "singleDay": "{{date}}",
+      "range": "{{from}} dan {{to}} gacha",
+      "from": "Dan",
+      "to": "Gacha",
+      "today": "Bugun",
+      "noCompletedInRange": "Tanlangan oraliqda tugatilgan smenalar yo'q."
+    }
+  },
   "validation": {
     "required": "Bu maydon majburiy",
     "email": "Haqiqiy emailni kiriting",

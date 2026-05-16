@@ -77,6 +77,18 @@ public class ShiftManagementController {
         return ResponseEntity.ok(shiftService.getShiftsByDate(restaurantId, date));
     }
 
+    @GetMapping("/date-range")
+    @Operation(summary = "Get shifts inside an inclusive date range")
+    public ResponseEntity<List<ShiftSummaryDTO>> getShiftsByDateRange(
+            @PathVariable Long restaurantId,
+            @RequestParam("startDate")
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam("endDate")
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(
+                shiftService.getShiftsByDateRange(restaurantId, startDate, endDate));
+    }
+
     @GetMapping("/pending-approval")
     @Operation(summary = "Get shifts pending manager approval")
     public ResponseEntity<List<ShiftSummaryDTO>> getPendingApproval(

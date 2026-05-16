@@ -41,6 +41,8 @@ export default function ShiftDashboard() {
   const [activeShifts, setActiveShifts] = useState([]);
   const [completedShifts, setCompletedShifts] = useState([]);
   const [now, setNow] = useState(Date.now());
+  const today = new Date().toISOString().split('T')[0];
+  const [dateRange, setDateRange] = useState({ from: today, to: today });
 
   useEffect(() => {
     restaurantAPI.getAll({ page: 0, size: 100 }).then(res => {
@@ -53,19 +55,21 @@ export default function ShiftDashboard() {
   const loadShifts = useCallback(async () => {
     if (!selectedRestaurant) return;
     try {
-      const [activeRes, todayRes] = await Promise.all([
+      const [activeRes, rangeRes] = await Promise.all([
         shiftAPI.getActive(selectedRestaurant),
-        shiftAPI.getByDate(selectedRestaurant, new Date().toISOString().split('T')[0]),
+        shiftAPI.getByDateRange(selectedRestaurant, dateRange.from, dateRange.to),
       ]);
       const active = activeRes.data.data || activeRes.data || [];
-      const today = todayRes.data.data || todayRes.data || [];
-      console.log('[ShiftDashboard] Active:', active.length, 'Today:', today.length);
+      const ranged = rangeRes.data.data || rangeRes.data || [];
       setActiveShifts(Array.isArray(active) ? active : []);
-      setCompletedShifts((Array.isArray(today) ? today : []).filter(s => s.status === 'COMPLETED' || s.status === 'APPROVED'));
+      setCompletedShifts(
+        (Array.isArray(ranged) ? ranged : [])
+          .filter(s => s.status === 'COMPLETED' || s.status === 'APPROVED')
+      );
     } catch (e) {
       console.error('Failed to load shifts:', e);
     }
-  }, [selectedRestaurant]);
+  }, [selectedRestaurant, dateRange.from, dateRange.to]);
 
   useEffect(() => {
     loadShifts();
@@ -286,15 +290,56 @@ export default function ShiftDashboard() {
         </CardContent>
       </Card>
 
-      {/* Completed Today */}
-      {completedShifts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              {t('shift.dashboard.completedToday', 'Completed Today')}
-            </CardTitle>
-          </CardHeader>
+      {/* Completed shifts in the selected date range */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5" />
+                {t('shift.dashboard.completedInRange', 'Completed shifts')}
+              </CardTitle>
+              <CardDescription>
+                {dateRange.from === dateRange.to
+                  ? t('shift.dashboard.singleDay', 'On {{date}}', { date: dateRange.from })
+                  : t('shift.dashboard.range', 'From {{from}} to {{to}}', {
+                      from: dateRange.from, to: dateRange.to,
+                    })}
+              </CardDescription>
+            </div>
+            <div className="flex items-end gap-2 flex-wrap">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{t('shift.dashboard.from', 'From')}</label>
+                <input
+                  type="date"
+                  value={dateRange.from}
+                  max={dateRange.to}
+                  onChange={e => setDateRange(r => ({ ...r, from: e.target.value }))}
+                  className="border rounded-md px-3 py-1.5 text-sm bg-background"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">{t('shift.dashboard.to', 'To')}</label>
+                <input
+                  type="date"
+                  value={dateRange.to}
+                  min={dateRange.from}
+                  max={today}
+                  onChange={e => setDateRange(r => ({ ...r, to: e.target.value }))}
+                  className="border rounded-md px-3 py-1.5 text-sm bg-background"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDateRange({ from: today, to: today })}
+                disabled={dateRange.from === today && dateRange.to === today}
+              >
+                {t('shift.dashboard.today', 'Today')}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
@@ -311,6 +356,13 @@ export default function ShiftDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {completedShifts.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                      {t('shift.dashboard.noCompletedInRange', 'No completed shifts in this range.')}
+                    </TableCell>
+                  </TableRow>
+                )}
                 {completedShifts.map(shift => (
                   <TableRow key={shift.id}>
                     <TableCell className="font-medium">{shift.employeeName}</TableCell>
@@ -350,7 +402,6 @@ export default function ShiftDashboard() {
             </Table>
           </CardContent>
         </Card>
-      )}
     </div>
   );
 }

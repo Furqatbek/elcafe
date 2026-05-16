@@ -1070,6 +1070,17 @@
     "back": "Назад",
     "error": "Ошибка"
   },
+  "shift": {
+    "dashboard": {
+      "completedInRange": "Завершённые смены",
+      "singleDay": "{{date}}",
+      "range": "С {{from}} по {{to}}",
+      "from": "С",
+      "to": "По",
+      "today": "Сегодня",
+      "noCompletedInRange": "В выбранном диапазоне завершённых смен нет."
+    }
+  },
   "validation": {
     "required": "Это поле обязательно",
     "email": "Введите действительный email",

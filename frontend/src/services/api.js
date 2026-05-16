@@ -404,6 +404,8 @@ export const waiterCommissionAPI = {
 export const shiftAPI = {
   getActive: (restaurantId) => api.get(`/restaurants/${restaurantId}/pos/shifts/active`),
   getByDate: (restaurantId, date) => api.get(`/restaurants/${restaurantId}/pos/shifts/date/${date}`),
+  getByDateRange: (restaurantId, startDate, endDate) =>
+    api.get(`/restaurants/${restaurantId}/pos/shifts/date-range`, { params: { startDate, endDate } }),
   clockIn: (restaurantId, data) => api.post(`/restaurants/${restaurantId}/pos/shifts/clock-in`, data),
   clockOut: (restaurantId, shiftId, data) => api.post(`/restaurants/${restaurantId}/pos/shifts/${shiftId}/clock-out`, data),
   startBreak: (restaurantId, shiftId) => api.post(`/restaurants/${restaurantId}/pos/shifts/${shiftId}/break/start`),

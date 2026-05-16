@@ -434,6 +434,17 @@
     "back": "Back",
     "error": "Error"
   },
+  "shift": {
+    "dashboard": {
+      "completedInRange": "Completed shifts",
+      "singleDay": "On {{date}}",
+      "range": "From {{from}} to {{to}}",
+      "from": "From",
+      "to": "To",
+      "today": "Today",
+      "noCompletedInRange": "No completed shifts in this range."
+    }
+  },
   "orders": {
     "title": "Orders",
     "allOrders": "All Orders",
