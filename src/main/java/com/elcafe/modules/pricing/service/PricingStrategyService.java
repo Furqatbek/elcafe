@@ -276,7 +276,10 @@ public class PricingStrategyService {
         int productsNeedingReview = 0;
         int productsUnderperforming = 0;
 
+        // Skip uncategorized products — groupingBy can't take a null key, and
+        // we'd have no category bucket to put them under anyway.
         Map<Long, List<Product>> productsByCategory = products.stream()
+                .filter(p -> p.getCategory() != null && p.getCategory().getId() != null)
                 .collect(Collectors.groupingBy(p -> p.getCategory().getId()));
 
         // Menu engineering counts
@@ -286,7 +289,8 @@ public class PricingStrategyService {
         BigDecimal avgMargin = calculateAverageMarginPercentage(restaurantId);
 
         for (Product product : products) {
-            if (product.getCostPrice() != null && product.getCostPrice().compareTo(BigDecimal.ZERO) > 0) {
+            if (product.getCostPrice() != null && product.getCostPrice().compareTo(BigDecimal.ZERO) > 0
+                    && product.getPrice() != null) {
                 productsWithCostData++;
 
                 BigDecimal margin = product.getPrice().subtract(product.getCostPrice());
@@ -439,8 +443,11 @@ public class PricingStrategyService {
     }
 
     private Map<Long, Long> calculateSalesByProduct(List<Order> orders) {
+        // Skip items without a productId (synthetic packaging/addon lines);
+        // groupingBy rejects null keys.
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
+                .filter(item -> item.getProductId() != null)
                 .collect(Collectors.groupingBy(
                         OrderItem::getProductId,
                         Collectors.summingLong(OrderItem::getQuantity)
@@ -450,9 +457,12 @@ public class PricingStrategyService {
     private Map<Long, BigDecimal> calculateRevenueByProduct(List<Order> orders) {
         return orders.stream()
                 .flatMap(order -> order.getItems().stream())
+                .filter(item -> item.getProductId() != null)
                 .collect(Collectors.groupingBy(
                         OrderItem::getProductId,
-                        Collectors.reducing(BigDecimal.ZERO, OrderItem::getTotalPrice, BigDecimal::add)
+                        Collectors.reducing(BigDecimal.ZERO,
+                                item -> item.getTotalPrice() != null ? item.getTotalPrice() : BigDecimal.ZERO,
+                                BigDecimal::add)
                 ));
     }
 

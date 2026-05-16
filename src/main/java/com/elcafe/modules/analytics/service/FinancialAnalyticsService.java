@@ -120,9 +120,12 @@ public class FinancialAnalyticsService {
                 .map(Order::getTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Group order items by product and category
+        // Group order items by product and category. Skip items without a
+        // productId (packaging/addon lines) — groupingBy rejects null keys
+        // and findAllById would also trip on a null in the set.
         Map<Long, List<OrderItem>> itemsByProduct = orders.stream()
                 .flatMap(order -> order.getItems().stream())
+                .filter(item -> item.getProductId() != null)
                 .collect(Collectors.groupingBy(OrderItem::getProductId));
 
         // Get all products
