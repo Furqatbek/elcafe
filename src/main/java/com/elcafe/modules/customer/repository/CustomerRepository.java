@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -39,35 +38,35 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
      * Find customers created before a specific date (for retention analysis)
      */
     @Query("SELECT c FROM Customer c WHERE c.createdAt < :before")
-    List<Customer> findByCreatedAtBefore(@Param("before") LocalDateTime before);
+    List<Customer> findByCreatedAtBefore(@Param("before") OffsetDateTime before);
 
     /**
      * Find customers created within a date range (for retention analysis)
      */
     @Query("SELECT c FROM Customer c WHERE c.createdAt >= :start AND c.createdAt <= :end")
-    List<Customer> findByCreatedAtBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    List<Customer> findByCreatedAtBetween(@Param("start") OffsetDateTime start, @Param("end") OffsetDateTime end);
 
     /**
      * Find customers created up to a specific date (for retention analysis)
      */
     @Query("SELECT c FROM Customer c WHERE c.createdAt <= :before")
-    List<Customer> findByCreatedAtLessThanEqual(@Param("before") LocalDateTime before);
+    List<Customer> findByCreatedAtLessThanEqual(@Param("before") OffsetDateTime before);
 
     /**
      * Count customers created before a specific date
      */
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.createdAt < :before")
-    long countByCreatedAtBefore(@Param("before") LocalDateTime before);
+    long countByCreatedAtBefore(@Param("before") OffsetDateTime before);
 
     /**
      * Count customers created within a date range
      */
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.createdAt >= :start AND c.createdAt <= :end")
-    long countByCreatedAtBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    long countByCreatedAtBetween(@Param("start") OffsetDateTime start, @Param("end") OffsetDateTime end);
 
     /**
      * Count customers created up to a specific date
      */
     @Query("SELECT COUNT(c) FROM Customer c WHERE c.createdAt <= :before")
-    long countByCreatedAtLessThanEqual(@Param("before") LocalDateTime before);
+    long countByCreatedAtLessThanEqual(@Param("before") OffsetDateTime before);
 }

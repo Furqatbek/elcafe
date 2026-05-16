@@ -51,18 +51,20 @@ public class CustomerAnalyticsService {
                 restaurantId, startDate, endDate);
         log.debug("Customer retention using shift range: {} to {}", shift.start(), shift.end());
 
-        // Convert shift boundaries to LocalDateTime for comparison with Customer.createdAt
-        LocalDateTime shiftStartLocal = shift.start().toLocalDateTime();
-        LocalDateTime shiftEndLocal = shift.end().toLocalDateTime();
+        // Customer.createdAt is OffsetDateTime; pass the shift boundaries
+        // through unchanged. The repo previously declared LocalDateTime
+        // params which Hibernate's strict bind-type check rejected.
+        OffsetDateTime shiftStartOffset = shift.start();
+        OffsetDateTime shiftEndOffset = shift.end();
 
         // Get all customers that existed at the start of the period (strictly before start)
-        List<Customer> customersAtStart = customerRepository.findByCreatedAtBefore(shiftStartLocal);
+        List<Customer> customersAtStart = customerRepository.findByCreatedAtBefore(shiftStartOffset);
 
         // Get new customers during the period (inclusive boundaries for shift-aware consistency)
-        List<Customer> newCustomers = customerRepository.findByCreatedAtBetween(shiftStartLocal, shiftEndLocal);
+        List<Customer> newCustomers = customerRepository.findByCreatedAtBetween(shiftStartOffset, shiftEndOffset);
 
         // Get all customers at the end of the period (up to and including end)
-        List<Customer> customersAtEnd = customerRepository.findByCreatedAtLessThanEqual(shiftEndLocal);
+        List<Customer> customersAtEnd = customerRepository.findByCreatedAtLessThanEqual(shiftEndOffset);
 
         // Get returning customers (customers who made orders during the period)
         Set<Long> returningCustomerIds = getCompletedOrders(shift.start(), shift.end(), restaurantId).stream()
