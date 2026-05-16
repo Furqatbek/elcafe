@@ -153,6 +153,8 @@ public class DailyFinancialReportService {
             plReport.getTipRevenue() != null ? plReport.getTipRevenue() : BigDecimal.ZERO,
             plReport.getTotalRevenue() != null ? plReport.getTotalRevenue() : BigDecimal.ZERO,
             plReport.getTotalExpenses() != null ? plReport.getTotalExpenses() : BigDecimal.ZERO,
+            plReport.getShiftDrawerExpenses() != null ? plReport.getShiftDrawerExpenses() : BigDecimal.ZERO,
+            plReport.getOtherExpenses() != null ? plReport.getOtherExpenses() : BigDecimal.ZERO,
             plReport.getTotalPayroll() != null ? plReport.getTotalPayroll() : BigDecimal.ZERO,
             plReport.getNetIncome() != null ? plReport.getNetIncome() : BigDecimal.ZERO
         );
@@ -238,6 +240,12 @@ public class DailyFinancialReportService {
 
         if (subscription.getAlertDailyExpenses()) {
             sb.append(String.format("💸 <b>Расходы:</b> %s\n", formatCurrency(metrics.totalExpenses())));
+            if (metrics.shiftDrawerExpenses().compareTo(BigDecimal.ZERO) > 0) {
+                sb.append(String.format("   🪙 Из кассы смены: %s\n", formatCurrency(metrics.shiftDrawerExpenses())));
+            }
+            if (metrics.otherExpenses().compareTo(BigDecimal.ZERO) > 0) {
+                sb.append(String.format("   🏦 Прочие: %s\n", formatCurrency(metrics.otherExpenses())));
+            }
             if (metrics.totalPayroll().compareTo(BigDecimal.ZERO) > 0) {
                 sb.append(String.format("   👥 Зарплата: %s\n", formatCurrency(metrics.totalPayroll())));
             }
@@ -329,6 +337,8 @@ public class DailyFinancialReportService {
             Map.entry("totalRevenue", metrics.totalRevenue()),
             // Expenses and net income (same as P&L report)
             Map.entry("totalExpenses", metrics.totalExpenses()),
+            Map.entry("shiftDrawerExpenses", metrics.shiftDrawerExpenses()),
+            Map.entry("otherExpenses", metrics.otherExpenses()),
             Map.entry("totalPayroll", metrics.totalPayroll()),
             Map.entry("netIncome", metrics.netIncome())
         );
@@ -351,8 +361,11 @@ public class DailyFinancialReportService {
         BigDecimal deliveryFeeRevenue,
         BigDecimal tipRevenue,
         BigDecimal totalRevenue,
-        // Expenses and net income (same as P&L report)
+        // Expenses and net income (same as P&L report).
+        // shiftDrawerExpenses + otherExpenses == totalExpenses.
         BigDecimal totalExpenses,
+        BigDecimal shiftDrawerExpenses,
+        BigDecimal otherExpenses,
         BigDecimal totalPayroll,
         BigDecimal netIncome
     ) {}

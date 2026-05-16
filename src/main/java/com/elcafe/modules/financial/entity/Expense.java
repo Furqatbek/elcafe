@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.entity;
 
+import com.elcafe.modules.pos.shift.entity.EmployeeShift;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
@@ -17,7 +18,8 @@ import java.time.LocalDateTime;
         @Index(name = "idx_expense_restaurant", columnList = "restaurant_id"),
         @Index(name = "idx_expense_date", columnList = "expense_date"),
         @Index(name = "idx_expense_category", columnList = "category"),
-        @Index(name = "idx_expense_account", columnList = "account_id")
+        @Index(name = "idx_expense_account", columnList = "account_id"),
+        @Index(name = "idx_expense_shift", columnList = "employee_shift_id")
 })
 @SQLRestriction("deleted_at IS NULL")
 @Getter
@@ -83,6 +85,14 @@ public class Expense {
 
     @Column
     private Long purchaseOrderId; // Link to purchase order if expense is from PO
+
+    // The shift that was active when this expense was recorded. Combined with
+    // paymentMethod=CASH this identifies an outflow from that shift's cash
+    // drawer; NULL means the expense wasn't tied to a shift (PO-driven,
+    // recurring rent, off-hours admin entry, …).
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_shift_id")
+    private EmployeeShift employeeShift;
 
     @Column(length = 1000)
     private String notes;

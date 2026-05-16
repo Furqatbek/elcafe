@@ -121,11 +121,25 @@ public class FinancialReportsService {
         List<Expense> expenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
                 restaurantId, startDate, expenseEndDate);
 
-        BigDecimal totalExpenses = expenses.stream()
+        List<Expense> paidExpenses = expenses.stream()
                 .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
+                .filter(e -> e.getTotalAmount() != null)
+                .collect(Collectors.toList());
+
+        BigDecimal totalExpenses = paidExpenses.stream()
                 .map(Expense::getTotalAmount)
-                .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Split into "paid out of the shift cash drawer" (linked to a shift
+        // AND paid in cash) vs everything else. Reports use this to keep
+        // the cash that left the till visually distinct from rent, bank
+        // transfers, payroll, etc.
+        BigDecimal shiftDrawerExpenses = paidExpenses.stream()
+                .filter(e -> e.getEmployeeShift() != null
+                        && e.getPaymentMethod() == Expense.PaymentMethod.CASH)
+                .map(Expense::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal otherExpenses = totalExpenses.subtract(shiftDrawerExpenses);
 
         // Group expenses by category
         Map<String, BigDecimal> expensesByCategory = expenses.stream()
@@ -167,6 +181,8 @@ public class FinancialReportsService {
                 .discountedOrderCount((int) discountedOrderCount)
                 .totalRevenue(totalRevenue)
                 .totalExpenses(totalExpenses)
+                .shiftDrawerExpenses(shiftDrawerExpenses)
+                .otherExpenses(otherExpenses)
                 .totalPayroll(totalPayroll)
                 .expensesByCategory(expensesByCategory)
                 .netIncome(netIncome)
@@ -406,6 +422,8 @@ public class FinancialReportsService {
         private BigDecimal totalRevenue;
         // Expenses
         private BigDecimal totalExpenses;
+        private BigDecimal shiftDrawerExpenses; // PAID + cash + tied to a shift
+        private BigDecimal otherExpenses;       // everything else in totalExpenses
         private BigDecimal totalPayroll;
         private Map<String, BigDecimal> expensesByCategory;
         // Net income

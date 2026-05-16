@@ -1,7 +1,5 @@
 package com.elcafe.modules.ownerbot.scheduler;
 
-import com.elcafe.modules.financial.dto.DashboardResponse;
-import com.elcafe.modules.financial.service.DashboardService;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -19,7 +17,6 @@ public class OwnerNotificationScheduler {
 
     private final OwnerNotificationService notificationService;
     private final RestaurantRepository restaurantRepository;
-    private final DashboardService dashboardService;
 
     @Scheduled(cron = "0 0 22 * * *")
     public void sendDailySalesReports() {
@@ -29,8 +26,7 @@ public class OwnerNotificationScheduler {
 
         for (Restaurant restaurant : restaurants) {
             try {
-                DashboardResponse dashboard = dashboardService.getTodaySummary(restaurant.getId());
-                notificationService.sendDailySalesReport(restaurant.getId(), restaurant.getName(), dashboard);
+                notificationService.sendDailySalesReport(restaurant.getId(), restaurant.getName());
             } catch (Exception e) {
                 log.error("Failed to send daily report for restaurant {}: {}",
                         restaurant.getName(), e.getMessage());

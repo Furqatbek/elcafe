@@ -97,9 +97,12 @@ public class EmployeeConsumptionService {
         ConsumptionLimitService.Decision limit =
                 consumptionLimitService.evaluate(restaurantId, employee, waiter, product, quantity);
 
-        // Create expense record via service (generates expense number)
+        // Create expense record via service (generates expense number).
+        // Tag it with the active shift (when one exists) so the daily report
+        // can separate drawer-paid expenses from off-shift ones.
         Expense expense = Expense.builder()
                 .restaurant(restaurant)
+                .employeeShift(shift)
                 .category(Expense.ExpenseCategory.OTHER)
                 .description("Employee consumption: " + consumerName + " - " + product.getName() + " x" + quantity)
                 .amount(totalPrice)

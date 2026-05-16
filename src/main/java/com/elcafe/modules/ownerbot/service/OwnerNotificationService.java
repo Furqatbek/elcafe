@@ -1,6 +1,7 @@
 package com.elcafe.modules.ownerbot.service;
 
-import com.elcafe.modules.financial.dto.DashboardResponse;
+import com.elcafe.modules.notification.service.DailyFinancialReportService;
+import com.elcafe.modules.notification.service.DailyFinancialReportService.DailyMetrics;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationLog;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationSettings;
@@ -32,17 +33,21 @@ public class OwnerNotificationService {
     private final OwnerTelegramBotService botService;
     private final OwnerTelegramSubscriberRepository subscriberRepository;
     private final OwnerNotificationLogRepository logRepository;
-    private final com.elcafe.modules.financial.service.DashboardService dashboardService;
+    // Owner-bot reports and the FinancialAlertSubscription reports used to
+    // pull different numbers (DashboardService vs FinancialReportsService —
+    // payroll was summed slightly differently). Both paths now go through
+    // DailyFinancialReportService so the auto and manual reports agree.
+    private final DailyFinancialReportService dailyFinancialReportService;
 
     public OwnerNotificationService(
             @org.springframework.context.annotation.Lazy OwnerTelegramBotService botService,
             OwnerTelegramSubscriberRepository subscriberRepository,
             OwnerNotificationLogRepository logRepository,
-            @org.springframework.context.annotation.Lazy com.elcafe.modules.financial.service.DashboardService dashboardService) {
+            @org.springframework.context.annotation.Lazy DailyFinancialReportService dailyFinancialReportService) {
         this.botService = botService;
         this.subscriberRepository = subscriberRepository;
         this.logRepository = logRepository;
-        this.dashboardService = dashboardService;
+        this.dailyFinancialReportService = dailyFinancialReportService;
     }
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
@@ -220,38 +225,57 @@ public class OwnerNotificationService {
     }
 
     /**
-     * Send daily sales report using dashboard data
+     * Send daily sales report. Pulls metrics from the same P&L pipeline
+     * the FinancialAlertSubscription scheduled report uses so the numbers
+     * line up between the two telegram channels.
      */
     @Async
     @Transactional
-    public void sendDailySalesReport(Long restaurantId, String restaurantName, DashboardResponse dashboard) {
+    public void sendDailySalesReport(Long restaurantId, String restaurantName) {
         List<OwnerTelegramSubscriber> subscribers = subscriberRepository
                 .findActiveSubscribersWithSettings(restaurantId);
 
-        BigDecimal totalRevenue = dashboard.getTotalIncome() != null ? dashboard.getTotalIncome() : BigDecimal.ZERO;
-        BigDecimal totalExpenses = dashboard.getTotalExpenses() != null ? dashboard.getTotalExpenses() : BigDecimal.ZERO;
-        BigDecimal netProfit = dashboard.getNetProfit() != null ? dashboard.getNetProfit() : BigDecimal.ZERO;
-        BigDecimal payroll = dashboard.getTotalPayroll() != null ? dashboard.getTotalPayroll() : BigDecimal.ZERO;
-        long totalOrders = dashboard.getOrderStats() != null && dashboard.getOrderStats().getTotalOrders() != null
-                ? dashboard.getOrderStats().getTotalOrders() : 0;
-        BigDecimal avgOrderValue = dashboard.getOrderStats() != null && dashboard.getOrderStats().getAverageOrderValue() != null
-                ? dashboard.getOrderStats().getAverageOrderValue() : BigDecimal.ZERO;
-        String profitEmoji = netProfit.compareTo(BigDecimal.ZERO) >= 0 ? "📈" : "📉";
+        DailyMetrics metrics;
+        try {
+            // calculateDailyMetrics already resolves the business day internally
+            // by querying the shift time service, so we just hand it the date.
+            metrics = dailyFinancialReportService.calculateDailyMetrics(
+                    restaurantId, java.time.LocalDate.now());
+        } catch (Exception e) {
+            log.error("Failed to compute daily metrics for restaurant {}: {}", restaurantId, e.getMessage());
+            return;
+        }
+
+        BigDecimal avgOrderValue = metrics.orderCount() > 0
+                ? metrics.totalRevenue().divide(
+                        BigDecimal.valueOf(metrics.orderCount()),
+                        2, java.math.RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        String profitEmoji = metrics.netIncome().compareTo(BigDecimal.ZERO) >= 0 ? "📈" : "📉";
 
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("📊 <b>Ежедневный отчёт</b>\n🏪 %s\n📅 %s\n\n",
                 restaurantName, LocalDateTime.now().format(DATE_FORMAT)));
-        sb.append(String.format("📦 <b>Заказы:</b> %d\n", totalOrders));
-        sb.append(String.format("💰 <b>Выручка:</b> %,.2f\n", totalRevenue));
+        sb.append(String.format("📦 <b>Заказы:</b> %d\n", metrics.orderCount()));
+        sb.append(String.format("💰 <b>Выручка:</b> %,.2f\n", metrics.totalRevenue()));
         sb.append(String.format("🧾 <b>Средний чек:</b> %,.2f\n\n", avgOrderValue));
-        sb.append(String.format("💸 <b>Расходы:</b> %,.2f\n", totalExpenses));
-        if (payroll.compareTo(BigDecimal.ZERO) > 0) {
-            sb.append(String.format("   👥 Зарплата: %,.2f\n", payroll));
+        sb.append(String.format("💸 <b>Расходы:</b> %,.2f\n", metrics.totalExpenses()));
+        if (metrics.shiftDrawerExpenses().compareTo(BigDecimal.ZERO) > 0) {
+            sb.append(String.format("   🪙 Из кассы смены: %,.2f\n", metrics.shiftDrawerExpenses()));
         }
-        sb.append(String.format("\n%s <b>Чистая прибыль:</b> %,.2f\n\n", profitEmoji, netProfit));
+        if (metrics.otherExpenses().compareTo(BigDecimal.ZERO) > 0) {
+            sb.append(String.format("   🏦 Прочие: %,.2f\n", metrics.otherExpenses()));
+        }
+        if (metrics.totalPayroll().compareTo(BigDecimal.ZERO) > 0) {
+            sb.append(String.format("   👥 Зарплата: %,.2f\n", metrics.totalPayroll()));
+        }
+        sb.append(String.format("\n%s <b>Чистая прибыль:</b> %,.2f\n\n", profitEmoji, metrics.netIncome()));
 
-        if (dashboard.getProfitMargin() != null) {
-            sb.append(String.format("📊 Маржа: %.1f%%\n\n", dashboard.getProfitMargin()));
+        if (metrics.totalRevenue().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal margin = metrics.netIncome()
+                    .divide(metrics.totalRevenue(), 4, java.math.RoundingMode.HALF_UP)
+                    .multiply(new BigDecimal("100"));
+            sb.append(String.format("📊 Маржа: %.1f%%\n\n", margin));
         }
         sb.append(String.format("⏰ %s", LocalDateTime.now().format(DATETIME_FORMAT)));
 
@@ -339,10 +363,18 @@ public class OwnerNotificationService {
             return;
         }
 
+        // Pull the same P&L-based metrics the daily report uses so the
+        // profit & expense numbers on the shift-closed message match what
+        // the owner will see in tomorrow's auto/manual report.
         java.math.BigDecimal todayProfit = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal drawerExpenses = java.math.BigDecimal.ZERO;
+        java.math.BigDecimal otherExpenses = java.math.BigDecimal.ZERO;
         try {
-            var dashboard = dashboardService.getTodaySummary(restaurantId);
-            todayProfit = dashboard.getNetProfit() != null ? dashboard.getNetProfit() : java.math.BigDecimal.ZERO;
+            DailyMetrics metrics = dailyFinancialReportService.calculateDailyMetrics(
+                    restaurantId, java.time.LocalDate.now());
+            todayProfit = metrics.netIncome();
+            drawerExpenses = metrics.shiftDrawerExpenses();
+            otherExpenses = metrics.otherExpenses();
         } catch (Exception e) {
             log.warn("Could not calculate today's profit for shift notification: {}", e.getMessage());
         }
@@ -356,17 +388,21 @@ public class OwnerNotificationService {
                 ? String.format("\n💵 Наличные: %,.2f", totalCashSales) : "";
         String cardText = totalCardSales != null && totalCardSales.compareTo(java.math.BigDecimal.ZERO) > 0
                 ? String.format("\n💳 Карта: %,.2f", totalCardSales) : "";
+        String drawerExpensesText = drawerExpenses.compareTo(java.math.BigDecimal.ZERO) > 0
+                ? String.format("\n🪙 Из кассы смены: %,.2f", drawerExpenses) : "";
+        String otherExpensesText = otherExpenses.compareTo(java.math.BigDecimal.ZERO) > 0
+                ? String.format("\n🏦 Прочие расходы: %,.2f", otherExpenses) : "";
 
         String message = String.format(
             "🔴 <b>Смена закрыта</b>\n\n" +
             "👤 <b>%s</b>\n" +
             "⏰ %s — %s (%dч %dмин)\n" +
             "📦 Заказов: %d\n" +
-            "💰 Выручка: %s%s%s\n" +
+            "💰 Выручка: %s%s%s%s%s\n" +
             "%s Чистая прибыль: %s",
             employeeName, clockInTime, clockOutTime, hours, mins,
             orderCount, totalSales != null ? String.format("%,.2f", totalSales) : "0",
-            cashText, cardText,
+            cashText, cardText, drawerExpensesText, otherExpensesText,
             profitEmoji, profitText
         );
 

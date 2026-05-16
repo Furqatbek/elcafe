@@ -91,8 +91,20 @@ public class ExpenseController {
             account = accountRepository.findById(request.getAccountId()).orElse(null);
         }
 
+        // Attach the caller's active shift (if any) so reports can split
+        // drawer-paid expenses from non-shift ones. Admins creating expenses
+        // off-shift have no active shift, which is the correct NULL outcome.
+        com.elcafe.modules.pos.shift.entity.EmployeeShift activeShift =
+                shiftEnforcementService.getActiveShiftForCurrentUser();
+        if (activeShift != null && !activeShift.getRestaurant().getId().equals(restaurant.getId())) {
+            // The operator is on shift at a different restaurant — don't
+            // mislabel this expense as coming from that shift's drawer.
+            activeShift = null;
+        }
+
         Expense expense = Expense.builder()
                 .restaurant(restaurant)
+                .employeeShift(activeShift)
                 .account(account)
                 .expenseDate(request.getExpenseDate())
                 .category(request.getCategory())
