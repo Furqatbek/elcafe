@@ -4384,7 +4384,8 @@
       "PER_SHIFT": "Per shift",
       "HOURLY": "Hourly"
     },
-    "amount": {
+    "amount": "Amount",
+    "amounts": {
       "daily": "Daily rate",
       "weekly": "Weekly amount",
       "biweekly": "Biweekly amount",

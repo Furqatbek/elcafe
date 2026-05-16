@@ -4192,7 +4192,8 @@
       "PER_SHIFT": "Smena uchun",
       "HOURLY": "Soatbay"
     },
-    "amount": {
+    "amount": "Summa",
+    "amounts": {
       "daily": "Kunlik stavka",
       "weekly": "Haftalik summa",
       "biweekly": "Ikki haftalik summa",

@@ -567,15 +567,15 @@ export default function Payroll() {
               <div className="space-y-2">
                 <Label>
                   {salaryForm.payFrequency === 'MONTHLY'
-                    && t('payroll.amount.monthly', 'Monthly amount')}
+                    && t('payroll.amounts.monthly', 'Monthly amount')}
                   {salaryForm.payFrequency === 'WEEKLY'
-                    && t('payroll.amount.weekly', 'Weekly amount')}
+                    && t('payroll.amounts.weekly', 'Weekly amount')}
                   {salaryForm.payFrequency === 'BIWEEKLY'
-                    && t('payroll.amount.biweekly', 'Biweekly amount')}
+                    && t('payroll.amounts.biweekly', 'Biweekly amount')}
                   {salaryForm.payFrequency === 'DAILY'
-                    && t('payroll.amount.daily', 'Daily rate')}
+                    && t('payroll.amounts.daily', 'Daily rate')}
                   {salaryForm.payFrequency === 'PER_SHIFT'
-                    && t('payroll.amount.perShift', 'Per-shift rate')}
+                    && t('payroll.amounts.perShift', 'Per-shift rate')}
                   {' *'}
                 </Label>
                 <Input type="number" value={salaryForm.baseAmount} onChange={e => setSalaryForm({ ...salaryForm, baseAmount: e.target.value })} />
