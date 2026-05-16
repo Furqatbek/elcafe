@@ -29,6 +29,7 @@
   },
   "nav": {
     "dashboard": "Bosh sahifa",
+    "pos": "Kassa",
     "orders": "Buyurtmalar",
     "restaurant": "Restoran",
     "restaurants": "Restoranlar",
@@ -109,7 +110,16 @@
       "milestones": "Yutuqlar",
       "externalOrders": "Onlayn buyurtmalar",
       "payroll": "Ish haqi",
-      "financialAlerts": "Moliyaviy ogohlantirishlar"
+      "financialAlerts": "Moliyaviy ogohlantirishlar",
+      "reservations": "Bronlar",
+      "shiftSchedule": "Smena jadvali",
+      "consumption": "Iste'mol",
+      "consumptionAllowances": "Iste'mol cheklovlari",
+      "menu": "Menyu",
+      "valuation": "Baholash",
+      "qrCodes": "QR kodlar",
+      "receiptTemplate": "Chek shabloni",
+      "systemUsers": "Foydalanuvchilar"
     }
   },
   "externalOrders": {

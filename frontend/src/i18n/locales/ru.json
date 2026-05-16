@@ -29,6 +29,7 @@
   },
   "nav": {
     "dashboard": "Главная",
+    "pos": "Касса",
     "orders": "Заказы",
     "restaurant": "Ресторан",
     "restaurants": "Рестораны",
@@ -109,7 +110,16 @@
       "milestones": "Достижения",
       "externalOrders": "Онлайн заказы",
       "payroll": "Зарплата",
-      "financialAlerts": "Финансовые уведомления"
+      "financialAlerts": "Финансовые уведомления",
+      "reservations": "Бронирования",
+      "shiftSchedule": "Расписание смен",
+      "consumption": "Потребление",
+      "consumptionAllowances": "Лимиты потребления",
+      "menu": "Меню",
+      "valuation": "Оценка",
+      "qrCodes": "QR-коды",
+      "receiptTemplate": "Шаблон чека",
+      "systemUsers": "Пользователи"
     }
   },
   "externalOrders": {

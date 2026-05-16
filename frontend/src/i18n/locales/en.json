@@ -112,7 +112,14 @@
       "milestones": "Milestones",
       "externalOrders": "Online Orders",
       "payroll": "Payroll",
-      "financialAlerts": "Financial Alerts"
+      "financialAlerts": "Financial Alerts",
+      "reservations": "Reservations",
+      "shiftSchedule": "Shift Schedule",
+      "consumption": "Consumption",
+      "consumptionAllowances": "Consumption allowances",
+      "qrCodes": "QR Codes",
+      "receiptTemplate": "Receipt Template",
+      "systemUsers": "System Users"
     }
   },
   "externalOrders": {
