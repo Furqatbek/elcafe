@@ -1081,15 +1081,8 @@
       "phonecall": "Phone Call",
       "walkin": "Walk-in",
       "other": "Other",
-      "TELEGRAM_BOT": "Telegram bot",
-      "WEBSITE": "Website",
-      "ADMIN_PANEL": "Admin panel",
-      "MOBILE_APP": "Mobile app",
-      "PHONE_CALL": "Phone call",
-      "WALK_IN": "Walk-in",
       "RESERVATION": "Reservation",
-      "QR_ORDER": "QR order",
-      "OTHER": "Other"
+      "QR_ORDER": "QR order"
     },
     "exportHeaders": {
       "firstName": "First Name",
@@ -1177,23 +1170,14 @@
       "full_time": "Full Time",
       "part_time": "Part Time",
       "freelance": "Freelance",
-      "contractor": "Contractor",
-      "FULL_TIME": "Full-time",
-      "PART_TIME": "Part-time",
-      "FREELANCE": "Freelance",
-      "CONTRACTOR": "Contractor"
+      "contractor": "Contractor"
     },
     "vehicles": {
       "bicycle": "Bicycle",
       "motorcycle": "Motorcycle",
       "scooter": "Scooter",
       "car": "Car",
-      "on_foot": "On Foot",
-      "BICYCLE": "Bicycle",
-      "MOTORCYCLE": "Motorcycle",
-      "SCOOTER": "Scooter",
-      "CAR": "Car",
-      "ON_FOOT": "On foot"
+      "on_foot": "On Foot"
     },
     "validation": {
       "emailRequired": "Email is required",
@@ -1598,7 +1582,8 @@
         "APPROVED": "Approved",
         "ORDERED": "Ordered",
         "PARTIALLY_RECEIVED": "Partially Received",
-        "RECEIVED": "Received"
+        "RECEIVED": "Received",
+        "CANCELLED": "Cancelled"
       },
       "paymentStatuses": {
         "UNPAID": "Unpaid",
@@ -1659,7 +1644,9 @@
         "DELIVERY_COSTS": "Delivery Costs",
         "PROFESSIONAL_FEES": "Professional Fees",
         "BANK_FEES": "Bank Fees",
-        "OTHER": "Other"
+        "OTHER": "Other",
+        "INVENTORY": "Inventory",
+        "COST_OF_GOODS_SOLD": "Cost of goods sold"
       },
       "paymentMethods": {
         "CASH": "Cash",
@@ -1690,6 +1677,11 @@
         "deleteSuccess": "Expense deleted successfully",
         "confirmDelete": "Are you sure you want to delete this expense?",
         "cannotDeletePaid": "Cannot delete a paid expense"
+      },
+      "paymentStatus": {
+        "UNPAID": "Unpaid",
+        "PAID": "Paid",
+        "PARTIALLY_PAID": "Partially paid"
       }
     },
     "reports": {
@@ -4802,53 +4794,6 @@
       "previewOnlyHint": "Preview-only: over-limit amounts are flagged on the consumption row but no advance is posted automatically.",
       "notes": "Notes",
       "optional": "Optional"
-    }
-  },
-  "expenses": {
-    "categories": {
-      "RENT": "Rent",
-      "UTILITIES": "Utilities",
-      "SUPPLIES": "Supplies",
-      "INVENTORY": "Inventory",
-      "COST_OF_GOODS_SOLD": "Cost of goods sold",
-      "MARKETING": "Marketing",
-      "INSURANCE": "Insurance",
-      "MAINTENANCE": "Maintenance",
-      "EQUIPMENT": "Equipment",
-      "LICENSES": "Licenses & permits",
-      "TAXES": "Taxes",
-      "DELIVERY_COSTS": "Delivery costs",
-      "PROFESSIONAL_FEES": "Professional fees",
-      "BANK_FEES": "Bank fees",
-      "OTHER": "Other"
-    },
-    "paymentMethods": {
-      "CASH": "Cash",
-      "CARD": "Card",
-      "BANK_TRANSFER": "Bank transfer",
-      "CHECK": "Check",
-      "OTHER": "Other"
-    },
-    "paymentStatus": {
-      "UNPAID": "Unpaid",
-      "PAID": "Paid",
-      "PARTIALLY_PAID": "Partially paid"
-    }
-  },
-  "purchaseOrders": {
-    "status": {
-      "DRAFT": "Draft",
-      "PENDING_APPROVAL": "Pending approval",
-      "APPROVED": "Approved",
-      "ORDERED": "Ordered",
-      "PARTIALLY_RECEIVED": "Partially received",
-      "RECEIVED": "Received",
-      "CANCELLED": "Cancelled"
-    },
-    "paymentStatus": {
-      "UNPAID": "Unpaid",
-      "PARTIALLY_PAID": "Partially paid",
-      "PAID": "Paid"
     }
   },
   "giftCard": {

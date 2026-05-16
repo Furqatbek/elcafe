@@ -981,15 +981,8 @@
       "phonecall": "Telefon qo'ng'irog'i",
       "walkin": "Shaxsiy tashrif",
       "other": "Boshqa",
-      "TELEGRAM_BOT": "Telegram bot",
-      "WEBSITE": "Veb-sayt",
-      "ADMIN_PANEL": "Admin paneli",
-      "MOBILE_APP": "Mobil ilova",
-      "PHONE_CALL": "Telefon qo'ng'irog'i",
-      "WALK_IN": "O'zi keldi",
       "RESERVATION": "Bron",
-      "QR_ORDER": "QR buyurtma",
-      "OTHER": "Boshqa"
+      "QR_ORDER": "QR buyurtma"
     },
     "exportHeaders": {
       "firstName": "Ism",
@@ -1108,23 +1101,14 @@
       "full_time": "To'liq vaqt",
       "part_time": "Qisman vaqt",
       "freelance": "Frilanser",
-      "contractor": "Pudratchi",
-      "FULL_TIME": "To'liq stavka",
-      "PART_TIME": "Yarim stavka",
-      "FREELANCE": "Frilanser",
-      "CONTRACTOR": "Shartnomali ishchi"
+      "contractor": "Pudratchi"
     },
     "vehicles": {
       "bicycle": "Velosiped",
       "motorcycle": "Mototsikl",
       "scooter": "Skuter",
       "car": "Avtomobil",
-      "on_foot": "Piyoda",
-      "BICYCLE": "Velosiped",
-      "MOTORCYCLE": "Mototsikl",
-      "SCOOTER": "Skuter",
-      "CAR": "Avtomobil",
-      "ON_FOOT": "Piyoda"
+      "on_foot": "Piyoda"
     },
     "validation": {
       "emailRequired": "Email majburiy",
@@ -1598,7 +1582,8 @@
         "APPROVED": "Tasdiqlangan",
         "ORDERED": "Buyurtma qilingan",
         "PARTIALLY_RECEIVED": "Qisman qabul qilingan",
-        "RECEIVED": "Qabul qilingan"
+        "RECEIVED": "Qabul qilingan",
+        "CANCELLED": "Bekor qilindi"
       },
       "paymentStatuses": {
         "UNPAID": "To'lanmagan",
@@ -1659,7 +1644,9 @@
         "DELIVERY_COSTS": "Yetkazib berish xarajatlari",
         "PROFESSIONAL_FEES": "Professional to'lovlar",
         "BANK_FEES": "Bank to'lovlari",
-        "OTHER": "Boshqa"
+        "OTHER": "Boshqa",
+        "INVENTORY": "Inventar",
+        "COST_OF_GOODS_SOLD": "Sotilgan tovarlar tannarxi"
       },
       "paymentMethods": {
         "CASH": "Naqd",
@@ -1690,6 +1677,11 @@
         "deleteSuccess": "Xarajat muvaffaqiyatli o'chirildi",
         "confirmDelete": "Ushbu xarajatni o'chirishga ishonchingiz komilmi?",
         "cannotDeletePaid": "To'langan xarajatni o'chirib bo'lmaydi"
+      },
+      "paymentStatus": {
+        "UNPAID": "To'lanmagan",
+        "PAID": "To'langan",
+        "PARTIALLY_PAID": "Qisman to'langan"
       }
     },
     "reports": {
@@ -4610,53 +4602,6 @@
       "previewOnlyHint": "Faqat ogohlantirish: ortiqcha summa yozuvda belgilanadi, avans avtomatik yaratilmaydi.",
       "notes": "Izoh",
       "optional": "Ixtiyoriy"
-    }
-  },
-  "expenses": {
-    "categories": {
-      "RENT": "Ijara",
-      "UTILITIES": "Kommunal xizmatlar",
-      "SUPPLIES": "Sarflanadigan materiallar",
-      "INVENTORY": "Inventar",
-      "COST_OF_GOODS_SOLD": "Sotilgan tovarlar tannarxi",
-      "MARKETING": "Marketing",
-      "INSURANCE": "Sug'urta",
-      "MAINTENANCE": "Ta'mirlash",
-      "EQUIPMENT": "Uskunalar",
-      "LICENSES": "Litsenziyalar va ruxsatlar",
-      "TAXES": "Soliqlar",
-      "DELIVERY_COSTS": "Yetkazib berish xarajatlari",
-      "PROFESSIONAL_FEES": "Professional xizmatlar",
-      "BANK_FEES": "Bank to'lovlari",
-      "OTHER": "Boshqa"
-    },
-    "paymentMethods": {
-      "CASH": "Naqd",
-      "CARD": "Karta",
-      "BANK_TRANSFER": "Bank o'tkazmasi",
-      "CHECK": "Chek",
-      "OTHER": "Boshqa"
-    },
-    "paymentStatus": {
-      "UNPAID": "To'lanmagan",
-      "PAID": "To'langan",
-      "PARTIALLY_PAID": "Qisman to'langan"
-    }
-  },
-  "purchaseOrders": {
-    "status": {
-      "DRAFT": "Qoralama",
-      "PENDING_APPROVAL": "Tasdiqlash kutilmoqda",
-      "APPROVED": "Tasdiqlangan",
-      "ORDERED": "Buyurtma berildi",
-      "PARTIALLY_RECEIVED": "Qisman qabul qilindi",
-      "RECEIVED": "Qabul qilindi",
-      "CANCELLED": "Bekor qilindi"
-    },
-    "paymentStatus": {
-      "UNPAID": "To'lanmagan",
-      "PARTIALLY_PAID": "Qisman to'langan",
-      "PAID": "To'langan"
     }
   },
   "giftCard": {

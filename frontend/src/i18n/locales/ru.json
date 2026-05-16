@@ -981,15 +981,8 @@
       "phonecall": "Телефонный звонок",
       "walkin": "Личное посещение",
       "other": "Другое",
-      "TELEGRAM_BOT": "Telegram-бот",
-      "WEBSITE": "Сайт",
-      "ADMIN_PANEL": "Админ-панель",
-      "MOBILE_APP": "Мобильное приложение",
-      "PHONE_CALL": "Телефонный звонок",
-      "WALK_IN": "Самостоятельный визит",
       "RESERVATION": "Бронирование",
-      "QR_ORDER": "QR-заказ",
-      "OTHER": "Прочее"
+      "QR_ORDER": "QR-заказ"
     },
     "exportHeaders": {
       "firstName": "Имя",
@@ -1108,23 +1101,14 @@
       "full_time": "Полный рабочий день",
       "part_time": "Неполный рабочий день",
       "freelance": "Фриланс",
-      "contractor": "Подрядчик",
-      "FULL_TIME": "Полная занятость",
-      "PART_TIME": "Частичная занятость",
-      "FREELANCE": "Фриланс",
-      "CONTRACTOR": "Контрактник"
+      "contractor": "Подрядчик"
     },
     "vehicles": {
       "bicycle": "Велосипед",
       "motorcycle": "Мотоцикл",
       "scooter": "Скутер",
       "car": "Автомобиль",
-      "on_foot": "Пешком",
-      "BICYCLE": "Велосипед",
-      "MOTORCYCLE": "Мотоцикл",
-      "SCOOTER": "Скутер",
-      "CAR": "Автомобиль",
-      "ON_FOOT": "Пешком"
+      "on_foot": "Пешком"
     },
     "validation": {
       "emailRequired": "Email обязателен",
@@ -1598,7 +1582,8 @@
         "APPROVED": "Утвержден",
         "ORDERED": "Заказано",
         "PARTIALLY_RECEIVED": "Частично получено",
-        "RECEIVED": "Получено"
+        "RECEIVED": "Получено",
+        "CANCELLED": "Отменён"
       },
       "paymentStatuses": {
         "UNPAID": "Неоплачено",
@@ -1659,7 +1644,9 @@
         "DELIVERY_COSTS": "Расходы на доставку",
         "PROFESSIONAL_FEES": "Профессиональные сборы",
         "BANK_FEES": "Банковские сборы",
-        "OTHER": "Другое"
+        "OTHER": "Другое",
+        "INVENTORY": "Запасы",
+        "COST_OF_GOODS_SOLD": "Себестоимость продаж"
       },
       "paymentMethods": {
         "CASH": "Наличные",
@@ -1690,6 +1677,11 @@
         "deleteSuccess": "Расход успешно удален",
         "confirmDelete": "Вы уверены, что хотите удалить этот расход?",
         "cannotDeletePaid": "Невозможно удалить оплаченный расход"
+      },
+      "paymentStatus": {
+        "UNPAID": "Не оплачено",
+        "PAID": "Оплачено",
+        "PARTIALLY_PAID": "Частично оплачено"
       }
     },
     "reports": {
@@ -4566,53 +4558,6 @@
       "previewOnlyHint": "Только предупреждение: превышение отмечается в записи, но аванс автоматически не создаётся.",
       "notes": "Примечание",
       "optional": "Необязательно"
-    }
-  },
-  "expenses": {
-    "categories": {
-      "RENT": "Аренда",
-      "UTILITIES": "Коммунальные услуги",
-      "SUPPLIES": "Расходные материалы",
-      "INVENTORY": "Запасы",
-      "COST_OF_GOODS_SOLD": "Себестоимость продаж",
-      "MARKETING": "Маркетинг",
-      "INSURANCE": "Страхование",
-      "MAINTENANCE": "Обслуживание",
-      "EQUIPMENT": "Оборудование",
-      "LICENSES": "Лицензии и разрешения",
-      "TAXES": "Налоги",
-      "DELIVERY_COSTS": "Расходы на доставку",
-      "PROFESSIONAL_FEES": "Профессиональные услуги",
-      "BANK_FEES": "Банковские комиссии",
-      "OTHER": "Прочее"
-    },
-    "paymentMethods": {
-      "CASH": "Наличные",
-      "CARD": "Карта",
-      "BANK_TRANSFER": "Банковский перевод",
-      "CHECK": "Чек",
-      "OTHER": "Прочее"
-    },
-    "paymentStatus": {
-      "UNPAID": "Не оплачено",
-      "PAID": "Оплачено",
-      "PARTIALLY_PAID": "Частично оплачено"
-    }
-  },
-  "purchaseOrders": {
-    "status": {
-      "DRAFT": "Черновик",
-      "PENDING_APPROVAL": "Ожидает утверждения",
-      "APPROVED": "Утверждён",
-      "ORDERED": "Заказан",
-      "PARTIALLY_RECEIVED": "Частично получен",
-      "RECEIVED": "Получен",
-      "CANCELLED": "Отменён"
-    },
-    "paymentStatus": {
-      "UNPAID": "Не оплачено",
-      "PARTIALLY_PAID": "Частично оплачено",
-      "PAID": "Оплачено"
     }
   },
   "giftCard": {
