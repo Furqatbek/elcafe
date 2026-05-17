@@ -133,6 +133,32 @@ public class TableController {
         return ResponseEntity.ok(ApiResponse.success("Table deleted successfully", null));
     }
 
+    @PostMapping("/tables/bulk")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+    @Operation(summary = "Bulk-create tables",
+            description = "Create N tables in one call. Table numbers are derived from prefix + startNumber..startNumber+count-1.")
+    public ResponseEntity<ApiResponse<List<TableResponse>>> bulkCreateTables(
+            @Valid @RequestBody com.elcafe.modules.restaurant.dto.BulkCreateTablesRequest request) {
+        log.info("Bulk creating {} tables for restaurant {}", request.getCount(), request.getRestaurantId());
+
+        List<TableResponse> response = tableService.bulkCreateTables(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Tables created successfully", response));
+    }
+
+    @DeleteMapping("/tables/bulk")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Bulk-delete tables", description = "Delete multiple tables by ID in one call.")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> bulkDeleteTables(
+            @RequestBody Map<String, List<Long>> body) {
+        List<Long> ids = body.get("ids");
+        log.info("Bulk deleting {} tables", ids != null ? ids.size() : 0);
+
+        int deleted = tableService.bulkDeleteTables(ids);
+        return ResponseEntity.ok(ApiResponse.success("Tables deleted successfully",
+                Map.of("deleted", deleted)));
+    }
+
     @GetMapping("/restaurants/{restaurantId}/tables/stats")
     @Operation(summary = "Get table statistics", description = "Get statistics about tables for a restaurant")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getTableStats(@PathVariable Long restaurantId) {

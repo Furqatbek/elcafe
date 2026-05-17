@@ -149,6 +149,62 @@ public class TableService {
         log.info("Deleted table: {}", id);
     }
 
+    /**
+     * Bulk-create N tables for one restaurant in a single transaction.
+     * Each row is built from the per-request defaults (capacity, section,
+     * notes, active) with the table number derived from
+     * {@code prefix + startNumber..startNumber+count-1}. Any pre-existing
+     * table number collision fails the whole batch — keeps the operator
+     * out of a half-applied state.
+     */
+    @Transactional
+    public List<TableResponse> bulkCreateTables(com.elcafe.modules.restaurant.dto.BulkCreateTablesRequest request) {
+        log.info("Bulk-creating {} tables for restaurant {}", request.getCount(), request.getRestaurantId());
+
+        Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", request.getRestaurantId()));
+
+        String prefix = request.getPrefix() != null ? request.getPrefix() : "";
+        int start = request.getStartNumber() != null ? request.getStartNumber() : 1;
+        int count = request.getCount();
+
+        List<RestaurantTable> created = new java.util.ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            String tableNumber = prefix + (start + i);
+            tableRepository.findByRestaurant_IdAndTableNumber(request.getRestaurantId(), tableNumber)
+                    .ifPresent(t -> {
+                        throw new IllegalArgumentException("Table number " + tableNumber + " already exists");
+                    });
+            RestaurantTable table = RestaurantTable.builder()
+                    .restaurant(restaurant)
+                    .tableNumber(tableNumber)
+                    .capacity(request.getCapacity())
+                    .section(request.getSection())
+                    .notes(request.getNotes())
+                    .active(request.getActive() != null ? request.getActive() : Boolean.TRUE)
+                    .status(RestaurantTable.TableStatus.AVAILABLE)
+                    .build();
+            created.add(table);
+        }
+        List<RestaurantTable> saved = tableRepository.saveAll(created);
+        log.info("Bulk-created {} tables for restaurant {}", saved.size(), request.getRestaurantId());
+        return saved.stream().map(tableMapper::toResponse).toList();
+    }
+
+    /**
+     * Bulk-delete a list of table IDs in one transaction. Missing IDs are
+     * silently skipped so a stale UI selection can't fail the whole batch.
+     * Returns the number of rows actually removed.
+     */
+    @Transactional
+    public int bulkDeleteTables(List<Long> tableIds) {
+        if (tableIds == null || tableIds.isEmpty()) return 0;
+        List<RestaurantTable> tables = tableRepository.findAllById(tableIds);
+        tableRepository.deleteAll(tables);
+        log.info("Bulk-deleted {} tables (requested {})", tables.size(), tableIds.size());
+        return tables.size();
+    }
+
     @Transactional(readOnly = true)
     public Long countTablesByStatus(Long restaurantId, RestaurantTable.TableStatus status) {
         return tableRepository.countByRestaurantIdAndStatus(restaurantId, status);

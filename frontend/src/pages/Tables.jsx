@@ -3,7 +3,7 @@ import { tablesAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { getCurrentRestaurantId } from '../utils/restaurant';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Users, Grid, GitMerge, GitBranch } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Grid, GitMerge, GitBranch, Copy } from 'lucide-react';
 
 const Tables = () => {
   const { t } = useTranslation();
@@ -18,6 +18,16 @@ const Tables = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [stats, setStats] = useState({ totalTables: 0, availableTables: 0, occupiedTables: 0, reservedTables: 0 });
   const [selectedTables, setSelectedTables] = useState([]);
+  const [showBulkCreateModal, setShowBulkCreateModal] = useState(false);
+  const [bulkCreateData, setBulkCreateData] = useState({
+    prefix: '',
+    startNumber: 1,
+    count: 10,
+    capacity: 4,
+    section: '',
+    notes: '',
+    active: true,
+  });
 
   const [formData, setFormData] = useState({
     restaurantId: getCurrentRestaurantId() || '',
@@ -160,6 +170,52 @@ const Tables = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedTables.length === 0) return;
+    if (!window.confirm(t('tables.confirmBulkDelete',
+        { defaultValue: 'Delete {{count}} selected tables? This cannot be undone.', count: selectedTables.length }))) {
+      return;
+    }
+    try {
+      const res = await tablesAPI.bulkDelete(selectedTables);
+      const deleted = res.data?.data?.deleted ?? selectedTables.length;
+      setSelectedTables([]);
+      loadTables();
+      loadStats();
+      alert(t('tables.messages.bulkDeleteSuccess',
+          { defaultValue: 'Deleted {{count}} tables', count: deleted }));
+    } catch (error) {
+      console.error('Failed to bulk delete tables:', error);
+      alert(error.response?.data?.message
+          || t('tables.messages.bulkDeleteError', 'Failed to delete tables'));
+    }
+  };
+
+  const handleBulkCreate = async () => {
+    try {
+      await tablesAPI.bulkCreate({
+        restaurantId: selectedRestaurant,
+        prefix: bulkCreateData.prefix || null,
+        startNumber: parseInt(bulkCreateData.startNumber, 10) || 1,
+        count: parseInt(bulkCreateData.count, 10),
+        capacity: parseInt(bulkCreateData.capacity, 10),
+        section: bulkCreateData.section || null,
+        notes: bulkCreateData.notes || null,
+        active: bulkCreateData.active,
+      });
+      setShowBulkCreateModal(false);
+      setBulkCreateData({ prefix: '', startNumber: 1, count: 10, capacity: 4, section: '', notes: '', active: true });
+      loadTables();
+      loadStats();
+      alert(t('tables.messages.bulkCreateSuccess',
+          { defaultValue: 'Created {{count}} tables', count: bulkCreateData.count }));
+    } catch (error) {
+      console.error('Failed to bulk create tables:', error);
+      alert(error.response?.data?.message
+          || t('tables.messages.bulkCreateError', 'Failed to create tables'));
+    }
+  };
+
   const handleStatusChange = async (id, status) => {
     try {
       await tablesAPI.updateStatus(id, status);
@@ -262,6 +318,15 @@ const Tables = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('tables.title')}</h1>
         <div className="flex gap-2">
+          {selectedTables.length >= 1 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              <Trash2 size={20} />
+              {t('tables.deleteSelected', 'Delete {{count}} selected', { count: selectedTables.length })}
+            </button>
+          )}
           {selectedTables.length >= 2 && (
             <button
               onClick={handleMergeTables}
@@ -271,6 +336,13 @@ const Tables = () => {
               {t('tables.mergeTables', 'Merge {{count}} Tables', { count: selectedTables.length })}
             </button>
           )}
+          <button
+            onClick={() => setShowBulkCreateModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+          >
+            <Copy size={20} />
+            {t('tables.bulkCreate', 'Bulk Create')}
+          </button>
           <button
             onClick={() => { resetForm(); setShowModal(true); }}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -516,6 +588,124 @@ const Tables = () => {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loading ? t('common.saving') : (editingTable ? t('common.update') : t('common.create'))}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Create modal */}
+      {showBulkCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-1">
+              {t('tables.bulkCreateTitle', 'Bulk Create Tables')}
+            </h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {t('tables.bulkCreateHint',
+                'Numbers run from {{start}} to {{end}}. Example: {{example}}', {
+                start: bulkCreateData.startNumber,
+                end: (parseInt(bulkCreateData.startNumber, 10) || 0)
+                  + (parseInt(bulkCreateData.count, 10) || 0) - 1,
+                example: `${bulkCreateData.prefix || ''}${bulkCreateData.startNumber}`,
+              })}
+            </p>
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleBulkCreate(); }}
+              className="space-y-3"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    {t('tables.bulkPrefix', 'Prefix (optional)')}
+                  </label>
+                  <input
+                    type="text"
+                    value={bulkCreateData.prefix}
+                    onChange={e => setBulkCreateData({ ...bulkCreateData, prefix: e.target.value })}
+                    placeholder="T-"
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    {t('tables.bulkStart', 'Start number')}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={bulkCreateData.startNumber}
+                    onChange={e => setBulkCreateData({ ...bulkCreateData, startNumber: e.target.value })}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    {t('tables.bulkCount', 'How many')} *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="200"
+                    required
+                    value={bulkCreateData.count}
+                    onChange={e => setBulkCreateData({ ...bulkCreateData, count: e.target.value })}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    {t('tables.capacity', 'Capacity')} *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={bulkCreateData.capacity}
+                    onChange={e => setBulkCreateData({ ...bulkCreateData, capacity: e.target.value })}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {t('tables.section', 'Section')}
+                </label>
+                <input
+                  type="text"
+                  value={bulkCreateData.section}
+                  onChange={e => setBulkCreateData({ ...bulkCreateData, section: e.target.value })}
+                  placeholder={t('tables.sectionPlaceholder', 'e.g. Terrace, VIP')}
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  {t('tables.notes', 'Notes')}
+                </label>
+                <input
+                  type="text"
+                  value={bulkCreateData.notes}
+                  onChange={e => setBulkCreateData({ ...bulkCreateData, notes: e.target.value })}
+                  className="w-full border rounded px-3 py-2"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowBulkCreateModal(false)}
+                  className="px-4 py-2 border rounded hover:bg-gray-50"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                >
+                  {t('tables.createCount', 'Create {{count}}', { count: bulkCreateData.count })}
                 </button>
               </div>
             </form>
