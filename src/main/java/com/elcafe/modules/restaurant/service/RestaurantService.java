@@ -59,11 +59,15 @@ public class RestaurantService {
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", id));
 
-        restaurant.setName(request.getName());
+        // Treat the update as a PATCH: NOT NULL columns
+        // (name, address, active, acceptingOrders) keep their existing
+        // value when the request omits them. Nullable columns are still
+        // overwritten so clients can clear them by sending null.
+        if (request.getName() != null) restaurant.setName(request.getName());
         restaurant.setDescription(request.getDescription());
         restaurant.setLogoUrl(request.getLogoUrl());
         restaurant.setBannerUrl(request.getBannerUrl());
-        restaurant.setAddress(request.getAddress());
+        if (request.getAddress() != null) restaurant.setAddress(request.getAddress());
         restaurant.setCity(request.getCity());
         restaurant.setState(request.getState());
         restaurant.setZipCode(request.getZipCode());
@@ -73,8 +77,8 @@ public class RestaurantService {
         restaurant.setPhone(request.getPhone());
         restaurant.setEmail(request.getEmail());
         restaurant.setWebsite(request.getWebsite());
-        restaurant.setActive(request.getActive());
-        restaurant.setAcceptingOrders(request.getAcceptingOrders());
+        if (request.getActive() != null) restaurant.setActive(request.getActive());
+        if (request.getAcceptingOrders() != null) restaurant.setAcceptingOrders(request.getAcceptingOrders());
         restaurant.setMinimumOrderAmount(request.getMinimumOrderAmount());
         restaurant.setDeliveryFee(request.getDeliveryFee());
         restaurant.setEstimatedDeliveryTimeMinutes(request.getEstimatedDeliveryTimeMinutes());
