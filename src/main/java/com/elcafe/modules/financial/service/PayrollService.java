@@ -29,7 +29,7 @@ public class PayrollService {
 
     @Transactional
     public PayrollEntry createPayrollEntry(PayrollEntry payrollEntry) {
-        log.info("Creating payroll entry for employee: {}", payrollEntry.getEmployee().getId());
+        log.info("Creating payroll entry for subject: {}", subjectLabel(payrollEntry));
 
         String payrollNumber = generatePayrollNumber(payrollEntry.getRestaurant().getId());
         payrollEntry.setPayrollNumber(payrollNumber);
@@ -40,6 +40,37 @@ public class PayrollService {
 
         log.info("Payroll entry created: {}", payrollNumber);
         return savedPayroll;
+    }
+
+    /**
+     * Post an over-allowance consumption charge as a salary advance in
+     * its OWN transaction so a failure here can never poison the caller's
+     * transaction (e.g. EmployeeConsumptionService.recordConsumption). The
+     * caller logs+swallows our exception; we make sure that swallow is
+     * actually effective by isolating us with REQUIRES_NEW.
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public PayrollEntry postOverAllowanceAdvance(PayrollEntry entry,
+                                                 java.time.LocalDate paymentDate,
+                                                 PayrollEntry.PaymentMethod paymentMethod) {
+        PayrollEntry saved = createPayrollEntry(entry);
+        approvePayrollEntry(saved.getId(), "System");
+        return processPayment(saved.getId(), paymentDate, paymentMethod, null);
+    }
+
+    /** Best-effort name for a payroll subject — works for waiter-only entries. */
+    private String subjectLabel(PayrollEntry e) {
+        if (e.getEmployee() != null) {
+            String name = e.getEmployee().getFullName();
+            if (name != null && !name.isBlank()) return name;
+            return e.getEmployee().getEmail();
+        }
+        if (e.getWaiter() != null) {
+            String name = e.getWaiter().getName();
+            if (name != null && !name.isBlank()) return name;
+            return "waiter#" + e.getWaiter().getId();
+        }
+        return "(unknown)";
     }
 
     @Transactional
@@ -164,7 +195,7 @@ public class PayrollService {
                 journalService.createJournalEntry(
                         payroll.getRestaurant().getId(),
                         payroll.getPaymentDate(),
-                        "Payroll: " + payroll.getEmployee().getUsername() +
+                        "Payroll: " + subjectLabel(payroll) +
                                 " (" + payroll.getPayPeriodStart() + " to " + payroll.getPayPeriodEnd() + ")",
                         "PAYROLL",
                         payroll.getId(),

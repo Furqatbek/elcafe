@@ -161,11 +161,14 @@ public class EmployeeConsumptionService {
                         .baseSalary(limit.chargedAmount())
                         .notes(chargeNote)
                         .build();
-                PayrollEntry saved = payrollService.createPayrollEntry(advance);
-                // The advance is "given" to the employee immediately
-                // (they got the product) so mark it paid right away.
-                payrollService.approvePayrollEntry(saved.getId(), "System");
-                payrollService.processPayment(saved.getId(), today, null, null);
+                // Route through postOverAllowanceAdvance so the advance
+                // posting runs in its OWN transaction. Previously the
+                // chained createPayrollEntry/approve/processPayment calls
+                // shared this transaction, so any failure inside them
+                // marked us rollback-only and silently nuked the whole
+                // consumption — the catch block below couldn't actually
+                // swallow it.
+                payrollService.postOverAllowanceAdvance(advance, today, null);
                 log.info("Charged {} to {} for over-allowance consumption (consumption {})",
                         limit.chargedAmount(), consumerName, consumption.getId());
             } catch (Exception e) {
