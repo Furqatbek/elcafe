@@ -2,6 +2,9 @@ package com.elcafe.modules.pos.shift.controller;
 
 import com.elcafe.modules.pos.shift.entity.EmployeeConsumption;
 import com.elcafe.modules.pos.shift.repository.EmployeeConsumptionRepository;
+import com.elcafe.modules.pos.shift.service.ConsumptionLimitService;
+import com.elcafe.modules.waiter.entity.Waiter;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import com.elcafe.utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -30,6 +33,8 @@ import java.util.List;
 public class WaiterConsumptionController {
 
     private final EmployeeConsumptionRepository consumptionRepository;
+    private final ConsumptionLimitService consumptionLimitService;
+    private final WaiterRepository waiterRepository;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR')")
@@ -57,6 +62,25 @@ public class WaiterConsumptionController {
                 .toList();
 
         return ResponseEntity.ok(ApiResponse.success("Consumptions retrieved", response));
+    }
+
+    /**
+     * Quota status across every allowance applicable to this waiter — the
+     * mobile app's home screen uses this to render "X of Y left today"
+     * tiles without doing the math client-side. Waiters can serve at
+     * more than one restaurant, so the client passes the restaurant id
+     * they're currently working at.
+     */
+    @GetMapping("/quota")
+    @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR')")
+    public ResponseEntity<ApiResponse<List<ConsumptionLimitService.QuotaStatus>>> getMyQuota(
+            @RequestHeader("X-Waiter-Id") Long waiterId,
+            @RequestParam Long restaurantId) {
+        Waiter waiter = waiterRepository.findById(waiterId)
+                .orElseThrow(() -> new IllegalArgumentException("Waiter not found"));
+        List<ConsumptionLimitService.QuotaStatus> statuses =
+                consumptionLimitService.quotaStatusFor(restaurantId, null, waiter);
+        return ResponseEntity.ok(ApiResponse.success("Quota retrieved", statuses));
     }
 
     /**

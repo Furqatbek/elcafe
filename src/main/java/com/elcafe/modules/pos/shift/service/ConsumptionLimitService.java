@@ -47,6 +47,42 @@ public class ConsumptionLimitService {
     /* ---------------------------------------------------------------- */
 
     /**
+     * Quota status for every active allowance applicable to a subject —
+     * used by the waiter mobile app's home screen to render "X of Y left"
+     * tiles. Each entry combines the allowance rule with its current
+     * usage inside the rule's period window.
+     */
+    @Transactional(readOnly = true)
+    public List<QuotaStatus> quotaStatusFor(Long restaurantId, User employee, Waiter waiter) {
+        return allowanceRepository.findByRestaurant_IdAndActiveTrue(restaurantId).stream()
+                .filter(a -> subjectMatches(a, employee, waiter))
+                .map(a -> {
+                    Usage usage = currentUsage(a, employee, waiter);
+                    OffsetDateTime[] window = periodWindow(a, employee, waiter);
+                    Integer remainingCount = a.getLimitCount() == null ? null
+                            : Math.max(0, a.getLimitCount() - usage.count());
+                    BigDecimal remainingAmount = a.getLimitAmount() == null ? null
+                            : a.getLimitAmount().subtract(usage.amount()).max(BigDecimal.ZERO);
+                    String categoryName = a.getCategory() != null ? a.getCategory().getName() : null;
+                    return new QuotaStatus(
+                            a.getId(),
+                            a.getPeriod() != null ? a.getPeriod().name() : null,
+                            categoryName,
+                            a.getLimitCount(),
+                            a.getLimitAmount(),
+                            usage.count(),
+                            usage.amount(),
+                            remainingCount,
+                            remainingAmount,
+                            window != null ? window[0] : null,
+                            window != null ? window[1] : null,
+                            Boolean.TRUE.equals(a.getBillOverflow())
+                    );
+                })
+                .toList();
+    }
+
+    /**
      * Resolve the most-specific active allowance for this subject+category,
      * if any. Precedence is encoded by {@link ConsumptionAllowance#specificity()}.
      */
@@ -287,6 +323,25 @@ public class ConsumptionLimitService {
     /* ---------------------------------------------------------------- */
 
     public record Usage(int count, BigDecimal amount) {}
+
+    /**
+     * Mobile-app-friendly view of one applicable allowance + its
+     * current usage and remaining quota.
+     */
+    public record QuotaStatus(
+            Long allowanceId,
+            String period,              // DAILY | WEEKLY | MONTHLY | PER_SHIFT
+            String categoryName,        // null = any category
+            Integer limitCount,         // null = unlimited by count
+            BigDecimal limitAmount,     // null = unlimited by amount
+            int usedCount,
+            BigDecimal usedAmount,
+            Integer remainingCount,     // null when limitCount is null
+            BigDecimal remainingAmount, // null when limitAmount is null
+            OffsetDateTime periodStart,
+            OffsetDateTime periodEnd,
+            boolean billOverflow
+    ) {}
 
     public record Decision(
             ConsumptionAllowance allowance,
