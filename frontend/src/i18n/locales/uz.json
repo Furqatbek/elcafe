@@ -1636,6 +1636,8 @@
       "amount": "Summa",
       "taxAmount": "Soliq summasi",
       "paymentMethod": "To'lov usuli",
+      "paidFromShiftDrawer": "Smena kassasidan to'langan",
+      "paidFromShiftDrawerHint": "Faqat pul jismonan sizning aktiv smenangiz kassasidan olingan bo'lsa belgilang. Byudjet / mayda kassa / o'z mablag'ingizdan to'langan xarajatlar belgilanmasin.",
       "referenceNumber": "Ma'lumotnoma raqami",
       "notes": "Izohlar",
       "recurring": "Takrorlanuvchi",

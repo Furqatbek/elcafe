@@ -54,4 +54,10 @@ public class ExpenseRequest {
     private Expense.RecurringPeriod recurringPeriod;
 
     private String attachmentUrl;
+
+    // True when the operator paid the vendor with cash physically taken
+    // out of the active shift's till. Drives the "Из кассы смены" line
+    // on the daily Telegram report and the balance-sheet drawer split.
+    // Default false — operators have to opt in.
+    private Boolean paidFromShiftDrawer;
 }

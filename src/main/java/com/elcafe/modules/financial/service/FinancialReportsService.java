@@ -130,13 +130,13 @@ public class FinancialReportsService {
                 .map(Expense::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Split into "paid out of the shift cash drawer" (linked to a shift
-        // AND paid in cash) vs everything else. Reports use this to keep
-        // the cash that left the till visually distinct from rent, bank
-        // transfers, payroll, etc.
+        // Split out cash that actually left the shift till. Previously
+        // this was a proxy ("operator on shift + paymentMethod = CASH")
+        // which mis-flagged budget/petty-cash expenses recorded by an
+        // on-shift operator. The new model: an expense is drawer-paid
+        // only when the operator explicitly says so via paidFromShiftDrawer.
         BigDecimal shiftDrawerExpenses = paidExpenses.stream()
-                .filter(e -> e.getEmployeeShift() != null
-                        && e.getPaymentMethod() == Expense.PaymentMethod.CASH)
+                .filter(e -> Boolean.TRUE.equals(e.getPaidFromShiftDrawer()))
                 .map(Expense::getTotalAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal otherExpenses = totalExpenses.subtract(shiftDrawerExpenses);

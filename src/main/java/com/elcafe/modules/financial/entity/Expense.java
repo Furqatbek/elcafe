@@ -86,13 +86,20 @@ public class Expense {
     @Column
     private Long purchaseOrderId; // Link to purchase order if expense is from PO
 
-    // The shift that was active when this expense was recorded. Combined with
-    // paymentMethod=CASH this identifies an outflow from that shift's cash
-    // drawer; NULL means the expense wasn't tied to a shift (PO-driven,
-    // recurring rent, off-hours admin entry, …).
+    // The shift that was active when this expense was recorded —
+    // analytics-only ("incurred during this shift"). Does NOT by itself
+    // mean the cash came from the till; see paidFromShiftDrawer below.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_shift_id")
     private EmployeeShift employeeShift;
+
+    // Explicit "this money came out of the cash drawer for the shift
+    // linked above". Drives the daily report's "Из кассы смены" line.
+    // An operator paying a vendor in cash from owner-provided budget or
+    // their own pocket while on shift leaves this false.
+    @Column(name = "paid_from_shift_drawer", nullable = false)
+    @Builder.Default
+    private Boolean paidFromShiftDrawer = false;
 
     @Column(length = 1000)
     private String notes;

@@ -36,7 +36,8 @@ const Expenses = () => {
     referenceNumber: '',
     notes: '',
     recurring: false,
-    recurringPeriod: null
+    recurringPeriod: null,
+    paidFromShiftDrawer: false,
   });
 
   const expenseCategories = [
@@ -186,7 +187,8 @@ const Expenses = () => {
       referenceNumber: '',
       notes: '',
       recurring: false,
-      recurringPeriod: null
+      recurringPeriod: null,
+      paidFromShiftDrawer: false,
     });
   };
 
@@ -520,6 +522,26 @@ const Expenses = () => {
                 <option value="CHECK">{t('finance.expenses.paymentMethods.CHECK')}</option>
                 <option value="OTHER">{t('finance.expenses.paymentMethods.OTHER')}</option>
               </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="flex items-start gap-3 cursor-pointer rounded-md border border-gray-200 px-3 py-2 hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={Boolean(formData.paidFromShiftDrawer)}
+                  onChange={(e) => setFormData({ ...formData, paidFromShiftDrawer: e.target.checked })}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-gray-700">
+                    {t('finance.expenses.paidFromShiftDrawer', 'Paid from shift cash drawer')}
+                  </span>
+                  <span className="block text-xs text-gray-500">
+                    {t('finance.expenses.paidFromShiftDrawerHint',
+                      'Tick this only if the cash physically came out of the till for your active shift. Budget / petty-cash / owner-paid expenses leave this off.')}
+                  </span>
+                </span>
+              </label>
             </div>
 
             <div className="mb-4">

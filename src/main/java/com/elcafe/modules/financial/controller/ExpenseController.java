@@ -91,20 +91,29 @@ public class ExpenseController {
             account = accountRepository.findById(request.getAccountId()).orElse(null);
         }
 
-        // Attach the caller's active shift (if any) so reports can split
-        // drawer-paid expenses from non-shift ones. Admins creating expenses
-        // off-shift have no active shift, which is the correct NULL outcome.
+        // Attach the caller's active shift (if any) for analytics so the
+        // expense is scoped to "incurred during shift X". This link no
+        // longer auto-classifies the expense as drawer-paid — the
+        // operator must opt in via paidFromShiftDrawer below.
         com.elcafe.modules.pos.shift.entity.EmployeeShift activeShift =
                 shiftEnforcementService.getActiveShiftForCurrentUser();
         if (activeShift != null && !activeShift.getRestaurant().getId().equals(restaurant.getId())) {
-            // The operator is on shift at a different restaurant — don't
-            // mislabel this expense as coming from that shift's drawer.
+            // Different restaurant — don't link.
             activeShift = null;
+        }
+
+        boolean paidFromDrawer = Boolean.TRUE.equals(request.getPaidFromShiftDrawer());
+        if (paidFromDrawer && activeShift == null) {
+            // Caller asked to debit the drawer but isn't on any shift —
+            // refuse rather than silently ignoring the flag.
+            throw new IllegalStateException(
+                    "Cannot mark expense as paid from shift drawer without an active shift");
         }
 
         Expense expense = Expense.builder()
                 .restaurant(restaurant)
                 .employeeShift(activeShift)
+                .paidFromShiftDrawer(paidFromDrawer)
                 .account(account)
                 .expenseDate(request.getExpenseDate())
                 .category(request.getCategory())
@@ -264,6 +273,8 @@ public class ExpenseController {
                 .approvedAt(expense.getApprovedAt())
                 .createdAt(expense.getCreatedAt())
                 .updatedAt(expense.getUpdatedAt())
+                .employeeShiftId(expense.getEmployeeShift() != null ? expense.getEmployeeShift().getId() : null)
+                .paidFromShiftDrawer(expense.getPaidFromShiftDrawer())
                 .build();
     }
 }

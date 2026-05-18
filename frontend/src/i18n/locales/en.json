@@ -1636,6 +1636,8 @@
       "amount": "Amount",
       "taxAmount": "Tax Amount",
       "paymentMethod": "Payment Method",
+      "paidFromShiftDrawer": "Paid from shift cash drawer",
+      "paidFromShiftDrawerHint": "Tick this only if the cash physically came out of the till for your active shift. Budget / petty-cash / owner-paid expenses leave this off.",
       "referenceNumber": "Reference Number",
       "notes": "Notes",
       "recurring": "Recurring",

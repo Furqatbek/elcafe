@@ -42,4 +42,6 @@ public class ExpenseResponse {
     private LocalDateTime approvedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long employeeShiftId;
+    private Boolean paidFromShiftDrawer;
 }
