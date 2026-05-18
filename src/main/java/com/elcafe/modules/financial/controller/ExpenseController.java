@@ -38,6 +38,7 @@ public class ExpenseController {
     private final RestaurantRepository restaurantRepository;
     private final AccountRepository accountRepository;
     private final com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
+    private final com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository employeeShiftRepository;
     private final IdempotencyService idempotencyService;
 
     /** Window for the server-derived fingerprint key when the client sends no header. */
@@ -91,23 +92,46 @@ public class ExpenseController {
             account = accountRepository.findById(request.getAccountId()).orElse(null);
         }
 
-        // Attach the caller's active shift (if any) for analytics so the
-        // expense is scoped to "incurred during shift X". This link no
-        // longer auto-classifies the expense as drawer-paid — the
-        // operator must opt in via paidFromShiftDrawer below.
+        // Resolve which shift the expense is tied to. Priority:
+        //   1. The caller is on shift themselves (typical operator/waiter
+        //      flow). Reject mid-air if they're on shift at a different
+        //      restaurant — that would mis-attribute the drawer.
+        //   2. The restaurant has exactly one shift currently open
+        //      (typical single-cashier case for admins recording a
+        //      drawer expense on behalf of the cashier).
+        //   3. The request body explicitly names an employeeShiftId
+        //      (multi-cashier disambiguation).
+        // If none of these apply and the caller asked to debit the
+        // drawer, refuse with a message that tells them which option
+        // would unblock them — not just "no active shift".
         com.elcafe.modules.pos.shift.entity.EmployeeShift activeShift =
                 shiftEnforcementService.getActiveShiftForCurrentUser();
         if (activeShift != null && !activeShift.getRestaurant().getId().equals(restaurant.getId())) {
-            // Different restaurant — don't link.
             activeShift = null;
         }
 
         boolean paidFromDrawer = Boolean.TRUE.equals(request.getPaidFromShiftDrawer());
         if (paidFromDrawer && activeShift == null) {
-            // Caller asked to debit the drawer but isn't on any shift —
-            // refuse rather than silently ignoring the flag.
-            throw new IllegalStateException(
-                    "Cannot mark expense as paid from shift drawer without an active shift");
+            if (request.getEmployeeShiftId() != null) {
+                activeShift = employeeShiftRepository.findById(request.getEmployeeShiftId())
+                        .filter(s -> s.getRestaurant() != null
+                                && s.getRestaurant().getId().equals(restaurant.getId()))
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "employeeShiftId not found or belongs to another restaurant"));
+            } else {
+                java.util.List<com.elcafe.modules.pos.shift.entity.EmployeeShift> openShifts =
+                        employeeShiftRepository.findActiveShiftsByRestaurant(restaurant.getId());
+                if (openShifts.size() == 1) {
+                    activeShift = openShifts.get(0);
+                } else if (openShifts.isEmpty()) {
+                    throw new IllegalStateException(
+                            "Cannot mark expense as paid from shift drawer: no shift is currently open at this restaurant.");
+                } else {
+                    throw new IllegalStateException(
+                            "Cannot mark expense as paid from shift drawer: multiple shifts are open ("
+                                    + openShifts.size() + ") — pass employeeShiftId to disambiguate.");
+                }
+            }
         }
 
         Expense expense = Expense.builder()

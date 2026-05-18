@@ -60,4 +60,12 @@ public class ExpenseRequest {
     // on the daily Telegram report and the balance-sheet drawer split.
     // Default false — operators have to opt in.
     private Boolean paidFromShiftDrawer;
+
+    /**
+     * Optional. Only needed when {@link #paidFromShiftDrawer} is true
+     * AND the caller isn't on shift themselves AND more than one shift
+     * is currently open at the restaurant. The single-cashier case
+     * resolves automatically.
+     */
+    private Long employeeShiftId;
 }
