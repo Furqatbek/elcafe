@@ -561,60 +561,58 @@ public class OwnerTelegramBotService {
             try {
                 Long restaurantId = subOpt.get().getRestaurant().getId();
                 String restaurantName = subOpt.get().getRestaurant().getName();
-                var data = dashboardService.getTodaySummary(restaurantId);
+
+                // Route through the same DailyFinancialReportService the
+                // scheduled FinancialAlert report uses so all three Telegram
+                // surfaces (scheduled, shift-closed, in-chat /report) show
+                // identical numbers and the same drawer/other/payroll split.
+                com.elcafe.modules.notification.service.DailyFinancialReportService.DailyMetrics m =
+                        dailyFinancialReportService.calculateDailyMetrics(
+                                restaurantId, java.time.LocalDate.now());
 
                 StringBuilder sb = new StringBuilder();
                 sb.append("📊 <b>Финансовый отчёт за сегодня</b>\n\n");
                 sb.append(String.format("🏪 <b>%s</b>\n", restaurantName));
-                sb.append(String.format("📅 %s\n\n", java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"))));
+                sb.append(String.format("📅 %s\n\n",
+                        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"))));
 
-                long orderCount = data.getOrderStats() != null && data.getOrderStats().getTotalOrders() != null
-                        ? data.getOrderStats().getTotalOrders() : 0;
-                java.math.BigDecimal totalIncome = data.getTotalIncome() != null ? data.getTotalIncome() : java.math.BigDecimal.ZERO;
+                sb.append(String.format("💰 <b>Выручка:</b> %,.2f\n", m.totalRevenue()));
+                sb.append(String.format("📦 Заказов: %d\n\n", m.orderCount()));
 
-                sb.append(String.format("💰 <b>Выручка:</b> %,.2f\n", totalIncome));
-                sb.append(String.format("📦 Заказов: %d\n\n", orderCount));
-
-                // Revenue by payment method
-                if (data.getIncomeByPaymentMethod() != null && !data.getIncomeByPaymentMethod().isEmpty()) {
-                    sb.append("<b>По способу оплаты:</b>\n");
-                    for (var entry : data.getIncomeByPaymentMethod().entrySet()) {
-                        String emoji = switch (entry.getKey()) {
-                            case "CASH" -> "💵";
-                            case "CARD" -> "💳";
-                            case "MOBILE_PAYMENT" -> "📱";
-                            default -> "💰";
-                        };
-                        String label = switch (entry.getKey()) {
-                            case "CASH" -> "Наличные";
-                            case "CARD" -> "Карта";
-                            case "MOBILE_PAYMENT" -> "Мобильный";
-                            default -> entry.getKey();
-                        };
-                        sb.append(String.format("   %s %s: %,.2f\n", emoji, label, entry.getValue()));
-                    }
+                // Revenue breakdown (mirrors the scheduled report's structure).
+                if (m.salesRevenue() != null) {
+                    sb.append("<b>Детализация выручки:</b>\n");
+                    sb.append(String.format("   🍽 Продажи: %,.2f\n", m.salesRevenue()));
+                    if (m.serviceFeeRevenue() != null && m.serviceFeeRevenue().signum() > 0)
+                        sb.append(String.format("   🔧 Сервисный сбор: %,.2f\n", m.serviceFeeRevenue()));
+                    if (m.deliveryFeeRevenue() != null && m.deliveryFeeRevenue().signum() > 0)
+                        sb.append(String.format("   🚗 Доставка: %,.2f\n", m.deliveryFeeRevenue()));
+                    if (m.tipRevenue() != null && m.tipRevenue().signum() > 0)
+                        sb.append(String.format("   💵 Чаевые: %,.2f\n", m.tipRevenue()));
                     sb.append("\n");
                 }
 
-                // Expenses
-                java.math.BigDecimal totalExpenses = data.getTotalExpenses() != null ? data.getTotalExpenses() : java.math.BigDecimal.ZERO;
-                java.math.BigDecimal totalPayroll = data.getTotalPayroll() != null ? data.getTotalPayroll() : java.math.BigDecimal.ZERO;
-                sb.append(String.format("💸 <b>Расходы:</b> %,.2f\n", totalExpenses));
-                if (totalPayroll.compareTo(java.math.BigDecimal.ZERO) > 0)
-                    sb.append(String.format("   👥 Зарплата: %,.2f\n", totalPayroll));
-
-                // COGS
-                java.math.BigDecimal totalCOGS = data.getTotalCOGS() != null ? data.getTotalCOGS() : java.math.BigDecimal.ZERO;
-                if (totalCOGS.compareTo(java.math.BigDecimal.ZERO) > 0)
-                    sb.append(String.format("   📦 Себестоимость: %,.2f\n", totalCOGS));
+                // Expenses with drawer/other split — same shape as the
+                // scheduled daily report so the operator's mental model
+                // never has to switch between the two surfaces.
+                sb.append(String.format("💸 <b>Расходы:</b> %,.2f\n", m.totalExpenses()));
+                if (m.shiftDrawerExpenses() != null && m.shiftDrawerExpenses().signum() > 0)
+                    sb.append(String.format("   🪙 Из кассы смены: %,.2f\n", m.shiftDrawerExpenses()));
+                if (m.otherExpenses() != null && m.otherExpenses().signum() > 0)
+                    sb.append(String.format("   🏦 Прочие: %,.2f\n", m.otherExpenses()));
+                if (m.totalPayroll() != null && m.totalPayroll().signum() > 0)
+                    sb.append(String.format("   👥 Зарплата: %,.2f\n", m.totalPayroll()));
 
                 // Net profit
-                java.math.BigDecimal netProfit = data.getNetProfit() != null ? data.getNetProfit() : java.math.BigDecimal.ZERO;
-                String profitEmoji = netProfit.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
-                sb.append(String.format("\n%s <b>Чистая прибыль:</b> %,.2f", profitEmoji, netProfit));
+                String profitEmoji = m.netIncome().compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
+                sb.append(String.format("\n%s <b>Чистая прибыль:</b> %,.2f", profitEmoji, m.netIncome()));
 
-                if (data.getProfitMargin() != null)
-                    sb.append(String.format("\n📊 Маржа: %.1f%%", data.getProfitMargin()));
+                if (m.totalRevenue().signum() > 0) {
+                    java.math.BigDecimal margin = m.netIncome()
+                            .divide(m.totalRevenue(), 4, java.math.RoundingMode.HALF_UP)
+                            .multiply(new java.math.BigDecimal("100"));
+                    sb.append(String.format("\n📊 Маржа: %.1f%%", margin));
+                }
 
                 sendReply(chatId, sb.toString());
             } catch (Exception e) {
