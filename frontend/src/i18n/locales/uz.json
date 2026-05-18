@@ -105,6 +105,7 @@
       "referrals": "Referallar",
       "smsMarketing": "SMS Marketing",
       "telegramMarketing": "Telegram",
+      "telegramSubscribers": "Telegram obunachilari",
       "instagramMarketing": "Instagram",
       "ordersHistory": "Buyurtmalar tarixi",
       "milestones": "Yutuqlar",
@@ -4682,6 +4683,41 @@
     "status": {
       "PUBLISHED": "Chop etilgan",
       "HIDDEN": "Yashirilgan"
+    }
+  },
+  "ownerBotSubscribers": {
+    "title": "Telegram bot obunachilari",
+    "subtitle": "Telegram-botingizdan bildirishnomalar oladigan foydalanuvchilar.",
+    "list": "Obunachilar",
+    "listDesc": "Obunachini ovozsiz qilish uchun «Faol» belgisini o'chiring yoki sozlamalarni ochib qaysi turdagi hodisalarni olishini boshqaring.",
+    "name": "Ism",
+    "username": "Foydalanuvchi nomi",
+    "role": "Rol",
+    "restaurant": "Restoran",
+    "verified": "Tasdiqlangan",
+    "active": "Faol",
+    "lastInteraction": "Oxirgi faoliyat",
+    "yes": "Ha",
+    "no": "Yo'q",
+    "empty": "Hozircha obunachilar yo'q. Telegram bot sozlamalarida kod yarating va uni foydalanuvchining Telegram hisobidan yuboring.",
+    "editSettings": "Sozlamalar",
+    "editTitle": "Obunachini tahrirlash",
+    "confirmDelete": "{{name}} obunachilardan olib tashlansinmi? Ular endi Telegram orqali bildirishnoma olmaydi.",
+    "updateFailed": "Yangilab bo'lmadi",
+    "deleteFailed": "O'chirib bo'lmadi",
+    "notificationFlags": "Bildirishnoma turlari",
+    "thresholds": "Chegaralar",
+    "minOrderAmount": "Bildirishnoma uchun min. buyurtma summasi",
+    "lowStockThreshold": "Past zaxira chegarasi",
+    "flags": {
+      "notifyNewOrder": "Yangi buyurtma",
+      "notifyNewReservation": "Yangi bron",
+      "notifyOrderCancelled": "Buyurtma bekor qilindi",
+      "notifyReservationCancelled": "Bron bekor qilindi",
+      "notifyLowStock": "Past zaxira",
+      "notifyCustomerReview": "Mijoz sharhi",
+      "notifyDailyReport": "Kunlik hisobot",
+      "notifyCriticalAlerts": "Muhim ogohlantirishlar"
     }
   }
 }

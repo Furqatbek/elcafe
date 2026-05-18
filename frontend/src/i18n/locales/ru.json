@@ -105,6 +105,7 @@
       "referrals": "Рефералы",
       "smsMarketing": "SMS Маркетинг",
       "telegramMarketing": "Telegram",
+      "telegramSubscribers": "Подписчики Telegram",
       "instagramMarketing": "Instagram",
       "ordersHistory": "История заказов",
       "milestones": "Достижения",
@@ -4638,6 +4639,41 @@
     "status": {
       "PUBLISHED": "Опубликован",
       "HIDDEN": "Скрыт"
+    }
+  },
+  "ownerBotSubscribers": {
+    "title": "Подписчики Telegram-бота",
+    "subtitle": "Люди, получающие уведомления из вашего Telegram-бота владельца.",
+    "list": "Подписчики",
+    "listDesc": "Переключите флажок «Активен», чтобы отключить подписчика, или откройте настройки, чтобы выбрать типы событий, на которые он подписан.",
+    "name": "Имя",
+    "username": "Имя пользователя",
+    "role": "Роль",
+    "restaurant": "Ресторан",
+    "verified": "Подтверждён",
+    "active": "Активен",
+    "lastInteraction": "Последнее действие",
+    "yes": "Да",
+    "no": "Нет",
+    "empty": "Подписчиков ещё нет. Сгенерируйте код в настройках Telegram-бота и отправьте его из Telegram-аккаунта пользователя.",
+    "editSettings": "Настройки",
+    "editTitle": "Редактировать подписчика",
+    "confirmDelete": "Удалить {{name}} из подписчиков? Они перестанут получать уведомления в Telegram.",
+    "updateFailed": "Не удалось обновить",
+    "deleteFailed": "Не удалось удалить",
+    "notificationFlags": "Уведомлять о…",
+    "thresholds": "Пороги",
+    "minOrderAmount": "Мин. сумма заказа для уведомления",
+    "lowStockThreshold": "Порог низкого остатка",
+    "flags": {
+      "notifyNewOrder": "Новый заказ",
+      "notifyNewReservation": "Новое бронирование",
+      "notifyOrderCancelled": "Отмена заказа",
+      "notifyReservationCancelled": "Отмена бронирования",
+      "notifyLowStock": "Низкий остаток",
+      "notifyCustomerReview": "Отзыв клиента",
+      "notifyDailyReport": "Ежедневный отчёт",
+      "notifyCriticalAlerts": "Критические оповещения"
     }
   }
 }

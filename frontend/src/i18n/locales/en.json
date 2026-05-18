@@ -107,6 +107,7 @@
       "referrals": "Referrals",
       "smsMarketing": "SMS Marketing",
       "telegramMarketing": "Telegram",
+      "telegramSubscribers": "Telegram subscribers",
       "instagramMarketing": "Instagram",
       "ordersHistory": "Orders History",
       "milestones": "Milestones",
@@ -4874,6 +4875,41 @@
     "status": {
       "PUBLISHED": "Published",
       "HIDDEN": "Hidden"
+    }
+  },
+  "ownerBotSubscribers": {
+    "title": "Telegram bot subscribers",
+    "subtitle": "People receiving notifications from your owner Telegram bot.",
+    "list": "Subscribers",
+    "listDesc": "Toggle the active flag to silence a subscriber, or open settings to control which event types they receive.",
+    "name": "Name",
+    "username": "Username",
+    "role": "Role",
+    "restaurant": "Restaurant",
+    "verified": "Verified",
+    "active": "Active",
+    "lastInteraction": "Last interaction",
+    "yes": "Yes",
+    "no": "No",
+    "empty": "No subscribers yet. Generate a code in the Telegram bot config and send it from the user's Telegram account.",
+    "editSettings": "Settings",
+    "editTitle": "Edit subscriber",
+    "confirmDelete": "Remove {{name}} from subscribers? They will stop receiving Telegram notifications.",
+    "updateFailed": "Update failed",
+    "deleteFailed": "Delete failed",
+    "notificationFlags": "Notify on…",
+    "thresholds": "Thresholds",
+    "minOrderAmount": "Min order amount for notify",
+    "lowStockThreshold": "Low stock threshold",
+    "flags": {
+      "notifyNewOrder": "New order",
+      "notifyNewReservation": "New reservation",
+      "notifyOrderCancelled": "Order cancelled",
+      "notifyReservationCancelled": "Reservation cancelled",
+      "notifyLowStock": "Low stock",
+      "notifyCustomerReview": "Customer review",
+      "notifyDailyReport": "Daily report",
+      "notifyCriticalAlerts": "Critical alerts"
     }
   }
 }

@@ -1125,6 +1125,12 @@ export const telegramAPI = {
   toggleOwnerBotConfig: (id) => api.patch(`/telegram/owner-config/${id}/toggle`),
   deleteOwnerBotConfig: (id) => api.delete(`/telegram/owner-config/${id}`),
   generateOwnerBotCode: (userId, restaurantId) => api.post('/telegram/owner-config/generate-code', null, { params: { userId, restaurantId } }),
+
+  // Owner-bot subscribers (the people receiving Telegram notifications)
+  listOwnerSubscribers: (params) => api.get('/telegram/owner-subscribers', { params }),
+  getOwnerSubscriber: (id) => api.get(`/telegram/owner-subscribers/${id}`),
+  updateOwnerSubscriber: (id, data) => api.patch(`/telegram/owner-subscribers/${id}`, data),
+  deleteOwnerSubscriber: (id) => api.delete(`/telegram/owner-subscribers/${id}`),
 };
 
 // QR Code / Self-Service API

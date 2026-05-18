@@ -227,6 +227,7 @@ export default function Layout() {
         { label: t('nav.sub.printers'), icon: Printer, path: '/settings/printers' },
         { label: t('nav.sub.receiptTemplate', 'Chek Shabloni'), icon: Receipt, path: '/settings/receipt-template' },
         { label: t('nav.sub.kitchenStations', 'Kitchen Stations'), icon: ChefHat, path: '/settings/kitchen-stations' },
+        { label: t('nav.sub.telegramSubscribers', 'Telegram subscribers'), icon: Send, path: '/settings/telegram-subscribers' },
       ],
     },
   ];

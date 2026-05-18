@@ -33,4 +33,11 @@ public interface OwnerNotificationLogRepository extends JpaRepository<OwnerNotif
             @Param("restaurantId") Long restaurantId, @Param("since") LocalDateTime since);
 
     List<OwnerNotificationLog> findByRelatedEntityTypeAndRelatedEntityId(String entityType, Long entityId);
+
+    /**
+     * Cascade-delete helper used when an admin removes a subscriber.
+     */
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM OwnerNotificationLog n WHERE n.subscriber.id = :subscriberId")
+    void deleteBySubscriberId(@Param("subscriberId") Long subscriberId);
 }
