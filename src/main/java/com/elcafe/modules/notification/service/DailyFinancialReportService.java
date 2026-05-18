@@ -20,6 +20,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -144,6 +145,9 @@ public class DailyFinancialReportService {
         return new DailyMetrics(
             restaurantName,
             startDate,
+            endDate,
+            shift.start(),
+            shift.end(),
             shift.openTime(),
             shift.closeTime(),
             plReport.getOrderCount(),
@@ -214,10 +218,8 @@ public class DailyFinancialReportService {
 
         sb.append("📊 <b>Финансовый отчет за смену</b>\n\n");
         sb.append(String.format("🏪 <b>%s</b>\n", metrics.restaurantName()));
-        sb.append(String.format("📅 %s\n", metrics.date().format(DATE_FORMATTER)));
-        sb.append(String.format("🕐 Смена: %s - %s\n\n",
-            metrics.shiftStart().format(TIME_FORMATTER),
-            metrics.shiftEnd().format(TIME_FORMATTER)));
+        sb.append(String.format("📅 %s\n", formatPeriodDate(metrics)));
+        sb.append(String.format("🕐 %s\n\n", formatPeriodRange(metrics)));
 
         if (subscription.getAlertDailyRevenue()) {
             sb.append(String.format("💰 <b>Общая выручка:</b> %s\n", formatCurrency(metrics.totalRevenue())));
@@ -282,6 +284,39 @@ public class DailyFinancialReportService {
     }
 
     /**
+     * "18.05.2026" for a single-day report, or "18.05.2026 — 24.05.2026"
+     * for a manually-triggered range that spans days.
+     */
+    private static String formatPeriodDate(DailyMetrics m) {
+        if (m.endDate() == null || m.date().equals(m.endDate())) {
+            return m.date().format(DATE_FORMATTER);
+        }
+        return m.date().format(DATE_FORMATTER) + " — " + m.endDate().format(DATE_FORMATTER);
+    }
+
+    /**
+     * Period clock range. Prefers the absolute datetime boundaries
+     * (handles overnight shifts crossing midnight: "18.05 09:00 →
+     * 19.05 02:00"). Falls back to the shift open/close LocalTime
+     * pair only if periodStart/end aren't populated.
+     */
+    private static String formatPeriodRange(DailyMetrics m) {
+        if (m.periodStart() != null && m.periodEnd() != null) {
+            DateTimeFormatter f = DateTimeFormatter.ofPattern("dd.MM HH:mm");
+            // If start and end fall on the same calendar day, drop the
+            // date from the right side to keep the line compact.
+            String left = m.periodStart().format(f);
+            boolean sameDay = m.periodStart().toLocalDate().equals(m.periodEnd().toLocalDate());
+            String right = sameDay
+                    ? m.periodEnd().format(TIME_FORMATTER)
+                    : m.periodEnd().format(f);
+            return "Период: " + left + " — " + right;
+        }
+        return "Смена: " + m.shiftStart().format(TIME_FORMATTER)
+                + " - " + m.shiftEnd().format(TIME_FORMATTER);
+    }
+
+    /**
      * Manually trigger daily report for a specific restaurant.
      * Does NOT update lastReportDate, so scheduled reports will still be sent at the configured time.
      */
@@ -326,6 +361,8 @@ public class DailyFinancialReportService {
             Map.entry("startDate", startDate.toString()),
             Map.entry("endDate", endDate.toString()),
             Map.entry("date", metrics.date().toString()),
+            Map.entry("periodStart", metrics.periodStart() != null ? metrics.periodStart().toString() : ""),
+            Map.entry("periodEnd", metrics.periodEnd() != null ? metrics.periodEnd().toString() : ""),
             Map.entry("shiftStart", metrics.shiftStart().toString()),
             Map.entry("shiftEnd", metrics.shiftEnd().toString()),
             Map.entry("orderCount", metrics.orderCount()),
@@ -351,7 +388,14 @@ public class DailyFinancialReportService {
      */
     public record DailyMetrics(
         String restaurantName,
+        // Calendar range the metrics cover. For a single-business-day
+        // report (the scheduled path) startDate == endDate. For an
+        // overnight shift, periodStart/periodEnd carry the actual
+        // wall-clock boundaries (e.g. 2026-05-18 09:00 → 2026-05-19 02:00).
         LocalDate date,
+        LocalDate endDate,
+        OffsetDateTime periodStart,
+        OffsetDateTime periodEnd,
         LocalTime shiftStart,
         LocalTime shiftEnd,
         int orderCount,
