@@ -182,6 +182,7 @@ export default function Layout() {
         { label: t('nav.sub.stockAlerts'), icon: AlertTriangle, path: '/kitchen/stock-alerts' },
         { label: t('nav.sub.valuation'), icon: Calculator, path: '/kitchen/valuation' },
         { label: t('nav.sub.poSuggestions'), icon: ShoppingCart, path: '/kitchen/po-suggestions' },
+        { label: t('nav.sub.production', 'Production'), icon: ChefHat, path: '/kitchen/production' },
       ],
     },
     {

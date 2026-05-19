@@ -403,7 +403,7 @@ export default function Dashboard() {
                 <CardTitle className="text-orange-800">{t('dashboard.inventoryAlerts', 'Inventory Alerts')}</CardTitle>
               </div>
               <Link
-                to="/inventory/ingredients"
+                to="/kitchen/inventory"
                 className="flex items-center gap-1 text-sm text-orange-600 hover:text-orange-800"
               >
                 {t('dashboard.viewAll', 'View All')}
