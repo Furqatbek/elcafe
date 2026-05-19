@@ -140,6 +140,10 @@ public class DashboardService {
                 .description(shiftDesc)
                 .build();
 
+        // Compute soldItems once so the loss-leader / low-margin views
+        // can reuse the same enriched list without re-iterating orders.
+        List<DashboardResponse.SoldItem> soldItems = calculateSoldItems(ordersForSoldItems);
+
         // Build response
         return DashboardResponse.builder()
                 .startDate(startDate)
@@ -156,10 +160,42 @@ public class DashboardService {
                 .incomeByPaymentMethod(calculateIncomeByPaymentMethod(completedOrders))
                 .expensesByCategory(calculateExpensesByCategory(expenses, totalPayroll))
                 .dailyStats(calculateDailyStats(restaurantId, completedOrders, expenses, startDate, endDate))
-                .soldItems(calculateSoldItems(ordersForSoldItems))
+                .soldItems(soldItems)
+                .topLossLeaders(topLossLeaders(soldItems))
+                .lowMarginItems(lowMarginItems(soldItems))
                 .comparison(safeCalculateComparison(restaurantId, startDate, endDate, totalIncome, totalExpenses, activeOrders.size()))
                 .inventoryAlerts(calculateInventoryAlerts(restaurantId))
                 .build();
+    }
+
+    /** Products that booked negative profit, worst first, capped at 10. */
+    private List<DashboardResponse.SoldItem> topLossLeaders(List<DashboardResponse.SoldItem> all) {
+        return all.stream()
+                .filter(i -> i.getProfit() != null && i.getProfit().signum() < 0)
+                .sorted((a, b) -> a.getProfit().compareTo(b.getProfit())) // most-negative first
+                .limit(10)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Products with positive but tight gross margin (&lt; 30%), sorted by
+     * total cost so high-volume tight-margin products bubble to the top —
+     * those are the biggest cash drains hiding behind a "we sold a lot"
+     * narrative.
+     */
+    private List<DashboardResponse.SoldItem> lowMarginItems(List<DashboardResponse.SoldItem> all) {
+        BigDecimal threshold = new BigDecimal("30");
+        return all.stream()
+                .filter(i -> i.getProfitMargin() != null
+                        && i.getProfitMargin().signum() > 0
+                        && i.getProfitMargin().compareTo(threshold) < 0)
+                .sorted((a, b) -> {
+                    BigDecimal ac = a.getTotalCost() != null ? a.getTotalCost() : BigDecimal.ZERO;
+                    BigDecimal bc = b.getTotalCost() != null ? b.getTotalCost() : BigDecimal.ZERO;
+                    return bc.compareTo(ac);
+                })
+                .limit(10)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -370,8 +406,10 @@ public class DashboardService {
                 .sorted((a, b) -> Long.compare(b.getQuantitySold(), a.getQuantitySold()))
                 .collect(Collectors.toList());
 
-        // Enrich with cost and profit data
+        // Enrich with cost and profit data. Skip items without a productId
+        // (bundle / packaging lines) — JPA's findById(null) throws.
         for (DashboardResponse.SoldItem item : soldItems) {
+            if (item.getProductId() == null) continue;
             try {
                 Product product = productRepository.findById(item.getProductId()).orElse(null);
                 if (product != null && product.getCostPrice() != null) {

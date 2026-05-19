@@ -49,6 +49,14 @@ public class DashboardResponse {
     // Sold items for the period
     private List<SoldItem> soldItems;
 
+    // Per-product margin diagnostics. topLossLeaders = products that
+    // booked negative profit, sorted worst-first. lowMarginItems =
+    // products with positive but tight gross margin (< 30%), sorted by
+    // total cost so the biggest cash drains float to the top. Both are
+    // capped at 10 entries so the response stays compact.
+    private List<SoldItem> topLossLeaders;
+    private List<SoldItem> lowMarginItems;
+
     // Comparison with previous period
     private PeriodComparison comparison;
 

@@ -181,21 +181,19 @@ public class PurchaseOrderService {
         if (fullyReceived) {
             createPurchaseJournalEntry(savedPo, receivedBy);
 
-            // Create expense record for the purchase order
-            try {
-                expenseService.createExpenseFromPurchaseOrder(
-                        savedPo.getRestaurant(),
-                        savedPo.getId(),
-                        savedPo.getPoNumber(),
-                        savedPo.getSupplierName(),
-                        savedPo.getSubtotal(),
-                        savedPo.getTaxAmount(),
-                        actualDeliveryDate,
-                        receivedBy
-                );
-            } catch (Exception e) {
-                log.warn("Failed to create expense for PO {}: {}", savedPo.getPoNumber(), e.getMessage());
-            }
+            // NOTE: previously this branch also called
+            //   expenseService.createExpenseFromPurchaseOrder(...)
+            // which posted a `financial_expenses` row with
+            // category = INVENTORY. That was a double-count: the journal
+            // entry above already records the purchase correctly
+            // (Dr Inventory / Cr A/P), and the period expense for the
+            // sold portion of that inventory is recognised later via
+            // COGS at sale time. Recording an expense at receipt time
+            // ALSO added the same amount as a period expense — so a 5M
+            // PO would show as 5M in expenses now AND eat into COGS
+            // again when its contents were sold, inflating total
+            // expenses by the full PO value and torching net profit.
+            // V140 backfills the historical rows out of the picture.
         }
 
         log.info("Purchase order received: {}", po.getPoNumber());
