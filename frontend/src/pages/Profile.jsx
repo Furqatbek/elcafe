@@ -24,12 +24,12 @@ export default function Profile() {
 
   const validate = () => {
     const errs = {};
-    if (!passwordForm.currentPassword) errs.currentPassword = 'Current password is required';
-    if (!passwordForm.newPassword) errs.newPassword = 'New password is required';
-    else if (passwordForm.newPassword.length < 8) errs.newPassword = 'Password must be at least 8 characters';
-    if (!passwordForm.confirmPassword) errs.confirmPassword = 'Please confirm your new password';
+    if (!passwordForm.currentPassword) errs.currentPassword = t('profile.validation.currentRequired');
+    if (!passwordForm.newPassword) errs.newPassword = t('profile.validation.newRequired');
+    else if (passwordForm.newPassword.length < 8) errs.newPassword = t('profile.validation.tooShort');
+    if (!passwordForm.confirmPassword) errs.confirmPassword = t('profile.validation.confirmRequired');
     else if (passwordForm.newPassword !== passwordForm.confirmPassword)
-      errs.confirmPassword = 'Passwords do not match';
+      errs.confirmPassword = t('profile.validation.mismatch');
     return errs;
   };
 
@@ -44,10 +44,10 @@ export default function Profile() {
     setSaving(true);
     try {
       await authAPI.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
-      toast({ title: 'Password changed successfully' });
+      toast({ title: t('profile.passwordChanged') });
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to change password';
+      const msg = err.response?.data?.message || t('profile.changeFailed');
       toast({ title: msg, variant: 'destructive' });
     } finally {
       setSaving(false);
@@ -58,7 +58,7 @@ export default function Profile() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Account Profile</h1>
+      <h1 className="text-2xl font-bold text-gray-900">{t('profile.title')}</h1>
 
       {/* Profile info card */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -74,19 +74,19 @@ export default function Profile() {
 
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-gray-500 mb-1">Email</p>
+            <p className="text-gray-500 mb-1">{t('auth.email')}</p>
             <p className="font-medium text-gray-900">{user?.email || '—'}</p>
           </div>
           <div>
-            <p className="text-gray-500 mb-1">Phone</p>
+            <p className="text-gray-500 mb-1">{t('auth.phone')}</p>
             <p className="font-medium text-gray-900">{user?.phone || '—'}</p>
           </div>
           <div>
-            <p className="text-gray-500 mb-1">First Name</p>
+            <p className="text-gray-500 mb-1">{t('auth.firstName')}</p>
             <p className="font-medium text-gray-900">{user?.firstName || '—'}</p>
           </div>
           <div>
-            <p className="text-gray-500 mb-1">Last Name</p>
+            <p className="text-gray-500 mb-1">{t('auth.lastName')}</p>
             <p className="font-medium text-gray-900">{user?.lastName || '—'}</p>
           </div>
         </div>
@@ -96,13 +96,13 @@ export default function Profile() {
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <div className="flex items-center space-x-2 mb-5">
           <Lock className="h-5 w-5 text-gray-500" />
-          <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('profile.changePassword')}</h2>
         </div>
 
         <form onSubmit={handleChangePassword} className="space-y-4">
           {/* Current password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.currentPassword')}</label>
             <div className="relative">
               <input
                 type={showCurrent ? 'text' : 'password'}
@@ -111,7 +111,7 @@ export default function Profile() {
                 className={`w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.currentPassword ? 'border-red-400' : 'border-gray-300'
                 }`}
-                placeholder="Enter current password"
+                placeholder={t('profile.currentPasswordPlaceholder')}
               />
               <button
                 type="button"
@@ -126,7 +126,7 @@ export default function Profile() {
 
           {/* New password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.newPassword')}</label>
             <div className="relative">
               <input
                 type={showNew ? 'text' : 'password'}
@@ -135,7 +135,7 @@ export default function Profile() {
                 className={`w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.newPassword ? 'border-red-400' : 'border-gray-300'
                 }`}
-                placeholder="Minimum 8 characters"
+                placeholder={t('profile.passwordHint')}
               />
               <button
                 type="button"
@@ -150,7 +150,7 @@ export default function Profile() {
 
           {/* Confirm new password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.confirmPassword')}</label>
             <div className="relative">
               <input
                 type={showConfirm ? 'text' : 'password'}
@@ -159,7 +159,7 @@ export default function Profile() {
                 className={`w-full border rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   errors.confirmPassword ? 'border-red-400' : 'border-gray-300'
                 }`}
-                placeholder="Repeat new password"
+                placeholder={t('profile.confirmPasswordPlaceholder')}
               />
               <button
                 type="button"
@@ -174,7 +174,7 @@ export default function Profile() {
 
           <div className="pt-2">
             <Button type="submit" disabled={saving}>
-              {saving ? 'Saving…' : 'Change Password'}
+              {saving ? t('common.saving') : t('profile.changePassword')}
             </Button>
           </div>
         </form>

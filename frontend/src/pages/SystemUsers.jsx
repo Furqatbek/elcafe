@@ -63,7 +63,7 @@ export default function SystemUsers() {
       loadUsers();
     } catch (e) {
       console.error(e);
-      alert(e.response?.data?.message || 'Failed');
+      alert(e.response?.data?.message || t('systemUsers.saveFailed', 'Failed'));
     }
   };
 

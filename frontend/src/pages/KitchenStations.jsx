@@ -26,14 +26,14 @@ const KitchenStations = () => {
   });
 
   const colorOptions = [
-    { value: '#3B82F6', label: 'Blue' },
-    { value: '#EF4444', label: 'Red' },
-    { value: '#10B981', label: 'Green' },
-    { value: '#F59E0B', label: 'Orange' },
-    { value: '#8B5CF6', label: 'Purple' },
-    { value: '#EC4899', label: 'Pink' },
-    { value: '#6366F1', label: 'Indigo' },
-    { value: '#14B8A6', label: 'Teal' },
+    { value: '#3B82F6', labelKey: 'blue' },
+    { value: '#EF4444', labelKey: 'red' },
+    { value: '#10B981', labelKey: 'green' },
+    { value: '#F59E0B', labelKey: 'orange' },
+    { value: '#8B5CF6', labelKey: 'purple' },
+    { value: '#EC4899', labelKey: 'pink' },
+    { value: '#6366F1', labelKey: 'indigo' },
+    { value: '#14B8A6', labelKey: 'teal' },
   ];
 
   useEffect(() => {
@@ -248,7 +248,7 @@ const KitchenStations = () => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('kitchenStations.stationName', 'Station Name')}</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('kitchenStations.description', 'Description')}</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('kitchenStations.stationDescription', 'Description')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('kitchenStations.printer', 'Printer')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('kitchenStations.color', 'Color')}</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('kitchenStations.status', 'Status')}</th>
@@ -339,7 +339,7 @@ const KitchenStations = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg my-8">
             <h2 className="text-xl font-bold mb-4">
-              {editingStation ? t('kitchenStations.editStation', 'Edit Kitchen Station') : t('kitchenStations.addStation', 'Add Kitchen Station')}
+              {editingStation ? t('kitchenStations.editStation', 'Edit Kitchen Station') : t('kitchenStations.addStationModal', 'Add Kitchen Station')}
             </h2>
 
             <div className="space-y-4 mb-6">
@@ -358,14 +358,14 @@ const KitchenStations = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {t('kitchenStations.description', 'Description')}
+                  {t('kitchenStations.stationDescription', 'Description')}
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   rows="2"
-                  placeholder={t('kitchenStations.descriptionPlaceholder', 'Optional description for this station')}
+                  placeholder={t('kitchenStations.stationDescriptionPlaceholder', 'Optional description for this station')}
                 />
               </div>
 
@@ -406,7 +406,7 @@ const KitchenStations = () => {
                         formData.color === color.value ? 'border-gray-800 ring-2 ring-offset-2 ring-gray-400' : 'border-gray-200'
                       }`}
                       style={{ backgroundColor: color.value }}
-                      title={color.label}
+                      title={t(`kitchenStations.colors.${color.labelKey}`)}
                     />
                   ))}
                 </div>

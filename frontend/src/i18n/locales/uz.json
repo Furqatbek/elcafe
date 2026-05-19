@@ -1575,7 +1575,11 @@
       "remaining": "Qolgan",
       "to": "dan",
       "none": "Yo'q",
-      "loadingReports": "Hisobotlar yuklanmoqda..."
+      "loadingReports": "Hisobotlar yuklanmoqda...",
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "save": "Saqlash",
+      "saving": "Saqlanmoqda..."
     },
     "purchaseOrders": {
       "title": "Xarid buyurtmalari",
@@ -4740,6 +4744,91 @@
       "notifyCustomerReview": "Mijoz sharhi",
       "notifyDailyReport": "Kunlik hisobot",
       "notifyCriticalAlerts": "Muhim ogohlantirishlar"
+    }
+  },
+  "profile": {
+    "title": "Hisob profili",
+    "changePassword": "Parolni o'zgartirish",
+    "currentPassword": "Joriy parol",
+    "currentPasswordPlaceholder": "Joriy parolni kiriting",
+    "newPassword": "Yangi parol",
+    "passwordHint": "Kamida 8 ta belgi",
+    "confirmPassword": "Yangi parolni tasdiqlang",
+    "confirmPasswordPlaceholder": "Yangi parolni qaytadan kiriting",
+    "passwordChanged": "Parol muvaffaqiyatli o'zgartirildi",
+    "changeFailed": "Parolni o'zgartirib bo'lmadi",
+    "validation": {
+      "currentRequired": "Joriy parol talab qilinadi",
+      "newRequired": "Yangi parol talab qilinadi",
+      "tooShort": "Parol kamida 8 ta belgidan iborat bo'lishi kerak",
+      "confirmRequired": "Yangi parolni tasdiqlang",
+      "mismatch": "Parollar mos kelmaydi"
+    }
+  },
+  "systemUsers": {
+    "title": "Tizim foydalanuvchilari",
+    "subtitle": "Boshqaruv paneliga kirish huquqi bo'lgan foydalanuvchilarni boshqarish",
+    "addUser": "Foydalanuvchi qo'shish",
+    "editUser": "Foydalanuvchini tahrirlash",
+    "panelUsers": "Boshqaruv paneli foydalanuvchilari",
+    "name": "Ismi",
+    "email": "Elektron pochta",
+    "phone": "Telefon",
+    "role": "Rol",
+    "status": "Holat",
+    "actions": "Harakatlar",
+    "active": "Faol",
+    "inactive": "Nofaol",
+    "noUsers": "Tizim foydalanuvchilari yo'q",
+    "firstName": "Ismi",
+    "lastName": "Familiyasi",
+    "password": "Parol",
+    "newPassword": "Yangi parol (saqlash uchun bo'sh qoldiring)",
+    "confirmDeactivate": "Ushbu foydalanuvchini o'chirishni tasdiqlaysizmi?",
+    "saveFailed": "Xatolik"
+  },
+  "kitchenStations": {
+    "title": "Oshxona stantsiyalari",
+    "description": "Cheklarni turli printerlarga yo'naltirish uchun oshxona stantsiyalarini sozlang",
+    "addStation": "Stantsiya qo'shish",
+    "editStation": "Oshxona stantsiyasini tahrirlash",
+    "addStationModal": "Oshxona stantsiyasini qo'shish",
+    "howItWorks": "Oshxona stantsiyalari yo'naltirish qanday ishlaydi",
+    "step1": "Oshxona stantsiyalarini yarating (masalan, Fryer, Gril, Sovuq stol)",
+    "step2": "Har bir stantsiyaga printer biriktiring",
+    "step3": "Kategoriyalar sahifasida har bir kategoriyani oshxona stantsiyasiga biriktiring",
+    "step4": "Buyurtmalar yaratilganda mahsulotlar avtomatik ravishda mos stantsiya printerida chop etiladi",
+    "stationName": "Stantsiya nomi",
+    "stationNamePlaceholder": "masalan, Fryer, Gril, Sovuq stol",
+    "stationDescription": "Tavsif",
+    "stationDescriptionPlaceholder": "Ushbu stantsiya uchun ixtiyoriy tavsif",
+    "printer": "Printer",
+    "selectPrinter": "Printer tanlang...",
+    "color": "Rang",
+    "sortOrder": "Tartib raqami",
+    "status": "Holat",
+    "noPrinter": "Printer biriktirilmagan",
+    "noStations": "Oshxona stantsiyalari sozlanmagan. Yaratish uchun «Stantsiya qo'shish» tugmasini bosing.",
+    "noPrintersAvailable": "Printerlar sozlanmagan. Avval Printer sozlamalariga o'tib, printer qo'shing.",
+    "colors": {
+      "blue": "Ko'k",
+      "red": "Qizil",
+      "green": "Yashil",
+      "orange": "To'q sariq",
+      "purple": "Binafsha",
+      "pink": "Pushti",
+      "indigo": "Indigo",
+      "teal": "Feruza"
+    },
+    "messages": {
+      "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
+      "updateSuccess": "Oshxona stantsiyasi muvaffaqiyatli yangilandi",
+      "createSuccess": "Oshxona stantsiyasi muvaffaqiyatli yaratildi",
+      "saveError": "Oshxona stantsiyasini saqlab bo'lmadi",
+      "confirmDelete": "Ushbu oshxona stantsiyasini o'chirishni xohlaysizmi?",
+      "deleteSuccess": "Oshxona stantsiyasi muvaffaqiyatli o'chirildi",
+      "deleteError": "Oshxona stantsiyasini o'chirib bo'lmadi",
+      "toggleError": "Oshxona stantsiyasi holatini almashtirib bo'lmadi"
     }
   }
 }

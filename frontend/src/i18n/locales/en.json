@@ -1575,7 +1575,11 @@
       "remaining": "Remaining",
       "to": "to",
       "none": "None",
-      "loadingReports": "Loading reports..."
+      "loadingReports": "Loading reports...",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "saving": "Saving..."
     },
     "purchaseOrders": {
       "title": "Purchase Orders",
@@ -4932,6 +4936,91 @@
       "notifyCustomerReview": "Customer review",
       "notifyDailyReport": "Daily report",
       "notifyCriticalAlerts": "Critical alerts"
+    }
+  },
+  "profile": {
+    "title": "Account Profile",
+    "changePassword": "Change Password",
+    "currentPassword": "Current Password",
+    "currentPasswordPlaceholder": "Enter current password",
+    "newPassword": "New Password",
+    "passwordHint": "Minimum 8 characters",
+    "confirmPassword": "Confirm New Password",
+    "confirmPasswordPlaceholder": "Repeat new password",
+    "passwordChanged": "Password changed successfully",
+    "changeFailed": "Failed to change password",
+    "validation": {
+      "currentRequired": "Current password is required",
+      "newRequired": "New password is required",
+      "tooShort": "Password must be at least 8 characters",
+      "confirmRequired": "Please confirm your new password",
+      "mismatch": "Passwords do not match"
+    }
+  },
+  "systemUsers": {
+    "title": "System Users",
+    "subtitle": "Manage users with admin panel access",
+    "addUser": "Add User",
+    "editUser": "Edit User",
+    "panelUsers": "Control Panel Users",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "role": "Role",
+    "status": "Status",
+    "actions": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "noUsers": "No system users",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "password": "Password",
+    "newPassword": "New Password (leave empty to keep)",
+    "confirmDeactivate": "Deactivate this user?",
+    "saveFailed": "Failed"
+  },
+  "kitchenStations": {
+    "title": "Kitchen Stations",
+    "description": "Configure kitchen stations for ticket routing to different printers",
+    "addStation": "Add Station",
+    "editStation": "Edit Kitchen Station",
+    "addStationModal": "Add Kitchen Station",
+    "howItWorks": "How Kitchen Station Routing Works",
+    "step1": "Create kitchen stations (e.g., Fryer, Grill, Cold Station)",
+    "step2": "Assign a printer to each station",
+    "step3": "In Categories page, assign each category to a kitchen station",
+    "step4": "When orders are created, items will automatically print to the correct station printer",
+    "stationName": "Station Name",
+    "stationNamePlaceholder": "e.g., Fryer, Grill, Cold Station",
+    "stationDescription": "Description",
+    "stationDescriptionPlaceholder": "Optional description for this station",
+    "printer": "Printer",
+    "selectPrinter": "Select a printer...",
+    "color": "Color",
+    "sortOrder": "Sort Order",
+    "status": "Status",
+    "noPrinter": "No printer assigned",
+    "noStations": "No kitchen stations configured. Click \"Add Station\" to create one.",
+    "noPrintersAvailable": "No printers configured. Go to Printer Settings to add printers first.",
+    "colors": {
+      "blue": "Blue",
+      "red": "Red",
+      "green": "Green",
+      "orange": "Orange",
+      "purple": "Purple",
+      "pink": "Pink",
+      "indigo": "Indigo",
+      "teal": "Teal"
+    },
+    "messages": {
+      "fillRequiredFields": "Please fill in all required fields",
+      "updateSuccess": "Kitchen station updated successfully",
+      "createSuccess": "Kitchen station created successfully",
+      "saveError": "Failed to save kitchen station",
+      "confirmDelete": "Are you sure you want to delete this kitchen station?",
+      "deleteSuccess": "Kitchen station deleted successfully",
+      "deleteError": "Failed to delete kitchen station",
+      "toggleError": "Failed to toggle kitchen station"
     }
   }
 }
