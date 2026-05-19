@@ -89,11 +89,10 @@ export default function Layout() {
     navigate('/login');
   };
 
+  // Accordion: opening a group closes any other open group, so the
+  // sidebar never grows beyond one expanded section at a time.
   const toggleMenu = (menuId) => {
-    setExpandedMenus((prev) => ({
-      ...prev,
-      [menuId]: !prev[menuId],
-    }));
+    setExpandedMenus((prev) => (prev[menuId] ? {} : { [menuId]: true }));
   };
 
   const isActive = (path) => location.pathname === path;
@@ -311,7 +310,7 @@ export default function Layout() {
                         target="_blank"
                         rel="noopener noreferrer"
                         title={collapsed ? item.label : undefined}
-                        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 text-sm font-medium rounded-lg transition-colors text-gray-700 hover:bg-gray-100`}
+                        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 text-sm font-medium rounded-lg transition-colors active:scale-[0.98] text-gray-700 hover:bg-gray-100`}
                       >
                         <item.icon className="h-5 w-5 shrink-0" />
                         {!collapsed && <span className="truncate">{item.label}</span>}
@@ -320,7 +319,7 @@ export default function Layout() {
                       <Link
                         to={item.path}
                         title={collapsed ? item.label : undefined}
-                        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 text-sm font-medium rounded-lg transition-colors active:scale-[0.98] ${
                           isActive(item.path)
                             ? 'bg-blue-50 text-blue-700'
                             : 'text-gray-700 hover:bg-gray-100'
@@ -348,7 +347,7 @@ export default function Layout() {
                           }
                         }}
                         title={collapsed ? item.label : undefined}
-                        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-3 py-2 text-sm font-medium rounded-lg transition-colors active:scale-[0.98] ${
                           isActive(item.path)
                             ? 'bg-blue-50 text-blue-700'
                             : 'text-gray-700 hover:bg-gray-100'
@@ -372,23 +371,31 @@ export default function Layout() {
                                 {item.badge > 99 ? '99+' : item.badge}
                               </span>
                             )}
-                            {expandedMenus[item.id] ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
+                            <ChevronRight
+                              className={`h-4 w-4 transition-transform duration-200 ${
+                                expandedMenus[item.id] ? 'rotate-90' : ''
+                              }`}
+                            />
                           </div>
                         )}
                       </button>
 
-                      {/* Sub-menu */}
-                      {!collapsed && expandedMenus[item.id] && (
-                        <ul className="mt-1 ml-4 space-y-1">
+                      {/* Sub-menu. Grid 0fr→1fr animates to natural
+                          height without measuring. overflow-hidden on
+                          the inner ul clips rows mid-transition so they
+                          don't overflow into the row below. */}
+                      {!collapsed && (
+                        <div
+                          className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+                            expandedMenus[item.id] ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                          }`}
+                        >
+                          <ul className="overflow-hidden ml-4 space-y-1 pt-1">
                           {item.subItems.map((subItem, idx) => (
                             <li key={idx}>
                               <Link
                                 to={subItem.path}
-                                className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors ${
+                                className={`flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors active:scale-[0.98] ${
                                   isActive(subItem.path)
                                     ? 'bg-blue-50 text-blue-700'
                                     : 'text-gray-600 hover:bg-gray-100'
@@ -406,7 +413,8 @@ export default function Layout() {
                               </Link>
                             </li>
                           ))}
-                        </ul>
+                          </ul>
+                        </div>
                       )}
                     </>
                   )}
@@ -421,7 +429,7 @@ export default function Layout() {
           <Link
             to="/profile"
             title={collapsed ? t('nav.accountProfile') : undefined}
-            className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+            className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 text-sm font-medium rounded-lg transition-colors active:scale-[0.98] ${
               isActive('/profile')
                 ? 'bg-blue-50 text-blue-700'
                 : 'text-gray-700 hover:bg-gray-100'
