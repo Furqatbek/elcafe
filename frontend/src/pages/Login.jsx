@@ -76,9 +76,6 @@ export default function Login() {
               {loading ? t('common.loading') : t('auth.signIn')}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            <p>{t('auth.demoCredentials', 'Demo: admin@qahvoon.uz / Admin123!')}</p>
-          </div>
         </CardContent>
       </Card>
     </div>
