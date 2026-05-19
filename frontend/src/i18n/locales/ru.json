@@ -1186,7 +1186,9 @@
     "confirm": "Подтвердить",
     "refresh": "Обновить",
     "back": "Назад",
-    "error": "Ошибка"
+    "error": "Ошибка",
+    "notes": "Заметки",
+    "selectRestaurant": "Выберите ресторан"
   },
   "shift": {
     "dashboard": {
@@ -1312,7 +1314,11 @@
       "pending": "Ожидает",
       "preparing": "Готовится",
       "ready": "Готово",
-      "total": "Всего заказов"
+      "total": "Всего заказов",
+      "waitingStart": "Ожидают начала",
+      "inProgress": "В работе",
+      "awaitingPickup": "Ожидают выдачи",
+      "totalActive": "Всего активных заказов"
     },
     "sections": {
       "pending": "Ожидающие заказы",
@@ -1329,7 +1335,8 @@
       "elapsed": "Прошло времени",
       "estimatedTime": "Ожид. время",
       "preparedBy": "Приготовил",
-      "prepTime": "Время приготовления"
+      "prepTime": "Время приготовления",
+      "estimated": "Ожидаемое"
     },
     "actions": {
       "start": "Начать приготовление",
@@ -1342,13 +1349,18 @@
       "PENDING": "Ожидает",
       "PREPARING": "Готовится",
       "READY": "Готово",
-      "PICKED_UP": "Выдано"
+      "PICKED_UP": "Выдано",
+      "ready": "Готово"
     },
     "priority": {
       "URGENT": "Срочно",
       "HIGH": "Высокий",
       "NORMAL": "Обычный",
-      "LOW": "Низкий"
+      "LOW": "Низкий",
+      "low": "Низкий",
+      "normal": "Обычный",
+      "high": "Высокий",
+      "urgent": "Срочно"
     },
     "modals": {
       "startPreparation": {
@@ -1367,11 +1379,18 @@
       "startFailed": "Не удалось начать приготовление",
       "markReadyFailed": "Не удалось отметить заказ готовым",
       "markPickedUpFailed": "Не удалось отметить заказ выданным",
-      "changePriorityFailed": "Не удалось изменить приоритет"
+      "changePriorityFailed": "Не удалось изменить приоритет",
+      "chefNameRequired": "Введите имя повара",
+      "readyFailed": "Не удалось отметить готовым",
+      "pickupFailed": "Не удалось отметить выданным",
+      "priorityFailed": "Не удалось изменить приоритет"
     },
     "empty": {
       "noOrders": "Нет заказов в этом разделе"
-    }
+    },
+    "confirmReady": "Отметить этот заказ как готовый?",
+    "noOrders": "Нет активных заказов",
+    "noOrdersDesc": "Новые заказы для кухни появятся здесь по мере поступления."
   },
   "waiters": {
     "permissions": {

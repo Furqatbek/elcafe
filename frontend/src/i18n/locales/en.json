@@ -441,7 +441,9 @@
     "confirm": "Confirm",
     "refresh": "Refresh",
     "back": "Back",
-    "error": "Error"
+    "error": "Error",
+    "notes": "Notes",
+    "selectRestaurant": "Select restaurant"
   },
   "shift": {
     "dashboard": {
@@ -1312,7 +1314,11 @@
       "pending": "Pending",
       "preparing": "Preparing",
       "ready": "Ready",
-      "total": "Total Orders"
+      "total": "Total Orders",
+      "waitingStart": "Waiting to start",
+      "inProgress": "In progress",
+      "awaitingPickup": "Awaiting pickup",
+      "totalActive": "Total active orders"
     },
     "sections": {
       "pending": "Pending Orders",
@@ -1329,7 +1335,8 @@
       "elapsed": "Elapsed Time",
       "estimatedTime": "Est. Time",
       "preparedBy": "Prepared By",
-      "prepTime": "Prep Time"
+      "prepTime": "Prep Time",
+      "estimated": "Estimated"
     },
     "actions": {
       "start": "Start Preparation",
@@ -1342,13 +1349,18 @@
       "PENDING": "Pending",
       "PREPARING": "Preparing",
       "READY": "Ready",
-      "PICKED_UP": "Picked Up"
+      "PICKED_UP": "Picked Up",
+      "ready": "Ready"
     },
     "priority": {
       "URGENT": "Urgent",
       "HIGH": "High",
       "NORMAL": "Normal",
-      "LOW": "Low"
+      "LOW": "Low",
+      "low": "Low",
+      "normal": "Normal",
+      "high": "High",
+      "urgent": "Urgent"
     },
     "modals": {
       "startPreparation": {
@@ -1367,11 +1379,18 @@
       "startFailed": "Failed to start preparation",
       "markReadyFailed": "Failed to mark order as ready",
       "markPickedUpFailed": "Failed to mark order as picked up",
-      "changePriorityFailed": "Failed to change priority"
+      "changePriorityFailed": "Failed to change priority",
+      "chefNameRequired": "Chef name is required",
+      "readyFailed": "Failed to mark as ready",
+      "pickupFailed": "Failed to mark as picked up",
+      "priorityFailed": "Failed to update priority"
     },
     "empty": {
       "noOrders": "No orders in this section"
-    }
+    },
+    "confirmReady": "Mark this order as ready?",
+    "noOrders": "No active orders",
+    "noOrdersDesc": "New kitchen orders will appear here as they come in."
   },
   "waiters": {
     "permissions": {

@@ -484,9 +484,9 @@ export default function KitchenDashboard() {
       <Dialog open={startModalOpen} onOpenChange={setStartModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('kitchen.modals.startPreparation')}</DialogTitle>
+            <DialogTitle>{t('kitchen.modals.startPreparation.title')}</DialogTitle>
             <DialogDescription>
-              {t('kitchen.modals.startDescription')} {selectedOrder?.order.orderNumber}
+              {t('kitchen.modals.startPreparation.description')} {selectedOrder?.order.orderNumber}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -496,7 +496,7 @@ export default function KitchenDashboard() {
                 id="chefName"
                 value={chefName}
                 onChange={(e) => setChefName(e.target.value)}
-                placeholder={t('kitchen.placeholders.enterChefName')}
+                placeholder={t('kitchen.modals.startPreparation.chefNamePlaceholder')}
               />
             </div>
           </div>
@@ -515,9 +515,9 @@ export default function KitchenDashboard() {
       <Dialog open={priorityModalOpen} onOpenChange={setPriorityModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('kitchen.modals.changePriority')}</DialogTitle>
+            <DialogTitle>{t('kitchen.modals.changePriority.title')}</DialogTitle>
             <DialogDescription>
-              {t('kitchen.modals.priorityDescription')}
+              {t('kitchen.modals.changePriority.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

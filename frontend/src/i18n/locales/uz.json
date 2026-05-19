@@ -1186,7 +1186,9 @@
     "confirm": "Tasdiqlash",
     "refresh": "Yangilash",
     "back": "Orqaga",
-    "error": "Xato"
+    "error": "Xato",
+    "notes": "Izohlar",
+    "selectRestaurant": "Restoranni tanlang"
   },
   "shift": {
     "dashboard": {
@@ -1312,7 +1314,11 @@
       "pending": "Kutilmoqda",
       "preparing": "Tayyorlanmoqda",
       "ready": "Tayyor",
-      "total": "Jami buyurtmalar"
+      "total": "Jami buyurtmalar",
+      "waitingStart": "Boshlashni kutmoqda",
+      "inProgress": "Jarayonda",
+      "awaitingPickup": "Olib ketishni kutmoqda",
+      "totalActive": "Jami faol buyurtmalar"
     },
     "sections": {
       "pending": "Kutilayotgan buyurtmalar",
@@ -1329,7 +1335,8 @@
       "elapsed": "O'tgan vaqt",
       "estimatedTime": "Taxminiy vaqt",
       "preparedBy": "Tayyorlagan",
-      "prepTime": "Tayyorlash vaqti"
+      "prepTime": "Tayyorlash vaqti",
+      "estimated": "Taxminiy"
     },
     "actions": {
       "start": "Tayyorlashni boshlash",
@@ -1342,13 +1349,18 @@
       "PENDING": "Kutilmoqda",
       "PREPARING": "Tayyorlanmoqda",
       "READY": "Tayyor",
-      "PICKED_UP": "Berildi"
+      "PICKED_UP": "Berildi",
+      "ready": "Tayyor"
     },
     "priority": {
       "URGENT": "Shoshilinch",
       "HIGH": "Yuqori",
       "NORMAL": "Oddiy",
-      "LOW": "Past"
+      "LOW": "Past",
+      "low": "Past",
+      "normal": "Oddiy",
+      "high": "Yuqori",
+      "urgent": "Shoshilinch"
     },
     "modals": {
       "startPreparation": {
@@ -1367,11 +1379,18 @@
       "startFailed": "Tayyorlashni boshlab bo'lmadi",
       "markReadyFailed": "Buyurtmani tayyor deb belgilab bo'lmadi",
       "markPickedUpFailed": "Buyurtmani berilgan deb belgilab bo'lmadi",
-      "changePriorityFailed": "Ustuvorlikni o'zgartirib bo'lmadi"
+      "changePriorityFailed": "Ustuvorlikni o'zgartirib bo'lmadi",
+      "chefNameRequired": "Oshpaz ismini kiriting",
+      "readyFailed": "Tayyor deb belgilab bo'lmadi",
+      "pickupFailed": "Berilgan deb belgilab bo'lmadi",
+      "priorityFailed": "Ustuvorlikni yangilab bo'lmadi"
     },
     "empty": {
       "noOrders": "Bu bo'limda buyurtmalar yo'q"
-    }
+    },
+    "confirmReady": "Bu buyurtmani tayyor deb belgilaysizmi?",
+    "noOrders": "Faol buyurtmalar yo'q",
+    "noOrdersDesc": "Yangi oshxona buyurtmalari kelganda shu yerda paydo bo'ladi."
   },
   "waiters": {
     "permissions": {
