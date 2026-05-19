@@ -233,6 +233,182 @@ top-level — e.g. `kitchen.dashboard`, `kitchen.inventory`,
 its core sub-items are unlocked. The top-level menu entry is
 shown iff at least one of its sub-items is unlocked.
 
+## Mini-phase breakdown
+
+Phase A is broken into 7 independently shippable mini-phases.
+Each is one PR, leaves the system in a working state, and either
+has no dependency on the module-to-tier mapping or depends on it
+explicitly. The detailed implementation outline that follows this
+section is the **reference material** for the work in each
+mini-phase; this section is the **sequencing**.
+
+```
+                ┌─ A2 (plan service + admin API)
+                │
+A1 (schema) ────┤                         ┌─ A5 (banner + read-only)
+                │                         │
+                └─ A3 (FE plan awareness) ┼─ A6 (expiry notifications)
+                                          │
+                                          ├─ A7 (trial + cutover)
+                                          │
+                                          └─ A4 (gating sweep)   ← needs module-to-tier
+```
+
+### A1 — Schema foundation
+**Depends on:** nothing. **Blocks:** A2, A3.
+**Module-to-tier mapping required?** No (seed empty feature_codes).
+
+- Flyway `V141__add_subscription_plans.sql` per the SQL block
+  below: `subscription_plan` table, restaurant FK columns,
+  backfill to Start, set NOT NULL.
+- `SubscriptionPlan` entity + repository.
+- `Restaurant` entity gets `plan`, `planStartedAt`,
+  `planExpiresAt`, `isTrial`.
+- Add `PLAN_CHANGED` to the `AuditAction` enum.
+- No service logic, no API, no UI yet. Just data shape.
+
+**Done when:** migration runs cleanly on a prod-like dump,
+every restaurant row has `plan_id` → Start, backend boots,
+existing test suite passes.
+
+### A2 — Plan service + admin API
+**Depends on:** A1. **Blocks:** A4, A5, A6, A7.
+**Module-to-tier mapping required?** No.
+
+- `PlanFeature` constants file (the typed surface over feature
+  codes — populated from the module catalogue but no gates are
+  applied yet).
+- `PlanGateService` with `requireFeature`, `hasFeature`,
+  `getCurrentPlan`, Caffeine cache, expiry logic.
+- `PaymentProvider` interface + `NoopPaymentProvider` stub.
+- `SubscriptionController` with `GET /api/v1/billing/me`,
+  `GET /api/v1/billing/plans`, `POST /api/v1/billing/admin/set-plan`
+  (ADMIN-only via `@PreAuthorize`).
+- `auditService.logAction(PLAN_CHANGED, …)` on every successful
+  set-plan call.
+
+**Done when:** ADMIN can change a restaurant's plan via curl,
+audit row is written, `/billing/me` returns sensible JSON for
+a normal user. Still no gates applied to any other service.
+
+### A3 — Frontend plan awareness (no gating)
+**Depends on:** A2 (just the API contract for `/billing/me`).
+Can be developed in parallel with A2 once the DTO shape is agreed.
+**Module-to-tier mapping required?** No.
+
+- `billingAPI` in `frontend/src/services/api.js`.
+- Extend `authStore.js` with `plan`, `features`, `planExpiresAt`,
+  `isTrial`; load from `/billing/me` on app init.
+- `usePlan()` hook (selector with `hasFeature`,
+  `daysUntilExpiry`, `isReadOnly`).
+- `Subscription` page registered at `/subscription`.
+  - ADMIN role: plan picker (calls `adminSetPlan`).
+  - Other roles: read-only with "contact us to upgrade" CTA.
+- Sidebar **not yet filtered**. Routes **not yet guarded**.
+  This phase is observability only — users can see their plan
+  and ADMINs can change it through the UI instead of curl.
+
+**Done when:** OWNER login shows current plan + expiry; ADMIN
+login can navigate to Subscription page and flip any
+restaurant's plan; the rest of the app behaves identically to
+today.
+
+### A5 — Expiry banner + read-only mode
+**Depends on:** A2. **Blocks:** nothing (independent).
+**Module-to-tier mapping required?** No.
+
+- `PlanExpiryBanner` component, mounted in `Layout.jsx`. Copy
+  for 7d / 3d / 1d / 0d / +1d / +2d / +3d / +4d windows. Trial
+  vs paid wording.
+- Backend: write-access check in `PlanGateService` (or a
+  separate `requireWriteAccess()` at the controller layer for
+  POST/PUT/DELETE endpoints).
+- Frontend: when `usePlan().isReadOnly`, POS "place order"
+  button + similar primary-action buttons disable with
+  tooltip "Renew your plan to resume".
+- i18n keys for banner + read-only messaging in en/ru/uz.
+
+**Done when:** manually setting `plan_expires_at` to past
+values reproduces verification scenarios 4, 6, and 7.
+
+### A6 — Expiry notifications scheduler
+**Depends on:** A2. **Blocks:** nothing.
+**Module-to-tier mapping required?** No.
+
+- `PlanExpiryNotifier` scheduled bean at
+  `com.elcafe.modules.billing.scheduler.PlanExpiryNotifier`,
+  modeled on `ReservationReminderScheduler`.
+- `@Scheduled(cron = "0 0 9 * * *")` — daily 09:00.
+- Window query for `plan_expires_at ∈ {-7d, -3d, -1d, 0d, +1d, +2d, +3d}`.
+- Reuse `TelegramBotService.sendMessage` and
+  `TelegramSubscriberRepository`.
+- Message templates in code, localized by restaurant's primary
+  language (default RU if unset).
+
+**Done when:** triggering the scheduler manually against a
+test restaurant with `plan_expires_at = today` delivers a
+Telegram message to the restaurant's subscribers.
+
+### A7 — Trial flow + pre-launch comms
+**Depends on:** A2. **Blocks:** nothing.
+**Module-to-tier mapping required?** No.
+
+- Hook the existing restaurant-creation flow in
+  `com.elcafe.modules.auth` (registration / onboarding) to
+  set `plan_id = pro`, `plan_started_at = now()`,
+  `plan_expires_at = now() + 14 days`, `is_trial = true`.
+- Update `PlanExpiryBanner` copy to branch on `isTrial`:
+  "Trial ends in N days" vs "Plan renews in N days" vs
+  "Plan expires in N days".
+- Pre-launch comms checklist (operational, not code):
+  - In-app pre-cutover banner announcing the tier rollout —
+    can be a flag-controlled variant of `PlanExpiryBanner`
+    or a one-off component, decided at implementation time.
+  - Telegram broadcast to all subscribers.
+  - Direct sales outreach to known heavy users of soon-to-be-
+    paid modules.
+
+**Done when:** signing up a new restaurant via the live signup
+flow lands it on Pro trial with a banner that says "Trial ends
+in 14 days" in the user's locale; existing restaurants are
+unaffected.
+
+### A4 — Gating sweep (the big one)
+**Depends on:** A2, A3, and **the user's module-to-tier mapping decision**.
+**Blocks:** nothing (final phase).
+
+This is the largest phase and is the only one that depends on
+the deferred module-to-tier mapping. Run an Explore agent over
+`src/main/java/com/elcafe/modules/{kitchen, inventory, marketing,
+courier, …}/service/` to enumerate every service method that
+implements a paid module, then:
+
+- Add `planGate.requireFeature(PlanFeature.XYZ)` at the top of
+  each gated service method.
+- Wrap each gated frontend route in `<RequirePlanFeature
+  feature="…">` in `App.jsx`.
+- Filter `menuItems` and `subItems` in `Layout.jsx` by
+  `usePlan().hasFeature(code)`. Top-level menu entry hides
+  when zero sub-items are visible.
+- Create `PlanRequired` page at `/plan-required` with locale
+  copy.
+- Update seed data in V141 (or a follow-up V142) with the
+  finalized `feature_codes` for each plan.
+- Write integration tests: for each gated controller endpoint,
+  assert 403 for a Start-tier user and 200 for a Pro-tier user.
+
+**Done when:** verification scenarios 2 and 3 pass for every
+combination of (plan × gated module) in the matrix.
+
+### Deployment order
+
+A1 → A2 → (A3 ∥ A5 ∥ A6 ∥ A7) → A4 → cutover.
+
+A1 and A2 ship without observable user impact. A3/A5/A6/A7
+land in any order as their PRs are ready — they each affect a
+disjoint surface. A4 is the user-visible "tier system goes
+live" moment and must be deployed backend+frontend in lockstep.
+
 ## Phase A — implementation outline
 
 ### Database (Flyway V141)
