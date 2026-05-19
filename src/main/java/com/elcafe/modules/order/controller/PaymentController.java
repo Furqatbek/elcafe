@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.controller;
 
+import com.elcafe.common.web.SortFieldWhitelist;
 import com.elcafe.modules.order.dto.*;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
@@ -103,7 +104,8 @@ public class PaymentController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "DESC") String sortDir
     ) {
-        Sort sort = sortDir.equalsIgnoreCase("DESC") ? Sort.by(sortBy).descending() : Sort.by(sortBy);
+        Sort sort = SortFieldWhitelist.sort(sortBy, sortDir,
+                "createdAt", "id", "amount", "method", "paidAt", "completedAt", "refundedAt");
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<PaymentResponse> payments = paymentService.getAllPayments(pageable);
         return ResponseEntity.ok(ApiResponse.success("Payments retrieved successfully", payments));

@@ -1,5 +1,6 @@
 package com.elcafe.modules.courier.controller;
 
+import com.elcafe.common.web.SortFieldWhitelist;
 import com.elcafe.modules.courier.dto.CourierTariffResponse;
 import com.elcafe.modules.courier.dto.CreateCourierTariffRequest;
 import com.elcafe.modules.courier.dto.UpdateCourierTariffRequest;
@@ -41,9 +42,8 @@ public class CourierTariffController {
             @RequestParam(defaultValue = "asc") String sortDir,
             @RequestParam(required = false) TariffType type) {
 
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+        Sort sort = SortFieldWhitelist.sort(sortBy, sortDir,
+                "id", "name", "type", "createdAt", "updatedAt");
 
         Pageable pageable = PageRequest.of(page, size, sort);
 

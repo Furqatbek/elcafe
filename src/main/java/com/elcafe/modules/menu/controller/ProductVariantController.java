@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.web.SortFieldWhitelist;
 import com.elcafe.modules.menu.dto.*;
 import com.elcafe.modules.menu.service.ProductVariantService;
 import com.elcafe.utils.ApiResponse;
@@ -37,7 +38,9 @@ public class ProductVariantController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "sortOrder") String sortBy
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
+        Sort sort = SortFieldWhitelist.sort(sortBy, "asc",
+                "sortOrder", "id", "name", "price", "sku", "barcode");
+        Pageable pageable = PageRequest.of(page, size, sort);
         Page<ProductVariantResponse> variants = productVariantService.getAllVariantsByProduct(productId, pageable);
         return ResponseEntity.ok(ApiResponse.success("Product variants retrieved successfully", variants));
     }

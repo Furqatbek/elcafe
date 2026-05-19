@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.controller;
 
+import com.elcafe.common.web.SortFieldWhitelist;
 import com.elcafe.modules.waiter.dto.CreateWaiterRequest;
 import com.elcafe.modules.waiter.dto.UpdateWaiterRequest;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
@@ -53,9 +54,9 @@ public class WaiterController {
             @RequestParam(defaultValue = "name") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
 
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+        // Whitelist: never expose pinCode / permissions.
+        Sort sort = SortFieldWhitelist.sort(sortBy, sortDir,
+                "name", "id", "email", "phoneNumber", "createdAt", "updatedAt");
 
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<WaiterResponse> waiters = waiterService.getAllWaiters(pageable);

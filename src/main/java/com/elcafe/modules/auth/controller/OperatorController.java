@@ -1,5 +1,6 @@
 package com.elcafe.modules.auth.controller;
 
+import com.elcafe.common.web.SortFieldWhitelist;
 import com.elcafe.modules.auth.dto.CreateOperatorRequest;
 import com.elcafe.modules.auth.dto.OperatorDTO;
 import com.elcafe.modules.auth.dto.UpdateOperatorRequest;
@@ -37,9 +38,11 @@ public class OperatorController {
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
 
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+        // Whitelist: never expose password / resetToken / resetTokenExpiry
+        // — ordering by those would leak hash and reset-token information.
+        Sort sort = SortFieldWhitelist.sort(sortBy, sortDir,
+                "id", "email", "firstName", "lastName", "phone", "role",
+                "restaurantId", "createdAt", "updatedAt");
 
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<OperatorDTO> operators = operatorService.getAllOperators(pageable);

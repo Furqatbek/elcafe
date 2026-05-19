@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.web.SortFieldWhitelist;
 import com.elcafe.modules.menu.dto.*;
 import com.elcafe.modules.menu.service.IngredientService;
 import com.elcafe.utils.ApiResponse;
@@ -36,7 +37,9 @@ public class IngredientController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "name") String sortBy
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
+        Sort sort = SortFieldWhitelist.sort(sortBy, "asc",
+                "name", "id", "unit", "supplier", "category", "createdAt", "updatedAt");
+        Pageable pageable = PageRequest.of(page, size, sort);
         Page<IngredientDTO> ingredients = ingredientService.getAllIngredients(pageable);
         return ResponseEntity.ok(ApiResponse.success("Ingredients retrieved successfully", ingredients));
     }

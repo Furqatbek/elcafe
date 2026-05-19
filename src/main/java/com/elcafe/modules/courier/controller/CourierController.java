@@ -1,5 +1,6 @@
 package com.elcafe.modules.courier.controller;
 
+import com.elcafe.common.web.SortFieldWhitelist;
 import com.elcafe.modules.courier.dto.CourierDTO;
 import com.elcafe.modules.courier.dto.CourierStatusResponse;
 import com.elcafe.modules.courier.dto.CourierStatusUpdateRequest;
@@ -40,9 +41,8 @@ public class CourierController {
             @RequestParam(defaultValue = "id") String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir) {
 
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+        Sort sort = SortFieldWhitelist.sort(sortBy, sortDir,
+                "id", "courierType", "vehicle", "city", "createdAt", "updatedAt");
 
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<CourierDTO> couriers = courierService.getAllCouriers(pageable);
