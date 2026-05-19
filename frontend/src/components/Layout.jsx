@@ -60,6 +60,8 @@ import {
   Globe,
   Instagram,
   Star,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -69,6 +71,18 @@ export default function Layout() {
   const { logout, user } = useAuthStore();
   const { unreadReservations } = useNotificationStore();
   const [expandedMenus, setExpandedMenus] = useState({});
+  // Persist sidebar collapse across reloads. Read once on mount.
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('sidebarCollapsed') === '1'
+  );
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      localStorage.setItem('sidebarCollapsed', next ? '1' : '0');
+      if (next) setExpandedMenus({}); // close submenus when collapsing
+      return next;
+    });
+  };
 
   const handleLogout = () => {
     logout();
@@ -244,24 +258,41 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        {/* Profile Section */}
+      {/* Sidebar. Width animates so the main content slides into place
+          rather than snapping. 300ms is the sweet spot — fast enough to
+          feel responsive, slow enough to be readable. */}
+      <aside
+        className={`${
+          collapsed ? 'w-16' : 'w-64'
+        } bg-white border-r border-gray-200 flex flex-col transition-[width] duration-300 ease-in-out overflow-hidden`}
+      >
+        {/* Profile + collapse toggle */}
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-              {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">
-                {user?.firstName || user?.email || 'User'}
-              </p>
-              <p className="text-xs text-gray-500 truncate">{user?.role || 'Admin'}</p>
-            </div>
-            {/* Notification Bell */}
-            <NotificationBell />
+          <div className={`flex items-center mb-4 ${collapsed ? 'justify-center' : 'space-x-3'}`}>
+            {!collapsed && (
+              <>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shrink-0">
+                  {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || 'U'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {user?.firstName || user?.email || 'User'}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{user?.role || 'Admin'}</p>
+                </div>
+                <NotificationBell />
+              </>
+            )}
+            <button
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+            >
+              {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
+            </button>
           </div>
-          <LanguageSwitcher />
+          {!collapsed && <LanguageSwitcher />}
         </div>
 
         {/* Navigation Menu */}
@@ -279,22 +310,24 @@ export default function Layout() {
                         href={`/admin${item.path}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors text-gray-700 hover:bg-gray-100"
+                        title={collapsed ? item.label : undefined}
+                        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 text-sm font-medium rounded-lg transition-colors text-gray-700 hover:bg-gray-100`}
                       >
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.label}</span>
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        {!collapsed && <span className="truncate">{item.label}</span>}
                       </a>
                     ) : (
                       <Link
                         to={item.path}
-                        className={`w-full flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        title={collapsed ? item.label : undefined}
+                        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                           isActive(item.path)
                             ? 'bg-blue-50 text-blue-700'
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
                       >
-                        <item.icon className="h-5 w-5" />
-                        <span>{item.label}</span>
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        {!collapsed && <span className="truncate">{item.label}</span>}
                       </Link>
                     )
                   ) : (
@@ -302,44 +335,54 @@ export default function Layout() {
                     <>
                       <button
                         onClick={() => {
+                          // Collapsed sidebar: chevron/sub-menu would have
+                          // nowhere to render, so the button just navigates
+                          // to the group's default page.
+                          if (collapsed) {
+                            navigate(item.path);
+                            return;
+                          }
                           toggleMenu(item.id);
                           if (!expandedMenus[item.id]) {
                             navigate(item.path);
                           }
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                        title={collapsed ? item.label : undefined}
+                        className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between'} px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                           isActive(item.path)
                             ? 'bg-blue-50 text-blue-700'
                             : 'text-gray-700 hover:bg-gray-100'
                         }`}
                       >
-                        <div className="flex items-center space-x-3">
+                        <div className={`flex items-center ${collapsed ? '' : 'space-x-3'}`}>
                           <div className="relative">
-                            <item.icon className="h-5 w-5" />
-                            {item.badge > 0 && !expandedMenus[item.id] && (
+                            <item.icon className="h-5 w-5 shrink-0" />
+                            {item.badge > 0 && (collapsed || !expandedMenus[item.id]) && (
                               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
                                 {item.badge > 9 ? '!' : item.badge}
                               </span>
                             )}
                           </div>
-                          <span>{item.label}</span>
+                          {!collapsed && <span className="truncate">{item.label}</span>}
                         </div>
-                        <div className="flex items-center space-x-2">
-                          {item.badge > 0 && expandedMenus[item.id] && (
-                            <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                              {item.badge > 99 ? '99+' : item.badge}
-                            </span>
-                          )}
-                          {expandedMenus[item.id] ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </div>
+                        {!collapsed && (
+                          <div className="flex items-center space-x-2">
+                            {item.badge > 0 && expandedMenus[item.id] && (
+                              <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                                {item.badge > 99 ? '99+' : item.badge}
+                              </span>
+                            )}
+                            {expandedMenus[item.id] ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </div>
+                        )}
                       </button>
 
                       {/* Sub-menu */}
-                      {expandedMenus[item.id] && (
+                      {!collapsed && expandedMenus[item.id] && (
                         <ul className="mt-1 ml-4 space-y-1">
                           {item.subItems.map((subItem, idx) => (
                             <li key={idx}>
@@ -377,22 +420,24 @@ export default function Layout() {
         <div className="p-4 border-t border-gray-200 space-y-2">
           <Link
             to="/profile"
-            className={`flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+            title={collapsed ? t('nav.accountProfile') : undefined}
+            className={`flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
               isActive('/profile')
                 ? 'bg-blue-50 text-blue-700'
                 : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
-            <UserCircle className="h-5 w-5" />
-            <span>{t('nav.accountProfile')}</span>
+            <UserCircle className="h-5 w-5 shrink-0" />
+            {!collapsed && <span className="truncate">{t('nav.accountProfile')}</span>}
           </Link>
           <Button
             variant="ghost"
-            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+            title={collapsed ? t('auth.logout') : undefined}
+            className={`w-full ${collapsed ? 'justify-center px-0' : 'justify-start'} text-red-600 hover:text-red-700 hover:bg-red-50`}
             onClick={handleLogout}
           >
-            <LogOut className="h-5 w-5 mr-3" />
-            {t('auth.logout')}
+            <LogOut className={`h-5 w-5 ${collapsed ? '' : 'mr-3'}`} />
+            {!collapsed && t('auth.logout')}
           </Button>
         </div>
       </aside>
