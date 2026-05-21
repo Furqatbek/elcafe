@@ -1639,7 +1639,10 @@
         "paymentSuccess": "Payment recorded successfully",
         "paymentError": "Failed to record payment",
         "fillSupplierAndItems": "Please fill supplier information and add at least one item"
-      }
+      },
+      "viewDetails": "View Details",
+      "detailsTitle": "Purchase Order Details",
+      "received": "Received"
     },
     "expenses": {
       "title": "Expenses",

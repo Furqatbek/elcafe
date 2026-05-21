@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { financialAPI, inventoryAPI, restaurantAPI, supplierAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { getCurrentRestaurantId } from '../utils/restaurant';
-import { Plus, Trash2, Check, Package, Link as LinkIcon } from 'lucide-react';
+import { Plus, Trash2, Check, Package, Link as LinkIcon, Eye } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -20,6 +20,7 @@ const PurchaseOrders = () => {
   const [prefillProcessed, setPrefillProcessed] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedPO, setSelectedPO] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -385,6 +386,11 @@ const PurchaseOrders = () => {
     setShowReceiveModal(true);
   };
 
+  const openDetailsModal = (po) => {
+    setSelectedPO(po);
+    setShowDetailsModal(true);
+  };
+
   const openPaymentModal = (po) => {
     setSelectedPO(po);
     const remainingAmount = po.totalAmount - (po.paidAmount || 0);
@@ -570,6 +576,13 @@ const PurchaseOrders = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex gap-2">
+                      <button
+                        onClick={() => openDetailsModal(po)}
+                        className="text-gray-600 hover:text-gray-900"
+                        title={t('finance.purchaseOrders.viewDetails')}
+                      >
+                        <Eye size={18} />
+                      </button>
                       {po.status === 'DRAFT' && (
                         <button
                           onClick={() => handleApprove(po.id)}
@@ -1042,6 +1055,124 @@ const PurchaseOrders = () => {
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
                 {loading ? t('finance.common.recording') : t('finance.purchaseOrders.recordPayment')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {showDetailsModal && selectedPO && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-3xl my-8">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-xl font-bold">
+                  {t('finance.purchaseOrders.detailsTitle')}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">{selectedPO.poNumber}</p>
+              </div>
+              <button
+                onClick={() => { setShowDetailsModal(false); setSelectedPO(null); }}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+              <div>
+                <p className="text-gray-500">{t('finance.purchaseOrders.supplier')}</p>
+                <p className="font-medium">{selectedPO.supplierName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('finance.purchaseOrders.orderDate')}</p>
+                <p className="font-medium">{selectedPO.orderDate || '-'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('finance.common.status')}</p>
+                <div>{getStatusBadge(selectedPO.status)}</div>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('finance.common.payment')}</p>
+                <div>{getPaymentStatusBadge(selectedPO.paymentStatus)}</div>
+              </div>
+            </div>
+
+            <h3 className="text-lg font-semibold mb-2">{t('finance.purchaseOrders.items')}</h3>
+            <div className="border border-gray-200 rounded-lg overflow-hidden mb-6">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.purchaseOrders.itemName')}</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.common.quantity')}</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.purchaseOrders.received')}</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.common.unit')}</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.common.unitPrice')}</th>
+                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.common.total')}</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {(Array.isArray(selectedPO.items) ? selectedPO.items : []).length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-4 py-4 text-center text-sm text-gray-500">
+                        {t('finance.common.noDataAvailable')}
+                      </td>
+                    </tr>
+                  ) : (
+                    selectedPO.items.map((item, idx) => (
+                      <tr key={item.id ?? idx}>
+                        <td className="px-4 py-2 text-sm text-gray-900">
+                          <div className="font-medium">{item.itemName || item.ingredientName || '-'}</div>
+                          {item.description && <div className="text-xs text-gray-500">{item.description}</div>}
+                        </td>
+                        <td className="px-4 py-2 text-sm text-right text-gray-900">{item.quantity}</td>
+                        <td className="px-4 py-2 text-sm text-right text-gray-500">{item.receivedQuantity ?? 0}</td>
+                        <td className="px-4 py-2 text-sm text-gray-500">{item.unit || '-'}</td>
+                        <td className="px-4 py-2 text-sm text-right text-gray-900">{Number(item.unitPrice ?? 0).toFixed(2)}</td>
+                        <td className="px-4 py-2 text-sm text-right text-gray-900 font-medium">
+                          {(Number(item.quantity ?? 0) * Number(item.unitPrice ?? 0)).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm mb-4">
+              <div className="flex justify-between">
+                <span className="text-gray-500">{t('finance.common.subtotal')}</span>
+                <span className="font-medium">{Number(selectedPO.subtotal ?? 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">{t('finance.common.taxAmount')}</span>
+                <span className="font-medium">{Number(selectedPO.taxAmount ?? 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">{t('finance.common.shippingCost')}</span>
+                <span className="font-medium">{Number(selectedPO.shippingCost ?? 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-2 mt-1">
+                <span className="font-semibold">{t('finance.common.totalAmount')}</span>
+                <span className="font-bold">{Number(selectedPO.totalAmount ?? 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {selectedPO.notes && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-500 mb-1">{t('finance.common.notes')}</p>
+                <p className="text-sm text-gray-800 whitespace-pre-wrap">{selectedPO.notes}</p>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => { setShowDetailsModal(false); setSelectedPO(null); }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                {t('finance.common.cancel')}
               </button>
             </div>
           </div>

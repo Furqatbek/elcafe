@@ -1639,7 +1639,10 @@
         "paymentSuccess": "To'lov muvaffaqiyatli qayd etildi",
         "paymentError": "To'lovni qayd etib bo'lmadi",
         "fillSupplierAndItems": "Iltimos, yetkazib beruvchi ma'lumotlarini to'ldiring va kamida bitta mahsulot qo'shing"
-      }
+      },
+      "viewDetails": "Batafsil",
+      "detailsTitle": "Xarid buyurtmasi tafsilotlari",
+      "received": "Qabul qilindi"
     },
     "expenses": {
       "title": "Xarajatlar",
