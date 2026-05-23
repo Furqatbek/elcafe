@@ -184,7 +184,6 @@ public class InventoryIngredientController {
         ingredient.setName(request.getName());
         ingredient.setDescription(request.getDescription());
         ingredient.setUnit(request.getUnit());
-        ingredient.setCurrentStock(request.getCurrentStock());
         ingredient.setMinimumStock(request.getMinimumStock());
         ingredient.setReorderLevel(request.getReorderLevel());
         ingredient.setReorderQuantity(request.getReorderQuantity());

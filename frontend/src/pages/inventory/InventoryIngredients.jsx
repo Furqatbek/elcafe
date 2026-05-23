@@ -236,7 +236,8 @@ export default function InventoryIngredients() {
       };
 
       if (editingIngredient) {
-        await inventoryAPI.updateIngredient(editingIngredient.id, data);
+        const { currentStock, ...updateData } = data;
+        await inventoryAPI.updateIngredient(editingIngredient.id, updateData);
       } else {
         await inventoryAPI.createIngredient(data);
       }
@@ -629,7 +630,7 @@ export default function InventoryIngredients() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="currentStock">{t('inventory.fields.currentStock')} *</Label>
+                <Label htmlFor="currentStock">{t('inventory.fields.currentStock')} {!editingIngredient && '*'}</Label>
                 <Input
                   id="currentStock"
                   type="number"
@@ -637,6 +638,7 @@ export default function InventoryIngredients() {
                   value={formData.currentStock}
                   onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
                   placeholder={t("common.placeholders.decimalValue")}
+                  disabled={!!editingIngredient}
                 />
               </div>
               <div className="space-y-2">
