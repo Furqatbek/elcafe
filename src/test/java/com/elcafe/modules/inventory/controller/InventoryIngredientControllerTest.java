@@ -37,6 +37,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import org.mockito.ArgumentCaptor;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -164,6 +167,33 @@ class InventoryIngredientControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk());
         verify(productCostService).recalculateProductsUsingIngredient(1L);
+    }
+
+    @Test @DisplayName("PUT /{id} — does not overwrite currentStock")
+    void update_doesNotOverwriteCurrentStock() throws Exception {
+        ingredient.setCurrentStock(new BigDecimal("100"));
+
+        IngredientRequest request = IngredientRequest.builder()
+                .restaurantId(1L).name("Updated Flour").unit("kg")
+                .currentStock(new BigDecimal("999")).minimumStock(BigDecimal.TEN)
+                .reorderLevel(new BigDecimal("20"))
+                .active(true).trackInventory(true).trackExpiry(false).build();
+        when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
+        when(ingredientRepository.save(any(Ingredient.class))).thenAnswer(i -> {
+            Ingredient saved = i.getArgument(0);
+            saved.setRestaurant(restaurant);
+            return saved;
+        });
+
+        mockMvc.perform(put("/api/v1/inventory/ingredients/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<Ingredient> captor = ArgumentCaptor.forClass(Ingredient.class);
+        verify(ingredientRepository).save(captor.capture());
+        assertEquals(0, new BigDecimal("100").compareTo(captor.getValue().getCurrentStock()),
+                "PUT must not overwrite currentStock — stock should remain 100 even though request sent 999");
     }
 
     @Test @DisplayName("DELETE /{id} — deletes ingredient")
