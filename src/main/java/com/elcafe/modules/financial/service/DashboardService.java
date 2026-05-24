@@ -97,7 +97,6 @@ public class DashboardService {
 
         BigDecimal totalExpenses = expenses.stream()
                 .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
-                .filter(e -> e.getCategory() != Expense.ExpenseCategory.INVENTORY)
                 .map(Expense::getTotalAmount)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -114,13 +113,15 @@ public class DashboardService {
         // Add payroll to total expenses
         totalExpenses = totalExpenses.add(totalPayroll);
 
-        // Calculate COGS (cost of goods sold) from completed orders
+        // Calculate COGS for informational display (per-product profitability)
         BigDecimal totalCOGS = calculateCOGS(completedOrders);
 
-        // Calculate net profit: revenue - COGS - expenses - payroll
-        BigDecimal netProfit = totalIncome.subtract(totalCOGS).subtract(totalExpenses);
+        // Net profit = revenue - expenses (all-inclusive: purchases, payroll, supplies, etc.)
+        // COGS is NOT subtracted here because ingredient costs are already captured
+        // as expenses when purchased (POs, manual expense entries).
+        BigDecimal netProfit = totalIncome.subtract(totalExpenses);
 
-        log.info("Dashboard: income={}, COGS={}, expenses={} (payroll={}), netProfit={}",
+        log.info("Dashboard: income={}, COGS={} (info only), expenses={} (payroll={}), netProfit={}",
                 totalIncome, totalCOGS, totalExpenses, totalPayroll, netProfit);
 
         // Calculate profit margin
@@ -331,23 +332,16 @@ public class DashboardService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal expenseTotal = dayExpenses.stream()
-                    .filter(e -> e.getCategory() != Expense.ExpenseCategory.INVENTORY)
                     .map(Expense::getTotalAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            // Subtract per-day COGS too so SUM(dailyStats.netProfit) matches
-            // the monthly totalNetProfit. The previous calculation skipped
-            // COGS here and produced a report where each day looked profitable
-            // but the monthly total was deeply negative — confusing and wrong.
-            BigDecimal dayCogs = calculateCOGS(dayOrders);
 
             dailyStats.add(DashboardResponse.DailyStats.builder()
                     .date(date)
                     .income(income)
                     .expenses(expenseTotal)
                     .orderCount((long) dayOrders.size())
-                    .netProfit(income.subtract(dayCogs).subtract(expenseTotal))
+                    .netProfit(income.subtract(expenseTotal))
                     .build());
         }
 

@@ -78,8 +78,8 @@ class DashboardServiceTest {
         assertNotNull(result);
     }
 
-    @Test @DisplayName("INVENTORY expenses are excluded from netProfit to avoid double-counting with COGS")
-    void inventoryExpensesExcludedFromNetProfit() {
+    @Test @DisplayName("netProfit = revenue - expenses, COGS is informational only")
+    void netProfitDoesNotSubtractCOGS() {
         stubShift();
         when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
                 .thenReturn(List.of());
@@ -103,9 +103,9 @@ class DashboardServiceTest {
 
         DashboardResponse result = dashboardService.getTodaySummary(1L);
 
-        assertEquals(0, new BigDecimal("-500000").compareTo(result.getNetProfit()),
-                "netProfit should only subtract SUPPLIES (500k), not INVENTORY (1M) — COGS handles ingredient costs");
-        assertEquals(0, new BigDecimal("500000").compareTo(result.getTotalExpenses()),
-                "totalExpenses should exclude INVENTORY category");
+        assertEquals(0, new BigDecimal("1500000").compareTo(result.getTotalExpenses()),
+                "totalExpenses should include ALL categories (SUPPLIES 500k + INVENTORY 1M)");
+        assertEquals(0, new BigDecimal("-1500000").compareTo(result.getNetProfit()),
+                "netProfit = 0 income - 1.5M expenses; COGS is NOT subtracted");
     }
 }
