@@ -2058,7 +2058,11 @@
         "countedQty": "Hisoblangan",
         "variance": "Farq",
         "status": "Holat",
-        "reason": "Sabab"
+        "reason": "Sabab",
+        "selectIngredients": "Ingredientlarni tanlang",
+        "searchIngredients": "Ingredientlarni qidirish...",
+        "noIngredients": "Ingredientlar topilmadi",
+        "selectedCount": "{{count}} tanlandi"
       },
       "itemStatus": {
         "pending": "Kutilmoqda",

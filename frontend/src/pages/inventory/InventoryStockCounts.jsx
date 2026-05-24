@@ -64,6 +64,7 @@ export default function InventoryStockCounts() {
     initiatedBy: 'Admin',
     ingredientIds: [],
   });
+  const [ingredientSearch, setIngredientSearch] = useState('');
 
   // Cancel dialog state
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -158,6 +159,7 @@ export default function InventoryStockCounts() {
         initiatedBy: 'Admin',
         ingredientIds: [],
       });
+      setIngredientSearch('');
       loadStockCounts();
     } catch (error) {
       console.error('Failed to create stock count:', error);
@@ -638,7 +640,7 @@ export default function InventoryStockCounts() {
               <Label>{t('inventory.stockCounts.fields.type', 'Count Type')}</Label>
               <Select
                 value={stockCountFormData.countType}
-                onValueChange={(value) => setStockCountFormData({ ...stockCountFormData, countType: value })}
+                onValueChange={(value) => setStockCountFormData({ ...stockCountFormData, countType: value, ingredientIds: [] })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -650,6 +652,48 @@ export default function InventoryStockCounts() {
                 </SelectContent>
               </Select>
             </div>
+            {stockCountFormData.countType !== 'FULL' && (
+              <div className="space-y-2">
+                <Label>{t('inventory.stockCounts.fields.selectIngredients', 'Select Ingredients')} *</Label>
+                <Input
+                  placeholder={t('inventory.stockCounts.fields.searchIngredients', 'Search ingredients...')}
+                  value={ingredientSearch}
+                  onChange={(e) => setIngredientSearch(e.target.value)}
+                />
+                <div className="border rounded-md max-h-48 overflow-y-auto">
+                  {(ingredients || [])
+                    .filter((ing) => ing.active && ing.name.toLowerCase().includes(ingredientSearch.toLowerCase()))
+                    .map((ing) => (
+                      <label
+                        key={ing.id}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      >
+                        <Checkbox
+                          checked={stockCountFormData.ingredientIds.includes(ing.id)}
+                          onCheckedChange={(checked) => {
+                            setStockCountFormData((prev) => ({
+                              ...prev,
+                              ingredientIds: checked
+                                ? [...prev.ingredientIds, ing.id]
+                                : prev.ingredientIds.filter((id) => id !== ing.id),
+                            }));
+                          }}
+                        />
+                        <span className="text-sm">{ing.name}</span>
+                        <span className="text-xs text-gray-400 ml-auto">{ing.unit}</span>
+                      </label>
+                    ))}
+                  {(ingredients || []).filter((ing) => ing.active && ing.name.toLowerCase().includes(ingredientSearch.toLowerCase())).length === 0 && (
+                    <p className="px-3 py-4 text-sm text-gray-500 text-center">{t('inventory.stockCounts.fields.noIngredients', 'No ingredients found')}</p>
+                  )}
+                </div>
+                {stockCountFormData.ingredientIds.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    {t('inventory.stockCounts.fields.selectedCount', '{{count}} selected', { count: stockCountFormData.ingredientIds.length })}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>{t('inventory.stockCounts.fields.scheduledDate', 'Scheduled Date')}</Label>
               <Input

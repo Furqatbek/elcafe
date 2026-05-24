@@ -2062,7 +2062,11 @@
         "countedQty": "Counted Qty",
         "variance": "Variance",
         "status": "Status",
-        "reason": "Reason"
+        "reason": "Reason",
+        "selectIngredients": "Select Ingredients",
+        "searchIngredients": "Search ingredients...",
+        "noIngredients": "No ingredients found",
+        "selectedCount": "{{count}} selected"
       },
       "itemStatus": {
         "pending": "Pending",

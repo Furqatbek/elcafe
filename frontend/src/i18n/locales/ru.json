@@ -2058,7 +2058,11 @@
         "countedQty": "Подсчитано",
         "variance": "Расхождение",
         "status": "Статус",
-        "reason": "Причина"
+        "reason": "Причина",
+        "selectIngredients": "Выберите ингредиенты",
+        "searchIngredients": "Поиск ингредиентов...",
+        "noIngredients": "Ингредиенты не найдены",
+        "selectedCount": "{{count}} выбрано"
       },
       "itemStatus": {
         "pending": "Ожидает",
