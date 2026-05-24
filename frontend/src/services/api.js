@@ -212,6 +212,7 @@ export const orderAPI = {
   create: (data) => api.post('/orders', data),
   getById: (id) => api.get(`/orders/${id}`),
   getByNumber: (orderNumber) => api.get(`/orders/number/${orderNumber}`),
+  getByShift: (shiftId) => api.get(`/orders/by-shift/${shiftId}`),
   getAll: (params) => api.get('/orders', { params }),
   getPending: () => api.get('/orders/pending'),
   getByRestaurant: (restaurantId) => api.get(`/orders/restaurant/${restaurantId}`),

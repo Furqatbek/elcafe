@@ -122,7 +122,8 @@
       "receiptTemplate": "Шаблон чека",
       "systemUsers": "Пользователи",
       "ordersByTables": "Заказы по столам",
-      "mainDashboard": "Главная панель"
+      "mainDashboard": "Главная панель",
+      "ordersByShift": "Заказы по сменам"
     }
   },
   "externalOrders": {
@@ -4795,6 +4796,51 @@
       "deleteSuccess": "Кухонная станция успешно удалена",
       "deleteError": "Не удалось удалить кухонную станцию",
       "toggleError": "Не удалось переключить кухонную станцию"
+    }
+  },
+  "ordersByShift": {
+    "title": "Заказы по сменам",
+    "subtitle": "Просмотр заказов, сгруппированных по сменам сотрудников",
+    "allStatuses": "Все статусы",
+    "noShifts": "Смены не найдены за выбранный период",
+    "noOrders": "Нет заказов в этой смене",
+    "ordersCount": "{{count}} заказов",
+    "orders": "Заказы",
+    "cash": "Наличные",
+    "card": "Карта",
+    "discount": "Скидка",
+    "tip": "Чаевые",
+    "delivery": "Доставка",
+    "orderItems": "Позиции заказа",
+    "status": {
+      "active": "Активные",
+      "completed": "Завершённые",
+      "approved": "Подтверждённые"
+    },
+    "stats": {
+      "totalShifts": "Всего смен",
+      "activeShifts": "Активные смены",
+      "totalOrders": "Всего заказов",
+      "totalSales": "Общие продажи"
+    },
+    "table": {
+      "time": "Время",
+      "type": "Тип",
+      "tableName": "Стол",
+      "waiter": "Официант",
+      "items": "Позиции",
+      "total": "Итого",
+      "payment": "Оплата",
+      "status": "Статус"
+    },
+    "item": {
+      "product": "Продукт",
+      "variant": "Вариант",
+      "qty": "Кол-во",
+      "unitPrice": "Цена",
+      "total": "Итого",
+      "addOns": "Добавки",
+      "notes": "Примечания"
     }
   }
 }

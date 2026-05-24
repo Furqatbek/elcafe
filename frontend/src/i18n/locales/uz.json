@@ -122,7 +122,8 @@
       "receiptTemplate": "Chek shabloni",
       "systemUsers": "Foydalanuvchilar",
       "ordersByTables": "Stollar bo'yicha buyurtmalar",
-      "mainDashboard": "Asosiy panel"
+      "mainDashboard": "Asosiy panel",
+      "ordersByShift": "Smenalar bo'yicha buyurtmalar"
     }
   },
   "externalOrders": {
@@ -4839,6 +4840,51 @@
       "deleteSuccess": "Oshxona stantsiyasi muvaffaqiyatli o'chirildi",
       "deleteError": "Oshxona stantsiyasini o'chirib bo'lmadi",
       "toggleError": "Oshxona stantsiyasi holatini almashtirib bo'lmadi"
+    }
+  },
+  "ordersByShift": {
+    "title": "Smenalar bo'yicha buyurtmalar",
+    "subtitle": "Xodimlar smenalari bo'yicha buyurtmalarni ko'rish",
+    "allStatuses": "Barcha holatlar",
+    "noShifts": "Tanlangan davr uchun smenalar topilmadi",
+    "noOrders": "Bu smenada buyurtmalar yo'q",
+    "ordersCount": "{{count}} buyurtma",
+    "orders": "Buyurtmalar",
+    "cash": "Naqd",
+    "card": "Karta",
+    "discount": "Chegirma",
+    "tip": "Choy puli",
+    "delivery": "Yetkazib berish",
+    "orderItems": "Buyurtma mahsulotlari",
+    "status": {
+      "active": "Faol",
+      "completed": "Yakunlangan",
+      "approved": "Tasdiqlangan"
+    },
+    "stats": {
+      "totalShifts": "Jami smenalar",
+      "activeShifts": "Faol smenalar",
+      "totalOrders": "Jami buyurtmalar",
+      "totalSales": "Jami sotuvlar"
+    },
+    "table": {
+      "time": "Vaqt",
+      "type": "Turi",
+      "tableName": "Stol",
+      "waiter": "Ofitsiant",
+      "items": "Mahsulotlar",
+      "total": "Jami",
+      "payment": "To'lov",
+      "status": "Holat"
+    },
+    "item": {
+      "product": "Mahsulot",
+      "variant": "Variant",
+      "qty": "Soni",
+      "unitPrice": "Narxi",
+      "total": "Jami",
+      "addOns": "Qo'shimchalar",
+      "notes": "Izohlar"
     }
   }
 }

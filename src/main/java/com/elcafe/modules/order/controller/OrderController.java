@@ -93,6 +93,13 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(order));
     }
 
+    @GetMapping("/by-shift/{shiftId}")
+    @Operation(summary = "Get orders for a specific shift")
+    public ResponseEntity<ApiResponse<List<Order>>> getOrdersByShift(@PathVariable Long shiftId) {
+        List<Order> orders = orderRepository.findByShiftIdWithItems(shiftId);
+        return ResponseEntity.ok(ApiResponse.success("Orders retrieved for shift", orders));
+    }
+
     @GetMapping
     @Operation(summary = "List orders", description = "Get all orders with pagination and filters. All date filtering uses shift-aware logic based on restaurant business hours. shiftDate can be 'today', 'yesterday', or a date (YYYY-MM-DD).")
     public ResponseEntity<ApiResponse<Page<Order>>> getAllOrders(

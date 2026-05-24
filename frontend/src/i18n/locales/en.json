@@ -122,7 +122,8 @@
       "receiptTemplate": "Receipt Template",
       "systemUsers": "System Users",
       "ordersByTables": "Orders by Tables",
-      "mainDashboard": "Main Dashboard"
+      "mainDashboard": "Main Dashboard",
+      "ordersByShift": "Orders by Shift"
     }
   },
   "externalOrders": {
@@ -5031,6 +5032,51 @@
       "deleteSuccess": "Kitchen station deleted successfully",
       "deleteError": "Failed to delete kitchen station",
       "toggleError": "Failed to toggle kitchen station"
+    }
+  },
+  "ordersByShift": {
+    "title": "Orders by Shift",
+    "subtitle": "View orders grouped by employee shifts",
+    "allStatuses": "All Statuses",
+    "noShifts": "No shifts found for the selected period",
+    "noOrders": "No orders in this shift",
+    "ordersCount": "{{count}} orders",
+    "orders": "Orders",
+    "cash": "Cash",
+    "card": "Card",
+    "discount": "Discount",
+    "tip": "Tip",
+    "delivery": "Delivery",
+    "orderItems": "Order Items",
+    "status": {
+      "active": "Active",
+      "completed": "Completed",
+      "approved": "Approved"
+    },
+    "stats": {
+      "totalShifts": "Total Shifts",
+      "activeShifts": "Active Shifts",
+      "totalOrders": "Total Orders",
+      "totalSales": "Total Sales"
+    },
+    "table": {
+      "time": "Time",
+      "type": "Type",
+      "tableName": "Table",
+      "waiter": "Waiter",
+      "items": "Items",
+      "total": "Total",
+      "payment": "Payment",
+      "status": "Status"
+    },
+    "item": {
+      "product": "Product",
+      "variant": "Variant",
+      "qty": "Qty",
+      "unitPrice": "Unit Price",
+      "total": "Total",
+      "addOns": "Add-ons",
+      "notes": "Notes"
     }
   }
 }

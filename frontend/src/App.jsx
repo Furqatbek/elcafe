@@ -77,6 +77,7 @@ import CustomerDisplayScreen from './pos/screens/CustomerDisplayScreen';
 import OrderStatusBoardScreen from './pos/screens/OrderStatusBoardScreen';
 import ReviewPage from './pages/customer/ReviewPage';
 import OrdersHistory from './pages/OrdersHistory';
+import OrdersByShift from './pages/OrdersByShift';
 import SelfServiceOrders from './pages/SelfServiceOrders';
 import Profile from './pages/Profile';
 
@@ -162,6 +163,7 @@ function App() {
           <Route path="dashboard/inventory-analytics" element={<AdminRoute><InventoryAnalytics /></AdminRoute>} />
           <Route path="orders" element={<Orders />} />
           <Route path="orders/history" element={<OrdersHistory />} />
+          <Route path="orders/by-shift" element={<OrdersByShift />} />
           <Route path="orders/self-service" element={<SelfServiceOrders />} />
           <Route path="restaurants" element={<Restaurants />} />
           <Route path="restaurants/tables" element={<Tables />} />

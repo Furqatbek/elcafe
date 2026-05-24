@@ -126,6 +126,7 @@ export default function Layout() {
       subItems: [
         { label: t('nav.sub.ordersByTables', 'Orders by Tables'), icon: ShoppingCart, path: '/orders' },
         { label: t('nav.sub.ordersHistory'), icon: History, path: '/orders/history' },
+        { label: t('nav.sub.ordersByShift', 'Orders by Shift'), icon: Clock, path: '/orders/by-shift' },
         { label: t('nav.sub.externalOrders', 'Online Orders'), icon: Globe, path: '/orders/self-service' },
       ],
     },
