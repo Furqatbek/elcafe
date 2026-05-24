@@ -104,6 +104,7 @@ export default function Layout() {
       icon: LayoutDashboard,
       path: '/dashboard',
       subItems: [
+        { label: t('nav.sub.mainDashboard', 'Main Dashboard'), icon: LayoutDashboard, path: '/dashboard' },
         { label: t('nav.sub.financialAnalytics'), icon: TrendingUp, path: '/dashboard/financial-analytics' },
         { label: t('nav.sub.operationalAnalytics'), icon: BarChart3, path: '/dashboard/operational-analytics' },
         { label: t('nav.sub.customerAnalytics'), icon: Users, path: '/dashboard/customer-analytics' },

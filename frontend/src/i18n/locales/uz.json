@@ -121,7 +121,8 @@
       "qrCodes": "QR kodlar",
       "receiptTemplate": "Chek shabloni",
       "systemUsers": "Foydalanuvchilar",
-      "ordersByTables": "Stollar bo'yicha buyurtmalar"
+      "ordersByTables": "Stollar bo'yicha buyurtmalar",
+      "mainDashboard": "Asosiy panel"
     }
   },
   "externalOrders": {

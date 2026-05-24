@@ -121,7 +121,8 @@
       "qrCodes": "QR Codes",
       "receiptTemplate": "Receipt Template",
       "systemUsers": "System Users",
-      "ordersByTables": "Orders by Tables"
+      "ordersByTables": "Orders by Tables",
+      "mainDashboard": "Main Dashboard"
     }
   },
   "externalOrders": {

@@ -121,7 +121,8 @@
       "qrCodes": "QR-коды",
       "receiptTemplate": "Шаблон чека",
       "systemUsers": "Пользователи",
-      "ordersByTables": "Заказы по столам"
+      "ordersByTables": "Заказы по столам",
+      "mainDashboard": "Главная панель"
     }
   },
   "externalOrders": {
