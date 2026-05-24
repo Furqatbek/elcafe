@@ -206,6 +206,16 @@ class OrderControllerTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("GET /orders/by-shift/{shiftId} — returns orders for shift")
+    void getOrdersByShift_returns200() throws Exception {
+        when(orderRepository.findByShiftIdWithItems(1L))
+                .thenReturn(List.of(createOrder(1L, OrderStatus.COMPLETED)));
+
+        mockMvc.perform(get("/api/v1/orders/by-shift/1"))
+                .andExpect(status().isOk());
+    }
+
     // ==================== revertOrderToActive ====================
 
     @Test
