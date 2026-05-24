@@ -1,6 +1,7 @@
 package com.elcafe.modules.financial.service;
 
 import com.elcafe.modules.financial.dto.DashboardResponse;
+import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.financial.repository.PayrollEntryRepository;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
@@ -15,12 +16,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -73,5 +76,36 @@ class DashboardServiceTest {
         stubEmpty();
         DashboardResponse result = dashboardService.getMonthSummary(1L);
         assertNotNull(result);
+    }
+
+    @Test @DisplayName("INVENTORY expenses are excluded from netProfit to avoid double-counting with COGS")
+    void inventoryExpensesExcludedFromNetProfit() {
+        stubShift();
+        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
+                .thenReturn(List.of());
+        when(payrollRepository.findByRestaurant_IdAndPayPeriodEndBetween(anyLong(), any(), any()))
+                .thenReturn(List.of());
+
+        Expense suppliesExpense = new Expense();
+        suppliesExpense.setCategory(Expense.ExpenseCategory.SUPPLIES);
+        suppliesExpense.setPaymentStatus(Expense.PaymentStatus.PAID);
+        suppliesExpense.setTotalAmount(new BigDecimal("500000"));
+        suppliesExpense.setExpenseDate(LocalDate.of(2026, 3, 1));
+
+        Expense inventoryExpense = new Expense();
+        inventoryExpense.setCategory(Expense.ExpenseCategory.INVENTORY);
+        inventoryExpense.setPaymentStatus(Expense.PaymentStatus.PAID);
+        inventoryExpense.setTotalAmount(new BigDecimal("1000000"));
+        inventoryExpense.setExpenseDate(LocalDate.of(2026, 3, 1));
+
+        when(expenseRepository.findByRestaurant_IdAndExpenseDateBetween(anyLong(), any(), any()))
+                .thenReturn(List.of(suppliesExpense, inventoryExpense));
+
+        DashboardResponse result = dashboardService.getTodaySummary(1L);
+
+        assertEquals(0, new BigDecimal("-500000").compareTo(result.getNetProfit()),
+                "netProfit should only subtract SUPPLIES (500k), not INVENTORY (1M) — COGS handles ingredient costs");
+        assertEquals(0, new BigDecimal("500000").compareTo(result.getTotalExpenses()),
+                "totalExpenses should exclude INVENTORY category");
     }
 }

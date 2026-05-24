@@ -97,6 +97,7 @@ public class DashboardService {
 
         BigDecimal totalExpenses = expenses.stream()
                 .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
+                .filter(e -> e.getCategory() != Expense.ExpenseCategory.INVENTORY)
                 .map(Expense::getTotalAmount)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -330,6 +331,7 @@ public class DashboardService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal expenseTotal = dayExpenses.stream()
+                    .filter(e -> e.getCategory() != Expense.ExpenseCategory.INVENTORY)
                     .map(Expense::getTotalAmount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
