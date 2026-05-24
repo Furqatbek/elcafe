@@ -1690,7 +1690,8 @@
         "BANK_FEES": "Bank Fees",
         "OTHER": "Other",
         "INVENTORY": "Inventory",
-        "COST_OF_GOODS_SOLD": "Cost of goods sold"
+        "COST_OF_GOODS_SOLD": "Cost of goods sold",
+        "PAYROLL": "Payroll"
       },
       "paymentMethods": {
         "CASH": "Cash",
@@ -1726,7 +1727,8 @@
         "UNPAID": "Unpaid",
         "PAID": "Paid",
         "PARTIALLY_PAID": "Partially paid"
-      }
+      },
+      "managedInPayroll": "Managed in Payroll"
     },
     "reports": {
       "title": "Financial Reports",

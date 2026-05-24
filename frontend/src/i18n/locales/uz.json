@@ -1690,7 +1690,8 @@
         "BANK_FEES": "Bank to'lovlari",
         "OTHER": "Boshqa",
         "INVENTORY": "Inventar",
-        "COST_OF_GOODS_SOLD": "Sotilgan tovarlar tannarxi"
+        "COST_OF_GOODS_SOLD": "Sotilgan tovarlar tannarxi",
+        "PAYROLL": "Ish haqi"
       },
       "paymentMethods": {
         "CASH": "Naqd",
@@ -1726,7 +1727,8 @@
         "UNPAID": "To'lanmagan",
         "PAID": "To'langan",
         "PARTIALLY_PAID": "Qisman to'langan"
-      }
+      },
+      "managedInPayroll": "Ish haqi bo'limida boshqariladi"
     },
     "reports": {
       "title": "Moliyaviy hisobotlar",

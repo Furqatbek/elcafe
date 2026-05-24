@@ -54,7 +54,8 @@ const Expenses = () => {
     { value: 'DELIVERY_COSTS', label: t('finance.expenses.categories.DELIVERY_COSTS') },
     { value: 'PROFESSIONAL_FEES', label: t('finance.expenses.categories.PROFESSIONAL_FEES') },
     { value: 'BANK_FEES', label: t('finance.expenses.categories.BANK_FEES') },
-    { value: 'OTHER', label: t('finance.expenses.categories.OTHER') }
+    { value: 'OTHER', label: t('finance.expenses.categories.OTHER') },
+    { value: 'PAYROLL', label: t('finance.expenses.categories.PAYROLL', 'Payroll') }
   ];
 
   useEffect(() => {
@@ -96,12 +97,31 @@ const Expenses = () => {
   const loadExpenses = async (restaurantId) => {
     try {
       setLoading(true);
-      const response = await financialAPI.getExpenses(
-        restaurantId,
-        dateRange.startDate,
-        dateRange.endDate
-      );
-      setExpenses(response.data.data || []);
+      const [expenseRes, payrollRes] = await Promise.all([
+        financialAPI.getExpenses(restaurantId, dateRange.startDate, dateRange.endDate),
+        financialAPI.getPayrollByRange(restaurantId, dateRange.startDate, dateRange.endDate),
+      ]);
+
+      const expenseRows = expenseRes.data.data || [];
+
+      const payrollRows = (payrollRes.data.data || [])
+        .filter((p) => p.status === 'PAID')
+        .map((p) => ({
+          id: `payroll-${p.id}`,
+          expenseNumber: p.payrollNumber,
+          expenseDate: p.paymentDate,
+          category: 'PAYROLL',
+          description: `${p.employee?.firstName || ''} ${p.employee?.lastName || ''}`.trim()
+            + ` (${p.payPeriodStart} — ${p.payPeriodEnd})`,
+          vendor: null,
+          totalAmount: p.netPay,
+          paymentStatus: 'PAID',
+          purchaseOrderId: null,
+          approvedBy: p.approvedBy,
+          _isPayroll: true,
+        }));
+
+      setExpenses([...expenseRows, ...payrollRows]);
     } catch (error) {
       console.error('Failed to load expenses:', error);
     } finally {
@@ -219,6 +239,7 @@ const Expenses = () => {
       DELIVERY_COSTS: 'bg-yellow-100 text-yellow-800',
       PROFESSIONAL_FEES: 'bg-gray-100 text-gray-800',
       BANK_FEES: 'bg-slate-100 text-slate-800',
+      PAYROLL: 'bg-violet-100 text-violet-800',
       OTHER: 'bg-gray-100 text-gray-800'
     };
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${categoryColors[category] || 'bg-gray-100 text-gray-800'}`}>
@@ -385,6 +406,9 @@ const Expenses = () => {
                   <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(expense.paymentStatus)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex gap-2">
+                      {expense._isPayroll ? (
+                        <span className="text-xs text-gray-400">{t('finance.expenses.managedInPayroll', 'Managed in Payroll')}</span>
+                      ) : (<>
                       {!expense.approvedBy && (
                         <button
                           onClick={() => handleApprove(expense.id)}
@@ -412,6 +436,7 @@ const Expenses = () => {
                           <Trash2 size={18} />
                         </button>
                       )}
+                      </>)}
                     </div>
                   </td>
                 </tr>

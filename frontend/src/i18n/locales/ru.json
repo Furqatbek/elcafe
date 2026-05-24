@@ -1690,7 +1690,8 @@
         "BANK_FEES": "Банковские сборы",
         "OTHER": "Другое",
         "INVENTORY": "Запасы",
-        "COST_OF_GOODS_SOLD": "Себестоимость продаж"
+        "COST_OF_GOODS_SOLD": "Себестоимость продаж",
+        "PAYROLL": "Зарплата"
       },
       "paymentMethods": {
         "CASH": "Наличные",
@@ -1726,7 +1727,8 @@
         "UNPAID": "Не оплачено",
         "PAID": "Оплачено",
         "PARTIALLY_PAID": "Частично оплачено"
-      }
+      },
+      "managedInPayroll": "Управляется в Зарплата"
     },
     "reports": {
       "title": "Финансовые отчеты",
