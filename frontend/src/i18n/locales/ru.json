@@ -73,7 +73,6 @@
       "campaigns": "Кампании",
       "emails": "Email-маркетинг",
       "notifications": "Уведомления",
-      "activeOrders": "Активные заказы",
       "kitchenDashboard": "Панель кухни",
       "recipes": "Рецепты",
       "inventory": "Инвентарь",
@@ -121,7 +120,8 @@
       "valuation": "Оценка",
       "qrCodes": "QR-коды",
       "receiptTemplate": "Шаблон чека",
-      "systemUsers": "Пользователи"
+      "systemUsers": "Пользователи",
+      "ordersByTables": "Заказы по столам"
     }
   },
   "externalOrders": {

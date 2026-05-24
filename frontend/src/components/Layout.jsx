@@ -123,7 +123,7 @@ export default function Layout() {
       icon: ShoppingCart,
       path: '/orders',
       subItems: [
-        { label: t('nav.sub.activeOrders', 'Active Orders'), icon: ShoppingCart, path: '/orders' },
+        { label: t('nav.sub.ordersByTables', 'Orders by Tables'), icon: ShoppingCart, path: '/orders' },
         { label: t('nav.sub.ordersHistory'), icon: History, path: '/orders/history' },
         { label: t('nav.sub.externalOrders', 'Online Orders'), icon: Globe, path: '/orders/self-service' },
       ],

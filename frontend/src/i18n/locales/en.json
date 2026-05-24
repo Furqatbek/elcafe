@@ -81,7 +81,6 @@
       "campaigns": "Campaigns",
       "emails": "Email Marketing",
       "notifications": "Notifications",
-      "activeOrders": "Active Orders",
       "kitchenDashboard": "Kitchen Dashboard",
       "recipes": "Recipes",
       "inventory": "Inventory",
@@ -121,7 +120,8 @@
       "consumptionAllowances": "Consumption allowances",
       "qrCodes": "QR Codes",
       "receiptTemplate": "Receipt Template",
-      "systemUsers": "System Users"
+      "systemUsers": "System Users",
+      "ordersByTables": "Orders by Tables"
     }
   },
   "externalOrders": {

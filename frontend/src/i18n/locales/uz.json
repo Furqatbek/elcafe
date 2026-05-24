@@ -73,7 +73,6 @@
       "campaigns": "Kampaniyalar",
       "emails": "Email marketing",
       "notifications": "Bildirishnomalar",
-      "activeOrders": "Faol buyurtmalar",
       "kitchenDashboard": "Oshxona paneli",
       "recipes": "Retseptlar",
       "inventory": "Inventar",
@@ -121,7 +120,8 @@
       "valuation": "Baholash",
       "qrCodes": "QR kodlar",
       "receiptTemplate": "Chek shabloni",
-      "systemUsers": "Foydalanuvchilar"
+      "systemUsers": "Foydalanuvchilar",
+      "ordersByTables": "Stollar bo'yicha buyurtmalar"
     }
   },
   "externalOrders": {
