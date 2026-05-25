@@ -147,6 +147,7 @@ public class StockCountItem {
         return varianceQuantity.abs()
                 .divide(systemQuantity.abs(), 4, RoundingMode.HALF_UP)
                 .multiply(new BigDecimal("100"))
-                .setScale(2, RoundingMode.HALF_UP);
+                .setScale(2, RoundingMode.HALF_UP)
+                .min(new BigDecimal("999.99"));
     }
 }

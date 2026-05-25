@@ -52,7 +52,7 @@ public class StockVarianceHistory {
     @Column(name = "variance_quantity", nullable = false, precision = 10, scale = 3)
     private BigDecimal varianceQuantity;
 
-    @Column(name = "variance_percentage", precision = 5, scale = 2)
+    @Column(name = "variance_percentage", precision = 7, scale = 2)
     private BigDecimal variancePercentage;
 
     @Column(name = "variance_value", precision = 15, scale = 2)
