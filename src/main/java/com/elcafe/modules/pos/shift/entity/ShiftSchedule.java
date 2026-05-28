@@ -77,7 +77,25 @@ public class ShiftSchedule {
         CANCELLED
     }
 
+    /**
+     * Overlap check that handles schedules crossing midnight. A schedule
+     * whose endTime is at or before startTime is treated as ending on
+     * the next calendar day, so a 22:00 → 02:00 row correctly conflicts
+     * with another 01:00 → 05:00 row on the same shiftDate.
+     *
+     * Both arguments are normalized the same way (the caller may also
+     * be supplying an overnight range), then both ranges are projected
+     * onto a 0..48h axis and compared as ordinary intervals.
+     */
     public boolean overlaps(LocalTime otherStart, LocalTime otherEnd) {
-        return startTime.isBefore(otherEnd) && otherStart.isBefore(endTime);
+        long thisStart = startTime.toSecondOfDay();
+        long thisEnd = endTime.toSecondOfDay();
+        if (thisEnd <= thisStart) thisEnd += 24L * 3600L;
+
+        long oStart = otherStart.toSecondOfDay();
+        long oEnd = otherEnd.toSecondOfDay();
+        if (oEnd <= oStart) oEnd += 24L * 3600L;
+
+        return thisStart < oEnd && oStart < thisEnd;
     }
 }
