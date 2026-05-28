@@ -97,6 +97,91 @@ public class ShiftScheduleService {
         return schedule;
     }
 
+    /**
+     * Apply partial updates to an existing schedule. Only non-null fields
+     * on the request are touched; the subject (user/waiter) cannot be
+     * changed since the row's identity is bound to it.
+     */
+    @Transactional
+    public ShiftSchedule updateSchedule(Long scheduleId, LocalDate shiftDate,
+                                         LocalTime startTime, LocalTime endTime,
+                                         String role, String notes) {
+        ShiftSchedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+
+        // Conflict check uses the candidate values that will land on the
+        // row after the patch, so a same-row no-op edit doesn't trip.
+        LocalDate newDate = shiftDate != null ? shiftDate : schedule.getShiftDate();
+        LocalTime newStart = startTime != null ? startTime : schedule.getStartTime();
+        LocalTime newEnd = endTime != null ? endTime : schedule.getEndTime();
+
+        List<ShiftSchedule> sameDay = schedule.getWaiter() != null
+                ? scheduleRepository.findActiveByWaiterAndDate(schedule.getWaiter().getId(), newDate)
+                : scheduleRepository.findActiveByEmployeeAndDate(schedule.getEmployee().getId(), newDate);
+        for (ShiftSchedule s : sameDay) {
+            if (s.getId().equals(scheduleId)) continue;
+            if (s.overlaps(newStart, newEnd)) {
+                throw new IllegalStateException(String.format(
+                        "Conflict: already scheduled %s-%s on %s",
+                        s.getStartTime(), s.getEndTime(), newDate));
+            }
+        }
+
+        schedule.setShiftDate(newDate);
+        schedule.setStartTime(newStart);
+        schedule.setEndTime(newEnd);
+        if (role != null) schedule.setRole(role);
+        if (notes != null) schedule.setNotes(notes);
+        return scheduleRepository.save(schedule);
+    }
+
+    /**
+     * Create schedule rows for multiple subjects across a date range,
+     * one per (subject × matching weekday). Skips conflicts silently
+     * and returns the per-subject counts so the UI can report "created
+     * N, skipped M".
+     */
+    @Transactional
+    public BulkResult bulkCreate(Long restaurantId, List<Subject> subjects, List<Integer> weekdays,
+                                  LocalDate fromDate, LocalDate toDate,
+                                  LocalTime startTime, LocalTime endTime,
+                                  String role, String notes, Long createdById) {
+        if (subjects == null || subjects.isEmpty()) {
+            throw new IllegalArgumentException("At least one employee is required");
+        }
+        if (weekdays == null || weekdays.isEmpty()) {
+            throw new IllegalArgumentException("At least one weekday is required");
+        }
+        if (fromDate == null || toDate == null || toDate.isBefore(fromDate)) {
+            throw new IllegalArgumentException("Invalid date range");
+        }
+        java.util.Set<Integer> wantedDays = new java.util.HashSet<>(weekdays);
+
+        int created = 0;
+        int skipped = 0;
+        for (LocalDate d = fromDate; !d.isAfter(toDate); d = d.plusDays(1)) {
+            if (!wantedDays.contains(d.getDayOfWeek().getValue())) continue;
+            for (Subject subject : subjects) {
+                try {
+                    createSchedule(restaurantId, subject.type(), subject.id(),
+                            d, startTime, endTime, role, notes, createdById);
+                    created++;
+                } catch (IllegalStateException e) {
+                    // Overlap with an existing row — that's fine for a
+                    // bulk run; the caller asked us to fill, not to
+                    // overwrite. Surface the count in BulkResult.
+                    skipped++;
+                }
+            }
+        }
+        log.info("Bulk created {} schedules ({} skipped) for restaurant {} {} → {}",
+                created, skipped, restaurantId, fromDate, toDate);
+        return new BulkResult(created, skipped);
+    }
+
+    public record Subject(String type, Long id) {}
+    public record BulkResult(int created, int skipped) {}
+
     @Transactional
     public void cancelSchedule(Long scheduleId) {
         ShiftSchedule schedule = scheduleRepository.findById(scheduleId)

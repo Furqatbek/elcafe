@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { restaurantAPI, operatorAPI, waiterAPI } from '../services/api';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
@@ -20,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
-import { ChevronLeft, ChevronRight, Plus, Copy, Wand2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Copy, Layers, Pencil, Trash2 } from 'lucide-react';
 
 const api = {
   getWeek: (restaurantId, weekStart) =>
@@ -30,6 +29,12 @@ const api = {
   create: (data) =>
     fetch('/api/v1/shift-schedules', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      body: JSON.stringify(data),
+    }).then(r => r.json()),
+  update: (id, data) =>
+    fetch(`/api/v1/shift-schedules/${id}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('access_token')}` },
       body: JSON.stringify(data),
     }).then(r => r.json()),
@@ -43,10 +48,11 @@ const api = {
       method: 'POST',
       headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
     }).then(r => r.json()),
-  autoFill: (restaurantId, weekStart) =>
-    fetch(`/api/v1/shift-schedules/restaurant/${restaurantId}/auto-fill?weekStart=${weekStart}`, {
+  bulk: (data) =>
+    fetch('/api/v1/shift-schedules/bulk', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('access_token')}` },
+      body: JSON.stringify(data),
     }).then(r => r.json()),
 };
 
@@ -58,6 +64,7 @@ function getMonday(date) {
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKDAY_NUMS = [1, 2, 3, 4, 5, 6, 7]; // ISO: 1=Mon..7=Sun
 
 export default function ShiftSchedule() {
   const { t } = useTranslation();
@@ -66,8 +73,21 @@ export default function ShiftSchedule() {
   const [employees, setEmployees] = useState([]);
   const [weekStart, setWeekStart] = useState(getMonday(new Date()));
   const [schedules, setSchedules] = useState([]);
+
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({ employeeKey: '', shiftDate: '', startTime: '09:00', endTime: '17:00', role: '' });
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ id: null, shiftDate: '', startTime: '', endTime: '', role: '', notes: '' });
+
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const monthAhead = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })();
+  const [bulkForm, setBulkForm] = useState({
+    employeeKeys: [], weekdays: [1, 2, 3, 4, 5],
+    fromDate: todayStr, toDate: monthAhead,
+    startTime: '09:00', endTime: '17:00', role: '',
+  });
 
   useEffect(() => {
     restaurantAPI.getAll({ page: 0, size: 100 }).then(res => {
@@ -89,7 +109,7 @@ export default function ShiftSchedule() {
           type: 'waiter',
           _role: 'Waiter',
         }));
-      } catch (e) { /* ignore if waiter API fails */ }
+      } catch (e) { /* ignore */ }
       setEmployees([...operators, ...waiters]);
     }).catch(console.error);
   }, []);
@@ -130,7 +150,41 @@ export default function ShiftSchedule() {
     }
   };
 
+  const handleEditOpen = (s) => {
+    setEditForm({
+      id: s.id,
+      shiftDate: s.shiftDate || '',
+      startTime: (s.startTime || '09:00').slice(0, 5),
+      endTime: (s.endTime || '17:00').slice(0, 5),
+      role: s.role || '',
+      notes: s.notes || '',
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    try {
+      const res = await api.update(editForm.id, {
+        shiftDate: editForm.shiftDate,
+        startTime: editForm.startTime,
+        endTime: editForm.endTime,
+        role: editForm.role,
+        notes: editForm.notes,
+      });
+      if (res?.success === false) {
+        alert(res.message || 'Update failed');
+        return;
+      }
+      setEditOpen(false);
+      loadSchedule();
+    } catch (e) {
+      console.error('Failed to update schedule:', e);
+      alert(e.message || 'Failed');
+    }
+  };
+
   const handleDelete = async (id) => {
+    if (!window.confirm(t('shift.schedule.confirmDelete', 'Delete this shift?'))) return;
     await api.delete(id);
     loadSchedule();
   };
@@ -143,9 +197,56 @@ export default function ShiftSchedule() {
     loadSchedule();
   };
 
-  const handleAutoFill = async () => {
-    await api.autoFill(selectedRestaurant, weekStart);
-    loadSchedule();
+  const toggleBulkEmployee = (key) => {
+    setBulkForm(f => ({
+      ...f,
+      employeeKeys: f.employeeKeys.includes(key)
+        ? f.employeeKeys.filter(k => k !== key)
+        : [...f.employeeKeys, key],
+    }));
+  };
+
+  const toggleBulkWeekday = (n) => {
+    setBulkForm(f => ({
+      ...f,
+      weekdays: f.weekdays.includes(n)
+        ? f.weekdays.filter(d => d !== n)
+        : [...f.weekdays, n].sort(),
+    }));
+  };
+
+  const handleBulkSubmit = async () => {
+    if (bulkForm.employeeKeys.length === 0 || bulkForm.weekdays.length === 0) return;
+    const employees = bulkForm.employeeKeys.map(k => {
+      const [type, id] = k.split(':');
+      return { type, id: parseInt(id, 10) };
+    });
+    try {
+      const res = await api.bulk({
+        restaurantId: parseInt(selectedRestaurant),
+        employees,
+        weekdays: bulkForm.weekdays,
+        fromDate: bulkForm.fromDate,
+        toDate: bulkForm.toDate,
+        startTime: bulkForm.startTime,
+        endTime: bulkForm.endTime,
+        role: bulkForm.role || null,
+      });
+      if (res?.success === false) {
+        alert(res.message || 'Bulk create failed');
+        return;
+      }
+      const created = res?.data?.created ?? 0;
+      const skipped = res?.data?.skipped ?? 0;
+      alert(t('shift.schedule.bulkResult',
+        'Created {{created}} shifts, skipped {{skipped}} conflicts',
+        { created, skipped }));
+      setBulkOpen(false);
+      loadSchedule();
+    } catch (e) {
+      console.error('Failed to bulk-create:', e);
+      alert(e.message || 'Failed');
+    }
   };
 
   const navigateWeek = (offset) => {
@@ -154,9 +255,6 @@ export default function ShiftSchedule() {
     setWeekStart(d.toISOString().split('T')[0]);
   };
 
-  // Build grid data: unique subjects (user or waiter) × 7 days. A row key
-  // is "user:<id>" or "waiter:<id>" so an operator and a waiter that
-  // happen to share a numeric id don't collide.
   const subjectKey = (s) => s.waiter ? `waiter:${s.waiter.id}` : (s.employee ? `user:${s.employee.id}` : null);
   const subjectLabel = (s) => s.waiter
     ? `${s.waiter.name || `Waiter #${s.waiter.id}`}`
@@ -179,6 +277,8 @@ export default function ShiftSchedule() {
     return `${start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} — ${end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
   };
 
+  const weekdayLabel = (n) => t(`common.weekdaysShort.${n}`, DAYS[n - 1]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -194,7 +294,6 @@ export default function ShiftSchedule() {
         </Select>
       </div>
 
-      {/* Week navigation + actions */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => navigateWeek(-1)}><ChevronLeft className="h-4 w-4" /></Button>
@@ -203,12 +302,11 @@ export default function ShiftSchedule() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleCopyWeek}><Copy className="h-4 w-4 mr-2" />{t('shift.schedule.copyWeek', 'Copy Prev Week')}</Button>
-          <Button variant="outline" onClick={handleAutoFill}><Wand2 className="h-4 w-4 mr-2" />{t('shift.schedule.autoFill', 'Auto-Fill')}</Button>
+          <Button variant="outline" onClick={() => setBulkOpen(true)}><Layers className="h-4 w-4 mr-2" />{t('shift.schedule.bulkAdd', 'Bulk Add')}</Button>
           <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-2" />{t('shift.schedule.addShift', 'Add Shift')}</Button>
         </div>
       </div>
 
-      {/* Schedule grid */}
       <Card>
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm">
@@ -241,17 +339,27 @@ export default function ShiftSchedule() {
                           {cells.length === 0 ? (
                             <span className="text-muted-foreground text-xs">—</span>
                           ) : (
-                            cells.map(s => (
-                              <div key={s.id} className="group relative inline-flex items-center gap-1 bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
-                                {s.startTime?.slice(0, 5)}-{s.endTime?.slice(0, 5)}
-                                <button
-                                  onClick={() => handleDelete(s.id)}
-                                  className="hidden group-hover:inline text-red-500 ml-1"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ))
+                            <div className="flex flex-col gap-1 items-center">
+                              {cells.map(s => (
+                                <div key={s.id} className="inline-flex items-center gap-2 bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                                  <span>{s.startTime?.slice(0, 5)}–{s.endTime?.slice(0, 5)}</span>
+                                  <button
+                                    onClick={() => handleEditOpen(s)}
+                                    className="text-blue-700 hover:text-blue-900"
+                                    title={t('common.edit', 'Edit')}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(s.id)}
+                                    className="text-red-600 hover:text-red-800"
+                                    title={t('common.delete', 'Delete')}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </td>
                       );
@@ -278,7 +386,7 @@ export default function ShiftSchedule() {
                 onChange={(e) => setAddForm({ ...addForm, employeeKey: e.target.value })}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               >
-                <option value="">Select employee</option>
+                <option value="">{t('shift.schedule.selectEmployee', 'Select employee')}</option>
                 {employees.map(emp => (
                   <option key={`${emp.type}:${emp.id}`} value={`${emp.type}:${emp.id}`}>
                     {emp.fullName || emp.email}{emp._role ? ` (${emp._role})` : ''}
@@ -308,6 +416,132 @@ export default function ShiftSchedule() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
             <Button onClick={handleCreate} disabled={!addForm.employeeKey || !addForm.shiftDate}>{t('common.add', 'Add')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Shift Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('shift.schedule.editShift', 'Edit Shift')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t('shift.schedule.date', 'Date')} *</Label>
+              <Input type="date" value={editForm.shiftDate} onChange={(e) => setEditForm({ ...editForm, shiftDate: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('shift.schedule.startTime', 'Start')}</Label>
+                <Input type="time" value={editForm.startTime} onChange={(e) => setEditForm({ ...editForm, startTime: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('shift.schedule.endTime', 'End')}</Label>
+                <Input type="time" value={editForm.endTime} onChange={(e) => setEditForm({ ...editForm, endTime: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('shift.schedule.role', 'Role')}</Label>
+              <Input value={editForm.role} onChange={(e) => setEditForm({ ...editForm, role: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('shift.schedule.notes', 'Notes')}</Label>
+              <Input value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
+            <Button onClick={handleEditSubmit}>{t('common.save', 'Save')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Add Dialog */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t('shift.schedule.bulkAdd', 'Bulk Add Shifts')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t('shift.schedule.employees', 'Employees')} *</Label>
+              <div className="border rounded-md p-2 max-h-40 overflow-y-auto">
+                {employees.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">{t('shift.schedule.noEmployees', 'No employees loaded')}</p>
+                ) : (
+                  employees.map(emp => {
+                    const key = `${emp.type}:${emp.id}`;
+                    return (
+                      <label key={key} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-muted/30 px-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={bulkForm.employeeKeys.includes(key)}
+                          onChange={() => toggleBulkEmployee(key)}
+                        />
+                        <span className="text-sm">{emp.fullName || emp.email}{emp._role ? ` (${emp._role})` : ''}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('shift.schedule.weekdays', 'Weekdays')} *</Label>
+              <div className="flex gap-2 flex-wrap">
+                {WEEKDAY_NUMS.map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => toggleBulkWeekday(n)}
+                    className={`px-3 py-1 rounded-md text-sm border ${
+                      bulkForm.weekdays.includes(n)
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background hover:bg-muted'
+                    }`}
+                  >
+                    {weekdayLabel(n)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('shift.schedule.fromDate', 'From')} *</Label>
+                <Input type="date" value={bulkForm.fromDate} onChange={e => setBulkForm({ ...bulkForm, fromDate: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('shift.schedule.toDate', 'To')} *</Label>
+                <Input type="date" value={bulkForm.toDate} onChange={e => setBulkForm({ ...bulkForm, toDate: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('shift.schedule.startTime', 'Start')} *</Label>
+                <Input type="time" value={bulkForm.startTime} onChange={e => setBulkForm({ ...bulkForm, startTime: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('shift.schedule.endTime', 'End')} *</Label>
+                <Input type="time" value={bulkForm.endTime} onChange={e => setBulkForm({ ...bulkForm, endTime: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('shift.schedule.role', 'Role')}</Label>
+              <Input value={bulkForm.role} onChange={e => setBulkForm({ ...bulkForm, role: e.target.value })} />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t('shift.schedule.bulkHint',
+                'Creates one shift per selected weekday in the date range, for every employee selected. Conflicts are skipped.')}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
+            <Button
+              onClick={handleBulkSubmit}
+              disabled={bulkForm.employeeKeys.length === 0 || bulkForm.weekdays.length === 0}
+            >
+              {t('shift.schedule.bulkCreate', 'Create All')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

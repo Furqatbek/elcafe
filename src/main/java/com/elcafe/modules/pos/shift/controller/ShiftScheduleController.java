@@ -49,10 +49,39 @@ public class ShiftScheduleController {
                 .body(ApiResponse.success("Shift scheduled", schedule));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<ShiftSchedule>> updateSchedule(
+            @PathVariable Long id, @RequestBody UpdateScheduleRequest request) {
+        ShiftSchedule updated = scheduleService.updateSchedule(
+                id, request.shiftDate, request.startTime, request.endTime,
+                request.role, request.notes);
+        return ResponseEntity.ok(ApiResponse.success("Schedule updated", updated));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteSchedule(@PathVariable Long id) {
         scheduleService.deleteSchedule(id);
         return ResponseEntity.ok(ApiResponse.success("Schedule deleted", null));
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<ApiResponse<ShiftScheduleService.BulkResult>> bulkCreate(
+            @RequestBody BulkCreateRequest request) {
+        java.util.List<ShiftScheduleService.Subject> subjects = request.employees == null
+                ? java.util.List.of()
+                : request.employees.stream()
+                    .map(e -> new ShiftScheduleService.Subject(
+                            e.type != null ? e.type : "user", e.id))
+                    .toList();
+        ShiftScheduleService.BulkResult result = scheduleService.bulkCreate(
+                request.restaurantId, subjects, request.weekdays,
+                request.fromDate, request.toDate,
+                request.startTime, request.endTime,
+                request.role, request.notes, request.createdById);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(
+                        "Bulk created: " + result.created() + " (skipped " + result.skipped() + ")",
+                        result));
     }
 
     @PostMapping("/{id}/cancel")
@@ -78,6 +107,42 @@ public class ShiftScheduleController {
             @RequestParam(required = false) Long createdById) {
         List<ShiftSchedule> created = scheduleService.autoFillFromWorkingHours(restaurantId, weekStart, createdById);
         return ResponseEntity.ok(ApiResponse.success("Auto-filled: " + created.size() + " schedules", created));
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class UpdateScheduleRequest {
+        private LocalDate shiftDate;
+        private LocalTime startTime;
+        private LocalTime endTime;
+        private String role;
+        private String notes;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class BulkCreateRequest {
+        private Long restaurantId;
+        private java.util.List<EmployeeRef> employees;
+        // ISO day-of-week numbers (1=Monday..7=Sunday) to schedule on.
+        private java.util.List<Integer> weekdays;
+        private LocalDate fromDate;
+        private LocalDate toDate;
+        private LocalTime startTime;
+        private LocalTime endTime;
+        private String role;
+        private String notes;
+        private Long createdById;
+    }
+
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class EmployeeRef {
+        private String type;
+        private Long id;
     }
 
     @lombok.Data
