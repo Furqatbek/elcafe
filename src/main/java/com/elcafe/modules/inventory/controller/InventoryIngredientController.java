@@ -3,6 +3,9 @@ package com.elcafe.modules.inventory.controller;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.security.UserPrincipal;
 import com.elcafe.utils.ApiResponse;
+import com.elcafe.modules.financial.entity.PurchaseOrder;
+import com.elcafe.modules.financial.entity.PurchaseOrderItem;
+import com.elcafe.modules.financial.service.PurchaseOrderService;
 import com.elcafe.modules.inventory.dto.AddStockRequest;
 import com.elcafe.modules.inventory.dto.AdjustStockRequest;
 import com.elcafe.modules.inventory.dto.IngredientRequest;
@@ -45,6 +48,7 @@ public class InventoryIngredientController {
     private final ProductCostService productCostService;
     private final StockOperationService stockOperationService;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
+    private final PurchaseOrderService purchaseOrderService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<IngredientResponse>>> getIngredients(
@@ -112,7 +116,8 @@ public class InventoryIngredientController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<IngredientResponse>> createIngredient(
-            @Valid @RequestBody IngredientRequest request) {
+            @Valid @RequestBody IngredientRequest request,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(request.getRestaurantId());
         log.info("Creating ingredient: {}", request.getName());
@@ -131,17 +136,37 @@ public class InventoryIngredientController {
             category = ingredientCategoryRepository.findById(request.getCategoryId()).orElse(null);
         }
 
+        // Decide whether the create call also represents an initial
+        // purchase. When the caller seeds both a stock quantity and a
+        // unit cost, we route the seeded stock through the full PO
+        // pipeline (create → receive → pay) so the books reflect the
+        // outflow: a journal entry, a financial_expenses row linked to
+        // the PO, and an inventory batch with cost history. Without
+        // this, the ingredient would silently appear on the books at
+        // 50 units with no matching cash movement, leaving the P&L
+        // and cash ledger out of sync with reality.
+        java.math.BigDecimal initialStock = request.getCurrentStock();
+        java.math.BigDecimal unitCost = request.getCostPerUnit();
+        boolean seedAsPurchase = initialStock != null
+                && unitCost != null
+                && initialStock.signum() > 0
+                && unitCost.signum() > 0;
+
         Ingredient ingredient = Ingredient.builder()
                 .restaurant(restaurant)
                 .category(category)
                 .name(request.getName())
                 .description(request.getDescription())
                 .unit(request.getUnit())
-                .currentStock(request.getCurrentStock())
+                // Start at zero when we're about to receive a PO for
+                // the initial stock; the receive step will create the
+                // batch and bump currentStock to the requested amount.
+                // Otherwise honor the caller's value as before.
+                .currentStock(seedAsPurchase ? java.math.BigDecimal.ZERO : initialStock)
                 .minimumStock(request.getMinimumStock())
                 .reorderLevel(request.getReorderLevel())
                 .reorderQuantity(request.getReorderQuantity())
-                .costPerUnit(request.getCostPerUnit())
+                .costPerUnit(unitCost)
                 .supplier(request.getSupplier())
                 .supplierEntity(supplier)
                 .sku(request.getSku())
@@ -153,6 +178,44 @@ public class InventoryIngredientController {
                 .build();
 
         Ingredient savedIngredient = ingredientRepository.save(ingredient);
+
+        if (seedAsPurchase) {
+            String performedBy = currentUser != null
+                    ? String.format("%s (ID:%d)", currentUser.getEmail(), currentUser.getId())
+                    : "SYSTEM";
+            String supplierName = supplier != null ? supplier.getName()
+                    : (request.getSupplier() != null && !request.getSupplier().isBlank()
+                            ? request.getSupplier()
+                            : "Initial Stock");
+
+            PurchaseOrder po = PurchaseOrder.builder()
+                    .restaurant(restaurant)
+                    .supplierName(supplierName)
+                    .orderDate(java.time.LocalDate.now())
+                    .taxAmount(java.math.BigDecimal.ZERO)
+                    .shippingCost(java.math.BigDecimal.ZERO)
+                    .notes("Auto-created from initial ingredient stock: " + savedIngredient.getName())
+                    .build();
+
+            PurchaseOrderItem item = PurchaseOrderItem.builder()
+                    .itemName(savedIngredient.getName())
+                    .sku(savedIngredient.getSku())
+                    .ingredient(savedIngredient)
+                    .quantity(initialStock)
+                    .unit(savedIngredient.getUnit() != null ? savedIngredient.getUnit() : "")
+                    .unitPrice(unitCost)
+                    .totalPrice(initialStock.multiply(unitCost))
+                    .receivedQuantity(java.math.BigDecimal.ZERO)
+                    .build();
+
+            purchaseOrderService.createAndFinalize(
+                    po, List.of(item), "CASH", java.time.LocalDate.now(), performedBy);
+
+            // Reload so the response reflects the stock + WAC the
+            // receive flow just wrote.
+            savedIngredient = ingredientRepository.findById(savedIngredient.getId())
+                    .orElse(savedIngredient);
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Ingredient created successfully", mapToResponse(savedIngredient)));
