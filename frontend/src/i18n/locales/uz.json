@@ -1216,6 +1216,31 @@
       "RESTROOM": "Hojatxona",
       "SMOKING": "Chekish",
       "OTHER": "Boshqa"
+    },
+    "schedule": {
+      "title": "Smenalar jadvali",
+      "subtitle": "Xodimlar smenalarini rejalashtirish va boshqarish",
+      "employee": "Xodim",
+      "employees": "Xodimlar",
+      "selectEmployee": "Xodimni tanlang",
+      "noEmployees": "Xodimlar yuklanmagan",
+      "date": "Sana",
+      "fromDate": "Dan",
+      "toDate": "Gacha",
+      "startTime": "Boshlanishi",
+      "endTime": "Tugashi",
+      "role": "Rol",
+      "notes": "Eslatmalar",
+      "weekdays": "Hafta kunlari",
+      "addShift": "Smena qo'shish",
+      "editShift": "Smenani tahrirlash",
+      "copyWeek": "O'tgan haftani nusxalash",
+      "bulkAdd": "Ommaviy qo'shish",
+      "bulkCreate": "Hammasini yaratish",
+      "bulkHint": "Tanlangan sana oralig'idagi har bir tanlangan hafta kuni uchun, har bir tanlangan xodimga bittadan smena yaratadi. Ziddiyatlar o'tkazib yuboriladi.",
+      "bulkResult": "{{created}} ta smena yaratildi, {{skipped}} ta ziddiyat o'tkazib yuborildi",
+      "confirmDelete": "Bu smenani o'chirilsinmi?",
+      "noSchedules": "Bu haftada smenalar rejalashtirilmagan"
     }
   },
   "validation": {

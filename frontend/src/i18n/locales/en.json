@@ -471,6 +471,31 @@
       "RESTROOM": "Restroom",
       "SMOKING": "Smoking",
       "OTHER": "Other"
+    },
+    "schedule": {
+      "title": "Shift Schedule",
+      "subtitle": "Plan and manage employee shifts",
+      "employee": "Employee",
+      "employees": "Employees",
+      "selectEmployee": "Select employee",
+      "noEmployees": "No employees loaded",
+      "date": "Date",
+      "fromDate": "From",
+      "toDate": "To",
+      "startTime": "Start",
+      "endTime": "End",
+      "role": "Role",
+      "notes": "Notes",
+      "weekdays": "Weekdays",
+      "addShift": "Add Shift",
+      "editShift": "Edit Shift",
+      "copyWeek": "Copy Prev Week",
+      "bulkAdd": "Bulk Add",
+      "bulkCreate": "Create All",
+      "bulkHint": "Creates one shift per selected weekday in the date range, for every employee selected. Conflicts are skipped.",
+      "bulkResult": "Created {{created}} shifts, skipped {{skipped}} conflicts",
+      "confirmDelete": "Delete this shift?",
+      "noSchedules": "No shifts scheduled this week"
     }
   },
   "orders": {
