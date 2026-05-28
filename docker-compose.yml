@@ -11,7 +11,11 @@ services:
       TZ: Asia/Tashkent
       PGTZ: Asia/Tashkent
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Host bind mount, not a named volume — survives down -v,
+      # volume prune, and project-name changes since Docker can't
+      # remove host paths it doesn't manage. Data lives in
+      # ./data/postgres in the repo root (gitignored).
+      - ./data/postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     networks:
@@ -152,8 +156,6 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
-    driver: local
   redis_data:
     driver: local
   uploads:

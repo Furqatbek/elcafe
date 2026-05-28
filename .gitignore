@@ -33,3 +33,6 @@ Thumbs.db
 application-local.yml
 .env
 template-smith-forge/
+
+# Docker bind-mount data (Postgres lives here in dev)
+/data/
