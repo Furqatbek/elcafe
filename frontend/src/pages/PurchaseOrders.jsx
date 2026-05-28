@@ -309,7 +309,11 @@ const PurchaseOrders = () => {
         ...formData,
         restaurantId: selectedRestaurant, // Use selectedRestaurant directly to ensure it's always set
         supplierId: formData.supplierId ? parseInt(formData.supplierId) : null,
-        supplierName: formData.supplierName || t('finance.purchaseOrders.unknownSupplier', 'Unknown Supplier')
+        supplierName: formData.supplierName || t('finance.purchaseOrders.unknownSupplier', 'Unknown Supplier'),
+        // Server-side one-shot: PO is created, approved, fully received
+        // and paid in a single transaction. No more click-by-click flow.
+        autoFinalize: true,
+        paymentMethod: 'CASH',
       };
       await financialAPI.createPurchaseOrder(submitData);
       alert(t('finance.purchaseOrders.messages.createSuccess'));
@@ -583,33 +587,6 @@ const PurchaseOrders = () => {
                       >
                         <Eye size={18} />
                       </button>
-                      {po.status === 'DRAFT' && (
-                        <button
-                          onClick={() => handleApprove(po.id)}
-                          className="text-green-600 hover:text-green-900"
-                          title="Approve"
-                        >
-                          <Check size={18} />
-                        </button>
-                      )}
-                      {(po.status === 'APPROVED' || po.status === 'ORDERED' || po.status === 'PARTIALLY_RECEIVED') && (
-                        <button
-                          onClick={() => openReceiveModal(po)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Receive"
-                        >
-                          <Package size={18} />
-                        </button>
-                      )}
-                      {po.paymentStatus !== 'PAID' && po.status === 'RECEIVED' && (
-                        <button
-                          onClick={() => openPaymentModal(po)}
-                          className="text-green-600 hover:text-green-900"
-                          title="Record Payment"
-                        >
-                          <Check size={18} />
-                        </button>
-                      )}
                     </div>
                   </td>
                 </tr>

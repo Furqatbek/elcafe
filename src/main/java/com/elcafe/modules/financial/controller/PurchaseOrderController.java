@@ -118,7 +118,23 @@ public class PurchaseOrderController {
                 })
                 .collect(Collectors.toList());
 
-        PurchaseOrder createdPo = purchaseOrderService.createPurchaseOrder(po, items);
+        PurchaseOrder createdPo;
+        if (Boolean.TRUE.equals(request.getAutoFinalize())) {
+            // One-shot path: caller wants the PO marked as RECEIVED and
+            // fully PAID immediately. Used for typical "just-bought-this
+            // at the market" purchases where there's no review step.
+            String performedBy = "OPERATOR";
+            createdPo = purchaseOrderService.createAndFinalize(
+                    po, items,
+                    request.getPaymentMethod(),
+                    request.getPaymentDate(),
+                    performedBy);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Purchase order created, received and paid",
+                            mapToResponse(createdPo)));
+        }
+
+        createdPo = purchaseOrderService.createPurchaseOrder(po, items);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Purchase order created successfully", mapToResponse(createdPo)));

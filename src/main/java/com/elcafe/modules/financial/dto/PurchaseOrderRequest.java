@@ -44,4 +44,18 @@ public class PurchaseOrderRequest {
     @NotEmpty(message = "At least one item is required")
     @Valid
     private List<PurchaseOrderItemRequest> items;
+
+    /**
+     * When true, the server runs approve + receive (all items at their
+     * ordered quantity) + record full payment in a single transaction so
+     * the PO comes out fully RECEIVED and PAID. Lets clients skip the
+     * multi-step button flow for trivial "just-bought-this" purchases.
+     */
+    private Boolean autoFinalize;
+
+    /** Optional override; defaults to CASH when autoFinalize is on. */
+    private String paymentMethod;
+
+    /** Optional override; defaults to today when autoFinalize is on. */
+    private LocalDate paymentDate;
 }

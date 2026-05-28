@@ -329,4 +329,46 @@ public class PurchaseOrderService {
         public BigDecimal receivedQuantity;
         public String notes;
     }
+
+    /**
+     * One-shot create + receive (full quantities) + payment (full amount).
+     * Mirrors the manual click-flow (Approve → Receive → Record Payment)
+     * but executes in a single transaction so a failure mid-way rolls
+     * everything back, leaving no half-finished PO behind. Used by the
+     * "Quick Add" UI for trivial market purchases where the buyer
+     * already has the goods and paid cash.
+     */
+    @Transactional
+    public PurchaseOrder createAndFinalize(PurchaseOrder purchaseOrder, List<PurchaseOrderItem> items,
+                                            String paymentMethod, LocalDate paymentDate,
+                                            String performedBy) {
+        PurchaseOrder created = createPurchaseOrder(purchaseOrder, items);
+
+        // Mark every line as received at its ordered quantity. The
+        // service requires PO-attached item ids, which only exist after
+        // the create save above persisted the children.
+        LocalDate deliveryDate = paymentDate != null ? paymentDate : LocalDate.now();
+        List<ReceivedItem> receivedItems = created.getItems().stream()
+                .map(it -> {
+                    ReceivedItem ri = new ReceivedItem();
+                    ri.itemId = it.getId();
+                    ri.receivedQuantity = it.getQuantity();
+                    return ri;
+                })
+                .toList();
+        PurchaseOrder received = receivePurchaseOrder(
+                created.getId(), deliveryDate, performedBy, receivedItems);
+
+        // Pay the full total. updatePaymentStatus on PurchaseOrder
+        // transitions UNPAID → PAID when paid amount matches total.
+        BigDecimal total = received.getTotalAmount() != null
+                ? received.getTotalAmount()
+                : BigDecimal.ZERO;
+        if (total.signum() > 0) {
+            return recordPayment(received.getId(), deliveryDate, total,
+                    paymentMethod != null ? paymentMethod : "CASH",
+                    performedBy);
+        }
+        return received;
+    }
 }
