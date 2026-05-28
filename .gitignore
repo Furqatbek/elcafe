@@ -36,3 +36,6 @@ template-smith-forge/
 
 # Docker bind-mount data (Postgres lives here in dev)
 /data/
+
+# Daily DB backups (written by db-backup sidecar)
+/backups/
