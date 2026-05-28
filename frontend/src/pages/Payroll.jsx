@@ -45,7 +45,7 @@ export default function Payroll() {
   const [salaryForm, setSalaryForm] = useState({
     employeeId: '', payFrequency: 'MONTHLY', baseAmount: '', payDay: '1',
     payDayOfWeek: '1', paymentMethod: 'CASH', autoApprove: true,
-    lateGraceMinutes: '5', latePenaltyAmount: '', notes: '',
+    lateGraceMinutes: '5', latePenaltyAmount: '', latePenaltyPerHour: '', notes: '',
   });
   const [payForm, setPayForm] = useState({ paymentDate: new Date().toISOString().split('T')[0], paymentMethod: 'CASH', transactionRef: '' });
   const [editingPayroll, setEditingPayroll] = useState(null);
@@ -104,6 +104,7 @@ export default function Payroll() {
         autoApprove: salaryForm.autoApprove,
         lateGraceMinutes: salaryForm.lateGraceMinutes !== '' ? parseInt(salaryForm.lateGraceMinutes, 10) : 5,
         latePenaltyAmount: salaryForm.latePenaltyAmount !== '' ? parseFloat(salaryForm.latePenaltyAmount) : 0,
+        latePenaltyPerHour: salaryForm.latePenaltyPerHour !== '' ? parseFloat(salaryForm.latePenaltyPerHour) : 0,
         notes: salaryForm.notes || null,
       };
 
@@ -123,7 +124,7 @@ export default function Payroll() {
       setSalaryForm({
         employeeId: '', payFrequency: 'MONTHLY', baseAmount: '', payDay: '1',
         payDayOfWeek: '1', paymentMethod: 'CASH', autoApprove: true,
-        lateGraceMinutes: '5', latePenaltyAmount: '', notes: '',
+        lateGraceMinutes: '5', latePenaltyAmount: '', latePenaltyPerHour: '', notes: '',
       });
       loadSalaryConfigs();
       loadPayrolls();
@@ -142,6 +143,7 @@ export default function Payroll() {
       autoApprove: sc.autoApprove !== false,
       lateGraceMinutes: (sc.lateGraceMinutes ?? 5).toString(),
       latePenaltyAmount: sc.latePenaltyAmount != null ? sc.latePenaltyAmount.toString() : '',
+      latePenaltyPerHour: sc.latePenaltyPerHour != null ? sc.latePenaltyPerHour.toString() : '',
       notes: sc.notes || '',
     });
     setSalaryOpen(true);
@@ -741,6 +743,16 @@ export default function Payroll() {
                   min="0"
                   value={salaryForm.latePenaltyAmount}
                   onChange={e => setSalaryForm({ ...salaryForm, latePenaltyAmount: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('payroll.latePenaltyPerHour', 'Fine per late hour')}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={salaryForm.latePenaltyPerHour}
+                  onChange={e => setSalaryForm({ ...salaryForm, latePenaltyPerHour: e.target.value })}
                   placeholder="0"
                 />
               </div>

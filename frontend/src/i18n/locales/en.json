@@ -4714,6 +4714,7 @@
     "latePenaltyHint": "Deduct a fixed amount for each shift that clocks in more than the grace minutes past its scheduled start. Set fine to 0 to disable.",
     "lateGraceMinutes": "Grace (min)",
     "latePenaltyAmount": "Fine per late shift",
+    "latePenaltyPerHour": "Fine per late hour",
     "processPayment": "Process Payment",
     "paymentDate": "Payment Date",
     "paymentMethod": "Payment Method",
