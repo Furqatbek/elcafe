@@ -139,15 +139,24 @@ public class ShiftManagementService {
                 : (waiter != null ? waiter.getName() : "Unknown");
         log.info("{} clocked in for shift at restaurant {}", shiftName, restaurantId);
 
-        // Telegram notification — include late-penalty hit if this is the
-        // first clock-in of the day AND the employee's salary config has
-        // a positive fine. Subsequent clock-ins of the same day are
-        // ignored (the morning arrival already settled lateness).
+        // Resolve late-penalty info once. Reused for both the Telegram
+        // owner notification and the transient field surfaced on the
+        // clock-in API response. Only the first clock-in of the day
+        // can be "late"; subsequent clock-ins after a break stay null.
+        com.elcafe.modules.financial.service.SalaryAutoPayService.LateInfo lateInfo = null;
+        if (firstOfDay) {
+            try {
+                lateInfo = salaryAutoPayService
+                        .findLateInfoForToday(restaurantId, uid, wid, LocalDate.now())
+                        .orElse(null);
+            } catch (Exception e) {
+                log.warn("Could not resolve late-penalty info for clock-in: {}", e.getMessage());
+            }
+        }
+        savedShift.setLatePenalty(lateInfo);
+
         try {
             java.time.ZoneId zone = java.time.ZoneId.systemDefault();
-            com.elcafe.modules.financial.service.SalaryAutoPayService.LateInfo lateInfo = firstOfDay
-                    ? salaryAutoPayService.findLateInfoForToday(restaurantId, uid, wid, LocalDate.now()).orElse(null)
-                    : null;
             ownerNotificationService.notifyShiftOpened(restaurantId, shiftName,
                     savedShift.getClockIn().atZoneSameInstant(zone).toLocalTime().toString().substring(0, 5),
                     lateInfo);

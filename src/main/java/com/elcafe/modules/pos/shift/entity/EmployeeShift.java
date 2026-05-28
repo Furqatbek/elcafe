@@ -163,6 +163,18 @@ public class EmployeeShift {
     @Builder.Default
     private List<ShiftBreak> breaks = new ArrayList<>();
 
+    /**
+     * Transient, response-only payload populated by the clock-in flow
+     * when the waiter arrived past the salary config's grace window.
+     * Lets the mobile / POS client show an immediate "you were late"
+     * warning at the moment of clock-in. Serialized only when set so
+     * existing clients aren't impacted by the new field.
+     */
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonInclude(
+            com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private com.elcafe.modules.financial.service.SalaryAutoPayService.LateInfo latePenalty;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime createdAt;
