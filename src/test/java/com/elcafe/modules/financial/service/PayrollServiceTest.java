@@ -69,4 +69,24 @@ class PayrollServiceTest {
         when(payrollRepository.findPendingPayrolls(1L)).thenReturn(List.of(payroll));
         assertEquals(1, payrollService.getPendingPayrolls(1L).size());
     }
+
+    @Test @DisplayName("update mutates fields on PENDING entry") void update_pending() {
+        when(payrollRepository.findById(1L)).thenReturn(Optional.of(payroll));
+        when(payrollRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        PayrollEntry updated = payrollService.updatePayrollEntry(
+                1L, BigDecimal.valueOf(40), BigDecimal.valueOf(25000),
+                null, null, BigDecimal.valueOf(50000), null, null,
+                null, null, null, null, "edited");
+        assertEquals(BigDecimal.valueOf(40), updated.getHoursWorked());
+        assertEquals(BigDecimal.valueOf(25000), updated.getHourlyRate());
+        assertEquals(BigDecimal.valueOf(50000), updated.getBonus());
+        assertEquals("edited", updated.getNotes());
+    }
+
+    @Test @DisplayName("update rejects PAID entry") void update_paid_rejected() {
+        payroll.setStatus(PayrollEntry.PaymentStatus.PAID);
+        when(payrollRepository.findById(1L)).thenReturn(Optional.of(payroll));
+        assertThrows(RuntimeException.class, () -> payrollService.updatePayrollEntry(
+                1L, BigDecimal.TEN, null, null, null, null, null, null, null, null, null, null, null));
+    }
 }

@@ -537,6 +537,7 @@ export const financialAPI = {
   getPayrollByEmployee: (employeeId) => api.get(`/financial/payroll/employee/${employeeId}`),
   getPendingPayroll: (restaurantId) => api.get(`/financial/payroll/restaurant/${restaurantId}/pending`),
   createPayroll: (data) => api.post('/financial/payroll', data),
+  updatePayroll: (id, data) => api.put(`/financial/payroll/${id}`, data),
   approvePayroll: (id, approvedBy) => api.post(`/financial/payroll/${id}/approve`, null, { params: { approvedBy } }),
   payPayroll: (id, paymentDate, paymentMethod, transactionRef) => api.post(`/financial/payroll/${id}/pay`, null, { params: { paymentDate, paymentMethod, transactionRef } }),
   deletePayroll: (id) => api.delete(`/financial/payroll/${id}`),

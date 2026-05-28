@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -220,6 +221,26 @@ public class PayrollEntry {
                 .add(bonus != null ? bonus : BigDecimal.ZERO)
                 .add(tips != null ? tips : BigDecimal.ZERO)
                 .add(commission != null ? commission : BigDecimal.ZERO);
+    }
+
+    /**
+     * Display name for the row: prefers waiter.name, falls back to
+     * employee's full name or email. Avoids the frontend having to do
+     * the fallback dance.
+     */
+    @JsonProperty("employeeName")
+    public String getDisplayEmployeeName() {
+        if (waiter != null && waiter.getName() != null && !waiter.getName().isBlank()) {
+            return waiter.getName();
+        }
+        if (employee != null) {
+            String first = employee.getFirstName() != null ? employee.getFirstName() : "";
+            String last = employee.getLastName() != null ? employee.getLastName() : "";
+            String full = (first + " " + last).trim();
+            if (!full.isEmpty()) return full;
+            if (employee.getEmail() != null) return employee.getEmail();
+        }
+        return null;
     }
 
     /**

@@ -113,6 +113,23 @@ public class PayrollController {
                 .body(ApiResponse.success("Payroll entry created", entry));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<PayrollEntry>> update(
+            @PathVariable Long id,
+            @RequestBody PayrollEntryRequest request) {
+        log.info("Updating payroll entry: {}", id);
+        PayrollEntry entry = payrollService.updatePayrollEntry(
+                id,
+                request.getHoursWorked(), request.getHourlyRate(),
+                request.getBaseSalary(), request.getOvertimePay(),
+                request.getBonus(), request.getTips(), request.getCommission(),
+                request.getTaxDeduction(), request.getOtherDeductions(),
+                request.getPayPeriodStart(), request.getPayPeriodEnd(),
+                request.getNotes()
+        );
+        return ResponseEntity.ok(ApiResponse.success("Payroll entry updated", entry));
+    }
+
     @PostMapping("/{id}/approve")
     public ResponseEntity<ApiResponse<PayrollEntry>> approve(
             @PathVariable Long id,

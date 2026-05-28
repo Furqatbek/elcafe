@@ -445,7 +445,8 @@
     "back": "Back",
     "error": "Error",
     "notes": "Notes",
-    "selectRestaurant": "Select restaurant"
+    "selectRestaurant": "Select restaurant",
+    "edit": "Edit"
   },
   "shift": {
     "dashboard": {
@@ -4726,13 +4727,16 @@
       "weekly": "Weekly amount",
       "biweekly": "Biweekly amount",
       "monthly": "Monthly amount",
-      "perShift": "Per-shift rate"
+      "perShift": "Per-shift rate",
+      "hourly": "Hourly rate"
     },
     "payFrequency": "Pay frequency",
     "payDayOfWeekLabel": "Pay day of week",
     "payWhen": "Paid",
     "payDailyHint": "End of each working day",
-    "payPerShiftHint": "After each clocked shift"
+    "payPerShiftHint": "After each clocked shift",
+    "editFixedSalary": "Edit Salary",
+    "editEntry": "Edit Payroll Entry"
   },
   "consumption": {
     "title": "Employee Consumption",

@@ -1190,7 +1190,8 @@
     "back": "Orqaga",
     "error": "Xato",
     "notes": "Izohlar",
-    "selectRestaurant": "Restoranni tanlang"
+    "selectRestaurant": "Restoranni tanlang",
+    "edit": "Tahrirlash"
   },
   "shift": {
     "dashboard": {
@@ -4526,7 +4527,7 @@
       "BIWEEKLY": "Ikki haftada bir",
       "MONTHLY": "Har oy",
       "PER_SHIFT": "Smena uchun",
-      "HOURLY": "Soatbay"
+      "HOURLY": "Soatlik"
     },
     "amount": "Summa",
     "amounts": {
@@ -4534,13 +4535,16 @@
       "weekly": "Haftalik summa",
       "biweekly": "Ikki haftalik summa",
       "monthly": "Oylik summa",
-      "perShift": "Smena uchun stavka"
+      "perShift": "Smena uchun stavka",
+      "hourly": "Soatlik stavka"
     },
     "payFrequency": "To'lov chastotasi",
     "payDayOfWeekLabel": "To'lov haftaning kuni",
     "payWhen": "Qachon to'lanadi",
     "payDailyHint": "Har bir ish kuni oxirida",
-    "payPerShiftHint": "Har bir yopilgan smenadan keyin"
+    "payPerShiftHint": "Har bir yopilgan smenadan keyin",
+    "editFixedSalary": "Maoshni tahrirlash",
+    "editEntry": "Yozuvni tahrirlash"
   },
   "consumption": {
     "title": "Xodimlar iste'moli",

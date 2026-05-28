@@ -155,6 +155,41 @@ public class PayrollService {
         return payrollRepository.findByRestaurant_Id(restaurantId);
     }
 
+    @Transactional
+    public PayrollEntry updatePayrollEntry(Long id, BigDecimal hoursWorked, BigDecimal hourlyRate,
+                                           BigDecimal baseSalary, BigDecimal overtimePay,
+                                           BigDecimal bonus, BigDecimal tips, BigDecimal commission,
+                                           BigDecimal taxDeduction, BigDecimal otherDeductions,
+                                           LocalDate payPeriodStart, LocalDate payPeriodEnd,
+                                           String notes) {
+        log.info("Updating payroll entry: {}", id);
+        PayrollEntry payroll = payrollRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Payroll entry not found"));
+
+        if (payroll.getStatus() == PayrollEntry.PaymentStatus.PAID) {
+            throw new RuntimeException("Cannot edit a paid payroll entry");
+        }
+        if (payroll.getStatus() == PayrollEntry.PaymentStatus.CANCELLED) {
+            throw new RuntimeException("Cannot edit a cancelled payroll entry");
+        }
+
+        if (hoursWorked != null) payroll.setHoursWorked(hoursWorked);
+        if (hourlyRate != null) payroll.setHourlyRate(hourlyRate);
+        if (baseSalary != null) payroll.setBaseSalary(baseSalary);
+        if (overtimePay != null) payroll.setOvertimePay(overtimePay);
+        if (bonus != null) payroll.setBonus(bonus);
+        if (tips != null) payroll.setTips(tips);
+        if (commission != null) payroll.setCommission(commission);
+        if (taxDeduction != null) payroll.setTaxDeduction(taxDeduction);
+        if (otherDeductions != null) payroll.setOtherDeductions(otherDeductions);
+        if (payPeriodStart != null) payroll.setPayPeriodStart(payPeriodStart);
+        if (payPeriodEnd != null) payroll.setPayPeriodEnd(payPeriodEnd);
+        if (notes != null) payroll.setNotes(notes);
+
+        // @PreUpdate recalculates grossPay/netPay
+        return payrollRepository.save(payroll);
+    }
+
     public List<PayrollEntry> getPayrollEntriesByEmployee(Long employeeId) {
         return payrollRepository.findByEmployee_Id(employeeId);
     }

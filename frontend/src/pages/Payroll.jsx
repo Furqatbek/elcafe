@@ -17,7 +17,7 @@ import {
 } from '../components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Switch } from '../components/ui/switch';
-import { Plus, DollarSign, CheckCircle, CreditCard, Trash2, CalendarClock, Play } from 'lucide-react';
+import { Plus, DollarSign, CheckCircle, CreditCard, Trash2, CalendarClock, Play, Pencil } from 'lucide-react';
 
 const STATUS_VARIANTS = {
   PENDING: 'secondary',
@@ -47,6 +47,8 @@ export default function Payroll() {
     payDayOfWeek: '1', paymentMethod: 'CASH', autoApprove: true, notes: '',
   });
   const [payForm, setPayForm] = useState({ paymentDate: new Date().toISOString().split('T')[0], paymentMethod: 'CASH', transactionRef: '' });
+  const [editingPayroll, setEditingPayroll] = useState(null);
+  const [editingSalary, setEditingSalary] = useState(null);
 
   useEffect(() => {
     restaurantAPI.getAll({ page: 0, size: 100 }).then(res => {
@@ -87,17 +89,9 @@ export default function Payroll() {
 
   const handleCreateSalary = async () => {
     try {
-      const { type, id } = parseEmployeeKey(salaryForm.employeeId);
       const freq = salaryForm.payFrequency;
       const baseAmountNum = parseFloat(salaryForm.baseAmount);
-      // Send baseAmount as the canonical value. For MONTHLY we also
-      // populate monthlySalary so older list views that still read it
-      // keep showing the right number; for other frequencies the legacy
-      // column stays null.
-      await financialAPI.createSalaryConfig({
-        restaurantId: parseInt(selectedRestaurant),
-        employeeId: id,
-        employeeType: type,
+      const payload = {
         payFrequency: freq,
         baseAmount: baseAmountNum,
         monthlySalary: freq === 'MONTHLY' ? baseAmountNum : null,
@@ -108,14 +102,43 @@ export default function Payroll() {
         paymentMethod: salaryForm.paymentMethod,
         autoApprove: salaryForm.autoApprove,
         notes: salaryForm.notes || null,
-      });
+      };
+
+      if (editingSalary) {
+        await financialAPI.updateSalaryConfig(editingSalary.id, payload);
+      } else {
+        const { type, id } = parseEmployeeKey(salaryForm.employeeId);
+        await financialAPI.createSalaryConfig({
+          restaurantId: parseInt(selectedRestaurant),
+          employeeId: id,
+          employeeType: type,
+          ...payload,
+        });
+      }
       setSalaryOpen(false);
+      setEditingSalary(null);
       setSalaryForm({
         employeeId: '', payFrequency: 'MONTHLY', baseAmount: '', payDay: '1',
         payDayOfWeek: '1', paymentMethod: 'CASH', autoApprove: true, notes: '',
       });
       loadSalaryConfigs();
+      loadPayrolls();
     } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
+  };
+
+  const handleEditSalary = (sc) => {
+    setEditingSalary(sc);
+    setSalaryForm({
+      employeeId: sc.waiter ? `waiter:${sc.waiter.id}` : `employee:${sc.employee?.id}`,
+      payFrequency: sc.payFrequency || 'MONTHLY',
+      baseAmount: (sc.baseAmount != null ? sc.baseAmount : sc.monthlySalary)?.toString() || '',
+      payDay: sc.payDay?.toString() || '1',
+      payDayOfWeek: sc.payDayOfWeek?.toString() || '1',
+      paymentMethod: sc.paymentMethod || 'CASH',
+      autoApprove: sc.autoApprove !== false,
+      notes: sc.notes || '',
+    });
+    setSalaryOpen(true);
   };
 
   const handleDeleteSalary = async (id) => {
@@ -155,11 +178,7 @@ export default function Payroll() {
 
   const handleCreate = async () => {
     try {
-      const { type, id } = parseEmployeeKey(form.employeeId);
-      await financialAPI.createPayroll({
-        restaurantId: parseInt(selectedRestaurant),
-        employeeId: id,
-        employeeType: type,
+      const payload = {
         payrollType: form.payrollType,
         payPeriodStart: form.payPeriodStart,
         payPeriodEnd: form.payPeriodEnd,
@@ -173,10 +192,44 @@ export default function Payroll() {
         taxDeduction: form.taxDeduction ? parseFloat(form.taxDeduction) : null,
         otherDeductions: form.otherDeductions ? parseFloat(form.otherDeductions) : null,
         notes: form.notes || null,
-      });
+      };
+
+      if (editingPayroll) {
+        await financialAPI.updatePayroll(editingPayroll.id, payload);
+      } else {
+        const { type, id } = parseEmployeeKey(form.employeeId);
+        await financialAPI.createPayroll({
+          restaurantId: parseInt(selectedRestaurant),
+          employeeId: id,
+          employeeType: type,
+          ...payload,
+        });
+      }
       setCreateOpen(false);
+      setEditingPayroll(null);
       loadPayrolls();
     } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
+  };
+
+  const handleEditPayroll = (p) => {
+    setEditingPayroll(p);
+    setForm({
+      employeeId: p.waiter ? `waiter:${p.waiter.id}` : `employee:${p.employee?.id}`,
+      payrollType: p.payrollType || 'HOURLY',
+      payPeriodStart: p.payPeriodStart || '',
+      payPeriodEnd: p.payPeriodEnd || '',
+      hoursWorked: p.hoursWorked?.toString() || '',
+      hourlyRate: p.hourlyRate?.toString() || '',
+      baseSalary: p.baseSalary?.toString() || '',
+      overtimePay: p.overtimePay?.toString() || '',
+      bonus: p.bonus?.toString() || '',
+      tips: p.tips?.toString() || '',
+      commission: p.commission?.toString() || '',
+      taxDeduction: p.taxDeduction?.toString() || '',
+      otherDeductions: p.otherDeductions?.toString() || '',
+      notes: p.notes || '',
+    });
+    setCreateOpen(true);
   };
 
   const handleApprove = async (id) => {
@@ -269,7 +322,7 @@ export default function Payroll() {
                       return (
                       <TableRow key={sc.id}>
                         <TableCell className="font-medium">
-                          {sc.waiter ? sc.waiter.name : `${sc.employee?.firstName || ''} ${sc.employee?.lastName || sc.employee?.email || ''}`}
+                          {sc.waiter?.name || ((sc.employee?.firstName || '') + ' ' + (sc.employee?.lastName || '')).trim() || sc.employee?.email || '—'}
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge variant="outline">{t(`payroll.frequencies.${freq}`, freq)}</Badge>
@@ -290,6 +343,9 @@ export default function Payroll() {
                               disabled={isPayNowDisabled(sc)}
                             >
                               <Play className="h-3 w-3 mr-1" /> {t('payroll.payNow')}
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleEditSalary(sc)} title={t('common.edit', 'Edit')}>
+                              <Pencil className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDeleteSalary(sc.id)}>
                               <Trash2 className="h-4 w-4 text-red-500" />
@@ -370,7 +426,7 @@ export default function Payroll() {
                   ) : (
                     payrolls.map(p => (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.waiter?.name || p.employee?.fullName || ((p.employee?.firstName || '') + ' ' + (p.employee?.lastName || '')).trim() || p.employee?.email || '—'}</TableCell>
+                        <TableCell className="font-medium">{p.employeeName || p.waiter?.name || p.employee?.fullName || ((p.employee?.firstName || '') + ' ' + (p.employee?.lastName || '')).trim() || p.employee?.email || '—'}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{p.payPeriodStart} — {p.payPeriodEnd}</TableCell>
                         <TableCell><Badge variant="outline">{t(`payroll.types.${p.payrollType}`)}</Badge></TableCell>
                         <TableCell className="text-right">{fmt(p.grossPay)}</TableCell>
@@ -387,6 +443,11 @@ export default function Payroll() {
                             {p.status === 'APPROVED' && (
                               <Button variant="outline" size="sm" onClick={() => { setSelectedPayroll(p); setPayOpen(true); }}>
                                 <CreditCard className="h-3 w-3 mr-1" /> {t('payroll.pay')}
+                              </Button>
+                            )}
+                            {(p.status === 'PENDING' || p.status === 'APPROVED') && (
+                              <Button variant="ghost" size="icon" onClick={() => handleEditPayroll(p)} title={t('common.edit', 'Edit')}>
+                                <Pencil className="h-4 w-4" />
                               </Button>
                             )}
                             {(p.status === 'PENDING' || p.status === 'APPROVED') && (
@@ -407,14 +468,14 @@ export default function Payroll() {
       </Tabs>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) setEditingPayroll(null); }}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{t('payroll.newEntry')}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingPayroll ? t('payroll.editEntry', 'Edit Payroll Entry') : t('payroll.newEntry')}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>{t('payroll.employee')} *</Label>
-                <select value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background">
+                <select disabled={!!editingPayroll} value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background disabled:opacity-60">
                   <option value="">{t('payroll.selectEmployee')}</option>
                   {employees.map(e => <option key={`${e.type}:${e.id}`} value={`${e.type}:${e.id}`}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
                 </select>
@@ -543,25 +604,23 @@ export default function Payroll() {
       </Dialog>
 
       {/* Salary Config Dialog */}
-      <Dialog open={salaryOpen} onOpenChange={setSalaryOpen}>
+      <Dialog open={salaryOpen} onOpenChange={(open) => { setSalaryOpen(open); if (!open) setEditingSalary(null); }}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>{t('payroll.addFixedSalary')}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingSalary ? t('payroll.editFixedSalary', 'Edit Salary') : t('payroll.addFixedSalary')}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
               <Label>{t('payroll.employee')} *</Label>
-              <select value={salaryForm.employeeId} onChange={e => setSalaryForm({ ...salaryForm, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background">
+              <select disabled={!!editingSalary} value={salaryForm.employeeId} onChange={e => setSalaryForm({ ...salaryForm, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background disabled:opacity-60">
                 <option value="">{t('payroll.selectEmployee')}</option>
                 {employees.map(e => <option key={`${e.type}:${e.id}`} value={`${e.type}:${e.id}`}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
               </select>
             </div>
             <div className="space-y-2">
               <Label>{t('payroll.payFrequency', 'Pay frequency')} *</Label>
-              {/* HOURLY is omitted from the picker until the scheduler can
-                  aggregate clocked hours. The label stays in i18n so existing
-                  HOURLY rows (if any) still render correctly in the list. */}
               <Select value={salaryForm.payFrequency} onValueChange={v => setSalaryForm({ ...salaryForm, payFrequency: v })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="HOURLY">{t('payroll.frequencies.HOURLY', 'Hourly')}</SelectItem>
                   <SelectItem value="DAILY">{t('payroll.frequencies.DAILY', 'Daily')}</SelectItem>
                   <SelectItem value="PER_SHIFT">{t('payroll.frequencies.PER_SHIFT', 'Per shift')}</SelectItem>
                   <SelectItem value="WEEKLY">{t('payroll.frequencies.WEEKLY', 'Weekly')}</SelectItem>
@@ -583,6 +642,8 @@ export default function Payroll() {
                     && t('payroll.amounts.daily', 'Daily rate')}
                   {salaryForm.payFrequency === 'PER_SHIFT'
                     && t('payroll.amounts.perShift', 'Per-shift rate')}
+                  {salaryForm.payFrequency === 'HOURLY'
+                    && t('payroll.amounts.hourly', 'Hourly rate')}
                   {' *'}
                 </Label>
                 <Input type="number" value={salaryForm.baseAmount} onChange={e => setSalaryForm({ ...salaryForm, baseAmount: e.target.value })} />

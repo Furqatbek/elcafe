@@ -1190,7 +1190,8 @@
     "back": "Назад",
     "error": "Ошибка",
     "notes": "Заметки",
-    "selectRestaurant": "Выберите ресторан"
+    "selectRestaurant": "Выберите ресторан",
+    "edit": "Изменить"
   },
   "shift": {
     "dashboard": {
@@ -4490,13 +4491,16 @@
       "weekly": "Сумма за неделю",
       "biweekly": "Сумма за две недели",
       "monthly": "Сумма за месяц",
-      "perShift": "Ставка за смену"
+      "perShift": "Ставка за смену",
+      "hourly": "Почасовая ставка"
     },
     "payFrequency": "Частота выплат",
     "payDayOfWeekLabel": "День недели выплаты",
     "payWhen": "Когда платится",
     "payDailyHint": "В конце каждого рабочего дня",
-    "payPerShiftHint": "После каждой закрытой смены"
+    "payPerShiftHint": "После каждой закрытой смены",
+    "editFixedSalary": "Редактировать зарплату",
+    "editEntry": "Редактировать запись"
   },
   "consumption": {
     "title": "Потребление сотрудников",

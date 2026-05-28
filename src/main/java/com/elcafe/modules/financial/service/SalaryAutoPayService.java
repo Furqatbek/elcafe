@@ -251,15 +251,13 @@ public class SalaryAutoPayService {
             }
             case DAILY:
             case PER_SHIFT:
+            case HOURLY: {
                 // Settle yesterday's work today; only pay if we haven't
                 // already paid for yesterday.
                 LocalDate yesterday = today.minusDays(1);
                 LocalDate last = config.getLastPaidDate();
                 return last == null || last.isBefore(yesterday);
-            case HOURLY:
-                // Not yet auto-paid by the scheduler; admins can still
-                // create payroll entries manually via the UI.
-                return false;
+            }
             default:
                 return false;
         }
@@ -309,10 +307,22 @@ public class SalaryAutoPayService {
                 long shiftsInPeriod = countShiftsInPeriod(config, period);
                 return base.multiply(BigDecimal.valueOf(shiftsInPeriod));
             }
-            case HOURLY:
-                // Stubbed: HOURLY isn't auto-paid yet. Returning zero
-                // here keeps the manual "pay now" path safe.
-                return BigDecimal.ZERO;
+            case HOURLY: {
+                // baseAmount is treated as the hourly rate. Sum worked
+                // minutes minus break minutes across matching shifts in
+                // the period and multiply by the hourly rate.
+                long totalMinutes = matchingShiftsInPeriod(config, period).stream()
+                        .mapToLong(s -> {
+                            long worked = s.getWorkedMinutes();
+                            int breaks = s.getBreakMinutes() != null ? s.getBreakMinutes() : 0;
+                            return Math.max(0L, worked - breaks);
+                        })
+                        .sum();
+                if (totalMinutes <= 0) return BigDecimal.ZERO;
+                BigDecimal hours = BigDecimal.valueOf(totalMinutes)
+                        .divide(BigDecimal.valueOf(60), 4, java.math.RoundingMode.HALF_UP);
+                return base.multiply(hours).setScale(2, java.math.RoundingMode.HALF_UP);
+            }
             default:
                 return base;
         }

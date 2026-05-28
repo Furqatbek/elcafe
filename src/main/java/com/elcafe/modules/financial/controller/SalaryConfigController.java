@@ -88,6 +88,21 @@ public class SalaryConfigController {
         log.info("Salary config created for {} {} at restaurant {}: {} {} (payDay={}, dow={})",
                 request.employeeType, request.employeeId, restaurant.getId(),
                 baseAmount, frequency, request.payDay, request.payDayOfWeek);
+
+        // If autoApprove is on, try to settle today right away so users
+        // don't have to wait for the next 08:00 cron tick or hit
+        // "Pay Now". Silently skips if there's nothing to pay yet
+        // (e.g., wrong day-of-week, no shifts) — the cron will handle it.
+        if (Boolean.TRUE.equals(saved.getAutoApprove())) {
+            try {
+                salaryAutoPayService.processPayment(saved, LocalDate.now());
+            } catch (IllegalStateException e) {
+                log.debug("Auto-pay on create skipped for config {}: {}", saved.getId(), e.getMessage());
+            } catch (Exception e) {
+                log.warn("Auto-pay on create failed for config {}: {}", saved.getId(), e.getMessage());
+            }
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Salary config created", saved));
     }
