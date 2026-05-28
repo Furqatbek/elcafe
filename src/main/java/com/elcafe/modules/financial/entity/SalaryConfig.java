@@ -96,6 +96,24 @@ public class SalaryConfig {
     @Column(name = "last_paid_date")
     private LocalDate lastPaidDate;
 
+    /**
+     * Minutes of grace past the shift's scheduledStart before a clock-in
+     * counts as late. Only consulted for HOURLY configs today. Defaults
+     * to 5 minutes so an unset value matches the documented norm.
+     */
+    @Column(name = "late_grace_minutes", nullable = false)
+    @Builder.Default
+    private Integer lateGraceMinutes = 5;
+
+    /**
+     * Fixed cash deduction added to that period's payroll deductions for
+     * each shift the employee clocked in late (beyond the grace window).
+     * Zero disables the punishment.
+     */
+    @Column(name = "late_penalty_amount", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal latePenaltyAmount = BigDecimal.ZERO;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 

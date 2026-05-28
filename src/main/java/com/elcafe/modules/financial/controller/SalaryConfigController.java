@@ -80,6 +80,8 @@ public class SalaryConfigController {
                 .payDayOfWeek(request.payDayOfWeek)
                 .paymentMethod(request.paymentMethod != null ? request.paymentMethod : PayrollEntry.PaymentMethod.CASH)
                 .autoApprove(request.autoApprove != null ? request.autoApprove : true)
+                .lateGraceMinutes(request.lateGraceMinutes != null ? request.lateGraceMinutes : 5)
+                .latePenaltyAmount(request.latePenaltyAmount != null ? request.latePenaltyAmount : BigDecimal.ZERO)
                 .active(true)
                 .notes(request.notes)
                 .build();
@@ -125,6 +127,8 @@ public class SalaryConfigController {
         if (request.payDayOfWeek != null) config.setPayDayOfWeek(request.payDayOfWeek);
         if (request.paymentMethod != null) config.setPaymentMethod(request.paymentMethod);
         if (request.autoApprove != null) config.setAutoApprove(request.autoApprove);
+        if (request.lateGraceMinutes != null) config.setLateGraceMinutes(request.lateGraceMinutes);
+        if (request.latePenaltyAmount != null) config.setLatePenaltyAmount(request.latePenaltyAmount);
         if (request.active != null) config.setActive(request.active);
         if (request.notes != null) config.setNotes(request.notes);
 
@@ -168,6 +172,8 @@ public class SalaryConfigController {
             Integer payDayOfWeek,
             PayrollEntry.PaymentMethod paymentMethod,
             Boolean autoApprove,
+            Integer lateGraceMinutes,
+            BigDecimal latePenaltyAmount,
             String notes
     ) {}
 
@@ -179,6 +185,8 @@ public class SalaryConfigController {
             Integer payDayOfWeek,
             PayrollEntry.PaymentMethod paymentMethod,
             Boolean autoApprove,
+            Integer lateGraceMinutes,
+            BigDecimal latePenaltyAmount,
             Boolean active,
             String notes
     ) {}

@@ -192,6 +192,10 @@ public class SalaryAutoPayService {
                 ? calculateUnpaidAdvances(config.getRestaurant().getId(), empId, period.start, period.end)
                 : BigDecimal.ZERO;
 
+        LatePenalty lateInfo = freq == PayFrequency.HOURLY
+                ? calculateLatePenalty(config, period)
+                : LatePenalty.NONE;
+
         PayrollEntry entry = PayrollEntry.builder()
                 .restaurant(config.getRestaurant())
                 .employee(config.getEmployee())
@@ -200,8 +204,8 @@ public class SalaryAutoPayService {
                 .payPeriodStart(period.start)
                 .payPeriodEnd(period.end)
                 .baseSalary(baseAmount)
-                .otherDeductions(advanceDeduction)
-                .notes(buildNote(freq, period, advanceDeduction))
+                .otherDeductions(advanceDeduction.add(lateInfo.amount))
+                .notes(buildNote(freq, period, advanceDeduction, lateInfo))
                 .build();
 
         PayrollEntry saved = payrollService.createPayrollEntry(entry);
@@ -357,12 +361,48 @@ public class SalaryAutoPayService {
         return !config.getLastPaidDate().isBefore(period.end);
     }
 
-    private String buildNote(PayFrequency freq, Period period, BigDecimal advanceDeduction) {
-        String base = "Auto-generated " + freq + " salary (" + period.start + " → " + period.end + ")";
+    private String buildNote(PayFrequency freq, Period period, BigDecimal advanceDeduction, LatePenalty lateInfo) {
+        StringBuilder sb = new StringBuilder("Auto-generated ")
+                .append(freq).append(" salary (")
+                .append(period.start).append(" → ").append(period.end).append(")");
         if (advanceDeduction != null && advanceDeduction.compareTo(BigDecimal.ZERO) > 0) {
-            return base + ". Advance deducted: " + advanceDeduction;
+            sb.append(". Advance deducted: ").append(advanceDeduction);
         }
-        return base;
+        if (lateInfo != null && lateInfo.lateShifts > 0) {
+            sb.append(". Late penalty: ").append(lateInfo.lateShifts)
+              .append(" × ").append(lateInfo.perShift)
+              .append(" = ").append(lateInfo.amount);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Counts how many shifts in the period clocked in beyond the
+     * config's grace window and multiplies by the per-occurrence
+     * penalty. Shifts without a scheduledStart can't be evaluated and
+     * are skipped (treated as on-time).
+     */
+    private LatePenalty calculateLatePenalty(SalaryConfig config, Period period) {
+        BigDecimal perShift = config.getLatePenaltyAmount();
+        if (perShift == null || perShift.signum() <= 0) return LatePenalty.NONE;
+        int grace = config.getLateGraceMinutes() != null ? config.getLateGraceMinutes() : 5;
+
+        int lateShifts = 0;
+        for (EmployeeShift s : matchingShiftsInPeriod(config, period)) {
+            if (s.getScheduledStart() == null || s.getClockIn() == null) continue;
+            java.time.LocalTime actual = s.getClockIn()
+                    .atZoneSameInstant(java.time.ZoneId.systemDefault())
+                    .toLocalTime();
+            long minutesLate = ChronoUnit.MINUTES.between(s.getScheduledStart(), actual);
+            if (minutesLate > grace) lateShifts++;
+        }
+        if (lateShifts == 0) return LatePenalty.NONE;
+        return new LatePenalty(lateShifts, perShift,
+                perShift.multiply(BigDecimal.valueOf(lateShifts)));
+    }
+
+    private record LatePenalty(int lateShifts, BigDecimal perShift, BigDecimal amount) {
+        static final LatePenalty NONE = new LatePenalty(0, BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
     private static int clampDayOfMonth(int requested, LocalDate ref) {
