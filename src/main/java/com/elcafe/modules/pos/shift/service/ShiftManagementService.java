@@ -139,11 +139,18 @@ public class ShiftManagementService {
                 : (waiter != null ? waiter.getName() : "Unknown");
         log.info("{} clocked in for shift at restaurant {}", shiftName, restaurantId);
 
-        // Telegram notification
+        // Telegram notification — include late-penalty hit if this is the
+        // first clock-in of the day AND the employee's salary config has
+        // a positive fine. Subsequent clock-ins of the same day are
+        // ignored (the morning arrival already settled lateness).
         try {
             java.time.ZoneId zone = java.time.ZoneId.systemDefault();
+            com.elcafe.modules.financial.service.SalaryAutoPayService.LateInfo lateInfo = firstOfDay
+                    ? salaryAutoPayService.findLateInfoForToday(restaurantId, uid, wid, LocalDate.now()).orElse(null)
+                    : null;
             ownerNotificationService.notifyShiftOpened(restaurantId, shiftName,
-                    savedShift.getClockIn().atZoneSameInstant(zone).toLocalTime().toString().substring(0, 5));
+                    savedShift.getClockIn().atZoneSameInstant(zone).toLocalTime().toString().substring(0, 5),
+                    lateInfo);
         } catch (Exception e) {
             log.warn("Failed to send shift opened notification: {}", e.getMessage());
         }
@@ -227,6 +234,12 @@ public class ShiftManagementService {
                 }
             }
 
+            Long uid = savedShift.getEmployee() != null ? savedShift.getEmployee().getId() : null;
+            Long wid = savedShift.getWaiter() != null ? savedShift.getWaiter().getId() : null;
+            com.elcafe.modules.financial.service.SalaryAutoPayService.LateInfo lateInfo =
+                    salaryAutoPayService.findLateInfoForToday(
+                            savedShift.getRestaurant().getId(), uid, wid, savedShift.getShiftDate())
+                    .orElse(null);
             ownerNotificationService.notifyShiftClosed(
                     savedShift.getRestaurant().getId(),
                     shiftName,
@@ -235,7 +248,8 @@ public class ShiftManagementService {
                     orderCount,
                     totalSales,
                     cashSales,
-                    cardSales);
+                    cardSales,
+                    lateInfo);
         } catch (Exception e) {
             log.warn("Failed to send shift closed notification: {}", e.getMessage());
         }
@@ -485,11 +499,17 @@ public class ShiftManagementService {
             }
         }
 
+        Long uid = shift.getEmployee() != null ? shift.getEmployee().getId() : null;
+        Long wid = shift.getWaiter() != null ? shift.getWaiter().getId() : null;
+        com.elcafe.modules.financial.service.SalaryAutoPayService.LateInfo lateInfo =
+                salaryAutoPayService.findLateInfoForToday(
+                        shift.getRestaurant().getId(), uid, wid, shift.getShiftDate())
+                .orElse(null);
         ownerNotificationService.notifyShiftClosed(
                 shift.getRestaurant().getId(),
                 shiftName, clockInTime, clockOutTime,
                 shift.getWorkedMinutes(), orderCount,
-                totalSales, cashSales, cardSales);
+                totalSales, cashSales, cardSales, lateInfo);
 
         log.info("Resent shift {} report to Telegram", shiftId);
     }

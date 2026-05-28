@@ -229,7 +229,8 @@ public class OwnerNotificationService {
      */
     @Async
     @Transactional
-    public void notifyShiftOpened(Long restaurantId, String employeeName, String clockInTime) {
+    public void notifyShiftOpened(Long restaurantId, String employeeName, String clockInTime,
+                                   com.elcafe.modules.financial.service.SalaryAutoPayService.LateInfo lateInfo) {
         List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.SHIFT_OPENED);
 
         if (subscribers.isEmpty()) {
@@ -240,12 +241,17 @@ public class OwnerNotificationService {
         String restaurantName = subscribers.get(0).getRestaurant() != null
                 ? subscribers.get(0).getRestaurant().getName() : "ID: " + restaurantId;
 
+        String lateLine = lateInfo != null
+                ? String.format("\n⚠️ <b>Опоздание на %d мин</b> — штраф %,.2f\n",
+                        lateInfo.minutesLate(), lateInfo.fine())
+                : "";
+
         String message = String.format(
             "🟢 <b>Смена открыта</b>\n\n" +
             "👤 <b>%s</b>\n" +
-            "⏰ Начало: %s\n\n" +
+            "⏰ Начало: %s\n%s\n" +
             "📍 %s",
-            employeeName, clockInTime, restaurantName
+            employeeName, clockInTime, lateLine, restaurantName
         );
 
         for (OwnerTelegramSubscriber subscriber : subscribers) {
@@ -285,7 +291,8 @@ public class OwnerNotificationService {
                                    String clockOutTime, long workedMinutes, int orderCount,
                                    java.math.BigDecimal totalSales,
                                    java.math.BigDecimal totalCashSales,
-                                   java.math.BigDecimal totalCardSales) {
+                                   java.math.BigDecimal totalCardSales,
+                                   com.elcafe.modules.financial.service.SalaryAutoPayService.LateInfo lateInfo) {
         List<OwnerTelegramSubscriber> subscribers = getEligibleSubscribers(restaurantId, OwnerNotificationType.SHIFT_CLOSED);
 
         if (subscribers.isEmpty()) {
@@ -323,14 +330,18 @@ public class OwnerNotificationService {
         String otherExpensesText = otherExpenses.compareTo(java.math.BigDecimal.ZERO) > 0
                 ? String.format("\n🏦 Прочие расходы: %,.2f", otherExpenses) : "";
 
+        String lateText = lateInfo != null
+                ? String.format("\n⚠️ Опоздание: %d мин — штраф %,.2f", lateInfo.minutesLate(), lateInfo.fine())
+                : "";
+
         String message = String.format(
             "🔴 <b>Смена закрыта</b>\n\n" +
             "👤 <b>%s</b>\n" +
-            "⏰ %s — %s (%dч %dмин)\n" +
+            "⏰ %s — %s (%dч %dмин)%s\n" +
             "📦 Заказов: %d\n" +
             "💰 Выручка: %s%s%s%s%s\n" +
             "%s Чистая прибыль: %s",
-            employeeName, clockInTime, clockOutTime, hours, mins,
+            employeeName, clockInTime, clockOutTime, hours, mins, lateText,
             orderCount, totalSales != null ? String.format("%,.2f", totalSales) : "0",
             cashText, cardText, drawerExpensesText, otherExpensesText,
             profitEmoji, profitText

@@ -458,6 +458,61 @@ public class SalaryAutoPayService {
         static final LatePenalty NONE = new LatePenalty(0, BigDecimal.ZERO, BigDecimal.ZERO);
     }
 
+    /**
+     * Public lateness summary for a given workday's first clock-in,
+     * resolved against the subject's active salary config. Returned by
+     * {@link #findLateInfoForToday} so notification code can include the
+     * minutes-late and fine without re-implementing config lookup.
+     */
+    public record LateInfo(int minutesLate, BigDecimal fine, int graceMinutes) {}
+
+    /**
+     * Resolve the late-arrival penalty (if any) for the given subject's
+     * earliest clock-in on the given date. Returns empty when:
+     *   - the subject has no active salary config with a positive fine,
+     *   - no clocked shift exists on that date,
+     *   - the earliest clock-in is within the configured grace window.
+     * If multiple configs match the subject the first one with a
+     * positive fine wins — there typically is only one per subject.
+     */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public java.util.Optional<LateInfo> findLateInfoForToday(
+            Long restaurantId, Long userId, Long waiterId, LocalDate date) {
+        if (restaurantId == null || date == null) return java.util.Optional.empty();
+        if (userId == null && waiterId == null) return java.util.Optional.empty();
+
+        SalaryConfig config = salaryConfigRepository.findByRestaurant_IdAndActiveTrue(restaurantId).stream()
+                .filter(c -> c.getLatePenaltyAmount() != null && c.getLatePenaltyAmount().signum() > 0)
+                .filter(c -> {
+                    Long cEmp = c.getEmployee() != null ? c.getEmployee().getId() : null;
+                    Long cWtr = c.getWaiter() != null ? c.getWaiter().getId() : null;
+                    return (userId != null && userId.equals(cEmp))
+                        || (waiterId != null && waiterId.equals(cWtr));
+                })
+                .findFirst().orElse(null);
+        if (config == null) return java.util.Optional.empty();
+
+        EmployeeShift earliest = shiftRepository.findByRestaurantIdAndShiftDate(restaurantId, date).stream()
+                .filter(s -> s.getClockIn() != null)
+                .filter(s -> {
+                    Long sEmp = s.getEmployee() != null ? s.getEmployee().getId() : null;
+                    Long sWtr = s.getWaiter() != null ? s.getWaiter().getId() : null;
+                    return (userId != null && userId.equals(sEmp))
+                        || (waiterId != null && waiterId.equals(sWtr));
+                })
+                .min(java.util.Comparator.comparing(EmployeeShift::getClockIn))
+                .orElse(null);
+        if (earliest == null || earliest.getScheduledStart() == null) return java.util.Optional.empty();
+
+        int grace = config.getLateGraceMinutes() != null ? config.getLateGraceMinutes() : 5;
+        java.time.LocalTime actual = earliest.getClockIn()
+                .atZoneSameInstant(java.time.ZoneId.systemDefault())
+                .toLocalTime();
+        long minutesLate = ChronoUnit.MINUTES.between(earliest.getScheduledStart(), actual);
+        if (minutesLate <= grace) return java.util.Optional.empty();
+        return java.util.Optional.of(new LateInfo((int) minutesLate, config.getLatePenaltyAmount(), grace));
+    }
+
     private static int clampDayOfMonth(int requested, LocalDate ref) {
         int lengthOfMonth = ref.lengthOfMonth();
         return Math.min(Math.max(requested, 1), lengthOfMonth);
