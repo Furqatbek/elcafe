@@ -82,6 +82,7 @@ public class SalaryConfigController {
                 .autoApprove(request.autoApprove != null ? request.autoApprove : true)
                 .lateGraceMinutes(request.lateGraceMinutes != null ? request.lateGraceMinutes : 5)
                 .latePenaltyAmount(request.latePenaltyAmount != null ? request.latePenaltyAmount : BigDecimal.ZERO)
+                .latePenaltyPerHour(request.latePenaltyPerHour != null ? request.latePenaltyPerHour : BigDecimal.ZERO)
                 .active(true)
                 .notes(request.notes)
                 .build();
@@ -129,6 +130,7 @@ public class SalaryConfigController {
         if (request.autoApprove != null) config.setAutoApprove(request.autoApprove);
         if (request.lateGraceMinutes != null) config.setLateGraceMinutes(request.lateGraceMinutes);
         if (request.latePenaltyAmount != null) config.setLatePenaltyAmount(request.latePenaltyAmount);
+        if (request.latePenaltyPerHour != null) config.setLatePenaltyPerHour(request.latePenaltyPerHour);
         if (request.active != null) config.setActive(request.active);
         if (request.notes != null) config.setNotes(request.notes);
 
@@ -174,6 +176,7 @@ public class SalaryConfigController {
             Boolean autoApprove,
             Integer lateGraceMinutes,
             BigDecimal latePenaltyAmount,
+            BigDecimal latePenaltyPerHour,
             String notes
     ) {}
 
@@ -187,6 +190,7 @@ public class SalaryConfigController {
             Boolean autoApprove,
             Integer lateGraceMinutes,
             BigDecimal latePenaltyAmount,
+            BigDecimal latePenaltyPerHour,
             Boolean active,
             String notes
     ) {}

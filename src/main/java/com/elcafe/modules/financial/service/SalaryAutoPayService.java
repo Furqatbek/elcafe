@@ -99,14 +99,18 @@ public class SalaryAutoPayService {
             // back in produces a second EmployeeShift row whose clockIn
             // is after the schedule, but it's not a second instance of
             // being late — it's the same workday.
-            LatePenalty lateInfo = isFirstShiftOfDay(shift, config) && isShiftLate(shift, config)
-                    ? new LatePenalty(1, config.getLatePenaltyAmount(), config.getLatePenaltyAmount())
+            BigDecimal shiftFine = isFirstShiftOfDay(shift, config)
+                    ? totalFineFor(shift, config)
+                    : BigDecimal.ZERO;
+            LatePenalty lateInfo = shiftFine.signum() > 0
+                    ? new LatePenalty(1, shiftFine, shiftFine)
                     : LatePenalty.NONE;
 
             String note = "Auto-generated PER_SHIFT payout for shift " + shift.getId()
                     + " (" + shift.getShiftDate() + ")";
             if (lateInfo.lateShifts > 0) {
-                note += ". Late penalty: 1 × " + lateInfo.perShift + " = " + lateInfo.amount;
+                note += ". Late penalty: " + lateInfo.amount
+                        + " (" + minutesPastGrace(shift, config) + " min past grace)";
             }
 
             PayrollEntry entry = PayrollEntry.builder()
@@ -395,8 +399,11 @@ public class SalaryAutoPayService {
      * are skipped (treated as on-time).
      */
     private LatePenalty calculateLatePenalty(SalaryConfig config, Period period) {
-        BigDecimal perShift = config.getLatePenaltyAmount();
-        if (perShift == null || perShift.signum() <= 0) return LatePenalty.NONE;
+        BigDecimal flat = config.getLatePenaltyAmount();
+        BigDecimal perHour = config.getLatePenaltyPerHour();
+        boolean anyFineConfigured = (flat != null && flat.signum() > 0)
+                || (perHour != null && perHour.signum() > 0);
+        if (!anyFineConfigured) return LatePenalty.NONE;
 
         // A waiter often clocks out for lunch and back in, producing
         // multiple EmployeeShift rows for the same calendar day. Count
@@ -410,12 +417,21 @@ public class SalaryAutoPayService {
         }
 
         int lateDays = 0;
+        BigDecimal total = BigDecimal.ZERO;
         for (EmployeeShift earliest : firstByDate.values()) {
-            if (isShiftLate(earliest, config)) lateDays++;
+            BigDecimal fine = totalFineFor(earliest, config);
+            if (fine.signum() > 0) {
+                lateDays++;
+                total = total.add(fine);
+            }
         }
         if (lateDays == 0) return LatePenalty.NONE;
-        return new LatePenalty(lateDays, perShift,
-                perShift.multiply(BigDecimal.valueOf(lateDays)));
+        // perShift becomes the average for the note breakdown; total is
+        // what actually gets deducted. With per-hour pricing two late
+        // days can have different fines, so a single "perShift" number
+        // is no longer meaningful — keep it for the existing record shape.
+        BigDecimal avg = total.divide(BigDecimal.valueOf(lateDays), 2, java.math.RoundingMode.HALF_UP);
+        return new LatePenalty(lateDays, avg, total);
     }
 
     /**
@@ -443,15 +459,44 @@ public class SalaryAutoPayService {
     }
 
     private boolean isShiftLate(EmployeeShift shift, SalaryConfig config) {
-        BigDecimal perShift = config.getLatePenaltyAmount();
-        if (perShift == null || perShift.signum() <= 0) return false;
-        if (shift == null || shift.getScheduledStart() == null || shift.getClockIn() == null) return false;
+        return minutesPastGrace(shift, config) > 0 && totalFineFor(shift, config).signum() > 0;
+    }
+
+    /**
+     * Minutes the shift's first clock-in landed past the configured
+     * grace window. Negative or zero means on-time. Returns 0 when the
+     * shift lacks a scheduledStart or clockIn (can't be evaluated).
+     */
+    private long minutesPastGrace(EmployeeShift shift, SalaryConfig config) {
+        if (shift == null || shift.getScheduledStart() == null || shift.getClockIn() == null) return 0;
         int grace = config.getLateGraceMinutes() != null ? config.getLateGraceMinutes() : 5;
         java.time.LocalTime actual = shift.getClockIn()
                 .atZoneSameInstant(java.time.ZoneId.systemDefault())
                 .toLocalTime();
         long minutesLate = ChronoUnit.MINUTES.between(shift.getScheduledStart(), actual);
-        return minutesLate > grace;
+        return minutesLate - grace;
+    }
+
+    /**
+     * Combined fine for one late shift:
+     *   flat (latePenaltyAmount) + perHour × ceil(minutesPastGrace / 60).
+     * Returns zero if both flat and per-hour are zero/null, or if the
+     * shift isn't actually late (past grace). The ceil-by-hour rule
+     * means any started hour counts — 1 minute past grace already
+     * triggers one perHour charge, matching "fire penalty for every
+     * late hour" as users typically mean it.
+     */
+    BigDecimal totalFineFor(EmployeeShift shift, SalaryConfig config) {
+        long past = minutesPastGrace(shift, config);
+        if (past <= 0) return BigDecimal.ZERO;
+        BigDecimal flat = config.getLatePenaltyAmount() != null
+                ? config.getLatePenaltyAmount() : BigDecimal.ZERO;
+        BigDecimal perHour = config.getLatePenaltyPerHour() != null
+                ? config.getLatePenaltyPerHour() : BigDecimal.ZERO;
+        if (flat.signum() <= 0 && perHour.signum() <= 0) return BigDecimal.ZERO;
+        long startedHours = (past + 59) / 60; // ceil
+        BigDecimal hourly = perHour.multiply(BigDecimal.valueOf(startedHours));
+        return flat.add(hourly);
     }
 
     private record LatePenalty(int lateShifts, BigDecimal perShift, BigDecimal amount) {
@@ -482,7 +527,12 @@ public class SalaryAutoPayService {
         if (userId == null && waiterId == null) return java.util.Optional.empty();
 
         SalaryConfig config = salaryConfigRepository.findByRestaurant_IdAndActiveTrue(restaurantId).stream()
-                .filter(c -> c.getLatePenaltyAmount() != null && c.getLatePenaltyAmount().signum() > 0)
+                .filter(c -> {
+                    BigDecimal flat = c.getLatePenaltyAmount();
+                    BigDecimal perHour = c.getLatePenaltyPerHour();
+                    return (flat != null && flat.signum() > 0)
+                        || (perHour != null && perHour.signum() > 0);
+                })
                 .filter(c -> {
                     Long cEmp = c.getEmployee() != null ? c.getEmployee().getId() : null;
                     Long cWtr = c.getWaiter() != null ? c.getWaiter().getId() : null;
@@ -510,7 +560,10 @@ public class SalaryAutoPayService {
                 .toLocalTime();
         long minutesLate = ChronoUnit.MINUTES.between(earliest.getScheduledStart(), actual);
         if (minutesLate <= grace) return java.util.Optional.empty();
-        return java.util.Optional.of(new LateInfo((int) minutesLate, config.getLatePenaltyAmount(), grace));
+        // Use the same hourly-aware calculation the payroll path uses
+        // so the clock-in toast and the eventual deduction always agree.
+        BigDecimal fine = totalFineFor(earliest, config);
+        return java.util.Optional.of(new LateInfo((int) minutesLate, fine, grace));
     }
 
     private static int clampDayOfMonth(int requested, LocalDate ref) {

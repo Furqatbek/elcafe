@@ -114,6 +114,17 @@ public class SalaryConfig {
     @Builder.Default
     private BigDecimal latePenaltyAmount = BigDecimal.ZERO;
 
+    /**
+     * Extra cash deduction per <em>started</em> hour the employee is
+     * late, on top of {@link #latePenaltyAmount}. So a 5-minute grace
+     * plus a 6-minute-late clock-in (1 minute past grace) charges one
+     * full hour's worth. Set both fields to combine a flat strike fine
+     * with hourly bleed, or leave one at zero to use only the other.
+     */
+    @Column(name = "late_penalty_per_hour", nullable = false, precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal latePenaltyPerHour = BigDecimal.ZERO;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
