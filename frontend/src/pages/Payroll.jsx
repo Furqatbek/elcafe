@@ -715,38 +715,36 @@ export default function Payroll() {
                 </SelectContent>
               </Select>
             </div>
-            {salaryForm.payFrequency === 'HOURLY' && (
-              <div className="grid grid-cols-2 gap-4 rounded-md border px-3 py-2">
-                <div className="space-y-2 col-span-2">
-                  <Label className="text-sm font-medium">
-                    {t('payroll.latePenalty', 'Late-arrival penalty')}
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t('payroll.latePenaltyHint',
-                      'Deduct a fixed amount for each shift that clocks in more than the grace minutes past its scheduled start.')}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('payroll.lateGraceMinutes', 'Grace (min)')}</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={salaryForm.lateGraceMinutes}
-                    onChange={e => setSalaryForm({ ...salaryForm, lateGraceMinutes: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>{t('payroll.latePenaltyAmount', 'Fine per late shift')}</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={salaryForm.latePenaltyAmount}
-                    onChange={e => setSalaryForm({ ...salaryForm, latePenaltyAmount: e.target.value })}
-                    placeholder="0"
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-4 rounded-md border px-3 py-2">
+              <div className="space-y-2 col-span-2">
+                <Label className="text-sm font-medium">
+                  {t('payroll.latePenalty', 'Late-arrival penalty')}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('payroll.latePenaltyHint',
+                    'Deduct a fixed amount for each shift that clocks in more than the grace minutes past its scheduled start. Set fine to 0 to disable.')}
+                </p>
               </div>
-            )}
+              <div className="space-y-2">
+                <Label>{t('payroll.lateGraceMinutes', 'Grace (min)')}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={salaryForm.lateGraceMinutes}
+                  onChange={e => setSalaryForm({ ...salaryForm, lateGraceMinutes: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('payroll.latePenaltyAmount', 'Fine per late shift')}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={salaryForm.latePenaltyAmount}
+                  onChange={e => setSalaryForm({ ...salaryForm, latePenaltyAmount: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+            </div>
             <div className="flex items-start justify-between gap-4 rounded-md border px-3 py-2">
               <div className="space-y-1">
                 <Label className="cursor-pointer" htmlFor="salary-auto-approve">

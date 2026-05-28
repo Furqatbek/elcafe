@@ -4494,7 +4494,7 @@
     "autoApprove": "Avtomatik tasdiqlash va to'lash",
     "autoApproveHint": "Yoqilganda tizim avtomatik ravishda TO'LANGAN holatda yozuv yaratadi. O'chirilganda yozuvlar qo'lda tekshirish uchun KUTILMOQDA holatida saqlanadi.",
     "latePenalty": "Kechikkanlik uchun jarima",
-    "latePenaltyHint": "Rejalashtirilgan boshlanish vaqtidan ruxsat berilgan oraliqdan ko'p kechikkan har bir smena uchun belgilangan summa ushlab qolinadi.",
+    "latePenaltyHint": "Rejalashtirilgan boshlanish vaqtidan ruxsat berilgan oraliqdan ko'p kechikkan har bir smena uchun belgilangan summa ushlab qolinadi. O'chirish uchun 0 qiymatini kiriting.",
     "lateGraceMinutes": "Ruxsat (daq)",
     "latePenaltyAmount": "Smena uchun jarima",
     "processPayment": "To'lovni amalga oshirish",

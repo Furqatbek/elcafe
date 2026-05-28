@@ -94,6 +94,16 @@ public class SalaryAutoPayService {
                     ? calculateUnpaidAdvances(restaurantId, empId, period.start, period.end)
                     : BigDecimal.ZERO;
 
+            LatePenalty lateInfo = isShiftLate(shift, config)
+                    ? new LatePenalty(1, config.getLatePenaltyAmount(), config.getLatePenaltyAmount())
+                    : LatePenalty.NONE;
+
+            String note = "Auto-generated PER_SHIFT payout for shift " + shift.getId()
+                    + " (" + shift.getShiftDate() + ")";
+            if (lateInfo.lateShifts > 0) {
+                note += ". Late penalty: 1 × " + lateInfo.perShift + " = " + lateInfo.amount;
+            }
+
             PayrollEntry entry = PayrollEntry.builder()
                     .restaurant(config.getRestaurant())
                     .employee(config.getEmployee())
@@ -102,9 +112,8 @@ public class SalaryAutoPayService {
                     .payPeriodStart(period.start)
                     .payPeriodEnd(period.end)
                     .baseSalary(base)
-                    .otherDeductions(advanceDeduction)
-                    .notes("Auto-generated PER_SHIFT payout for shift " + shift.getId()
-                            + " (" + shift.getShiftDate() + ")")
+                    .otherDeductions(advanceDeduction.add(lateInfo.amount))
+                    .notes(note)
                     .build();
 
             PayrollEntry saved = payrollService.createPayrollEntry(entry);
@@ -192,9 +201,7 @@ public class SalaryAutoPayService {
                 ? calculateUnpaidAdvances(config.getRestaurant().getId(), empId, period.start, period.end)
                 : BigDecimal.ZERO;
 
-        LatePenalty lateInfo = freq == PayFrequency.HOURLY
-                ? calculateLatePenalty(config, period)
-                : LatePenalty.NONE;
+        LatePenalty lateInfo = calculateLatePenalty(config, period);
 
         PayrollEntry entry = PayrollEntry.builder()
                 .restaurant(config.getRestaurant())
@@ -385,20 +392,26 @@ public class SalaryAutoPayService {
     private LatePenalty calculateLatePenalty(SalaryConfig config, Period period) {
         BigDecimal perShift = config.getLatePenaltyAmount();
         if (perShift == null || perShift.signum() <= 0) return LatePenalty.NONE;
-        int grace = config.getLateGraceMinutes() != null ? config.getLateGraceMinutes() : 5;
 
         int lateShifts = 0;
         for (EmployeeShift s : matchingShiftsInPeriod(config, period)) {
-            if (s.getScheduledStart() == null || s.getClockIn() == null) continue;
-            java.time.LocalTime actual = s.getClockIn()
-                    .atZoneSameInstant(java.time.ZoneId.systemDefault())
-                    .toLocalTime();
-            long minutesLate = ChronoUnit.MINUTES.between(s.getScheduledStart(), actual);
-            if (minutesLate > grace) lateShifts++;
+            if (isShiftLate(s, config)) lateShifts++;
         }
         if (lateShifts == 0) return LatePenalty.NONE;
         return new LatePenalty(lateShifts, perShift,
                 perShift.multiply(BigDecimal.valueOf(lateShifts)));
+    }
+
+    private boolean isShiftLate(EmployeeShift shift, SalaryConfig config) {
+        BigDecimal perShift = config.getLatePenaltyAmount();
+        if (perShift == null || perShift.signum() <= 0) return false;
+        if (shift == null || shift.getScheduledStart() == null || shift.getClockIn() == null) return false;
+        int grace = config.getLateGraceMinutes() != null ? config.getLateGraceMinutes() : 5;
+        java.time.LocalTime actual = shift.getClockIn()
+                .atZoneSameInstant(java.time.ZoneId.systemDefault())
+                .toLocalTime();
+        long minutesLate = ChronoUnit.MINUTES.between(shift.getScheduledStart(), actual);
+        return minutesLate > grace;
     }
 
     private record LatePenalty(int lateShifts, BigDecimal perShift, BigDecimal amount) {
