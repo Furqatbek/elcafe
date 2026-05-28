@@ -106,6 +106,22 @@ class InventoryIngredientControllerTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+    @Test
+    @DisplayName("Class-level @PreAuthorize permits ADMIN, OPERATOR and WAITER")
+    void classLevelPreAuthorize_permitsWaiter() {
+        org.springframework.security.access.prepost.PreAuthorize ann =
+                InventoryIngredientController.class.getAnnotation(
+                        org.springframework.security.access.prepost.PreAuthorize.class);
+        assertEquals(true, ann != null, "Class must carry @PreAuthorize");
+        String expr = ann.value();
+        // Tolerates any whitespace/quote style. We only care the role list
+        // contains ADMIN, OPERATOR and WAITER — the three roles allowed
+        // to read the ingredient catalog.
+        assertEquals(true, expr.contains("ADMIN"),    "WAITER role missing from " + expr);
+        assertEquals(true, expr.contains("OPERATOR"), "OPERATOR role missing from " + expr);
+        assertEquals(true, expr.contains("WAITER"),   "WAITER role missing from " + expr);
+    }
+
     @Test @DisplayName("GET /{id} — returns single ingredient")
     void getById() throws Exception {
         when(ingredientRepository.findById(1L)).thenReturn(Optional.of(ingredient));
