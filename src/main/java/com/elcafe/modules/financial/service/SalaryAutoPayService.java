@@ -94,7 +94,12 @@ public class SalaryAutoPayService {
                     ? calculateUnpaidAdvances(restaurantId, empId, period.start, period.end)
                     : BigDecimal.ZERO;
 
-            LatePenalty lateInfo = isShiftLate(shift, config)
+            // Only charge the late fine on the FIRST clocked shift of the
+            // day for this subject. A waiter who clocks out for lunch and
+            // back in produces a second EmployeeShift row whose clockIn
+            // is after the schedule, but it's not a second instance of
+            // being late — it's the same workday.
+            LatePenalty lateInfo = isFirstShiftOfDay(shift, config) && isShiftLate(shift, config)
                     ? new LatePenalty(1, config.getLatePenaltyAmount(), config.getLatePenaltyAmount())
                     : LatePenalty.NONE;
 
@@ -393,13 +398,48 @@ public class SalaryAutoPayService {
         BigDecimal perShift = config.getLatePenaltyAmount();
         if (perShift == null || perShift.signum() <= 0) return LatePenalty.NONE;
 
-        int lateShifts = 0;
+        // A waiter often clocks out for lunch and back in, producing
+        // multiple EmployeeShift rows for the same calendar day. Count
+        // lateness once per scheduled day: only the earliest clockIn of
+        // each day is compared against the schedule.
+        java.util.Map<LocalDate, EmployeeShift> firstByDate = new java.util.HashMap<>();
         for (EmployeeShift s : matchingShiftsInPeriod(config, period)) {
-            if (isShiftLate(s, config)) lateShifts++;
+            if (s.getClockIn() == null) continue;
+            firstByDate.merge(s.getShiftDate(), s,
+                    (a, b) -> a.getClockIn().isBefore(b.getClockIn()) ? a : b);
         }
-        if (lateShifts == 0) return LatePenalty.NONE;
-        return new LatePenalty(lateShifts, perShift,
-                perShift.multiply(BigDecimal.valueOf(lateShifts)));
+
+        int lateDays = 0;
+        for (EmployeeShift earliest : firstByDate.values()) {
+            if (isShiftLate(earliest, config)) lateDays++;
+        }
+        if (lateDays == 0) return LatePenalty.NONE;
+        return new LatePenalty(lateDays, perShift,
+                perShift.multiply(BigDecimal.valueOf(lateDays)));
+    }
+
+    /**
+     * True if {@code shift} is the earliest clocked shift of its day
+     * for the subject of {@code config}. Used so the PER_SHIFT late
+     * penalty fires at most once per workday, even when the waiter
+     * clocks out for breaks and back in.
+     */
+    private boolean isFirstShiftOfDay(EmployeeShift shift, SalaryConfig config) {
+        if (shift == null || shift.getClockIn() == null || shift.getShiftDate() == null) return false;
+        Long restaurantId = config.getRestaurant() != null ? config.getRestaurant().getId() : null;
+        if (restaurantId == null) return true;
+        Long cfgEmp = config.getEmployee() != null ? config.getEmployee().getId() : null;
+        Long cfgWtr = config.getWaiter() != null ? config.getWaiter().getId() : null;
+        return shiftRepository.findByRestaurantIdAndShiftDate(restaurantId, shift.getShiftDate()).stream()
+                .filter(s -> s.getClockIn() != null)
+                .filter(s -> {
+                    Long shEmp = s.getEmployee() != null ? s.getEmployee().getId() : null;
+                    Long shWtr = s.getWaiter() != null ? s.getWaiter().getId() : null;
+                    boolean empMatch = cfgEmp != null && cfgEmp.equals(shEmp);
+                    boolean wtrMatch = cfgWtr != null && cfgWtr.equals(shWtr);
+                    return empMatch || wtrMatch;
+                })
+                .noneMatch(s -> s.getClockIn().isBefore(shift.getClockIn()));
     }
 
     private boolean isShiftLate(EmployeeShift shift, SalaryConfig config) {

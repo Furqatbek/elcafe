@@ -106,13 +106,17 @@ public class ShiftManagementService {
 
         // If the caller didn't pass scheduledStart explicitly, look up
         // today's ShiftSchedule for this subject and use its startTime.
-        // Mirrors the Payroll-page promise that scheduling + late-penalty
-        // are wired end-to-end without manual entry at clock-in.
+        // Only do this on the FIRST clock-in of the day for this subject
+        // — subsequent clock-ins (after a lunch break clock-out) belong
+        // to the same logical workday and shouldn't get the schedule
+        // re-stamped, which would mislead reports into thinking they were
+        // a second on-time arrival.
         java.time.LocalTime resolvedStart = request.getScheduledStart();
         java.time.LocalTime resolvedEnd = request.getScheduledEnd();
-        if (resolvedStart == null) {
-            Long uid = employee != null ? employee.getId() : null;
-            Long wid = waiter != null ? waiter.getId() : null;
+        Long uid = employee != null ? employee.getId() : null;
+        Long wid = waiter != null ? waiter.getId() : null;
+        boolean firstOfDay = !hasEarlierShiftToday(restaurantId, uid, wid);
+        if (resolvedStart == null && firstOfDay) {
             resolvedStart = shiftScheduleService.findTodayScheduledStart(uid, wid, LocalDate.now());
         }
 
@@ -145,6 +149,17 @@ public class ShiftManagementService {
         }
 
         return savedShift;
+    }
+
+    private boolean hasEarlierShiftToday(Long restaurantId, Long userId, Long waiterId) {
+        if (userId == null && waiterId == null) return false;
+        return shiftRepository.findByRestaurantIdAndShiftDate(restaurantId, LocalDate.now()).stream()
+                .anyMatch(s -> {
+                    Long shEmp = s.getEmployee() != null ? s.getEmployee().getId() : null;
+                    Long shWtr = s.getWaiter() != null ? s.getWaiter().getId() : null;
+                    return (userId != null && userId.equals(shEmp))
+                        || (waiterId != null && waiterId.equals(shWtr));
+                });
     }
 
     /**
