@@ -16,6 +16,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -214,6 +215,22 @@ class OrderControllerTest {
 
         mockMvc.perform(get("/api/v1/orders/by-shift/1"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("by-shift method @PreAuthorize permits ADMIN, OPERATOR and WAITER")
+    void getOrdersByShift_methodAllowsWaiter() throws Exception {
+        java.lang.reflect.Method m =
+                com.elcafe.modules.order.controller.OrderController.class
+                        .getMethod("getOrdersByShift", Long.class);
+        org.springframework.security.access.prepost.PreAuthorize ann =
+                m.getAnnotation(org.springframework.security.access.prepost.PreAuthorize.class);
+        assertEquals(true, ann != null,
+                "by-shift handler must override class-level @PreAuthorize to permit WAITER");
+        String expr = ann.value();
+        assertEquals(true, expr.contains("ADMIN"),    "ADMIN missing from " + expr);
+        assertEquals(true, expr.contains("OPERATOR"), "OPERATOR missing from " + expr);
+        assertEquals(true, expr.contains("WAITER"),   "WAITER missing from " + expr);
     }
 
     // ==================== revertOrderToActive ====================

@@ -94,6 +94,7 @@ public class OrderController {
     }
 
     @GetMapping("/by-shift/{shiftId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get orders for a specific shift")
     public ResponseEntity<ApiResponse<List<Order>>> getOrdersByShift(@PathVariable Long shiftId) {
         List<Order> orders = orderRepository.findByShiftIdWithItems(shiftId);
