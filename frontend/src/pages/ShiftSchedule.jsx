@@ -67,7 +67,7 @@ export default function ShiftSchedule() {
   const [weekStart, setWeekStart] = useState(getMonday(new Date()));
   const [schedules, setSchedules] = useState([]);
   const [addOpen, setAddOpen] = useState(false);
-  const [addForm, setAddForm] = useState({ employeeId: '', shiftDate: '', startTime: '09:00', endTime: '17:00', role: '' });
+  const [addForm, setAddForm] = useState({ employeeKey: '', shiftDate: '', startTime: '09:00', endTime: '17:00', role: '' });
 
   useEffect(() => {
     restaurantAPI.getAll({ page: 0, size: 100 }).then(res => {
@@ -77,22 +77,20 @@ export default function ShiftSchedule() {
     }).catch(console.error);
     operatorAPI.getAll({ page: 0, size: 100 }).then(async (res) => {
       const operators = (res.data.data?.content || res.data.data || []).map(e => ({
-        ...e, _role: 'Operator',
+        id: e.id, fullName: e.fullName, email: e.email, type: 'user', _role: 'Operator',
       }));
       let waiters = [];
       try {
         const wRes = await waiterAPI.getAll({ page: 0, size: 100 });
         waiters = (wRes.data.data?.content || wRes.data.data || []).map(w => ({
-          id: w.userId || w.id,
+          id: w.id,
           fullName: w.name || w.fullName || `Waiter #${w.id}`,
           email: w.phone || '',
+          type: 'waiter',
           _role: 'Waiter',
         }));
       } catch (e) { /* ignore if waiter API fails */ }
-      // Merge and deduplicate by id
-      const merged = [...operators, ...waiters];
-      const unique = merged.filter((emp, idx) => merged.findIndex(e => e.id === emp.id) === idx);
-      setEmployees(unique);
+      setEmployees([...operators, ...waiters]);
     }).catch(console.error);
   }, []);
 
@@ -110,11 +108,15 @@ export default function ShiftSchedule() {
   };
 
   const handleCreate = async () => {
-    if (!addForm.employeeId || !addForm.shiftDate) return;
+    if (!addForm.employeeKey || !addForm.shiftDate) return;
+    const [type, idStr] = addForm.employeeKey.split(':');
+    const id = parseInt(idStr, 10);
     try {
       await api.create({
         restaurantId: parseInt(selectedRestaurant),
-        employeeId: parseInt(addForm.employeeId),
+        employeeType: type,
+        employeeId: type === 'user' ? id : null,
+        waiterId: type === 'waiter' ? id : null,
         shiftDate: addForm.shiftDate,
         startTime: addForm.startTime,
         endTime: addForm.endTime,
@@ -152,16 +154,22 @@ export default function ShiftSchedule() {
     setWeekStart(d.toISOString().split('T')[0]);
   };
 
-  // Build grid data: unique employees × 7 days
-  const employeeIds = [...new Set(schedules.map(s => s.employee?.id))];
-  const employeeMap = {};
-  schedules.forEach(s => { if (s.employee) employeeMap[s.employee.id] = s.employee.fullName || s.employee.email; });
+  // Build grid data: unique subjects (user or waiter) × 7 days. A row key
+  // is "user:<id>" or "waiter:<id>" so an operator and a waiter that
+  // happen to share a numeric id don't collide.
+  const subjectKey = (s) => s.waiter ? `waiter:${s.waiter.id}` : (s.employee ? `user:${s.employee.id}` : null);
+  const subjectLabel = (s) => s.waiter
+    ? `${s.waiter.name || `Waiter #${s.waiter.id}`}`
+    : (s.employee?.fullName || s.employee?.email || '');
+  const subjectKeys = [...new Set(schedules.map(subjectKey).filter(Boolean))];
+  const subjectMap = {};
+  schedules.forEach(s => { const k = subjectKey(s); if (k) subjectMap[k] = subjectLabel(s); });
 
-  const getCell = (empId, dayIdx) => {
+  const getCell = (key, dayIdx) => {
     const date = new Date(weekStart);
     date.setDate(date.getDate() + dayIdx);
     const dateStr = date.toISOString().split('T')[0];
-    return schedules.filter(s => s.employee?.id === empId && s.shiftDate === dateStr && s.status !== 'CANCELLED');
+    return schedules.filter(s => subjectKey(s) === key && s.shiftDate === dateStr && s.status !== 'CANCELLED');
   };
 
   const formatWeekLabel = () => {
@@ -220,14 +228,14 @@ export default function ShiftSchedule() {
               </tr>
             </thead>
             <tbody>
-              {employeeIds.length === 0 ? (
+              {subjectKeys.length === 0 ? (
                 <tr><td colSpan={8} className="text-center py-8 text-muted-foreground">{t('shift.schedule.noSchedules', 'No shifts scheduled this week')}</td></tr>
               ) : (
-                employeeIds.map(empId => (
-                  <tr key={empId} className="border-b">
-                    <td className="p-3 font-medium">{employeeMap[empId] || `#${empId}`}</td>
+                subjectKeys.map(key => (
+                  <tr key={key} className="border-b">
+                    <td className="p-3 font-medium">{subjectMap[key] || key}</td>
                     {DAYS.map((_, dayIdx) => {
-                      const cells = getCell(empId, dayIdx);
+                      const cells = getCell(key, dayIdx);
                       return (
                         <td key={dayIdx} className="p-2 text-center">
                           {cells.length === 0 ? (
@@ -266,13 +274,15 @@ export default function ShiftSchedule() {
             <div className="space-y-2">
               <Label>{t('shift.schedule.employee', 'Employee')} *</Label>
               <select
-                value={addForm.employeeId}
-                onChange={(e) => setAddForm({ ...addForm, employeeId: e.target.value })}
+                value={addForm.employeeKey}
+                onChange={(e) => setAddForm({ ...addForm, employeeKey: e.target.value })}
                 className="w-full border rounded-md px-3 py-2 text-sm bg-background"
               >
                 <option value="">Select employee</option>
                 {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.fullName || emp.email}{emp._role ? ` (${emp._role})` : ''}</option>
+                  <option key={`${emp.type}:${emp.id}`} value={`${emp.type}:${emp.id}`}>
+                    {emp.fullName || emp.email}{emp._role ? ` (${emp._role})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
@@ -297,7 +307,7 @@ export default function ShiftSchedule() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
-            <Button onClick={handleCreate} disabled={!addForm.employeeId || !addForm.shiftDate}>{t('common.add', 'Add')}</Button>
+            <Button onClick={handleCreate} disabled={!addForm.employeeKey || !addForm.shiftDate}>{t('common.add', 'Add')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

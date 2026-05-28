@@ -47,6 +47,7 @@ class ShiftManagementServiceTest {
     @Mock private RestaurantRepository restaurantRepository;
     @Mock private WaiterRepository waiterRepository;
     @Mock private CashDrawerRepository cashDrawerRepository;
+    @Mock private ShiftScheduleService shiftScheduleService;
     @InjectMocks private ShiftManagementService shiftManagementService;
 
     private Restaurant restaurant;

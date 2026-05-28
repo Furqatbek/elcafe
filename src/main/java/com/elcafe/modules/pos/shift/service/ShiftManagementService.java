@@ -44,6 +44,7 @@ public class ShiftManagementService {
     private final WaiterRepository waiterRepository;
     private final com.elcafe.modules.order.repository.OrderRepository orderRepository;
     private final CashDrawerRepository cashDrawerRepository;
+    private final ShiftScheduleService shiftScheduleService;
     @org.springframework.context.annotation.Lazy
     private final com.elcafe.modules.ownerbot.service.OwnerNotificationService ownerNotificationService;
     // Lazy so the financial → shift dependency direction stays one-way and
@@ -103,6 +104,18 @@ public class ShiftManagementService {
                 .orElse(null);
         }
 
+        // If the caller didn't pass scheduledStart explicitly, look up
+        // today's ShiftSchedule for this subject and use its startTime.
+        // Mirrors the Payroll-page promise that scheduling + late-penalty
+        // are wired end-to-end without manual entry at clock-in.
+        java.time.LocalTime resolvedStart = request.getScheduledStart();
+        java.time.LocalTime resolvedEnd = request.getScheduledEnd();
+        if (resolvedStart == null) {
+            Long uid = employee != null ? employee.getId() : null;
+            Long wid = waiter != null ? waiter.getId() : null;
+            resolvedStart = shiftScheduleService.findTodayScheduledStart(uid, wid, LocalDate.now());
+        }
+
         EmployeeShift shift = EmployeeShift.builder()
             .restaurant(restaurant)
             .employee(employee)
@@ -110,8 +123,8 @@ public class ShiftManagementService {
             .cashDrawer(cashDrawer)
             .shiftDate(LocalDate.now())
             .clockIn(OffsetDateTime.now())
-            .scheduledStart(request.getScheduledStart())
-            .scheduledEnd(request.getScheduledEnd())
+            .scheduledStart(resolvedStart)
+            .scheduledEnd(resolvedEnd)
             .openingCash(request.getOpeningCash() != null ? request.getOpeningCash() : BigDecimal.ZERO)
             .status(ShiftStatus.ACTIVE)
             .build();

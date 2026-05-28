@@ -8,6 +8,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.WorkingHours;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.restaurant.repository.WorkingHoursRepository;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ class ShiftScheduleServiceTest {
     @Mock private WorkingHoursRepository workingHoursRepository;
     @Mock private RestaurantRepository restaurantRepository;
     @Mock private UserRepository userRepository;
+    @Mock private WaiterRepository waiterRepository;
     @InjectMocks private ShiftScheduleService service;
 
     private Restaurant restaurant;
@@ -72,7 +74,7 @@ class ShiftScheduleServiceTest {
                 .thenReturn(List.of(existing));
 
         assertThatThrownBy(() -> service.createSchedule(
-                1L, 10L, LocalDate.of(2026, 5, 5),
+                1L, "user", 10L, LocalDate.of(2026, 5, 5),
                 LocalTime.of(12, 0), LocalTime.of(20, 0), null, null, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Conflict");
@@ -89,7 +91,7 @@ class ShiftScheduleServiceTest {
                 .thenReturn(List.of(existing));
 
         ShiftSchedule result = service.createSchedule(
-                1L, 10L, LocalDate.of(2026, 5, 5),
+                1L, "user", 10L, LocalDate.of(2026, 5, 5),
                 LocalTime.of(14, 0), LocalTime.of(20, 0), "WAITER", null, null);
 
         assertThat(result).isNotNull();

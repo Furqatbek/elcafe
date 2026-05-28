@@ -8,6 +8,8 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.WorkingHours;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.restaurant.repository.WorkingHoursRepository;
+import com.elcafe.modules.waiter.entity.Waiter;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ public class ShiftScheduleService {
     private final WorkingHoursRepository workingHoursRepository;
     private final RestaurantRepository restaurantRepository;
     private final UserRepository userRepository;
+    private final WaiterRepository waiterRepository;
 
     @Transactional(readOnly = true)
     public List<ShiftSchedule> getWeekSchedule(Long restaurantId, LocalDate weekStart) {
@@ -36,29 +39,49 @@ public class ShiftScheduleService {
                 restaurantId, weekStart, weekEnd);
     }
 
+    /**
+     * Create a schedule entry for a User (operator/manager) or a Waiter,
+     * but never both. The subject is selected by {@code employeeType}
+     * ("user" or "waiter"). Conflicts on the same subject + date refuse
+     * the new row.
+     */
     @Transactional
-    public ShiftSchedule createSchedule(Long restaurantId, Long employeeId, LocalDate date,
-                                         LocalTime startTime, LocalTime endTime, String role,
-                                         String notes, Long createdById) {
-        // Conflict detection
-        List<ShiftSchedule> existing = scheduleRepository.findActiveByEmployeeAndDate(employeeId, date);
-        for (ShiftSchedule s : existing) {
-            if (s.overlaps(startTime, endTime)) {
-                throw new IllegalStateException(String.format(
-                        "Conflict: employee already scheduled %s-%s on %s",
-                        s.getStartTime(), s.getEndTime(), date));
+    public ShiftSchedule createSchedule(Long restaurantId, String employeeType, Long subjectId,
+                                         LocalDate date, LocalTime startTime, LocalTime endTime,
+                                         String role, String notes, Long createdById) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        User employee = null;
+        Waiter waiter = null;
+        if ("waiter".equalsIgnoreCase(employeeType)) {
+            waiter = waiterRepository.findById(subjectId)
+                    .orElseThrow(() -> new RuntimeException("Waiter not found"));
+            for (ShiftSchedule s : scheduleRepository.findActiveByWaiterAndDate(subjectId, date)) {
+                if (s.overlaps(startTime, endTime)) {
+                    throw new IllegalStateException(String.format(
+                            "Conflict: waiter already scheduled %s-%s on %s",
+                            s.getStartTime(), s.getEndTime(), date));
+                }
+            }
+        } else {
+            employee = userRepository.findById(subjectId)
+                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+            for (ShiftSchedule s : scheduleRepository.findActiveByEmployeeAndDate(subjectId, date)) {
+                if (s.overlaps(startTime, endTime)) {
+                    throw new IllegalStateException(String.format(
+                            "Conflict: employee already scheduled %s-%s on %s",
+                            s.getStartTime(), s.getEndTime(), date));
+                }
             }
         }
 
-        Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
-        User employee = userRepository.findById(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
         User createdBy = createdById != null ? userRepository.findById(createdById).orElse(null) : null;
 
         ShiftSchedule schedule = ShiftSchedule.builder()
                 .restaurant(restaurant)
                 .employee(employee)
+                .waiter(waiter)
                 .shiftDate(date)
                 .startTime(startTime)
                 .endTime(endTime)
@@ -68,7 +91,9 @@ public class ShiftScheduleService {
                 .build();
 
         schedule = scheduleRepository.save(schedule);
-        log.info("Created shift schedule: {} for {} on {}", schedule.getId(), employee.getFullName(), date);
+        String name = employee != null ? employee.getFullName()
+                : (waiter != null ? waiter.getName() : "?");
+        log.info("Created shift schedule: {} for {} on {}", schedule.getId(), name, date);
         return schedule;
     }
 
@@ -87,7 +112,8 @@ public class ShiftScheduleService {
     }
 
     /**
-     * Copy previous week's schedule to target week.
+     * Copy previous week's schedule to target week. Waiter rows are
+     * cloned as waiter rows; user rows stay user rows.
      */
     @Transactional
     public List<ShiftSchedule> copyWeek(Long restaurantId, LocalDate sourceWeekStart, LocalDate targetWeekStart, Long createdById) {
@@ -102,9 +128,19 @@ public class ShiftScheduleService {
             int dayOffset = (int) (s.getShiftDate().toEpochDay() - sourceWeekStart.toEpochDay());
             LocalDate targetDate = targetWeekStart.plusDays(dayOffset);
 
+            String type;
+            Long subjectId;
+            if (s.getWaiter() != null) {
+                type = "waiter"; subjectId = s.getWaiter().getId();
+            } else if (s.getEmployee() != null) {
+                type = "user"; subjectId = s.getEmployee().getId();
+            } else {
+                continue;
+            }
+
             try {
                 ShiftSchedule newSchedule = createSchedule(
-                        restaurantId, s.getEmployee().getId(), targetDate,
+                        restaurantId, type, subjectId, targetDate,
                         s.getStartTime(), s.getEndTime(), s.getRole(), s.getNotes(), createdById);
                 created.add(newSchedule);
             } catch (IllegalStateException e) {
@@ -117,7 +153,8 @@ public class ShiftScheduleService {
     }
 
     /**
-     * Auto-fill a week from recurring WorkingHours.
+     * Auto-fill a week from recurring WorkingHours (User-only — there's
+     * no waiter-side recurring-hours config today).
      */
     @Transactional
     public List<ShiftSchedule> autoFillFromWorkingHours(Long restaurantId, LocalDate weekStart, Long createdById) {
@@ -133,7 +170,7 @@ public class ShiftScheduleService {
 
                 try {
                     ShiftSchedule schedule = createSchedule(
-                            restaurantId, wh.getUser().getId(), date,
+                            restaurantId, "user", wh.getUser().getId(), date,
                             wh.getStartTime(), wh.getEndTime(), null, null, createdById);
                     created.add(schedule);
                 } catch (IllegalStateException e) {
@@ -144,5 +181,27 @@ public class ShiftScheduleService {
 
         log.info("Auto-filled {} schedules for week {} from WorkingHours", created.size(), weekStart);
         return created;
+    }
+
+    /**
+     * Returns the earliest scheduled start time today for the given
+     * subject, or null if nothing matches. Used by the clock-in flow
+     * to auto-populate EmployeeShift.scheduledStart so the late-penalty
+     * logic has a reference time without any manual entry.
+     */
+    @Transactional(readOnly = true)
+    public LocalTime findTodayScheduledStart(Long userId, Long waiterId, LocalDate date) {
+        List<ShiftSchedule> matches;
+        if (waiterId != null) {
+            matches = scheduleRepository.findActiveByWaiterAndDate(waiterId, date);
+        } else if (userId != null) {
+            matches = scheduleRepository.findActiveByEmployeeAndDate(userId, date);
+        } else {
+            return null;
+        }
+        return matches.stream()
+                .map(ShiftSchedule::getStartTime)
+                .min(LocalTime::compareTo)
+                .orElse(null);
     }
 }

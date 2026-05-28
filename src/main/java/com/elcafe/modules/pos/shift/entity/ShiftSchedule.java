@@ -2,6 +2,7 @@ package com.elcafe.modules.pos.shift.entity;
 
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.waiter.entity.Waiter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
@@ -32,9 +33,15 @@ public class ShiftSchedule {
     @JoinColumn(name = "restaurant_id", nullable = false)
     private Restaurant restaurant;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "employee_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "resetToken", "resetTokenExpiry"})
     private User employee;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "waiter_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Waiter waiter;
 
     @Column(name = "shift_date", nullable = false)
     private LocalDate shiftDate;

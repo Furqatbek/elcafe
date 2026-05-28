@@ -34,9 +34,16 @@ public class ShiftScheduleController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<ShiftSchedule>> createSchedule(@RequestBody CreateScheduleRequest request) {
-        log.info("Creating shift schedule for employee {} on {}", request.employeeId, request.shiftDate);
+        // employeeType picks the subject table:
+        //   "waiter" → schedule a Waiter (uses waiters.id)
+        //   anything else (or null) → schedule a User (uses users.id)
+        String type = request.employeeType != null ? request.employeeType : "user";
+        Long subjectId = "waiter".equalsIgnoreCase(type) && request.waiterId != null
+                ? request.waiterId
+                : request.employeeId;
+        log.info("Creating shift schedule for {} {} on {}", type, subjectId, request.shiftDate);
         ShiftSchedule schedule = scheduleService.createSchedule(
-                request.restaurantId, request.employeeId, request.shiftDate,
+                request.restaurantId, type, subjectId, request.shiftDate,
                 request.startTime, request.endTime, request.role, request.notes, request.createdById);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Shift scheduled", schedule));
@@ -79,6 +86,9 @@ public class ShiftScheduleController {
     public static class CreateScheduleRequest {
         private Long restaurantId;
         private Long employeeId;
+        private Long waiterId;
+        // "user" or "waiter"; defaults to "user" for backward compat.
+        private String employeeType;
         private LocalDate shiftDate;
         private LocalTime startTime;
         private LocalTime endTime;

@@ -23,4 +23,9 @@ public interface ShiftScheduleRepository extends JpaRepository<ShiftSchedule, Lo
            "AND s.shiftDate = :date AND s.status != 'CANCELLED'")
     List<ShiftSchedule> findActiveByEmployeeAndDate(
             @Param("employeeId") Long employeeId, @Param("date") LocalDate date);
+
+    @Query("SELECT s FROM ShiftSchedule s WHERE s.waiter.id = :waiterId " +
+           "AND s.shiftDate = :date AND s.status != 'CANCELLED'")
+    List<ShiftSchedule> findActiveByWaiterAndDate(
+            @Param("waiterId") Long waiterId, @Param("date") LocalDate date);
 }
