@@ -41,27 +41,30 @@ public class PayrollController {
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getStaffEmployees() {
         List<Map<String, Object>> result = new java.util.ArrayList<>();
 
-        List<User> staff = userRepository.findByRoleNotInAndActiveTrue(
-                List.of(UserRole.CUSTOMER));
+        // Include inactive employees too so payroll can be created/edited
+        // for anyone the user expects to see, even those toggled inactive.
+        List<User> staff = userRepository.findByRoleNotIn(List.of(UserRole.CUSTOMER));
         for (User u : staff) {
-            result.add(Map.of(
-                    "id", u.getId(),
-                    "fullName", (u.getFirstName() != null ? u.getFirstName() : "") + " " + (u.getLastName() != null ? u.getLastName() : ""),
-                    "email", u.getEmail() != null ? u.getEmail() : "",
-                    "role", u.getRole().name(),
-                    "type", "user"
-            ));
+            Map<String, Object> row = new java.util.HashMap<>();
+            row.put("id", u.getId());
+            row.put("fullName", (u.getFirstName() != null ? u.getFirstName() : "") + " " + (u.getLastName() != null ? u.getLastName() : ""));
+            row.put("email", u.getEmail() != null ? u.getEmail() : "");
+            row.put("role", u.getRole().name());
+            row.put("type", "user");
+            row.put("active", Boolean.TRUE.equals(u.getActive()));
+            result.add(row);
         }
 
-        List<Waiter> waiters = waiterRepository.findByActiveTrueOrderByNameAsc();
+        List<Waiter> waiters = waiterRepository.findAllByOrderByNameAsc();
         for (Waiter w : waiters) {
-            result.add(Map.of(
-                    "id", w.getId(),
-                    "fullName", w.getName() != null ? w.getName() : "",
-                    "email", w.getEmail() != null ? w.getEmail() : "",
-                    "role", w.getRole().name(),
-                    "type", "waiter"
-            ));
+            Map<String, Object> row = new java.util.HashMap<>();
+            row.put("id", w.getId());
+            row.put("fullName", w.getName() != null ? w.getName() : "");
+            row.put("email", w.getEmail() != null ? w.getEmail() : "");
+            row.put("role", w.getRole().name());
+            row.put("type", "waiter");
+            row.put("active", Boolean.TRUE.equals(w.getActive()));
+            result.add(row);
         }
 
         return ResponseEntity.ok(ApiResponse.success("Staff employees retrieved", result));

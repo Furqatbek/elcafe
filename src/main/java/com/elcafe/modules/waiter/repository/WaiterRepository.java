@@ -33,6 +33,8 @@ public interface WaiterRepository extends JpaRepository<Waiter, Long> {
      */
     List<Waiter> findByActiveTrueOrderByNameAsc();
 
+    List<Waiter> findAllByOrderByNameAsc();
+
     /**
      * Check if PIN code exists
      */

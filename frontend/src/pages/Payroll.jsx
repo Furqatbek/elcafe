@@ -129,7 +129,7 @@ export default function Payroll() {
   const handleEditSalary = (sc) => {
     setEditingSalary(sc);
     setSalaryForm({
-      employeeId: sc.waiter ? `waiter:${sc.waiter.id}` : `employee:${sc.employee?.id}`,
+      employeeId: sc.waiter ? `waiter:${sc.waiter.id}` : (sc.employee ? `user:${sc.employee.id}` : ''),
       payFrequency: sc.payFrequency || 'MONTHLY',
       baseAmount: (sc.baseAmount != null ? sc.baseAmount : sc.monthlySalary)?.toString() || '',
       payDay: sc.payDay?.toString() || '1',
@@ -207,6 +207,11 @@ export default function Payroll() {
       }
       setCreateOpen(false);
       setEditingPayroll(null);
+      setForm({
+        employeeId: '', payrollType: 'HOURLY', payPeriodStart: '', payPeriodEnd: '',
+        hoursWorked: '', hourlyRate: '', baseSalary: '', overtimePay: '',
+        bonus: '', tips: '', commission: '', taxDeduction: '', otherDeductions: '', notes: '',
+      });
       loadPayrolls();
     } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
   };
@@ -214,7 +219,7 @@ export default function Payroll() {
   const handleEditPayroll = (p) => {
     setEditingPayroll(p);
     setForm({
-      employeeId: p.waiter ? `waiter:${p.waiter.id}` : `employee:${p.employee?.id}`,
+      employeeId: p.waiter ? `waiter:${p.waiter.id}` : (p.employee ? `user:${p.employee.id}` : ''),
       payrollType: p.payrollType || 'HOURLY',
       payPeriodStart: p.payPeriodStart || '',
       payPeriodEnd: p.payPeriodEnd || '',
@@ -468,7 +473,17 @@ export default function Payroll() {
       </Tabs>
 
       {/* Create Dialog */}
-      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) setEditingPayroll(null); }}>
+      <Dialog open={createOpen} onOpenChange={(open) => {
+        setCreateOpen(open);
+        if (!open) {
+          setEditingPayroll(null);
+          setForm({
+            employeeId: '', payrollType: 'HOURLY', payPeriodStart: '', payPeriodEnd: '',
+            hoursWorked: '', hourlyRate: '', baseSalary: '', overtimePay: '',
+            bonus: '', tips: '', commission: '', taxDeduction: '', otherDeductions: '', notes: '',
+          });
+        }
+      }}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editingPayroll ? t('payroll.editEntry', 'Edit Payroll Entry') : t('payroll.newEntry')}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-2">
@@ -477,7 +492,7 @@ export default function Payroll() {
                 <Label>{t('payroll.employee')} *</Label>
                 <select disabled={!!editingPayroll} value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background disabled:opacity-60">
                   <option value="">{t('payroll.selectEmployee')}</option>
-                  {employees.map(e => <option key={`${e.type}:${e.id}`} value={`${e.type}:${e.id}`}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
+                  {employees.map(e => <option key={`${e.type}:${e.id}`} value={`${e.type}:${e.id}`}>{(e.fullName || '').trim() || e.email} ({e.role}){e.active === false ? " - inactive" : ""}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
@@ -612,7 +627,7 @@ export default function Payroll() {
               <Label>{t('payroll.employee')} *</Label>
               <select disabled={!!editingSalary} value={salaryForm.employeeId} onChange={e => setSalaryForm({ ...salaryForm, employeeId: e.target.value })} className="w-full border rounded-md px-3 py-2 text-sm bg-background disabled:opacity-60">
                 <option value="">{t('payroll.selectEmployee')}</option>
-                {employees.map(e => <option key={`${e.type}:${e.id}`} value={`${e.type}:${e.id}`}>{(e.fullName || '').trim() || e.email} ({e.role})</option>)}
+                {employees.map(e => <option key={`${e.type}:${e.id}`} value={`${e.type}:${e.id}`}>{(e.fullName || '').trim() || e.email} ({e.role}){e.active === false ? " - inactive" : ""}</option>)}
               </select>
             </div>
             <div className="space-y-2">

@@ -27,4 +27,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> findByRoleAndActiveTrue(UserRole role, Pageable pageable);
 
     List<User> findByRoleNotInAndActiveTrue(Collection<UserRole> excludedRoles);
+
+    List<User> findByRoleNotIn(Collection<UserRole> excludedRoles);
 }
