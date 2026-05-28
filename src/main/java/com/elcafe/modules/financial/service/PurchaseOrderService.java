@@ -359,6 +359,36 @@ public class PurchaseOrderService {
         PurchaseOrder received = receivePurchaseOrder(
                 created.getId(), deliveryDate, performedBy, receivedItems);
 
+        // Book the financial_expenses row up front so it shows up in
+        // the expenses list. We deliberately do NOT do this for the
+        // generic recipe-PO path (see the long comment in
+        // receivePurchaseOrder explaining the COGS double-count), but
+        // autoFinalize is the "I just paid cash at the market"
+        // pattern — there's no later COGS recognition that would
+        // double-count, and the buyer expects the outflow visible in
+        // expenses immediately. recordPayment below will then mark
+        // this row PAID via updateExpensePaymentByPurchaseOrderId.
+        try {
+            BigDecimal subtotal = received.getSubtotal() != null
+                    ? received.getSubtotal()
+                    : (received.getTotalAmount() != null ? received.getTotalAmount() : BigDecimal.ZERO);
+            BigDecimal taxAmount = received.getTaxAmount() != null
+                    ? received.getTaxAmount()
+                    : BigDecimal.ZERO;
+            expenseService.createExpenseFromPurchaseOrder(
+                    received.getRestaurant(),
+                    received.getId(),
+                    received.getPoNumber(),
+                    received.getSupplierName(),
+                    subtotal,
+                    taxAmount,
+                    deliveryDate,
+                    performedBy);
+        } catch (Exception e) {
+            log.warn("Failed to create expense from auto-finalized PO {}: {}",
+                    received.getPoNumber(), e.getMessage());
+        }
+
         // Pay the full total. updatePaymentStatus on PurchaseOrder
         // transitions UNPAID → PAID when paid amount matches total.
         BigDecimal total = received.getTotalAmount() != null
