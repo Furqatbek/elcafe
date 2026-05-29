@@ -321,10 +321,18 @@ export default function Payroll() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {salaryConfigs.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t('payroll.noSalaries')}</TableCell></TableRow>
-                  ) : (
-                    salaryConfigs.map(sc => {
+                  {(() => {
+                    // Soft-deleted configs (active=false) stay in the DB so old
+                    // PayrollEntry rows keep their FK target intact, but they
+                    // shouldn't clutter the admin list — the operator already
+                    // "deleted" them.
+                    const visible = salaryConfigs.filter(sc => sc.active !== false);
+                    if (visible.length === 0) {
+                      return (
+                        <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{t('payroll.noSalaries')}</TableCell></TableRow>
+                      );
+                    }
+                    return visible.map(sc => {
                       const freq = sc.payFrequency || 'MONTHLY';
                       const amount = sc.baseAmount != null ? sc.baseAmount : sc.monthlySalary;
                       const payWhen =
@@ -367,8 +375,8 @@ export default function Payroll() {
                         </TableCell>
                       </TableRow>
                       );
-                    })
-                  )}
+                    });
+                  })()}
                 </TableBody>
               </Table>
             </CardContent>
