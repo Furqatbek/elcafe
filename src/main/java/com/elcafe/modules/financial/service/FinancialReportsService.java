@@ -112,14 +112,20 @@ public class FinancialReportsService {
         log.info("P&L: Found {} orders, {} revenue-counted, gross: {}, discounts: {}, net: {}",
                 orders.size(), completedOrders.size(), grossRevenue, totalDiscounts, totalRevenue);
 
-        // Calculate expenses from expense records (with shift-extended date range)
-        // For overnight shifts, extend end date to include expenses from early morning hours
-        LocalDate shiftEndDate = shift.end().toLocalDate();
-        LocalDate expenseEndDate = shiftEndDate.isAfter(endDate) ? shiftEndDate : endDate;
-        log.debug("P&L: Expense date range: {} to {} (shift end: {})", startDate, expenseEndDate, shift.end());
+        // Filter expenses by the SAME timestamp window used for orders,
+        // not by calendar date. The old date-only query swept in any
+        // expense whose expenseDate happened to land on the same day —
+        // including ones recorded hours before the shift opened or
+        // after it closed. Telegram shift-closed reports were the most
+        // visible victim: an owner closing a 18:00–02:00 shift saw an
+        // expense added at 09:00 that morning (a completely different
+        // shift) bundled into "today's" totals.
+        java.time.LocalDateTime shiftStartLocal = shift.start().toLocalDateTime();
+        java.time.LocalDateTime shiftEndLocal = shift.end().toLocalDateTime();
+        log.debug("P&L: Expense timestamp window: {} to {}", shiftStartLocal, shiftEndLocal);
 
-        List<Expense> expenses = expenseRepository.findByRestaurant_IdAndExpenseDateBetween(
-                restaurantId, startDate, expenseEndDate);
+        List<Expense> expenses = expenseRepository.findByRestaurant_IdAndCreatedAtBetween(
+                restaurantId, shiftStartLocal, shiftEndLocal);
 
         List<Expense> paidExpenses = expenses.stream()
                 .filter(e -> e.getPaymentStatus() == Expense.PaymentStatus.PAID)
@@ -150,9 +156,15 @@ public class FinancialReportsService {
                         Collectors.reducing(BigDecimal.ZERO, Expense::getTotalAmount, BigDecimal::add)
                 ));
 
-        // Calculate payroll costs (paid within the date range)
+        // Calculate payroll costs (paid within the date range). Payroll
+        // queries the paymentDate column which is a LocalDate, so the
+        // calendar-day cap remains correct here — we just need the same
+        // shift-extended end-date the old expense query computed.
+        LocalDate payrollEndDate = shiftEndLocal.toLocalDate().isAfter(endDate)
+                ? shiftEndLocal.toLocalDate()
+                : endDate;
         BigDecimal totalPayroll = payrollRepository.getTotalPaidPayrollByPaymentDate(
-                restaurantId, startDate, expenseEndDate);
+                restaurantId, startDate, payrollEndDate);
         if (totalPayroll == null) totalPayroll = BigDecimal.ZERO;
 
         log.info("P&L: Total expenses: {}, payroll: {}, categories: {}",

@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,6 +28,17 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
 
     List<Expense> findByRestaurant_IdAndExpenseDateBetween(
             Long restaurantId, LocalDate startDate, LocalDate endDate);
+
+    /**
+     * Finds expenses recorded (createdAt) within a precise timestamp
+     * window. Used by reports/notifications that need to align expenses
+     * with a shift's actual operational hours rather than the calendar
+     * day — a 06:00–02:00 shift should not include expenses recorded
+     * at 03:00 just because they share a calendar date with the
+     * shift's open hour.
+     */
+    List<Expense> findByRestaurant_IdAndCreatedAtBetween(
+            Long restaurantId, LocalDateTime startInclusive, LocalDateTime endInclusive);
 
     List<Expense> findByRestaurant_IdAndRecurringTrue(Long restaurantId);
 
