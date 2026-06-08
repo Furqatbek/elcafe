@@ -654,6 +654,49 @@ public class POSOrderService {
     }
 
     /**
+     * Attach a customer to an in-flight POS order so the loyalty wallet
+     * credit fires when the order completes. Resolves the customer from
+     * exactly one of: customerId, qrCode, phone.
+     */
+    @Transactional
+    public POSOrderResponse attachCustomer(Long orderId, com.elcafe.modules.order.dto.pos.AttachCustomerRequest request) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+
+        if (order.getStatus() == OrderStatus.DELIVERED
+                || order.getStatus() == OrderStatus.COMPLETED
+                || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("Cannot attach customer to a settled order (status=" + order.getStatus() + ")");
+        }
+
+        Customer customer = resolveCustomer(request);
+        order.setCustomer(customer);
+        Order saved = orderRepository.save(order);
+        log.info("Attached customer {} to order {} (resolved via {})",
+                customer.getId(), orderId, resolveStrategy(request));
+        return mapToResponse(saved, getOrderTypeString(saved));
+    }
+
+    private Customer resolveCustomer(com.elcafe.modules.order.dto.pos.AttachCustomerRequest request) {
+        if (request.getCustomerId() != null) {
+            return customerRepository.findById(request.getCustomerId())
+                    .orElseThrow(() -> new IllegalArgumentException("Customer not found with ID: " + request.getCustomerId()));
+        }
+        if (request.getQrCode() != null && !request.getQrCode().isBlank()) {
+            return customerRepository.findByQrCode(request.getQrCode())
+                    .orElseThrow(() -> new IllegalArgumentException("Customer not found for QR code: " + request.getQrCode()));
+        }
+        return customerRepository.findByPhone(request.getPhone())
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found for phone: " + request.getPhone()));
+    }
+
+    private String resolveStrategy(com.elcafe.modules.order.dto.pos.AttachCustomerRequest request) {
+        if (request.getCustomerId() != null) return "customerId";
+        if (request.getQrCode() != null && !request.getQrCode().isBlank()) return "qrCode";
+        return "phone";
+    }
+
+    /**
      * Record promotion usage for analytics when order is created with discount info.
      */
     private void recordPromotionUsageIfApplicable(Order order, CreatePOSOrderRequest request) {

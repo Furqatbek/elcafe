@@ -4,6 +4,7 @@ import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.common.security.exception.SecurityPolicyViolationException;
 import com.elcafe.common.security.service.FinancialOperationSecurityService;
+import com.elcafe.modules.order.dto.pos.AttachCustomerRequest;
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.ModifyOrderItemRequest;
 import com.elcafe.modules.order.dto.pos.PaymentRequestDTO;
@@ -155,6 +156,25 @@ public class POSOrderController {
         POSOrderResponse order = posOrderService.getOrderById(orderId);
 
         return ResponseEntity.ok(ApiResponse.success("Order retrieved", order));
+    }
+
+    @PatchMapping("/{orderId}/customer")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER', 'CASHIER', 'MANAGER')")
+    @Operation(
+            summary = "Attach customer to order",
+            description = "Link an existing customer to an in-flight POS order. " +
+                    "Exactly one of customerId, qrCode, or phone must be provided. " +
+                    "Drives the loyalty wallet credit on order completion."
+    )
+    public ResponseEntity<ApiResponse<POSOrderResponse>> attachCustomer(
+            @PathVariable Long orderId,
+            @Valid @RequestBody AttachCustomerRequest request) {
+
+        log.info("Attaching customer to order {} (customerId={}, qrCode={}, phone={})",
+                orderId, request.getCustomerId(), request.getQrCode(), request.getPhone());
+
+        POSOrderResponse response = posOrderService.attachCustomer(orderId, request);
+        return ResponseEntity.ok(ApiResponse.success("Customer attached to order", response));
     }
 
     // ============== Item Management Endpoints ==============
