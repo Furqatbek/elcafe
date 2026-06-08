@@ -59,6 +59,7 @@ import OwnerBotSubscribers from './pages/OwnerBotSubscribers';
 import InstagramMarketing from './pages/InstagramMarketing';
 import QRCodes from './pages/QRCodes';
 import LoyaltyMilestones from './pages/LoyaltyMilestones';
+import LoyaltySettings from './pages/LoyaltySettings';
 import Reservations from './pages/Reservations';
 import {
   InventoryIngredients,
@@ -216,6 +217,7 @@ function App() {
           <Route path="marketing/instagram" element={<AdminRoute><InstagramMarketing /></AdminRoute>} />
           <Route path="marketing/qr-codes" element={<AdminRoute><QRCodes /></AdminRoute>} />
           <Route path="marketing/milestones" element={<AdminRoute><LoyaltyMilestones /></AdminRoute>} />
+          <Route path="marketing/loyalty" element={<AdminRoute><LoyaltySettings /></AdminRoute>} />
           <Route path="marketing/analytics" element={<AdminRoute><PromotionAnalytics /></AdminRoute>} />
           <Route path="promotions" element={<AdminRoute><Promotions /></AdminRoute>} />
           <Route path="coupons" element={<AdminRoute><CouponCodes /></AdminRoute>} />
