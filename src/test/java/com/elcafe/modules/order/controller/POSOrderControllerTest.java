@@ -471,4 +471,42 @@ class POSOrderControllerTest {
         mockMvc.perform(post("/api/v1/pos/orders/1/happy-hour/apply"))
                 .andExpect(status().isOk());
     }
+
+    // ==================== attachCustomer ====================
+
+    @Test
+    @DisplayName("PATCH /{orderId}/customer — attaches by qrCode")
+    void attachCustomer_byQrCode() throws Exception {
+        when(posOrderService.attachCustomer(eq(1L), any())).thenReturn(buildResponse());
+
+        mockMvc.perform(patch("/api/v1/pos/orders/1/customer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"qrCode\":\"CST-ABCDEF123456\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(1));
+
+        verify(posOrderService).attachCustomer(eq(1L), any());
+    }
+
+    @Test
+    @DisplayName("PATCH /{orderId}/customer — attaches by phone")
+    void attachCustomer_byPhone() throws Exception {
+        when(posOrderService.attachCustomer(eq(1L), any())).thenReturn(buildResponse());
+
+        mockMvc.perform(patch("/api/v1/pos/orders/1/customer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"phone\":\"+998901234567\"}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("PATCH /{orderId}/customer — attaches by customerId")
+    void attachCustomer_byCustomerId() throws Exception {
+        when(posOrderService.attachCustomer(eq(1L), any())).thenReturn(buildResponse());
+
+        mockMvc.perform(patch("/api/v1/pos/orders/1/customer")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customerId\":42}"))
+                .andExpect(status().isOk());
+    }
 }

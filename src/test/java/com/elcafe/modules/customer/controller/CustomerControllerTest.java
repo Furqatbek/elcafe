@@ -81,4 +81,29 @@ class CustomerControllerTest {
         mockMvc.perform(delete("/api/v1/customers/1")).andExpect(status().isOk());
         verify(customerService).deleteCustomer(1L);
     }
+
+    @Test @DisplayName("GET /by-qr/{code} — returns customer for matching code")
+    void getByQr_returnsCustomer() throws Exception {
+        customer.setQrCode("CST-ABCDEF123456");
+        when(customerService.getCustomerByQrCode("CST-ABCDEF123456")).thenReturn(customer);
+        when(customerService.getCustomerWithMarketing(1L))
+                .thenReturn(com.elcafe.modules.customer.dto.CustomerResponse.from(customer));
+
+        mockMvc.perform(get("/api/v1/customers/by-qr/CST-ABCDEF123456"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.qrCode").value("CST-ABCDEF123456"));
+    }
+
+    @Test @DisplayName("POST /{id}/qr-code/regenerate — rotates the code")
+    void regenerateQrCode_returnsRefreshed() throws Exception {
+        customer.setQrCode("CST-NEWCODE12345");
+        when(customerService.getCustomerWithMarketing(1L))
+                .thenReturn(com.elcafe.modules.customer.dto.CustomerResponse.from(customer));
+
+        mockMvc.perform(post("/api/v1/customers/1/qr-code/regenerate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.qrCode").value("CST-NEWCODE12345"));
+
+        verify(customerService).regenerateQrCode(1L);
+    }
 }
