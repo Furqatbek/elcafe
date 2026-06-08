@@ -3,11 +3,14 @@ package com.elcafe.modules.loyalty.service;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.loyalty.dto.LoyaltyConfigRequest;
 import com.elcafe.modules.loyalty.entity.*;
 import com.elcafe.modules.loyalty.repository.CustomerLoyaltyRepository;
 import com.elcafe.modules.loyalty.repository.LoyaltyConfigRepository;
 import com.elcafe.modules.loyalty.repository.LoyaltyPromotionRepository;
 import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +39,7 @@ public class LoyaltyService {
     private final LoyaltyConfigRepository loyaltyConfigRepository;
     private final LoyaltyPromotionRepository loyaltyPromotionRepository;
     private final CustomerRepository customerRepository;
+    private final RestaurantRepository restaurantRepository;
     private final BonusService bonusService;
     private final TierService tierService;
 
@@ -433,5 +437,58 @@ public class LoyaltyService {
     @Transactional(readOnly = true)
     public Optional<CustomerLoyalty> getCustomerLoyalty(Long customerId) {
         return customerLoyaltyRepository.findByCustomerId(customerId);
+    }
+
+    /**
+     * Public read of the loyalty config for a restaurant. Falls back to the
+     * global config when the restaurant has no override. Returns null if
+     * nothing is configured yet.
+     */
+    @Transactional(readOnly = true)
+    public LoyaltyConfig getConfig(Long restaurantId) {
+        if (restaurantId != null) {
+            Optional<LoyaltyConfig> perRestaurant = loyaltyConfigRepository.findByRestaurant_IdAndEnabled(restaurantId, true);
+            if (perRestaurant.isPresent()) return perRestaurant.get();
+        }
+        return loyaltyConfigRepository.findGlobalConfig().orElse(null);
+    }
+
+    /**
+     * Upsert the loyalty config for a restaurant (or the global config if
+     * restaurantId is null). Only supplied fields overwrite existing values.
+     */
+    @Transactional
+    public LoyaltyConfig upsertConfig(LoyaltyConfigRequest request) {
+        LoyaltyConfig config;
+        if (request.getRestaurantId() != null) {
+            config = loyaltyConfigRepository.findByRestaurant_IdAndEnabled(request.getRestaurantId(), true)
+                    .orElseGet(() -> {
+                        Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
+                                .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", request.getRestaurantId()));
+                        LoyaltyConfig fresh = LoyaltyConfig.builder().restaurant(restaurant).build();
+                        return fresh;
+                    });
+        } else {
+            config = loyaltyConfigRepository.findGlobalConfig()
+                    .orElseGet(() -> LoyaltyConfig.builder().build());
+        }
+
+        if (request.getBonusRateType() != null) config.setBonusRateType(request.getBonusRateType());
+        if (request.getBonusRateValue() != null) config.setBonusRateValue(request.getBonusRateValue());
+        if (request.getMaxBonusPaymentPercentage() != null) config.setMaxBonusPaymentPercentage(request.getMaxBonusPaymentPercentage());
+        if (request.getMinOrderAmountForBonus() != null) config.setMinOrderAmountForBonus(request.getMinOrderAmountForBonus());
+        if (request.getBirthdayBonusAmount() != null) config.setBirthdayBonusAmount(request.getBirthdayBonusAmount());
+        if (request.getFirstOrderBonusAmount() != null) config.setFirstOrderBonusAmount(request.getFirstOrderBonusAmount());
+        if (request.getReactivationBonusAmount() != null) config.setReactivationBonusAmount(request.getReactivationBonusAmount());
+        if (request.getReactivationDaysThreshold() != null) config.setReactivationDaysThreshold(request.getReactivationDaysThreshold());
+        if (request.getBonusExpiryDays() != null) config.setBonusExpiryDays(request.getBonusExpiryDays());
+        if (request.getEnabled() != null) config.setEnabled(request.getEnabled());
+
+        LoyaltyConfig saved = loyaltyConfigRepository.save(config);
+        log.info("Upserted loyalty config id={} restaurantId={} enabled={}",
+                saved.getId(),
+                saved.getRestaurant() != null ? saved.getRestaurant().getId() : null,
+                saved.getEnabled());
+        return saved;
     }
 }

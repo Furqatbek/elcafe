@@ -35,6 +35,10 @@ public class LoyaltyMapper {
     }
 
     public CustomerLoyaltyResponse.TierInfo toTierInfo(CustomerTier tier) {
+        return toTierInfo(tier, null);
+    }
+
+    public CustomerLoyaltyResponse.TierInfo toTierInfo(CustomerTier tier, Long customerCount) {
         if (tier == null) {
             return null;
         }
@@ -47,6 +51,9 @@ public class LoyaltyMapper {
                 .color(tier.getColor())
                 .icon(tier.getIcon())
                 .benefitsDescription(tier.getBenefitsDescription())
+                .minTotalSpend(tier.getMinTotalSpend())
+                .minOrderCount(tier.getMinOrderCount())
+                .customerCount(customerCount)
                 .build();
     }
 

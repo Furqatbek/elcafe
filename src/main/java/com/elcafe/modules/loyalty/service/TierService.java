@@ -1,8 +1,11 @@
 package com.elcafe.modules.loyalty.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.loyalty.dto.TierRequest;
 import com.elcafe.modules.loyalty.entity.CustomerLoyalty;
 import com.elcafe.modules.loyalty.entity.CustomerTier;
 import com.elcafe.modules.loyalty.entity.TierHistory;
+import com.elcafe.modules.loyalty.repository.CustomerLoyaltyRepository;
 import com.elcafe.modules.loyalty.repository.CustomerTierRepository;
 import com.elcafe.modules.loyalty.repository.TierHistoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,7 @@ public class TierService {
 
     private final CustomerTierRepository customerTierRepository;
     private final TierHistoryRepository tierHistoryRepository;
+    private final CustomerLoyaltyRepository customerLoyaltyRepository;
 
     /**
      * Check and update customer tier based on spend and order count
@@ -96,5 +100,60 @@ public class TierService {
     @Transactional(readOnly = true)
     public Optional<CustomerTier> getTierByName(String name) {
         return customerTierRepository.findByName(name);
+    }
+
+    @Transactional(readOnly = true)
+    public long countCustomersOnTier(Long tierId) {
+        Long count = customerLoyaltyRepository.countByTierId(tierId);
+        return count == null ? 0L : count;
+    }
+
+    @Transactional
+    public CustomerTier createTier(TierRequest request) {
+        CustomerTier tier = CustomerTier.builder()
+                .name(request.getName())
+                .level(request.getLevel())
+                .minTotalSpend(request.getMinTotalSpend() != null ? request.getMinTotalSpend() : BigDecimal.ZERO)
+                .minOrderCount(request.getMinOrderCount() != null ? request.getMinOrderCount() : 0)
+                .bonusMultiplier(request.getBonusMultiplier() != null ? request.getBonusMultiplier() : BigDecimal.ONE)
+                .benefitsDescription(request.getBenefitsDescription())
+                .color(request.getColor())
+                .icon(request.getIcon())
+                .build();
+        CustomerTier saved = customerTierRepository.save(tier);
+        log.info("Created loyalty tier {} (level {})", saved.getName(), saved.getLevel());
+        return saved;
+    }
+
+    @Transactional
+    public CustomerTier updateTier(Long id, TierRequest request) {
+        CustomerTier tier = customerTierRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("CustomerTier", "id", id));
+
+        tier.setName(request.getName());
+        tier.setLevel(request.getLevel());
+        if (request.getMinTotalSpend() != null) tier.setMinTotalSpend(request.getMinTotalSpend());
+        if (request.getMinOrderCount() != null) tier.setMinOrderCount(request.getMinOrderCount());
+        if (request.getBonusMultiplier() != null) tier.setBonusMultiplier(request.getBonusMultiplier());
+        tier.setBenefitsDescription(request.getBenefitsDescription());
+        tier.setColor(request.getColor());
+        tier.setIcon(request.getIcon());
+
+        CustomerTier saved = customerTierRepository.save(tier);
+        log.info("Updated loyalty tier {} (level {})", saved.getName(), saved.getLevel());
+        return saved;
+    }
+
+    @Transactional
+    public void deleteTier(Long id) {
+        CustomerTier tier = customerTierRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("CustomerTier", "id", id));
+        long assigned = countCustomersOnTier(id);
+        if (assigned > 0) {
+            throw new IllegalStateException(
+                    "Cannot delete tier '" + tier.getName() + "' — " + assigned + " customer(s) are currently on it. Reassign them first.");
+        }
+        customerTierRepository.delete(tier);
+        log.info("Deleted loyalty tier {} (level {})", tier.getName(), tier.getLevel());
     }
 }

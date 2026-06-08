@@ -42,5 +42,8 @@ public class CustomerLoyaltyResponse {
         private String color;
         private String icon;
         private String benefitsDescription;
+        private BigDecimal minTotalSpend;
+        private Integer minOrderCount;
+        private Long customerCount;
     }
 }

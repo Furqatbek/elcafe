@@ -2,17 +2,22 @@ package com.elcafe.modules.loyalty.controller;
 
 import com.elcafe.modules.loyalty.dto.BonusTransactionResponse;
 import com.elcafe.modules.loyalty.dto.CustomerLoyaltyResponse;
+import com.elcafe.modules.loyalty.dto.LoyaltyConfigRequest;
+import com.elcafe.modules.loyalty.dto.TierRequest;
 import com.elcafe.modules.loyalty.entity.BonusTransaction;
 import com.elcafe.modules.loyalty.entity.CustomerLoyalty;
 import com.elcafe.modules.loyalty.entity.CustomerTier;
+import com.elcafe.modules.loyalty.entity.LoyaltyConfig;
 import com.elcafe.modules.loyalty.mapper.LoyaltyMapper;
 import com.elcafe.modules.loyalty.repository.CustomerTierRepository;
 import com.elcafe.modules.loyalty.service.BonusService;
 import com.elcafe.modules.loyalty.service.LoyaltyService;
+import com.elcafe.modules.loyalty.service.TierService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,6 +40,7 @@ public class LoyaltyController {
 
     private final LoyaltyService loyaltyService;
     private final BonusService bonusService;
+    private final TierService tierService;
     private final CustomerTierRepository customerTierRepository;
     private final LoyaltyMapper loyaltyMapper;
 
@@ -68,16 +74,63 @@ public class LoyaltyController {
     }
 
     @GetMapping("/tiers")
-    @Operation(summary = "Get all tiers", description = "Get list of all loyalty tiers")
+    @Operation(summary = "Get all tiers", description = "Get list of all loyalty tiers, with the customer count on each tier")
     public ResponseEntity<ApiResponse<List<CustomerLoyaltyResponse.TierInfo>>> getAllTiers() {
         log.info("Getting all loyalty tiers");
 
         List<CustomerTier> tiers = customerTierRepository.findAll();
         List<CustomerLoyaltyResponse.TierInfo> response = tiers.stream()
-                .map(loyaltyMapper::toTierInfo)
+                .map(tier -> loyaltyMapper.toTierInfo(tier, tierService.countCustomersOnTier(tier.getId())))
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/tiers")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    @Operation(summary = "Create loyalty tier")
+    public ResponseEntity<ApiResponse<CustomerTier>> createTier(@Valid @RequestBody TierRequest request) {
+        log.info("Creating loyalty tier {} (level {})", request.getName(), request.getLevel());
+        CustomerTier tier = tierService.createTier(request);
+        return ResponseEntity.ok(ApiResponse.success("Tier created", tier));
+    }
+
+    @PutMapping("/tiers/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    @Operation(summary = "Update loyalty tier")
+    public ResponseEntity<ApiResponse<CustomerTier>> updateTier(
+            @PathVariable Long id,
+            @Valid @RequestBody TierRequest request) {
+        log.info("Updating loyalty tier {}", id);
+        CustomerTier tier = tierService.updateTier(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Tier updated", tier));
+    }
+
+    @DeleteMapping("/tiers/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    @Operation(summary = "Delete loyalty tier", description = "Refuses if any customers are currently on this tier")
+    public ResponseEntity<ApiResponse<Void>> deleteTier(@PathVariable Long id) {
+        log.info("Deleting loyalty tier {}", id);
+        tierService.deleteTier(id);
+        return ResponseEntity.ok(ApiResponse.success("Tier deleted", null));
+    }
+
+    @GetMapping("/config")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
+    @Operation(summary = "Get loyalty config", description = "Returns the per-restaurant config, falling back to the global config")
+    public ResponseEntity<ApiResponse<LoyaltyConfig>> getConfig(
+            @RequestParam(required = false) Long restaurantId) {
+        LoyaltyConfig config = loyaltyService.getConfig(restaurantId);
+        return ResponseEntity.ok(ApiResponse.success(config));
+    }
+
+    @PutMapping("/config")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    @Operation(summary = "Upsert loyalty config")
+    public ResponseEntity<ApiResponse<LoyaltyConfig>> upsertConfig(
+            @Valid @RequestBody LoyaltyConfigRequest request) {
+        LoyaltyConfig saved = loyaltyService.upsertConfig(request);
+        return ResponseEntity.ok(ApiResponse.success("Loyalty config saved", saved));
     }
 
     @PostMapping("/customers/{customerId}/birthday-bonus")
