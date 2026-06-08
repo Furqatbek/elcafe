@@ -2953,6 +2953,25 @@
       "typeDinein": "Zalda",
       "typeTakeaway": "Olib ketish",
       "typeDelivery": "Yetkazib berish"
+    },
+    "attachCustomer": {
+      "label": "Sodiqlik mijozi",
+      "notAttached": "Bog‘lanmagan — bonus hamyonga tushmaydi.",
+      "attach": "Bog‘lash",
+      "change": "O‘zgartirish",
+      "clearLocal": "Lokal tanlovni tozalash",
+      "balance": "Balans",
+      "dialogTitle": "Mijozni buyurtmaga bog‘lash",
+      "dialogDescription": "Mijozni QR-kodi orqali yoki telefon raqami bo‘yicha aniqlang.",
+      "modes": {
+        "qr": "QR skanerlash",
+        "phone": "Telefon orqali qidirish"
+      },
+      "qrPlaceholder": "Mijoz QR-kodini skanerlang yoki kiriting…",
+      "qrHint": "USB-skaner Enter bilan avtomatik yuboradi.",
+      "phonePlaceholder": "Telefon raqami…",
+      "noMatches": "Mos keladigan natija yo‘q",
+      "noOrderYet": "Mijozni bog‘lashdan oldin buyurtmani saqlang."
     }
   },
   "pages": {
@@ -4734,6 +4753,84 @@
       "DISCOUNT_PERCENTAGE": "Foizli chegirma",
       "DISCOUNT_FIXED": "Belgilangan chegirma",
       "BONUS_POINTS": "Bonus ballari"
+    },
+    "title": "Sodiqlik va hamyon sozlamalari",
+    "subtitle": "Bonus stavkasi, bosqichlar va mijoz hamyonlarini boshqaring",
+    "tabs": {
+      "general": "Umumiy",
+      "stages": "Bosqichlar",
+      "customers": "Mijozlar"
+    },
+    "config": {
+      "title": "Sodiqlik konfiguratsiyasi",
+      "description": "Bonuslar qanday hisoblanishi va cheklanishini boshqaradi",
+      "globalConfig": "Global (barcha restoranlar)",
+      "enabled": "Sodiqlik dasturi yoqilgan",
+      "bonusRateType": "Bonus turi",
+      "bonusRateTypes": {
+        "PERCENTAGE": "Buyurtmaning foizi",
+        "FIXED_AMOUNT": "Har bir buyurtma uchun belgilangan summa"
+      },
+      "bonusRatePercent": "Bonus stavkasi (buyurtmaning %)",
+      "bonusRateFixed": "Har bir buyurtma uchun bonus",
+      "maxBonusPaymentPercentage": "Hamyondan maksimal to‘lov (buyurtmaning %)",
+      "minOrderAmountForBonus": "Bonus uchun minimal buyurtma summasi",
+      "firstOrderBonusAmount": "Birinchi buyurtma uchun bonus",
+      "birthdayBonusAmount": "Tug‘ilgan kun bonusi",
+      "reactivationBonusAmount": "Qayta faollik bonusi",
+      "reactivationDaysThreshold": "Qayta faollik chegarasi (kun)",
+      "bonusExpiryDays": "Bonus muddati (kun, bo‘sh = cheksiz)"
+    },
+    "stages": {
+      "title": "Bosqichlar",
+      "description": "Mijoz umumiy xarid summasi VA buyurtmalar soni belgilangan chegaralarga yetganda bosqichga ko‘tariladi. Bonus stavkasi bosqich koeffitsientiga ko‘paytiriladi.",
+      "addStage": "Bosqich qo‘shish",
+      "editTier": "Bosqichni tahrirlash",
+      "empty": "Hali bosqichlar belgilanmagan",
+      "emptyHint": "Doimiy mijozlar uchun yuqori bonus stavkasi belgilash uchun bosqich qo‘shing.",
+      "deleteTitle": "Bosqichni o‘chirish",
+      "deleteConfirm": "«{{name}}» bosqichi o‘chirilsinmi? Bu amalni qaytarib bo‘lmaydi.",
+      "deleteBlocked": "Bosqichda {{count}} ta mijoz bor — avval ularni boshqasiga ko‘chiring",
+      "formDescription": "Mijoz ikkala shart bajarilganda bu bosqichga o‘tadi.",
+      "color": "Rang",
+      "benefits": "Imtiyozlar tavsifi",
+      "cols": {
+        "level": "Daraja",
+        "name": "Nomi",
+        "minSpend": "Min. xarid",
+        "minOrders": "Min. buyurtma",
+        "multiplier": "Koeffitsient",
+        "customers": "Mijozlar"
+      }
+    },
+    "customers": {
+      "title": "Mijozlar hamyonlari",
+      "description": "Mijozni telefon raqami bo‘yicha qidirib, hamyon balansi, joriy bosqich va bonus tarixini ko‘ring.",
+      "searchPlaceholder": "Telefon raqami…",
+      "clearSelection": "Tozalash",
+      "balance": "Hamyon balansi",
+      "lifetimeEarned": "Jami yig‘ilgan",
+      "lifetimeSpent": "Jami sarflangan (bonus)",
+      "tier": "Bosqich",
+      "noTier": "Bosqich yo‘q",
+      "ledger": "Bonus operatsiyalari",
+      "noTransactions": "Hali bonus operatsiyalari yo‘q",
+      "noLoyaltyRecord": "Bu mijozda hali sodiqlik yozuvi yo‘q.",
+      "txCols": {
+        "date": "Sana",
+        "type": "Turi",
+        "amount": "Summa",
+        "balanceAfter": "Keyingi balans",
+        "order": "Buyurtma",
+        "description": "Tavsif"
+      }
+    },
+    "messages": {
+      "configSaved": "Sodiqlik sozlamalari saqlandi",
+      "configSaveError": "Sodiqlik sozlamalarini saqlab bo‘lmadi",
+      "tierNameRequired": "Bosqich nomi kerak",
+      "tierSaveError": "Bosqichni saqlab bo‘lmadi",
+      "tierDeleteError": "Bosqichni o‘chirib bo‘lmadi"
     }
   },
   "referrals": {

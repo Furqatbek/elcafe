@@ -3140,6 +3140,25 @@
       "typeDinein": "Dine-in",
       "typeTakeaway": "Takeaway",
       "typeDelivery": "Delivery"
+    },
+    "attachCustomer": {
+      "label": "Loyalty customer",
+      "notAttached": "Not attached — wallet bonus will not be credited.",
+      "attach": "Attach",
+      "change": "Change",
+      "clearLocal": "Clear local selection",
+      "balance": "Balance",
+      "dialogTitle": "Attach customer to order",
+      "dialogDescription": "Identify the customer by scanning their loyalty QR or looking them up by phone.",
+      "modes": {
+        "qr": "Scan QR",
+        "phone": "Phone lookup"
+      },
+      "qrPlaceholder": "Scan or type the customer QR code…",
+      "qrHint": "USB scanners will submit automatically on Enter.",
+      "phonePlaceholder": "Phone number…",
+      "noMatches": "No matches",
+      "noOrderYet": "Save the order before attaching a customer."
     }
   },
   "pages": {
@@ -4926,6 +4945,84 @@
       "DISCOUNT_PERCENTAGE": "Percentage discount",
       "DISCOUNT_FIXED": "Fixed discount",
       "BONUS_POINTS": "Bonus points"
+    },
+    "title": "Loyalty & wallet settings",
+    "subtitle": "Configure earn rate, stages, and inspect customer wallets",
+    "tabs": {
+      "general": "General",
+      "stages": "Stages",
+      "customers": "Customers"
+    },
+    "config": {
+      "title": "Loyalty configuration",
+      "description": "Controls how bonuses are earned, capped, and granted",
+      "globalConfig": "Global (all restaurants)",
+      "enabled": "Loyalty program enabled",
+      "bonusRateType": "Bonus rate type",
+      "bonusRateTypes": {
+        "PERCENTAGE": "Percentage of order",
+        "FIXED_AMOUNT": "Fixed amount per order"
+      },
+      "bonusRatePercent": "Bonus rate (% of order)",
+      "bonusRateFixed": "Bonus per order",
+      "maxBonusPaymentPercentage": "Max wallet payment (% of order)",
+      "minOrderAmountForBonus": "Minimum order amount for bonus",
+      "firstOrderBonusAmount": "First-order bonus",
+      "birthdayBonusAmount": "Birthday bonus",
+      "reactivationBonusAmount": "Reactivation bonus",
+      "reactivationDaysThreshold": "Reactivation threshold (days)",
+      "bonusExpiryDays": "Bonus expires after (days, blank = never)"
+    },
+    "stages": {
+      "title": "Stages",
+      "description": "Customers are promoted to a stage when their total spend AND order count meet its thresholds. Bonus earnings are multiplied by the stage multiplier.",
+      "addStage": "Add stage",
+      "editTier": "Edit stage",
+      "empty": "No stages defined yet",
+      "emptyHint": "Add stages to give frequent customers a higher earn rate.",
+      "deleteTitle": "Delete stage",
+      "deleteConfirm": "Delete stage \"{{name}}\"? This cannot be undone.",
+      "deleteBlocked": "{{count}} customer(s) on this stage — reassign first",
+      "formDescription": "A customer becomes eligible for this stage once both thresholds are met.",
+      "color": "Color",
+      "benefits": "Benefits description",
+      "cols": {
+        "level": "Level",
+        "name": "Name",
+        "minSpend": "Min spend",
+        "minOrders": "Min orders",
+        "multiplier": "Multiplier",
+        "customers": "Customers"
+      }
+    },
+    "customers": {
+      "title": "Customer wallets",
+      "description": "Look up a customer by phone to see their wallet balance, current stage, and bonus transaction history.",
+      "searchPlaceholder": "Phone number…",
+      "clearSelection": "Clear",
+      "balance": "Wallet balance",
+      "lifetimeEarned": "Lifetime earned",
+      "lifetimeSpent": "Lifetime spent (bonus)",
+      "tier": "Stage",
+      "noTier": "No stage",
+      "ledger": "Bonus transactions",
+      "noTransactions": "No bonus transactions yet",
+      "noLoyaltyRecord": "This customer has no loyalty record yet.",
+      "txCols": {
+        "date": "Date",
+        "type": "Type",
+        "amount": "Amount",
+        "balanceAfter": "Balance after",
+        "order": "Order",
+        "description": "Description"
+      }
+    },
+    "messages": {
+      "configSaved": "Loyalty config saved",
+      "configSaveError": "Failed to save loyalty config",
+      "tierNameRequired": "Tier name is required",
+      "tierSaveError": "Failed to save tier",
+      "tierDeleteError": "Failed to delete tier"
     }
   },
   "referrals": {
