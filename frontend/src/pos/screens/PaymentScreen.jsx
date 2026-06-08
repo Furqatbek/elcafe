@@ -18,6 +18,7 @@ import CardPaymentDialog from '../components/CardPaymentDialog';
 import VoidOrderDialog from '../components/VoidOrderDialog';
 import RefundDialog from '../components/RefundDialog';
 import HappyHourBanner from '../components/HappyHourBanner';
+import AttachCustomerPanel from '../components/AttachCustomerPanel';
 import usePOSStore from '../store/posStore';
 import { posAPI } from '../../services/api';
 import PrintReceipt from '../../components/PrintReceipt';
@@ -614,6 +615,9 @@ const PaymentScreen = () => {
         {/* Payment Method Selection */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-6 pb-32 lg:pb-6">
           <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+            {/* Loyalty: attach customer for wallet credit */}
+            <AttachCustomerPanel orderId={currentOrder.id} />
+
             {/* Happy Hour Banner */}
             {happyHour.active && !happyHourDismissed && currentOrder.discountType !== 'HAPPY_HOUR' && (
               <HappyHourBanner
