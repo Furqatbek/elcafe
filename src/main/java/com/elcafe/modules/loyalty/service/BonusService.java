@@ -126,7 +126,8 @@ public class BonusService {
                type == BonusTransaction.TransactionType.FIRST_ORDER_BONUS ||
                type == BonusTransaction.TransactionType.REACTIVATION_BONUS ||
                type == BonusTransaction.TransactionType.PROMOTION_BONUS ||
-               type == BonusTransaction.TransactionType.REFERRAL_BONUS;
+               type == BonusTransaction.TransactionType.REFERRAL_BONUS ||
+               type == BonusTransaction.TransactionType.TOP_UP;
     }
 
     /**

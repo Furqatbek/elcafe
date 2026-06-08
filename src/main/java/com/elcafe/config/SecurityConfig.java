@@ -62,6 +62,7 @@ public class SecurityConfig {
                                 "/api/v1/waiters/auth",
                                 "/api/v1/menu/public/**",
                                 "/api/v1/courier/webhook/**",
+                                "/api/v1/webhook/wallet/**",
                                 "/api/v1/self-service/**",  // Self-service ordering (QR code)
                                 "/api/v1/public/**",        // Public reservation endpoints
                                 "/api/public/**",           // Public order tracking endpoints

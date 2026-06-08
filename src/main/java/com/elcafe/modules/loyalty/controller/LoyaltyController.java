@@ -4,15 +4,18 @@ import com.elcafe.modules.loyalty.dto.BonusTransactionResponse;
 import com.elcafe.modules.loyalty.dto.CustomerLoyaltyResponse;
 import com.elcafe.modules.loyalty.dto.LoyaltyConfigRequest;
 import com.elcafe.modules.loyalty.dto.TierRequest;
+import com.elcafe.modules.loyalty.dto.WalletTopUpResponse;
 import com.elcafe.modules.loyalty.entity.BonusTransaction;
 import com.elcafe.modules.loyalty.entity.CustomerLoyalty;
 import com.elcafe.modules.loyalty.entity.CustomerTier;
 import com.elcafe.modules.loyalty.entity.LoyaltyConfig;
+import com.elcafe.modules.loyalty.entity.WalletTopUp;
 import com.elcafe.modules.loyalty.mapper.LoyaltyMapper;
 import com.elcafe.modules.loyalty.repository.CustomerTierRepository;
 import com.elcafe.modules.loyalty.service.BonusService;
 import com.elcafe.modules.loyalty.service.LoyaltyService;
 import com.elcafe.modules.loyalty.service.TierService;
+import com.elcafe.modules.loyalty.service.WalletTopUpService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -41,6 +44,7 @@ public class LoyaltyController {
     private final LoyaltyService loyaltyService;
     private final BonusService bonusService;
     private final TierService tierService;
+    private final WalletTopUpService walletTopUpService;
     private final CustomerTierRepository customerTierRepository;
     private final LoyaltyMapper loyaltyMapper;
 
@@ -153,5 +157,43 @@ public class LoyaltyController {
         loyaltyService.grantReactivationBonus(customerId);
 
         return ResponseEntity.ok(ApiResponse.success("Reactivation bonus granted successfully", null));
+    }
+
+    // ============== Wallet top-ups (admin view + manual confirm) ==============
+
+    @GetMapping("/wallet/top-ups")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
+    @Operation(summary = "List wallet top-ups",
+            description = "Paged list across all customers, optionally filtered by status")
+    public ResponseEntity<ApiResponse<Page<WalletTopUpResponse>>> listTopUps(
+            @RequestParam(required = false) WalletTopUp.Status status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<WalletTopUpResponse> result = walletTopUpService
+                .listAll(status, PageRequest.of(page, size))
+                .map(WalletTopUpResponse::from);
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    @PostMapping("/wallet/top-ups/{id}/confirm")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER', 'CASHIER')")
+    @Operation(summary = "Manually confirm a top-up",
+            description = "Admin path for cash-at-counter (MANUAL provider) or to settle a stuck PENDING. " +
+                    "Credits the wallet via the same idempotent ledger path the webhooks use.")
+    public ResponseEntity<ApiResponse<WalletTopUpResponse>> manualConfirm(
+            @PathVariable Long id,
+            @RequestParam(required = false) String reference) {
+        WalletTopUp topUp = walletTopUpService.complete(id, null, reference, null);
+        return ResponseEntity.ok(ApiResponse.success("Top-up confirmed", WalletTopUpResponse.from(topUp)));
+    }
+
+    @PostMapping("/wallet/top-ups/{id}/fail")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
+    @Operation(summary = "Mark a top-up as failed")
+    public ResponseEntity<ApiResponse<WalletTopUpResponse>> markFailed(
+            @PathVariable Long id,
+            @RequestParam(required = false) String reason) {
+        WalletTopUp topUp = walletTopUpService.fail(id, reason);
+        return ResponseEntity.ok(ApiResponse.success("Top-up failed", WalletTopUpResponse.from(topUp)));
     }
 }
