@@ -251,6 +251,7 @@ public class ShiftManagementService {
                     .orElse(null);
             ownerNotificationService.notifyShiftClosed(
                     savedShift.getRestaurant().getId(),
+                    savedShift.getId(),
                     shiftName,
                     clockInTime, clockOutTime,
                     savedShift.getWorkedMinutes(),
@@ -516,6 +517,7 @@ public class ShiftManagementService {
                 .orElse(null);
         ownerNotificationService.notifyShiftClosed(
                 shift.getRestaurant().getId(),
+                shift.getId(),
                 shiftName, clockInTime, clockOutTime,
                 shift.getWorkedMinutes(), orderCount,
                 totalSales, cashSales, cardSales, lateInfo);

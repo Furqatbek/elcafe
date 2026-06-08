@@ -1,7 +1,6 @@
 package com.elcafe.modules.ownerbot.service;
 
-import com.elcafe.modules.notification.service.DailyFinancialReportService;
-import com.elcafe.modules.notification.service.DailyFinancialReportService.DailyMetrics;
+import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationLog;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationSettings;
@@ -33,21 +32,17 @@ public class OwnerNotificationService {
     private final OwnerTelegramBotService botService;
     private final OwnerTelegramSubscriberRepository subscriberRepository;
     private final OwnerNotificationLogRepository logRepository;
-    // Owner-bot reports and the FinancialAlertSubscription reports used to
-    // pull different numbers (DashboardService vs FinancialReportsService —
-    // payroll was summed slightly differently). Both paths now go through
-    // DailyFinancialReportService so the auto and manual reports agree.
-    private final DailyFinancialReportService dailyFinancialReportService;
+    private final ExpenseRepository expenseRepository;
 
     public OwnerNotificationService(
             @org.springframework.context.annotation.Lazy OwnerTelegramBotService botService,
             OwnerTelegramSubscriberRepository subscriberRepository,
             OwnerNotificationLogRepository logRepository,
-            @org.springframework.context.annotation.Lazy DailyFinancialReportService dailyFinancialReportService) {
+            ExpenseRepository expenseRepository) {
         this.botService = botService;
         this.subscriberRepository = subscriberRepository;
         this.logRepository = logRepository;
-        this.dailyFinancialReportService = dailyFinancialReportService;
+        this.expenseRepository = expenseRepository;
     }
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
@@ -287,8 +282,9 @@ public class OwnerNotificationService {
 
     @Async
     @Transactional
-    public void notifyShiftClosed(Long restaurantId, String employeeName, String clockInTime,
-                                   String clockOutTime, long workedMinutes, int orderCount,
+    public void notifyShiftClosed(Long restaurantId, Long shiftId, String employeeName,
+                                   String clockInTime, String clockOutTime,
+                                   long workedMinutes, int orderCount,
                                    java.math.BigDecimal totalSales,
                                    java.math.BigDecimal totalCashSales,
                                    java.math.BigDecimal totalCardSales,
@@ -300,25 +296,29 @@ public class OwnerNotificationService {
             return;
         }
 
-        // Pull the same P&L-based metrics the daily report uses so the
-        // profit & expense numbers on the shift-closed message match what
-        // the owner will see in tomorrow's auto/manual report.
-        java.math.BigDecimal todayProfit = java.math.BigDecimal.ZERO;
+        // Numbers here are SHIFT-SCOPED — we sum only expenses whose
+        // employee_shift_id equals the just-closed shift. Previously we
+        // pulled DailyMetrics for the whole restaurant-day, so an empty
+        // ghost shift would display expenses recorded earlier in the day
+        // against another cashier; the closing employee then looked
+        // responsible for them. Net profit is sales minus this shift's
+        // own expenses (no payroll/COGS allocation across shifts).
         java.math.BigDecimal drawerExpenses = java.math.BigDecimal.ZERO;
         java.math.BigDecimal otherExpenses = java.math.BigDecimal.ZERO;
-        try {
-            DailyMetrics metrics = dailyFinancialReportService.calculateDailyMetrics(
-                    restaurantId, java.time.LocalDate.now());
-            todayProfit = metrics.netIncome();
-            drawerExpenses = metrics.shiftDrawerExpenses();
-            otherExpenses = metrics.otherExpenses();
-        } catch (Exception e) {
-            log.warn("Could not calculate today's profit for shift notification: {}", e.getMessage());
+        if (shiftId != null) {
+            try {
+                drawerExpenses = nullToZero(expenseRepository.sumDrawerExpensesByShift(shiftId));
+                otherExpenses = nullToZero(expenseRepository.sumNonDrawerExpensesByShift(shiftId));
+            } catch (Exception e) {
+                log.warn("Could not load shift-scoped expenses for shift {}: {}", shiftId, e.getMessage());
+            }
         }
+        java.math.BigDecimal salesForProfit = totalSales != null ? totalSales : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal shiftProfit = salesForProfit.subtract(drawerExpenses).subtract(otherExpenses);
 
         long hours = workedMinutes / 60;
         long mins = workedMinutes % 60;
-        String profitEmoji = todayProfit.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
+        String profitEmoji = shiftProfit.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
 
         String cashText = totalCashSales != null && totalCashSales.compareTo(java.math.BigDecimal.ZERO) > 0
                 ? String.format("\n💵 Наличные: %,.2f", totalCashSales) : "";
@@ -329,15 +329,6 @@ public class OwnerNotificationService {
                 ? String.format("\n⚠️ Опоздание: %d мин — штраф %,.2f", lateInfo.minutesLate(), lateInfo.fine())
                 : "";
 
-        // Build the message in two clearly separated blocks:
-        //   1. Shift-scoped numbers (employee, hours, orders, sales for THIS shift).
-        //   2. Day-scoped restaurant totals (drawer expenses, other expenses, net profit
-        //      for the WHOLE business day across all shifts).
-        // The day-scoped numbers were previously rendered without a header, which made
-        // them look like they were attributable to the closing employee — e.g. a waiter
-        // who clocks in & out by mistake would appear to have racked up the day's
-        // expenses against their name. The "📊 За день (по ресторану):" prefix fixes
-        // that attribution.
         StringBuilder msg = new StringBuilder();
         msg.append("🔴 <b>Смена закрыта</b>\n\n");
         msg.append("👤 <b>").append(employeeName).append("</b>\n");
@@ -348,26 +339,33 @@ public class OwnerNotificationService {
                 totalSales != null ? String.format("%,.2f", totalSales) : "0"));
         msg.append(cashText).append(cardText);
 
-        boolean hasDayTotals = drawerExpenses.signum() > 0
+        // Only render the expense / profit block when this shift actually
+        // had financial activity. An empty 0-minute shift gets the header
+        // lines only — no expense or profit numbers borrowed from elsewhere.
+        boolean hasShiftFinancials = drawerExpenses.signum() > 0
                 || otherExpenses.signum() > 0
-                || todayProfit.signum() != 0;
-        if (hasDayTotals) {
-            msg.append("\n\n📊 <b>За день (по ресторану):</b>");
+                || salesForProfit.signum() > 0;
+        if (hasShiftFinancials) {
             if (drawerExpenses.signum() > 0) {
                 msg.append(String.format("\n🪙 Из кассы смены: %,.2f", drawerExpenses));
             }
             if (otherExpenses.signum() > 0) {
                 msg.append(String.format("\n🏦 Прочие расходы: %,.2f", otherExpenses));
             }
-            msg.append(String.format("\n%s Чистая прибыль: %,.2f", profitEmoji, todayProfit));
+            msg.append(String.format("\n%s Чистая прибыль (смена): %,.2f", profitEmoji, shiftProfit));
         }
         String message = msg.toString();
 
         for (OwnerTelegramSubscriber subscriber : subscribers) {
-            sendNotification(subscriber, OwnerNotificationType.SHIFT_CLOSED, message, "SHIFT", null);
+            sendNotification(subscriber, OwnerNotificationType.SHIFT_CLOSED, message, "SHIFT", shiftId);
         }
 
-        log.info("Shift closed notification sent for {} at restaurant {}", employeeName, restaurantId);
+        log.info("Shift closed notification sent for {} (shift {}) at restaurant {}",
+                employeeName, shiftId, restaurantId);
+    }
+
+    private static java.math.BigDecimal nullToZero(java.math.BigDecimal value) {
+        return value != null ? value : java.math.BigDecimal.ZERO;
     }
 
     @Async

@@ -63,6 +63,27 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
            "AND e.paymentStatus = 'PAID'")
     BigDecimal getTotalExpensesByDateRange(Long restaurantId, LocalDate startDate, LocalDate endDate);
 
+    /**
+     * Sum paid expenses tied to a specific employee_shift_id, split by
+     * whether they were paid from the shift's cash drawer.
+     *
+     * Used by the shift-closed Telegram notification so the message
+     * shows the closing shift's own expenses, not the whole day's
+     * restaurant totals — a 0-minute "ghost" shift should report 0,
+     * not inherit the day's expense bucket.
+     */
+    @Query("SELECT COALESCE(SUM(e.totalAmount), 0) FROM FinancialExpense e " +
+           "WHERE e.employeeShift.id = :shiftId " +
+           "AND e.paymentStatus = 'PAID' " +
+           "AND e.paidFromShiftDrawer = true")
+    BigDecimal sumDrawerExpensesByShift(Long shiftId);
+
+    @Query("SELECT COALESCE(SUM(e.totalAmount), 0) FROM FinancialExpense e " +
+           "WHERE e.employeeShift.id = :shiftId " +
+           "AND e.paymentStatus = 'PAID' " +
+           "AND (e.paidFromShiftDrawer = false OR e.paidFromShiftDrawer IS NULL)")
+    BigDecimal sumNonDrawerExpensesByShift(Long shiftId);
+
     @Query("SELECT e.category, SUM(e.totalAmount) FROM FinancialExpense e " +
            "WHERE e.restaurant.id = :restaurantId " +
            "AND e.expenseDate BETWEEN :startDate AND :endDate " +

@@ -1,10 +1,8 @@
 package com.elcafe.modules.ownerbot.service;
 
-import com.elcafe.modules.notification.service.DailyFinancialReportService;
-import com.elcafe.modules.notification.service.DailyFinancialReportService.DailyMetrics;
+import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationLog;
 import com.elcafe.modules.ownerbot.entity.OwnerTelegramSubscriber;
-import com.elcafe.modules.ownerbot.enums.OwnerNotificationType;
 import com.elcafe.modules.ownerbot.repository.OwnerNotificationLogRepository;
 import com.elcafe.modules.ownerbot.repository.OwnerTelegramSubscriberRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +16,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,7 +32,7 @@ class OwnerNotificationServiceShiftClosedTest {
     @Mock private OwnerTelegramBotService botService;
     @Mock private OwnerTelegramSubscriberRepository subscriberRepository;
     @Mock private OwnerNotificationLogRepository logRepository;
-    @Mock private DailyFinancialReportService dailyFinancialReportService;
+    @Mock private ExpenseRepository expenseRepository;
 
     private OwnerNotificationService service;
     private OwnerTelegramSubscriber subscriber;
@@ -43,7 +40,7 @@ class OwnerNotificationServiceShiftClosedTest {
     @BeforeEach
     void setUp() {
         service = new OwnerNotificationService(botService, subscriberRepository,
-                logRepository, dailyFinancialReportService);
+                logRepository, expenseRepository);
 
         subscriber = new OwnerTelegramSubscriber();
         subscriber.setTelegramUserId(12345L);
@@ -55,29 +52,18 @@ class OwnerNotificationServiceShiftClosedTest {
         when(botService.sendMessage(anyLong(), anyString())).thenReturn(1);
     }
 
-    private DailyMetrics metrics(BigDecimal drawer, BigDecimal other, BigDecimal netIncome) {
-        return new DailyMetrics(
-                "Test Cafe", LocalDate.now(), LocalDate.now(),
-                null, null, null, null,
-                0,
-                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                BigDecimal.ZERO, drawer, other, BigDecimal.ZERO, netIncome);
-    }
-
     @Test
-    @DisplayName("Day-scoped expenses and profit appear under 'За день' header, " +
-            "not attributed to the closing employee")
-    void dayScopedNumbersAreLabeledAsDayTotals() {
-        when(dailyFinancialReportService.calculateDailyMetrics(anyLong(), any(LocalDate.class)))
-                .thenReturn(metrics(
-                        new BigDecimal("18000"),
-                        new BigDecimal("115000"),
-                        new BigDecimal("937000")));
+    @DisplayName("Empty 0-minute shift carries no expenses or profit numbers — " +
+            "earlier shifts' expenses don't bleed into the closing message")
+    void emptyShiftDoesNotInheritDayExpenses() {
+        // The original bug report: Malika clocks in & out at 20:48 with 0 orders.
+        // The shift has no expenses linked to it (employee_shift_id = S2).
+        // Day totals at this restaurant happen to be 18k drawer + 115k other,
+        // recorded against an earlier shift — those must NOT appear here.
+        when(expenseRepository.sumDrawerExpensesByShift(42L)).thenReturn(BigDecimal.ZERO);
+        when(expenseRepository.sumNonDrawerExpensesByShift(42L)).thenReturn(BigDecimal.ZERO);
 
-        // The exact scenario from the bug report: Malika opens then immediately
-        // closes a shift with no orders. Day totals (drawer/other/profit) come
-        // from the WHOLE restaurant day, not from her empty shift.
-        service.notifyShiftClosed(1L, "Malika", "20:48", "20:48",
+        service.notifyShiftClosed(1L, 42L, "Malika", "20:48", "20:48",
                 0L, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null);
 
         ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
@@ -87,48 +73,22 @@ class OwnerNotificationServiceShiftClosedTest {
         assertThat(msg).contains("👤 <b>Malika</b>");
         assertThat(msg).contains("📦 Заказов: 0");
         assertThat(msg).contains("💰 Выручка: 0");
-        // The day-scoped block must carry its own header so the owner can't
-        // misread these numbers as being attributable to Malika.
-        assertThat(msg).contains("📊 <b>За день (по ресторану):</b>");
-        assertThat(msg).contains("🪙 Из кассы смены: 18,000.00");
-        assertThat(msg).contains("🏦 Прочие расходы: 115,000.00");
-        assertThat(msg).contains("📈 Чистая прибыль: 937,000.00");
-
-        int dayHeaderAt = msg.indexOf("📊");
-        int drawerAt = msg.indexOf("🪙");
-        int profitAt = msg.indexOf("Чистая прибыль");
-        assertThat(dayHeaderAt).isGreaterThan(0);
-        assertThat(drawerAt).isGreaterThan(dayHeaderAt);
-        assertThat(profitAt).isGreaterThan(dayHeaderAt);
-    }
-
-    @Test
-    @DisplayName("No day-totals block when the day's expenses and profit are all zero")
-    void omitsDayTotalsWhenAllZero() {
-        when(dailyFinancialReportService.calculateDailyMetrics(anyLong(), any(LocalDate.class)))
-                .thenReturn(metrics(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO));
-
-        service.notifyShiftClosed(1L, "Malika", "20:48", "20:48",
-                0L, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null);
-
-        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
-        verify(botService).sendMessage(any(Long.class), captor.capture());
-        String msg = captor.getValue();
-
-        assertThat(msg).doesNotContain("📊 <b>За день");
+        // No expense numbers, no profit number — nothing the owner could
+        // mis-attribute to Malika.
+        assertThat(msg).doesNotContain("Из кассы смены");
+        assertThat(msg).doesNotContain("Прочие расходы");
         assertThat(msg).doesNotContain("Чистая прибыль");
     }
 
     @Test
-    @DisplayName("Negative net profit gets the 📉 emoji and still lives in the day block")
-    void negativeNetProfitFormatted() {
-        when(dailyFinancialReportService.calculateDailyMetrics(anyLong(), any(LocalDate.class)))
-                .thenReturn(metrics(
-                        new BigDecimal("5000"),
-                        new BigDecimal("10000"),
-                        new BigDecimal("-15000")));
+    @DisplayName("Productive shift shows only its OWN expenses (sums scoped by shift id)")
+    void productiveShiftShowsOwnExpenses() {
+        // Shift 100 had real activity: 12 orders, 250k revenue, 5k drawer
+        // expense + 3k other expense linked to it.
+        when(expenseRepository.sumDrawerExpensesByShift(100L)).thenReturn(new BigDecimal("5000"));
+        when(expenseRepository.sumNonDrawerExpensesByShift(100L)).thenReturn(new BigDecimal("3000"));
 
-        service.notifyShiftClosed(1L, "Aziz", "09:00", "17:00",
+        service.notifyShiftClosed(1L, 100L, "Aziz", "09:00", "17:00",
                 480L, 12, new BigDecimal("250000"),
                 new BigDecimal("150000"), new BigDecimal("100000"), null);
 
@@ -136,12 +96,66 @@ class OwnerNotificationServiceShiftClosedTest {
         verify(botService).sendMessage(any(Long.class), captor.capture());
         String msg = captor.getValue();
 
-        assertThat(msg).contains("📉 Чистая прибыль: -15,000.00");
-        assertThat(msg).contains("📊 <b>За день (по ресторану):</b>");
-        // Shift-scoped sales render under the employee header, day totals below it.
-        int salesAt = msg.indexOf("Выручка");
-        int dayAt = msg.indexOf("📊");
-        assertThat(salesAt).isGreaterThan(0);
-        assertThat(dayAt).isGreaterThan(salesAt);
+        assertThat(msg).contains("👤 <b>Aziz</b>");
+        assertThat(msg).contains("📦 Заказов: 12");
+        assertThat(msg).contains("💰 Выручка: 250,000.00");
+        assertThat(msg).contains("💵 Наличные: 150,000.00");
+        assertThat(msg).contains("💳 Карта: 100,000.00");
+        assertThat(msg).contains("🪙 Из кассы смены: 5,000.00");
+        assertThat(msg).contains("🏦 Прочие расходы: 3,000.00");
+        // Profit = sales - shift expenses = 250000 - 5000 - 3000 = 242000.
+        // Crucially NOT the restaurant's day-net of 937k.
+        assertThat(msg).contains("📈 Чистая прибыль (смена): 242,000.00");
+    }
+
+    @Test
+    @DisplayName("Shift with sales but no own expenses still shows the profit line")
+    void salesWithoutShiftExpenses() {
+        when(expenseRepository.sumDrawerExpensesByShift(100L)).thenReturn(BigDecimal.ZERO);
+        when(expenseRepository.sumNonDrawerExpensesByShift(100L)).thenReturn(BigDecimal.ZERO);
+
+        service.notifyShiftClosed(1L, 100L, "Dilshod", "09:00", "17:00",
+                480L, 5, new BigDecimal("80000"),
+                new BigDecimal("80000"), BigDecimal.ZERO, null);
+
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(botService).sendMessage(any(Long.class), captor.capture());
+        String msg = captor.getValue();
+
+        assertThat(msg).doesNotContain("Из кассы смены");
+        assertThat(msg).doesNotContain("Прочие расходы");
+        assertThat(msg).contains("📈 Чистая прибыль (смена): 80,000.00");
+    }
+
+    @Test
+    @DisplayName("Negative profit (expenses > sales) gets the 📉 emoji")
+    void negativeProfit() {
+        when(expenseRepository.sumDrawerExpensesByShift(100L)).thenReturn(new BigDecimal("50000"));
+        when(expenseRepository.sumNonDrawerExpensesByShift(100L)).thenReturn(BigDecimal.ZERO);
+
+        service.notifyShiftClosed(1L, 100L, "Aziz", "09:00", "10:00",
+                60L, 1, new BigDecimal("10000"),
+                new BigDecimal("10000"), BigDecimal.ZERO, null);
+
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(botService).sendMessage(any(Long.class), captor.capture());
+        String msg = captor.getValue();
+
+        assertThat(msg).contains("📉 Чистая прибыль (смена): -40,000.00");
+    }
+
+    @Test
+    @DisplayName("Null shiftId (legacy path) gracefully degrades to no expense block")
+    void nullShiftId() {
+        service.notifyShiftClosed(1L, null, "Legacy", "09:00", "10:00",
+                60L, 0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, null);
+
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(botService).sendMessage(any(Long.class), captor.capture());
+        String msg = captor.getValue();
+
+        assertThat(msg).doesNotContain("Из кассы смены");
+        assertThat(msg).doesNotContain("Прочие расходы");
+        assertThat(msg).doesNotContain("Чистая прибыль");
     }
 }
