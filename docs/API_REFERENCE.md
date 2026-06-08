@@ -2392,6 +2392,75 @@ Authorization: Bearer {token}
 }
 ```
 
+### Create Tier (Admin)
+```http
+POST /api/v1/loyalty/tiers
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "name": "Bronze",
+  "level": 2,
+  "minTotalSpend": 50000,
+  "minOrderCount": 10,
+  "bonusMultiplier": 1.3,
+  "color": "#cd7f32",
+  "icon": "award",
+  "benefitsDescription": "30% bonus multiplier"
+}
+```
+
+**Required role**: `ADMIN`, `OWNER`.
+
+### Update Tier (Admin)
+```http
+PUT /api/v1/loyalty/tiers/{id}
+Authorization: Bearer {token}
+```
+
+Same body shape as create. **Required role**: `ADMIN`, `OWNER`.
+
+### Delete Tier (Admin)
+```http
+DELETE /api/v1/loyalty/tiers/{id}
+Authorization: Bearer {token}
+```
+
+**Required role**: `ADMIN`, `OWNER`.
+
+Refuses (`IllegalStateException`) when customers are still assigned to the tier; the error message includes the count so the caller can ask the admin to reassign first. The `GET /loyalty/tiers` list includes `customerCount` on each row so the UI can disable the delete button inline.
+
+### Get Loyalty Config
+```http
+GET /api/v1/loyalty/config?restaurantId=1
+Authorization: Bearer {token}
+```
+
+Returns the per-restaurant config when one exists, falling back to the global row. **Required role**: `ADMIN`, `OWNER`, `MANAGER`.
+
+### Upsert Loyalty Config
+```http
+PUT /api/v1/loyalty/config
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "restaurantId": 1,
+  "bonusRateType": "PERCENTAGE",
+  "bonusRateValue": 5.0,
+  "maxBonusPaymentPercentage": 50,
+  "minOrderAmountForBonus": 10000,
+  "firstOrderBonusAmount": 5000,
+  "birthdayBonusAmount": 10000,
+  "reactivationBonusAmount": 5000,
+  "reactivationDaysThreshold": 90,
+  "bonusExpiryDays": 365,
+  "enabled": true
+}
+```
+
+`restaurantId: null` targets the global config row. All scalar fields are optional — only supplied fields overwrite. **Required role**: `ADMIN`, `OWNER`.
+
 ### Grant Birthday Bonus (Admin)
 ```http
 POST /api/v1/loyalty/customers/{customerId}/birthday-bonus
@@ -2407,6 +2476,157 @@ Authorization: Bearer {token}
 ```
 
 **Response**: 200 OK
+
+---
+
+## Customer Wallet (Consumer)
+
+Customer-facing wallet API. All endpoints require the customer's OTP-issued Bearer token (`CustomerPrincipal`).
+
+See the [Customer Wallet Top-Ups](LOYALTY_SYSTEM.md#customer-wallet-top-ups) section of `LOYALTY_SYSTEM.md` for the full lifecycle, idempotency model, and provider config.
+
+### Get Own Wallet
+```http
+GET /api/v1/consumer/wallet
+Authorization: Bearer {customer_token}
+```
+
+Returns the authenticated customer's `CustomerLoyaltyResponse`.
+
+### Create Top-Up
+```http
+POST /api/v1/consumer/wallet/top-ups
+Authorization: Bearer {customer_token}
+Content-Type: application/json
+
+{
+  "amount": 50000,
+  "provider": "CLICK"
+}
+```
+
+`amount >= 1000`. `provider` ∈ {`CLICK`, `PAYME`, `MANUAL`}.
+
+**Response** (201):
+```json
+{
+  "success": true,
+  "message": "Top-up created",
+  "data": {
+    "id": 42,
+    "customerId": 7,
+    "amount": 50000.00,
+    "status": "PENDING",
+    "provider": "CLICK",
+    "paymentUrl": "https://my.click.uz/services/pay?...",
+    "createdAt": "2026-06-08T07:42:00Z",
+    "completedAt": null
+  }
+}
+```
+
+The mobile / web client redirects the user to `paymentUrl`. Wallet credit happens via the provider webhook after the customer pays.
+
+### Get Top-Up Status
+```http
+GET /api/v1/consumer/wallet/top-ups/{id}
+Authorization: Bearer {customer_token}
+```
+
+Ownership-enforced — returns 404 if the top-up belongs to another customer.
+
+### List Own Top-Ups
+```http
+GET /api/v1/consumer/wallet/top-ups?page=0&size=20
+Authorization: Bearer {customer_token}
+```
+
+### Cancel Pending Top-Up
+```http
+POST /api/v1/consumer/wallet/top-ups/{id}/cancel
+Authorization: Bearer {customer_token}
+```
+
+Only valid while `status == PENDING`.
+
+---
+
+## Customer Wallet (Admin)
+
+Under `/api/v1/loyalty/wallet/`, role-gated.
+
+### List All Top-Ups
+```http
+GET /api/v1/loyalty/wallet/top-ups?status=PENDING&page=0&size=20
+Authorization: Bearer {token}
+```
+
+`status` filter is optional. **Required role**: `ADMIN`, `OWNER`, `MANAGER`.
+
+### Manually Confirm Top-Up
+```http
+POST /api/v1/loyalty/wallet/top-ups/{id}/confirm?reference=cash-receipt-1234
+Authorization: Bearer {token}
+```
+
+Credits the wallet via the same idempotent path the provider webhooks use. Use for `MANUAL` (cash-at-counter) provider top-ups, or to unstick a `PENDING` row whose webhook never arrived. **Required role**: `ADMIN`, `OWNER`, `MANAGER`, `CASHIER`.
+
+### Mark Top-Up Failed
+```http
+POST /api/v1/loyalty/wallet/top-ups/{id}/fail?reason=Card%20declined
+Authorization: Bearer {token}
+```
+
+No wallet movement. **Required role**: `ADMIN`, `OWNER`, `MANAGER`.
+
+---
+
+## Wallet Top-Up Webhooks
+
+Under `/api/v1/webhook/wallet/`, **no Bearer token required** — protected by provider signature verification.
+
+See [Customer Wallet Top-Ups → Provider webhooks](LOYALTY_SYSTEM.md#provider-webhooks) for protocol details, signature schemes, and configuration properties.
+
+| Endpoint | Provider | Auth |
+|----------|----------|------|
+| `POST /api/v1/webhook/wallet/click/prepare` | Click | MD5 `sign_string` |
+| `POST /api/v1/webhook/wallet/click/complete` | Click | MD5 `sign_string` |
+| `POST /api/v1/webhook/wallet/payme` | Payme | HTTP Basic |
+
+---
+
+## Loyalty QR & POS Attach
+
+### Resolve Customer by QR Code
+```http
+GET /api/v1/customers/by-qr/{qrCode}
+Authorization: Bearer {token}
+```
+
+Scans of a `CST-XXXXXXXXXXXX` loyalty QR resolve to the full customer record with marketing data (bonus balance, tier, etc.). **Required role**: `ADMIN`, `MANAGER`, `OPERATOR`, `WAITER`, `CASHIER`.
+
+### Regenerate Customer QR Code
+```http
+POST /api/v1/customers/{id}/qr-code/regenerate
+Authorization: Bearer {token}
+```
+
+Rotates the QR code (e.g. lost card, suspected fraud). The old code is permanently invalidated. **Required role**: `ADMIN`, `OWNER`, `MANAGER`.
+
+### Attach Customer to POS Order
+```http
+PATCH /api/v1/pos/orders/{orderId}/customer
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{ "qrCode": "CST-ABCDEF123456" }
+```
+
+Links a customer to an in-flight POS order so the loyalty wallet credit fires on payment-commit. Exactly **one** of `customerId`, `qrCode`, `phone` must be supplied (DTO `@AssertTrue` validation).
+
+Rejected when the order is in a terminal status (`DELIVERED`, `COMPLETED`, `CANCELLED`).
+
+**Required role**: `ADMIN`, `OPERATOR`, `WAITER`, `CASHIER`, `MANAGER`.
 
 ---
 

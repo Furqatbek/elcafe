@@ -1,7 +1,7 @@
 # Loyalty & Bonus Points System
 
-**Version:** 1.0
-**Last Updated:** 2025-12-15
+**Version:** 1.2
+**Last Updated:** 2026-06-08
 **Author:** ElCafe Development Team
 
 ## Table of Contents
@@ -20,6 +20,9 @@
 12. [Audit Trail](#audit-trail)
 13. [Usage Examples](#usage-examples)
 14. [Troubleshooting](#troubleshooting)
+15. [Loyalty Milestones (Stamp Card Rewards)](#loyalty-milestones-stamp-card-rewards)
+16. [Customer QR Identity & POS Attach](#customer-qr-identity--pos-attach)
+17. [Customer Wallet Top-Ups](#customer-wallet-top-ups)
 
 ---
 
@@ -1479,13 +1482,342 @@ POST /api/v1/restaurants/1/milestones
 
 ---
 
+---
+
+## Customer QR Identity & POS Attach
+
+### Overview
+
+Each customer carries a stable `CST-XXXXXXXXXXXX` QR code on their loyalty card / in-app screen. At the counter, the cashier scans it (USB scanner — keystrokes ending in Enter) and the in-flight POS order is linked to that customer. The existing `OrderCompletedEvent` listener then credits the wallet on payment-commit using the standard earn formula.
+
+### Database
+
+Migration **V145** adds `customers.qr_code`:
+
+| Column   | Type        | Notes                                 |
+|----------|-------------|---------------------------------------|
+| qr_code  | VARCHAR(40) | NOT NULL, UNIQUE, indexed             |
+
+Existing rows are backfilled on migrate. New rows generate a code in `Customer.@PrePersist` via `UUID.randomUUID()` truncated to 12 uppercase hex chars with a `CST-` prefix.
+
+### Endpoints
+
+#### Resolve scanned QR
+
+```http
+GET /api/v1/customers/by-qr/{qrCode}
+Authorization: Bearer {token}
+```
+
+**Required role**: `ADMIN`, `MANAGER`, `OPERATOR`, `WAITER`, or `CASHIER`.
+
+**Response** (200):
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 123,
+    "firstName": "Ada",
+    "lastName": "Lovelace",
+    "phone": "+998901234567",
+    "qrCode": "CST-ABCDEF123456",
+    "bonusBalance": 50000.00,
+    "tierName": "Bronze",
+    "orderCount": 12
+  }
+}
+```
+
+Returns 404 when the code doesn't exist.
+
+#### Rotate QR code
+
+```http
+POST /api/v1/customers/{id}/qr-code/regenerate
+Authorization: Bearer {token}
+```
+
+**Required role**: `ADMIN`, `OWNER`, or `MANAGER`. Use this when a customer reports a lost card or suspected fraud.
+
+#### Attach customer to in-flight POS order
+
+```http
+PATCH /api/v1/pos/orders/{orderId}/customer
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "qrCode": "CST-ABCDEF123456"
+}
+```
+
+**Body**: exactly one of `customerId`, `qrCode`, `phone` (DTO-enforced via `@AssertTrue`). The cashier picks whichever path is fastest — usually QR scan; falls back to phone lookup when the card isn't to hand.
+
+**Required role**: `ADMIN`, `OPERATOR`, `WAITER`, `CASHIER`, or `MANAGER`.
+
+**Constraints**:
+- Order must exist.
+- Order must NOT be in a terminal status (`DELIVERED`, `COMPLETED`, `CANCELLED`) — admins cannot retro-attach to closed sales.
+
+**Behaviour**: sets `order.customer`, saves, and returns the refreshed `POSOrderResponse`. No bonus is credited at this step — that happens on payment-commit via the existing `OrderCompletedEvent` path.
+
+### Idempotency
+
+Attaching the same customer twice is a no-op (just re-saves). Attaching a different customer overwrites the link. The wallet credit on order completion uses the existing `"order-bonus-{orderId}"` idempotency key on the `BonusTransaction` — unchanged by this work, so double-payment events still credit only once.
+
+---
+
+## Customer Wallet Top-Ups
+
+### Overview
+
+Authenticated customers can top up their own loyalty wallet from the consumer API. Top-ups are settled by either an external payment provider (Click or Payme) via webhook, or manually by an admin for cash-at-counter scenarios. **Top-ups are non-refundable promo credit, not a stored-value liability** — once credited, the balance behaves identically to earned bonus.
+
+### Database
+
+Migration **V146** adds the `wallet_top_ups` table:
+
+| Column                    | Type          | Notes                                                                 |
+|---------------------------|---------------|-----------------------------------------------------------------------|
+| id                        | BIGSERIAL     | Primary key                                                           |
+| customer_id               | BIGINT        | FK to `customers`, CASCADE delete                                     |
+| amount                    | NUMERIC(12,2) | Positive (CHECK constraint)                                           |
+| status                    | VARCHAR(20)   | `PENDING`, `COMPLETED`, `FAILED`, `CANCELLED`, `EXPIRED`              |
+| provider                  | VARCHAR(20)   | `CLICK`, `PAYME`, `MANUAL`                                            |
+| payment_url               | TEXT          | Hosted checkout URL (null for `MANUAL`)                               |
+| external_transaction_id   | VARCHAR(120)  | Provider's tx id; UNIQUE per `(provider, external_transaction_id)`    |
+| idempotency_key           | VARCHAR(120)  | UNIQUE                                                                |
+| bonus_transaction_id      | BIGINT        | FK to `bonus_transactions` once settled                               |
+| failure_reason            | TEXT          | Populated when status = FAILED                                        |
+| metadata                  | JSONB         | Provider-supplied details (clickTransId, paymeTransactionId, etc.)    |
+| completed_at              | TIMESTAMPTZ   | Set when status transitions to COMPLETED                              |
+
+A `BonusTransaction.TransactionType.TOP_UP` value was added; it credits the wallet just like `EARNED` but with no `order_id` link and a `topup-{id}` idempotency key.
+
+### Lifecycle
+
+```
+              create()                            webhook / admin confirm()
+                  │                                          │
+                  ▼                                          ▼
+   ┌─────────┐         ┌────────────────────────────────────────┐
+   │ (none)  │ ──────▶ │             PENDING                    │
+   └─────────┘         └────────┬─────────────────┬─────────────┘
+                                │                 │
+                  cancel() ◀────┘                 └───▶ complete()
+                                                            │
+                                                            ▼
+                       ┌────────────┐                ┌────────────┐
+                       │ CANCELLED  │                │ COMPLETED  │
+                       └────────────┘                └────────────┘
+                                                            ▲
+                                                            │ idempotent
+                                                            │ retry no-op
+                                       webhook error / admin fail()
+                                                  │
+                                                  ▼
+                                            ┌──────────┐
+                                            │  FAILED  │
+                                            └──────────┘
+```
+
+All terminal states (`COMPLETED`, `FAILED`, `CANCELLED`, `EXPIRED`) reject further state transitions, with two exceptions: a duplicate `complete()` call on an already-COMPLETED row is a deliberate no-op (so webhook retries are safe), and `fail()` on a terminal row is also a no-op.
+
+### Consumer endpoints
+
+All endpoints under `/api/v1/consumer/wallet/` require the customer's OTP-issued Bearer token (`CustomerPrincipal`).
+
+#### Get own wallet
+
+```http
+GET /api/v1/consumer/wallet
+Authorization: Bearer {customer_token}
+```
+
+Returns the customer's `CustomerLoyaltyResponse` — same shape as the admin endpoint.
+
+#### Create top-up
+
+```http
+POST /api/v1/consumer/wallet/top-ups
+Authorization: Bearer {customer_token}
+Content-Type: application/json
+
+{
+  "amount": 50000,
+  "provider": "CLICK"
+}
+```
+
+**Validation**: `amount >= 1000`. `provider` must be one of `CLICK`, `PAYME`, `MANUAL`.
+
+**Response** (201):
+
+```json
+{
+  "success": true,
+  "message": "Top-up created",
+  "data": {
+    "id": 42,
+    "customerId": 7,
+    "amount": 50000.00,
+    "status": "PENDING",
+    "provider": "CLICK",
+    "paymentUrl": "https://my.click.uz/services/pay?service_id=...&merchant_id=...&amount=50000&transaction_param=42",
+    "externalTransactionId": null,
+    "failureReason": null,
+    "createdAt": "2026-06-08T07:42:00Z",
+    "completedAt": null
+  }
+}
+```
+
+The mobile / web client redirects the customer to `paymentUrl`. After they pay on the provider's hosted checkout, the provider POSTs to the corresponding webhook (`/webhook/wallet/click/*` or `/webhook/wallet/payme`) and the wallet is credited.
+
+#### Get top-up status
+
+```http
+GET /api/v1/consumer/wallet/top-ups/{id}
+```
+
+Ownership-enforced — returns 404 if the top-up belongs to another customer.
+
+#### List own top-ups
+
+```http
+GET /api/v1/consumer/wallet/top-ups?page=0&size=20
+```
+
+Newest first.
+
+#### Cancel a pending top-up
+
+```http
+POST /api/v1/consumer/wallet/top-ups/{id}/cancel
+```
+
+Only valid while status is `PENDING`. Returns 400 with a clear message otherwise.
+
+### Admin endpoints
+
+Under `/api/v1/loyalty/wallet/`, role-gated.
+
+#### List all top-ups
+
+```http
+GET /api/v1/loyalty/wallet/top-ups?status=PENDING&page=0&size=20
+```
+
+Optional `status` filter. **Required role**: `ADMIN`, `OWNER`, `MANAGER`.
+
+#### Manually confirm (cash at counter)
+
+```http
+POST /api/v1/loyalty/wallet/top-ups/{id}/confirm?reference=cash-receipt-1234
+```
+
+Credits the wallet via the same idempotent path the webhooks use. Use for `MANUAL` provider top-ups, or to unstick a `PENDING` row where the webhook never arrived. **Required role**: `ADMIN`, `OWNER`, `MANAGER`, `CASHIER`.
+
+#### Mark failed
+
+```http
+POST /api/v1/loyalty/wallet/top-ups/{id}/fail?reason=Card%20declined
+```
+
+No wallet movement. **Required role**: `ADMIN`, `OWNER`, `MANAGER`.
+
+### Provider webhooks
+
+Under `/api/v1/webhook/wallet/`. These bypass Bearer authentication (configured in `SecurityConfig.permitAll`) — they're protected by **provider signature verification**.
+
+#### Click — 2-phase protocol
+
+```http
+POST /api/v1/webhook/wallet/click/prepare
+Content-Type: application/x-www-form-urlencoded
+
+click_trans_id=…&service_id=…&merchant_trans_id={topUpId}&amount=…&action=0&sign_time=…&sign_string=…
+```
+
+Click asks "ready to accept?" — we verify signature, lookup the top-up by `merchant_trans_id`, check it's `PENDING`, and verify the amount matches. Returns `error=0` and the `merchant_prepare_id` on success, or a negative error code otherwise.
+
+```http
+POST /api/v1/webhook/wallet/click/complete
+Content-Type: application/x-www-form-urlencoded
+
+click_trans_id=…&service_id=…&merchant_trans_id={topUpId}&merchant_prepare_id=…&amount=…&action=1&error=0&sign_time=…&sign_string=…
+```
+
+When `error=0`, calls `WalletTopUpService.complete()` and returns `merchant_confirm_id` + `error=0`. When `error != 0`, calls `fail()` and echoes back the error code.
+
+**Signature**: MD5 of `click_trans_id + service_id + secret_key + merchant_trans_id + merchant_prepare_id + amount + action + sign_time`. When `click.secret-key` is unset (dev / not yet provisioned) the check is skipped with a `WARN` log line.
+
+#### Payme — JSON-RPC
+
+```http
+POST /api/v1/webhook/wallet/payme
+Authorization: Basic <base64("Paycom:{merchant_key}")>
+Content-Type: application/json
+
+{
+  "id": 1,
+  "method": "PerformTransaction",
+  "params": {
+    "id": "payme-transaction-id",
+    "account": { "top_up_id": "42" }
+  }
+}
+```
+
+Currently only `PerformTransaction` is wired — it calls `complete()` and returns the canonical Payme success envelope (`result.transaction`, `result.state=2`, `result.perform_time`).
+
+Other methods (`CheckPerformTransaction`, `CreateTransaction`, `CancelTransaction`, `CheckTransaction`, `GetStatement`) return Payme error code `-32601` ("method not implemented in this build") until the full state machine is wired in a follow-up. The skeleton is in place — fill out the remaining method branches in `WalletTopUpWebhookController.payme()`.
+
+**Auth**: HTTP Basic with username `Paycom` and password = `payme.merchant-key`. When the key is unset the check is skipped with a `WARN` log.
+
+### Configuration properties
+
+All have placeholder defaults so the code wires in dev and tests. **Production deploys MUST set these** before going live with real customers.
+
+```properties
+# Click
+click.merchant-id=...
+click.service-id=...
+click.secret-key=...
+click.checkout-base-url=https://my.click.uz/services/pay
+
+# Payme
+payme.merchant-id=...
+payme.merchant-key=...
+payme.account-field=top_up_id
+payme.checkout-base-url=https://checkout.paycom.uz
+```
+
+### Idempotency
+
+- `BonusTransaction.idempotencyKey = "topup-{topUpId}"` — handled by `BonusService.recordTransaction`. Second call with the same key returns the existing transaction without re-crediting.
+- `WalletTopUpService.complete()` short-circuits on `status == COMPLETED` before calling `BonusService`. Combined, a webhook can fire any number of times for the same top-up and the customer's balance changes exactly once.
+- The `wallet_top_ups` UNIQUE partial index on `(provider, external_transaction_id) WHERE external_transaction_id IS NOT NULL` is a belt-and-braces guard against the (provider-side) bug where the same external tx is replayed against a fresh top-up.
+
+### Source
+
+- Entity / repo: `src/main/java/com/elcafe/modules/loyalty/entity/WalletTopUp.java`, `repository/WalletTopUpRepository.java`
+- Service: `src/main/java/com/elcafe/modules/loyalty/service/WalletTopUpService.java`
+- Provider strategies: `src/main/java/com/elcafe/modules/loyalty/service/topup/`
+- Controllers: `src/main/java/com/elcafe/modules/loyalty/controller/ConsumerWalletController.java`, `WalletTopUpWebhookController.java`
+- Migration: `src/main/resources/db/migration/V146__wallet_top_ups.sql`
+- Tests: `src/test/java/com/elcafe/modules/loyalty/service/WalletTopUpServiceTest.java`, `controller/WalletTopUpWebhookControllerTest.java`
+
+---
+
 ## Support
 
 For questions or issues:
 
 - **Documentation**: `/docs/API_REFERENCE.md`
-- **Database Schema**: `/src/main/resources/db/migration/V27__*.sql`, `/src/main/resources/db/migration/V101__*.sql`
+- **Database Schema**: `/src/main/resources/db/migration/V27__*.sql`, `/src/main/resources/db/migration/V101__*.sql`, `/src/main/resources/db/migration/V145__customer_qr_code.sql`, `/src/main/resources/db/migration/V146__wallet_top_ups.sql`
 - **Source Code**: `/src/main/java/com/elcafe/modules/loyalty/`
 
-**Version:** 1.1
-**Last Updated:** 2026-02-19
+**Version:** 1.2
+**Last Updated:** 2026-06-08

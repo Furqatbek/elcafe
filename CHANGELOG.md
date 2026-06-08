@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-06-08
+
+#### Customer Wallet & Loyalty Stages
+
+**Backend**:
+- **V145** migration: added `customers.qr_code` (NOT NULL, UNIQUE, indexed). Each customer has a stable `CST-XXXXXXXXXXXX` loyalty QR that the POS can scan to attach them to an in-flight order. Backfilled on migrate; new rows generate on `@PrePersist`.
+- New endpoints on `CustomerController`:
+  - `GET /api/v1/customers/by-qr/{qrCode}` — resolve a scanned QR to a customer (ADMIN/MANAGER/OPERATOR/WAITER/CASHIER).
+  - `POST /api/v1/customers/{id}/qr-code/regenerate` — rotate a lost/compromised code (ADMIN/OWNER/MANAGER).
+- New endpoint on `POSOrderController`:
+  - `PATCH /api/v1/pos/orders/{orderId}/customer` — attach a customer to an in-flight order. Exactly one of `customerId`, `qrCode`, `phone` must be supplied (`@AssertTrue` on the DTO). Settled orders (DELIVERED/COMPLETED/CANCELLED) are rejected so admins can't retro-attach to closed sales. This is the missing trigger for the loyalty wallet credit on payment-commit — the existing `OrderCompletedEvent` listener handles the rest unchanged.
+- Tier CRUD on `LoyaltyController` (was read-only):
+  - `POST /api/v1/loyalty/tiers`, `PUT /api/v1/loyalty/tiers/{id}`, `DELETE /api/v1/loyalty/tiers/{id}` (ADMIN/OWNER).
+  - Delete is guarded — refuses when `customerLoyalty.tier_id` still references the tier (surfaced as IllegalStateException with the customer count).
+- LoyaltyConfig CRUD on `LoyaltyController`:
+  - `GET /api/v1/loyalty/config?restaurantId=…` — per-restaurant config with global fallback.
+  - `PUT /api/v1/loyalty/config` — upsert; null `restaurantId` targets the global row.
+- Tier list (`GET /loyalty/tiers`) now returns `minTotalSpend`, `minOrderCount`, and `customerCount` on each tier so the admin UI can render the delete-blocked guard inline.
+
+**Frontend**:
+- New admin page `/admin/marketing/loyalty` (`LoyaltySettings.jsx`) with three tabs:
+  - **General** — form bound to `LoyaltyConfig` (enable toggle, bonus rate type/value, max wallet payment %, min order amount, first-order/birthday/reactivation bonuses, thresholds, expiry). Restaurant selector falls back to "Global (all restaurants)".
+  - **Stages** — `CustomerTier` CRUD with color picker, multiplier, dual thresholds; delete is disabled with tooltip when customers are still on the stage.
+  - **Customers** — phone-search → wallet card (balance, lifetime earned/spent, current stage) + paged `BonusTransaction` ledger.
+- New POS `AttachCustomerPanel` above the Happy Hour banner on `PaymentScreen` — scan QR via USB scanner (focused input, Enter-to-submit) or phone lookup; shows current wallet balance + stage after attach.
+- `Customers.jsx` gains a "Loyalty QR" column with copy + regenerate actions; CSV export includes `qrCode`.
+- `loyaltyAPI` service module added with config get/upsert, tier CRUD, customer wallet reads, bonus grants.
+- en/ru/uz translations for all new copy (zero English fallbacks in new namespaces).
+
+**Tests**:
+- New: `WalletTopUpServiceTest` (8), `WalletTopUpWebhookControllerTest` (6), `LoyaltyControllerTest` (7), `TierServiceTest` (5), `AttachCustomerRequestTest` (6), `POSOrderServiceTest$AttachCustomerTests` (4).
+- Existing extended: `CustomerControllerTest` (+3), `POSOrderControllerTest` (+3).
+- All 75 new + adjacent tests pass.
+
+#### Customer Wallet Top-Up
+
+**Backend**:
+- **V146** migration: `wallet_top_ups` table — PENDING/COMPLETED/FAILED/CANCELLED/EXPIRED lifecycle per (customer, provider) with a UNIQUE partial index on `(provider, external_transaction_id)` so webhook retries can't double-create rows.
+- New `BonusTransaction.TransactionType.TOP_UP` for customer-funded credit (treated as non-refundable promo credit, not a stored-value liability).
+- `WalletTopUpService` with idempotent `complete()` — the same path is used by webhooks AND admin manual-confirm. Records a `BonusTransaction` with key `topup-{id}`; safe to retry.
+- Provider strategy pattern (`WalletTopUpPaymentProvider` interface):
+  - `ClickPaymentProvider` — builds Click hosted-checkout URL with merchant_id + service_id + amount + transaction_param.
+  - `PaymePaymentProvider` — builds Payme hosted-checkout URL (base64-encoded GET, amounts in tiyin).
+  - `ManualPaymentProvider` — null URL, cash-at-counter flow.
+- Endpoints:
+  - Consumer (`/api/v1/consumer/wallet/`, CustomerPrincipal-authed):
+    - `GET /` — own wallet snapshot.
+    - `POST /top-ups` — create, returns checkout URL.
+    - `GET /top-ups/{id}` (ownership-enforced).
+    - `GET /top-ups` (paged).
+    - `POST /top-ups/{id}/cancel` (PENDING only).
+  - Admin (`/api/v1/loyalty/wallet/`, role-gated):
+    - `GET /top-ups?status=…`
+    - `POST /top-ups/{id}/confirm` — manual settle (cash flow or stuck PENDING).
+    - `POST /top-ups/{id}/fail`
+  - Webhooks (`/api/v1/webhook/wallet/`, permitAll + signature-verified):
+    - `POST /click/prepare` + `POST /click/complete` — Click 2-phase protocol, MD5 sign_string verification.
+    - `POST /payme` — Payme JSON-RPC; PerformTransaction wired, other methods return -32601 (full state machine to follow once sandbox credentials are provisioned).
+- Configuration (defaults to placeholder values, must be set in production):
+  - `click.merchant-id`, `click.service-id`, `click.secret-key`, `click.checkout-base-url`
+  - `payme.merchant-id`, `payme.merchant-key`, `payme.account-field`, `payme.checkout-base-url`
+
+**Tests**:
+- `WalletTopUpServiceTest` covers create/complete (incl. duplicate no-op)/cancel ownership/cancel state-guard/fail.
+- `WalletTopUpWebhookControllerTest` covers Click prepare amount-match, Click complete success + provider-error→fail() path, Payme PerformTransaction settlement, and unknown-method→-32601. 14/14 green.
+
 ### Added - 2025-11-24
 
 #### Analytics System (Phase 2)
