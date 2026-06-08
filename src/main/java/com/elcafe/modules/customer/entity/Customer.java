@@ -13,6 +13,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -39,6 +40,9 @@ public class Customer {
 
     @Column(nullable = false, length = 20)
     private String phone;
+
+    @Column(name = "qr_code", nullable = false, unique = true, length = 40)
+    private String qrCode;
 
     @Column(length = 500)
     private String defaultAddress;
@@ -95,5 +99,16 @@ public class Customer {
 
     public String getFullName() {
         return firstName + " " + lastName;
+    }
+
+    @PrePersist
+    private void ensureQrCode() {
+        if (qrCode == null || qrCode.isBlank()) {
+            qrCode = generateQrCode();
+        }
+    }
+
+    public static String generateQrCode() {
+        return "CST-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
     }
 }

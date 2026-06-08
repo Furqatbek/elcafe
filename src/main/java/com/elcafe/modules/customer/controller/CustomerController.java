@@ -83,6 +83,22 @@ public class CustomerController {
         return ResponseEntity.ok(ApiResponse.success(customer));
     }
 
+    @GetMapping("/by-qr/{qrCode}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'OPERATOR', 'WAITER', 'CASHIER')")
+    @Operation(summary = "Find customer by QR code", description = "Resolve a scanned loyalty QR code to a customer")
+    public ResponseEntity<ApiResponse<CustomerResponse>> getCustomerByQrCode(@PathVariable String qrCode) {
+        Customer customer = customerService.getCustomerByQrCode(qrCode);
+        return ResponseEntity.ok(ApiResponse.success(customerService.getCustomerWithMarketing(customer.getId())));
+    }
+
+    @PostMapping("/{id}/qr-code/regenerate")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
+    @Operation(summary = "Regenerate customer QR code", description = "Rotate the customer's loyalty QR code (e.g. lost card)")
+    public ResponseEntity<ApiResponse<CustomerResponse>> regenerateQrCode(@PathVariable Long id) {
+        customerService.regenerateQrCode(id);
+        return ResponseEntity.ok(ApiResponse.success("QR code regenerated", customerService.getCustomerWithMarketing(id)));
+    }
+
     @GetMapping("/suggest/phone")
     @Operation(summary = "Suggest customers by phone", description = "Find customers with similar phone numbers")
     public ResponseEntity<ApiResponse<List<Customer>>> suggestCustomersByPhone(@RequestParam String phone) {

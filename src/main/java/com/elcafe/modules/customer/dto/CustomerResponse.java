@@ -23,6 +23,7 @@ public class CustomerResponse {
     private String lastName;
     private String email;
     private String phone;
+    private String qrCode;
     private String defaultAddress;
     private String city;
     private String state;
@@ -62,6 +63,7 @@ public class CustomerResponse {
                 .lastName(customer.getLastName())
                 .email(customer.getEmail())
                 .phone(customer.getPhone())
+                .qrCode(customer.getQrCode())
                 .defaultAddress(customer.getDefaultAddress())
                 .city(customer.getCity())
                 .state(customer.getState())

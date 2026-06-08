@@ -295,6 +295,25 @@ public class CustomerService {
     }
 
     @Transactional(readOnly = true)
+    public Customer getCustomerByQrCode(String qrCode) {
+        return customerRepository.findByQrCode(qrCode)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer", "qrCode", qrCode));
+    }
+
+    @Transactional
+    public Customer regenerateQrCode(Long customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Customer", "id", customerId));
+        String newCode;
+        do {
+            newCode = Customer.generateQrCode();
+        } while (customerRepository.findByQrCode(newCode).isPresent());
+        customer.setQrCode(newCode);
+        log.info("Regenerated QR code for customer {}", customerId);
+        return customerRepository.save(customer);
+    }
+
+    @Transactional(readOnly = true)
     public java.util.List<Customer> searchCustomersByPhone(String phone) {
         return customerRepository.findByPhoneContaining(phone);
     }
