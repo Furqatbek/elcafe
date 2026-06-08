@@ -1191,7 +1191,9 @@
     "error": "Xato",
     "notes": "Izohlar",
     "selectRestaurant": "Restoranni tanlang",
-    "edit": "Tahrirlash"
+    "edit": "Tahrirlash",
+    "actions": "Harakatlar",
+    "delete": "O‘chirish"
   },
   "shift": {
     "dashboard": {

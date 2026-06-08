@@ -446,7 +446,9 @@
     "error": "Error",
     "notes": "Notes",
     "selectRestaurant": "Select restaurant",
-    "edit": "Edit"
+    "edit": "Edit",
+    "actions": "Actions",
+    "delete": "Delete"
   },
   "shift": {
     "dashboard": {
