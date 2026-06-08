@@ -854,4 +854,79 @@ class POSOrderServiceTest {
             assertEquals("TAKEAWAY", posOrderService.getOrderTypeString(nullTypeTakeaway));
         }
     }
+
+    @Nested
+    @DisplayName("attachCustomer")
+    class AttachCustomerTests {
+
+        @Test
+        @DisplayName("attaches customer by qrCode")
+        void attachByQrCode() {
+            Order order = buildOrderForResponse(OrderStatus.NEW, OrderType.DINE_IN);
+            order.setId(1L);
+            Customer target = Customer.builder().id(7L).firstName("Alice").lastName("Doe")
+                    .phone("+998900000000").qrCode("CST-ABC123").build();
+
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+            when(customerRepository.findByQrCode("CST-ABC123")).thenReturn(Optional.of(target));
+            when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            com.elcafe.modules.order.dto.pos.AttachCustomerRequest req =
+                    com.elcafe.modules.order.dto.pos.AttachCustomerRequest.builder()
+                            .qrCode("CST-ABC123").build();
+
+            POSOrderResponse response = posOrderService.attachCustomer(1L, req);
+
+            assertNotNull(response);
+            assertEquals(target, order.getCustomer());
+            verify(orderRepository).save(order);
+        }
+
+        @Test
+        @DisplayName("attaches customer by phone")
+        void attachByPhone() {
+            Order order = buildOrderForResponse(OrderStatus.NEW, OrderType.TAKEAWAY);
+            order.setId(2L);
+            Customer target = Customer.builder().id(11L).firstName("Bob").lastName("Smith")
+                    .phone("+998901111111").qrCode("CST-XYZ").build();
+
+            when(orderRepository.findById(2L)).thenReturn(Optional.of(order));
+            when(customerRepository.findByPhone("+998901111111")).thenReturn(Optional.of(target));
+            when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            posOrderService.attachCustomer(2L,
+                    com.elcafe.modules.order.dto.pos.AttachCustomerRequest.builder()
+                            .phone("+998901111111").build());
+
+            assertEquals(target, order.getCustomer());
+        }
+
+        @Test
+        @DisplayName("rejects when order is settled (DELIVERED/COMPLETED/CANCELLED)")
+        void rejectsSettledOrder() {
+            for (OrderStatus terminal : new OrderStatus[]{OrderStatus.DELIVERED, OrderStatus.COMPLETED, OrderStatus.CANCELLED}) {
+                Order order = buildOrderForResponse(terminal, OrderType.TAKEAWAY);
+                order.setId(3L);
+                when(orderRepository.findById(3L)).thenReturn(Optional.of(order));
+
+                IllegalStateException ex = assertThrows(IllegalStateException.class,
+                        () -> posOrderService.attachCustomer(3L,
+                                com.elcafe.modules.order.dto.pos.AttachCustomerRequest.builder()
+                                        .customerId(99L).build()));
+                assertTrue(ex.getMessage().contains(terminal.name()));
+                verify(customerRepository, never()).findById(any());
+            }
+        }
+
+        @Test
+        @DisplayName("rejects when order does not exist")
+        void rejectsMissingOrder() {
+            when(orderRepository.findById(404L)).thenReturn(Optional.empty());
+
+            assertThrows(IllegalArgumentException.class, () ->
+                    posOrderService.attachCustomer(404L,
+                            com.elcafe.modules.order.dto.pos.AttachCustomerRequest.builder()
+                                    .qrCode("CST-NOPE").build()));
+        }
+    }
 }

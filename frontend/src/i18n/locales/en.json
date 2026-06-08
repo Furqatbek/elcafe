@@ -1144,7 +1144,10 @@
       "tags": "Tags",
       "status": "Status",
       "createdAt": "Created At"
-    }
+    },
+    "qrCode": "Loyalty QR",
+    "qrRegenerate": "Regenerate QR code",
+    "qrRegenerateConfirm": "Rotate {{name}}'s loyalty QR code? The old code will stop working."
   },
   "customerSegments": {
     "title": "Customer Segments",

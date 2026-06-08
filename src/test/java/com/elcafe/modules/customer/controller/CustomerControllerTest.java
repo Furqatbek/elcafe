@@ -94,6 +94,16 @@ class CustomerControllerTest {
                 .andExpect(jsonPath("$.data.qrCode").value("CST-ABCDEF123456"));
     }
 
+    @Test @DisplayName("GET /by-qr/{code} — surfaces 404 when code not found")
+    void getByQr_notFound() throws Exception {
+        when(customerService.getCustomerByQrCode("CST-MISSING000000"))
+                .thenThrow(new com.elcafe.exception.ResourceNotFoundException("Customer", "qrCode", "CST-MISSING000000"));
+
+        org.assertj.core.api.Assertions
+                .assertThatThrownBy(() -> mockMvc.perform(get("/api/v1/customers/by-qr/CST-MISSING000000")))
+                .hasRootCauseInstanceOf(com.elcafe.exception.ResourceNotFoundException.class);
+    }
+
     @Test @DisplayName("POST /{id}/qr-code/regenerate — rotates the code")
     void regenerateQrCode_returnsRefreshed() throws Exception {
         customer.setQrCode("CST-NEWCODE12345");

@@ -1014,7 +1014,10 @@
       "tags": "Teglar",
       "status": "Holat",
       "createdAt": "Yaratilgan sana"
-    }
+    },
+    "qrCode": "Sodiqlik QR",
+    "qrRegenerate": "Yangi QR-kod yaratish",
+    "qrRegenerateConfirm": "{{name}} uchun sodiqlik QR-kodi yangilansinmi? Eski kod ishlamay qoladi."
   },
   "customerSegments": {
     "title": "Mijoz segmentlari",

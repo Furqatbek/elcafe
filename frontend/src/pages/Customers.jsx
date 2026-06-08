@@ -27,6 +27,8 @@ import {
   ShoppingCart,
   Users,
   Copy,
+  QrCode,
+  RefreshCw,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -67,6 +69,23 @@ export default function Customers() {
   const copyToClipboard = (text, e) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
+  };
+
+  const handleRegenerateQr = async (customer, e) => {
+    e.stopPropagation();
+    const confirmMsg = t(
+      'customers.qrRegenerateConfirm',
+      'Rotate {{name}}\'s loyalty QR code? The old code will stop working.',
+      { name: `${customer.firstName} ${customer.lastName}`.trim() }
+    );
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await customerAPI.regenerateQrCode(customer.id);
+      loadCustomers();
+    } catch (err) {
+      console.error('Failed to regenerate QR code:', err);
+      alert(err.response?.data?.message || err.message);
+    }
   };
 
   useEffect(() => {
@@ -123,6 +142,7 @@ export default function Customers() {
       t('pages.customers.lastName', 'Last Name'),
       t('pages.customers.email', 'Email'),
       t('pages.customers.phone', 'Phone'),
+      t('customers.qrCode', 'Loyalty QR'),
       t('pages.customers.address', 'Address'),
       t('pages.customers.city', 'City'),
       t('pages.customers.state', 'State'),
@@ -143,6 +163,7 @@ export default function Customers() {
       customer.lastName,
       customer.email,
       customer.phone,
+      customer.qrCode || '',
       customer.defaultAddress,
       customer.city,
       customer.state,
@@ -492,6 +513,12 @@ export default function Customers() {
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <div className="flex items-center gap-1">
+                    <QrCode className="h-3 w-3" />
+                    {t('customers.qrCode', 'Loyalty QR')}
+                  </div>
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="flex items-center gap-1">
                     <Coins className="h-3 w-3" />
                     {t('customers.bonusBalance', 'Bonus')}
                   </div>
@@ -528,7 +555,7 @@ export default function Customers() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={12} className="px-4 py-8 text-center text-gray-500">
                     {t('common.noData')}
                   </td>
                 </tr>
@@ -549,6 +576,31 @@ export default function Customers() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                       {customer.phone}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
+                      {customer.qrCode ? (
+                        <div className="flex items-center gap-1">
+                          <code className="px-2 py-1 bg-gray-100 rounded text-xs font-mono">
+                            {customer.qrCode}
+                          </code>
+                          <button
+                            onClick={(e) => copyToClipboard(customer.qrCode, e)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                            title={t('common.copy', 'Copy')}
+                          >
+                            <Copy className="h-3 w-3 text-gray-400" />
+                          </button>
+                          <button
+                            onClick={(e) => handleRegenerateQr(customer, e)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                            title={t('customers.qrRegenerate', 'Regenerate QR code')}
+                          >
+                            <RefreshCw className="h-3 w-3 text-gray-400" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {customer.bonusBalance > 0 ? (
