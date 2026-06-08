@@ -319,33 +319,49 @@ public class OwnerNotificationService {
         long hours = workedMinutes / 60;
         long mins = workedMinutes % 60;
         String profitEmoji = todayProfit.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
-        String profitText = String.format("%,.2f", todayProfit);
 
         String cashText = totalCashSales != null && totalCashSales.compareTo(java.math.BigDecimal.ZERO) > 0
                 ? String.format("\n💵 Наличные: %,.2f", totalCashSales) : "";
         String cardText = totalCardSales != null && totalCardSales.compareTo(java.math.BigDecimal.ZERO) > 0
                 ? String.format("\n💳 Карта: %,.2f", totalCardSales) : "";
-        String drawerExpensesText = drawerExpenses.compareTo(java.math.BigDecimal.ZERO) > 0
-                ? String.format("\n🪙 Из кассы смены: %,.2f", drawerExpenses) : "";
-        String otherExpensesText = otherExpenses.compareTo(java.math.BigDecimal.ZERO) > 0
-                ? String.format("\n🏦 Прочие расходы: %,.2f", otherExpenses) : "";
 
         String lateText = lateInfo != null
                 ? String.format("\n⚠️ Опоздание: %d мин — штраф %,.2f", lateInfo.minutesLate(), lateInfo.fine())
                 : "";
 
-        String message = String.format(
-            "🔴 <b>Смена закрыта</b>\n\n" +
-            "👤 <b>%s</b>\n" +
-            "⏰ %s — %s (%dч %dмин)%s\n" +
-            "📦 Заказов: %d\n" +
-            "💰 Выручка: %s%s%s%s%s\n" +
-            "%s Чистая прибыль: %s",
-            employeeName, clockInTime, clockOutTime, hours, mins, lateText,
-            orderCount, totalSales != null ? String.format("%,.2f", totalSales) : "0",
-            cashText, cardText, drawerExpensesText, otherExpensesText,
-            profitEmoji, profitText
-        );
+        // Build the message in two clearly separated blocks:
+        //   1. Shift-scoped numbers (employee, hours, orders, sales for THIS shift).
+        //   2. Day-scoped restaurant totals (drawer expenses, other expenses, net profit
+        //      for the WHOLE business day across all shifts).
+        // The day-scoped numbers were previously rendered without a header, which made
+        // them look like they were attributable to the closing employee — e.g. a waiter
+        // who clocks in & out by mistake would appear to have racked up the day's
+        // expenses against their name. The "📊 За день (по ресторану):" prefix fixes
+        // that attribution.
+        StringBuilder msg = new StringBuilder();
+        msg.append("🔴 <b>Смена закрыта</b>\n\n");
+        msg.append("👤 <b>").append(employeeName).append("</b>\n");
+        msg.append(String.format("⏰ %s — %s (%dч %dмин)%s\n",
+                clockInTime, clockOutTime, hours, mins, lateText));
+        msg.append(String.format("📦 Заказов: %d\n", orderCount));
+        msg.append(String.format("💰 Выручка: %s",
+                totalSales != null ? String.format("%,.2f", totalSales) : "0"));
+        msg.append(cashText).append(cardText);
+
+        boolean hasDayTotals = drawerExpenses.signum() > 0
+                || otherExpenses.signum() > 0
+                || todayProfit.signum() != 0;
+        if (hasDayTotals) {
+            msg.append("\n\n📊 <b>За день (по ресторану):</b>");
+            if (drawerExpenses.signum() > 0) {
+                msg.append(String.format("\n🪙 Из кассы смены: %,.2f", drawerExpenses));
+            }
+            if (otherExpenses.signum() > 0) {
+                msg.append(String.format("\n🏦 Прочие расходы: %,.2f", otherExpenses));
+            }
+            msg.append(String.format("\n%s Чистая прибыль: %,.2f", profitEmoji, todayProfit));
+        }
+        String message = msg.toString();
 
         for (OwnerTelegramSubscriber subscriber : subscribers) {
             sendNotification(subscriber, OwnerNotificationType.SHIFT_CLOSED, message, "SHIFT", null);
