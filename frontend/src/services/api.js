@@ -228,6 +228,8 @@ export const customerAPI = {
   getAll: (params) => api.get('/customers', { params }),
   getById: (id) => api.get(`/customers/${id}`),
   getByPhone: (phone) => api.get('/customers/search/phone', { params: { phone } }),
+  getByQrCode: (qrCode) => api.get(`/customers/by-qr/${encodeURIComponent(qrCode)}`),
+  regenerateQrCode: (id) => api.post(`/customers/${id}/qr-code/regenerate`),
   suggestByPhone: (phone) => api.get('/customers/suggest/phone', { params: { phone } }),
   create: (data) => api.post('/customers', data),
   update: (id, data) => api.put(`/customers/${id}`, data),
@@ -427,6 +429,7 @@ export const posAPI = {
   checkProductAvailability: (productId, restaurantId) =>
     api.get(`/pos/orders/products/${productId}/availability`, { params: { restaurantId } }),
   getKitchenStatus: (orderId) => api.get(`/pos/orders/${orderId}/kitchen-status`),
+  attachCustomer: (orderId, payload) => api.patch(`/pos/orders/${orderId}/customer`, payload),
   // Order Management
   getOpenDineInOrders: (restaurantId) => api.get(`/pos/orders/open/${restaurantId}`),
   getOrderById: (orderId) => api.get(`/pos/orders/${orderId}`),
@@ -990,6 +993,27 @@ export const referralAPI = {
     api.get(`/restaurants/${restaurantId}/referrals/customer/${customerId}`),
   getStats: (restaurantId) =>
     api.get(`/restaurants/${restaurantId}/referrals/stats`),
+};
+
+// Loyalty wallet, tiers, and per-restaurant config
+export const loyaltyAPI = {
+  getConfig: (restaurantId) =>
+    api.get('/loyalty/config', { params: restaurantId ? { restaurantId } : {} }),
+  upsertConfig: (data) => api.put('/loyalty/config', data),
+
+  getTiers: () => api.get('/loyalty/tiers'),
+  createTier: (data) => api.post('/loyalty/tiers', data),
+  updateTier: (id, data) => api.put(`/loyalty/tiers/${id}`, data),
+  deleteTier: (id) => api.delete(`/loyalty/tiers/${id}`),
+
+  getCustomerLoyalty: (customerId) =>
+    api.get(`/loyalty/customers/${customerId}`),
+  getCustomerTransactions: (customerId, params) =>
+    api.get(`/loyalty/customers/${customerId}/transactions`, { params }),
+  grantBirthdayBonus: (customerId) =>
+    api.post(`/loyalty/customers/${customerId}/birthday-bonus`),
+  grantReactivationBonus: (customerId) =>
+    api.post(`/loyalty/customers/${customerId}/reactivation-bonus`),
 };
 
 // Loyalty Milestones API
