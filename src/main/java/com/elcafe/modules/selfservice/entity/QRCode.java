@@ -5,6 +5,7 @@ import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.selfservice.enums.QRCodeType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class QRCode {
 
     @Id

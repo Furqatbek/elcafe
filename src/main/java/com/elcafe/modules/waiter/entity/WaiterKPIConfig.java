@@ -3,6 +3,7 @@ package com.elcafe.modules.waiter.entity;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 @Table(name = "waiter_kpi_configs")
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class WaiterKPIConfig {
 
     @Id

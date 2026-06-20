@@ -6,6 +6,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.waiter.enums.CommissionStatus;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,6 +30,7 @@ import java.time.LocalDateTime;
         uniqueConstraints = @UniqueConstraint(columnNames = {"waiter_id", "order_id"}))
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class WaiterCommission {
 
     @Id

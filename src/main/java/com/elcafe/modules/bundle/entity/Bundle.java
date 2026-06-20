@@ -3,6 +3,7 @@ package com.elcafe.modules.bundle.entity;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -23,6 +24,7 @@ import java.util.Set;
 @Entity
 @Table(name = "bundles")
 @EntityListeners(AuditingEntityListener.class)
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class Bundle {
 
     /** Length of day abbreviations (MON, TUE, WED, etc.) used for availability checking. */

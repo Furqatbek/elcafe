@@ -2,6 +2,7 @@ package com.elcafe.modules.settings.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class ReceiptTemplate {
 
     @Id

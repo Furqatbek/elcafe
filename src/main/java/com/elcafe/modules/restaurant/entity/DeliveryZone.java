@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,6 +17,7 @@ import java.math.BigDecimal;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "delivery_zones")
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class DeliveryZone {
 
     @Id

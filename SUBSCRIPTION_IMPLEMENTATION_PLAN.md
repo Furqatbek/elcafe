@@ -60,7 +60,7 @@ billing on top. (a) is the expensive, risky 70%.
 Nothing downstream is trustworthy without this.
 
 > **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (filter in *shadow* + controller
-> retrofit **started**) · §3.4 ◐ (backstop wired; fin/order/menu/inventory/pos scoped) · §3.5 ☐
+> retrofit **started**) · §3.4 ◐ (backstop wired; all 68 business entities scoped) · §3.5 ☐
 > (deferred) · §3.6 ☐ · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
@@ -90,9 +90,9 @@ Nothing downstream is trustworthy without this.
 > stay unscoped. Once active, a surrogate-`/{id}` lookup for a foreign tenant simply returns
 > nothing — closing the IDOR class at the data layer without per-endpoint code. Mode parsing is
 > now a single shared `TenantEnforcementMode` enum (used by the edge filter and the interceptor).
-> **Still TODO:** apply `@Filter` to the remaining ~19 restaurant-scoped entities (financial,
-> order, menu, inventory, pos, reservation, promotion, loyalty, referral now done; mechanical,
-> module by module — only those with their own `restaurant_id` column). **Limits:** relies on `spring.jpa.open-in-view=true`; does not cover
+> **Entity rollout complete:** `@Filter` now covers **all 68 restaurant-owned business entities**;
+> only `auth/User` and `common/audit/AuditLog` are deferred as special cases. Next: dedicated
+> handling for those two, then staging validation of the `enforce` flip. **Limits:** relies on `spring.jpa.open-in-view=true`; does not cover
 > `REQUIRES_NEW` sessions or non-MVC DB access (by design — those aren't request-tenant-scoped).
 > Inert until `enforce`, so flipping the switch needs a staging soak.
 
@@ -135,39 +135,26 @@ Nothing downstream is trustworthy without this.
   `reservation/ReservationController`, `customer/*`, `loyalty/*`. This is the bulk of the
   effort and the main regression risk — do it behind tests.
 
-### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ IN PROGRESS
+### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ ENTITY ROLLOUT DONE (enforce not yet flipped)
 - ✅ `@FilterDef("restaurantFilter", restaurantId: Long)` declared on `Restaurant`;
-  `@Filter(condition = "restaurant_id = :restaurantId")` applied to **47 entities** so far: the 8
-  financial (`Account`, `Expense`, `Transaction`, `JournalEntry`, `PayrollEntry`, `PurchaseOrder`,
-  `AccountingPeriod`, `SalaryConfig`), the 5 order/menu crown-jewel entities (`Order`,
-  `Category`, `AddOnGroup`, `MenuCollection`, `PackagingRule`), the 8 inventory entities
-  (`Ingredient`, `IngredientCategory`, `Supplier`, `ProductionBatch`, `StockCount`,
-  `StockVarianceHistory`, `ValuationSettings`, `WasteRecord`), and the 15 pos entities
-  (`CashDrawer`, `GiftCard`, `GiftCardType`, `EmployeeShift`, `EmployeeConsumption`,
-  `ConsumptionAllowance`, `ShiftRules`, `ShiftSchedule`, `ShiftSwapRequest`, `OfflineOrder`,
-  `POSDevice`, `Scale`, `CustomerDisplay`, `TaxExemptionLog`, `TaxExemptionType`), plus
-  reservation (3: `Reservation`, `ReservationSettings`, `ReservationTimeSlot`), promotion (2:
-  `HappyHour`, `Promotion`), loyalty (3: `LoyaltyConfig`, `LoyaltyMilestone`, `LoyaltyPromotion`)
-  and referral (3: `Referral`, `ReferralCode`, `ReferralSettings`).
+  `@Filter(condition = "restaurant_id = :restaurantId")` applied to **all 68 restaurant-owned
+  business entities** — across financial, order, menu, inventory, pos, reservation, promotion,
+  loyalty, referral, selfservice, restaurant, settings, waiter-derived, review, kitchen, bundle,
+  pricing, notification and ownerbot. Verified by sweep: every `@Entity` with its own
+  `restaurant_id` column now carries the filter, except the two special cases below.
 - ✅ `common/tenant/TenantFilterInterceptor` enables the filter per request from `TenantContext`,
   gated by `app.security.tenant-enforcement.mode` (active only in `enforce`); SUPER_ADMIN
   aggregates (null tenant) and background jobs are left unscoped. Registered via
   `TenantWebMvcConfig`. Decision logic unit-tested; full-context bootstrap verified.
-- ☐ Apply `@Filter` to the remaining `restaurant_id` entities, module by module. Roadmap (each
-  has an explicit `restaurant_id` column, verified):
-  **selfservice** (QRCode,
-  SelfServiceSession, SelfServiceSettings), **restaurant** (BusinessHours, DeliveryZone,
-  RestaurantTable, WorkingHours), **settings** (PrintJob, PrinterSettings, ReceiptTemplate),
-  **waiter** (WaiterCommission, WaiterKPIConfig, WaiterPerformance), plus Review, KitchenStation,
-  Bundle, PriceChangeLog, the two notification subs, and the two ownerbot entities.
-  - **Only** entities with their OWN `restaurant_id` column qualify — those scoped via a parent
-    (`Product`→`Category`, `OrderItem`→`Order`) have no column to filter and stay on the
-    controller-guard / parent-check path. A misapplied `@Filter` is a *latent* bug: dormant in
-    shadow, it errors only at query time under `enforce`, so verify the column before annotating.
-  - **Handle separately, with dedicated tests (NOT in the mechanical sweep):** `auth/User`
-    (central to authentication — scoping it wrong could lock users out) and `common/audit/AuditLog`
-    (written from background/no-tenant contexts). Both need careful reasoning about login,
-    refresh, SUPER_ADMIN user-management, and async writes before they get a filter.
+- ✅ Entity rollout **complete** — every qualifying entity annotated, module by module. Entities
+  scoped only via a parent (`Product`→`Category`, `OrderItem`→`Order`) have no own column and stay
+  on the controller-guard / parent-check path. A misapplied `@Filter` would be a *latent* bug
+  (dormant in shadow, erroring only under `enforce`), so each entity's `restaurant_id` column was
+  verified before annotating.
+- ☐ **Two entities deferred, to be handled with dedicated tests:** `auth/User` (central to
+  authentication — scoping it wrong could lock users out) and `common/audit/AuditLog` (written from
+  background/no-tenant contexts). Both need careful reasoning about login, refresh, SUPER_ADMIN
+  user-management, and async writes before they get a filter.
 - ☐ Staging validation when flipping to `enforce`; consider `REQUIRES_NEW`/non-MVC coverage if
   any tenant-scoped query runs outside the open-in-view session.
 

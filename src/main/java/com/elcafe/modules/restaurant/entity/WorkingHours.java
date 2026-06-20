@@ -2,6 +2,7 @@ package com.elcafe.modules.restaurant.entity;
 
 import com.elcafe.modules.auth.entity.User;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,7 @@ import java.time.LocalTime;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "working_hours")
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class WorkingHours {
 
     @Id

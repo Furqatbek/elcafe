@@ -2,6 +2,7 @@ package com.elcafe.modules.pricing.entity;
 
 import com.elcafe.modules.pricing.enums.PricingStrategy;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "price_change_logs")
 @EntityListeners(AuditingEntityListener.class)
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class PriceChangeLog {
 
     @Id
