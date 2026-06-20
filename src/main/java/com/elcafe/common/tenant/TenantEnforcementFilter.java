@@ -54,33 +54,18 @@ public class TenantEnforcementFilter extends OncePerRequestFilter {
     /** Matches /restaurant/{id} or /restaurants/{id} where id is numeric. */
     private static final Pattern RESTAURANT_PATH = Pattern.compile("/restaurants?/(\\d+)");
 
-    private final Mode mode;
+    private final TenantEnforcementMode mode;
 
     public TenantEnforcementFilter(
             @Value("${app.security.tenant-enforcement.mode:shadow}") String mode) {
-        this.mode = Mode.from(mode);
+        this.mode = TenantEnforcementMode.from(mode);
         log.info("TenantEnforcementFilter initialised in {} mode", this.mode);
-    }
-
-    enum Mode {
-        OFF, SHADOW, ENFORCE;
-
-        static Mode from(String raw) {
-            if (raw == null) {
-                return SHADOW;
-            }
-            return switch (raw.trim().toLowerCase()) {
-                case "off", "disabled", "false" -> OFF;
-                case "enforce", "block", "strict" -> ENFORCE;
-                default -> SHADOW;
-            };
-        }
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        if (mode == Mode.OFF) {
+        if (mode == TenantEnforcementMode.OFF) {
             chain.doFilter(request, response);
             return;
         }
@@ -96,7 +81,7 @@ public class TenantEnforcementFilter extends OncePerRequestFilter {
             }
 
             if (violation != null) {
-                if (mode == Mode.ENFORCE) {
+                if (mode == TenantEnforcementMode.ENFORCE) {
                     writeForbidden(request, response, violation);
                     return;
                 }

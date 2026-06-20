@@ -4,6 +4,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.UpdateTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
         @Index(name = "idx_accounting_period_restaurant", columnList = "restaurant_id"),
         @Index(name = "idx_accounting_period_dates", columnList = "start_date, end_date")
 })
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 @Getter
 @Setter
 @NoArgsConstructor

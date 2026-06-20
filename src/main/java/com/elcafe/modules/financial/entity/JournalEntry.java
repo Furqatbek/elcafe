@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.UpdateTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -20,6 +21,7 @@ import java.util.List;
         @Index(name = "idx_journal_entry_date", columnList = "entry_date"),
         @Index(name = "idx_journal_entry_reference", columnList = "reference_type, reference_id")
 })
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 @Getter
 @Setter
 @NoArgsConstructor

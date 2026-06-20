@@ -4,6 +4,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Filter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
         @Index(name = "idx_financial_transaction_account", columnList = "account_id"),
         @Index(name = "idx_financial_transaction_reference", columnList = "reference_type, reference_id")
 })
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 @Getter
 @Setter
 @NoArgsConstructor

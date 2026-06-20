@@ -60,8 +60,8 @@ billing on top. (a) is the expensive, risky 70%.
 Nothing downstream is trustworthy without this.
 
 > **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (filter in *shadow* + controller
-> retrofit **started**) · §3.4 ☐ · §3.5 ☐ (deferred) · §3.6 ☐ · §3.7 ☐ (product decision
-> pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
+> retrofit **started**) · §3.4 ◐ (Hibernate backstop wired; financial entities scoped) · §3.5 ☐
+> (deferred) · §3.6 ☐ · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
 > default **shadow**) plus a mode-aware `RestaurantAuthorizationService.checkAccess(...)` for
@@ -81,6 +81,19 @@ Nothing downstream is trustworthy without this.
 > - **`PayrollController GET /employees`** returns staff + waiters across **all** restaurants
 >   (cross-tenant listing). Needs query scoping by tenant, which also depends on §3.6
 >   (waiters are not yet tenant-bound).
+>
+> **§3.4 Hibernate backstop (this increment) — the systemic answer to the `/{id}` gap above:**
+> a global `@FilterDef("restaurantFilter")` on `Restaurant` + `@Filter(restaurant_id =
+> :restaurantId)` on the 8 financial entities, enabled per-request by `TenantFilterInterceptor`
+> (reads `TenantContext`). It activates **only** in `enforce` mode and **only** when a concrete
+> tenant is bound, so SUPER_ADMIN aggregates and background schedulers (e.g. payroll auto-pay)
+> stay unscoped. Once active, a surrogate-`/{id}` lookup for a foreign tenant simply returns
+> nothing — closing the IDOR class at the data layer without per-endpoint code. Mode parsing is
+> now a single shared `TenantEnforcementMode` enum (used by the edge filter and the interceptor).
+> **Still TODO:** apply `@Filter` to the remaining ~58 restaurant-scoped entities (mechanical,
+> module by module). **Limits:** relies on `spring.jpa.open-in-view=true`; does not cover
+> `REQUIRES_NEW` sessions or non-MVC DB access (by design — those aren't request-tenant-scoped).
+> Inert until `enforce`, so flipping the switch needs a staging soak.
 
 ### 3.1 Close the self-service ADMIN hole
 - **`modules/auth/dto/RegisterRequest.java`** — remove the `role` field.
@@ -121,10 +134,19 @@ Nothing downstream is trustworthy without this.
   `reservation/ReservationController`, `customer/*`, `loyalty/*`. This is the bulk of the
   effort and the main regression risk — do it behind tests.
 
-### 3.4 Defense in depth: Hibernate tenant filter (recommended)
-- Add a Hibernate `@Filter` (e.g. `tenantFilter` on `restaurant_id`) enabled per request from
-  `TenantContext`, so even a missed controller check cannot leak cross-tenant rows. Entities
-  with `restaurant_id` get `@FilterDef`/`@Filter`. SUPER_ADMIN requests disable the filter.
+### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ IN PROGRESS
+- ✅ `@FilterDef("restaurantFilter", restaurantId: Long)` declared on `Restaurant`;
+  `@Filter(condition = "restaurant_id = :restaurantId")` applied to the 8 financial entities
+  (`Account`, `Expense`, `Transaction`, `JournalEntry`, `PayrollEntry`, `PurchaseOrder`,
+  `AccountingPeriod`, `SalaryConfig`).
+- ✅ `common/tenant/TenantFilterInterceptor` enables the filter per request from `TenantContext`,
+  gated by `app.security.tenant-enforcement.mode` (active only in `enforce`); SUPER_ADMIN
+  aggregates (null tenant) and background jobs are left unscoped. Registered via
+  `TenantWebMvcConfig`. Decision logic unit-tested; full-context bootstrap verified.
+- ☐ Apply `@Filter` to the remaining ~58 `restaurant_id` entities (order, menu, inventory,
+  reservation, waiter-derived, etc.), module by module.
+- ☐ Staging validation when flipping to `enforce`; consider `REQUIRES_NEW`/non-MVC coverage if
+  any tenant-scoped query runs outside the open-in-view session.
 
 ### 3.5 Make tokens revocable / finite
 - **`security/JwtUtil.java`** — `isTokenExpired` must honor real expiry.

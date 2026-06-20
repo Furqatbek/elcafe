@@ -6,6 +6,7 @@ import com.elcafe.modules.waiter.entity.Waiter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -22,6 +23,7 @@ import java.time.OffsetDateTime;
 @Table(name = "salary_configs")
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class SalaryConfig {
 
     @Id

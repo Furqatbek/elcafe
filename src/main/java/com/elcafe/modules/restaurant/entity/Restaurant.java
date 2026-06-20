@@ -3,6 +3,8 @@ package com.elcafe.modules.restaurant.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import org.hibernate.annotations.FilterDef;
+import org.hibernate.annotations.ParamDef;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,6 +26,9 @@ import java.util.List;
 @Table(name = "restaurants")
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+// Phase 0 §3.4: global definition of the tenant-isolation filter. Applied (via @Filter) to every
+// restaurant-scoped entity and enabled per-request by TenantFilterInterceptor in enforce mode.
+@FilterDef(name = "restaurantFilter", parameters = @ParamDef(name = "restaurantId", type = Long.class))
 public class Restaurant {
 
     @Id
