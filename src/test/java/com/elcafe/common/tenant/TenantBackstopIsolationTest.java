@@ -23,14 +23,19 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 0 §3.4 — proves the Hibernate {@code restaurantFilter} backstop actually scopes data when
- * enabled (as {@code TenantFilterInterceptor} does in {@code enforce} mode), against real rows.
+ * Phase 0 §3.4 — proves the Hibernate {@code restaurantFilter} backstop scopes real data when
+ * enabled (as {@code TenantFilterInterceptor} does in {@code enforce} mode), and pins down exactly
+ * which access paths it does and does not cover.
  *
  * <p>This is the gate for flipping {@code TENANT_ENFORCEMENT_MODE=enforce}: the existing
  * {@code TenantFilterInterceptorTest} only checks the gating logic (it stubs {@code enableFilter}),
- * so until now nothing verified that the filter scopes queries or closes a cross-tenant lookup on
- * real data. It exercises both a plain-column tenant entity ({@code Customer}) and an FK-based one
- * ({@code Order}) so the proof generalises across modules.
+ * so nothing verified the filter against real rows. It exercises a plain-column tenant entity
+ * ({@code Customer}) and an FK-based one ({@code Order}).
+ *
+ * <p>Key result: <strong>queries are scoped, PK loads are not</strong>. A default Spring Data
+ * {@code findById} uses {@code EntityManager.find} (a PK load the filter ignores), so it leaks across
+ * tenants — which is why production routes repositories through {@link TenantScopedJpaRepository},
+ * whose query-based {@code findById} <em>is</em> filtered (the mechanism is proven directly below).
  */
 @DataJpaTest
 @ActiveProfiles("test")
@@ -121,30 +126,36 @@ class TenantBackstopIsolationTest {
         assertThat(orderRepository.findAll()).hasSize(1);
     }
 
-    // --- THE GAP: Hibernate @Filter is NOT applied to primary-key em.find() loads, so Spring Data
-    // findById(foreignId) is NOT scoped — even with the filter enabled. This contradicts the §3.4
-    // plan's claim that a surrogate "/{id}" lookup for a foreign tenant "returns nothing". Query-based
-    // access (above) is scoped; PK lookups are not. Every findById-based /{id} endpoint therefore
-    // still needs an explicit ownership check (§3.3) — the backstop alone does not close it.
-    // When that gap is closed (e.g. a query-based findById in a repository base class), flip these
-    // assertions to isEmpty().
+    // --- findById: the raw gap vs the fix. Raw em.find (a PK load) is NOT scoped by the filter —
+    // which is why repositories route through TenantScopedJpaRepository, whose query-based findById
+    // IS scoped. Both are exercised here under the same enabled filter. ---
 
     @Test
-    @DisplayName("GAP: findById by primary key is NOT filtered (foreign tenant row still loads)")
-    void filterOn_findByIdByPrimaryKeyIsNotScoped() {
+    @DisplayName("GAP (why the fix exists): raw em.find PK load is NOT scoped")
+    void rawEmFind_isNotScoped() {
+        enableFilterFor(restaurantA);
+        // Direct EntityManager.find bypasses the filter — the foreign tenant's row still loads.
+        assertThat(em.find(Customer.class, custBId))
+                .as("Hibernate @Filter does not apply to em.find PK loads")
+                .isNotNull();
+    }
+
+    @Test
+    @DisplayName("FIX: repository.findById (query-based, via TenantScopedJpaRepository) IS scoped")
+    void repositoryFindById_isScoped() {
         enableFilterFor(restaurantA);
 
-        // Same-tenant lookups work (expected).
+        // Same-tenant findById still works (no breakage / false negatives).
         assertThat(customerRepository.findById(custA1Id)).isPresent();
 
-        // Documents the gap: the foreign tenant's rows are STILL returned by findById despite the
-        // filter being active (verified live by the query-scoping tests in this class).
+        // A foreign tenant's row is no longer reachable by surrogate id — closing the /{id} IDOR
+        // class the §3.4 plan assumed @Filter already closed.
         assertThat(customerRepository.findById(custBId))
-                .as("findById is a PK load (em.find) which Hibernate @Filter does not scope")
-                .isPresent();
+                .as("foreign Customer hidden via query-based findById")
+                .isEmpty();
         assertThat(orderRepository.findById(orderBId))
-                .as("same gap for FK-based entities")
-                .isPresent();
+                .as("same closure for FK-based entities")
+                .isEmpty();
     }
 
     private static Restaurant restaurant(String name) {
