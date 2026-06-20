@@ -84,6 +84,27 @@ bumps the version on PIN change and on deactivation/soft-delete, instantly inval
 tokens. This adds one waiter lookup per authenticated waiter request (the accepted cost of
 revocation). No API/client change.
 
+#### Loyalty is now per-restaurant (§3.7) — ⚠️ balances reset
+
+Loyalty was already per-restaurant for new activity (it keys off `customer_loyalty.customer_id`,
+which V150 made per-restaurant), but the loyalty tables had no explicit `restaurant_id`, so the
+tenant `@Filter` backstop couldn't cover them and pre-V150 balances were stranded on each customer's
+primary-restaurant row.
+
+**Backend**: **V153** adds `restaurant_id` (NOT NULL, FK, indexed) to `customer_loyalty`,
+`bonus_transactions`, `wallet_top_ups`, `tier_history`, backfilled from the owning customer / parent
+loyalty row; the four entities gain `@Filter`, so the §3.4 backstop now scopes them (this also closes
+the previously un-scoped `WalletTopUpService.listAll` admin read in enforce mode). Services set
+`restaurant_id` on create.
+
+**⚠️ Breaking — balances reset**: per explicit product decision, **all loyalty balances are zeroed**
+at migration (`current_balance`/`lifetime_earned`/`lifetime_spent`, tier reset) so every (customer,
+restaurant) starts fresh. The spendable balance commingles promo points and customer-funded top-ups;
+top-ups are non-refundable promo credit by design (`WalletTopUp`), so this is a promo-credit reset,
+not a refund. Transaction/top-up history rows are retained for audit. Same H2/Flyway caveat as
+V150–V152: V153 is Postgres-only and not exercised by the test suite — validate on a Postgres copy
+(and back up) before deploy.
+
 ### Added - 2026-06-08
 
 #### Customer Wallet & Loyalty Stages

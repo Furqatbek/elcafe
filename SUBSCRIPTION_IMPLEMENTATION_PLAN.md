@@ -235,24 +235,28 @@ Nothing downstream is trustworthy without this.
   `WaiterAuthRequest` now requires `restaurantId` (BREAKING) and `authenticate` resolves by
   `(restaurantId, pin)`. `waiters.restaurant_id` is now `NOT NULL` (V148 backfill confirmed).
 
-### 3.7 Decide the customer-tenancy model
-Customers are currently global. Two options — pick one:
-- **(A) Customers belong to one restaurant:** Migration adds `restaurant_id` to `customers`
-  (+ `Customer.java`, repositories, `ConsumerAuthService` token gets the claim). Backfill is
-  non-trivial if a customer transacted at multiple restaurants.
-- **(B) Customers are platform-global by design** (shared identity, orders are per-tenant):
-  then customer PII endpoints must be access-scoped by which tenant the customer has
-  interacted with. Document explicitly and gate `customer/*` controllers accordingly.
-
-> 3.7 is a product decision with privacy/compliance weight. Flag to stakeholders.
+### 3.7 Customer-tenancy model — ✅ DECIDED (A) + DONE
+Chose **(A) Customers belong to one restaurant.**
+- ✅ **Customers (V150):** `restaurant_id` added to `customers` (+ `Customer.java` `@Filter`,
+  repositories, `ConsumerAuthService` token carries the claim; consumer login requires a
+  `restaurantId`). A multi-restaurant customer is split into one row per restaurant; the most-orders
+  restaurant is "primary". See CHANGELOG.
+- ✅ **Loyalty per-restaurant (V153):** loyalty was already per-restaurant for new activity (keyed
+  off the now-per-restaurant `customer_id`); V153 makes it explicit — adds `restaurant_id` (+
+  `@Filter`) to `customer_loyalty`/`bonus_transactions`/`wallet_top_ups`/`tier_history`. Per product
+  decision, **all balances are zeroed** at migration so every (customer, restaurant) starts fresh
+  (top-ups are non-refundable promo credit by design, so this is a promo reset, not a refund).
+- ☐ **Remaining (separate):** the consumer-IDOR pair (`AddressController`/`NotificationController`
+  trust a client `customerId`) still needs a principal-ownership fix — distinct from restaurant
+  tenancy; pending a pin-down of the consumer principal model.
 
 ---
 
 ## 4. Phase 1 — Tenant & subscription data model
 
-New module `com.elcafe.modules.subscription`. Migrations start at **`V153`** — Phase 0 consumed
-V147–V152 (V147/V148 tenant backfill, V149 user `token_version`, V150 customers per-restaurant,
-V151 waiter identity, V152 waiter `token_version`).
+New module `com.elcafe.modules.subscription`. Migrations start at **`V154`** — Phase 0 consumed
+V147–V153 (V147/V148 tenant backfill, V149 user `token_version`, V150 customers per-restaurant,
+V151 waiter identity, V152 waiter `token_version`, V153 loyalty per-restaurant).
 
 ### 4.1 Entities (new)
 - `entity/BillingAccount.java` → table `billing_accounts` (owner user, company/billing name,
@@ -274,12 +278,12 @@ V151 waiter identity, V152 waiter `token_version`).
 - `enums/InvoiceStatus.java`: `DRAFT, OPEN, PAID, UNCOLLECTIBLE, VOID`.
 
 ### 4.3 Migrations
-- `V153__create_billing_accounts.sql`
-- `V154__create_subscription_plans.sql` (+ seed default plans)
-- `V155__create_restaurant_subscriptions.sql`
-- `V156__create_subscription_invoices.sql`
-- `V157__create_billing_events.sql`
-- `V158__backfill_subscriptions_for_existing_restaurants.sql` — every existing restaurant
+- `V154__create_billing_accounts.sql`
+- `V155__create_subscription_plans.sql` (+ seed default plans)
+- `V156__create_restaurant_subscriptions.sql`
+- `V157__create_subscription_invoices.sql`
+- `V158__create_billing_events.sql`
+- `V159__backfill_subscriptions_for_existing_restaurants.sql` — every existing restaurant
   gets a `BillingAccount` + a subscription (grandfathered `ACTIVE` or `TRIALING`) so the new
   gate doesn't lock out current users on deploy. **Critical for a no-downtime rollout.**
 
@@ -362,7 +366,7 @@ V151 waiter identity, V152 waiter `token_version`).
 - **Tests.** New: tenancy-isolation tests (user A cannot touch restaurant B via path/param),
   enforcement-filter tests (402 paths + allowlist), billing lifecycle, webhook idempotency.
   Module test dirs already exist under `src/test/java/com/elcafe/modules/*`.
-- **Rollout / data migration.** `V158` backfill must run so existing tenants land `ACTIVE`/
+- **Rollout / data migration.** `V159` backfill must run so existing tenants land `ACTIVE`/
   grandfathered; otherwise the gate locks everyone out on deploy. Stage behind a feature flag
   (`subscription.enforcement.enabled`) — ship enforcement OFF, verify data, then flip ON.
 - **Observability.** Metrics/alerts for failed charges, suspensions, webhook failures; audit
@@ -378,7 +382,7 @@ V151 waiter identity, V152 waiter `token_version`).
 
 ```
 Phase 0  (security + tenancy)            ── must land first, gates everything
-   └─ Phase 1 (data model + V158 backfill)
+   └─ Phase 1 (data model + V159 backfill)
          └─ Phase 2 (enforcement gate, flag OFF)
                ├─ Phase 3 (billing engine + provider + webhooks)
                └─ Phase 4 (frontend paywall + billing UI)
@@ -392,7 +396,7 @@ Flip enforcement flag ON only after Phase 1 backfill verified in prod.
    Hibernate tenant filter (§3.4) as a backstop and broad isolation tests.
 2. **Immortal tokens vs. suspension** — without finite tokens + denylist (§3.5), a suspended
    tenant keeps working until their token expires.
-3. **Backfill correctness (`V158`)** — a wrong backfill either locks out paying users or hands
+3. **Backfill correctness (`V159`)** — a wrong backfill either locks out paying users or hands
    free access. Dry-run on a prod snapshot.
 4. **Customer-global model (§3.7)** — unresolved, this leaks PII across tenants; it's a product
    + privacy decision, not just code.
