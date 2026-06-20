@@ -60,7 +60,7 @@ billing on top. (a) is the expensive, risky 70%.
 Nothing downstream is trustworthy without this.
 
 > **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (filter in *shadow* + controller
-> retrofit **started**) · §3.4 ◐ (backstop wired; financial/order/menu/inventory scoped) · §3.5 ☐
+> retrofit **started**) · §3.4 ◐ (backstop wired; fin/order/menu/inventory/pos scoped) · §3.5 ☐
 > (deferred) · §3.6 ☐ · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
@@ -90,8 +90,8 @@ Nothing downstream is trustworthy without this.
 > stay unscoped. Once active, a surrogate-`/{id}` lookup for a foreign tenant simply returns
 > nothing — closing the IDOR class at the data layer without per-endpoint code. Mode parsing is
 > now a single shared `TenantEnforcementMode` enum (used by the edge filter and the interceptor).
-> **Still TODO:** apply `@Filter` to the remaining ~45 restaurant-scoped entities (financial,
-> order, menu, inventory now done; mechanical, module by module — only those with their own
+> **Still TODO:** apply `@Filter` to the remaining ~30 restaurant-scoped entities (financial,
+> order, menu, inventory, pos now done; mechanical, module by module — only those with their own
 > `restaurant_id` column). **Limits:** relies on `spring.jpa.open-in-view=true`; does not cover
 > `REQUIRES_NEW` sessions or non-MVC DB access (by design — those aren't request-tenant-scoped).
 > Inert until `enforce`, so flipping the switch needs a staging soak.
@@ -137,20 +137,21 @@ Nothing downstream is trustworthy without this.
 
 ### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ IN PROGRESS
 - ✅ `@FilterDef("restaurantFilter", restaurantId: Long)` declared on `Restaurant`;
-  `@Filter(condition = "restaurant_id = :restaurantId")` applied to **21 entities** so far: the 8
+  `@Filter(condition = "restaurant_id = :restaurantId")` applied to **36 entities** so far: the 8
   financial (`Account`, `Expense`, `Transaction`, `JournalEntry`, `PayrollEntry`, `PurchaseOrder`,
   `AccountingPeriod`, `SalaryConfig`), the 5 order/menu crown-jewel entities (`Order`,
-  `Category`, `AddOnGroup`, `MenuCollection`, `PackagingRule`), and the 8 inventory entities
+  `Category`, `AddOnGroup`, `MenuCollection`, `PackagingRule`), the 8 inventory entities
   (`Ingredient`, `IngredientCategory`, `Supplier`, `ProductionBatch`, `StockCount`,
-  `StockVarianceHistory`, `ValuationSettings`, `WasteRecord`).
+  `StockVarianceHistory`, `ValuationSettings`, `WasteRecord`), and the 15 pos entities
+  (`CashDrawer`, `GiftCard`, `GiftCardType`, `EmployeeShift`, `EmployeeConsumption`,
+  `ConsumptionAllowance`, `ShiftRules`, `ShiftSchedule`, `ShiftSwapRequest`, `OfflineOrder`,
+  `POSDevice`, `Scale`, `CustomerDisplay`, `TaxExemptionLog`, `TaxExemptionType`).
 - ✅ `common/tenant/TenantFilterInterceptor` enables the filter per request from `TenantContext`,
   gated by `app.security.tenant-enforcement.mode` (active only in `enforce`); SUPER_ADMIN
   aggregates (null tenant) and background jobs are left unscoped. Registered via
   `TenantWebMvcConfig`. Decision logic unit-tested; full-context bootstrap verified.
 - ☐ Apply `@Filter` to the remaining `restaurant_id` entities, module by module. Roadmap (each
-  has an explicit `restaurant_id` column, verified): **pos** (CashDrawer, ConsumptionAllowance, CustomerDisplay,
-  EmployeeConsumption, EmployeeShift, GiftCard, GiftCardType, OfflineOrder, POSDevice, Scale,
-  ShiftRules, ShiftSchedule, ShiftSwapRequest, TaxExemptionLog, TaxExemptionType),
+  has an explicit `restaurant_id` column, verified):
   **reservation** (Reservation, ReservationSettings, ReservationTimeSlot), **promotion**
   (HappyHour, Promotion), **loyalty** (LoyaltyConfig, LoyaltyMilestone, LoyaltyPromotion),
   **referral** (Referral, ReferralCode, ReferralSettings), **selfservice** (QRCode,

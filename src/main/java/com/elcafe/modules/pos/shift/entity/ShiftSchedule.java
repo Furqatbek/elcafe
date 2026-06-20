@@ -5,6 +5,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.waiter.entity.Waiter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -23,6 +24,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class ShiftSchedule {
 
     @Id
