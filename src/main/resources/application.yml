@@ -130,10 +130,15 @@ springdoc:
 app:
   security:
     jwt:
-      secret: ${JWT_SECRET:f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1}
-      access-token-expiration: 315360000000000 # 10000 years (effectively no expiration)
-      refresh-token-expiration: 315360000000000 # 10000 years (effectively no expiration)
-      waiter-token-expiration: 315360000000000 # 10000 years (effectively no expiration)
+      # SECURITY: no default — JWT_SECRET MUST be provided via env (>= 32 bytes). The app refuses to
+      # start otherwise (JwtUtil#validateSecret). Rotating the secret invalidates all existing tokens.
+      secret: ${JWT_SECRET:}
+      # Finite, env-tunable lifetimes (ms). Access tokens are short-lived; clients must obtain a new
+      # one via POST /api/v1/auth/refresh when they get a 401. Bump these via env if a client cannot
+      # yet refresh, but do not return to the old "never expires" values.
+      access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION_MS:900000}        # 15 minutes
+      refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION_MS:2592000000}  # 30 days
+      waiter-token-expiration: ${JWT_WAITER_TOKEN_EXPIRATION_MS:43200000}      # 12 hours (a shift)
     cors:
       allowed-origins: ${CORS_ORIGINS:*}
       allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS

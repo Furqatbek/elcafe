@@ -60,7 +60,7 @@ billing on top. (a) is the expensive, risky 70%.
 Nothing downstream is trustworthy without this.
 
 > **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (filter in *shadow* + controller
-> retrofit **started**) · §3.4 ◐ (backstop wired; all entities scoped, +AuditLog, User excluded) · §3.5 ☐
+> retrofit **started**) · §3.4 ◐ (backstop wired; all entities scoped, +AuditLog, User excluded) · §3.5 ◐ (finite + secret hardened; instant-revocation deferred)
 > (deferred) · §3.6 ✅ (waiter tenant-bound; PIN-uniqueness hardening separate) · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
@@ -172,13 +172,24 @@ Nothing downstream is trustworthy without this.
 - ☐ Staging validation when flipping to `enforce`; consider `REQUIRES_NEW`/non-MVC coverage if
   any tenant-scoped query runs outside the open-in-view session.
 
-### 3.5 Make tokens revocable / finite
-- **`security/JwtUtil.java`** — `isTokenExpired` must honor real expiry.
-- **`application.yml` (lines ~132–160)** — set realistic `access-token-expiration` (e.g. 15m)
-  and `refresh-token-expiration` (e.g. 7–30d). Remove the 10000-year values.
-- **`application.yml`** — remove the committed default `jwt.secret`; require it via env with
-  no fallback. Add a token/`tokenVersion` or Redis denylist so "suspend tenant" can hard-kill
-  active sessions immediately (otherwise suspension waits for token expiry).
+### 3.5 Make tokens revocable / finite — ◐ FINITE + SECRET HARDENED (instant-revocation deferred)
+- ✅ **`JwtUtil`** — `isTokenExpired` now honors real expiry; `validateToken` returns `false`
+  (instead of throwing) for expired/malformed/bad-signature tokens, so the refresh path returns a
+  clean 400. A `@PostConstruct` `validateSecret` **fails the app at startup** if the signing secret
+  is missing, < 32 bytes, or the old committed default.
+- ✅ **`application.yml`** — removed the committed `jwt.secret` default (now `${JWT_SECRET:}`, no
+  fallback) and replaced the 10000-year lifetimes with finite, env-tunable ones: access **15m**
+  (`JWT_ACCESS_TOKEN_EXPIRATION_MS`), refresh **30d**, waiter **12h**. A working refresh flow
+  already exists (`POST /api/v1/auth/refresh`).
+- ⚠️ **Deploy requirements (must do before/with rollout):** set `JWT_SECRET` (>= 32 bytes) in every
+  environment — the app will not start otherwise. Rotating off the old public secret **invalidates
+  all existing tokens** (one-time re-login). Finite access tokens require the **frontend to handle
+  401 → refresh → retry**; verify in staging (the env knobs allow lengthening if a client lags).
+- ☐ **Instant revocation (`tokenVersion`)** — add a `tokenVersion` to `User`/`Waiter`, embed it as a
+  claim, and reject a token whose version != the stored one. Lets "log out everywhere" and "suspend
+  tenant" hard-kill sessions immediately rather than waiting up to the access-token lifetime. Its
+  own increment (entity + migration + per-request check). Until then, suspension takes effect within
+  the access-token window (≤ 15m) once subscription enforcement blocks refresh.
 
 ### 3.6 Tenant-scope waiters — ✅ TENANT-BOUND (PIN per-restaurant uniqueness is separate hardening)
 - ✅ **Migration `V148`** — adds `waiters.restaurant_id` (FK + index) and backfills it from each

@@ -1,8 +1,11 @@
 package com.elcafe.security;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -28,6 +31,33 @@ public class JwtUtil {
 
     @Value("${app.security.jwt.waiter-token-expiration}")
     private Long waiterTokenExpiration;
+
+    /** The secret that used to ship as a committed default in application.yml — now rejected. */
+    private static final String LEAKED_DEFAULT_SECRET =
+            "f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1";
+
+    /**
+     * Fail closed at startup if the signing secret is missing, too weak, or the old public default.
+     * A leaked HS256 secret lets anyone forge a token for any user/role, which bypasses every
+     * tenant/role check in Phase 0 — so the app must never run with a known or trivial value.
+     */
+    @PostConstruct
+    void validateSecret() {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException(
+                    "app.security.jwt.secret is not set — provide the JWT_SECRET env var (>= 32 bytes). "
+                            + "Refusing to start.");
+        }
+        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "app.security.jwt.secret must be at least 32 bytes (256 bits) for HS256.");
+        }
+        if (LEAKED_DEFAULT_SECRET.equals(secret)) {
+            throw new IllegalStateException(
+                    "app.security.jwt.secret is the old committed default, which is public. "
+                            + "Set a fresh JWT_SECRET and rotate.");
+        }
+    }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
@@ -55,8 +85,12 @@ public class JwtUtil {
     }
 
     public Boolean isTokenExpired(String token) {
-        // Tokens are now stateless with no expiration
-        return false;
+        try {
+            return extractExpiration(token).before(new Date());
+        } catch (ExpiredJwtException e) {
+            // Parsing itself rejects an expired token before we can read the date.
+            return true;
+        }
     }
 
     public String generateAccessToken(UserDetails userDetails) {
@@ -107,7 +141,12 @@ public class JwtUtil {
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
-        final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        try {
+            final String username = extractUsername(token);
+            return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        } catch (JwtException e) {
+            // Expired, malformed, or bad-signature tokens are simply invalid.
+            return false;
+        }
     }
 }

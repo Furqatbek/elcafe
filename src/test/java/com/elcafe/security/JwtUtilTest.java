@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtUtilTest {
@@ -78,5 +79,33 @@ class JwtUtilTest {
         String token = jwtUtil.generateAccessToken(principal);
 
         assertThat(jwtUtil.extractUsername(token)).isEqualTo("cashier@test.com");
+    }
+
+    @Test @DisplayName("validateToken — expired token returns false (not throws)")
+    void validateToken_expired_returnsFalse() {
+        ReflectionTestUtils.setField(jwtUtil, "accessTokenExpiration", -10_000L); // already past
+        UserPrincipal principal = new UserPrincipal(1L, "admin@test.com", "pass", UserRole.ADMIN, true, 1L);
+        String token = jwtUtil.generateAccessToken(principal);
+
+        assertThat(jwtUtil.validateToken(token, principal)).isFalse();
+    }
+
+    @Test @DisplayName("validateSecret — rejects blank, too-short, and the old committed secret")
+    void validateSecret_rejectsWeakSecrets() {
+        ReflectionTestUtils.setField(jwtUtil, "secret", "");
+        assertThatThrownBy(jwtUtil::validateSecret).isInstanceOf(IllegalStateException.class);
+
+        ReflectionTestUtils.setField(jwtUtil, "secret", "too-short");
+        assertThatThrownBy(jwtUtil::validateSecret).isInstanceOf(IllegalStateException.class);
+
+        ReflectionTestUtils.setField(jwtUtil, "secret",
+                "f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1");
+        assertThatThrownBy(jwtUtil::validateSecret).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test @DisplayName("validateSecret — accepts a strong, non-default secret")
+    void validateSecret_acceptsStrong() {
+        // the @BeforeEach secret is strong and not the committed one
+        assertThatCode(jwtUtil::validateSecret).doesNotThrowAnyException();
     }
 }
