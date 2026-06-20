@@ -1,5 +1,6 @@
 package com.elcafe.modules.promotion.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.promotion.dto.*;
 import com.elcafe.modules.promotion.enums.PromotionScope;
 import com.elcafe.modules.promotion.enums.PromotionType;
@@ -39,6 +40,7 @@ class PromotionControllerTest {
     @Mock private CouponService couponService;
     @Mock private CouponValidationService couponValidationService;
     @Mock private PromotionAnalyticsService promotionAnalyticsService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private PromotionController controller;
 
     private PromotionResponse promoResp;

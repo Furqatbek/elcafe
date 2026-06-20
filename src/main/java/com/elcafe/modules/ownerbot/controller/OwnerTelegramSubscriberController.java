@@ -1,5 +1,6 @@
 package com.elcafe.modules.ownerbot.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationSettings;
 import com.elcafe.modules.ownerbot.entity.OwnerTelegramSubscriber;
 import com.elcafe.modules.ownerbot.repository.OwnerNotificationLogRepository;
@@ -33,11 +34,13 @@ public class OwnerTelegramSubscriberController {
     private final OwnerTelegramSubscriberRepository subscriberRepository;
     private final OwnerNotificationSettingsRepository settingsRepository;
     private final OwnerNotificationLogRepository logRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<List<SubscriberSummary>>> list(
             @RequestParam(required = false) Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         // Return both active and inactive rows so an admin can re-activate
         // a previously-disabled subscriber. The per-restaurant filter is
         // applied in-memory rather than via the active-only repo helper.

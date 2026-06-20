@@ -3,6 +3,7 @@ package com.elcafe.modules.review.controller;
 import com.elcafe.modules.review.dto.ReviewResponse;
 import com.elcafe.modules.review.entity.Review;
 import com.elcafe.modules.review.service.ReviewService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +21,12 @@ import java.util.List;
 public class ReviewController {
 
     private final ReviewService reviewService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<ApiResponse<List<ReviewResponse>>> getReviews(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<ReviewResponse> reviews = reviewService.getAllRestaurantReviews(restaurantId).stream()
                 .map(ReviewResponse::fromEntity)
                 .toList();
@@ -33,6 +36,7 @@ public class ReviewController {
     @GetMapping("/restaurant/{restaurantId}/summary")
     public ResponseEntity<ApiResponse<ReviewService.ReviewSummary>> getSummary(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ReviewService.ReviewSummary summary = reviewService.getReviewSummary(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Summary retrieved", summary));
     }

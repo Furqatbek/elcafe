@@ -11,6 +11,7 @@ import com.elcafe.modules.reservation.service.ReservationService;
 import com.elcafe.modules.reservation.service.TableAvailabilityService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -40,6 +41,7 @@ public class ReservationController {
     private final TableAvailabilityService tableAvailabilityService;
     private final RestaurantRepository restaurantRepository;
     private final ReservationSettingsRepository reservationSettingsRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     // ========== Public Endpoints (for customers) ==========
 
@@ -153,6 +155,7 @@ public class ReservationController {
     public ResponseEntity<ApiResponse<Page<ReservationResponse>>> getReservations(
             @PathVariable Long restaurantId,
             Pageable pageable) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Page<ReservationResponse> reservations = reservationService.getReservations(restaurantId, pageable);
         return ResponseEntity.ok(ApiResponse.success(reservations));
     }
@@ -164,6 +167,7 @@ public class ReservationController {
     public ResponseEntity<ApiResponse<List<ReservationResponse>>> getReservationsByDate(
             @PathVariable Long restaurantId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<ReservationResponse> reservations = reservationService.getReservationsByDate(restaurantId, date);
         return ResponseEntity.ok(ApiResponse.success(reservations));
     }
@@ -176,6 +180,7 @@ public class ReservationController {
             @PathVariable Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<ReservationResponse> reservations = reservationService
                 .getReservationsByDateRange(restaurantId, startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success(reservations));
@@ -197,6 +202,7 @@ public class ReservationController {
     public ResponseEntity<ApiResponse<ReservationResponse>> createReservationAdmin(
             @PathVariable Long restaurantId,
             @RequestBody AdminCreateReservationRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         // Convert admin request to standard request (without @Future validation)
         CreateReservationRequest createRequest = CreateReservationRequest.builder()
                 .customerName(request.customerName())

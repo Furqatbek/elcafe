@@ -5,6 +5,7 @@ import com.elcafe.modules.loyalty.dto.MilestoneCreateRequest;
 import com.elcafe.modules.loyalty.dto.MilestoneResponse;
 import com.elcafe.modules.loyalty.dto.MilestoneUpdateRequest;
 import com.elcafe.modules.loyalty.service.MilestoneService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -28,6 +29,7 @@ import java.util.List;
 public class MilestoneController {
 
     private final MilestoneService milestoneService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     // --- Admin/Manager endpoints for managing milestones ---
 
@@ -38,6 +40,7 @@ public class MilestoneController {
             @PathVariable Long restaurantId,
             @Valid @RequestBody MilestoneCreateRequest request) {
         log.info("Creating milestone for restaurant {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         MilestoneResponse response = milestoneService.createMilestone(restaurantId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Milestone created successfully", response));
@@ -65,6 +68,7 @@ public class MilestoneController {
     @Operation(summary = "Get restaurant milestones", description = "Get all milestones for a restaurant")
     public ResponseEntity<ApiResponse<List<MilestoneResponse>>> getRestaurantMilestones(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<MilestoneResponse> response = milestoneService.getMilestonesByRestaurant(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -85,6 +89,7 @@ public class MilestoneController {
     public ResponseEntity<ApiResponse<List<CustomerMilestoneProgressResponse>>> getCustomerProgress(
             @PathVariable Long restaurantId,
             @PathVariable Long customerId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<CustomerMilestoneProgressResponse> response = milestoneService.getCustomerProgress(customerId, restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }

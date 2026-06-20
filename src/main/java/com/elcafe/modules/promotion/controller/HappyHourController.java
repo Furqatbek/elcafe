@@ -5,6 +5,7 @@ import com.elcafe.modules.promotion.dto.ActiveHappyHourResponse;
 import com.elcafe.modules.promotion.dto.HappyHourRequest;
 import com.elcafe.modules.promotion.dto.HappyHourResponse;
 import com.elcafe.modules.promotion.service.HappyHourService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import java.util.Optional;
 public class HappyHourController {
 
     private final HappyHourService happyHourService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     /**
      * Get all happy hours for a restaurant
@@ -35,6 +37,7 @@ public class HappyHourController {
             @PathVariable Long restaurantId,
             @PageableDefault(size = 20, sort = "priority", direction = Sort.Direction.DESC) Pageable pageable) {
         log.debug("Getting happy hours for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Page<HappyHourResponse> happyHours = happyHourService.getHappyHoursByRestaurant(restaurantId, pageable);
         return ResponseEntity.ok(ApiResponse.success(happyHours));
     }
@@ -59,6 +62,7 @@ public class HappyHourController {
             @PathVariable Long restaurantId,
             @Valid @RequestBody HappyHourRequest request) {
         log.info("Creating happy hour for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         HappyHourResponse created = happyHourService.createHappyHour(restaurantId, request);
         return ResponseEntity.ok(ApiResponse.success("Happy hour created successfully", created));
     }
@@ -105,6 +109,7 @@ public class HappyHourController {
     public ResponseEntity<ApiResponse<ActiveHappyHourResponse>> getActiveHappyHour(
             @PathVariable Long restaurantId) {
         log.debug("Checking active happy hour for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Optional<ActiveHappyHourResponse> active = happyHourService.getActiveHappyHour(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(active.orElse(null)));
     }
@@ -114,6 +119,7 @@ public class HappyHourController {
      */
     @GetMapping("/restaurants/{restaurantId}/happy-hours/is-active")
     public ResponseEntity<ApiResponse<Boolean>> isHappyHourActive(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         boolean isActive = happyHourService.isHappyHourActive(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(isActive));
     }

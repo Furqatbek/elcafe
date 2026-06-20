@@ -2,6 +2,7 @@ package com.elcafe.modules.referral.controller;
 
 import com.elcafe.modules.referral.dto.*;
 import com.elcafe.modules.referral.service.ReferralService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.util.List;
 public class ReferralController {
 
     private final ReferralService referralService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     // ==================== Settings Endpoints ====================
 
@@ -29,6 +31,7 @@ public class ReferralController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<ReferralSettingsResponse>> getSettings(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ReferralSettingsResponse settings = referralService.getSettings(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(settings));
     }
@@ -41,6 +44,7 @@ public class ReferralController {
     public ResponseEntity<ApiResponse<ReferralSettingsResponse>> saveSettings(
             @PathVariable Long restaurantId,
             @Valid @RequestBody ReferralSettingsRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ReferralSettingsResponse settings = referralService.saveSettings(restaurantId, request);
         return ResponseEntity.ok(ApiResponse.success("Referral settings saved successfully", settings));
     }
@@ -52,6 +56,7 @@ public class ReferralController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<ReferralSettingsResponse>> toggleProgram(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ReferralSettingsResponse settings = referralService.toggleProgram(restaurantId);
         String status = Boolean.TRUE.equals(settings.getProgramActive()) ? "activated" : "deactivated";
         return ResponseEntity.ok(ApiResponse.success("Referral program " + status, settings));
@@ -67,6 +72,7 @@ public class ReferralController {
     public ResponseEntity<ApiResponse<ReferralCodeResponse>> generateCode(
             @PathVariable Long restaurantId,
             @RequestParam Long customerId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ReferralCodeResponse code = referralService.generateReferralCode(restaurantId, customerId);
         return ResponseEntity.ok(ApiResponse.success("Referral code generated", code));
     }
@@ -79,6 +85,7 @@ public class ReferralController {
     public ResponseEntity<ApiResponse<ReferralCodeResponse>> getCustomerCode(
             @PathVariable Long restaurantId,
             @PathVariable Long customerId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ReferralCodeResponse code = referralService.getCustomerReferralCode(restaurantId, customerId);
         return ResponseEntity.ok(ApiResponse.success(code));
     }
@@ -91,6 +98,7 @@ public class ReferralController {
     public ResponseEntity<ApiResponse<Page<ReferralCodeResponse>>> getCodes(
             @PathVariable Long restaurantId,
             Pageable pageable) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Page<ReferralCodeResponse> codes = referralService.getReferralCodes(restaurantId, pageable);
         return ResponseEntity.ok(ApiResponse.success(codes));
     }
@@ -102,6 +110,7 @@ public class ReferralController {
     public ResponseEntity<ApiResponse<Boolean>> validateCode(
             @PathVariable Long restaurantId,
             @RequestParam String code) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         boolean valid = referralService.validateReferralCode(code, restaurantId);
         return ResponseEntity.ok(ApiResponse.success(valid));
     }
@@ -115,6 +124,7 @@ public class ReferralController {
     public ResponseEntity<ApiResponse<ReferralResponse>> applyReferral(
             @PathVariable Long restaurantId,
             @Valid @RequestBody ApplyReferralRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ReferralResponse referral = referralService.processReferral(
                 restaurantId, request.getCode(), request.getCustomerId());
         return ResponseEntity.ok(ApiResponse.success("Referral applied successfully", referral));
@@ -130,6 +140,7 @@ public class ReferralController {
     public ResponseEntity<ApiResponse<Page<ReferralResponse>>> getReferrals(
             @PathVariable Long restaurantId,
             Pageable pageable) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Page<ReferralResponse> referrals = referralService.getReferrals(restaurantId, pageable);
         return ResponseEntity.ok(ApiResponse.success(referrals));
     }
@@ -142,6 +153,7 @@ public class ReferralController {
     public ResponseEntity<ApiResponse<List<ReferralResponse>>> getCustomerReferrals(
             @PathVariable Long restaurantId,
             @PathVariable Long customerId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<ReferralResponse> referrals = referralService.getCustomerReferrals(restaurantId, customerId);
         return ResponseEntity.ok(ApiResponse.success(referrals));
     }
@@ -153,6 +165,7 @@ public class ReferralController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<ReferralStatsResponse>> getStats(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ReferralStatsResponse stats = referralService.getStats(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(stats));
     }

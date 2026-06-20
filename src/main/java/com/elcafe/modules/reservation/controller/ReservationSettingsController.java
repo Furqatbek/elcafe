@@ -4,6 +4,7 @@ import com.elcafe.modules.reservation.dto.ReservationSettingsDTO;
 import com.elcafe.modules.reservation.entity.ReservationSettings;
 import com.elcafe.modules.reservation.repository.ReservationSettingsRepository;
 import com.elcafe.modules.reservation.service.AvailabilityService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -22,6 +23,7 @@ public class ReservationSettingsController {
 
     private final ReservationSettingsRepository settingsRepository;
     private final AvailabilityService availabilityService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
@@ -29,6 +31,7 @@ public class ReservationSettingsController {
     @Operation(summary = "Get reservation settings", description = "Get reservation settings for a restaurant")
     public ResponseEntity<ApiResponse<ReservationSettingsDTO>> getSettings(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ReservationSettings settings = availabilityService.getOrCreateSettings(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(ReservationSettingsDTO.from(settings)));
     }
@@ -40,6 +43,7 @@ public class ReservationSettingsController {
     public ResponseEntity<ApiResponse<ReservationSettingsDTO>> updateSettings(
             @PathVariable Long restaurantId,
             @Valid @RequestBody ReservationSettingsDTO request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         ReservationSettings settings = availabilityService.getOrCreateSettings(restaurantId);
 

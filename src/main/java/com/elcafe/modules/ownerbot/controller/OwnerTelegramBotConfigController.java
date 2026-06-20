@@ -1,5 +1,6 @@
 package com.elcafe.modules.ownerbot.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.ownerbot.dto.OwnerBotConfigRequest;
 import com.elcafe.modules.ownerbot.dto.OwnerBotConfigResponse;
 import com.elcafe.modules.ownerbot.service.OwnerTelegramBotConfigService;
@@ -24,6 +25,7 @@ public class OwnerTelegramBotConfigController {
 
     private final OwnerTelegramBotConfigService configService;
     private final OwnerTelegramBotService botService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     public ResponseEntity<List<OwnerBotConfigResponse>> getAllConfigs() {
@@ -46,6 +48,7 @@ public class OwnerTelegramBotConfigController {
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<OwnerBotConfigResponse> getConfigByRestaurant(@PathVariable Long restaurantId) {
         log.info("Getting Owner Telegram bot config for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(configService.getConfigByRestaurant(restaurantId));
     }
 
@@ -54,6 +57,7 @@ public class OwnerTelegramBotConfigController {
             @Valid @RequestBody OwnerBotConfigRequest request,
             @RequestParam(required = false) Long restaurantId) {
         log.info("Creating Owner Telegram bot config for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.status(HttpStatus.CREATED).body(configService.createConfig(request, restaurantId));
     }
 
@@ -82,6 +86,7 @@ public class OwnerTelegramBotConfigController {
     public ResponseEntity<ApiResponse<String>> generateVerificationCode(
             @RequestParam Long userId,
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         String code = botService.generateVerificationCode(userId, restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Verification code generated", code));
     }

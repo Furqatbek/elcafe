@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.waiter.entity.WaiterKPIConfig;
 import com.elcafe.modules.waiter.entity.WaiterPerformance;
 import com.elcafe.modules.waiter.service.WaiterPerformanceService;
@@ -31,6 +32,7 @@ class WaiterPerformanceControllerTest {
 
     private MockMvc mockMvc;
     @Mock private WaiterPerformanceService performanceService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private WaiterPerformanceController controller;
 
     @BeforeEach

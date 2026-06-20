@@ -6,6 +6,7 @@ import com.elcafe.modules.waiter.dto.WaiterCommissionSummaryDTO;
 import com.elcafe.modules.waiter.entity.Waiter;
 import com.elcafe.modules.waiter.entity.WaiterCommission;
 import com.elcafe.modules.waiter.service.WaiterCommissionService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,6 +32,7 @@ import java.util.Map;
 public class WaiterCommissionController {
 
     private final WaiterCommissionService commissionService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     /**
      * Configure commission settings for a waiter
@@ -78,6 +80,7 @@ public class WaiterCommissionController {
     public ResponseEntity<ApiResponse<Page<WaiterCommissionDTO>>> getRestaurantCommissions(
             @PathVariable Long restaurantId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Page<WaiterCommissionDTO> commissions = commissionService.getRestaurantCommissions(restaurantId, pageable);
         return ResponseEntity.ok(ApiResponse.success(commissions));
     }
@@ -91,6 +94,7 @@ public class WaiterCommissionController {
             @PathVariable Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<WaiterCommissionSummaryDTO> report = commissionService.getRestaurantCommissionReport(
                 restaurantId, startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success(report));

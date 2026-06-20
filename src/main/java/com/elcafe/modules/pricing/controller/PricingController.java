@@ -4,6 +4,7 @@ import com.elcafe.modules.pricing.dto.PricingAnalyticsDTO;
 import com.elcafe.modules.pricing.dto.PricingRecommendationDTO;
 import com.elcafe.modules.pricing.dto.ProductProfitabilityDTO;
 import com.elcafe.modules.pricing.service.PricingStrategyService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,6 +27,7 @@ import java.util.List;
 public class PricingController {
 
     private final PricingStrategyService pricingStrategyService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/analytics/{restaurantId}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -37,6 +39,7 @@ public class PricingController {
             @RequestParam(required = false) BigDecimal targetMargin
     ) {
         log.info("Fetching pricing analytics for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         if (endDate == null) {
             endDate = LocalDate.now();
@@ -60,6 +63,7 @@ public class PricingController {
             @RequestParam(required = false) BigDecimal targetMargin
     ) {
         log.info("Generating pricing recommendations for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<PricingRecommendationDTO> recommendations = pricingStrategyService.generatePricingRecommendations(
                 restaurantId, targetMargin
@@ -77,6 +81,7 @@ public class PricingController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         log.info("Fetching products profitability for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         if (endDate == null) {
             endDate = LocalDate.now();
@@ -102,6 +107,7 @@ public class PricingController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         log.info("Fetching profitability for product: {} in restaurant: {}", productId, restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         if (endDate == null) {
             endDate = LocalDate.now();

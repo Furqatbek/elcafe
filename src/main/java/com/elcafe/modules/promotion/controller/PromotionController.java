@@ -5,6 +5,7 @@ import com.elcafe.modules.promotion.service.CouponService;
 import com.elcafe.modules.promotion.service.CouponValidationService;
 import com.elcafe.modules.promotion.service.PromotionAnalyticsService;
 import com.elcafe.modules.promotion.service.PromotionService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class PromotionController {
     private final CouponService couponService;
     private final CouponValidationService couponValidationService;
     private final PromotionAnalyticsService promotionAnalyticsService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     // ==================== PROMOTION ENDPOINTS ====================
 
@@ -39,6 +41,7 @@ public class PromotionController {
             @PathVariable Long restaurantId,
             @Valid @RequestBody CreatePromotionRequest request) {
         log.info("Creating promotion for restaurant {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         PromotionResponse response = promotionService.createPromotion(restaurantId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -48,6 +51,7 @@ public class PromotionController {
             @PathVariable Long restaurantId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Pageable pageable = PageRequest.of(page, size);
         Page<PromotionResponse> promotions = promotionService.getPromotions(restaurantId, pageable);
         return ResponseEntity.ok(promotions);
@@ -55,6 +59,7 @@ public class PromotionController {
 
     @GetMapping("/restaurants/{restaurantId}/promotions/active")
     public ResponseEntity<List<PromotionResponse>> getActivePromotions(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<PromotionResponse> promotions = promotionService.getActivePromotions(restaurantId);
         return ResponseEntity.ok(promotions);
     }
@@ -63,6 +68,7 @@ public class PromotionController {
     public ResponseEntity<List<CartDiscountResult>> checkCart(
             @PathVariable Long restaurantId,
             @RequestBody CheckCartRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(promotionService.checkCartPromotions(restaurantId, request.items()));
     }
 
@@ -155,6 +161,7 @@ public class PromotionController {
             @PathVariable Long restaurantId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Pageable pageable = PageRequest.of(page, size);
         Page<CouponCodeResponse> coupons = couponService.getCouponsByRestaurant(restaurantId, pageable);
         return ResponseEntity.ok(coupons);
@@ -201,6 +208,7 @@ public class PromotionController {
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate) {
         log.info("Getting discount analytics for restaurant {} from {} to {}", restaurantId, startDate, endDate);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         PromotionAnalyticsService.DiscountAnalytics analytics = promotionAnalyticsService.getDiscountAnalytics(restaurantId, startDate, endDate);
         return ResponseEntity.ok(analytics);
     }
@@ -219,6 +227,7 @@ public class PromotionController {
     public ResponseEntity<List<PromotionAnalyticsService.PromotionPerformance>> getAllPromotionsPerformance(
             @PathVariable Long restaurantId) {
         log.info("Getting all promotions performance for restaurant {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<PromotionAnalyticsService.PromotionPerformance> performances = promotionAnalyticsService.getAllPromotionsPerformance(restaurantId);
         return ResponseEntity.ok(performances);
     }
@@ -230,6 +239,7 @@ public class PromotionController {
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate startDate,
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate) {
         log.info("Getting discount trends for restaurant {} from {} to {}", restaurantId, startDate, endDate);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<PromotionAnalyticsService.DailyDiscountTrend> trends = promotionAnalyticsService.getDiscountTrends(restaurantId, startDate, endDate);
         return ResponseEntity.ok(trends);
     }
@@ -242,6 +252,7 @@ public class PromotionController {
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate endDate,
             @RequestParam(defaultValue = "10") int limit) {
         log.info("Getting top coupons for restaurant {} from {} to {}", restaurantId, startDate, endDate);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<PromotionAnalyticsService.CouponPerformance> topCoupons = promotionAnalyticsService.getTopCoupons(restaurantId, startDate, endDate, limit);
         return ResponseEntity.ok(topCoupons);
     }

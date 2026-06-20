@@ -6,6 +6,7 @@ import com.elcafe.modules.waiter.dto.WaiterPerformanceSummary;
 import com.elcafe.modules.waiter.entity.WaiterKPIConfig;
 import com.elcafe.modules.waiter.entity.WaiterPerformance;
 import com.elcafe.modules.waiter.service.WaiterPerformanceService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ import java.util.Map;
 public class WaiterPerformanceController {
 
     private final WaiterPerformanceService performanceService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     // ==================== KPI Configuration ====================
 
@@ -35,6 +37,7 @@ public class WaiterPerformanceController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @Operation(summary = "Get all KPI configs", description = "Get all KPI configurations for a restaurant")
     public ResponseEntity<List<WaiterKPIConfig>> getKPIConfigs(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(performanceService.getKPIConfigs(restaurantId));
     }
 
@@ -44,6 +47,7 @@ public class WaiterPerformanceController {
     public ResponseEntity<WaiterKPIConfig> getEffectiveKPIConfig(
             @PathVariable Long waiterId,
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(performanceService.getEffectiveKPIConfig(waiterId, restaurantId));
     }
 
@@ -53,6 +57,7 @@ public class WaiterPerformanceController {
     public ResponseEntity<WaiterKPIConfig> saveKPIConfig(
             @PathVariable Long restaurantId,
             @RequestBody WaiterKPIConfigRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(performanceService.saveKPIConfig(restaurantId, request));
     }
 
@@ -112,6 +117,7 @@ public class WaiterPerformanceController {
             @PathVariable Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(performanceService.getLeaderboard(restaurantId, startDate, endDate));
     }
 
@@ -123,6 +129,7 @@ public class WaiterPerformanceController {
     public ResponseEntity<Map<String, Object>> recordComplaint(
             @PathVariable Long waiterId,
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         performanceService.recordComplaint(waiterId, restaurantId);
         return ResponseEntity.ok(Map.of("success", true, "message", "Complaint recorded"));
     }
@@ -133,6 +140,7 @@ public class WaiterPerformanceController {
     public ResponseEntity<Map<String, Object>> recordCompliment(
             @PathVariable Long waiterId,
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         performanceService.recordCompliment(waiterId, restaurantId);
         return ResponseEntity.ok(Map.of("success", true, "message", "Compliment recorded"));
     }
@@ -144,6 +152,7 @@ public class WaiterPerformanceController {
             @PathVariable Long waiterId,
             @RequestParam Long restaurantId,
             @RequestParam BigDecimal rating) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         if (rating.compareTo(BigDecimal.ONE) < 0 || rating.compareTo(BigDecimal.valueOf(5)) > 0) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Rating must be between 1 and 5"));
         }
@@ -158,6 +167,7 @@ public class WaiterPerformanceController {
             @PathVariable Long waiterId,
             @RequestParam Long restaurantId,
             @RequestParam BigDecimal amount) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         performanceService.recordTip(waiterId, restaurantId, amount);
         return ResponseEntity.ok(Map.of("success", true, "message", "Tip recorded"));
     }
@@ -168,6 +178,7 @@ public class WaiterPerformanceController {
     public ResponseEntity<Map<String, Object>> recordShiftStart(
             @PathVariable Long waiterId,
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         performanceService.recordShiftStart(waiterId, restaurantId);
         return ResponseEntity.ok(Map.of("success", true, "message", "Shift started"));
     }
@@ -178,6 +189,7 @@ public class WaiterPerformanceController {
     public ResponseEntity<Map<String, Object>> recordShiftEnd(
             @PathVariable Long waiterId,
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         performanceService.recordShiftEnd(waiterId, restaurantId);
         return ResponseEntity.ok(Map.of("success", true, "message", "Shift ended"));
     }

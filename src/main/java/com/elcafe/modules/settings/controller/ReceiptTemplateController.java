@@ -4,6 +4,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.settings.entity.ReceiptTemplate;
 import com.elcafe.modules.settings.repository.ReceiptTemplateRepository;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,12 +20,14 @@ public class ReceiptTemplateController {
 
     private final ReceiptTemplateRepository receiptTemplateRepository;
     private final RestaurantRepository restaurantRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<ReceiptTemplate>> getTemplate(
             @RequestParam Long restaurantId) {
         log.info("Getting receipt template for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         ReceiptTemplate template = receiptTemplateRepository.findByRestaurantId(restaurantId)
                 .orElse(null);
@@ -38,6 +41,7 @@ public class ReceiptTemplateController {
             @RequestParam Long restaurantId,
             @RequestBody ReceiptTemplate request) {
         log.info("Saving receipt template for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));

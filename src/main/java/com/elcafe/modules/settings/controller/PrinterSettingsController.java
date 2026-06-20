@@ -5,6 +5,7 @@ import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.settings.entity.PrinterSettings;
 import com.elcafe.modules.settings.repository.PrinterSettingsRepository;
 import com.elcafe.modules.settings.service.PrintService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,12 +26,14 @@ public class PrinterSettingsController {
     private final PrinterSettingsRepository printerSettingsRepository;
     private final RestaurantRepository restaurantRepository;
     private final PrintService printService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<List<PrinterSettings>>> getAllPrinters(
             @RequestParam Long restaurantId) {
         log.info("Getting printers for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<PrinterSettings> printers = printerSettingsRepository.findByRestaurant_Id(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Printers retrieved successfully", printers));
@@ -52,6 +55,7 @@ public class PrinterSettingsController {
     public ResponseEntity<ApiResponse<PrinterSettings>> createPrinter(
             @RequestBody PrinterSettings printerSettings) {
         log.info("Creating printer settings for restaurant: {}", printerSettings.getRestaurant().getId());
+        restaurantAuthorizationService.checkAccess(printerSettings.getRestaurant().getId());
 
         Restaurant restaurant = restaurantRepository.findById(printerSettings.getRestaurant().getId())
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));

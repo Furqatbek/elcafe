@@ -1,5 +1,6 @@
 package com.elcafe.modules.loyalty.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.loyalty.entity.CustomerTier;
 import com.elcafe.modules.loyalty.entity.LoyaltyConfig;
 import com.elcafe.modules.loyalty.mapper.LoyaltyMapper;
@@ -44,6 +45,7 @@ class LoyaltyControllerTest {
     @Mock private TierService tierService;
     @Mock private CustomerTierRepository customerTierRepository;
     @Mock private LoyaltyMapper loyaltyMapper;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
 
     @InjectMocks private LoyaltyController controller;
 

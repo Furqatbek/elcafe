@@ -1,5 +1,6 @@
 package com.elcafe.modules.promotion.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.promotion.dto.ActiveHappyHourResponse;
 import com.elcafe.modules.promotion.dto.HappyHourRequest;
 import com.elcafe.modules.promotion.dto.HappyHourResponse;
@@ -33,6 +34,7 @@ class HappyHourControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
     @Mock private HappyHourService happyHourService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private HappyHourController controller;
     private HappyHourResponse response;
 

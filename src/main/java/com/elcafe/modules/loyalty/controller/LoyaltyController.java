@@ -16,6 +16,7 @@ import com.elcafe.modules.loyalty.service.BonusService;
 import com.elcafe.modules.loyalty.service.LoyaltyService;
 import com.elcafe.modules.loyalty.service.TierService;
 import com.elcafe.modules.loyalty.service.WalletTopUpService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -47,6 +48,7 @@ public class LoyaltyController {
     private final WalletTopUpService walletTopUpService;
     private final CustomerTierRepository customerTierRepository;
     private final LoyaltyMapper loyaltyMapper;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/customers/{customerId}")
     @Operation(summary = "Get customer loyalty info", description = "Get loyalty balance and tier information for a customer")
@@ -124,6 +126,7 @@ public class LoyaltyController {
     @Operation(summary = "Get loyalty config", description = "Returns the per-restaurant config, falling back to the global config")
     public ResponseEntity<ApiResponse<LoyaltyConfig>> getConfig(
             @RequestParam(required = false) Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         LoyaltyConfig config = loyaltyService.getConfig(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(config));
     }
@@ -133,6 +136,7 @@ public class LoyaltyController {
     @Operation(summary = "Upsert loyalty config")
     public ResponseEntity<ApiResponse<LoyaltyConfig>> upsertConfig(
             @Valid @RequestBody LoyaltyConfigRequest request) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         LoyaltyConfig saved = loyaltyService.upsertConfig(request);
         return ResponseEntity.ok(ApiResponse.success("Loyalty config saved", saved));
     }
