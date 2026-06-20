@@ -55,6 +55,21 @@ matching waiters (§3.6).
 > Note: the test suite runs on H2 with `flyway.enabled=false`, so **V150 is not exercised by tests** —
 > it must be validated against a Postgres copy (and backed up) before deploy.
 
+#### Waiter identity is now per-restaurant (§3.6 hardening)
+
+Waiters were tenant-bound (V148) but `pin_code`/`email` stayed globally unique and login resolved a
+waiter globally by PIN. Now scoped per restaurant.
+
+**⚠️ Breaking — waiter auth API**: `POST /api/v1/waiters/auth` now requires `restaurantId` in the
+body (the POS device supplies it); the waiter is resolved by `(restaurantId, pinCode)`. POS clients
+must send it or login returns 400.
+
+**Backend**: **V151** migration drops the global `waiters_pin_code_key`/`waiters_email_key`, makes
+`waiters.restaurant_id` `NOT NULL` (V148 backfilled every row), and adds composite uniques
+`(restaurant_id, pin_code)` and `(restaurant_id, email)` — so two restaurants can reuse a PIN.
+`WaiterService` create/update scope their PIN/email uniqueness checks to the restaurant. Same H2/
+Flyway test caveat as V150: validate V151 on a Postgres copy before deploy.
+
 ### Added - 2026-06-08
 
 #### Customer Wallet & Loyalty Stages

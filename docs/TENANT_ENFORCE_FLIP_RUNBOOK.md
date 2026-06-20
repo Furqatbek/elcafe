@@ -68,9 +68,10 @@ paths remain and should be spot-audited during the soak:
 - **`CrossTenantWriteException` → 500**: add an `@ExceptionHandler` mapping it to 403 for a cleaner
   client contract (optional).
 
-## Still open in Phase 0 (separate, breaking — not required for the flip)
+## Still open in Phase 0 (separate — not required for the flip)
 
-- **§3.6 waiter hardening** — per-restaurant `pin_code`/`email` uniqueness + waiter-login-by-
-  restaurant (a breaking PIN-lookup change) + `waiters.restaurant_id NOT NULL`.
-- **§3.5 waiter-token revocation** — `tokenVersion` is enforced for users only; waiters need a
-  per-request lookup.
+- **§3.6 waiter hardening** — ✅ done (V151): per-restaurant `pin_code`/`email`, waiter-login-by-
+  restaurant (`WaiterAuthRequest.restaurantId` now required — update POS clients), `restaurant_id
+  NOT NULL`.
+- **§3.5 waiter-token revocation** — still open: `tokenVersion` is enforced for users only; waiters
+  need a per-request lookup.

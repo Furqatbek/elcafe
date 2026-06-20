@@ -324,7 +324,7 @@ PENDING/PLACED/ACCEPTED → CANCELLED (Customer/Admin cancels) → Refund if pai
 - `POST /api/v1/kitchen/orders/{id}/picked-up` - Mark as picked up by courier
 
 ### Waiter Module
-- `POST /api/v1/waiters/auth` - Waiter PIN authentication (Public)
+- `POST /api/v1/waiters/auth` - Waiter PIN authentication (Public); requires `restaurantId` (PINs are per-restaurant)
 - `GET /api/v1/waiter/tables` - Get all tables (Waiter)
 - `POST /api/v1/waiter/orders` - Create dine-in order (Waiter)
 - `POST /api/v1/waiter/orders/{orderId}/submit` - Submit order to kitchen (Waiter)

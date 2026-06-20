@@ -225,10 +225,10 @@ Nothing downstream is trustworthy without this.
   `TenantContext`, so *waiter-authenticated requests* (not just admin views of waiters) are scoped
   by the backstop in enforce mode. `TenantEnforcementFilter` now **always** clears `TenantContext`
   (even in OFF mode) so the waiter-set value can't leak across pooled request threads.
-- ☐ **Hardening (separate increment):** make `pin_code`/`email` unique **per restaurant**
-  (currently global) and scope waiter login by restaurant — this needs a waiter-login-flow change
-  (the PIN lookup must take a restaurant). Enforce `restaurant_id` NOT NULL once backfill is
-  confirmed across environments.
+- ✅ **Hardening (done, V151):** `pin_code`/`email` are now unique **per restaurant** (global
+  uniques dropped, composite `(restaurant_id, …)` added) and waiter login is scoped by restaurant —
+  `WaiterAuthRequest` now requires `restaurantId` (BREAKING) and `authenticate` resolves by
+  `(restaurantId, pin)`. `waiters.restaurant_id` is now `NOT NULL` (V148 backfill confirmed).
 
 ### 3.7 Decide the customer-tenancy model
 Customers are currently global. Two options — pick one:

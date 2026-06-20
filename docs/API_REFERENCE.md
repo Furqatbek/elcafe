@@ -968,9 +968,15 @@ POST /api/v1/waiters/auth
 Content-Type: application/json
 
 {
+  "restaurantId": 1,
   "pinCode": "1234"
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `restaurantId` | number | yes | Restaurant the device is signing into. PINs are per-restaurant (V151), so the waiter is resolved by `(restaurantId, pinCode)`. |
+| `pinCode` | string | yes | The waiter's 4-6 digit PIN |
 
 **Response**: 200 OK
 ```json
