@@ -117,6 +117,28 @@ lists the `LOW`-confidence customers/waiters and reassigns them to the correct r
 the row `HIGH` (reviewed). Balances were already zeroed by V153, so this is about assignment
 correctness, not money. V154 is Postgres-only (not exercised by the H2 suite).
 
+#### Consumer IDOR fixes (§3.7)
+
+The JWT filter built a plain Spring `User` for consumer tokens and **discarded the `customerId`
+claim**, so `@AuthenticationPrincipal CustomerPrincipal` injected `null` — the wallet/profile endpoints
+that call `principal.getId()` would NPE on real tokens (tests passed only via a fake principal
+resolver). Meanwhile two controllers trusted a client-supplied id:
+
+- **`JwtAuthenticationFilter`** now sets a real `CustomerPrincipal` (carrying the token's `customerId`)
+  for consumer tokens. `getUsername()` stays the phone, so `auth.getName()` lookups and `ROLE_CUSTOMER`
+  are unchanged, and `instanceof UserPrincipal` staff checks are unaffected — this also repairs the
+  latent wallet/profile NPE.
+- **`AddressController`** (`/api/v1/customers/{customerId}/addresses`) now rejects a `{customerId}`
+  that isn't the authenticated consumer's (403). Staff principals resolve to null and stay
+  tenant-bounded by the `Customer` `@Filter`.
+- **`NotificationController`** forces a consumer to `(CUSTOMER, principal.getId())` (ignoring any client
+  `role`/`userId`) and verifies per-notification ownership on its by-id endpoints (read/archive/delete/
+  order). Staff/admin behaviour is unchanged; their cross-tenant hardening (and a tenant `@Filter` on
+  the un-scoped `Notification` entity) is tracked as follow-up.
+
+No migration; covered by `JwtAuthenticationFilterTest`, `AddressControllerTest`, and
+`NotificationControllerTest`.
+
 ### Added - 2026-06-08
 
 #### Customer Wallet & Loyalty Stages

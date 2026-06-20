@@ -249,9 +249,16 @@ Chose **(A) Customers belong to one restaurant.**
 - ✅ **Backfill-confidence safeguard (V154):** `tenant_assignment_confidence` on customers/waiters,
   flagged LOW where the heuristic used the no-evidence fallback; a SUPER_ADMIN `tenant-review`
   surface lists LOW rows and reassigns them (marking them reviewed).
-- ☐ **Remaining (separate):** the consumer-IDOR pair (`AddressController`/`NotificationController`
-  trust a client `customerId`) still needs a principal-ownership fix — distinct from restaurant
-  tenancy; pending a pin-down of the consumer principal model.
+- ✅ **Consumer-IDOR pair fixed:** root cause was the JWT filter setting a plain `User` for consumer
+  tokens (discarding the `customerId` claim), so `@AuthenticationPrincipal CustomerPrincipal` resolved
+  to null — also a latent NPE in the wallet/profile endpoints. The filter now sets a real
+  `CustomerPrincipal`; `AddressController` rejects a `{customerId}` that isn't the caller's; and
+  `NotificationController` forces a consumer to `(CUSTOMER, principal.getId())` and checks per-
+  notification ownership on its by-id endpoints. Non-consumer (staff) principals are unchanged.
+- ☐ **Remaining (separate):** staff-side notification hardening — `NotificationController`'s
+  staff/admin path still trusts the client `role`/`userId`, and `Notification` has no tenant `@Filter`
+  (so it's cross-tenant for staff). A full fix needs per-role `userId` semantics, a waiter principal
+  that carries an id, and a `restaurant_id` + `@Filter` on `Notification`.
 
 ---
 
