@@ -220,6 +220,7 @@ public class AccountController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<Account>>> getAccounts(@RequestParam Long restaurantId) {
         log.info("Fetching accounts for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<Account> accounts = accountService.getAccountsByRestaurant(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Accounts fetched successfully", accounts));
@@ -233,6 +234,7 @@ public class AccountController {
             @RequestParam Long restaurantId,
             @RequestParam Account.AccountType type) {
         log.info("Fetching {} accounts for restaurant: {}", type, restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<Account> accounts = accountService.getAccountsByType(restaurantId, type);
         return ResponseEntity.ok(ApiResponse.success("Accounts fetched successfully", accounts));
@@ -246,6 +248,7 @@ public class AccountController {
             @RequestParam Long restaurantId,
             @RequestParam Account.AccountCategory category) {
         log.info("Fetching {} accounts for restaurant: {}", category, restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<Account> accounts = accountService.getAccountsByCategory(restaurantId, category);
         return ResponseEntity.ok(ApiResponse.success("Accounts fetched successfully", accounts));
@@ -258,7 +261,7 @@ public class AccountController {
     public ResponseEntity<ApiResponse<Account>> getAccountById(@PathVariable Long id) {
         log.info("Fetching account: {}", id);
 
-        Account account = accountService.getAccountById(id);
+        Account account = requireAccountAccess(id);
         return ResponseEntity.ok(ApiResponse.success("Account fetched successfully", account));
     }
 
@@ -268,6 +271,11 @@ public class AccountController {
     @PostMapping
     public ResponseEntity<ApiResponse<Account>> createAccount(@RequestBody Account account) {
         log.info("Creating new account: {}", account.getName());
+        // §3.3: the caller may only create an account for a restaurant it owns.
+        if (account.getRestaurant() == null || account.getRestaurant().getId() == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("restaurant is required"));
+        }
+        restaurantAuthorizationService.checkAccess(account.getRestaurant().getId());
 
         Account createdAccount = accountService.createAccount(account);
         return ResponseEntity.ok(ApiResponse.success("Account created successfully", createdAccount));
@@ -281,6 +289,7 @@ public class AccountController {
             @PathVariable Long id,
             @RequestBody Account account) {
         log.info("Updating account: {}", id);
+        requireAccountAccess(id);
 
         Account updatedAccount = accountService.updateAccount(id, account);
         return ResponseEntity.ok(ApiResponse.success("Account updated successfully", updatedAccount));
@@ -292,10 +301,24 @@ public class AccountController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteAccount(@PathVariable Long id) {
         log.info("Soft deleting account: {}", id);
+        requireAccountAccess(id);
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String deletedBy = auth != null ? auth.getName() : "SYSTEM";
         accountService.deleteAccount(id, deletedBy);
         return ResponseEntity.ok(ApiResponse.success("Account soft deleted successfully", null));
+    }
+
+    /**
+     * §3.3: load an account and assert the caller's tenant owns it before acting on it by surrogate
+     * id. Mode-aware (checkAccess) so it engages on the enforce flip and only logs in shadow.
+     */
+    private Account requireAccountAccess(Long id) {
+        Account account = accountService.getAccountById(id);
+        // restaurant is a NOT NULL FK in practice; guard defensively so malformed data can't 500.
+        if (account.getRestaurant() != null) {
+            restaurantAuthorizationService.checkAccess(account.getRestaurant().getId());
+        }
+        return account;
     }
 }

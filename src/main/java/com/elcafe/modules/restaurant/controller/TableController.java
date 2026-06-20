@@ -80,6 +80,7 @@ public class TableController {
     public ResponseEntity<ApiResponse<List<TableResponse>>> getTablesByRestaurant(
             @PathVariable Long restaurantId) {
         log.info("Getting tables for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<TableResponse> response = tableService.getTablesByRestaurant(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -90,6 +91,7 @@ public class TableController {
     public ResponseEntity<ApiResponse<List<TableResponse>>> getAvailableTables(
             @PathVariable Long restaurantId) {
         log.info("Getting available tables for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<TableResponse> response = tableService.getAvailableTables(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -99,6 +101,7 @@ public class TableController {
     @Operation(summary = "Get table sections", description = "Get all unique sections for a restaurant")
     public ResponseEntity<ApiResponse<List<String>>> getSections(@PathVariable Long restaurantId) {
         log.info("Getting sections for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<String> response = tableService.getSections(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -110,6 +113,7 @@ public class TableController {
             @PathVariable Long restaurantId,
             @PathVariable String section) {
         log.info("Getting tables for restaurant {} in section {}", restaurantId, section);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<TableResponse> response = tableService.getTablesBySection(restaurantId, section);
         return ResponseEntity.ok(ApiResponse.success(response));
@@ -145,6 +149,7 @@ public class TableController {
     public ResponseEntity<ApiResponse<List<TableResponse>>> bulkCreateTables(
             @Valid @RequestBody com.elcafe.modules.restaurant.dto.BulkCreateTablesRequest request) {
         log.info("Bulk creating {} tables for restaurant {}", request.getCount(), request.getRestaurantId());
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         List<TableResponse> response = tableService.bulkCreateTables(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -168,6 +173,7 @@ public class TableController {
     @Operation(summary = "Get table statistics", description = "Get statistics about tables for a restaurant")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getTableStats(@PathVariable Long restaurantId) {
         log.info("Getting table stats for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         long totalTables = tableService.getTablesByRestaurant(restaurantId).size();
         long availableTables = tableService.countTablesByStatus(restaurantId, RestaurantTable.TableStatus.AVAILABLE);
@@ -230,6 +236,7 @@ public class TableController {
     @Operation(summary = "Get floor plan", description = "Get the floor plan with all table positions for a restaurant")
     public ResponseEntity<ApiResponse<FloorPlanDTO>> getFloorPlan(@PathVariable Long restaurantId) {
         log.info("Getting floor plan for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         FloorPlanDTO response = tableService.getFloorPlan(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
