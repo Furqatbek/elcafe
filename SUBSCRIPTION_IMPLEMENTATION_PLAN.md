@@ -59,15 +59,18 @@ billing on top. (a) is the expensive, risky 70%.
 
 Nothing downstream is trustworthy without this.
 
-> **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (central filter built in *shadow*
-> mode; controller retrofit pending) · §3.4 ☐ · §3.5 ☐ (deferred) · §3.6 ☐ · §3.7 ☐
-> (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and
-> confine ADMIN to a single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds
-> `TenantContext` + `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` =
-> shadow|enforce|off, default **shadow**): it logs any request whose URL/query `restaurantId`
-> ≠ the caller's tenant. The hole is **not fully closed** until the filter is flipped to
-> `enforce` AND the ~104 controllers are retrofitted (the filter only covers `/restaurant(s)/{id}`
-> paths + `?restaurantId=`; ids inside JSON bodies or other path-var names still need the guard).
+> **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (filter in *shadow* + controller
+> retrofit **started**) · §3.4 ☐ · §3.5 ☐ (deferred) · §3.6 ☐ · §3.7 ☐ (product decision
+> pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
+> single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
+> `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
+> default **shadow**) plus a mode-aware `RestaurantAuthorizationService.checkAccess(...)` for
+> the controller retrofit. Retrofitted so far: `AccountController` (4 filter-missed
+> `/financial/accounts/.../{restaurantId}` endpoints; `/sync-all` restricted to SUPER_ADMIN)
+> and `TableController` create (body `restaurantId`). The hole is **not fully closed** until
+> the mode is flipped to `enforce` AND the remaining ~100 controllers are retrofitted —
+> prioritise endpoints carrying `restaurantId` in the JSON body or under non-`/restaurant/`
+> paths, which the edge filter cannot see.
 
 ### 3.1 Close the self-service ADMIN hole
 - **`modules/auth/dto/RegisterRequest.java`** — remove the `role` field.

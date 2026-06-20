@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.restaurant.dto.CreateTableRequest;
 import com.elcafe.modules.restaurant.dto.FloorPlanDTO;
 import com.elcafe.modules.restaurant.dto.MergeTablesRequest;
@@ -32,9 +33,12 @@ import java.util.Map;
 public class TableController {
 
     private final TableService tableService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
-    public TableController(@Qualifier("restaurantTableService") TableService tableService) {
+    public TableController(@Qualifier("restaurantTableService") TableService tableService,
+                           RestaurantAuthorizationService restaurantAuthorizationService) {
         this.tableService = tableService;
+        this.restaurantAuthorizationService = restaurantAuthorizationService;
     }
 
     @PostMapping("/tables")
@@ -43,6 +47,7 @@ public class TableController {
     public ResponseEntity<ApiResponse<TableResponse>> createTable(
             @Valid @RequestBody CreateTableRequest request) {
         log.info("Creating table {} for restaurant {}", request.getTableNumber(), request.getRestaurantId());
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         TableResponse response = tableService.createTable(request);
         return ResponseEntity.status(HttpStatus.CREATED)

@@ -3,6 +3,7 @@ package com.elcafe.common.security.service;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.security.UserPrincipal;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,6 +20,42 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class RestaurantAuthorizationService {
+
+    @Value("${app.security.tenant-enforcement.mode:shadow}")
+    private String enforcementMode;
+
+    /**
+     * Mode-aware tenant check for controllers being retrofitted (Phase 0 §3.3).
+     *
+     * <p>Governed by {@code app.security.tenant-enforcement.mode}, so the entire new
+     * enforcement surface flips from observe to block with a single config change:
+     * <ul>
+     *   <li>{@code off} — no-op.</li>
+     *   <li>{@code shadow} (default) — log a {@code [tenant-shadow]} warning on a cross-tenant
+     *       attempt but allow it through.</li>
+     *   <li>{@code enforce} — throw {@link AccessDeniedException}, exactly like
+     *       {@link #validateRestaurantAccess(Long)}.</li>
+     * </ul>
+     *
+     * <p>Unlike {@link #validateRestaurantAccess(Long)} (which always throws and is used by the
+     * handful of already-hard-enforced endpoints), this method is for NEW guard calls that
+     * should be observed before they start blocking.
+     */
+    public void checkAccess(Long restaurantId) {
+        String mode = enforcementMode == null ? "shadow" : enforcementMode.trim().toLowerCase();
+        switch (mode) {
+            case "off", "disabled", "false" -> { /* enforcement disabled */ }
+            case "enforce", "block", "strict" -> validateRestaurantAccess(restaurantId);
+            default -> { // shadow
+                try {
+                    validateRestaurantAccess(restaurantId);
+                } catch (AccessDeniedException e) {
+                    log.warn("[tenant-shadow] controller-guard violation for restaurantId={}: {}",
+                            restaurantId, e.getMessage());
+                }
+            }
+        }
+    }
 
     /**
      * Validates that the current user has access to the specified restaurant.

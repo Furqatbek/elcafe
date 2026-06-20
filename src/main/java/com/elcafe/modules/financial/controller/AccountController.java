@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.service.AccountService;
 import com.elcafe.modules.financial.service.FinancialMigrationService;
@@ -32,6 +33,7 @@ import java.util.List;
 @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
 public class AccountController {
 
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final AccountService accountService;
     private final RevenueService revenueService;
     private final FinancialMigrationService migrationService;
@@ -55,6 +57,7 @@ public class AccountController {
     @PostMapping("/initialize/{restaurantId}")
     public ResponseEntity<ApiResponse<String>> initializeChartOfAccounts(@PathVariable Long restaurantId) {
         log.info("Initializing Chart of Accounts for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         try {
             accountService.initializeChartOfAccounts(restaurantId);
@@ -81,6 +84,7 @@ public class AccountController {
     @PostMapping("/backfill/{restaurantId}")
     public ResponseEntity<ApiResponse<String>> backfillHistoricalOrdersEndpoint(@PathVariable Long restaurantId) {
         log.info("Backfilling historical orders for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         try {
             int count = backfillHistoricalOrders(restaurantId);
@@ -145,6 +149,7 @@ public class AccountController {
     public ResponseEntity<ApiResponse<FinancialMigrationService.MigrationResult>> syncFinancialData(
             @PathVariable Long restaurantId) {
         log.info("Starting full financial data sync for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         try {
             FinancialMigrationService.MigrationResult result = migrationService.syncRestaurantFinancialData(restaurantId);
@@ -166,7 +171,7 @@ public class AccountController {
      * WARNING: This can be a heavy operation for large deployments.
      */
     @PostMapping("/sync-all")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')") // cross-tenant operation — platform operator only
     public ResponseEntity<ApiResponse<List<FinancialMigrationService.MigrationResult>>> syncAllFinancialData() {
         log.info("Starting full financial data sync for ALL restaurants");
 
@@ -192,6 +197,7 @@ public class AccountController {
     @PostMapping("/add-missing/{restaurantId}")
     public ResponseEntity<ApiResponse<String>> addMissingAccounts(@PathVariable Long restaurantId) {
         log.info("Adding missing accounts for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         try {
             accountService.addMissingAccounts(restaurantId);

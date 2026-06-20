@@ -1,0 +1,90 @@
+package com.elcafe.common.security.service;
+
+import com.elcafe.modules.auth.enums.UserRole;
+import com.elcafe.security.UserPrincipal;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class RestaurantAuthorizationServiceTest {
+
+    private final RestaurantAuthorizationService service = new RestaurantAuthorizationService();
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void authenticateAs(UserRole role, Long restaurantId) {
+        UserPrincipal principal = new UserPrincipal(1L, "user@test.com", "pw", role, true, restaurantId);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+    }
+
+    private void setMode(String mode) {
+        ReflectionTestUtils.setField(service, "enforcementMode", mode);
+    }
+
+    @Test
+    @DisplayName("checkAccess ENFORCE — cross-tenant throws AccessDenied")
+    void checkAccess_enforce_crossTenant_throws() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        setMode("enforce");
+        assertThatThrownBy(() -> service.checkAccess(2L)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("checkAccess ENFORCE — same tenant allowed")
+    void checkAccess_enforce_sameTenant_ok() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        setMode("enforce");
+        assertThatCode(() -> service.checkAccess(1L)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("checkAccess SHADOW — cross-tenant does NOT throw")
+    void checkAccess_shadow_crossTenant_noThrow() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        setMode("shadow");
+        assertThatCode(() -> service.checkAccess(2L)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("checkAccess OFF — cross-tenant does NOT throw")
+    void checkAccess_off_crossTenant_noThrow() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        setMode("off");
+        assertThatCode(() -> service.checkAccess(2L)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("checkAccess ENFORCE — SUPER_ADMIN is cross-tenant (allowed)")
+    void checkAccess_enforce_superAdmin_ok() {
+        authenticateAs(UserRole.SUPER_ADMIN, 1L);
+        setMode("enforce");
+        assertThatCode(() -> service.checkAccess(2L)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("checkAccess — null/unset mode defaults to shadow (no throw)")
+    void checkAccess_nullMode_defaultsShadow() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        // enforcementMode left unset (null)
+        assertThatCode(() -> service.checkAccess(2L)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("validateRestaurantAccess — ADMIN is now tenant-scoped (no cross-tenant bypass)")
+    void validate_admin_isTenantScoped() {
+        authenticateAs(UserRole.ADMIN, 1L);
+        assertThatThrownBy(() -> service.validateRestaurantAccess(2L)).isInstanceOf(AccessDeniedException.class);
+        assertThatCode(() -> service.validateRestaurantAccess(1L)).doesNotThrowAnyException();
+    }
+}
