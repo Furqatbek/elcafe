@@ -139,6 +139,14 @@ app:
       allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
       allowed-headers: '*'
       allow-credentials: true
+    tenant-enforcement:
+      # Cross-tenant access control mode (Phase 0 §3.3):
+      #   off     - filter disabled (no-op)
+      #   shadow  - LOG any request whose URL/query restaurantId != the caller's tenant, but
+      #             do NOT block. Use this to observe real traffic before enforcing.
+      #   enforce - additionally return 403 on a cross-tenant mismatch.
+      # Start in shadow, watch the [tenant-shadow] logs, then flip to enforce.
+      mode: ${TENANT_ENFORCEMENT_MODE:shadow}
 
   cache:
     menu-ttl: 1800 # 30 minutes

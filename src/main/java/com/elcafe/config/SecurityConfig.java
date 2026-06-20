@@ -1,5 +1,6 @@
 package com.elcafe.config;
 
+import com.elcafe.common.tenant.TenantEnforcementFilter;
 import com.elcafe.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +39,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final TenantEnforcementFilter tenantEnforcementFilter;
     private final UserDetailsService userDetailsService;
 
     @Value("${app.security.cors.allowed-origins}")
@@ -111,7 +113,9 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // Tenant isolation runs right after authentication, so the principal is available.
+                .addFilterAfter(tenantEnforcementFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
