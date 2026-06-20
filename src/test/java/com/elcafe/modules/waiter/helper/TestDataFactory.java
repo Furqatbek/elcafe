@@ -75,6 +75,7 @@ public final class TestDataFactory {
     public static Waiter createWaiter(Long id, String name, String pin) {
         Waiter w = new Waiter();
         w.setId(id);
+        w.setRestaurantId(1L);
         w.setName(name);
         w.setPinCode(pin);
         w.setEmail(name.toLowerCase().replace(" ", ".") + "@test.com");

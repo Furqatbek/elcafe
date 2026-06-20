@@ -80,13 +80,16 @@ public class WaiterService {
      */
     @Transactional
     public WaiterResponse createWaiter(CreateWaiterRequest request) {
-        // Validate PIN code uniqueness
-        if (waiterRepository.existsByPinCode(request.getPinCode())) {
+        // Bind the waiter to the creating admin's restaurant; uniqueness is per-restaurant (V151).
+        Long restaurantId = restaurantAuthorizationService.getCurrentUserRestaurantId();
+
+        // Validate PIN code uniqueness within the restaurant
+        if (waiterRepository.existsByRestaurantIdAndPinCode(restaurantId, request.getPinCode())) {
             throw new BadRequestException("PIN code already exists");
         }
 
-        // Validate email uniqueness if provided
-        if (request.getEmail() != null && waiterRepository.existsByEmail(request.getEmail())) {
+        // Validate email uniqueness within the restaurant if provided
+        if (request.getEmail() != null && waiterRepository.existsByRestaurantIdAndEmail(restaurantId, request.getEmail())) {
             throw new BadRequestException("Email already exists");
         }
 
@@ -101,9 +104,7 @@ public class WaiterService {
         }
 
         Waiter waiter = Waiter.builder()
-                // Bind the waiter to the creating admin's restaurant (null for SUPER_ADMIN /
-                // non-tenant principals — matches the previously-unbound behaviour).
-                .restaurantId(restaurantAuthorizationService.getCurrentUserRestaurantId())
+                .restaurantId(restaurantId)
                 .name(request.getName())
                 .pinCode(request.getPinCode())
                 .email(request.getEmail())
@@ -132,14 +133,14 @@ public class WaiterService {
         }
 
         if (request.getPinCode() != null && !request.getPinCode().equals(waiter.getPinCode())) {
-            if (waiterRepository.existsByPinCode(request.getPinCode())) {
+            if (waiterRepository.existsByRestaurantIdAndPinCode(waiter.getRestaurantId(), request.getPinCode())) {
                 throw new BadRequestException("PIN code already exists");
             }
             waiter.setPinCode(request.getPinCode());
         }
 
         if (request.getEmail() != null && !request.getEmail().equals(waiter.getEmail())) {
-            if (waiterRepository.existsByEmail(request.getEmail())) {
+            if (waiterRepository.existsByRestaurantIdAndEmail(waiter.getRestaurantId(), request.getEmail())) {
                 throw new BadRequestException("Email already exists");
             }
             waiter.setEmail(request.getEmail());
@@ -211,7 +212,9 @@ public class WaiterService {
      */
     @Transactional(readOnly = true)
     public WaiterAuthResponse authenticate(WaiterAuthRequest request) {
-        Waiter waiter = waiterRepository.findByPinCode(request.getPinCode())
+        // V151: PINs are unique per restaurant, so authenticate within the restaurant the device is
+        // signing into (carried in the request).
+        Waiter waiter = waiterRepository.findByRestaurantIdAndPinCode(request.getRestaurantId(), request.getPinCode())
                 .orElseThrow(() -> new BadRequestException("Invalid PIN code"));
 
         if (!waiter.getActive()) {

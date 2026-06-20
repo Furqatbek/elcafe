@@ -18,6 +18,15 @@ public interface WaiterRepository extends JpaRepository<Waiter, Long> {
      */
     Optional<Waiter> findByPinCode(String pinCode);
 
+    // --- Per-restaurant finders (V151: pin_code/email are unique per restaurant). ---
+
+    /** Authenticate a waiter within a restaurant (PIN is only per-restaurant unique). */
+    Optional<Waiter> findByRestaurantIdAndPinCode(Long restaurantId, String pinCode);
+
+    boolean existsByRestaurantIdAndPinCode(Long restaurantId, String pinCode);
+
+    boolean existsByRestaurantIdAndEmail(Long restaurantId, String email);
+
     /**
      * Find waiter by email and active status
      */

@@ -100,7 +100,8 @@ class WaiterServiceTest {
     @Test
     void createWaiter_success() {
         CreateWaiterRequest request = createWaiterRequest("New Waiter", "9999");
-        when(waiterRepository.existsByPinCode("9999")).thenReturn(false);
+        when(restaurantAuthorizationService.getCurrentUserRestaurantId()).thenReturn(1L);
+        when(waiterRepository.existsByRestaurantIdAndPinCode(1L, "9999")).thenReturn(false);
         when(waiterRepository.save(any(Waiter.class))).thenAnswer(i -> {
             Waiter w = i.getArgument(0); w.setId(2L); return w;
         });
@@ -114,7 +115,8 @@ class WaiterServiceTest {
     @Test
     void createWaiter_duplicatePin_throws() {
         CreateWaiterRequest request = createWaiterRequest("Dup", "1234");
-        when(waiterRepository.existsByPinCode("1234")).thenReturn(true);
+        when(restaurantAuthorizationService.getCurrentUserRestaurantId()).thenReturn(1L);
+        when(waiterRepository.existsByRestaurantIdAndPinCode(1L, "1234")).thenReturn(true);
         assertThrows(BadRequestException.class, () -> waiterService.createWaiter(request));
         verify(waiterRepository, never()).save(any());
     }
@@ -123,8 +125,9 @@ class WaiterServiceTest {
     void createWaiter_duplicateEmail_throws() {
         CreateWaiterRequest request = createWaiterRequest("Dup", "5555");
         request.setEmail("taken@test.com");
-        when(waiterRepository.existsByPinCode("5555")).thenReturn(false);
-        when(waiterRepository.existsByEmail("taken@test.com")).thenReturn(true);
+        when(restaurantAuthorizationService.getCurrentUserRestaurantId()).thenReturn(1L);
+        when(waiterRepository.existsByRestaurantIdAndPinCode(1L, "5555")).thenReturn(false);
+        when(waiterRepository.existsByRestaurantIdAndEmail(1L, "taken@test.com")).thenReturn(true);
         assertThrows(BadRequestException.class, () -> waiterService.createWaiter(request));
     }
 
@@ -147,7 +150,7 @@ class WaiterServiceTest {
         UpdateWaiterRequest request = new UpdateWaiterRequest();
         request.setPinCode("9999");
         when(waiterRepository.findById(1L)).thenReturn(Optional.of(waiter));
-        when(waiterRepository.existsByPinCode("9999")).thenReturn(true);
+        when(waiterRepository.existsByRestaurantIdAndPinCode(1L, "9999")).thenReturn(true);
         assertThrows(BadRequestException.class, () -> waiterService.updateWaiter(1L, request));
     }
 
@@ -187,8 +190,9 @@ class WaiterServiceTest {
     @Test
     void authenticate_validPin_returnsToken() {
         WaiterAuthRequest request = new WaiterAuthRequest();
+        request.setRestaurantId(1L);
         request.setPinCode("1234");
-        when(waiterRepository.findByPinCode("1234")).thenReturn(Optional.of(waiter));
+        when(waiterRepository.findByRestaurantIdAndPinCode(1L, "1234")).thenReturn(Optional.of(waiter));
         when(jwtUtil.generateWaiterAccessToken(anyString(), anyLong(), anyString(), any())).thenReturn("jwt-token");
         when(waiterTableRepository.countByWaiterIdAndActiveTrue(anyLong())).thenReturn(0L);
 
@@ -200,8 +204,9 @@ class WaiterServiceTest {
     @Test
     void authenticate_invalidPin_throws() {
         WaiterAuthRequest request = new WaiterAuthRequest();
+        request.setRestaurantId(1L);
         request.setPinCode("0000");
-        when(waiterRepository.findByPinCode("0000")).thenReturn(Optional.empty());
+        when(waiterRepository.findByRestaurantIdAndPinCode(1L, "0000")).thenReturn(Optional.empty());
         assertThrows(BadRequestException.class, () -> waiterService.authenticate(request));
     }
 
@@ -209,8 +214,9 @@ class WaiterServiceTest {
     void authenticate_inactiveWaiter_throws() {
         waiter.setActive(false);
         WaiterAuthRequest request = new WaiterAuthRequest();
+        request.setRestaurantId(1L);
         request.setPinCode("1234");
-        when(waiterRepository.findByPinCode("1234")).thenReturn(Optional.of(waiter));
+        when(waiterRepository.findByRestaurantIdAndPinCode(1L, "1234")).thenReturn(Optional.of(waiter));
         assertThrows(BadRequestException.class, () -> waiterService.authenticate(request));
     }
 
@@ -218,8 +224,9 @@ class WaiterServiceTest {
     void authenticate_usesEmailAsIdentifier() {
         waiter.setEmail("waiter@test.com");
         WaiterAuthRequest request = new WaiterAuthRequest();
+        request.setRestaurantId(1L);
         request.setPinCode("1234");
-        when(waiterRepository.findByPinCode("1234")).thenReturn(Optional.of(waiter));
+        when(waiterRepository.findByRestaurantIdAndPinCode(1L, "1234")).thenReturn(Optional.of(waiter));
         when(jwtUtil.generateWaiterAccessToken(eq("waiter@test.com"), anyLong(), anyString(), any())).thenReturn("tok");
         when(waiterTableRepository.countByWaiterIdAndActiveTrue(anyLong())).thenReturn(0L);
 

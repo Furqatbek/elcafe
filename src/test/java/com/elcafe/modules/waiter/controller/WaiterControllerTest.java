@@ -41,7 +41,7 @@ class WaiterControllerTest {
     @Test @DisplayName("POST /auth") void authenticate() throws Exception {
         when(waiterService.authenticate(any())).thenReturn(
                 WaiterAuthResponse.builder().waiterId(1L).name("Ali").token("jwt").build());
-        WaiterAuthRequest req = new WaiterAuthRequest(); req.setPinCode("1234");
+        WaiterAuthRequest req = new WaiterAuthRequest(); req.setRestaurantId(1L); req.setPinCode("1234");
         mockMvc.perform(post("/api/v1/waiters/auth").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req))).andExpect(status().isOk());
     }

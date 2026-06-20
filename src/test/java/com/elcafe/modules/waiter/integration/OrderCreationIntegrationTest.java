@@ -72,6 +72,7 @@ class OrderCreationIntegrationTest {
         entityManager.persist(table);
 
         waiter = new Waiter();
+        waiter.setRestaurantId(1L);
         waiter.setName("Test Waiter");
         waiter.setPinCode("1234");
         waiter.setRole(WaiterRole.WAITER);

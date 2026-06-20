@@ -38,6 +38,7 @@ class WaiterPerformanceRepositoryTest {
         em.persist(restaurant);
 
         waiter = Waiter.builder()
+                .restaurantId(restaurant.getId())
                 .name("Jane Waiter")
                 .pinCode("5678")
                 .active(true)

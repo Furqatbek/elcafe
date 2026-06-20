@@ -72,6 +72,7 @@ class POSPaymentIntegrationTest {
         em.persist(table);
 
         Waiter waiter = new Waiter();
+        waiter.setRestaurantId(1L);
         waiter.setName("Ali");
         waiter.setPinCode("1234");
         waiter.setRole(WaiterRole.WAITER);

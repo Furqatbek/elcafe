@@ -69,6 +69,7 @@ class WaiterCrudIntegrationTest {
 
     private Waiter persistWaiter(String name, String pin, boolean active) {
         Waiter w = new Waiter();
+        w.setRestaurantId(1L);
         w.setName(name);
         w.setPinCode(pin);
         w.setRole(WaiterRole.WAITER);
@@ -82,6 +83,7 @@ class WaiterCrudIntegrationTest {
     @DisplayName("Create waiter persists all fields to database")
     void createWaiter_persistsAllFields() {
         Waiter w = new Waiter();
+        w.setRestaurantId(1L);
         w.setName("Ali");
         w.setPinCode("1111");
         w.setEmail("ali@test.com");

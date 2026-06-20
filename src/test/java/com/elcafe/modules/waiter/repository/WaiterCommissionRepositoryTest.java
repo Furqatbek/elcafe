@@ -43,6 +43,7 @@ class WaiterCommissionRepositoryTest {
         em.persist(restaurant);
 
         waiter = Waiter.builder()
+                .restaurantId(restaurant.getId())
                 .name("John Waiter")
                 .pinCode("1234")
                 .active(true)

@@ -41,18 +41,20 @@ public class Waiter {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Phase 0 §3.6: the owning tenant. Nullable for now (existing rows backfilled by migration
-    // V148); set from the caller's restaurant on creation.
-    @Column(name = "restaurant_id")
+    // Phase 0 §3.6: the owning tenant. NOT NULL since V151 (V148 backfilled every row); set from the
+    // caller's restaurant on creation.
+    @Column(name = "restaurant_id", nullable = false)
     private Long restaurantId;
 
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, unique = true, length = 10)
+    // Uniqueness is per-restaurant (uq_waiters_restaurant_pin, V151), enforced at the DB level.
+    @Column(nullable = false, length = 10)
     private String pinCode;
 
-    @Column(unique = true, length = 100)
+    // Uniqueness is per-restaurant (uq_waiters_restaurant_email, V151), enforced at the DB level.
+    @Column(length = 100)
     private String email;
 
     @Column(length = 20)
