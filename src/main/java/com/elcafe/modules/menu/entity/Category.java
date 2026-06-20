@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
+import org.hibernate.annotations.Filter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -28,6 +29,7 @@ import java.util.List;
 })
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"restaurant", "products", "kitchenStation", "hibernateLazyInitializer", "handler"})
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class Category {
 
     @Id

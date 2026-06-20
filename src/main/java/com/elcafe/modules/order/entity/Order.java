@@ -17,6 +17,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.Filter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import org.springframework.data.annotation.CreatedDate;
@@ -53,6 +54,7 @@ import java.util.stream.Collectors;
 })
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 @NamedEntityGraph(
     name = "Order.withItems",
     attributeNodes = {

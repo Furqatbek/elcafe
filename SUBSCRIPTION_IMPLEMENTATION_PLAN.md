@@ -90,8 +90,8 @@ Nothing downstream is trustworthy without this.
 > stay unscoped. Once active, a surrogate-`/{id}` lookup for a foreign tenant simply returns
 > nothing — closing the IDOR class at the data layer without per-endpoint code. Mode parsing is
 > now a single shared `TenantEnforcementMode` enum (used by the edge filter and the interceptor).
-> **Still TODO:** apply `@Filter` to the remaining ~58 restaurant-scoped entities (mechanical,
-> module by module). **Limits:** relies on `spring.jpa.open-in-view=true`; does not cover
+> **Still TODO:** apply `@Filter` to the remaining ~53 restaurant-scoped entities (order + menu
+> now done; mechanical, module by module — only those with their own `restaurant_id` column). **Limits:** relies on `spring.jpa.open-in-view=true`; does not cover
 > `REQUIRES_NEW` sessions or non-MVC DB access (by design — those aren't request-tenant-scoped).
 > Inert until `enforce`, so flipping the switch needs a staging soak.
 
@@ -136,15 +136,20 @@ Nothing downstream is trustworthy without this.
 
 ### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ IN PROGRESS
 - ✅ `@FilterDef("restaurantFilter", restaurantId: Long)` declared on `Restaurant`;
-  `@Filter(condition = "restaurant_id = :restaurantId")` applied to the 8 financial entities
-  (`Account`, `Expense`, `Transaction`, `JournalEntry`, `PayrollEntry`, `PurchaseOrder`,
-  `AccountingPeriod`, `SalaryConfig`).
+  `@Filter(condition = "restaurant_id = :restaurantId")` applied to **13 entities** so far: the 8
+  financial (`Account`, `Expense`, `Transaction`, `JournalEntry`, `PayrollEntry`, `PurchaseOrder`,
+  `AccountingPeriod`, `SalaryConfig`) and the 5 order/menu crown-jewel entities (`Order`,
+  `Category`, `AddOnGroup`, `MenuCollection`, `PackagingRule`).
 - ✅ `common/tenant/TenantFilterInterceptor` enables the filter per request from `TenantContext`,
   gated by `app.security.tenant-enforcement.mode` (active only in `enforce`); SUPER_ADMIN
   aggregates (null tenant) and background jobs are left unscoped. Registered via
   `TenantWebMvcConfig`. Decision logic unit-tested; full-context bootstrap verified.
-- ☐ Apply `@Filter` to the remaining ~58 `restaurant_id` entities (order, menu, inventory,
-  reservation, waiter-derived, etc.), module by module.
+- ☐ Apply `@Filter` to the remaining ~53 `restaurant_id` entities (inventory, reservation,
+  selfservice, waiter-derived, etc.), module by module. **Only** entities with their OWN
+  `restaurant_id` column qualify — those scoped via a parent (`Product`→`Category`,
+  `OrderItem`→`Order`) have no column to filter and stay on the controller-guard / parent-check
+  path. (A misapplied `@Filter` is a *latent* bug: dormant in shadow, it errors only at query
+  time under `enforce`, so verify the column before annotating.)
 - ☐ Staging validation when flipping to `enforce`; consider `REQUIRES_NEW`/non-MVC coverage if
   any tenant-scoped query runs outside the open-in-view session.
 
