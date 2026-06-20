@@ -139,6 +139,25 @@ resolver). Meanwhile two controllers trusted a client-supplied id:
 No migration; covered by `JwtAuthenticationFilterTest`, `AddressControllerTest`, and
 `NotificationControllerTest`.
 
+#### Surrogate-id IDOR audit + financial read role-guards (§3.3)
+
+Audited the `/{orderId|paymentId|expenseId|id|shiftId}` load-then-act endpoints across
+order/financial/pos-shift. The **tenant** side of this IDOR class is closed *systemically* on the
+§3.4 enforce flip — `TenantScopedJpaRepository` makes `findById` query-based (filter-scoped) for every
+repository, and `deleteById` routes through it; the order module is no exception (Spring Data parses
+`OrderRepository`'s `@EntityGraph findById` as a derived query, which the filter scopes). So no
+per-endpoint guard sprinkling is needed for tenancy.
+
+- **`ExpenseController` / `PurchaseOrderController`:** the read endpoints (list, `/{id}`, `/unpaid`)
+  had **no `@PreAuthorize`** while their writes require `ADMIN/OPERATOR/WAITER` — any authenticated
+  principal (incl. a consumer) could read expenses/purchase-orders. Now guarded to match the writes.
+- **`TenantBackstopIsolationTest`:** added a `deleteById` scoping proof (a foreign id is left
+  untouched while the filter is on; same-tenant delete still works) — locks down the delete path and
+  guards against a regression to `em.find`-based loads.
+
+No migration. Enforce residuals (native/bulk queries, `getReferenceById`, `REQUIRES_NEW`) remain
+tracked in `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`.
+
 ### Added - 2026-06-08
 
 #### Customer Wallet & Loyalty Stages

@@ -143,6 +143,19 @@ Nothing downstream is trustworthy without this.
   `financial/SalaryConfigController`, `restaurant/TableController`,
   `reservation/ReservationController`, `customer/*`, `loyalty/*`. This is the bulk of the
   effort and the main regression risk — do it behind tests.
+- ✅ **Surrogate-id depth pass (audit outcome).** Audited every `/{orderId|paymentId|expenseId|
+  id|shiftId}` endpoint across order/financial/pos-shift for load-then-act without a tenant check.
+  Conclusion: the **tenant** side of this IDOR class is closed *systemically* on the §3.4 enforce
+  flip — `TenantScopedJpaRepository` makes `findById` query-based (filter-scoped) for **every** repo,
+  and `deleteById` routes through it (both now proven in `TenantBackstopIsolationTest`, incl. a
+  `deleteById` case). The order module is **not** an exception: Spring Data parses
+  `OrderRepository`'s `@EntityGraph findById` as a derived query, which the filter scopes (the test
+  asserts `orderRepository.findById(foreign)` is empty). So no per-endpoint `checkAccess` sprinkling
+  is warranted for tenancy (and `checkAccess` is shadow-gated + a no-op for waiter tokens). The one
+  genuinely-open residual was a **role** gap orthogonal to tenancy: the financial **read** endpoints
+  (`ExpenseController`, `PurchaseOrderController` — list, `/{id}`, `/unpaid`) had no `@PreAuthorize`
+  while their writes require `ADMIN/OPERATOR/WAITER`; now guarded to match. Enforce residuals
+  (native/bulk queries, `getReferenceById`, `REQUIRES_NEW`) remain tracked in the flip runbook.
 
 ### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ READ + WRITE CLOSED (enforce not yet flipped)
 
