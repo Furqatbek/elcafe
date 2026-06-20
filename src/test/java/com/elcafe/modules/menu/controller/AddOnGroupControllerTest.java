@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.menu.dto.AddOnGroupResponse;
 import com.elcafe.modules.menu.dto.CreateAddOnGroupRequest;
 import com.elcafe.modules.menu.dto.UpdateAddOnGroupRequest;
@@ -30,6 +31,7 @@ class AddOnGroupControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
     @Mock private AddOnGroupService addOnGroupService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private AddOnGroupController controller;
     private AddOnGroupResponse response;
 

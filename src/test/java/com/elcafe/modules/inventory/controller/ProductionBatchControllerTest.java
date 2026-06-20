@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.AddInputRequest;
 import com.elcafe.modules.inventory.dto.CompleteBatchRequest;
 import com.elcafe.modules.inventory.dto.CreateProductionBatchRequest;
@@ -43,6 +44,7 @@ class ProductionBatchControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Mock private ProductionBatchService productionBatchService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private ProductionBatchController controller;
 
     private ProductionBatch batch;

@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.SupplierRequest;
 import com.elcafe.modules.inventory.dto.SupplierResponse;
 import com.elcafe.modules.inventory.service.SupplierService;
@@ -32,6 +33,7 @@ class SupplierControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Mock private SupplierService supplierService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private SupplierController controller;
 
     private SupplierResponse supplierResponse;

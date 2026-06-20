@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.StockCountRequest;
 import com.elcafe.modules.inventory.dto.StockCountResponse;
 import com.elcafe.modules.inventory.dto.VarianceReportResponse;
@@ -45,6 +46,7 @@ class StockCountControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Mock private StockCountService stockCountService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private StockCountController controller;
 
     private StockCount stockCount;

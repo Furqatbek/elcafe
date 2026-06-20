@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.ValuationReportDTO.CostVarianceReport;
 import com.elcafe.modules.inventory.dto.ValuationReportDTO.InventoryValuationReport;
 import com.elcafe.modules.inventory.dto.ValuationReportDTO.ValuationComparisonReport;
@@ -53,6 +54,7 @@ class ValuationControllerTest {
     @Mock private CostHistoryService costHistoryService;
     @Mock private BatchConsumptionService consumptionService;
     @Mock private ValuationReportService reportService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private ValuationController controller;
 
     @BeforeEach

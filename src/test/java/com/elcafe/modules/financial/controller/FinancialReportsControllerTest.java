@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.service.FinancialReportsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +23,7 @@ class FinancialReportsControllerTest {
 
     private MockMvc mockMvc;
     @Mock private FinancialReportsService reportsService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private FinancialReportsController controller;
 
     @BeforeEach

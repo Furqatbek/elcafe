@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.WasteRecordRequest;
 import com.elcafe.modules.inventory.dto.WasteReportResponse;
 import com.elcafe.modules.inventory.entity.Ingredient;
@@ -37,6 +38,7 @@ class WasteControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Mock private WasteService wasteService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private WasteController controller;
 
     private WasteRecord wasteRecord;

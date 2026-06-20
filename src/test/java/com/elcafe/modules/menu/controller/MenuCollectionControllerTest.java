@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.menu.dto.CreateMenuCollectionRequest;
 import com.elcafe.modules.menu.dto.MenuCollectionDTO;
 import com.elcafe.modules.menu.dto.UpdateMenuCollectionRequest;
@@ -34,6 +35,7 @@ class MenuCollectionControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     @Mock private MenuCollectionService menuCollectionService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private MenuCollectionController controller;
     private MenuCollectionDTO dto;
 

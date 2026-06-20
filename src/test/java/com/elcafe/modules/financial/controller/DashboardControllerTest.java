@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.dto.DashboardResponse;
 import com.elcafe.modules.financial.service.DashboardService;
 import com.elcafe.modules.financial.service.ShiftTimeService;
@@ -28,6 +29,7 @@ class DashboardControllerTest {
     private MockMvc mockMvc;
     @Mock private DashboardService dashboardService;
     @Mock private ShiftTimeService shiftTimeService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private DashboardController controller;
 
     @BeforeEach

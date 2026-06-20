@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.service.ExpenseService;
@@ -29,6 +30,7 @@ class ExpenseControllerTest {
     @Mock private ExpenseService expenseService;
     @Mock private RestaurantRepository restaurantRepository;
     @Mock private AccountRepository accountRepository;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private ExpenseController controller;
 
     @BeforeEach

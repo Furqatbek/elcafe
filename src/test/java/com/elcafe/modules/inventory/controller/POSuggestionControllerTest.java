@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.GeneratePORequest;
 import com.elcafe.modules.inventory.dto.POSuggestionResponse;
 import com.elcafe.modules.inventory.service.POSuggestionService;
@@ -34,6 +35,7 @@ class POSuggestionControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Mock private POSuggestionService poSuggestionService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private POSuggestionController controller;
 
     @BeforeEach

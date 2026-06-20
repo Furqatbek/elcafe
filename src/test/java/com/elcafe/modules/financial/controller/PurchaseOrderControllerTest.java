@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.entity.PurchaseOrder;
 import com.elcafe.modules.financial.service.PurchaseOrderService;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
@@ -32,6 +33,7 @@ class PurchaseOrderControllerTest {
     @Mock private InventoryIngredientRepository ingredientRepository;
     @Mock private SupplierRepository supplierRepository;
     @Mock private ExpenseRepository expenseRepository;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private PurchaseOrderController controller;
 
     @BeforeEach

@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.kitchen.repository.KitchenStationRepository;
 import com.elcafe.modules.menu.dto.CreateCategoryRequest;
 import com.elcafe.modules.menu.dto.UpdateCategoryRequest;
@@ -38,6 +39,7 @@ class CategoryControllerTest {
     @Mock private MenuService menuService;
     @Mock private RestaurantRepository restaurantRepository;
     @Mock private KitchenStationRepository kitchenStationRepository;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private CategoryController controller;
     private Restaurant restaurant;
     private Category category;
