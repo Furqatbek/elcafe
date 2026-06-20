@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.restaurant.dto.CreateWorkingHoursRequest;
 import com.elcafe.modules.restaurant.dto.UpdateWorkingHoursRequest;
 import com.elcafe.modules.restaurant.dto.WorkingHoursResponse;
@@ -27,12 +28,14 @@ import java.util.List;
 public class WorkingHoursController {
 
     private final WorkingHoursService workingHoursService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/restaurants/{restaurantId}/working-hours")
     @Operation(summary = "List working hours by restaurant", description = "Get all working hours for a specific restaurant")
     public ResponseEntity<ApiResponse<List<WorkingHoursResponse>>> getWorkingHoursByRestaurant(
             @PathVariable Long restaurantId
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<WorkingHoursResponse> response = workingHoursService.getAllByRestaurantId(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -52,6 +55,7 @@ public class WorkingHoursController {
             @PathVariable Long restaurantId,
             @PathVariable Long userId
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<WorkingHoursResponse> response = workingHoursService.getAllByRestaurantAndUser(restaurantId, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -62,6 +66,7 @@ public class WorkingHoursController {
             @PathVariable Long restaurantId,
             @PathVariable @Parameter(description = "Day of week (e.g., MONDAY, TUESDAY)", example = "MONDAY") DayOfWeek dayOfWeek
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<WorkingHoursResponse> response = workingHoursService.getAllByDay(restaurantId, dayOfWeek);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -114,6 +119,8 @@ public class WorkingHoursController {
     public ResponseEntity<ApiResponse<Void>> deleteAllWorkingHoursByRestaurant(
             @PathVariable Long restaurantId
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
+
         workingHoursService.deleteAllByRestaurantId(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("All working hours deleted successfully for restaurant", null));
     }

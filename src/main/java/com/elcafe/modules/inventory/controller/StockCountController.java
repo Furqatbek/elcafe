@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.StockCountRequest;
 import com.elcafe.modules.inventory.dto.StockCountResponse;
 import com.elcafe.modules.inventory.dto.VarianceReportResponse;
@@ -28,10 +29,12 @@ import java.util.stream.Collectors;
 public class StockCountController {
 
     private final StockCountService stockCountService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<StockCountResponse>>> getStockCounts(
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Fetching stock counts for restaurant: {}", restaurantId);
 
         List<StockCount> stockCounts = stockCountService.getStockCountsByRestaurant(restaurantId);
@@ -45,6 +48,7 @@ public class StockCountController {
     @GetMapping("/active")
     public ResponseEntity<ApiResponse<List<StockCountResponse>>> getActiveStockCounts(
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Fetching active stock counts for restaurant: {}", restaurantId);
 
         List<StockCount> stockCounts = stockCountService.getActiveStockCounts(restaurantId);
@@ -68,6 +72,7 @@ public class StockCountController {
     @PostMapping
     public ResponseEntity<ApiResponse<StockCountResponse>> createStockCount(
             @Valid @RequestBody StockCountRequest request) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         log.info("Creating stock count for restaurant: {}", request.getRestaurantId());
 
         StockCount stockCount = stockCountService.createStockCount(request);
@@ -166,6 +171,7 @@ public class StockCountController {
             @RequestParam Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Generating variance report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 
         VarianceReportResponse report = stockCountService.generateVarianceReport(restaurantId, startDate, endDate);

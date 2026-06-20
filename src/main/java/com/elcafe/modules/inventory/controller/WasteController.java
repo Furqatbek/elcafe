@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.WasteRecordRequest;
 import com.elcafe.modules.inventory.dto.WasteRecordResponse;
 import com.elcafe.modules.inventory.dto.WasteReportResponse;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 public class WasteController {
 
     private final WasteService wasteService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<WasteRecordResponse>>> getWasteRecords(
@@ -36,6 +38,7 @@ public class WasteController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) WasteRecord.WasteReason reason,
             @RequestParam(required = false) Long ingredientId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         log.info("Fetching waste records for restaurant: {}", restaurantId);
 
@@ -66,6 +69,7 @@ public class WasteController {
     @PostMapping
     public ResponseEntity<ApiResponse<WasteRecordResponse>> recordWaste(
             @Valid @RequestBody WasteRecordRequest request) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         log.info("Recording waste for ingredient: {} in restaurant: {}",
                 request.getIngredientId(), request.getRestaurantId());
 
@@ -90,6 +94,7 @@ public class WasteController {
             @RequestParam Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         log.info("Generating waste report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
 

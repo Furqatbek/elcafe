@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.utils.ApiResponse;
 import com.elcafe.modules.inventory.dto.SupplierRequest;
 import com.elcafe.modules.inventory.dto.SupplierResponse;
@@ -20,12 +21,14 @@ import java.util.List;
 public class SupplierController {
 
     private final SupplierService supplierService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @Operation(summary = "Get all suppliers for a restaurant")
     public ResponseEntity<ApiResponse<List<SupplierResponse>>> getAllByRestaurant(
             @RequestParam Long restaurantId,
             @RequestParam(required = false, defaultValue = "false") Boolean activeOnly) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<SupplierResponse> suppliers = activeOnly
                 ? supplierService.getActiveByRestaurant(restaurantId)
                 : supplierService.getAllByRestaurant(restaurantId);
@@ -42,6 +45,7 @@ public class SupplierController {
     @PostMapping
     @Operation(summary = "Create a new supplier")
     public ResponseEntity<ApiResponse<SupplierResponse>> create(@Valid @RequestBody SupplierRequest request) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         SupplierResponse supplier = supplierService.create(request);
         return ResponseEntity.ok(ApiResponse.success(supplier));
     }

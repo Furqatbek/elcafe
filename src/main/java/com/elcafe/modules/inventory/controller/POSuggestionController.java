@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.entity.PurchaseOrder;
 import com.elcafe.modules.inventory.dto.GeneratePORequest;
 import com.elcafe.modules.inventory.dto.POSuggestionResponse;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class POSuggestionController {
 
     private final POSuggestionService poSuggestionService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     /**
      * Get all PO suggestions for a restaurant, grouped by supplier
@@ -32,6 +34,7 @@ public class POSuggestionController {
     public ResponseEntity<ApiResponse<List<POSuggestionResponse>>> getSuggestions(
             @RequestParam Long restaurantId) {
         log.info("Fetching PO suggestions for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<POSuggestionResponse> suggestions = poSuggestionService.getSuggestions(restaurantId);
 
@@ -46,6 +49,7 @@ public class POSuggestionController {
     public ResponseEntity<ApiResponse<Map<String, Integer>>> getSuggestionCount(
             @RequestParam Long restaurantId) {
         log.info("Fetching PO suggestion count for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         int count = poSuggestionService.getSuggestionCount(restaurantId);
 
@@ -61,6 +65,7 @@ public class POSuggestionController {
     public ResponseEntity<ApiResponse<Long>> generatePurchaseOrder(
             @Valid @RequestBody GeneratePORequest request,
             Authentication authentication) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         log.info("Generating PO for supplier: {} in restaurant: {}",
                 request.getSupplierId(), request.getRestaurantId());
 
@@ -81,6 +86,7 @@ public class POSuggestionController {
     public ResponseEntity<ApiResponse<List<Long>>> generateAllPurchaseOrders(
             @RequestParam Long restaurantId,
             Authentication authentication) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Generating all suggested POs for restaurant: {}", restaurantId);
 
         String username = authentication != null ? authentication.getName() : "SYSTEM";

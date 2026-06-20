@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.*;
 import com.elcafe.modules.inventory.entity.ProductionBatch;
 import com.elcafe.modules.inventory.entity.ProductionBatchInput;
@@ -26,10 +27,12 @@ import java.util.List;
 public class ProductionBatchController {
 
     private final ProductionBatchService productionBatchService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<ProductionBatchResponse>> createBatch(
             @Valid @RequestBody CreateProductionBatchRequest request) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         log.info("Creating production batch '{}' for restaurant {}", request.getName(), request.getRestaurantId());
 
         ProductionBatch batch = productionBatchService.createBatch(request);
@@ -43,6 +46,7 @@ public class ProductionBatchController {
     public ResponseEntity<ApiResponse<List<ProductionBatchSummary>>> getBatches(
             @PathVariable Long restaurantId,
             @RequestParam(required = false) ProductionBatch.Status status) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Fetching production batches for restaurant {}, status={}", restaurantId, status);
 
         List<ProductionBatch> batches;
@@ -164,6 +168,7 @@ public class ProductionBatchController {
     @GetMapping("/restaurant/{restaurantId}/available")
     public ResponseEntity<ApiResponse<List<ProductionBatchSummary>>> getAvailableBatches(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Fetching available production batches for restaurant {}", restaurantId);
 
         List<ProductionBatch> batches = productionBatchService.getActiveBatches(restaurantId);
@@ -179,6 +184,7 @@ public class ProductionBatchController {
             @PathVariable Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Generating production cost report for restaurant {} from {} to {}", restaurantId, from, to);
 
         List<Object[]> report = productionBatchService.getBatchCostReport(restaurantId, from, to);

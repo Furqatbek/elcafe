@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.dto.*;
 import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.entity.PurchaseOrder;
@@ -31,6 +32,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PurchaseOrderController {
 
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final PurchaseOrderService purchaseOrderService;
     private final RestaurantRepository restaurantRepository;
     private final InventoryIngredientRepository ingredientRepository;
@@ -46,6 +48,7 @@ public class PurchaseOrderController {
         shiftEnforcementService.requireActiveShift();
 
         log.info("Creating purchase order for restaurant: {}", request.getRestaurantId());
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
@@ -144,6 +147,7 @@ public class PurchaseOrderController {
     public ResponseEntity<ApiResponse<List<PurchaseOrderResponse>>> getPurchaseOrders(
             @RequestParam Long restaurantId) {
         log.info("Getting purchase orders for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<PurchaseOrder> pos = purchaseOrderService.getPurchaseOrdersByRestaurant(restaurantId);
         List<PurchaseOrderResponse> responses = pos.stream()

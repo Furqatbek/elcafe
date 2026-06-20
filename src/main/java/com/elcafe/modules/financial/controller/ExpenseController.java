@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.dto.ExpenseRequest;
 import com.elcafe.modules.financial.dto.ExpenseResponse;
 import com.elcafe.modules.financial.entity.Account;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ExpenseController {
 
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final ExpenseService expenseService;
     private final RestaurantRepository restaurantRepository;
     private final AccountRepository accountRepository;
@@ -53,6 +55,7 @@ public class ExpenseController {
         shiftEnforcementService.requireActiveShift();
 
         log.info("Creating expense for restaurant: {}", request.getRestaurantId());
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         // The mobile app retries on flaky restaurant Wi-Fi, which produced
         // duplicate expense rows. Route every create through the existing
@@ -199,6 +202,7 @@ public class ExpenseController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         log.info("Getting expenses for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<Expense> expenses;
         if (startDate != null && endDate != null) {
@@ -226,6 +230,7 @@ public class ExpenseController {
     public ResponseEntity<ApiResponse<List<ExpenseResponse>>> getUnpaidExpenses(
             @RequestParam Long restaurantId) {
         log.info("Getting unpaid expenses for restaurant: {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<Expense> expenses = expenseService.getUnpaidExpenses(restaurantId);
         List<ExpenseResponse> responses = expenses.stream()

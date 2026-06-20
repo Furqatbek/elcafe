@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.restaurant.dto.CreateDeliveryZoneRequest;
 import com.elcafe.modules.restaurant.dto.DeliveryZoneResponse;
 import com.elcafe.modules.restaurant.dto.UpdateDeliveryZoneRequest;
@@ -25,12 +26,14 @@ import java.util.List;
 public class DeliveryZoneController {
 
     private final DeliveryZoneService deliveryZoneService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @Operation(summary = "List delivery zones", description = "Get all delivery zones for a restaurant")
     public ResponseEntity<ApiResponse<List<DeliveryZoneResponse>>> getAllDeliveryZones(
             @PathVariable Long restaurantId
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<DeliveryZoneResponse> response = deliveryZoneService.getAllByRestaurantId(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -41,6 +44,7 @@ public class DeliveryZoneController {
             @PathVariable Long restaurantId,
             @PathVariable Long id
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         DeliveryZoneResponse response = deliveryZoneService.getById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -52,6 +56,8 @@ public class DeliveryZoneController {
             @PathVariable Long restaurantId,
             @Valid @RequestBody CreateDeliveryZoneRequest request
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
+
         // Ensure the restaurantId in the path matches the request
         if (!restaurantId.equals(request.getRestaurantId())) {
             throw new IllegalArgumentException("Restaurant ID in path does not match request body");
@@ -71,6 +77,8 @@ public class DeliveryZoneController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateDeliveryZoneRequest request
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
+
         DeliveryZoneResponse response = deliveryZoneService.update(id, request);
         return ResponseEntity.ok(ApiResponse.success("Delivery zone updated successfully", response));
     }
@@ -82,6 +90,8 @@ public class DeliveryZoneController {
             @PathVariable Long restaurantId,
             @PathVariable Long id
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
+
         deliveryZoneService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Delivery zone deleted successfully", null));
     }

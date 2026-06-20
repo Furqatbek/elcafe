@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.entity.IngredientCategory;
 import com.elcafe.modules.inventory.repository.IngredientCategoryRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
@@ -21,12 +22,14 @@ import java.util.List;
 @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
 public class IngredientCategoryController {
 
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final IngredientCategoryRepository categoryRepository;
     private final RestaurantRepository restaurantRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<IngredientCategory>>> getCategories(
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<IngredientCategory> categories = categoryRepository
                 .findByRestaurantIdOrderBySortOrderAscNameAsc(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Categories retrieved", categories));
@@ -35,6 +38,7 @@ public class IngredientCategoryController {
     @PostMapping
     public ResponseEntity<ApiResponse<IngredientCategory>> createCategory(
             @RequestBody CreateCategoryRequest request) {
+        restaurantAuthorizationService.checkAccess(request.restaurantId);
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 

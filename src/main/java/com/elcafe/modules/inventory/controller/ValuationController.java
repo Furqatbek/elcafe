@@ -1,5 +1,6 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.ValuationReportDTO.*;
 import com.elcafe.modules.inventory.entity.BatchConsumption;
 import com.elcafe.modules.inventory.entity.IngredientCostHistory;
@@ -34,6 +35,7 @@ import java.util.Map;
 @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
 public class ValuationController {
 
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final InventoryValuationService valuationService;
     private final CostHistoryService costHistoryService;
     private final BatchConsumptionService consumptionService;
@@ -47,6 +49,7 @@ public class ValuationController {
     @GetMapping("/settings")
     public ResponseEntity<ApiResponse<ValuationMethodResponse>> getValuationMethod(
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Getting valuation method for restaurant: {}", restaurantId);
 
         ValuationMethod method = valuationService.getValuationMethod(restaurantId);
@@ -60,6 +63,7 @@ public class ValuationController {
     @PostMapping("/settings")
     public ResponseEntity<ApiResponse<ValuationSettings>> setValuationMethod(
             @RequestBody SetValuationMethodRequest request) {
+        restaurantAuthorizationService.checkAccess(request.restaurantId);
         log.info("Setting valuation method for restaurant {} to {}",
                 request.restaurantId, request.valuationMethod);
 
@@ -78,6 +82,7 @@ public class ValuationController {
     public ResponseEntity<ApiResponse<InventoryValuationService.InventoryValuation>> calculateInventoryValue(
             @RequestParam Long restaurantId,
             @RequestParam(required = false) ValuationMethod method) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Calculating inventory value for restaurant {} using method {}",
                 restaurantId, method);
 
@@ -94,6 +99,7 @@ public class ValuationController {
     @GetMapping("/compare")
     public ResponseEntity<ApiResponse<ValuationComparison>> compareValuationMethods(
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Comparing valuation methods for restaurant {}", restaurantId);
 
         BigDecimal fifoValue = valuationService.calculateInventoryValue(restaurantId, ValuationMethod.FIFO).totalValue();
@@ -231,6 +237,7 @@ public class ValuationController {
             @RequestParam Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Getting consumption summary for restaurant {} from {} to {}", restaurantId, startDate, endDate);
 
         List<BatchConsumptionService.IngredientConsumptionSummary> summary =
@@ -277,6 +284,7 @@ public class ValuationController {
             @RequestParam Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Getting total COGS for restaurant {} from {} to {}", restaurantId, startDate, endDate);
 
         BigDecimal cogs = consumptionService.calculateTotalCOGS(restaurantId, startDate, endDate);
@@ -294,6 +302,7 @@ public class ValuationController {
     @GetMapping("/reports/comparison")
     public ResponseEntity<ApiResponse<ValuationComparisonReport>> getValuationComparisonReport(
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Generating valuation comparison report for restaurant {}", restaurantId);
 
         ValuationComparisonReport report = reportService.generateComparisonReport(restaurantId);
@@ -307,6 +316,7 @@ public class ValuationController {
     public ResponseEntity<ApiResponse<InventoryValuationReport>> getInventoryValuationReport(
             @RequestParam Long restaurantId,
             @RequestParam(required = false) ValuationMethod method) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Generating inventory valuation report for restaurant {} using method {}",
                 restaurantId, method);
 
@@ -322,6 +332,7 @@ public class ValuationController {
             @RequestParam Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         log.info("Generating cost variance report for restaurant {} from {} to {}",
                 restaurantId, startDate, endDate);
 

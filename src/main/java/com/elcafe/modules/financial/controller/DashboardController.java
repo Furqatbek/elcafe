@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.dto.DashboardResponse;
 import com.elcafe.modules.financial.service.DashboardService;
 import com.elcafe.modules.financial.service.ShiftTimeService;
@@ -24,6 +25,7 @@ import java.util.Map;
 @PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
 public class DashboardController {
 
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final DashboardService dashboardService;
     private final ShiftTimeService shiftTimeService;
 
@@ -38,6 +40,7 @@ public class DashboardController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         log.info("Getting dashboard for restaurant {} from {} to {}", restaurantId, startDate, endDate);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         DashboardResponse dashboard = dashboardService.getDashboard(restaurantId, startDate, endDate);
 
@@ -53,6 +56,7 @@ public class DashboardController {
             @RequestParam Long restaurantId) {
 
         log.info("Getting today's summary for restaurant {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         DashboardResponse dashboard = dashboardService.getTodaySummary(restaurantId);
 
@@ -68,6 +72,7 @@ public class DashboardController {
             @RequestParam Long restaurantId) {
 
         log.info("Getting weekly summary for restaurant {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         DashboardResponse dashboard = dashboardService.getWeekSummary(restaurantId);
 
@@ -83,6 +88,7 @@ public class DashboardController {
             @RequestParam Long restaurantId) {
 
         log.info("Getting monthly summary for restaurant {}", restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         DashboardResponse dashboard = dashboardService.getMonthSummary(restaurantId);
 
@@ -98,6 +104,7 @@ public class DashboardController {
     )
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentBusinessDay(
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         LocalDate businessDay = shiftTimeService.getCurrentBusinessDay(restaurantId);
         LocalDate calendarDay = LocalDate.now();

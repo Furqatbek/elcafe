@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.restaurant.dto.BusinessHoursResponse;
 import com.elcafe.modules.restaurant.dto.CreateBusinessHoursRequest;
 import com.elcafe.modules.restaurant.dto.UpdateBusinessHoursRequest;
@@ -25,12 +26,14 @@ import java.util.List;
 public class BusinessHoursController {
 
     private final BusinessHoursService businessHoursService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @Operation(summary = "List business hours", description = "Get all business hours for a restaurant")
     public ResponseEntity<ApiResponse<List<BusinessHoursResponse>>> getAllBusinessHours(
             @PathVariable Long restaurantId
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<BusinessHoursResponse> response = businessHoursService.getAllByRestaurantId(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -41,6 +44,7 @@ public class BusinessHoursController {
             @PathVariable Long restaurantId,
             @PathVariable Long id
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         BusinessHoursResponse response = businessHoursService.getById(id);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
@@ -52,6 +56,8 @@ public class BusinessHoursController {
             @PathVariable Long restaurantId,
             @Valid @RequestBody CreateBusinessHoursRequest request
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
+
         // Ensure the restaurantId in the path matches the request
         if (!restaurantId.equals(request.getRestaurantId())) {
             throw new IllegalArgumentException("Restaurant ID in path does not match request body");
@@ -71,6 +77,8 @@ public class BusinessHoursController {
             @PathVariable Long id,
             @Valid @RequestBody UpdateBusinessHoursRequest request
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
+
         BusinessHoursResponse response = businessHoursService.update(id, request);
         return ResponseEntity.ok(ApiResponse.success("Business hours updated successfully", response));
     }
@@ -82,6 +90,8 @@ public class BusinessHoursController {
             @PathVariable Long restaurantId,
             @PathVariable Long id
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
+
         businessHoursService.delete(id);
         return ResponseEntity.ok(ApiResponse.success("Business hours deleted successfully", null));
     }
@@ -92,6 +102,8 @@ public class BusinessHoursController {
     public ResponseEntity<ApiResponse<Void>> deleteAllBusinessHours(
             @PathVariable Long restaurantId
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
+
         businessHoursService.deleteAllByRestaurantId(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("All business hours deleted successfully", null));
     }
@@ -103,6 +115,8 @@ public class BusinessHoursController {
             @PathVariable Long restaurantId,
             @Valid @RequestBody List<UpdateBusinessHoursRequest> requests
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
+
         List<BusinessHoursResponse> response = businessHoursService.updateAllByRestaurantId(restaurantId, requests);
         return ResponseEntity.ok(ApiResponse.success("Business hours updated successfully", response));
     }

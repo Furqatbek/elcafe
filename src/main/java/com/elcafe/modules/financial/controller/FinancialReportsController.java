@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.service.FinancialReportsService;
 import com.elcafe.utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.time.LocalDate;
 @PreAuthorize("hasRole('ADMIN')")
 public class FinancialReportsController {
 
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final FinancialReportsService reportsService;
 
     @GetMapping("/profit-loss")
@@ -26,6 +28,7 @@ public class FinancialReportsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         log.info("Generating P&L report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         FinancialReportsService.ProfitLossReport report =
                 reportsService.generateProfitLossReport(restaurantId, startDate, endDate);
@@ -38,6 +41,7 @@ public class FinancialReportsController {
             @RequestParam Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOfDate) {
         log.info("Generating balance sheet for restaurant: {} as of {}", restaurantId, asOfDate);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         FinancialReportsService.BalanceSheetReport report =
                 reportsService.generateBalanceSheet(restaurantId, asOfDate);
@@ -51,6 +55,7 @@ public class FinancialReportsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         log.info("Generating cash flow report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         FinancialReportsService.CashFlowReport report =
                 reportsService.generateCashFlowReport(restaurantId, startDate, endDate);
@@ -64,6 +69,7 @@ public class FinancialReportsController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         log.info("Generating COGS report for restaurant: {} from {} to {}", restaurantId, startDate, endDate);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         FinancialReportsService.CogsReport report =
                 reportsService.generateCogsReport(restaurantId, startDate, endDate);
