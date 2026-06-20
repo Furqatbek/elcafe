@@ -75,9 +75,11 @@ Nothing downstream is trustworthy without this.
 > **Known §3.3 gaps — status:**
 > - **`id`-based mutators** in `PayrollController` / `SalaryConfigController`
 >   (`/{id}/approve`, `/{id}/pay`, `/{id}/pay-now`, `PUT`/`DELETE /{id}`) carry no `restaurantId`.
->   ✅ Now **closed by the §3.4 backstop**: `PayrollEntry`/`SalaryConfig` are `@Filter`ed, so in
->   `enforce` mode the service's `findById(foreignId)` returns nothing → a cross-tenant id simply
->   404s instead of being acted on.
+>   ✅ Now **closed** — but NOT by the `@Filter` alone, as originally assumed. Hibernate does not
+>   apply filters to primary-key `em.find()` loads, so `findById(foreignId)` still returned the
+>   foreign row in `enforce` mode (proven by `TenantBackstopIsolationTest`). It is closed by
+>   `TenantScopedJpaRepository`, whose query-based `findById` *is* filtered, so a cross-tenant id
+>   returns empty → 404s. See `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`.
 > - **User enumeration/mutation across tenants** — `PayrollController GET /employees` and all of
 >   `SystemUserController` (list/create/update/delete of system users) reached every restaurant's
 >   users. ✅ Now **scoped at the query/controller layer** (the mitigation the `User`-not-`@Filter`ed
@@ -142,7 +144,21 @@ Nothing downstream is trustworthy without this.
   `reservation/ReservationController`, `customer/*`, `loyalty/*`. This is the bulk of the
   effort and the main regression risk — do it behind tests.
 
-### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ ENTITY ROLLOUT DONE (enforce not yet flipped)
+### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ READ + WRITE CLOSED (enforce not yet flipped)
+
+> **Correction + completion (this branch).** The original §3.4 claim that the `@Filter` closes the
+> surrogate-`/{id}` IDOR ("`findById(foreignId)` returns nothing") was **false**: Hibernate filters
+> scope queries and association loads but **not** primary-key `em.find()` lookups, which is what
+> Spring Data `findById` uses. `TenantBackstopIsolationTest` proves this. Two systemic fixes close
+> the gap, both inert outside `enforce`:
+> - **Reads:** `common/tenant/TenantScopedJpaRepository` (registered via `@EnableJpaRepositories`
+>   on the app class) makes every repository's `findById` query-based, so the filter scopes it.
+> - **Writes:** `common/tenant/TenantInsertGuard` (a SessionFactory `Interceptor`) vetoes any insert
+>   whose `restaurant_id` ≠ the bound tenant — the INSERT case the read filter never covered.
+>
+> Both are proven + soaked (zero regressions, full suite). Remaining residuals (native/bulk queries,
+> `getReferenceById`, `REQUIRES_NEW`) and the flip procedure are in
+> `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`.
 - ✅ `@FilterDef("restaurantFilter", restaurantId: Long)` declared on `Restaurant`;
   `@Filter(condition = "restaurant_id = :restaurantId")` applied to **all 68 restaurant-owned
   business entities** — across financial, order, menu, inventory, pos, reservation, promotion,
