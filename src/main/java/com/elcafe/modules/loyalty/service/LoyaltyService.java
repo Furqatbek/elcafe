@@ -59,6 +59,7 @@ public class LoyaltyService {
         // Create new loyalty record with default tier
         CustomerLoyalty loyalty = CustomerLoyalty.builder()
                 .customer(customer)
+                .restaurantId(customer.getRestaurantId()) // §3.7: loyalty is per-restaurant
                 .currentBalance(BigDecimal.ZERO)
                 .lifetimeEarned(BigDecimal.ZERO)
                 .lifetimeSpent(BigDecimal.ZERO)

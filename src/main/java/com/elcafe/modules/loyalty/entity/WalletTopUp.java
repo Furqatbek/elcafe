@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -27,6 +28,7 @@ import java.util.Set;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "wallet_top_ups")
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 @Data
 @Builder
 @NoArgsConstructor
@@ -40,6 +42,10 @@ public class WalletTopUp {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)
     private Customer customer;
+
+    // §3.7: owning tenant (NOT NULL since V153, backfilled from the customer). Set on create.
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;

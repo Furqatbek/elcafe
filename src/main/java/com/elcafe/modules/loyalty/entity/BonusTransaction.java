@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Filter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
@@ -22,6 +23,7 @@ import java.util.Map;
     @Index(name = "idx_bonus_transactions_created_at", columnList = "created_at"),
     @Index(name = "idx_bonus_transactions_idempotency_key", columnList = "idempotency_key")
 })
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 @Data
 @Builder
 @NoArgsConstructor
@@ -35,6 +37,10 @@ public class BonusTransaction {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_loyalty_id", nullable = false)
     private CustomerLoyalty customerLoyalty;
+
+    // §3.7: owning tenant (NOT NULL since V153). Set from the parent loyalty row on create.
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false, length = 30)

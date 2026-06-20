@@ -67,6 +67,7 @@ public class BonusService {
         // Create and save the transaction record
         BonusTransaction transaction = BonusTransaction.builder()
                 .customerLoyalty(customerLoyalty)
+                .restaurantId(customerLoyalty.getRestaurantId()) // §3.7: inherit the loyalty's tenant
                 .transactionType(type)
                 .amount(amount)
                 .balanceAfter(newBalance)

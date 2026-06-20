@@ -45,11 +45,11 @@ class CustomerLoyaltyRepositoryTest {
 
         OffsetDateTime now = OffsetDateTime.now();
 
-        em.persist(CustomerLoyalty.builder().customer(c1)
+        em.persist(CustomerLoyalty.builder().restaurantId(1L).customer(c1)
                 .lastOrderDate(now.minusDays(10)).build());
-        em.persist(CustomerLoyalty.builder().customer(c2)
+        em.persist(CustomerLoyalty.builder().restaurantId(1L).customer(c2)
                 .lastOrderDate(now.minusDays(100)).build());
-        em.persist(CustomerLoyalty.builder().customer(c3).build()); // null lastOrderDate
+        em.persist(CustomerLoyalty.builder().restaurantId(1L).customer(c3).build()); // null lastOrderDate
 
         em.flush(); em.clear();
 
@@ -69,9 +69,9 @@ class CustomerLoyaltyRepositoryTest {
         Customer c2 = persistCustomer("C2", "+998900000011");
         Customer c3 = persistCustomer("C3", "+998900000012");
 
-        em.persist(CustomerLoyalty.builder().customer(c1).tier(gold).build());
-        em.persist(CustomerLoyalty.builder().customer(c2).tier(gold).build());
-        em.persist(CustomerLoyalty.builder().customer(c3).tier(silver).build());
+        em.persist(CustomerLoyalty.builder().restaurantId(1L).customer(c1).tier(gold).build());
+        em.persist(CustomerLoyalty.builder().restaurantId(1L).customer(c2).tier(gold).build());
+        em.persist(CustomerLoyalty.builder().restaurantId(1L).customer(c3).tier(silver).build());
 
         em.flush(); em.clear();
 

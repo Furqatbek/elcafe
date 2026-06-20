@@ -58,6 +58,7 @@ public class TierService {
             // Record tier history
             TierHistory history = TierHistory.builder()
                     .customerLoyalty(customerLoyalty)
+                    .restaurantId(customerLoyalty.getRestaurantId()) // §3.7: inherit the loyalty's tenant
                     .fromTier(currentTier)
                     .toTier(newTier)
                     .reason(String.format("Automatic upgrade - Total spent: %s, Order count: %d",

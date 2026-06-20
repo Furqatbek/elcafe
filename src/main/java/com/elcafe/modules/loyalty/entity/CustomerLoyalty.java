@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.UpdateTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -16,6 +17,7 @@ import java.time.OffsetDateTime;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "customer_loyalty")
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,6 +31,11 @@ public class CustomerLoyalty {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false, unique = true)
     private Customer customer;
+
+    // §3.7: owning tenant (NOT NULL since V153, backfilled from the customer). Loyalty is
+    // per-restaurant; set from the customer on create.
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @Builder.Default
     @Column(name = "current_balance", nullable = false, precision = 10, scale = 2)

@@ -78,6 +78,7 @@ public class WalletTopUpService {
 
         WalletTopUp topUp = WalletTopUp.builder()
                 .customer(customer)
+                .restaurantId(customer.getRestaurantId()) // §3.7: top-up belongs to the customer's tenant
                 .amount(request.getAmount())
                 .status(WalletTopUp.Status.PENDING)
                 .provider(request.getProvider())
