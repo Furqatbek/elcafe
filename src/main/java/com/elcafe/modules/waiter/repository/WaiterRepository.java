@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.repository;
 
+import com.elcafe.common.tenant.AssignmentConfidence;
 import com.elcafe.modules.waiter.entity.Waiter;
 import com.elcafe.modules.waiter.enums.WaiterRole;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,9 @@ import java.util.Optional;
 
 @Repository
 public interface WaiterRepository extends JpaRepository<Waiter, Long> {
+
+    /** §3.7 review surface: waiters whose heuristic tenant assignment needs admin review. */
+    List<Waiter> findByTenantAssignmentConfidence(AssignmentConfidence confidence);
 
     /**
      * Find waiter by PIN code for authentication

@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.entity;
 
+import com.elcafe.common.tenant.AssignmentConfidence;
 import com.elcafe.modules.waiter.enums.CommissionType;
 import com.elcafe.modules.waiter.enums.WaiterRole;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -45,6 +46,13 @@ public class Waiter {
     // caller's restaurant on creation.
     @Column(name = "restaurant_id", nullable = false)
     private Long restaurantId;
+
+    // Phase 0 §3.7 safeguard (V154): confidence in the heuristic tenant assignment. LOW = assigned by
+    // the no-evidence backfill fallback; surfaced for SUPER_ADMIN review via TenantReviewController.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tenant_assignment_confidence", nullable = false, length = 10)
+    @Builder.Default
+    private AssignmentConfidence tenantAssignmentConfidence = AssignmentConfidence.HIGH;
 
     @Column(nullable = false, length = 100)
     private String name;

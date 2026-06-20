@@ -1,5 +1,6 @@
 package com.elcafe.modules.customer.repository;
 
+import com.elcafe.common.tenant.AssignmentConfidence;
 import com.elcafe.modules.customer.entity.Customer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -53,6 +54,10 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     /** Tenant-scoped variant of {@link #findByActiveTrue()} (§3.3 — admin activity/RFM listing). */
     List<Customer> findByRestaurantIdAndActiveTrue(Long restaurantId);
+
+    /** §3.7 review surface: customers whose heuristic tenant assignment needs admin review. */
+    Page<Customer> findByTenantAssignmentConfidence(AssignmentConfidence confidence,
+                                                    org.springframework.data.domain.Pageable pageable);
 
     @Query("SELECT c FROM Customer c WHERE MONTH(c.birthDate) = :month AND DAY(c.birthDate) = :day")
     List<Customer> findByBirthDateMonthAndDay(@Param("month") int month, @Param("day") int day);
