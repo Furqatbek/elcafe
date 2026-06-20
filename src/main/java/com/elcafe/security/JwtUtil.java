@@ -122,11 +122,15 @@ public class JwtUtil {
      * Generate access token for waiter authentication
      * Uses extended expiration time (30 days) for waiters
      */
-    public String generateWaiterAccessToken(String identifier, Long waiterId, String role, Long restaurantId) {
+    public String generateWaiterAccessToken(String identifier, Long waiterId, String role, Long restaurantId,
+                                            Integer tokenVersion) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("waiterId", waiterId);
         claims.put("role", role);
         claims.put("type", "waiter");
+        // §3.5: revocation version, checked per request by JwtAuthenticationFilter (a missing claim
+        // counts as 0). Bumped on PIN change / deactivation to kill outstanding long-lived tokens.
+        claims.put("tokenVersion", tokenVersion == null ? 0 : tokenVersion);
         // §3.6: bind the waiter to a tenant so their requests can be tenant-scoped. Omitted when the
         // waiter has no restaurant yet (e.g. a legacy row not backfilled), preserving prior behaviour.
         if (restaurantId != null) {

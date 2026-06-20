@@ -57,6 +57,13 @@ public class Waiter {
     @Column(length = 100)
     private String email;
 
+    // Phase 0 §3.5: bumped to revoke this waiter's existing tokens at once (PIN change or
+    // deactivation). Embedded as the {@code tokenVersion} claim and checked on every request by
+    // JwtAuthenticationFilter — waiter tokens are long-lived (30d), so this is their only kill switch.
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private Integer tokenVersion = 0;
+
     @Column(length = 20)
     private String phoneNumber;
 

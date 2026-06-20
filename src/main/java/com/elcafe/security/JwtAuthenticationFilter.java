@@ -1,6 +1,8 @@
 package com.elcafe.security;
 
 import com.elcafe.common.tenant.TenantContext;
+import com.elcafe.modules.waiter.entity.Waiter;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,10 +30,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final WaiterRepository waiterRepository;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, @Lazy UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, @Lazy UserDetailsService userDetailsService,
+                                   @Lazy WaiterRepository waiterRepository) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.waiterRepository = waiterRepository;
     }
 
     @Override
@@ -66,7 +71,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     Long waiterId = claims.get("waiterId", Long.class);
                     logger.debug("Processing waiter token - role: " + role + ", waiterId: " + waiterId);
 
-                    if (role != null && jwtUtil.isTokenExpired(jwt) == false) {
+                    // §3.5: waiter access tokens are long-lived (30d) with no refresh flow, so
+                    // revocation is enforced per request. Load the waiter and reject the token if the
+                    // waiter is gone, deactivated, or its tokenVersion was bumped (PIN change /
+                    // deactivation in WaiterService).
+                    Waiter waiter = (waiterId != null) ? waiterRepository.findById(waiterId).orElse(null) : null;
+
+                    if (role != null && waiter != null && jwtUtil.isTokenExpired(jwt) == false
+                            && Boolean.TRUE.equals(waiter.getActive())
+                            && tokenVersionMatches(claims, waiter)) {
                         // Create UserDetails for waiter — always grant ROLE_WAITER
                         // regardless of specific waiter role (JUNIOR_WAITER, SENIOR_WAITER, etc.)
                         List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
@@ -89,12 +102,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         logger.debug("Waiter authentication set successfully");
 
                         // §3.6: bind this waiter request to its restaurant so the tenant backstop
-                        // (TenantFilterInterceptor) scopes its queries. Cleared per request by
-                        // TenantEnforcementFilter's finally.
-                        Long restaurantId = claims.get("restaurantId", Long.class);
-                        if (restaurantId != null) {
-                            TenantContext.setRestaurantId(restaurantId);
+                        // (TenantFilterInterceptor) scopes its queries. restaurant_id is NOT NULL since
+                        // V151, so prefer the live value over the (possibly stale) claim. Cleared per
+                        // request by TenantEnforcementFilter's finally.
+                        if (waiter.getRestaurantId() != null) {
+                            TenantContext.setRestaurantId(waiter.getRestaurantId());
                         }
+                    } else if (waiterId != null) {
+                        logger.warn("Waiter token rejected (revoked, inactive, or unknown waiter) for waiterId="
+                                + waiterId);
                     }
                 } else if ("consumer".equals(tokenType)) {
                     // Handle consumer/customer authentication
@@ -152,5 +168,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * §3.5: a waiter token is valid only while its embedded version matches the waiter's current one.
+     * A missing claim counts as 0, so tokens issued before V152 stay valid until the first bump.
+     */
+    private boolean tokenVersionMatches(Claims claims, Waiter waiter) {
+        Integer claimVersion = claims.get("tokenVersion", Integer.class);
+        int current = waiter.getTokenVersion() == null ? 0 : waiter.getTokenVersion();
+        return (claimVersion == null ? 0 : claimVersion) == current;
     }
 }

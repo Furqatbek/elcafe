@@ -35,15 +35,23 @@ class JwtUtilTest {
         assertThat(username).isEqualTo("admin@test.com");
     }
 
-    @Test @DisplayName("generateWaiterAccessToken — contains waiterId and role claims")
+    @Test @DisplayName("generateWaiterAccessToken — contains waiterId, role and tokenVersion claims")
     void generateConsumerToken_containsClaims() {
-        String token = jwtUtil.generateWaiterAccessToken("waiter-pin", 5L, "WAITER", 42L);
+        String token = jwtUtil.generateWaiterAccessToken("waiter-pin", 5L, "WAITER", 42L, 3);
 
         Claims claims = jwtUtil.extractAllClaims(token);
         assertThat(claims.getSubject()).isEqualTo("waiter-pin");
         assertThat(claims.get("waiterId", Long.class)).isEqualTo(5L);
         assertThat(claims.get("type", String.class)).isEqualTo("waiter");
         assertThat(claims.get("restaurantId", Long.class)).isEqualTo(42L);
+        // §3.5: revocation version is embedded for the filter to check per request.
+        assertThat(claims.get("tokenVersion", Integer.class)).isEqualTo(3);
+    }
+
+    @Test @DisplayName("generateWaiterAccessToken — null tokenVersion defaults to 0")
+    void generateWaiterToken_nullVersion_defaultsToZero() {
+        String token = jwtUtil.generateWaiterAccessToken("waiter-pin", 5L, "WAITER", 42L, null);
+        assertThat(jwtUtil.extractAllClaims(token).get("tokenVersion", Integer.class)).isEqualTo(0);
     }
 
     @Test @DisplayName("validateToken — valid token returns true")

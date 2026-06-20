@@ -155,6 +155,45 @@ class WaiterServiceTest {
     }
 
     @Test
+    void updateWaiter_pinChange_bumpsTokenVersion() {
+        UpdateWaiterRequest request = new UpdateWaiterRequest();
+        request.setPinCode("9999");
+        when(waiterRepository.findById(1L)).thenReturn(Optional.of(waiter));
+        when(waiterRepository.existsByRestaurantIdAndPinCode(1L, "9999")).thenReturn(false);
+        when(waiterRepository.save(any(Waiter.class))).thenAnswer(i -> i.getArgument(0));
+        when(waiterTableRepository.countByWaiterIdAndActiveTrue(anyLong())).thenReturn(0L);
+
+        waiterService.updateWaiter(1L, request);
+        // §3.5: a new PIN revokes sessions opened with the old one (0 -> 1).
+        assertEquals(1, waiter.getTokenVersion().intValue());
+    }
+
+    @Test
+    void updateWaiter_deactivate_bumpsTokenVersion() {
+        UpdateWaiterRequest request = new UpdateWaiterRequest();
+        request.setActive(false);
+        when(waiterRepository.findById(1L)).thenReturn(Optional.of(waiter));
+        when(waiterRepository.save(any(Waiter.class))).thenAnswer(i -> i.getArgument(0));
+        when(waiterTableRepository.countByWaiterIdAndActiveTrue(anyLong())).thenReturn(0L);
+
+        waiterService.updateWaiter(1L, request);
+        assertEquals(1, waiter.getTokenVersion().intValue());
+    }
+
+    @Test
+    void updateWaiter_nameOnly_doesNotBumpTokenVersion() {
+        UpdateWaiterRequest request = new UpdateWaiterRequest();
+        request.setName("Renamed");
+        when(waiterRepository.findById(1L)).thenReturn(Optional.of(waiter));
+        when(waiterRepository.save(any(Waiter.class))).thenAnswer(i -> i.getArgument(0));
+        when(waiterTableRepository.countByWaiterIdAndActiveTrue(anyLong())).thenReturn(0L);
+
+        waiterService.updateWaiter(1L, request);
+        // A non-credential edit must not log the waiter out.
+        assertEquals(0, waiter.getTokenVersion().intValue());
+    }
+
+    @Test
     void updateWaiter_notFound_throws() {
         when(waiterRepository.findById(99L)).thenReturn(Optional.empty());
         assertThrows(ResourceNotFoundException.class,
@@ -173,6 +212,8 @@ class WaiterServiceTest {
 
         assertFalse(assignment.getActive());
         assertFalse(waiter.getActive());
+        // §3.5: soft-delete (deactivation) bumps the token version to revoke outstanding tokens.
+        assertEquals(1, waiter.getTokenVersion().intValue());
         verify(waiterTableRepository).saveAll(anyList());
         // deleteWaiter is a SOFT delete (mark inactive + save) to preserve linked history —
         // see WaiterService.deleteWaiter. (Was asserting a hard delete() that never happens.)
@@ -193,7 +234,7 @@ class WaiterServiceTest {
         request.setRestaurantId(1L);
         request.setPinCode("1234");
         when(waiterRepository.findByRestaurantIdAndPinCode(1L, "1234")).thenReturn(Optional.of(waiter));
-        when(jwtUtil.generateWaiterAccessToken(anyString(), anyLong(), anyString(), any())).thenReturn("jwt-token");
+        when(jwtUtil.generateWaiterAccessToken(anyString(), anyLong(), anyString(), any(), anyInt())).thenReturn("jwt-token");
         when(waiterTableRepository.countByWaiterIdAndActiveTrue(anyLong())).thenReturn(0L);
 
         WaiterAuthResponse result = waiterService.authenticate(request);
@@ -227,11 +268,11 @@ class WaiterServiceTest {
         request.setRestaurantId(1L);
         request.setPinCode("1234");
         when(waiterRepository.findByRestaurantIdAndPinCode(1L, "1234")).thenReturn(Optional.of(waiter));
-        when(jwtUtil.generateWaiterAccessToken(eq("waiter@test.com"), anyLong(), anyString(), any())).thenReturn("tok");
+        when(jwtUtil.generateWaiterAccessToken(eq("waiter@test.com"), anyLong(), anyString(), any(), anyInt())).thenReturn("tok");
         when(waiterTableRepository.countByWaiterIdAndActiveTrue(anyLong())).thenReturn(0L);
 
         waiterService.authenticate(request);
-        verify(jwtUtil).generateWaiterAccessToken(eq("waiter@test.com"), eq(1L), eq("WAITER"), any());
+        verify(jwtUtil).generateWaiterAccessToken(eq("waiter@test.com"), eq(1L), eq("WAITER"), any(), eq(0));
     }
 
     // ==================== assignToTable ====================

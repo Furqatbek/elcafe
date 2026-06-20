@@ -2,6 +2,8 @@ package com.elcafe.security;
 
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.auth.enums.UserRole;
+import com.elcafe.modules.waiter.entity.Waiter;
+import com.elcafe.modules.waiter.repository.WaiterRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -24,6 +26,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -35,6 +38,7 @@ class JwtAuthenticationFilterTest {
 
     @Mock private JwtUtil jwtUtil;
     @Mock private UserDetailsService userDetailsService;
+    @Mock private WaiterRepository waiterRepository;
     @Mock private FilterChain filterChain;
 
     private JwtAuthenticationFilter filter;
@@ -42,7 +46,7 @@ class JwtAuthenticationFilterTest {
 
     @BeforeEach
     void setUp() {
-        filter = new JwtAuthenticationFilter(jwtUtil, userDetailsService);
+        filter = new JwtAuthenticationFilter(jwtUtil, userDetailsService, waiterRepository);
         SecurityContextHolder.clearContext();
         TenantContext.clear();
     }
@@ -132,6 +136,7 @@ class JwtAuthenticationFilterTest {
                 .add("restaurantId", 42L)
                 .build();
         when(jwtUtil.extractAllClaims("waiter-token")).thenReturn(claims);
+        when(waiterRepository.findById(9L)).thenReturn(Optional.of(activeWaiter(0)));
 
         try {
             filter.doFilterInternal(request, response, filterChain);
@@ -142,5 +147,79 @@ class JwtAuthenticationFilterTest {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    @Test @DisplayName("waiter token — stale tokenVersion is rejected (§3.5 revocation)")
+    void waiterToken_staleVersion_rejected() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer waiter-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(jwtUtil.extractUsername("waiter-token")).thenReturn("waiter@test.com");
+        when(jwtUtil.isTokenExpired("waiter-token")).thenReturn(false);
+        Claims claims = Jwts.claims().subject("waiter@test.com")
+                .add("type", "waiter").add("role", "WAITER").add("waiterId", 9L)
+                .add("restaurantId", 42L).add("tokenVersion", 1).build();
+        when(jwtUtil.extractAllClaims("waiter-token")).thenReturn(claims);
+        // Waiter's version has since been bumped past the token's (e.g. PIN changed).
+        when(waiterRepository.findById(9L)).thenReturn(Optional.of(activeWaiter(2)));
+
+        try {
+            filter.doFilterInternal(request, response, filterChain);
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+            assertThat(TenantContext.getRestaurantId()).isNull();
+            verify(filterChain).doFilter(request, response);
+        } finally {
+            TenantContext.clear();
+        }
+    }
+
+    @Test @DisplayName("waiter token — deactivated waiter is rejected")
+    void waiterToken_inactiveWaiter_rejected() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer waiter-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(jwtUtil.extractUsername("waiter-token")).thenReturn("waiter@test.com");
+        when(jwtUtil.isTokenExpired("waiter-token")).thenReturn(false);
+        Claims claims = Jwts.claims().subject("waiter@test.com")
+                .add("type", "waiter").add("role", "WAITER").add("waiterId", 9L)
+                .add("restaurantId", 42L).add("tokenVersion", 0).build();
+        when(jwtUtil.extractAllClaims("waiter-token")).thenReturn(claims);
+        Waiter inactive = activeWaiter(0);
+        inactive.setActive(false);
+        when(waiterRepository.findById(9L)).thenReturn(Optional.of(inactive));
+
+        filter.doFilterInternal(request, response, filterChain);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test @DisplayName("waiter token — unknown waiterId is rejected")
+    void waiterToken_unknownWaiter_rejected() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer waiter-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(jwtUtil.extractUsername("waiter-token")).thenReturn("waiter@test.com");
+        when(jwtUtil.isTokenExpired("waiter-token")).thenReturn(false);
+        Claims claims = Jwts.claims().subject("waiter@test.com")
+                .add("type", "waiter").add("role", "WAITER").add("waiterId", 9L).build();
+        when(jwtUtil.extractAllClaims("waiter-token")).thenReturn(claims);
+        when(waiterRepository.findById(9L)).thenReturn(Optional.empty());
+
+        filter.doFilterInternal(request, response, filterChain);
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
+    /** An active waiter (id 9, restaurant 42) at the given token version. */
+    private static Waiter activeWaiter(int tokenVersion) {
+        Waiter w = new Waiter();
+        w.setId(9L);
+        w.setActive(true);
+        w.setRestaurantId(42L);
+        w.setTokenVersion(tokenVersion);
+        return w;
     }
 }

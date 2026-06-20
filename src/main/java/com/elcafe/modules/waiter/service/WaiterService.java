@@ -137,6 +137,8 @@ public class WaiterService {
                 throw new BadRequestException("PIN code already exists");
             }
             waiter.setPinCode(request.getPinCode());
+            // §3.5: a new PIN must invalidate any sessions opened with the old one.
+            bumpTokenVersion(waiter);
         }
 
         if (request.getEmail() != null && !request.getEmail().equals(waiter.getEmail())) {
@@ -155,6 +157,10 @@ public class WaiterService {
         }
 
         if (request.getActive() != null) {
+            // §3.5: deactivating a waiter revokes their outstanding (long-lived) tokens.
+            if (Boolean.FALSE.equals(request.getActive()) && !Boolean.FALSE.equals(waiter.getActive())) {
+                bumpTokenVersion(waiter);
+            }
             waiter.setActive(request.getActive());
         }
 
@@ -203,8 +209,19 @@ public class WaiterService {
             return;
         }
         waiter.setActive(false);
+        // §3.5: a soft-deleted (deactivated) waiter's outstanding tokens must stop working.
+        bumpTokenVersion(waiter);
         waiterRepository.save(waiter);
         log.info("Soft-deleted waiter: {}", waiter.getName());
+    }
+
+    /**
+     * §3.5: increment the waiter's token version, invalidating every JWT they currently hold. Called
+     * on PIN change and deactivation. A null current version is treated as 0.
+     */
+    private void bumpTokenVersion(Waiter waiter) {
+        Integer current = waiter.getTokenVersion();
+        waiter.setTokenVersion((current == null ? 0 : current) + 1);
     }
 
     /**
@@ -230,7 +247,8 @@ public class WaiterService {
                 identifier,
                 waiter.getId(),
                 waiter.getRole().name(),
-                waiter.getRestaurantId()
+                waiter.getRestaurantId(),
+                waiter.getTokenVersion()
         );
 
         log.info("Waiter authenticated successfully: {} (ID: {})", waiter.getName(), waiter.getId());
