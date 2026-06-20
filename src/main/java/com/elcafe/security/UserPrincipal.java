@@ -24,6 +24,16 @@ public class UserPrincipal implements UserDetails {
     private UserRole role;
     private boolean active;
     private Long restaurantId;
+    private int tokenVersion;
+
+    /**
+     * Backwards-compatible constructor for callers that don't track the token version
+     * (defaults {@code tokenVersion} to 0).
+     */
+    public UserPrincipal(Long id, String email, String password, UserRole role,
+                         boolean active, Long restaurantId) {
+        this(id, email, password, role, active, restaurantId, 0);
+    }
 
     /**
      * Create UserPrincipal from User entity
@@ -35,7 +45,8 @@ public class UserPrincipal implements UserDetails {
                 user.getPassword(),
                 user.getRole(),
                 user.getActive(),
-                user.getRestaurantId()
+                user.getRestaurantId(),
+                user.getTokenVersion() == null ? 0 : user.getTokenVersion()
         );
     }
 

@@ -1,5 +1,6 @@
 package com.elcafe.security;
 
+import com.elcafe.modules.auth.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -95,13 +96,26 @@ public class JwtUtil {
 
     public String generateAccessToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("tokenVersion", tokenVersionOf(userDetails));
         return createToken(claims, userDetails.getUsername(), accessTokenExpiration);
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
+        claims.put("tokenVersion", tokenVersionOf(userDetails));
         return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
+    }
+
+    /** Current token version for a principal (0 for token types that don't track it). */
+    private int tokenVersionOf(UserDetails userDetails) {
+        if (userDetails instanceof UserPrincipal principal) {
+            return principal.getTokenVersion();
+        }
+        if (userDetails instanceof User user && user.getTokenVersion() != null) {
+            return user.getTokenVersion();
+        }
+        return 0;
     }
 
     /**
@@ -142,8 +156,15 @@ public class JwtUtil {
 
     public Boolean validateToken(String token, UserDetails userDetails) {
         try {
-            final String username = extractUsername(token);
-            return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+            final Claims claims = extractAllClaims(token); // single parse; throws if expired/invalid
+            if (!claims.getSubject().equals(userDetails.getUsername())) {
+                return false;
+            }
+            // Instant revocation (§3.5): a token is dead once its version trails the user's current
+            // one (bumped on password change/reset / "log out everywhere"). A missing claim counts
+            // as 0, so tokens issued before this existed stay valid until the first bump.
+            Integer claimVersion = claims.get("tokenVersion", Integer.class);
+            return (claimVersion == null ? 0 : claimVersion) == tokenVersionOf(userDetails);
         } catch (JwtException e) {
             // Expired, malformed, or bad-signature tokens are simply invalid.
             return false;

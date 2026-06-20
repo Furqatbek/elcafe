@@ -148,6 +148,8 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        // §3.5: invalidate every existing token for this user (force re-login on all devices).
+        user.setTokenVersion((user.getTokenVersion() == null ? 0 : user.getTokenVersion()) + 1);
         userRepository.save(user);
         log.info("Password changed successfully for user: {}", email);
     }
@@ -166,6 +168,8 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
+        // §3.5: invalidate every existing token for this user.
+        user.setTokenVersion((user.getTokenVersion() == null ? 0 : user.getTokenVersion()) + 1);
 
         userRepository.save(user);
         log.info("Password reset successfully for user: {}", user.getEmail());

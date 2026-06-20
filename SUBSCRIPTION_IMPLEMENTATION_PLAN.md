@@ -60,7 +60,7 @@ billing on top. (a) is the expensive, risky 70%.
 Nothing downstream is trustworthy without this.
 
 > **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (filter in *shadow* + controller
-> retrofit **started**) · §3.4 ◐ (backstop wired; all entities scoped, +AuditLog, User excluded) · §3.5 ◐ (finite + secret hardened; instant-revocation deferred)
+> retrofit **started**) · §3.4 ◐ (backstop wired; all entities scoped, +AuditLog, User excluded) · §3.5 ✅ (finite + revocable + secret hardened)
 > (deferred) · §3.6 ✅ (waiter tenant-bound; PIN-uniqueness hardening separate) · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
@@ -172,7 +172,7 @@ Nothing downstream is trustworthy without this.
 - ☐ Staging validation when flipping to `enforce`; consider `REQUIRES_NEW`/non-MVC coverage if
   any tenant-scoped query runs outside the open-in-view session.
 
-### 3.5 Make tokens revocable / finite — ◐ FINITE + SECRET HARDENED (instant-revocation deferred)
+### 3.5 Make tokens revocable / finite — ✅ FINITE + REVOCABLE + SECRET HARDENED
 - ✅ **`JwtUtil`** — `isTokenExpired` now honors real expiry; `validateToken` returns `false`
   (instead of throwing) for expired/malformed/bad-signature tokens, so the refresh path returns a
   clean 400. A `@PostConstruct` `validateSecret` **fails the app at startup** if the signing secret
@@ -185,11 +185,13 @@ Nothing downstream is trustworthy without this.
   environment — the app will not start otherwise. Rotating off the old public secret **invalidates
   all existing tokens** (one-time re-login). Finite access tokens require the **frontend to handle
   401 → refresh → retry**; verify in staging (the env knobs allow lengthening if a client lags).
-- ☐ **Instant revocation (`tokenVersion`)** — add a `tokenVersion` to `User`/`Waiter`, embed it as a
-  claim, and reject a token whose version != the stored one. Lets "log out everywhere" and "suspend
-  tenant" hard-kill sessions immediately rather than waiting up to the access-token lifetime. Its
-  own increment (entity + migration + per-request check). Until then, suspension takes effect within
-  the access-token window (≤ 15m) once subscription enforcement blocks refresh.
+- ✅ **Instant revocation (`tokenVersion`)** — `users.token_version` (migration V149) is embedded as
+  a `tokenVersion` claim in access + refresh tokens; `JwtUtil.validateToken` rejects any token whose
+  version trails the stored one (checked on every request via the filter, and on `/refresh`). It is
+  bumped on password change/reset, so changing a password logs out all devices. The same
+  `setTokenVersion(current + 1)` is the hook for a future "log out everywhere" endpoint / suspend-
+  tenant action. (Waiter-token revocation would need a per-request waiter lookup — separate,
+  lower-priority, since waiter access tokens are 12h and PIN-based.)
 
 ### 3.6 Tenant-scope waiters — ✅ TENANT-BOUND (PIN per-restaurant uniqueness is separate hardening)
 - ✅ **Migration `V148`** — adds `waiters.restaurant_id` (FK + index) and backfills it from each

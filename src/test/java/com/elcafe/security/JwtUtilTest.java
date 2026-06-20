@@ -108,4 +108,14 @@ class JwtUtilTest {
         // the @BeforeEach secret is strong and not the committed one
         assertThatCode(jwtUtil::validateSecret).doesNotThrowAnyException();
     }
+
+    @Test @DisplayName("validateToken — token whose version trails the user's is revoked")
+    void validateToken_staleVersion_returnsFalse() {
+        UserPrincipal principal = new UserPrincipal(1L, "admin@test.com", "pass", UserRole.ADMIN, true, 1L, 0);
+        String token = jwtUtil.generateAccessToken(principal); // embeds tokenVersion 0
+
+        UserPrincipal afterRevoke = new UserPrincipal(1L, "admin@test.com", "pass", UserRole.ADMIN, true, 1L, 1);
+        assertThat(jwtUtil.validateToken(token, afterRevoke)).isFalse();   // version bumped -> revoked
+        assertThat(jwtUtil.validateToken(token, principal)).isTrue();      // same version -> still valid
+    }
 }

@@ -74,6 +74,15 @@ public class User implements UserDetails {
     @Column(name = "restaurant_id")
     private Long restaurantId;
 
+    /**
+     * Phase 0 §3.5: bumped to invalidate all of this user's existing tokens at once (password
+     * change/reset, "log out everywhere"). Embedded as the {@code tokenVersion} claim and checked
+     * on every request by {@code JwtUtil#validateToken}.
+     */
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private Integer tokenVersion = 0;
+
     private String resetToken;
 
     private LocalDateTime resetTokenExpiry;
