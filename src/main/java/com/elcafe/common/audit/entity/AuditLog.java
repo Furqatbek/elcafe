@@ -1,6 +1,7 @@
 package com.elcafe.common.audit.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,6 +27,12 @@ import java.time.OffsetDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+// Phase 0 §3.4: tenant backstop. Safe to filter — AuditLog holds only plain Long columns
+// (no @ManyToOne to navigate, nothing fetches it as a required association) and @Filter affects
+// SELECTs only, so writes from any context (including background jobs and failed-auth logging)
+// are unaffected. Reads scope to the caller's tenant; SUPER_ADMIN and background jobs (null
+// TenantContext) stay unfiltered.
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class AuditLog {
 
     @Id

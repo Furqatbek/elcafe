@@ -26,6 +26,18 @@ import java.util.List;
 @Entity
 @Table(name = "users")
 @EntityListeners(AuditingEntityListener.class)
+// Phase 0 §3.4: User is DELIBERATELY NOT tenant-@Filtered (do not "complete the sweep" by adding
+// it — TenantFilterPolicyTest guards this). Reasons:
+//  1. It is the Spring Security principal, loaded during authentication (JwtAuthenticationFilter →
+//     loadUserByUsername) before the request-scoped tenant filter is enabled, so filtering it would
+//     not even cover the auth path.
+//  2. It is the target of many @ManyToOne associations across tenant entities (employee, approvedBy,
+//     operator, appliedBy, confirmedBy, createdBy, ...), several EAGER and several nullable=false.
+//     With the filter active in a tenant request, a required association pointing at a platform
+//     (restaurant_id IS NULL) or cross-tenant user would resolve to nothing → FetchNotFoundException
+//     (HTTP 500) in legitimate flows.
+// Cross-tenant user *enumeration* (e.g. listing endpoints) is instead constrained at the
+// query/controller layer, which can scope by restaurant without breaking association fetches.
 public class User implements UserDetails {
 
     @Id

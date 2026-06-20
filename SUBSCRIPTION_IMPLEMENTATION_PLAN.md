@@ -60,7 +60,7 @@ billing on top. (a) is the expensive, risky 70%.
 Nothing downstream is trustworthy without this.
 
 > **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (filter in *shadow* + controller
-> retrofit **started**) · §3.4 ◐ (backstop wired; all 68 business entities scoped) · §3.5 ☐
+> retrofit **started**) · §3.4 ◐ (backstop wired; all entities scoped, +AuditLog, User excluded) · §3.5 ☐
 > (deferred) · §3.6 ☐ · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
@@ -90,9 +90,11 @@ Nothing downstream is trustworthy without this.
 > stay unscoped. Once active, a surrogate-`/{id}` lookup for a foreign tenant simply returns
 > nothing — closing the IDOR class at the data layer without per-endpoint code. Mode parsing is
 > now a single shared `TenantEnforcementMode` enum (used by the edge filter and the interceptor).
-> **Entity rollout complete:** `@Filter` now covers **all 68 restaurant-owned business entities**;
-> only `auth/User` and `common/audit/AuditLog` are deferred as special cases. Next: dedicated
-> handling for those two, then staging validation of the `enforce` flip. **Limits:** relies on `spring.jpa.open-in-view=true`; does not cover
+> **Entity rollout complete:** `@Filter` covers **all 68 restaurant-owned business entities** plus
+> `common/audit/AuditLog`. The two special cases are resolved (`TenantFilterPolicyTest` guards
+> them): AuditLog is filtered; `auth/User` is deliberately **excluded** — it's the auth principal
+> and the target of many required/EAGER associations, so a filtered fetch would 500 legitimate
+> flows. Next: staging validation of the `enforce` flip. **Limits:** relies on `spring.jpa.open-in-view=true`; does not cover
 > `REQUIRES_NEW` sessions or non-MVC DB access (by design — those aren't request-tenant-scoped).
 > Inert until `enforce`, so flipping the switch needs a staging soak.
 
@@ -151,10 +153,17 @@ Nothing downstream is trustworthy without this.
   on the controller-guard / parent-check path. A misapplied `@Filter` would be a *latent* bug
   (dormant in shadow, erroring only under `enforce`), so each entity's `restaurant_id` column was
   verified before annotating.
-- ☐ **Two entities deferred, to be handled with dedicated tests:** `auth/User` (central to
-  authentication — scoping it wrong could lock users out) and `common/audit/AuditLog` (written from
-  background/no-tenant contexts). Both need careful reasoning about login, refresh, SUPER_ADMIN
-  user-management, and async writes before they get a filter.
+- ✅ **Two special cases resolved** (`TenantFilterPolicyTest` guards both so a future sweep can't
+  silently change them):
+  - `common/audit/AuditLog` **IS** filtered — it holds only plain columns (no `@ManyToOne` to
+    navigate, nothing fetches it as a required association) and `@Filter` doesn't touch INSERTs, so
+    writes from any context are unaffected while reads scope to the tenant.
+  - `auth/User` is deliberately **NOT** filtered — it is the Spring Security principal (loaded at
+    `JwtAuthenticationFilter` *before* the request-scoped filter is enabled) and the target of 20+
+    `@ManyToOne` associations across tenant entities (several EAGER / `nullable=false`). A filtered
+    fetch of a required association pointing at a platform (NULL-restaurant) or cross-tenant user
+    would throw `FetchNotFoundException` (HTTP 500) in legitimate flows. Cross-tenant user
+    *enumeration* is constrained at the query/controller layer instead.
 - ☐ Staging validation when flipping to `enforce`; consider `REQUIRES_NEW`/non-MVC coverage if
   any tenant-scoped query runs outside the open-in-view session.
 
