@@ -65,12 +65,22 @@ Nothing downstream is trustworthy without this.
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
 > default **shadow**) plus a mode-aware `RestaurantAuthorizationService.checkAccess(...)` for
-> the controller retrofit. Retrofitted so far: `AccountController` (4 filter-missed
-> `/financial/accounts/.../{restaurantId}` endpoints; `/sync-all` restricted to SUPER_ADMIN)
-> and `TableController` create (body `restaurantId`). The hole is **not fully closed** until
-> the mode is flipped to `enforce` AND the remaining ~100 controllers are retrofitted —
-> prioritise endpoints carrying `restaurantId` in the JSON body or under non-`/restaurant/`
-> paths, which the edge filter cannot see.
+> the controller retrofit. Retrofitted so far: **financial module** — `AccountController`
+> (4 filter-missed endpoints; `/sync-all` → SUPER_ADMIN), `PayrollController` (3 GETs +
+> create), `SalaryConfigController` (GET + create) — and `TableController` create. The hole
+> is **not fully closed** until the mode is flipped to `enforce` AND the remaining ~95
+> controllers are retrofitted — prioritise endpoints carrying `restaurantId` in the JSON body
+> or under non-`/restaurant/` paths, which the edge filter cannot see.
+>
+> **Known §3.3 gaps to revisit (deliberately not half-fixed):**
+> - **`id`-based mutators** in `PayrollController` / `SalaryConfigController`
+>   (`/{id}/approve`, `/{id}/pay`, `/{id}/pay-now`, `PUT`/`DELETE /{id}`) carry no
+>   `restaurantId` — they're IDOR-able and need an *entity-load* tenant check (load the
+>   record, compare `record.restaurant.id` to the caller's tenant). This pattern is needed
+>   broadly for `/{id}` endpoints and should become a reusable helper.
+> - **`PayrollController GET /employees`** returns staff + waiters across **all** restaurants
+>   (cross-tenant listing). Needs query scoping by tenant, which also depends on §3.6
+>   (waiters are not yet tenant-bound).
 
 ### 3.1 Close the self-service ADMIN hole
 - **`modules/auth/dto/RegisterRequest.java`** — remove the `role` field.

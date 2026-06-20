@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.financial.entity.PayrollEntry;
@@ -29,6 +30,7 @@ import java.util.List;
 @PreAuthorize("hasRole('ADMIN')")
 public class SalaryConfigController {
 
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final SalaryConfigRepository salaryConfigRepository;
     private final RestaurantRepository restaurantRepository;
     private final UserRepository userRepository;
@@ -37,12 +39,14 @@ public class SalaryConfigController {
 
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<ApiResponse<List<SalaryConfig>>> getAll(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<SalaryConfig> configs = salaryConfigRepository.findByRestaurant_Id(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Salary configs retrieved", configs));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<SalaryConfig>> create(@RequestBody CreateSalaryConfigRequest request) {
+        restaurantAuthorizationService.checkAccess(request.restaurantId);
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 

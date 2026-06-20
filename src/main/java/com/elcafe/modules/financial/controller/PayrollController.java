@@ -1,5 +1,6 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.repository.UserRepository;
@@ -32,6 +33,7 @@ import java.util.Map;
 @PreAuthorize("hasRole('ADMIN')")
 public class PayrollController {
 
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
     private final PayrollService payrollService;
     private final RestaurantRepository restaurantRepository;
     private final UserRepository userRepository;
@@ -73,6 +75,7 @@ public class PayrollController {
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<ApiResponse<List<PayrollEntry>>> getByRestaurant(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<PayrollEntry> entries = payrollService.getPayrollEntriesByRestaurant(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Payroll entries retrieved", entries));
     }
@@ -82,6 +85,7 @@ public class PayrollController {
             @PathVariable Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<PayrollEntry> entries = payrollService.getPayrollEntriesByDateRange(restaurantId, startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success("Payroll entries retrieved", entries));
     }
@@ -96,6 +100,7 @@ public class PayrollController {
     @GetMapping("/restaurant/{restaurantId}/pending")
     public ResponseEntity<ApiResponse<List<PayrollEntry>>> getPending(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<PayrollEntry> entries = payrollService.getPendingPayrolls(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Pending payrolls retrieved", entries));
     }
@@ -111,6 +116,7 @@ public class PayrollController {
             @Valid @RequestBody PayrollEntryRequest request) {
         log.info("Creating payroll entry for employee {} ({} - {})",
                 request.getEmployeeId(), request.getPayPeriodStart(), request.getPayPeriodEnd());
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         PayrollEntry entry = payrollService.createPayrollEntry(mapToEntity(request));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Payroll entry created", entry));
