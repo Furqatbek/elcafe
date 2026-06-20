@@ -150,6 +150,7 @@ Content-Type: application/json
 
 {
   "phoneNumber": "+998901234567",
+  "restaurantId": 1,
   "firstName": "John",
   "lastName": "Doe",
   "registrationSource": "MOBILE_APP"
@@ -159,6 +160,7 @@ Content-Type: application/json
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `phoneNumber` | string | yes | Phone number (10-20 digits, may include `+`) |
+| `restaurantId` | number | yes | Restaurant the customer is signing into. Customers are per-restaurant: a returning customer is matched by `(phoneNumber, restaurantId)`; a new one is created under it. |
 | `firstName` | string | no | Customer first name |
 | `lastName` | string | no | Customer last name |
 | `registrationSource` | string | yes | One of: `MOBILE_APP`, `WEB`, `SELF_SERVICE`, `POS` |
@@ -183,9 +185,16 @@ Content-Type: application/json
 
 {
   "phoneNumber": "+998901234567",
-  "otp": "123456"
+  "restaurantId": 1,
+  "otpCode": "123456"
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `phoneNumber` | string | yes | Phone number used in the matching `/login` request |
+| `restaurantId` | number | yes | Must match the `restaurantId` the OTP was requested for; the issued access token is bound to it |
+| `otpCode` | string | yes | The 6-digit code sent via SMS |
 
 **Response**: 200 OK
 ```json

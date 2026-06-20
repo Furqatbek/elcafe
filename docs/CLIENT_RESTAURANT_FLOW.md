@@ -719,13 +719,19 @@ CREATE INDEX idx_order_events_created ON order_events(created_at);
 
 **Request OTP**
 ```http
-POST /api/v1/consumers/request-otp
+POST /api/v1/consumer/auth/login
 Content-Type: application/json
 
 {
-  "phoneNumber": "+998901234567"
+  "phoneNumber": "+998901234567",
+  "restaurantId": 1,
+  "registrationSource": "MOBILE_APP"
 }
 ```
+
+> `restaurantId` is required — customers are per-restaurant, so a returning
+> customer is matched by `(phoneNumber, restaurantId)` and a new one is created
+> under that restaurant.
 
 Response:
 ```json
@@ -742,14 +748,18 @@ Response:
 
 **Verify OTP & Login**
 ```http
-POST /api/v1/consumers/verify-otp
+POST /api/v1/consumer/auth/verify
 Content-Type: application/json
 
 {
   "phoneNumber": "+998901234567",
+  "restaurantId": 1,
   "otpCode": "123456"
 }
 ```
+
+> `restaurantId` must match the one used in the `/login` request — the issued
+> access token is bound to it so subsequent requests are tenant-scoped.
 
 Response:
 ```json

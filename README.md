@@ -287,8 +287,8 @@ PENDING/PLACED/ACCEPTED → CANCELLED (Customer/Admin cancels) → Refund if pai
 - `POST /api/v1/auth/register` - Register new user (Admin/Operator)
 - `POST /api/v1/auth/login` - User login with email/password
 - `POST /api/v1/auth/refresh` - Refresh access token
-- `POST /api/v1/consumer/auth/login` - Consumer OTP login (send SMS code)
-- `POST /api/v1/consumer/auth/verify` - Verify OTP code and get tokens
+- `POST /api/v1/consumer/auth/login` - Consumer OTP login (send SMS code); requires `restaurantId` (customers are per-restaurant)
+- `POST /api/v1/consumer/auth/verify` - Verify OTP code and get tokens (requires matching `restaurantId`)
 
 ### Restaurants
 - `GET /api/v1/restaurants` - List all restaurants (Public)
