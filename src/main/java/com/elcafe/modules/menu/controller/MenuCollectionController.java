@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.menu.dto.*;
 import com.elcafe.modules.menu.service.MenuCollectionService;
 import com.elcafe.utils.ApiResponse;
@@ -26,6 +27,7 @@ import java.util.List;
 public class MenuCollectionController {
 
     private final MenuCollectionService menuCollectionService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
@@ -35,6 +37,7 @@ public class MenuCollectionController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Pageable pageable = PageRequest.of(page, size);
         Page<MenuCollectionDTO> collections = menuCollectionService.getMenuCollections(restaurantId, pageable);
         return ResponseEntity.ok(ApiResponse.success("Menu collections retrieved successfully", collections));
@@ -63,6 +66,7 @@ public class MenuCollectionController {
     public ResponseEntity<ApiResponse<MenuCollectionDTO>> createMenuCollection(
             @Valid @RequestBody CreateMenuCollectionRequest request
     ) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         MenuCollectionDTO collection = menuCollectionService.createMenuCollection(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Menu collection created successfully", collection));

@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.kitchen.entity.KitchenStation;
 import com.elcafe.modules.kitchen.repository.KitchenStationRepository;
@@ -32,6 +33,7 @@ public class CategoryController {
     private final MenuService menuService;
     private final RestaurantRepository restaurantRepository;
     private final KitchenStationRepository kitchenStationRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @Operation(summary = "Get active categories", description = "Get all active categories for a restaurant (public endpoint)")
@@ -60,6 +62,7 @@ public class CategoryController {
             @Valid @RequestBody CreateCategoryRequest request
     ) {
         log.info("Creating category: {} for restaurant: {}", request.getName(), request.getRestaurantId());
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         // Validate restaurant exists
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())

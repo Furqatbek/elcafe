@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.menu.dto.CreatePackagingRuleRequest;
 import com.elcafe.modules.menu.dto.PackagingRuleResponse;
 import com.elcafe.modules.menu.entity.PackagingRule;
@@ -23,10 +24,12 @@ import java.util.List;
 public class PackagingRuleController {
 
     private final PackagingService packagingService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<ApiResponse<List<PackagingRuleResponse>>> getRulesByRestaurant(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<PackagingRuleResponse> rules = packagingService.getRulesForRestaurant(restaurantId).stream()
                 .map(PackagingRuleResponse::fromEntity)
                 .toList();
@@ -47,6 +50,7 @@ public class PackagingRuleController {
             @Valid @RequestBody CreatePackagingRuleRequest request) {
         log.info("Creating packaging rule: product {} → ingredient {}",
                 request.getProductId(), request.getPackagingIngredientId());
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         PackagingRule rule = packagingService.createRule(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Packaging rule created", PackagingRuleResponse.fromEntity(rule)));
@@ -57,6 +61,7 @@ public class PackagingRuleController {
             @PathVariable Long id,
             @Valid @RequestBody CreatePackagingRuleRequest request) {
         log.info("Updating packaging rule {}", id);
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         PackagingRule rule = packagingService.updateRule(id, request);
         return ResponseEntity.ok(ApiResponse.success("Packaging rule updated", PackagingRuleResponse.fromEntity(rule)));
     }

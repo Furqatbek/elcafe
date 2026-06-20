@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.menu.dto.AddOnGroupResponse;
 import com.elcafe.modules.menu.dto.CreateAddOnGroupRequest;
 import com.elcafe.modules.menu.dto.UpdateAddOnGroupRequest;
@@ -25,6 +26,7 @@ import java.util.List;
 public class AddOnGroupController {
 
     private final AddOnGroupService addOnGroupService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
@@ -34,6 +36,7 @@ public class AddOnGroupController {
             @RequestParam(required = false, defaultValue = "false") boolean activeOnly
     ) {
         log.info("Fetching add-on groups for restaurant: {}, activeOnly: {}", restaurantId, activeOnly);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<AddOnGroupResponse> addOnGroups = activeOnly
                 ? addOnGroupService.getActiveAddOnGroupsByRestaurant(restaurantId)
@@ -50,6 +53,7 @@ public class AddOnGroupController {
             @PathVariable Long id
     ) {
         log.info("Fetching add-on group: {} for restaurant: {}", id, restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         AddOnGroupResponse addOnGroup = addOnGroupService.getAddOnGroupById(restaurantId, id);
 
@@ -64,6 +68,7 @@ public class AddOnGroupController {
             @Valid @RequestBody CreateAddOnGroupRequest request
     ) {
         log.info("Creating add-on group: {} for restaurant: {}", request.getName(), restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         // Ensure the restaurantId in the path matches the one in the request
         if (!restaurantId.equals(request.getRestaurantId())) {
@@ -85,6 +90,7 @@ public class AddOnGroupController {
             @Valid @RequestBody UpdateAddOnGroupRequest request
     ) {
         log.info("Updating add-on group: {} for restaurant: {}", id, restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         AddOnGroupResponse addOnGroup = addOnGroupService.updateAddOnGroup(restaurantId, id, request);
 
@@ -99,6 +105,7 @@ public class AddOnGroupController {
             @PathVariable Long id
     ) {
         log.info("Deleting add-on group: {} for restaurant: {}", id, restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         addOnGroupService.deleteAddOnGroup(restaurantId, id);
 
