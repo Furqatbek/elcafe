@@ -6,6 +6,7 @@ import com.elcafe.modules.referral.enums.ReferralStatus;
 import com.elcafe.modules.referral.enums.RewardType;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
     @UniqueConstraint(columnNames = {"referee_id", "restaurant_id"})
 })
 @EntityListeners(AuditingEntityListener.class)
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class Referral {
 
     @Id

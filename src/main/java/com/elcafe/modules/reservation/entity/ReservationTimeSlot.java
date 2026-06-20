@@ -2,6 +2,7 @@ package com.elcafe.modules.reservation.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -16,6 +17,7 @@ import java.time.LocalTime;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "reservation_time_slots")
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class ReservationTimeSlot {
 
     @Id

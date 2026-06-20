@@ -8,6 +8,7 @@ import com.elcafe.modules.reservation.enums.ReservationStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -27,6 +28,7 @@ import java.util.List;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Entity
 @Table(name = "reservations")
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class Reservation {
 
     @Id

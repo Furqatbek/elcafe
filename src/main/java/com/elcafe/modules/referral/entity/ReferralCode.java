@@ -4,6 +4,7 @@ import com.elcafe.modules.customer.entity.Customer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -24,6 +25,7 @@ import java.util.List;
     @UniqueConstraint(columnNames = {"restaurant_id", "customer_id"})
 })
 @EntityListeners(AuditingEntityListener.class)
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class ReferralCode {
 
     @Id

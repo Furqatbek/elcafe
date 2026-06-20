@@ -3,6 +3,7 @@ package com.elcafe.modules.promotion.entity;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,6 +26,7 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class HappyHour {
 
     @Id

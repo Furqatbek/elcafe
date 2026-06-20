@@ -3,6 +3,7 @@ package com.elcafe.modules.referral.entity;
 import com.elcafe.modules.referral.enums.RewardType;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "referral_settings")
 @EntityListeners(AuditingEntityListener.class)
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class ReferralSettings {
 
     @Id
