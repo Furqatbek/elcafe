@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.shift.entity.ShiftSchedule;
 import com.elcafe.modules.pos.shift.service.ShiftScheduleService;
 import com.elcafe.utils.ApiResponse;
@@ -23,17 +24,20 @@ import java.util.List;
 public class ShiftScheduleController {
 
     private final ShiftScheduleService scheduleService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<ApiResponse<List<ShiftSchedule>>> getWeekSchedule(
             @PathVariable Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<ShiftSchedule> schedules = scheduleService.getWeekSchedule(restaurantId, weekStart);
         return ResponseEntity.ok(ApiResponse.success("Schedule retrieved", schedules));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<ShiftSchedule>> createSchedule(@RequestBody CreateScheduleRequest request) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         // employeeType picks the subject table:
         //   "waiter" → schedule a Waiter (uses waiters.id)
         //   anything else (or null) → schedule a User (uses users.id)
@@ -67,6 +71,7 @@ public class ShiftScheduleController {
     @PostMapping("/bulk")
     public ResponseEntity<ApiResponse<ShiftScheduleService.BulkResult>> bulkCreate(
             @RequestBody BulkCreateRequest request) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         java.util.List<ShiftScheduleService.Subject> subjects = request.employees == null
                 ? java.util.List.of()
                 : request.employees.stream()
@@ -96,6 +101,7 @@ public class ShiftScheduleController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate sourceWeek,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate targetWeek,
             @RequestParam(required = false) Long createdById) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<ShiftSchedule> created = scheduleService.copyWeek(restaurantId, sourceWeek, targetWeek, createdById);
         return ResponseEntity.ok(ApiResponse.success("Week copied: " + created.size() + " schedules", created));
     }
@@ -105,6 +111,7 @@ public class ShiftScheduleController {
             @PathVariable Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
             @RequestParam(required = false) Long createdById) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<ShiftSchedule> created = scheduleService.autoFillFromWorkingHours(restaurantId, weekStart, createdById);
         return ResponseEntity.ok(ApiResponse.success("Auto-filled: " + created.size() + " schedules", created));
     }

@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.shift.entity.EmployeeConsumption;
 import com.elcafe.modules.pos.shift.service.EmployeeConsumptionService;
 import com.elcafe.utils.ApiResponse;
@@ -20,11 +21,13 @@ import java.util.List;
 public class EmployeeConsumptionController {
 
     private final EmployeeConsumptionService consumptionService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<EmployeeConsumption>> record(
             @PathVariable Long restaurantId,
             @RequestBody RecordRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         EmployeeConsumption consumption = consumptionService.recordConsumption(
                 restaurantId, request.productId(), request.quantity(),
                 request.waiterId(), request.employeeId(), request.notes());
@@ -37,6 +40,7 @@ public class EmployeeConsumptionController {
             @PathVariable Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Consumptions retrieved",
                 consumptionService.getByRestaurantAndDateRange(restaurantId, from, to)));
     }
@@ -46,6 +50,7 @@ public class EmployeeConsumptionController {
             @PathVariable Long restaurantId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(
                 "Consumption usage",
                 consumptionService.consumerUsage(restaurantId, from, to)));
@@ -55,6 +60,7 @@ public class EmployeeConsumptionController {
     public ResponseEntity<ApiResponse<List<EmployeeConsumption>>> getByShift(
             @PathVariable Long restaurantId,
             @PathVariable Long shiftId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Shift consumptions retrieved",
                 consumptionService.getByShift(shiftId)));
     }

@@ -2,6 +2,7 @@ package com.elcafe.modules.order.controller;
 
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.common.security.service.FinancialOperationSecurityService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.ModifyOrderItemRequest;
 import com.elcafe.modules.order.dto.pos.POSKitchenStatusDTO;
@@ -80,6 +81,7 @@ class POSOrderControllerTest {
     @Mock private FinancialOperationSecurityService financialSecurityService;
     @Mock private AuditService auditService;
     @Mock private OrderRepository orderRepository;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
 
     @InjectMocks private POSOrderController controller;
 

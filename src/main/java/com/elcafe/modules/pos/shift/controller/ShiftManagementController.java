@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.shift.dto.*;
 import com.elcafe.modules.pos.shift.entity.EmployeeShift;
 import com.elcafe.modules.pos.shift.entity.ShiftBreak;
@@ -27,12 +28,14 @@ import java.util.List;
 public class ShiftManagementController {
 
     private final ShiftManagementService shiftService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping("/clock-in")
     @Operation(summary = "Clock in an employee to start shift")
     public ResponseEntity<EmployeeShift> clockIn(
             @PathVariable Long restaurantId,
             @Valid @RequestBody ClockInRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.clockIn(restaurantId, request));
     }
 
@@ -42,6 +45,7 @@ public class ShiftManagementController {
             @PathVariable Long restaurantId,
             @PathVariable Long shiftId,
             @Valid @RequestBody ClockOutRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.clockOut(shiftId, request));
     }
 
@@ -51,6 +55,7 @@ public class ShiftManagementController {
             @PathVariable Long restaurantId,
             @PathVariable Long shiftId,
             @RequestParam(required = false) BreakType breakType) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.startBreak(shiftId, breakType));
     }
 
@@ -59,6 +64,7 @@ public class ShiftManagementController {
     public ResponseEntity<ShiftBreak> endBreak(
             @PathVariable Long restaurantId,
             @PathVariable Long shiftId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.endBreak(shiftId));
     }
 
@@ -66,6 +72,7 @@ public class ShiftManagementController {
     @Operation(summary = "Get all active shifts")
     public ResponseEntity<List<ShiftSummaryDTO>> getActiveShifts(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.getActiveShifts(restaurantId));
     }
 
@@ -74,6 +81,7 @@ public class ShiftManagementController {
     public ResponseEntity<List<ShiftSummaryDTO>> getShiftsByDate(
             @PathVariable Long restaurantId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.getShiftsByDate(restaurantId, date));
     }
 
@@ -85,6 +93,7 @@ public class ShiftManagementController {
                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam("endDate")
                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(
                 shiftService.getShiftsByDateRange(restaurantId, startDate, endDate));
     }
@@ -93,6 +102,7 @@ public class ShiftManagementController {
     @Operation(summary = "Get shifts pending manager approval")
     public ResponseEntity<List<ShiftSummaryDTO>> getPendingApproval(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.getPendingApprovalShifts(restaurantId));
     }
 
@@ -103,6 +113,7 @@ public class ShiftManagementController {
             @PathVariable Long shiftId,
             @RequestParam(required = false) Long managerId,
             @RequestParam(required = false) String notes) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.approveShift(shiftId, managerId, notes));
     }
 
@@ -111,6 +122,7 @@ public class ShiftManagementController {
     public ResponseEntity<java.util.Map<String, String>> resendTelegram(
             @PathVariable Long restaurantId,
             @PathVariable Long shiftId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         shiftService.resendShiftToTelegram(shiftId);
         return ResponseEntity.ok(java.util.Map.of("message", "Shift report sent to Telegram"));
     }
@@ -121,6 +133,7 @@ public class ShiftManagementController {
             @PathVariable Long restaurantId,
             @PathVariable Long employeeId,
             Pageable pageable) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.getEmployeeShiftHistory(employeeId, pageable));
     }
 
@@ -129,6 +142,7 @@ public class ShiftManagementController {
     public ResponseEntity<EndOfDayReport> getEndOfDayReport(
             @PathVariable Long restaurantId,
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(shiftService.getEndOfDayReport(restaurantId, date));
     }
 }

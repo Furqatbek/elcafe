@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.offline.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.offline.dto.*;
 import com.elcafe.modules.pos.offline.entity.OfflineOrder;
 import com.elcafe.modules.pos.offline.entity.POSDevice;
@@ -21,12 +22,14 @@ import java.util.List;
 public class OfflineSyncController {
 
     private final OfflineSyncService offlineSyncService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping("/devices/register")
     @Operation(summary = "Register a POS device for offline mode")
     public ResponseEntity<POSDevice> registerDevice(
             @PathVariable Long restaurantId,
             @Valid @RequestBody DeviceRegistrationRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(offlineSyncService.registerDevice(restaurantId, request));
     }
 
@@ -35,6 +38,7 @@ public class OfflineSyncController {
     public ResponseEntity<Void> heartbeat(
             @PathVariable Long restaurantId,
             @PathVariable String deviceId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         offlineSyncService.recordHeartbeat(restaurantId, deviceId);
         return ResponseEntity.ok().build();
     }
@@ -43,6 +47,7 @@ public class OfflineSyncController {
     @Operation(summary = "Get device status (online/offline)")
     public ResponseEntity<DeviceStatusResponse> getDeviceStatus(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(offlineSyncService.getDeviceStatus(restaurantId));
     }
 
@@ -51,6 +56,7 @@ public class OfflineSyncController {
     public ResponseEntity<OfflineOrder> queueOfflineOrder(
             @PathVariable Long restaurantId,
             @Valid @RequestBody OfflineOrderRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(offlineSyncService.queueOfflineOrder(restaurantId, request));
     }
 
@@ -59,6 +65,7 @@ public class OfflineSyncController {
     public ResponseEntity<List<OfflineOrder>> queueOfflineOrders(
             @PathVariable Long restaurantId,
             @Valid @RequestBody List<OfflineOrderRequest> requests) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(offlineSyncService.queueOfflineOrders(restaurantId, requests));
     }
 
@@ -67,6 +74,7 @@ public class OfflineSyncController {
     public ResponseEntity<BatchSyncResult> syncDeviceOrders(
             @PathVariable Long restaurantId,
             @PathVariable String deviceId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(offlineSyncService.syncDeviceOrders(restaurantId, deviceId));
     }
 
@@ -74,6 +82,7 @@ public class OfflineSyncController {
     @Operation(summary = "Get overall sync status for restaurant")
     public ResponseEntity<OfflineSyncStatus> getSyncStatus(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(offlineSyncService.getSyncStatus(restaurantId));
     }
 }

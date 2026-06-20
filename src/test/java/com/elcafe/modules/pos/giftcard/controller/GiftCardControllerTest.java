@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.giftcard.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.giftcard.dto.*;
 import com.elcafe.modules.pos.giftcard.entity.GiftCard;
 import com.elcafe.modules.pos.giftcard.entity.GiftCardType;
@@ -35,6 +36,7 @@ class GiftCardControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
     @Mock private GiftCardService giftCardService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private GiftCardController controller;
     private final String BASE = "/api/v1/restaurants/1/pos/gift-cards";
 

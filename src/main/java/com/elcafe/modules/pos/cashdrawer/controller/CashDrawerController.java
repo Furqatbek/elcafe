@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.cashdrawer.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.cashdrawer.dto.*;
 import com.elcafe.modules.pos.cashdrawer.entity.CashDrawer;
 import com.elcafe.modules.pos.cashdrawer.entity.CashDrawerOperation;
@@ -25,12 +26,14 @@ import java.util.List;
 public class CashDrawerController {
 
     private final CashDrawerService cashDrawerService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping
     @Operation(summary = "Create a new cash drawer")
     public ResponseEntity<CashDrawer> createCashDrawer(
             @PathVariable Long restaurantId,
             @Valid @RequestBody CreateCashDrawerRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.createCashDrawer(restaurantId, request));
     }
 
@@ -38,6 +41,7 @@ public class CashDrawerController {
     @Operation(summary = "Get all cash drawers")
     public ResponseEntity<List<CashDrawer>> getCashDrawers(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.getCashDrawers(restaurantId));
     }
 
@@ -49,6 +53,7 @@ public class CashDrawerController {
             @RequestParam Long operatorId,
             @RequestParam(required = false) Long shiftId,
             @RequestParam(required = false) String reason) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.openDrawer(drawerId, operatorId, shiftId, reason));
     }
 
@@ -61,6 +66,7 @@ public class CashDrawerController {
             @RequestParam Long operatorId,
             @RequestParam(required = false) Long shiftId,
             @RequestParam(required = false) String reason) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.recordPaidIn(drawerId, amount, operatorId, shiftId, reason));
     }
 
@@ -73,6 +79,7 @@ public class CashDrawerController {
             @RequestParam Long operatorId,
             @RequestParam(required = false) Long shiftId,
             @RequestParam(required = false) String reason) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.recordPaidOut(drawerId, amount, operatorId, shiftId, reason));
     }
 
@@ -85,6 +92,7 @@ public class CashDrawerController {
             @RequestParam Long operatorId,
             @RequestParam(required = false) Long shiftId,
             @RequestParam(required = false) String notes) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.recordCashDrop(drawerId, amount, operatorId, shiftId, notes));
     }
 
@@ -97,6 +105,7 @@ public class CashDrawerController {
             @RequestParam Long operatorId,
             @RequestParam(required = false) Long shiftId,
             @RequestParam(required = false) String notes) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.recordCashPickup(drawerId, amount, operatorId, shiftId, notes));
     }
 
@@ -108,6 +117,7 @@ public class CashDrawerController {
             @RequestParam Long operatorId,
             @RequestParam(required = false) Long shiftId,
             @RequestParam BigDecimal countedAmount) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.closeDrawer(drawerId, operatorId, shiftId, countedAmount));
     }
 
@@ -117,6 +127,7 @@ public class CashDrawerController {
             @PathVariable Long restaurantId,
             @PathVariable Long drawerId,
             @RequestParam(required = false) Long shiftId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.getDrawerStatus(drawerId, shiftId));
     }
 
@@ -126,6 +137,7 @@ public class CashDrawerController {
             @PathVariable Long restaurantId,
             @PathVariable Long drawerId,
             Pageable pageable) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.getOperationHistory(drawerId, pageable));
     }
 
@@ -134,6 +146,7 @@ public class CashDrawerController {
     public ResponseEntity<List<CashDrawerOperationDTO>> getShiftOperations(
             @PathVariable Long restaurantId,
             @PathVariable Long shiftId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(cashDrawerService.getShiftOperations(shiftId));
     }
 }

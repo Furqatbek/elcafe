@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.tax.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.pos.tax.dto.*;
 import com.elcafe.modules.pos.tax.entity.TaxExemptionLog;
@@ -24,6 +25,7 @@ import java.util.List;
 public class TaxExemptionController {
 
     private final TaxExemptionService taxExemptionService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     // Exemption Types
     @PostMapping("/types")
@@ -31,6 +33,7 @@ public class TaxExemptionController {
     public ResponseEntity<TaxExemptionType> createType(
             @PathVariable Long restaurantId,
             @Valid @RequestBody CreateTaxExemptionTypeRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(taxExemptionService.createExemptionType(restaurantId, request));
     }
 
@@ -38,6 +41,7 @@ public class TaxExemptionController {
     @Operation(summary = "Get all exemption types")
     public ResponseEntity<List<TaxExemptionType>> getTypes(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(taxExemptionService.getExemptionTypes(restaurantId));
     }
 
@@ -48,6 +52,7 @@ public class TaxExemptionController {
             @PathVariable Long restaurantId,
             @PathVariable Long customerId,
             @Valid @RequestBody SetCustomerTaxExemptRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(taxExemptionService.setCustomerTaxExempt(customerId, request));
     }
 
@@ -56,6 +61,7 @@ public class TaxExemptionController {
     public ResponseEntity<Customer> removeCustomerTaxExempt(
             @PathVariable Long restaurantId,
             @PathVariable Long customerId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(taxExemptionService.removeCustomerTaxExempt(customerId));
     }
 
@@ -64,6 +70,7 @@ public class TaxExemptionController {
     public ResponseEntity<TaxExemptCheckResult> checkCustomerExemption(
             @PathVariable Long restaurantId,
             @PathVariable Long customerId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(taxExemptionService.checkCustomerExemption(customerId));
     }
 
@@ -75,6 +82,7 @@ public class TaxExemptionController {
             @PathVariable Long orderId,
             @Valid @RequestBody ApplyTaxExemptionRequest request,
             @RequestParam Long operatorId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(taxExemptionService.applyOrderTaxExemption(orderId, request, operatorId));
     }
 
@@ -84,6 +92,7 @@ public class TaxExemptionController {
             @PathVariable Long restaurantId,
             @PathVariable Long orderId,
             @RequestParam BigDecimal taxRate) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(taxExemptionService.removeOrderTaxExemption(orderId, taxRate));
     }
 
@@ -93,6 +102,7 @@ public class TaxExemptionController {
     public ResponseEntity<Page<TaxExemptionLog>> getLogs(
             @PathVariable Long restaurantId,
             Pageable pageable) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(taxExemptionService.getExemptionLogs(restaurantId, pageable));
     }
 }

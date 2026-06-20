@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -45,6 +46,7 @@ public class OrderController {
     private final RestaurantRepository restaurantRepository;
     private final ShiftTimeService shiftTimeService;
     private final SelfServiceOrderRepository selfServiceOrderRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping
     @Operation(summary = "Create order", description = "Create a new order")
@@ -59,6 +61,8 @@ public class OrderController {
                     .orElseThrow(() -> new IllegalStateException("No active restaurant found in the system"));
             order.setRestaurant(restaurant);
         }
+        // §3.3: the order's (possibly defaulted) restaurant must be one the caller owns.
+        restaurantAuthorizationService.checkAccess(order.getRestaurant().getId());
 
         Order createdOrder = orderService.createOrder(order);
         return ResponseEntity
@@ -113,6 +117,7 @@ public class OrderController {
             @RequestParam(required = false) String search,
             Pageable pageable
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         LocalDateTime effectiveFromDate = fromDate;
         LocalDateTime effectiveToDate = toDate;
 
@@ -177,6 +182,7 @@ public class OrderController {
     @GetMapping("/restaurant/{restaurantId}")
     @Operation(summary = "Get restaurant orders", description = "Get orders for a specific restaurant")
     public ResponseEntity<ApiResponse<List<Order>>> getRestaurantOrders(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         List<Order> orders = orderService.getOrdersByRestaurant(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
@@ -206,6 +212,7 @@ public class OrderController {
             @RequestParam(required = false) Long restaurantId,
             Pageable pageable
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Page<SelfServiceOrder> orders;
         if (restaurantId != null) {
             orders = selfServiceOrderRepository.findByOrderRestaurantIdOrderByCreatedAtDesc(restaurantId, pageable);
@@ -222,6 +229,7 @@ public class OrderController {
             @RequestParam(required = false) OrderSource source,
             Pageable pageable
     ) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         // External sources: everything except ADMIN_PANEL, WALK_IN, and WAITER
         List<OrderSource> externalSources = List.of(
                 OrderSource.TELEGRAM_BOT,

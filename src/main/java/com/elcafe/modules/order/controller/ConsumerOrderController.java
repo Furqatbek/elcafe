@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.service.ConsumerOrderService;
@@ -24,12 +25,15 @@ import java.math.BigDecimal;
 public class ConsumerOrderController {
 
     private final ConsumerOrderService consumerOrderService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping
     @Operation(summary = "Place order", description = "Place a new food order (public API for website/mobile)")
     public ResponseEntity<ApiResponse<OrderResponse>> placeOrder(@Valid @RequestBody CreateOrderRequest request) {
         log.info("Received order request from {} for restaurant {}",
                 request.getOrderSource(), request.getRestaurantId());
+
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         OrderResponse response = consumerOrderService.placeOrder(request);
 
@@ -63,6 +67,7 @@ public class ConsumerOrderController {
             @RequestParam(required = false) BigDecimal orderTotal,
             @RequestParam(required = false) Long customerId) {
         log.info("Validating coupon {} for restaurant {}", couponCode, restaurantId);
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ValidateCouponResponse response = consumerOrderService.validateCoupon(
                 restaurantId, couponCode, orderTotal != null ? orderTotal : BigDecimal.ZERO, customerId, null);
         return ResponseEntity.ok(ApiResponse.success("Coupon validation completed", response));

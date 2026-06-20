@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.offline.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.offline.dto.*;
 import com.elcafe.modules.pos.offline.entity.OfflineOrder;
 import com.elcafe.modules.pos.offline.entity.POSDevice;
@@ -32,6 +33,7 @@ class OfflineSyncControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
     @Mock private OfflineSyncService offlineSyncService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private OfflineSyncController controller;
     private final String BASE = "/api/v1/restaurants/1/pos/offline";
 

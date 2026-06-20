@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.shift.entity.EmployeeConsumption;
 import com.elcafe.modules.pos.shift.repository.EmployeeConsumptionRepository;
 import com.elcafe.modules.pos.shift.service.ConsumptionLimitService;
@@ -35,6 +36,7 @@ public class WaiterConsumptionController {
     private final EmployeeConsumptionRepository consumptionRepository;
     private final ConsumptionLimitService consumptionLimitService;
     private final WaiterRepository waiterRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR')")
@@ -76,6 +78,7 @@ public class WaiterConsumptionController {
     public ResponseEntity<ApiResponse<List<ConsumptionLimitService.QuotaStatus>>> getMyQuota(
             @RequestHeader("X-Waiter-Id") Long waiterId,
             @RequestParam Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new IllegalArgumentException("Waiter not found"));
         List<ConsumptionLimitService.QuotaStatus> statuses =

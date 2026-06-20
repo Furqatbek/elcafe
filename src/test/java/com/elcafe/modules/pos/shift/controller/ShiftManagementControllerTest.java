@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.shift.dto.*;
 import com.elcafe.modules.pos.shift.entity.EmployeeShift;
 import com.elcafe.modules.pos.shift.entity.ShiftBreak;
@@ -41,6 +42,7 @@ class ShiftManagementControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     @Mock private ShiftManagementService shiftService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private ShiftManagementController controller;
     private final String BASE = "/api/v1/restaurants/1/pos/shifts";
     private EmployeeShift shift;

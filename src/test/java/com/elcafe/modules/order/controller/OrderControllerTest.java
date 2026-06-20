@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.order.entity.Order;
@@ -62,6 +63,7 @@ class OrderControllerTest {
     @Mock private RestaurantRepository restaurantRepository;
     @Mock private ShiftTimeService shiftTimeService;
     @Mock private SelfServiceOrderRepository selfServiceOrderRepository;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private OrderController controller;
 
     @BeforeEach

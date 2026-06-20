@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.tax.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.pos.tax.dto.*;
@@ -36,6 +37,7 @@ class TaxExemptionControllerTest {
     private MockMvc mockMvc;
     private final ObjectMapper objectMapper = new ObjectMapper();
     @Mock private TaxExemptionService taxExemptionService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private TaxExemptionController controller;
     private final String BASE = "/api/v1/restaurants/1/pos/tax-exemptions";
 

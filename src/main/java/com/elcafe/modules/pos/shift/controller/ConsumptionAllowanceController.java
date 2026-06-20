@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.menu.entity.Category;
@@ -35,10 +36,12 @@ public class ConsumptionAllowanceController {
     private final UserRepository userRepository;
     private final WaiterRepository waiterRepository;
     private final ProductRepository productRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<List<ConsumptionAllowance>>> list(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(ApiResponse.success(
                 "Consumption allowances",
                 allowanceRepository.findByRestaurant_Id(restaurantId)));
@@ -49,6 +52,7 @@ public class ConsumptionAllowanceController {
     public ResponseEntity<ApiResponse<ConsumptionAllowance>> create(
             @PathVariable Long restaurantId,
             @RequestBody UpsertRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ConsumptionAllowance saved = allowanceRepository.save(build(restaurantId, null, request));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Consumption allowance created", saved));
@@ -60,6 +64,7 @@ public class ConsumptionAllowanceController {
             @PathVariable Long restaurantId,
             @PathVariable Long allowanceId,
             @RequestBody UpsertRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ConsumptionAllowance existing = allowanceRepository.findById(allowanceId)
                 .orElseThrow(() -> new IllegalArgumentException("Allowance not found"));
         return ResponseEntity.ok(ApiResponse.success(
@@ -72,6 +77,7 @@ public class ConsumptionAllowanceController {
     public ResponseEntity<ApiResponse<Void>> delete(
             @PathVariable Long restaurantId,
             @PathVariable Long allowanceId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         allowanceRepository.deleteById(allowanceId);
         return ResponseEntity.ok(ApiResponse.success("Consumption allowance deleted", null));
     }
@@ -89,6 +95,7 @@ public class ConsumptionAllowanceController {
             @RequestParam int quantity,
             @RequestParam(required = false) Long employeeId,
             @RequestParam(required = false) Long waiterId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("Product not found"));
         User employee = employeeId != null ? userRepository.findById(employeeId).orElse(null) : null;

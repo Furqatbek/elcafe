@@ -4,6 +4,7 @@ import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.common.security.exception.SecurityPolicyViolationException;
 import com.elcafe.common.security.service.FinancialOperationSecurityService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.order.dto.pos.AttachCustomerRequest;
 import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.ModifyOrderItemRequest;
@@ -74,6 +75,7 @@ public class POSOrderController {
     private final FinancialOperationSecurityService financialSecurityService;
     private final AuditService auditService;
     private final OrderRepository orderRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping
     @Operation(
@@ -85,6 +87,8 @@ public class POSOrderController {
 
         log.info("Received POS order request: type={}, restaurant={}, items={}",
                 request.getOrderType(), request.getRestaurantId(), request.getItems().size());
+
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         POSOrderResponse response = posOrderService.createOrder(request);
 
@@ -105,6 +109,8 @@ public class POSOrderController {
             @RequestParam Long restaurantId) {
 
         log.info("Checking availability for product: {} at restaurant: {}", productId, restaurantId);
+
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         POSProductAvailabilityDTO availability = posOrderService.getProductAvailability(productId, restaurantId);
 
@@ -137,6 +143,8 @@ public class POSOrderController {
             @PathVariable Long restaurantId) {
 
         log.info("Getting open dine-in orders for restaurant: {}", restaurantId);
+
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<POSOrderResponse> orders = posOrderService.getOpenDineInOrders(restaurantId);
 
@@ -588,6 +596,8 @@ public class POSOrderController {
             @RequestParam Long restaurantId) {
 
         log.info("Getting active happy hour for restaurant: {}", restaurantId);
+
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         Optional<ActiveHappyHourResponse> activeHappyHour = happyHourService.getActiveHappyHour(restaurantId);
 

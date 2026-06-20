@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.cashdrawer.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.cashdrawer.dto.CreateCashDrawerRequest;
 import com.elcafe.modules.pos.cashdrawer.dto.DrawerCloseResult;
 import com.elcafe.modules.pos.cashdrawer.dto.DrawerStatusResponse;
@@ -46,6 +47,9 @@ class CashDrawerControllerTest {
 
     @Mock
     private CashDrawerService cashDrawerService;
+
+    @Mock
+    private RestaurantAuthorizationService restaurantAuthorizationService;
 
     @InjectMocks
     private CashDrawerController controller;

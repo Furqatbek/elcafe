@@ -1,5 +1,6 @@
 package com.elcafe.modules.notification.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.notification.dto.StockAlertSubscriptionRequest;
 import com.elcafe.modules.notification.dto.StockAlertSubscriptionResponse;
 import com.elcafe.modules.notification.entity.StockAlertSubscription;
@@ -38,11 +39,13 @@ public class StockAlertController {
     private final StockAlertSubscriptionRepository subscriptionRepository;
     private final StockAlertService stockAlertService;
     private final RestaurantRepository restaurantRepository;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/subscriptions")
     @Operation(summary = "Get all subscriptions", description = "Get all stock alert subscriptions")
     public ResponseEntity<ApiResponse<List<StockAlertSubscriptionResponse>>> getAllSubscriptions(
             @RequestParam(required = false) Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
 
         List<StockAlertSubscription> subscriptions;
         if (restaurantId != null) {
@@ -74,6 +77,7 @@ public class StockAlertController {
     @Operation(summary = "Create subscription", description = "Create a new stock alert subscription")
     public ResponseEntity<ApiResponse<StockAlertSubscriptionResponse>> createSubscription(
             @Valid @RequestBody StockAlertSubscriptionRequest request) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         // Check if subscription already exists
         if (subscriptionRepository.existsByRestaurantIdAndTelegramChatId(
@@ -160,6 +164,7 @@ public class StockAlertController {
     @PostMapping("/trigger/{restaurantId}")
     @Operation(summary = "Trigger alert", description = "Manually trigger stock alert for a restaurant")
     public ResponseEntity<ApiResponse<Void>> triggerAlert(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         stockAlertService.triggerAlertForRestaurant(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Stock alert triggered successfully", null));
     }
@@ -167,6 +172,7 @@ public class StockAlertController {
     @GetMapping("/summary/{restaurantId}")
     @Operation(summary = "Get stock summary", description = "Get stock alert summary for a restaurant")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStockSummary(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         Map<String, Object> summary = stockAlertService.getStockSummary(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Stock summary retrieved successfully", summary));
     }

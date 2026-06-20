@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.shift.entity.ShiftRules;
 import com.elcafe.modules.pos.shift.service.OvertimeRuleService;
 import com.elcafe.utils.ApiResponse;
@@ -15,9 +16,11 @@ import org.springframework.web.bind.annotation.*;
 public class ShiftRulesController {
 
     private final OvertimeRuleService overtimeRuleService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<ApiResponse<ShiftRules>> getRules(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ShiftRules rules = overtimeRuleService.getOrCreateRules(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Shift rules retrieved", rules));
     }
@@ -26,6 +29,7 @@ public class ShiftRulesController {
     public ResponseEntity<ApiResponse<ShiftRules>> updateRules(
             @PathVariable Long restaurantId,
             @RequestBody ShiftRules rules) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         ShiftRules updated = overtimeRuleService.updateRules(restaurantId, rules);
         return ResponseEntity.ok(ApiResponse.success("Shift rules updated", updated));
     }

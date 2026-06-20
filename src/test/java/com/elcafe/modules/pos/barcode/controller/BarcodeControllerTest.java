@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.barcode.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.barcode.dto.BarcodeLookupResult;
 import com.elcafe.modules.pos.barcode.service.BarcodeService;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BarcodeControllerTest {
     private MockMvc mockMvc;
     @Mock private BarcodeService barcodeService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private BarcodeController controller;
 
     @BeforeEach

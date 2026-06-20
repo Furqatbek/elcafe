@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.shift.entity.ShiftSwapRequest;
 import com.elcafe.modules.pos.shift.service.ShiftSwapService;
 import com.elcafe.utils.ApiResponse;
@@ -21,21 +22,25 @@ import java.util.List;
 public class ShiftSwapController {
 
     private final ShiftSwapService swapService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @GetMapping("/restaurant/{restaurantId}")
     public ResponseEntity<ApiResponse<List<ShiftSwapRequest>>> getAll(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Swap requests retrieved",
                 swapService.getAllRequests(restaurantId)));
     }
 
     @GetMapping("/restaurant/{restaurantId}/pending")
     public ResponseEntity<ApiResponse<List<ShiftSwapRequest>>> getPending(@PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(ApiResponse.success("Pending requests retrieved",
                 swapService.getPendingRequests(restaurantId)));
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<ShiftSwapRequest>> createRequest(@RequestBody CreateSwapRequest request) {
+        restaurantAuthorizationService.checkAccess(request.getRestaurantId());
         ShiftSwapRequest swap = swapService.createRequest(
                 request.restaurantId, request.requestingEmployeeId,
                 request.targetEmployeeId, request.scheduleId,

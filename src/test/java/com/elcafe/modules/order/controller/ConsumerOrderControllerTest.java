@@ -3,6 +3,7 @@ package com.elcafe.modules.order.controller;
 import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.enums.OrderSource;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.order.service.ConsumerOrderService;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,6 +34,7 @@ class ConsumerOrderControllerTest {
 
     private MockMvc mockMvc;
     @Mock private ConsumerOrderService consumerOrderService;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private ConsumerOrderController controller;
 
     @BeforeEach

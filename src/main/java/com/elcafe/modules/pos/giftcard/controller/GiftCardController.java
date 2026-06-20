@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.giftcard.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.pos.giftcard.dto.*;
 import com.elcafe.modules.pos.giftcard.entity.GiftCard;
 import com.elcafe.modules.pos.giftcard.entity.GiftCardTransaction;
@@ -24,6 +25,7 @@ import java.util.List;
 public class GiftCardController {
 
     private final GiftCardService giftCardService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     // Gift Card Types
     @PostMapping("/types")
@@ -31,6 +33,7 @@ public class GiftCardController {
     public ResponseEntity<GiftCardType> createType(
             @PathVariable Long restaurantId,
             @Valid @RequestBody CreateGiftCardTypeRequest request) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(giftCardService.createGiftCardType(restaurantId, request));
     }
 
@@ -38,6 +41,7 @@ public class GiftCardController {
     @Operation(summary = "Get all gift card types")
     public ResponseEntity<List<GiftCardType>> getTypes(
             @PathVariable Long restaurantId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(giftCardService.getGiftCardTypes(restaurantId));
     }
 
@@ -48,6 +52,7 @@ public class GiftCardController {
             @PathVariable Long restaurantId,
             @Valid @RequestBody IssueGiftCardRequest request,
             @RequestParam Long operatorId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(giftCardService.issueGiftCard(restaurantId, request, operatorId));
     }
 
@@ -56,6 +61,7 @@ public class GiftCardController {
     public ResponseEntity<Page<GiftCard>> listGiftCards(
             @PathVariable Long restaurantId,
             Pageable pageable) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(giftCardService.listGiftCards(restaurantId, pageable));
     }
 
@@ -64,6 +70,7 @@ public class GiftCardController {
     public ResponseEntity<GiftCardBalanceResponse> checkBalance(
             @PathVariable Long restaurantId,
             @PathVariable String cardNumberOrBarcode) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(giftCardService.checkBalance(restaurantId, cardNumberOrBarcode));
     }
 
@@ -73,6 +80,7 @@ public class GiftCardController {
             @PathVariable Long restaurantId,
             @Valid @RequestBody RedeemGiftCardRequest request,
             @RequestParam Long operatorId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(giftCardService.redeemGiftCard(
             restaurantId, request, null, null, operatorId));
     }
@@ -84,6 +92,7 @@ public class GiftCardController {
             @PathVariable String cardNumberOrBarcode,
             @RequestParam BigDecimal amount,
             @RequestParam Long operatorId) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(giftCardService.reloadGiftCard(
             restaurantId, cardNumberOrBarcode, amount, operatorId));
     }
@@ -94,6 +103,7 @@ public class GiftCardController {
             @PathVariable Long restaurantId,
             @PathVariable String cardNumberOrBarcode,
             Pageable pageable) {
+        restaurantAuthorizationService.checkAccess(restaurantId);
         return ResponseEntity.ok(giftCardService.getTransactionHistory(
             restaurantId, cardNumberOrBarcode, pageable));
     }
