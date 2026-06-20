@@ -51,6 +51,9 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     List<Customer> findByActiveTrue();
 
+    /** Tenant-scoped variant of {@link #findByActiveTrue()} (§3.3 — admin activity/RFM listing). */
+    List<Customer> findByRestaurantIdAndActiveTrue(Long restaurantId);
+
     @Query("SELECT c FROM Customer c WHERE MONTH(c.birthDate) = :month AND DAY(c.birthDate) = :day")
     List<Customer> findByBirthDateMonthAndDay(@Param("month") int month, @Param("day") int day);
 

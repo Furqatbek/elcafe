@@ -2,6 +2,7 @@ package com.elcafe.modules.customer.service;
 
 import com.elcafe.modules.customer.dto.CustomerActivityDTO;
 import com.elcafe.modules.customer.dto.CustomerActivityFilterDTO;
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.order.entity.Order;
@@ -32,8 +33,14 @@ public class CustomerActivityService {
      * Get all customers with their activity data (RFM analysis)
      */
     public List<CustomerActivityDTO> getAllCustomersActivity() {
-        // Use active customers only to avoid loading inactive/soft-deleted customers
-        List<Customer> customers = customerRepository.findByActiveTrue();
+        // §3.3: this admin RFM listing has no restaurantId param, so derive the tenant from the
+        // authenticated principal (TenantContext) rather than leaning solely on the @Filter backstop —
+        // otherwise it leaks every tenant's customer PII in shadow/off mode. null tenant (SUPER_ADMIN /
+        // unscoped modes) = all, mirroring CustomerService#listForTenant.
+        Long tenantId = TenantContext.getRestaurantId();
+        List<Customer> customers = (tenantId != null)
+                ? customerRepository.findByRestaurantIdAndActiveTrue(tenantId)
+                : customerRepository.findByActiveTrue();
         List<CustomerActivityDTO> activityList = customers.stream()
                 .map(this::calculateCustomerActivity)
                 .collect(Collectors.toList());
