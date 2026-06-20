@@ -61,7 +61,7 @@ Nothing downstream is trustworthy without this.
 
 > **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (filter in *shadow* + controller
 > retrofit **started**) · §3.4 ◐ (backstop wired; all entities scoped, +AuditLog, User excluded) · §3.5 ☐
-> (deferred) · §3.6 ◐ (waiter entity bound; token-binding pending) · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
+> (deferred) · §3.6 ✅ (waiter tenant-bound; PIN-uniqueness hardening separate) · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
 > default **shadow**) plus a mode-aware `RestaurantAuthorizationService.checkAccess(...)` for
@@ -180,7 +180,7 @@ Nothing downstream is trustworthy without this.
   no fallback. Add a token/`tokenVersion` or Redis denylist so "suspend tenant" can hard-kill
   active sessions immediately (otherwise suspension waits for token expiry).
 
-### 3.6 Tenant-scope waiters — ◐ ENTITY BOUND (token-binding pending)
+### 3.6 Tenant-scope waiters — ✅ TENANT-BOUND (PIN per-restaurant uniqueness is separate hardening)
 - ✅ **Migration `V148`** — adds `waiters.restaurant_id` (FK + index) and backfills it from each
   waiter's activity: most-frequent `orders.restaurant_id`, then `waiter_performance`, then the
   oldest restaurant for activity-less waiters. Left NULLABLE (a later migration can enforce NOT
@@ -191,13 +191,15 @@ Nothing downstream is trustworthy without this.
 - ✅ **`WaiterService.createWaiter`** — binds the new waiter to the creating admin's restaurant.
 - ✅ **`PayrollController GET /employees`** — waiters now scoped by tenant (clears the residual the
   User-listing fix left open). `WaiterRepository.findByRestaurantIdOrderByNameAsc` added.
-- ☐ **Waiter token tenant-binding** — include `restaurantId` in the waiter token
-  (`JwtUtil.generateWaiterAccessToken`) and stash it in `TenantContext` from
-  `JwtAuthenticationFilter`, so *waiter-authenticated requests* (not just admin views of waiters)
-  are tenant-scoped. Until then, waiter requests carry no tenant and the backstop is inactive for
-  them.
-- ☐ Make `pin_code`/`email` unique **per restaurant** (currently global) and scope waiter login by
-  restaurant; enforce `restaurant_id` NOT NULL once backfill is confirmed.
+- ✅ **Waiter token tenant-binding** — `JwtUtil.generateWaiterAccessToken` now carries a
+  `restaurantId` claim (from `Waiter.restaurantId`), and `JwtAuthenticationFilter` stashes it in
+  `TenantContext`, so *waiter-authenticated requests* (not just admin views of waiters) are scoped
+  by the backstop in enforce mode. `TenantEnforcementFilter` now **always** clears `TenantContext`
+  (even in OFF mode) so the waiter-set value can't leak across pooled request threads.
+- ☐ **Hardening (separate increment):** make `pin_code`/`email` unique **per restaurant**
+  (currently global) and scope waiter login by restaurant — this needs a waiter-login-flow change
+  (the PIN lookup must take a restaurant). Enforce `restaurant_id` NOT NULL once backfill is
+  confirmed across environments.
 
 ### 3.7 Decide the customer-tenancy model
 Customers are currently global. Two options — pick one:

@@ -189,7 +189,7 @@ class WaiterServiceTest {
         WaiterAuthRequest request = new WaiterAuthRequest();
         request.setPinCode("1234");
         when(waiterRepository.findByPinCode("1234")).thenReturn(Optional.of(waiter));
-        when(jwtUtil.generateWaiterAccessToken(anyString(), anyLong(), anyString())).thenReturn("jwt-token");
+        when(jwtUtil.generateWaiterAccessToken(anyString(), anyLong(), anyString(), any())).thenReturn("jwt-token");
         when(waiterTableRepository.countByWaiterIdAndActiveTrue(anyLong())).thenReturn(0L);
 
         WaiterAuthResponse result = waiterService.authenticate(request);
@@ -220,11 +220,11 @@ class WaiterServiceTest {
         WaiterAuthRequest request = new WaiterAuthRequest();
         request.setPinCode("1234");
         when(waiterRepository.findByPinCode("1234")).thenReturn(Optional.of(waiter));
-        when(jwtUtil.generateWaiterAccessToken(eq("waiter@test.com"), anyLong(), anyString())).thenReturn("tok");
+        when(jwtUtil.generateWaiterAccessToken(eq("waiter@test.com"), anyLong(), anyString(), any())).thenReturn("tok");
         when(waiterTableRepository.countByWaiterIdAndActiveTrue(anyLong())).thenReturn(0L);
 
         waiterService.authenticate(request);
-        verify(jwtUtil).generateWaiterAccessToken(eq("waiter@test.com"), eq(1L), eq("WAITER"));
+        verify(jwtUtil).generateWaiterAccessToken(eq("waiter@test.com"), eq(1L), eq("WAITER"), any());
     }
 
     // ==================== assignToTable ====================

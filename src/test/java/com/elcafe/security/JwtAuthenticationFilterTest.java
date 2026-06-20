@@ -1,5 +1,6 @@
 package com.elcafe.security;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.auth.enums.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -43,6 +44,7 @@ class JwtAuthenticationFilterTest {
     void setUp() {
         filter = new JwtAuthenticationFilter(jwtUtil, userDetailsService);
         SecurityContextHolder.clearContext();
+        TenantContext.clear();
     }
 
     @Test @DisplayName("valid token — sets authentication in SecurityContext")
@@ -112,5 +114,33 @@ class JwtAuthenticationFilterTest {
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
         assertThat(SecurityContextHolder.getContext().getAuthentication().getName()).isEqualTo("+998901234567");
         verify(filterChain).doFilter(request, response);
+    }
+
+    @Test @DisplayName("waiter token — binds TenantContext to the waiter's restaurant (§3.6)")
+    void waiterToken_bindsTenantContext() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer waiter-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(jwtUtil.extractUsername("waiter-token")).thenReturn("waiter@test.com");
+        when(jwtUtil.isTokenExpired("waiter-token")).thenReturn(false);
+        Claims claims = Jwts.claims()
+                .subject("waiter@test.com")
+                .add("type", "waiter")
+                .add("role", "WAITER")
+                .add("waiterId", 9L)
+                .add("restaurantId", 42L)
+                .build();
+        when(jwtUtil.extractAllClaims("waiter-token")).thenReturn(claims);
+
+        try {
+            filter.doFilterInternal(request, response, filterChain);
+
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+            assertThat(TenantContext.getRestaurantId()).isEqualTo(42L);
+            verify(filterChain).doFilter(request, response);
+        } finally {
+            TenantContext.clear();
+        }
     }
 }

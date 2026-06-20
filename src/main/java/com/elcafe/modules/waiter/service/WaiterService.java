@@ -226,7 +226,8 @@ public class WaiterService {
         String token = jwtUtil.generateWaiterAccessToken(
                 identifier,
                 waiter.getId(),
-                waiter.getRole().name()
+                waiter.getRole().name(),
+                waiter.getRestaurantId()
         );
 
         log.info("Waiter authenticated successfully: {} (ID: {})", waiter.getName(), waiter.getId());

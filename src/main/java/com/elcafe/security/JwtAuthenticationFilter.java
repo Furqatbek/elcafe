@@ -1,5 +1,6 @@
 package com.elcafe.security;
 
+import com.elcafe.common.tenant.TenantContext;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -86,6 +87,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                         logger.debug("Waiter authentication set successfully");
+
+                        // §3.6: bind this waiter request to its restaurant so the tenant backstop
+                        // (TenantFilterInterceptor) scopes its queries. Cleared per request by
+                        // TenantEnforcementFilter's finally.
+                        Long restaurantId = claims.get("restaurantId", Long.class);
+                        if (restaurantId != null) {
+                            TenantContext.setRestaurantId(restaurantId);
+                        }
                     }
                 } else if ("consumer".equals(tokenType)) {
                     // Handle consumer/customer authentication

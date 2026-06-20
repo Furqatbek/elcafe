@@ -65,12 +65,12 @@ public class TenantEnforcementFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        if (mode == TenantEnforcementMode.OFF) {
-            chain.doFilter(request, response);
-            return;
-        }
-
         try {
+            if (mode == TenantEnforcementMode.OFF) {
+                chain.doFilter(request, response);
+                return;
+            }
+
             Violation violation = null;
             try {
                 violation = detect(request);
@@ -92,6 +92,9 @@ public class TenantEnforcementFilter extends OncePerRequestFilter {
 
             chain.doFilter(request, response);
         } finally {
+            // Always clear, even in OFF mode: JwtAuthenticationFilter may populate TenantContext for
+            // waiter tokens (§3.6) regardless of this filter's mode, and it must not leak across the
+            // pooled request thread.
             TenantContext.clear();
         }
     }

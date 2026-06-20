@@ -36,12 +36,13 @@ class JwtUtilTest {
 
     @Test @DisplayName("generateWaiterAccessToken — contains waiterId and role claims")
     void generateConsumerToken_containsClaims() {
-        String token = jwtUtil.generateWaiterAccessToken("waiter-pin", 5L, "WAITER");
+        String token = jwtUtil.generateWaiterAccessToken("waiter-pin", 5L, "WAITER", 42L);
 
         Claims claims = jwtUtil.extractAllClaims(token);
         assertThat(claims.getSubject()).isEqualTo("waiter-pin");
         assertThat(claims.get("waiterId", Long.class)).isEqualTo(5L);
         assertThat(claims.get("type", String.class)).isEqualTo("waiter");
+        assertThat(claims.get("restaurantId", Long.class)).isEqualTo(42L);
     }
 
     @Test @DisplayName("validateToken — valid token returns true")
