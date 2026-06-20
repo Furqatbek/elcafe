@@ -2,6 +2,7 @@ package com.elcafe.modules.inventory.entity;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 @Entity(name = "InventoryIngredient")
 @Table(name = "inventory_ingredients")
 @EntityListeners(AuditingEntityListener.class)
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class Ingredient {
 
     @Id
