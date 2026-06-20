@@ -1,5 +1,6 @@
 package com.elcafe.modules.auth.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.dto.CreateOperatorRequest;
 import com.elcafe.modules.auth.dto.OperatorDTO;
 import com.elcafe.modules.auth.dto.UpdateOperatorRequest;
@@ -20,14 +21,22 @@ public class OperatorService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     /**
-     * Get all operators with pagination
+     * Get all operators with pagination.
+     *
+     * <p>§3.3: OPERATOR is a tenant-scoped role and {@link User} is not Hibernate-@Filtered, so scope
+     * the listing at the query layer (mirrors SystemUserController). null scope (SUPER_ADMIN /
+     * shadow/off) lists all, preserving pre-enforcement behaviour.
      */
     @Transactional(readOnly = true)
     public Page<OperatorDTO> getAllOperators(Pageable pageable) {
-        return userRepository.findByRole(UserRole.OPERATOR, pageable)
-                .map(this::convertToDTO);
+        Long tenantScope = restaurantAuthorizationService.currentTenantScopeOrNull();
+        Page<User> operators = (tenantScope == null)
+                ? userRepository.findByRole(UserRole.OPERATOR, pageable)
+                : userRepository.findByRoleAndRestaurantId(UserRole.OPERATOR, tenantScope, pageable);
+        return operators.map(this::convertToDTO);
     }
 
     /**
@@ -41,6 +50,8 @@ public class OperatorService {
         if (user.getRole() != UserRole.OPERATOR) {
             throw new ResourceNotFoundException("User with id " + id + " is not an operator");
         }
+        // §3.3: prevent cross-tenant read of an operator via a guessed id.
+        restaurantAuthorizationService.checkAccess(user.getRestaurantId());
 
         return convertToDTO(user);
     }
@@ -64,6 +75,9 @@ public class OperatorService {
                 .role(UserRole.OPERATOR)
                 .active(request.getActive() != null ? request.getActive() : true)
                 .emailVerified(false)
+                // §3.3: bind the operator to the creator's restaurant so it is tenant-scoped once
+                // enforcement is on (null for SUPER_ADMIN / pre-enforcement, preserving behaviour).
+                .restaurantId(restaurantAuthorizationService.currentTenantScopeOrNull())
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -81,6 +95,8 @@ public class OperatorService {
         if (user.getRole() != UserRole.OPERATOR) {
             throw new IllegalArgumentException("User with id " + id + " is not an operator");
         }
+        // §3.3: prevent cross-tenant account takeover (e.g. password reset) via a guessed id.
+        restaurantAuthorizationService.checkAccess(user.getRestaurantId());
 
         // Check if email is being updated and if it already exists
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
@@ -125,6 +141,8 @@ public class OperatorService {
         if (user.getRole() != UserRole.OPERATOR) {
             throw new IllegalArgumentException("User with id " + id + " is not an operator");
         }
+        // §3.3: prevent cross-tenant deletion via a guessed id.
+        restaurantAuthorizationService.checkAccess(user.getRestaurantId());
 
         userRepository.delete(user);
     }

@@ -1,5 +1,6 @@
 package com.elcafe.modules.auth.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.dto.CreateOperatorRequest;
 import com.elcafe.modules.auth.dto.OperatorDTO;
 import com.elcafe.modules.auth.dto.UpdateOperatorRequest;
@@ -33,6 +34,7 @@ class OperatorServiceTest {
 
     @Mock private UserRepository userRepository;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private OperatorService operatorService;
 
     private User operator;
@@ -47,6 +49,7 @@ class OperatorServiceTest {
 
     @Test @DisplayName("getAllOperators — returns paginated")
     void getAllOperators_returnsPage() {
+        when(restaurantAuthorizationService.currentTenantScopeOrNull()).thenReturn(null);
         when(userRepository.findByRole(UserRole.OPERATOR, PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(operator), PageRequest.of(0, 10), 1));
 
@@ -140,5 +143,29 @@ class OperatorServiceTest {
         operatorService.deleteOperator(1L);
 
         verify(userRepository).delete(operator);
+    }
+
+    @Test @DisplayName("getAllOperators — scopes to caller's tenant when set (§3.3)")
+    void getAllOperators_scopedToTenant() {
+        when(restaurantAuthorizationService.currentTenantScopeOrNull()).thenReturn(7L);
+        when(userRepository.findByRoleAndRestaurantId(UserRole.OPERATOR, 7L, PageRequest.of(0, 10)))
+                .thenReturn(new PageImpl<>(List.of(operator), PageRequest.of(0, 10), 1));
+
+        Page<OperatorDTO> result = operatorService.getAllOperators(PageRequest.of(0, 10));
+
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        verify(userRepository).findByRoleAndRestaurantId(UserRole.OPERATOR, 7L, PageRequest.of(0, 10));
+        verify(userRepository, never()).findByRole(any(), any());
+    }
+
+    @Test @DisplayName("getOperatorById — cross-tenant denied (§3.3)")
+    void getOperatorById_crossTenant_denied() {
+        operator.setRestaurantId(2L);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(operator));
+        doThrow(new org.springframework.security.access.AccessDeniedException("denied"))
+                .when(restaurantAuthorizationService).checkAccess(2L);
+
+        assertThatThrownBy(() -> operatorService.getOperatorById(1L))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
     }
 }

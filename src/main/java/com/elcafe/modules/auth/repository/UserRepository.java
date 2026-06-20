@@ -24,6 +24,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Page<User> findByRole(UserRole role, Pageable pageable);
 
+    /** Tenant-scoped role listing (§3.3 — User is not @Filter'd, so scope at the query layer). */
+    Page<User> findByRoleAndRestaurantId(UserRole role, Long restaurantId, Pageable pageable);
+
     Page<User> findByRoleAndActiveTrue(UserRole role, Pageable pageable);
 
     List<User> findByRoleNotInAndActiveTrue(Collection<UserRole> excludedRoles);
