@@ -144,6 +144,7 @@ public class PurchaseOrderController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     public ResponseEntity<ApiResponse<List<PurchaseOrderResponse>>> getPurchaseOrders(
             @RequestParam Long restaurantId) {
         log.info("Getting purchase orders for restaurant: {}", restaurantId);
@@ -158,6 +159,7 @@ public class PurchaseOrderController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> getPurchaseOrderById(@PathVariable Long id) {
         log.info("Getting purchase order: {}", id);
 

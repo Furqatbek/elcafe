@@ -158,6 +158,28 @@ class TenantBackstopIsolationTest {
                 .isEmpty();
     }
 
+    @Test
+    @DisplayName("FIX extends to deleteById: a foreign id is not deleted while scoped")
+    void repositoryDeleteById_isScoped() {
+        enableFilterFor(restaurantA);
+
+        // deleteById routes through the overridden (query-based) findById; a foreign id resolves to
+        // empty, so tenant B's row is left untouched — closing the surrogate-id delete IDOR (e.g. the
+        // blind allowance/schedule deleteById calls) on the flip. (Same-tenant delete still works.)
+        customerRepository.deleteById(custBId);
+        customerRepository.deleteById(custA1Id);
+        em.flush();
+        em.clear();
+
+        em.unwrap(Session.class).disableFilter("restaurantFilter");
+        assertThat(customerRepository.findById(custBId))
+                .as("foreign row must not be deleted via scoped deleteById")
+                .isPresent();
+        assertThat(customerRepository.findById(custA1Id))
+                .as("same-tenant delete still works")
+                .isEmpty();
+    }
+
     private static Restaurant restaurant(String name) {
         Restaurant r = new Restaurant();
         r.setName(name);

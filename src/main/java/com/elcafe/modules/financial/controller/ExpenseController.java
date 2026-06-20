@@ -197,6 +197,7 @@ public class ExpenseController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     public ResponseEntity<ApiResponse<List<ExpenseResponse>>> getExpenses(
             @RequestParam Long restaurantId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -219,6 +220,7 @@ public class ExpenseController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     public ResponseEntity<ApiResponse<ExpenseResponse>> getExpenseById(@PathVariable Long id) {
         log.info("Getting expense: {}", id);
 
@@ -227,6 +229,7 @@ public class ExpenseController {
     }
 
     @GetMapping("/unpaid")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     public ResponseEntity<ApiResponse<List<ExpenseResponse>>> getUnpaidExpenses(
             @RequestParam Long restaurantId) {
         log.info("Getting unpaid expenses for restaurant: {}", restaurantId);
