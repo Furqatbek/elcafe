@@ -105,6 +105,18 @@ not a refund. Transaction/top-up history rows are retained for audit. Same H2/Fl
 V150–V152: V153 is Postgres-only and not exercised by the test suite — validate on a Postgres copy
 (and back up) before deploy.
 
+#### Tenant-assignment review surface (§3.7 backfill safeguard)
+
+The V148/V150 backfills assigned `restaurant_id` from order activity, falling back to the oldest
+restaurant when there was no evidence — those fallback assignments are guesses. **V154** adds
+`tenant_assignment_confidence` (NOT NULL, default `HIGH`) to `customers` and `waiters` and backfills
+`LOW` where no order (nor, for waiters, `waiter_performance`) corroborates the assigned restaurant.
+
+A new SUPER_ADMIN, cross-tenant **`/api/v1/admin/tenant-review`** surface (`TenantReviewController`)
+lists the `LOW`-confidence customers/waiters and reassigns them to the correct restaurant, which marks
+the row `HIGH` (reviewed). Balances were already zeroed by V153, so this is about assignment
+correctness, not money. V154 is Postgres-only (not exercised by the H2 suite).
+
 ### Added - 2026-06-08
 
 #### Customer Wallet & Loyalty Stages
