@@ -56,7 +56,7 @@ class ConsumerAuthServiceTest {
         ReflectionTestUtils.setField(consumerAuthService, "developmentMode", false);
 
         customer = Customer.builder()
-                .id(1L).phone("+998901234567")
+                .id(1L).restaurantId(10L).phone("+998901234567")
                 .firstName("Test").lastName("Customer")
                 .active(true).build();
     }
@@ -65,10 +65,11 @@ class ConsumerAuthServiceTest {
     void requestOtp_newCustomer_createsAccount() {
         ConsumerLoginRequest request = new ConsumerLoginRequest();
         request.setPhoneNumber("+998901234567");
+        request.setRestaurantId(10L);
         request.setRegistrationSource(RegistrationSource.MOBILE_APP);
 
         when(otpCodeRepository.countRecentOtpsByPhoneNumber(anyString(), any())).thenReturn(0L);
-        when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.empty());
+        when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 10L)).thenReturn(Optional.empty());
         when(customerRepository.save(any(Customer.class))).thenAnswer(i -> { Customer c = i.getArgument(0); c.setId(1L); return c; });
         when(otpCodeRepository.save(any(OtpCode.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -84,10 +85,11 @@ class ConsumerAuthServiceTest {
     void requestOtp_existingCustomer_sendsOtp() {
         ConsumerLoginRequest request = new ConsumerLoginRequest();
         request.setPhoneNumber("+998901234567");
+        request.setRestaurantId(10L);
         request.setRegistrationSource(RegistrationSource.MOBILE_APP);
 
         when(otpCodeRepository.countRecentOtpsByPhoneNumber(anyString(), any())).thenReturn(0L);
-        when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+        when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 10L)).thenReturn(Optional.of(customer));
         when(customerRepository.save(any(Customer.class))).thenAnswer(i -> i.getArgument(0));
         when(otpCodeRepository.save(any(OtpCode.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -113,6 +115,7 @@ class ConsumerAuthServiceTest {
     void verifyOtp_success() {
         VerifyOtpRequest request = new VerifyOtpRequest();
         request.setPhoneNumber("+998901234567");
+        request.setRestaurantId(10L);
         request.setOtpCode("123456");
 
         OtpCode otp = OtpCode.builder()
@@ -122,7 +125,7 @@ class ConsumerAuthServiceTest {
         when(otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse("+998901234567", "123456"))
                 .thenReturn(Optional.of(otp));
         when(otpCodeRepository.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+        when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 10L)).thenReturn(Optional.of(customer));
         when(sessionRepository.save(any(ConsumerSession.class))).thenAnswer(i -> i.getArgument(0));
 
         ConsumerAuthResponse result = consumerAuthService.verifyOtp(request, "127.0.0.1", "TestAgent");
@@ -130,7 +133,7 @@ class ConsumerAuthServiceTest {
         assertThat(result.getAccessToken()).isNotNull();
         assertThat(result.getRefreshToken()).isNotNull();
         assertThat(result.getCustomerId()).isEqualTo(1L);
-        verify(sessionRepository).invalidateAllSessionsByPhoneNumber("+998901234567");
+        verify(sessionRepository).invalidateAllSessionsByCustomerId(1L);
     }
 
     @Test @DisplayName("verifyOtp — invalid code throws")

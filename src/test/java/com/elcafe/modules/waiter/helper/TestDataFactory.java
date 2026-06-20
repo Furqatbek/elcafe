@@ -113,6 +113,7 @@ public final class TestDataFactory {
     public static Customer createCustomer() {
         Customer c = new Customer();
         c.setId(1L);
+        c.setRestaurantId(1L);
         c.setFirstName("Test");
         c.setLastName("Customer");
         c.setPhone("+998901111111");

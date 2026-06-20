@@ -33,7 +33,7 @@ class ReferralCodeRepositoryTest {
     }
 
     private Customer persistCustomer(String firstName, String phone) {
-        Customer c = Customer.builder()
+        Customer c = Customer.builder().restaurantId(1L)
                 .firstName(firstName).lastName("Test").phone(phone).active(true).build();
         em.persist(c);
         return c;

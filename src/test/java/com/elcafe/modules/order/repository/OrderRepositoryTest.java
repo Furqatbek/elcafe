@@ -39,7 +39,7 @@ class OrderRepositoryTest {
         restaurant.setActive(true);
         em.persist(restaurant);
 
-        customer = Customer.builder()
+        customer = Customer.builder().restaurantId(1L)
                 .firstName("John").lastName("Doe").phone("1234567890")
                 .active(true)
                 .build();

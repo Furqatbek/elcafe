@@ -779,7 +779,7 @@ class SelfServiceOrderServiceTest {
                 .thenReturn(List.of(cartItem));
         when(settingsRepository.findByRestaurantId(restaurant.getId()))
                 .thenReturn(Optional.of(settings));
-        when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+        when(customerRepository.findByPhoneAndRestaurantId("+998901234567", restaurant.getId())).thenReturn(Optional.of(customer));
         when(dailyOrderSequenceService.generateNextOrderNumber()).thenReturn("ORD-002");
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> {
             Order o = inv.getArgument(0); o.setId(2L); return o;
@@ -791,7 +791,7 @@ class SelfServiceOrderServiceTest {
         SelfServiceOrder result = service.submitOrder("test-session-token", request);
 
         assertNotNull(result);
-        verify(customerRepository).findByPhone("+998901234567");
+        verify(customerRepository).findByPhoneAndRestaurantId("+998901234567", restaurant.getId());
     }
 
     @Test

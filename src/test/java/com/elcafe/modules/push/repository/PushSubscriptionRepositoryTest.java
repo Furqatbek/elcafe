@@ -37,6 +37,7 @@ class PushSubscriptionRepositoryTest {
     @BeforeEach
     void setUp() {
         customer = new Customer();
+        customer.setRestaurantId(1L);
         customer.setFirstName("John");
         customer.setLastName("Doe");
         customer.setPhone("+1234567890");

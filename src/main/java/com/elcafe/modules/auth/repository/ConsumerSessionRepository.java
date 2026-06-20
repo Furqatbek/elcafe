@@ -40,6 +40,14 @@ public interface ConsumerSessionRepository extends JpaRepository<ConsumerSession
     void invalidateAllSessionsByPhoneNumber(@Param("phoneNumber") String phoneNumber);
 
     /**
+     * Invalidate all sessions for a specific (per-restaurant) customer. V150: re-login under one
+     * restaurant must not drop the customer's sessions at other restaurants sharing the phone.
+     */
+    @Modifying
+    @Query("UPDATE ConsumerSession s SET s.isActive = false WHERE s.customer.id = :customerId")
+    void invalidateAllSessionsByCustomerId(@Param("customerId") Long customerId);
+
+    /**
      * Delete expired sessions (cleanup)
      */
     @Modifying

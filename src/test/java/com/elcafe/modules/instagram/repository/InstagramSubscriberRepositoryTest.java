@@ -33,6 +33,7 @@ class InstagramSubscriberRepositoryTest {
     @BeforeEach
     void setUp() {
         customer = new Customer();
+        customer.setRestaurantId(1L);
         customer.setFirstName("Jane");
         customer.setLastName("Doe");
         customer.setPhone("+9876543210");

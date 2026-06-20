@@ -37,7 +37,7 @@ class PromotionUsageRepositoryTest {
                 .discountValue(new BigDecimal("20")).active(true)
                 .startDate(LocalDateTime.now().minusDays(1)).endDate(LocalDateTime.now().plusDays(30)).build();
         em.persist(promotion);
-        customer = Customer.builder().phone("+998901234567").firstName("Test").lastName("Customer").active(true).build();
+        customer = Customer.builder().restaurantId(1L).phone("+998901234567").firstName("Test").lastName("Customer").active(true).build();
         em.persist(customer);
         Order order = Order.builder().orderNumber("ORD-001").restaurant(restaurant)
                 .subtotal(new BigDecimal("100000")).tax(BigDecimal.ZERO).deliveryFee(BigDecimal.ZERO)

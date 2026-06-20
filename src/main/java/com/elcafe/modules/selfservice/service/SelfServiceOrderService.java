@@ -443,7 +443,7 @@ public class SelfServiceOrderService {
         BigDecimal subtotal = calculateSubtotal(cartItems);
         validateMinimumOrderAmount(subtotal, settings);
 
-        Customer customer = findOrCreateCustomer(request);
+        Customer customer = findOrCreateCustomer(request, session.getRestaurant().getId());
         String customerNotes = sanitizeTextInput(
                 request.getNotes() != null ? request.getNotes() : request.getSpecialInstructions(),
                 MAX_NOTES_LENGTH
@@ -528,7 +528,7 @@ public class SelfServiceOrderService {
         }
     }
 
-    private Customer findOrCreateCustomer(SubmitOrderRequest request) {
+    private Customer findOrCreateCustomer(SubmitOrderRequest request, Long restaurantId) {
         if (request.getCustomerPhone() == null || request.getCustomerPhone().isEmpty()) {
             return null;
         }
@@ -536,7 +536,7 @@ public class SelfServiceOrderService {
         String phone = request.getCustomerPhone().trim();
         String customerName = request.getCustomerName() != null ? request.getCustomerName().trim() : "";
 
-        return customerRepository.findByPhone(phone)
+        return customerRepository.findByPhoneAndRestaurantId(phone, restaurantId)
                 .map(existingCustomer -> {
                     if (!customerName.isEmpty() &&
                         (existingCustomer.getFirstName() == null || existingCustomer.getFirstName().isEmpty()
@@ -548,13 +548,14 @@ public class SelfServiceOrderService {
                 })
                 .orElseGet(() -> {
                     Customer newCustomer = Customer.builder()
+                            .restaurantId(restaurantId)
                             .phone(phone)
                             .firstName(customerName.isEmpty() ? "Customer" : customerName)
                             .lastName("")
                             .registrationSource(RegistrationSource.QR_ORDER)
                             .active(true)
                             .build();
-                    log.info("Creating new customer from self-service order: phone={}", phone);
+                    log.info("Creating new customer from self-service order: phone={}, restaurant={}", phone, restaurantId);
                     return customerRepository.save(newCustomer);
                 });
     }

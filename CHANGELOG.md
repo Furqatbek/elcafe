@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - 2026-06-20
+
+#### Customers are now per-restaurant (tenant-scoped identity)
+
+Until now a customer was a **global** identity — one row shared across every restaurant it ordered
+from — which leaked PII across tenants (admin customer lists, search-by-phone) and made the §3.4
+Hibernate tenant `@Filter` backstop unusable for customers. Customers are now scoped to a restaurant,
+matching waiters (§3.6).
+
+**⚠️ Breaking — consumer auth API**:
+- `POST /api/v1/consumer/auth/login` and `POST /api/v1/consumer/auth/verify` now require a
+  `restaurantId` (Long) in the request body. A returning customer is matched by
+  `(phone, restaurantId)`; a new one is created under that restaurant. Existing consumer clients must
+  send `restaurantId` (already known from the QR/menu context). The consumer access token now carries
+  a `restaurantId` claim, which `JwtAuthenticationFilter` binds into `TenantContext` so consumer
+  requests are tenant-scoped by the backstop (same mechanism as waiter tokens).
+
+**Backend**:
+- **V150** migration: adds `customers.restaurant_id` (FK, NOT NULL, indexed). Backfills each customer
+  to its primary restaurant (most orders; ties → lowest id). A customer that spans multiple
+  restaurants is **fragmented** into one row per restaurant: the original row keeps the primary
+  restaurant plus all global per-customer assets that cannot be split (loyalty balance, wallet
+  top-ups, addresses, coupons, push/telegram/instagram subscriptions, consumer sessions, promotion
+  usage, milestone redemptions); a fresh "shadow" row is created for each other restaurant with only
+  that restaurant's restaurant-scoped rows (orders, reservations, reviews, self-service sessions,
+  tax-exemption logs, gift cards, referral codes, referrals) repointed to it. Nothing is duplicated,
+  so no balance or point total is inflated. Global email uniqueness becomes the composite
+  `(restaurant_id, email)`; phone uniqueness becomes `(restaurant_id, phone)`; `qr_code` stays
+  globally unique.
+- `Customer` gains a `restaurantId` and the `restaurantFilter` `@Filter`. Every customer-creation
+  path now sets it from the resolved restaurant: consumer login (explicit), and the
+  order/POS/self-service/reservation paths (threaded from the order's restaurant).
+- `CustomerRepository` gains per-restaurant finders (`findByPhoneAndRestaurantId`,
+  `findByEmailAndRestaurantId`, `findByPhoneContainingAndRestaurantId`, `findByRestaurantId`, etc.)
+  and `findFirstByPhoneOrderByIdAsc` (primary-record resolution for the global Telegram/Instagram
+  bots, whose subscriber rows are not tenant-scoped). The global `findByPhone`/`findByEmail` are no
+  longer safe (a phone/email can map to several rows); `CustomUserDetailsService` now uses
+  `existsBy*`, and admin lookups/lists in `CustomerService` are scoped to the caller's tenant via
+  `TenantContext` (closing the cross-tenant customer-list PII leak in shadow/enforce modes).
+
+**Tests**:
+- Updated fixtures/mocks across the customer, auth, order, referral, promotion, loyalty, telegram,
+  instagram and push test suites for the per-restaurant model. Full suite green except for failures
+  that pre-date this change (unmocked `shiftEnforcementService`/`packagingService`).
+
+> Note: the test suite runs on H2 with `flyway.enabled=false`, so **V150 is not exercised by tests** —
+> it must be validated against a Postgres copy (and backed up) before deploy.
+
 ### Added - 2026-06-08
 
 #### Customer Wallet & Loyalty Stages

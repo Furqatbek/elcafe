@@ -278,7 +278,7 @@ class POSOrderServiceTest {
         void createOrder_dineIn_withItems_success() {
             CreatePOSOrderRequest request = buildDineInRequest();
             stubCommonCreateOrderDeps();
-            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+            when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 1L)).thenReturn(Optional.of(customer));
 
             POSOrderResponse response = posOrderService.createOrder(request);
 
@@ -307,7 +307,7 @@ class POSOrderServiceTest {
             deliveryCustomer.setFirstName("Jane");
             deliveryCustomer.setLastName("Smith");
             deliveryCustomer.setPhone("+998907654321");
-            when(customerRepository.findByPhone("+998907654321")).thenReturn(Optional.of(deliveryCustomer));
+            when(customerRepository.findByPhoneAndRestaurantId("+998907654321", 1L)).thenReturn(Optional.of(deliveryCustomer));
 
             POSOrderResponse response = posOrderService.createOrder(request);
 
@@ -333,7 +333,7 @@ class POSOrderServiceTest {
             takeawayCustomer.setFirstName("Bob");
             takeawayCustomer.setLastName("Wilson");
             takeawayCustomer.setPhone("+998909999999");
-            when(customerRepository.findByPhone("+998909999999")).thenReturn(Optional.of(takeawayCustomer));
+            when(customerRepository.findByPhoneAndRestaurantId("+998909999999", 1L)).thenReturn(Optional.of(takeawayCustomer));
 
             POSOrderResponse response = posOrderService.createOrder(request);
 
@@ -350,7 +350,7 @@ class POSOrderServiceTest {
         void createOrder_withCustomer_findsExisting() {
             CreatePOSOrderRequest request = buildDineInRequest();
             stubCommonCreateOrderDeps();
-            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+            when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 1L)).thenReturn(Optional.of(customer));
 
             POSOrderResponse response = posOrderService.createOrder(request);
 
@@ -373,7 +373,7 @@ class POSOrderServiceTest {
             assertNotNull(response);
             assertNull(response.getCustomerName());
             assertNull(response.getCustomerPhone());
-            verify(customerRepository, never()).findByPhone(anyString());
+            verify(customerRepository, never()).findByPhoneAndRestaurantId(anyString(), any());
         }
 
         @Test
@@ -395,7 +395,7 @@ class POSOrderServiceTest {
             CreatePOSOrderRequest request = buildDineInRequest();
             request.setItems(List.of(bundleItem));
             stubCommonCreateOrderDeps();
-            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+            when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 1L)).thenReturn(Optional.of(customer));
             when(bundleRepository.findById(10L)).thenReturn(Optional.of(bundle));
 
             POSOrderResponse response = posOrderService.createOrder(request);
@@ -435,7 +435,7 @@ class POSOrderServiceTest {
             CreatePOSOrderRequest request = buildDineInRequest();
             request.setItems(List.of(itemWithModifiers));
             stubCommonCreateOrderDeps();
-            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+            when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 1L)).thenReturn(Optional.of(customer));
 
             POSOrderResponse response = posOrderService.createOrder(request);
 
@@ -468,7 +468,7 @@ class POSOrderServiceTest {
             when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
             when(dailyOrderSequenceService.generateNextOrderNumber()).thenReturn("ORD-20260329-0001");
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+            when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 1L)).thenReturn(Optional.of(customer));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
                 Order o = invocation.getArgument(0);
                 if (o.getId() == null) o.setId(1L);
@@ -510,7 +510,7 @@ class POSOrderServiceTest {
             request.setTotal(BigDecimal.valueOf(66000));
 
             stubCommonCreateOrderDeps();
-            when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+            when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 1L)).thenReturn(Optional.of(customer));
             when(productRepository.findById(2L)).thenReturn(Optional.of(product2));
             when(productRepository.findById(3L)).thenReturn(Optional.of(product3));
 
@@ -891,7 +891,7 @@ class POSOrderServiceTest {
                     .phone("+998901111111").qrCode("CST-XYZ").build();
 
             when(orderRepository.findById(2L)).thenReturn(Optional.of(order));
-            when(customerRepository.findByPhone("+998901111111")).thenReturn(Optional.of(target));
+            when(customerRepository.findByPhoneAndRestaurantId("+998901111111", 1L)).thenReturn(Optional.of(target));
             when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
 
             posOrderService.attachCustomer(2L,

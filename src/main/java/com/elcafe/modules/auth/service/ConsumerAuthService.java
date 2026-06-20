@@ -76,10 +76,12 @@ public class ConsumerAuthService {
     @Transactional
     public ConsumerLoginResponse requestOtp(ConsumerLoginRequest request, String ipAddress, String userAgent) {
         String phoneNumber = normalizePhoneNumber(request.getPhoneNumber());
+        Long restaurantId = request.getRestaurantId();
 
         // Debug logging to see what data is received
-        log.info("Login request received - phone: {}, firstName: {}, lastName: {}, birthDate: {}, source: {}, language: {}",
+        log.info("Login request received - phone: {}, restaurantId: {}, firstName: {}, lastName: {}, birthDate: {}, source: {}, language: {}",
                 phoneNumber,
+                restaurantId,
                 request.getFirstName(),
                 request.getLastName(),
                 request.getBirthDate(),
@@ -89,8 +91,8 @@ public class ConsumerAuthService {
         // Rate limiting check
         checkRateLimit(phoneNumber);
 
-        // Find or create customer with provided registration data
-        Customer customer = customerRepository.findByPhone(phoneNumber)
+        // Find or create the customer for THIS restaurant (V150: identity is per-restaurant).
+        Customer customer = customerRepository.findByPhoneAndRestaurantId(phoneNumber, restaurantId)
                 .orElse(null);
 
         boolean isNewCustomer = customer == null;
@@ -109,6 +111,7 @@ public class ConsumerAuthService {
             }
 
             customer = Customer.builder()
+                    .restaurantId(restaurantId)
                     .phone(phoneNumber)
                     .firstName(firstName)
                     .lastName(lastName)
@@ -221,6 +224,7 @@ public class ConsumerAuthService {
     @Transactional
     public ConsumerAuthResponse verifyOtp(VerifyOtpRequest request, String ipAddress, String userAgent) {
         String phoneNumber = normalizePhoneNumber(request.getPhoneNumber());
+        Long restaurantId = request.getRestaurantId();
         String otpCode = request.getOtpCode();
 
         OtpCode otp;
@@ -265,17 +269,18 @@ public class ConsumerAuthService {
         otp.setVerifiedAt(LocalDateTime.now());
         otpCodeRepository.save(otp);
 
-        // Find customer (should have been created during login request)
-        Customer customer = customerRepository.findByPhone(phoneNumber)
+        // Find the per-restaurant customer (created during the matching login request).
+        Customer customer = customerRepository.findByPhoneAndRestaurantId(phoneNumber, restaurantId)
                 .orElseThrow(() -> new RuntimeException("Customer not found. Please request OTP first."));
 
-        log.info("Customer authenticated: phone={}, customerId={}", phoneNumber, customer.getId());
+        log.info("Customer authenticated: phone={}, restaurantId={}, customerId={}",
+                phoneNumber, restaurantId, customer.getId());
 
-        // Invalidate existing sessions
-        sessionRepository.invalidateAllSessionsByPhoneNumber(phoneNumber);
+        // Invalidate this customer's existing sessions (scoped to the restaurant, not the phone).
+        sessionRepository.invalidateAllSessionsByCustomerId(customer.getId());
 
-        // Generate tokens
-        String accessToken = generateAccessToken(phoneNumber, customer.getId());
+        // Generate tokens (the access token carries the restaurant so requests are tenant-scoped).
+        String accessToken = generateAccessToken(phoneNumber, customer.getId(), restaurantId);
         String refreshToken = generateRefreshToken(phoneNumber);
 
         // Calculate expiration times
@@ -330,9 +335,12 @@ public class ConsumerAuthService {
             throw new RuntimeException("Refresh token has expired");
         }
 
-        // Generate new access token
-        String newAccessToken = generateAccessToken(session.getPhoneNumber(),
-                session.getCustomer() != null ? session.getCustomer().getId() : null);
+        // Generate new access token, preserving the customer's restaurant binding.
+        Customer sessionCustomer = session.getCustomer();
+        String newAccessToken = generateAccessToken(
+                session.getPhoneNumber(),
+                sessionCustomer != null ? sessionCustomer.getId() : null,
+                sessionCustomer != null ? sessionCustomer.getRestaurantId() : null);
 
         LocalDateTime accessExpiresAt = LocalDateTime.now().plusSeconds(accessTokenExpiration / 1000);
 
@@ -381,9 +389,11 @@ public class ConsumerAuthService {
     }
 
     /**
-     * Generate JWT access token
+     * Generate JWT access token. The {@code restaurantId} claim binds the consumer session to its
+     * tenant so {@code JwtAuthenticationFilter} can populate {@link com.elcafe.common.tenant.TenantContext}
+     * and the §3.4 backstop scopes the request's queries.
      */
-    private String generateAccessToken(String phoneNumber, Long customerId) {
+    private String generateAccessToken(String phoneNumber, Long customerId, Long restaurantId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
 
@@ -392,6 +402,7 @@ public class ConsumerAuthService {
         return Jwts.builder()
                 .setSubject(phoneNumber)
                 .claim("customerId", customerId)
+                .claim("restaurantId", restaurantId)
                 .claim("type", "consumer")
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)

@@ -36,7 +36,7 @@ class ConsumerAuthControllerTest {
 
     @Test @DisplayName("POST /login — request OTP") void requestOtp() throws Exception {
         ConsumerLoginRequest req = new ConsumerLoginRequest();
-        req.setPhoneNumber("+998901234567"); req.setRegistrationSource(RegistrationSource.MOBILE_APP);
+        req.setPhoneNumber("+998901234567"); req.setRestaurantId(10L); req.setRegistrationSource(RegistrationSource.MOBILE_APP);
         when(consumerAuthService.requestOtp(any(), any(), any()))
                 .thenReturn(ConsumerLoginResponse.builder().message("OTP sent").phoneNumber("+998901234567")
                         .expiresAt(LocalDateTime.now().plusMinutes(5)).expiresInSeconds(300L).build());
@@ -45,7 +45,7 @@ class ConsumerAuthControllerTest {
     }
     @Test @DisplayName("POST /verify — verify OTP") void verifyOtp() throws Exception {
         VerifyOtpRequest req = new VerifyOtpRequest();
-        req.setPhoneNumber("+998901234567"); req.setOtpCode("123456");
+        req.setPhoneNumber("+998901234567"); req.setRestaurantId(10L); req.setOtpCode("123456");
         when(consumerAuthService.verifyOtp(any(), any(), any()))
                 .thenReturn(ConsumerAuthResponse.builder().accessToken("at").refreshToken("rt")
                         .customerId(1L).phoneNumber("+998901234567").build());

@@ -130,7 +130,7 @@ class CustomerServiceTest {
 
     @Test @DisplayName("getCustomerByPhone — found")
     void getCustomerByPhone_found() {
-        when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+        when(customerRepository.findFirstByPhoneOrderByIdAsc("+998901234567")).thenReturn(Optional.of(customer));
         Customer result = customerService.getCustomerByPhone("+998901234567");
         assertThat(result).isNotNull();
         assertThat(result.getFirstName()).isEqualTo("Test");
@@ -164,7 +164,7 @@ class CustomerServiceTest {
 
     @Test @DisplayName("findByPhone — returns optional")
     void findByPhone_returnsOptional() {
-        when(customerRepository.findByPhone("+998901234567")).thenReturn(Optional.of(customer));
+        when(customerRepository.findFirstByPhoneOrderByIdAsc("+998901234567")).thenReturn(Optional.of(customer));
         Optional<Customer> result = customerService.findByPhone("+998901234567");
         assertThat(result).isPresent();
     }

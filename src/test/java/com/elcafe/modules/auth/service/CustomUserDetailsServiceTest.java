@@ -63,7 +63,7 @@ class CustomUserDetailsServiceTest {
     @Test @DisplayName("loadUserByUsername — customer account gives helpful message")
     void loadUserByUsername_customerFound() {
         when(userRepository.findByEmail("customer@test.com")).thenReturn(Optional.empty());
-        when(customerRepository.findByEmail("customer@test.com")).thenReturn(Optional.of(new Customer()));
+        when(customerRepository.existsByEmail("customer@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> customUserDetailsService.loadUserByUsername("customer@test.com"))
                 .isInstanceOf(UsernameNotFoundException.class)
@@ -74,7 +74,7 @@ class CustomUserDetailsServiceTest {
     @Test @DisplayName("loadUserByUsername — not found throws")
     void loadUserByUsername_notFound_throws() {
         when(userRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
-        when(customerRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
+        when(customerRepository.existsByEmail("unknown@test.com")).thenReturn(false);
 
         assertThatThrownBy(() -> customUserDetailsService.loadUserByUsername("unknown@test.com"))
                 .isInstanceOf(UsernameNotFoundException.class)

@@ -22,11 +22,11 @@ class CustomerRepositoryTest {
     @Autowired private EntityManager em;
 
     @BeforeEach void setUp() {
-        em.persist(Customer.builder().firstName("Alice").lastName("Smith")
+        em.persist(Customer.builder().restaurantId(1L).firstName("Alice").lastName("Smith")
                 .phone("+998901234567").email("alice@test.com").active(true).build());
-        em.persist(Customer.builder().firstName("Bob").lastName("Jones")
+        em.persist(Customer.builder().restaurantId(1L).firstName("Bob").lastName("Jones")
                 .phone("+998909876543").email("bob@test.com").active(true).build());
-        em.persist(Customer.builder().firstName("Charlie").lastName("Brown")
+        em.persist(Customer.builder().restaurantId(1L).firstName("Charlie").lastName("Brown")
                 .phone("+998901112233").active(false).build());
         em.flush(); em.clear();
     }

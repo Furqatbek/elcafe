@@ -304,7 +304,9 @@ public class TelegramBotService {
     private void completeRegistration(TelegramSubscriber subscriber, Long chatId) {
         // Attempt to link to existing customer account by phone
         if (subscriber.getPhone() != null && subscriber.getCustomer() == null) {
-            customerRepository.findByPhone(subscriber.getPhone()).ifPresent(customer -> {
+            // V150: the Telegram bot is a global channel with no restaurant context, so link to the
+            // customer's primary record (oldest row for the phone).
+            customerRepository.findFirstByPhoneOrderByIdAsc(subscriber.getPhone()).ifPresent(customer -> {
                 subscriber.setCustomer(customer);
                 log.info("Linked Telegram subscriber {} to customer {}",
                         subscriber.getTelegramUserId(), customer.getId());

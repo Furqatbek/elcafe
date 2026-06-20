@@ -62,7 +62,7 @@ public class ConsumerOrderService {
         }
 
         // 2. Find or create customer (optional)
-        Customer customer = request.getCustomerInfo() != null ? findOrCreateCustomer(request.getCustomerInfo()) : null;
+        Customer customer = request.getCustomerInfo() != null ? findOrCreateCustomer(request.getCustomerInfo(), restaurant.getId()) : null;
 
         // 3. Build order
         Order order = Order.builder()
@@ -246,12 +246,13 @@ public class ConsumerOrderService {
         return mapToResponse(savedOrder);
     }
 
-    private Customer findOrCreateCustomer(CreateOrderRequest.CustomerInfo customerInfo) {
-        // If phone is provided, try to find existing customer
+    private Customer findOrCreateCustomer(CreateOrderRequest.CustomerInfo customerInfo, Long restaurantId) {
+        // If phone is provided, try to find existing customer for THIS restaurant (V150).
         if (customerInfo.getPhone() != null && !customerInfo.getPhone().isBlank()) {
-            return customerRepository.findByPhone(customerInfo.getPhone())
+            return customerRepository.findByPhoneAndRestaurantId(customerInfo.getPhone(), restaurantId)
                     .orElseGet(() -> {
                         Customer newCustomer = Customer.builder()
+                                .restaurantId(restaurantId)
                                 .firstName(customerInfo.getFirstName())
                                 .lastName(customerInfo.getLastName())
                                 .phone(customerInfo.getPhone())
@@ -264,6 +265,7 @@ public class ConsumerOrderService {
 
         // No phone - create new customer without lookup
         Customer newCustomer = Customer.builder()
+                .restaurantId(restaurantId)
                 .firstName(customerInfo.getFirstName())
                 .lastName(customerInfo.getLastName())
                 .phone(customerInfo.getPhone())

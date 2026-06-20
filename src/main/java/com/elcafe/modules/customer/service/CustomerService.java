@@ -1,5 +1,6 @@
 package com.elcafe.modules.customer.service;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.dto.CreateCustomerRequest;
 import com.elcafe.modules.customer.dto.CustomerResponse;
@@ -62,6 +63,7 @@ public class CustomerService {
         // Build customer entity from request
         // Convert empty strings to null for unique constraint fields (email)
         Customer customer = Customer.builder()
+                .restaurantId(resolveRestaurantId(request.getRestaurantId()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(emptyToNull(request.getEmail()))
@@ -156,7 +158,18 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public Page<Customer> getAllCustomers(Pageable pageable) {
-        return customerRepository.findAll(pageable);
+        return listForTenant(pageable);
+    }
+
+    /**
+     * List customers for the caller's tenant (V150: closes the cross-tenant PII leak). An unscoped
+     * caller (SUPER_ADMIN, or OFF enforcement mode) still sees all customers.
+     */
+    private Page<Customer> listForTenant(Pageable pageable) {
+        Long tenantId = TenantContext.getRestaurantId();
+        return tenantId != null
+                ? customerRepository.findByRestaurantId(tenantId, pageable)
+                : customerRepository.findAll(pageable);
     }
 
     /**
@@ -164,7 +177,7 @@ public class CustomerService {
      */
     @Transactional(readOnly = true)
     public Page<CustomerResponse> getAllCustomersWithMarketing(Pageable pageable) {
-        Page<Customer> customerPage = customerRepository.findAll(pageable);
+        Page<Customer> customerPage = listForTenant(pageable);
         List<Customer> customers = customerPage.getContent();
 
         if (customers.isEmpty()) {
@@ -291,7 +304,24 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public Customer getCustomerByPhone(String phone) {
-        return customerRepository.findByPhone(phone).orElse(null);
+        return findByPhoneScoped(phone).orElse(null);
+    }
+
+    /**
+     * Resolve a customer by phone within the caller's tenant (V150). Falls back to the primary
+     * record only for an unscoped caller (e.g. SUPER_ADMIN aggregate), where {@code findByPhone}
+     * is no longer safe (a phone can map to several per-restaurant rows).
+     */
+    private Optional<Customer> findByPhoneScoped(String phone) {
+        Long tenantId = TenantContext.getRestaurantId();
+        return tenantId != null
+                ? customerRepository.findByPhoneAndRestaurantId(phone, tenantId)
+                : customerRepository.findFirstByPhoneOrderByIdAsc(phone);
+    }
+
+    /** Tenant for an admin-created customer: explicit request value, else the caller's tenant. */
+    private Long resolveRestaurantId(Long requested) {
+        return requested != null ? requested : TenantContext.getRestaurantId();
     }
 
     @Transactional(readOnly = true)
@@ -315,7 +345,10 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public java.util.List<Customer> searchCustomersByPhone(String phone) {
-        return customerRepository.findByPhoneContaining(phone);
+        Long tenantId = TenantContext.getRestaurantId();
+        return tenantId != null
+                ? customerRepository.findByPhoneContainingAndRestaurantId(phone, tenantId)
+                : customerRepository.findByPhoneContaining(phone);
     }
 
     @Transactional
@@ -384,11 +417,11 @@ public class CustomerService {
     }
 
     /**
-     * Find customer by phone number.
+     * Find customer by phone number, scoped to the caller's tenant (V150).
      */
     @Transactional(readOnly = true)
     public Optional<Customer> findByPhone(String phone) {
-        return customerRepository.findByPhone(phone);
+        return findByPhoneScoped(phone);
     }
 
     /**

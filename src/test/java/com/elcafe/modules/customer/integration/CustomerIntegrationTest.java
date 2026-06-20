@@ -29,7 +29,7 @@ class CustomerIntegrationTest {
 
     @Test @DisplayName("Create customer → find by phone")
     void createAndFind_fullFlow() {
-        Customer customer = Customer.builder()
+        Customer customer = Customer.builder().restaurantId(1L)
                 .firstName("Test").lastName("User").phone("+998901234567").active(true).build();
         customer = customerRepository.save(customer);
         em.flush(); em.clear();
@@ -40,7 +40,7 @@ class CustomerIntegrationTest {
 
     @Test @DisplayName("Address CRUD: create → update → set default → delete")
     void addressCRUD_fullFlow() {
-        Customer customer = customerRepository.save(Customer.builder()
+        Customer customer = customerRepository.save(Customer.builder().restaurantId(1L)
                 .firstName("Test").lastName("User").phone("+998909876543").active(true).build());
 
         // Create
@@ -80,7 +80,7 @@ class CustomerIntegrationTest {
 
     @Test @DisplayName("Duplicate phone — findByPhone returns first match")
     void duplicatePhoneFindByPhone() {
-        customerRepository.save(Customer.builder()
+        customerRepository.save(Customer.builder().restaurantId(1L)
                 .firstName("A").lastName("B").phone("+998901111111").active(true).build());
         em.flush(); em.clear();
 
@@ -91,9 +91,9 @@ class CustomerIntegrationTest {
 
     @Test @DisplayName("Partial phone search returns matches")
     void searchByPhonePartial() {
-        customerRepository.save(Customer.builder()
+        customerRepository.save(Customer.builder().restaurantId(1L)
                 .firstName("A").lastName("B").phone("+998901234567").active(true).build());
-        customerRepository.save(Customer.builder()
+        customerRepository.save(Customer.builder().restaurantId(1L)
                 .firstName("C").lastName("D").phone("+998909876543").active(true).build());
         em.flush(); em.clear();
 

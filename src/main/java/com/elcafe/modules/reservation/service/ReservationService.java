@@ -438,8 +438,8 @@ public class ReservationService {
         if (request.getCustomerPhone() != null && !request.getCustomerPhone().isBlank()) {
             String normalizedPhone = normalizePhone(request.getCustomerPhone());
 
-            // Try to find existing customer by phone
-            Customer existingCustomer = customerRepository.findByPhone(normalizedPhone).orElse(null);
+            // Try to find existing customer by phone for this restaurant (V150).
+            Customer existingCustomer = customerRepository.findByPhoneAndRestaurantId(normalizedPhone, restaurantId).orElse(null);
 
             if (existingCustomer != null) {
                 log.info("Found existing customer by phone: {}", existingCustomer.getId());
@@ -462,6 +462,7 @@ public class ReservationService {
                     : new String[]{"Guest", ""};
 
             Customer newCustomer = Customer.builder()
+                    .restaurantId(restaurantId)
                     .firstName(names[0])
                     .lastName(names.length > 1 ? names[1] : "")
                     .phone(normalizedPhone)

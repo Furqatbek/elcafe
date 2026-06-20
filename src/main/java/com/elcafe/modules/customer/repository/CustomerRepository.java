@@ -1,6 +1,7 @@
 package com.elcafe.modules.customer.repository;
 
 import com.elcafe.modules.customer.entity.Customer;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,6 +25,29 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
     boolean existsByEmail(String email);
 
     boolean existsByPhone(String phone);
+
+    // --- Per-restaurant finders (V150: customers are tenant-scoped). Used by flows that resolve a
+    // restaurant explicitly (consumer login, order/reservation/self-service customer creation) so a
+    // phone/email shared across restaurants maps to the right per-restaurant row. ---
+
+    Optional<Customer> findByPhoneAndRestaurantId(String phone, Long restaurantId);
+
+    Optional<Customer> findByEmailAndRestaurantId(String email, Long restaurantId);
+
+    boolean existsByPhoneAndRestaurantId(String phone, Long restaurantId);
+
+    boolean existsByEmailAndRestaurantId(String email, Long restaurantId);
+
+    List<Customer> findByPhoneContainingAndRestaurantId(String phone, Long restaurantId);
+
+    /**
+     * Resolve a customer's PRIMARY record (the oldest row for a phone) for GLOBAL channels that
+     * carry no restaurant context — the Telegram/Instagram bots, whose subscriber rows are not
+     * tenant-scoped. Per-restaurant flows must use {@link #findByPhoneAndRestaurantId} instead.
+     */
+    Optional<Customer> findFirstByPhoneOrderByIdAsc(String phone);
+
+    Page<Customer> findByRestaurantId(Long restaurantId, org.springframework.data.domain.Pageable pageable);
 
     List<Customer> findByActiveTrue();
 

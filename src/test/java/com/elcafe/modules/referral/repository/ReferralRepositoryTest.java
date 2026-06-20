@@ -37,9 +37,9 @@ class ReferralRepositoryTest {
         restaurant = Restaurant.builder().name("Test Cafe").address("123 Main St").build();
         em.persist(restaurant);
 
-        referrer = Customer.builder().firstName("Referrer").lastName("User").phone("+998900000001").active(true).build();
-        referee1 = Customer.builder().firstName("Referee1").lastName("User").phone("+998900000002").active(true).build();
-        referee2 = Customer.builder().firstName("Referee2").lastName("User").phone("+998900000003").active(true).build();
+        referrer = Customer.builder().restaurantId(1L).firstName("Referrer").lastName("User").phone("+998900000001").active(true).build();
+        referee1 = Customer.builder().restaurantId(1L).firstName("Referee1").lastName("User").phone("+998900000002").active(true).build();
+        referee2 = Customer.builder().restaurantId(1L).firstName("Referee2").lastName("User").phone("+998900000003").active(true).build();
         em.persist(referrer);
         em.persist(referee1);
         em.persist(referee2);

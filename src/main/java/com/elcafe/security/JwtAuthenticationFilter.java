@@ -119,6 +119,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                         logger.debug("Consumer authentication set successfully for customerId: " + customerId);
+
+                        // V150: bind this consumer request to its restaurant so the tenant backstop
+                        // (TenantFilterInterceptor) scopes its queries — same mechanism as waiters
+                        // (§3.6). Cleared per request by TenantEnforcementFilter's finally.
+                        Long restaurantId = claims.get("restaurantId", Long.class);
+                        if (restaurantId != null) {
+                            TenantContext.setRestaurantId(restaurantId);
+                        }
                     }
                 } else {
                     // Handle regular user authentication

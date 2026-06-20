@@ -25,6 +25,11 @@ public class ConsumerLoginRequest {
     @Pattern(regexp = "^[0-9+]{10,20}$", message = "Phone number must be 10-20 digits, may include +")
     private String phoneNumber;
 
+    // V150: customers are per-restaurant, so login must name the restaurant being signed into.
+    // A returning customer is matched by (phone, restaurantId); a new one is created under it.
+    @NotNull(message = "Restaurant is required")
+    private Long restaurantId;
+
     @JsonProperty(value = "firstName", access = JsonProperty.Access.WRITE_ONLY)
     private String firstName;
 

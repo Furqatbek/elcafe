@@ -204,7 +204,9 @@ public class InstagramBotService {
     private void completeRegistration(InstagramBotConfig config, InstagramSubscriber subscriber) {
         // Try to link to existing customer by phone
         if (subscriber.getPhone() != null && subscriber.getCustomer() == null) {
-            customerRepository.findByPhone(subscriber.getPhone()).ifPresent(customer -> {
+            // V150: the Instagram bot is a global channel with no restaurant context, so link to the
+            // customer's primary record (oldest row for the phone).
+            customerRepository.findFirstByPhoneOrderByIdAsc(subscriber.getPhone()).ifPresent(customer -> {
                 subscriber.setCustomer(customer);
                 log.info("Linked Instagram subscriber {} to customer {}", subscriber.getIgsid(), customer.getId());
             });

@@ -118,7 +118,7 @@ public class POSOrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + request.getRestaurantId()));
 
         // Find or create customer (optional for dine-in)
-        Customer customer = findOrCreateCustomer(request.getCustomerInfo(), request.getOrderType());
+        Customer customer = findOrCreateCustomer(request.getCustomerInfo(), request.getOrderType(), restaurant.getId());
 
         // Create order
         Order order = new Order();
@@ -305,7 +305,8 @@ public class POSOrderService {
     }
 
     private Customer findOrCreateCustomer(CreatePOSOrderRequest.CustomerInfo customerInfo,
-                                          CreatePOSOrderRequest.OrderType orderType) {
+                                          CreatePOSOrderRequest.OrderType orderType,
+                                          Long restaurantId) {
         if (orderType == CreatePOSOrderRequest.OrderType.DINE_IN) {
             if (customerInfo == null || customerInfo.getPhone() == null || customerInfo.getPhone().isBlank()) {
                 log.info("Dine-in order without customer info - walk-in guest");
@@ -313,9 +314,9 @@ public class POSOrderService {
             }
         }
 
-        return customerRepository.findByPhone(customerInfo.getPhone())
+        return customerRepository.findByPhoneAndRestaurantId(customerInfo.getPhone(), restaurantId)
                 .orElseGet(() -> {
-                    log.info("Creating new customer with phone: {}", customerInfo.getPhone());
+                    log.info("Creating new customer with phone: {} for restaurant: {}", customerInfo.getPhone(), restaurantId);
 
                     String name = customerInfo.getName() != null ? customerInfo.getName().trim() : "Customer";
                     String[] nameParts = name.split("\\s+", 2);
@@ -323,6 +324,7 @@ public class POSOrderService {
                     String lastName = nameParts.length > 1 ? nameParts[1] : "";
 
                     Customer newCustomer = new Customer();
+                    newCustomer.setRestaurantId(restaurantId);
                     newCustomer.setFirstName(firstName);
                     newCustomer.setLastName(lastName);
                     newCustomer.setPhone(customerInfo.getPhone());
@@ -669,7 +671,8 @@ public class POSOrderService {
             throw new IllegalStateException("Cannot attach customer to a settled order (status=" + order.getStatus() + ")");
         }
 
-        Customer customer = resolveCustomer(request);
+        Long restaurantId = order.getRestaurant() != null ? order.getRestaurant().getId() : null;
+        Customer customer = resolveCustomer(request, restaurantId);
         order.setCustomer(customer);
         Order saved = orderRepository.save(order);
         log.info("Attached customer {} to order {} (resolved via {})",
@@ -677,7 +680,7 @@ public class POSOrderService {
         return mapToResponse(saved, getOrderTypeString(saved));
     }
 
-    private Customer resolveCustomer(com.elcafe.modules.order.dto.pos.AttachCustomerRequest request) {
+    private Customer resolveCustomer(com.elcafe.modules.order.dto.pos.AttachCustomerRequest request, Long restaurantId) {
         if (request.getCustomerId() != null) {
             return customerRepository.findById(request.getCustomerId())
                     .orElseThrow(() -> new IllegalArgumentException("Customer not found with ID: " + request.getCustomerId()));
@@ -686,7 +689,8 @@ public class POSOrderService {
             return customerRepository.findByQrCode(request.getQrCode())
                     .orElseThrow(() -> new IllegalArgumentException("Customer not found for QR code: " + request.getQrCode()));
         }
-        return customerRepository.findByPhone(request.getPhone())
+        // V150: phone is per-restaurant — scope to the order's restaurant.
+        return customerRepository.findByPhoneAndRestaurantId(request.getPhone(), restaurantId)
                 .orElseThrow(() -> new IllegalArgumentException("Customer not found for phone: " + request.getPhone()));
     }
 

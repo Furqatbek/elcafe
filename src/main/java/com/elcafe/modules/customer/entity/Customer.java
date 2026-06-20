@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Filter;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -23,11 +24,20 @@ import java.util.UUID;
 @Table(name = "customers")
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+// Phase 0: customers are tenant-scoped (V150). Safe to @Filter — after fragmentation every entity
+// that references a customer does so within the same restaurant, so the §3.4 backstop scopes
+// customer queries and lazy-loads without cross-tenant association fetches.
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class Customer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // Tenant owner. Set from the resolved restaurant on creation: consumer login carries it
+    // explicitly, and the order/reservation/self-service paths thread it from the order's restaurant.
+    @Column(name = "restaurant_id", nullable = false)
+    private Long restaurantId;
 
     @Column(nullable = false, length = 100)
     private String firstName;
@@ -35,7 +45,8 @@ public class Customer {
     @Column(nullable = false, length = 100)
     private String lastName;
 
-    @Column(unique = true, length = 100)
+    // Uniqueness is per-restaurant (uq_customers_restaurant_email, V150), enforced at the DB level.
+    @Column(length = 100)
     private String email;
 
     @Column(nullable = false, length = 20)

@@ -30,9 +30,10 @@ public class CustomUserDetailsService implements UserDetailsService {
                 });
 
         if (user == null) {
-            // Check if this is a customer account
-            boolean isCustomer = customerRepository.findByEmail(username).isPresent() ||
-                    (username.startsWith("+") && customerRepository.findByPhone(username).isPresent());
+            // Check if this is a customer account. V150: a phone/email can map to several
+            // per-restaurant customers, so use existence checks (the finders are now non-unique).
+            boolean isCustomer = customerRepository.existsByEmail(username) ||
+                    (username.startsWith("+") && customerRepository.existsByPhone(username));
 
             if (isCustomer) {
                 throw new UsernameNotFoundException(

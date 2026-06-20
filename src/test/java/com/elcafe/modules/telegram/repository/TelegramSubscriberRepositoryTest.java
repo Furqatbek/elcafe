@@ -30,7 +30,7 @@ class TelegramSubscriberRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        Customer customer = Customer.builder()
+        Customer customer = Customer.builder().restaurantId(1L)
                 .firstName("Test").lastName("User").phone("+998901111111").build();
         em.persist(customer);
 
