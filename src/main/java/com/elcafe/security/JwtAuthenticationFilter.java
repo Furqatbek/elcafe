@@ -22,7 +22,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -118,14 +117,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     logger.debug("Processing consumer token - customerId: " + customerId);
 
                     if (customerId != null && jwtUtil.isTokenExpired(jwt) == false) {
-                        // Create UserDetails for consumer with CUSTOMER role
-                        UserDetails consumerDetails = User.builder()
-                                .username(username)
-                                .password("") // Password not needed for token auth
-                                .authorities(Collections.singletonList(
-                                        new SimpleGrantedAuthority("ROLE_CUSTOMER")
-                                ))
-                                .build();
+                        // Build a CustomerPrincipal carrying the customer id from the token, so consumer
+                        // endpoints can derive the authenticated customer via @AuthenticationPrincipal and
+                        // never trust a client-supplied id. getUsername() stays the phone (auth.getName()
+                        // and the ROLE_CUSTOMER authority are unchanged), so existing lookups keep working.
+                        CustomerPrincipal consumerDetails = CustomerPrincipal.create(username, customerId);
 
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 consumerDetails,

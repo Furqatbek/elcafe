@@ -117,6 +117,11 @@ class JwtAuthenticationFilterTest {
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
         assertThat(SecurityContextHolder.getContext().getAuthentication().getName()).isEqualTo("+998901234567");
+        // The principal must be a CustomerPrincipal carrying the token's customerId, so consumer
+        // endpoints can derive identity via @AuthenticationPrincipal instead of trusting client input.
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        assertThat(principal).isInstanceOf(CustomerPrincipal.class);
+        assertThat(((CustomerPrincipal) principal).getId()).isEqualTo(1L);
         verify(filterChain).doFilter(request, response);
     }
 

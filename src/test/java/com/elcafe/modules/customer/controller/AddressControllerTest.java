@@ -4,6 +4,7 @@ import com.elcafe.modules.customer.dto.AddressResponse;
 import com.elcafe.modules.customer.dto.CreateAddressRequest;
 import com.elcafe.modules.customer.dto.UpdateAddressRequest;
 import com.elcafe.modules.customer.service.AddressService;
+import com.elcafe.security.CustomerPrincipal;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -12,10 +13,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
+
 import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -32,7 +42,21 @@ class AddressControllerTest {
     private AddressResponse resp;
 
     @BeforeEach void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        // Inject an authenticated consumer (customerId=1), mirroring the real CustomerPrincipal that
+        // JwtAuthenticationFilter now sets — so the ownership guard is actually exercised.
+        CustomerPrincipal principal = CustomerPrincipal.create("+998901234567", 1L);
+        HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+            @Override public boolean supportsParameter(MethodParameter parameter) {
+                return parameter.getParameterType().isAssignableFrom(CustomerPrincipal.class);
+            }
+            @Override public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+                                                    NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+                return principal;
+            }
+        };
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(principalResolver)
+                .build();
         resp = AddressResponse.builder().id(1L).customerId(1L).label("Home").city("Tashkent").build();
     }
 
@@ -68,5 +92,14 @@ class AddressControllerTest {
     @Test @DisplayName("DELETE /{addressId}") void deleteAddr() throws Exception {
         mockMvc.perform(delete(BASE + "/1")).andExpect(status().isOk());
         verify(addressService).deleteAddress(1L, 1L);
+    }
+
+    @Test @DisplayName("consumer cannot touch another customer's addresses (IDOR)")
+    void deniesOtherCustomer() {
+        // Authenticated as customerId=1, but the path targets customerId=2 → must be rejected,
+        // and the service must never be reached.
+        assertThatThrownBy(() -> mockMvc.perform(get("/api/v1/customers/2/addresses")))
+                .hasRootCauseInstanceOf(AccessDeniedException.class);
+        verifyNoInteractions(addressService);
     }
 }
