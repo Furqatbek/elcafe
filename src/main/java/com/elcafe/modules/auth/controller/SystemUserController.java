@@ -1,5 +1,6 @@
 package com.elcafe.modules.auth.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.repository.UserRepository;
@@ -29,13 +30,20 @@ public class SystemUserController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     private static final Set<UserRole> SYSTEM_ROLES = Set.of(
             UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.OPERATOR);
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAll() {
-        List<User> users = userRepository.findAll().stream()
+        // User is deliberately not Hibernate-@Filtered (see User.java); constrain cross-tenant
+        // enumeration here at the query layer. In shadow/off the scope is null and the listing is
+        // unchanged; once enforcement is on, a tenant admin sees only their own restaurant's users.
+        Long tenantScope = restaurantAuthorizationService.currentTenantScopeOrNull();
+        List<User> users = (tenantScope == null
+                ? userRepository.findAll()
+                : userRepository.findByRestaurantId(tenantScope)).stream()
                 .filter(u -> SYSTEM_ROLES.contains(u.getRole()))
                 .toList();
 
@@ -70,6 +78,9 @@ public class SystemUserController {
                 .role(req.role)
                 .active(true)
                 .emailVerified(true)
+                // Bind the new system user to the creator's restaurant once enforcement is on
+                // (null for SUPER_ADMIN / pre-enforcement, preserving current behaviour).
+                .restaurantId(restaurantAuthorizationService.currentTenantScopeOrNull())
                 .build();
 
         User saved = userRepository.save(user);
@@ -83,6 +94,8 @@ public class SystemUserController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> update(@PathVariable Long id, @RequestBody UpdateRequest req) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        // Prevent cross-tenant account takeover (e.g. password reset) via a guessed id.
+        restaurantAuthorizationService.checkAccess(user.getRestaurantId());
 
         if (req.firstName != null) user.setFirstName(req.firstName);
         if (req.lastName != null) user.setLastName(req.lastName);
@@ -101,6 +114,8 @@ public class SystemUserController {
     public ResponseEntity<ApiResponse<Void>> deactivate(@PathVariable Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        // Prevent cross-tenant deactivation via a guessed id.
+        restaurantAuthorizationService.checkAccess(user.getRestaurantId());
         user.setActive(false);
         userRepository.save(user);
         return ResponseEntity.ok(ApiResponse.success("User deactivated", null));

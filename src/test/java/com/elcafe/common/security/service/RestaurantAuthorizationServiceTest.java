@@ -10,6 +10,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -86,5 +87,44 @@ class RestaurantAuthorizationServiceTest {
         authenticateAs(UserRole.ADMIN, 1L);
         assertThatThrownBy(() -> service.validateRestaurantAccess(2L)).isInstanceOf(AccessDeniedException.class);
         assertThatCode(() -> service.validateRestaurantAccess(1L)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("currentTenantScopeOrNull ENFORCE — tenant-scoped caller returns own restaurant")
+    void scope_enforce_tenantCaller_returnsOwn() {
+        authenticateAs(UserRole.ADMIN, 7L);
+        setMode("enforce");
+        assertThat(service.currentTenantScopeOrNull()).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("currentTenantScopeOrNull ENFORCE — SUPER_ADMIN is unscoped (null)")
+    void scope_enforce_superAdmin_null() {
+        authenticateAs(UserRole.SUPER_ADMIN, 7L);
+        setMode("enforce");
+        assertThat(service.currentTenantScopeOrNull()).isNull();
+    }
+
+    @Test
+    @DisplayName("currentTenantScopeOrNull SHADOW — unscoped (null), preserving current behaviour")
+    void scope_shadow_null() {
+        authenticateAs(UserRole.ADMIN, 7L);
+        setMode("shadow");
+        assertThat(service.currentTenantScopeOrNull()).isNull();
+    }
+
+    @Test
+    @DisplayName("currentTenantScopeOrNull OFF — unscoped (null)")
+    void scope_off_null() {
+        authenticateAs(UserRole.ADMIN, 7L);
+        setMode("off");
+        assertThat(service.currentTenantScopeOrNull()).isNull();
+    }
+
+    @Test
+    @DisplayName("currentTenantScopeOrNull ENFORCE — unauthenticated is unscoped (null)")
+    void scope_enforce_noPrincipal_null() {
+        setMode("enforce");
+        assertThat(service.currentTenantScopeOrNull()).isNull();
     }
 }

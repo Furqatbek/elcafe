@@ -29,4 +29,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByRoleNotInAndActiveTrue(Collection<UserRole> excludedRoles);
 
     List<User> findByRoleNotIn(Collection<UserRole> excludedRoles);
+
+    List<User> findByRestaurantId(Long restaurantId);
+
+    List<User> findByRestaurantIdAndRoleNotIn(Long restaurantId, Collection<UserRole> excludedRoles);
 }

@@ -1,5 +1,6 @@
 package com.elcafe.common.security.service;
 
+import com.elcafe.common.tenant.TenantEnforcementMode;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.security.UserPrincipal;
 import lombok.extern.slf4j.Slf4j;
@@ -42,11 +43,10 @@ public class RestaurantAuthorizationService {
      * should be observed before they start blocking.
      */
     public void checkAccess(Long restaurantId) {
-        String mode = enforcementMode == null ? "shadow" : enforcementMode.trim().toLowerCase();
-        switch (mode) {
-            case "off", "disabled", "false" -> { /* enforcement disabled */ }
-            case "enforce", "block", "strict" -> validateRestaurantAccess(restaurantId);
-            default -> { // shadow
+        switch (TenantEnforcementMode.from(enforcementMode)) {
+            case OFF -> { /* enforcement disabled */ }
+            case ENFORCE -> validateRestaurantAccess(restaurantId);
+            case SHADOW -> {
                 try {
                     validateRestaurantAccess(restaurantId);
                 } catch (AccessDeniedException e) {
@@ -55,6 +55,31 @@ public class RestaurantAuthorizationService {
                 }
             }
         }
+    }
+
+    /**
+     * The restaurant a tenant-scoped <em>listing or write</em> should be constrained to, or
+     * {@code null} to apply no constraint (the caller may see/affect all rows). Honors the
+     * enforcement mode so it flips together with the rest of Phase 0:
+     * <ul>
+     *   <li>{@code off}/{@code shadow} → {@code null} (preserves current, pre-enforcement behavior);</li>
+     *   <li>{@code enforce} + cross-tenant {@link UserRole#SUPER_ADMIN} → {@code null};</li>
+     *   <li>{@code enforce} + tenant-scoped caller → the caller's own {@code restaurantId}.</li>
+     * </ul>
+     *
+     * <p>For endpoints over entities the Hibernate backstop cannot scope — notably {@code User},
+     * which is deliberately not {@code @Filter}ed (see {@code User.java}) — this is how
+     * cross-tenant enumeration is constrained at the query layer instead.
+     */
+    public Long currentTenantScopeOrNull() {
+        if (TenantEnforcementMode.from(enforcementMode) != TenantEnforcementMode.ENFORCE) {
+            return null;
+        }
+        UserPrincipal principal = getCurrentUserPrincipal();
+        if (principal == null || principal.getRole() == UserRole.SUPER_ADMIN) {
+            return null;
+        }
+        return principal.getRestaurantId();
     }
 
     /**

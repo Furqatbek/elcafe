@@ -72,15 +72,20 @@ Nothing downstream is trustworthy without this.
 > controllers are retrofitted — prioritise endpoints carrying `restaurantId` in the JSON body
 > or under non-`/restaurant/` paths, which the edge filter cannot see.
 >
-> **Known §3.3 gaps to revisit (deliberately not half-fixed):**
+> **Known §3.3 gaps — status:**
 > - **`id`-based mutators** in `PayrollController` / `SalaryConfigController`
->   (`/{id}/approve`, `/{id}/pay`, `/{id}/pay-now`, `PUT`/`DELETE /{id}`) carry no
->   `restaurantId` — they're IDOR-able and need an *entity-load* tenant check (load the
->   record, compare `record.restaurant.id` to the caller's tenant). This pattern is needed
->   broadly for `/{id}` endpoints and should become a reusable helper.
-> - **`PayrollController GET /employees`** returns staff + waiters across **all** restaurants
->   (cross-tenant listing). Needs query scoping by tenant, which also depends on §3.6
->   (waiters are not yet tenant-bound).
+>   (`/{id}/approve`, `/{id}/pay`, `/{id}/pay-now`, `PUT`/`DELETE /{id}`) carry no `restaurantId`.
+>   ✅ Now **closed by the §3.4 backstop**: `PayrollEntry`/`SalaryConfig` are `@Filter`ed, so in
+>   `enforce` mode the service's `findById(foreignId)` returns nothing → a cross-tenant id simply
+>   404s instead of being acted on.
+> - **User enumeration/mutation across tenants** — `PayrollController GET /employees` and all of
+>   `SystemUserController` (list/create/update/delete of system users) reached every restaurant's
+>   users. ✅ Now **scoped at the query/controller layer** (the mitigation the `User`-not-`@Filter`ed
+>   decision relies on): listings use `RestaurantAuthorizationService.currentTenantScopeOrNull()`,
+>   create binds `restaurant_id` to the caller's tenant, and the `/{id}` mutators `checkAccess` the
+>   target user's tenant. **Residuals:** waiters in `/employees` are still cross-tenant (no
+>   `restaurant_id` until §3.6), and a tenant admin can still touch a `restaurant_id IS NULL`
+>   (platform/legacy) user until those accounts are cleaned up (migration V147).
 >
 > **§3.4 Hibernate backstop (this increment) — the systemic answer to the `/{id}` gap above:**
 > a global `@FilterDef("restaurantFilter")` on `Restaurant` + `@Filter(restaurant_id =

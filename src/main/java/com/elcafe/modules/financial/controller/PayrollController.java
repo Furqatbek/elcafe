@@ -45,7 +45,14 @@ public class PayrollController {
 
         // Include inactive employees too so payroll can be created/edited
         // for anyone the user expects to see, even those toggled inactive.
-        List<User> staff = userRepository.findByRoleNotIn(List.of(UserRole.CUSTOMER));
+        //
+        // Scope staff to the caller's restaurant once enforcement is on. User is deliberately not
+        // Hibernate-@Filtered (see User.java), so the tenant constraint is applied here at the
+        // query layer; in shadow/off the scope is null and behaviour is unchanged.
+        Long tenantScope = restaurantAuthorizationService.currentTenantScopeOrNull();
+        List<User> staff = (tenantScope == null)
+                ? userRepository.findByRoleNotIn(List.of(UserRole.CUSTOMER))
+                : userRepository.findByRestaurantIdAndRoleNotIn(tenantScope, List.of(UserRole.CUSTOMER));
         for (User u : staff) {
             Map<String, Object> row = new java.util.HashMap<>();
             row.put("id", u.getId());
@@ -57,6 +64,8 @@ public class PayrollController {
             result.add(row);
         }
 
+        // NOTE: waiters are not yet tenant-bound at the entity level (no restaurant_id — §3.6),
+        // so they cannot be scoped here yet and remain visible across tenants until that lands.
         List<Waiter> waiters = waiterRepository.findAllByOrderByNameAsc();
         for (Waiter w : waiters) {
             Map<String, Object> row = new java.util.HashMap<>();
