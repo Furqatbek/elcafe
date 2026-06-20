@@ -54,7 +54,7 @@ class AuthControllerTest {
     @Test @DisplayName("POST /register") void register() throws Exception {
         RegisterRequest req = new RegisterRequest();
         req.setEmail("new@test.com"); req.setPassword("password123");
-        req.setFirstName("New"); req.setLastName("User"); req.setRole(UserRole.OPERATOR);
+        req.setFirstName("New"); req.setLastName("User");
         when(authService.register(any())).thenReturn(AuthResponse.builder()
                 .accessToken("at").refreshToken("rt").build());
         mockMvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON)

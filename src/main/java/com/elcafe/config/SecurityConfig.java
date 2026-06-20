@@ -10,6 +10,10 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -143,5 +147,29 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Role hierarchy: SUPER_ADMIN (the platform operator) inherits every ADMIN authority.
+     *
+     * <p>This is what lets the new SUPER_ADMIN role satisfy all pre-existing
+     * {@code hasRole('ADMIN')} / {@code @PreAuthorize("hasRole('ADMIN')")} checks across the
+     * ~85 controllers without editing any of them. Spring Security 6.3+ auto-applies this bean
+     * to both web authorization and method security.
+     *
+     * <p>NOTE: this governs <em>endpoint authorization</em> only. Cross-tenant <em>data</em>
+     * access remains gated by {@link com.elcafe.common.security.service.RestaurantAuthorizationService},
+     * which grants the cross-restaurant bypass to SUPER_ADMIN exclusively.
+     */
+    @Bean
+    static RoleHierarchy roleHierarchy() {
+        return RoleHierarchyImpl.fromHierarchy("ROLE_SUPER_ADMIN > ROLE_ADMIN");
+    }
+
+    @Bean
+    static MethodSecurityExpressionHandler methodSecurityExpressionHandler(RoleHierarchy roleHierarchy) {
+        DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
+        handler.setRoleHierarchy(roleHierarchy);
+        return handler;
     }
 }

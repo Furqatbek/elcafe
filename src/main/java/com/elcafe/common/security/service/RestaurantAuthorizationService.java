@@ -9,8 +9,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 /**
- * Security service for restaurant-level authorization.
- * Validates that users can only access data for restaurants they are associated with.
+ * Security service for restaurant-level (tenant) authorization.
+ * Validates that users can only access data for the restaurant they are associated with.
+ *
+ * <p>Cross-restaurant access is granted to {@link UserRole#SUPER_ADMIN} only (the platform
+ * operator). Every other role — including the tenant-scoped {@link UserRole#ADMIN} — is
+ * confined to its own {@code restaurantId}.
  */
 @Slf4j
 @Service
@@ -39,9 +43,9 @@ public class RestaurantAuthorizationService {
             throw new AccessDeniedException("User not authenticated");
         }
 
-        // ADMIN users have access to all restaurants
-        if (principal.getRole() == UserRole.ADMIN) {
-            log.debug("Admin user {} accessing restaurant {}", principal.getEmail(), restaurantId);
+        // SUPER_ADMIN (platform operator) is the only role with cross-restaurant access.
+        if (principal.getRole() == UserRole.SUPER_ADMIN) {
+            log.debug("Platform operator {} accessing restaurant {}", principal.getEmail(), restaurantId);
             return;
         }
 
@@ -77,13 +81,13 @@ public class RestaurantAuthorizationService {
     }
 
     /**
-     * Checks if the current user is an admin.
+     * Checks if the current user is the cross-tenant platform operator (SUPER_ADMIN).
      *
-     * @return true if the user has ADMIN role
+     * @return true if the user has the SUPER_ADMIN role
      */
     public boolean isAdmin() {
         UserPrincipal principal = getCurrentUserPrincipal();
-        return principal != null && principal.getRole() == UserRole.ADMIN;
+        return principal != null && principal.getRole() == UserRole.SUPER_ADMIN;
     }
 
     /**
@@ -108,9 +112,9 @@ public class RestaurantAuthorizationService {
             return requestedRestaurantId;
         }
 
-        // If no restaurant specified, ADMIN can query all, others get their own
-        if (principal.getRole() == UserRole.ADMIN) {
-            return null; // ADMIN can see aggregate data across all restaurants
+        // If no restaurant specified, SUPER_ADMIN can query all, others get their own
+        if (principal.getRole() == UserRole.SUPER_ADMIN) {
+            return null; // SUPER_ADMIN can see aggregate data across all restaurants
         }
 
         // Non-admin users must have an assigned restaurant

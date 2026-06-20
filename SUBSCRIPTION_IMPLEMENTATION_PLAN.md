@@ -59,6 +59,12 @@ billing on top. (a) is the expensive, risky 70%.
 
 Nothing downstream is trustworthy without this.
 
+> **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ☐ · §3.4 ☐ · §3.5 ☐ · §3.6 ☐ ·
+> §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN*
+> vector and confine ADMIN to a single tenant (only SUPER_ADMIN is cross-tenant). The hole
+> is **not fully closed** until §3.3 — a self-registered account can still reach the ~104
+> controllers that don't yet call the central guard.
+
 ### 3.1 Close the self-service ADMIN hole
 - **`modules/auth/dto/RegisterRequest.java`** — remove the `role` field.
 - **`modules/auth/service/AuthService.java` (`register`, line ~47)** — stop reading role

@@ -5,6 +5,7 @@ import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.auth.dto.*;
 import com.elcafe.modules.auth.entity.User;
+import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.mapper.UserMapper;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.security.JwtUtil;
@@ -38,13 +39,19 @@ public class AuthService {
             throw new ConflictException("Email already registered");
         }
 
+        // SECURITY: never trust a client-supplied role. Public self-registration always
+        // creates an unprivileged OWNER with no restaurant assigned. Such an account cannot
+        // reach any tenant's data until it is attached to a restaurant (and, in Phase 1,
+        // provisioned with a billing account + trial subscription). Privileged accounts
+        // (ADMIN / SUPER_ADMIN / staff) are created only by an authenticated admin via
+        // SystemUserController / OperatorController.
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .phone(request.getPhone())
-                .role(request.getRole())
+                .role(UserRole.OWNER)
                 .active(true)
                 .emailVerified(false)
                 .build();

@@ -5,8 +5,14 @@ package com.elcafe.modules.auth.enums;
  * These roles are used in @PreAuthorize annotations across controllers.
  */
 public enum UserRole {
+    // Platform-operator role (cross-tenant). The ONLY role allowed to access data across
+    // all restaurants. SUPER_ADMIN inherits every ADMIN authority via the RoleHierarchy
+    // configured in SecurityConfig, so existing @PreAuthorize("hasRole('ADMIN')") checks
+    // continue to authorize a SUPER_ADMIN without modification.
+    SUPER_ADMIN,
+
     // Primary roles
-    ADMIN,           // System administrator with full access
+    ADMIN,           // Restaurant administrator (tenant-scoped — see RestaurantAuthorizationService)
     OWNER,           // Restaurant owner with management access
     MANAGER,         // Restaurant manager with operational access
     OPERATOR,        // Back-office operator

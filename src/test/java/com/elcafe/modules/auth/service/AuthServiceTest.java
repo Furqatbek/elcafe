@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -58,11 +59,11 @@ class AuthServiceTest {
         when(userMapper.toResponse(any(User.class))).thenReturn(userResponse);
     }
 
-    @Test @DisplayName("register — success with JWT tokens")
+    @Test @DisplayName("register — forces OWNER role with no restaurant (ignores client input)")
     void register_success() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("new@test.com"); request.setPassword("password123");
-        request.setFirstName("New"); request.setLastName("User"); request.setRole(UserRole.OPERATOR);
+        request.setFirstName("New"); request.setLastName("User");
 
         when(userRepository.existsByEmail("new@test.com")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("$2a$encoded");
@@ -75,6 +76,14 @@ class AuthServiceTest {
         assertThat(result.getAccessToken()).isEqualTo("access-token");
         assertThat(result.getRefreshToken()).isEqualTo("refresh-token");
         verify(passwordEncoder).encode("password123");
+
+        // SECURITY: self-registration must always create an unprivileged OWNER with no
+        // restaurant — never an ADMIN/SUPER_ADMIN, and never a client-chosen role.
+        ArgumentCaptor<User> savedUser = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(savedUser.capture());
+        assertThat(savedUser.getValue().getRole()).isEqualTo(UserRole.OWNER);
+        assertThat(savedUser.getValue().getRestaurantId()).isNull();
+        assertThat(savedUser.getValue().getEmailVerified()).isFalse();
     }
 
     @Test @DisplayName("register — duplicate email throws")
