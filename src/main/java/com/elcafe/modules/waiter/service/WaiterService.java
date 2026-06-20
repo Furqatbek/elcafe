@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.waiter.dto.CreateWaiterRequest;
@@ -43,6 +44,7 @@ public class WaiterService {
     private final RestaurantTableRepository tableRepository;
     private final ObjectMapper objectMapper;
     private final JwtUtil jwtUtil;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     /**
      * Get all waiters with pagination
@@ -99,6 +101,9 @@ public class WaiterService {
         }
 
         Waiter waiter = Waiter.builder()
+                // Bind the waiter to the creating admin's restaurant (null for SUPER_ADMIN /
+                // non-tenant principals — matches the previously-unbound behaviour).
+                .restaurantId(restaurantAuthorizationService.getCurrentUserRestaurantId())
                 .name(request.getName())
                 .pinCode(request.getPinCode())
                 .email(request.getEmail())

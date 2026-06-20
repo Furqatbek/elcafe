@@ -64,9 +64,10 @@ public class PayrollController {
             result.add(row);
         }
 
-        // NOTE: waiters are not yet tenant-bound at the entity level (no restaurant_id — §3.6),
-        // so they cannot be scoped here yet and remain visible across tenants until that lands.
-        List<Waiter> waiters = waiterRepository.findAllByOrderByNameAsc();
+        // Scope waiters to the caller's restaurant too (§3.6 bound Waiter to a tenant).
+        List<Waiter> waiters = (tenantScope == null)
+                ? waiterRepository.findAllByOrderByNameAsc()
+                : waiterRepository.findByRestaurantIdOrderByNameAsc(tenantScope);
         for (Waiter w : waiters) {
             Map<String, Object> row = new java.util.HashMap<>();
             row.put("id", w.getId());

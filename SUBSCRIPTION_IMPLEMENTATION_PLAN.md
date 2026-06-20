@@ -61,7 +61,7 @@ Nothing downstream is trustworthy without this.
 
 > **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ◐ (filter in *shadow* + controller
 > retrofit **started**) · §3.4 ◐ (backstop wired; all entities scoped, +AuditLog, User excluded) · §3.5 ☐
-> (deferred) · §3.6 ☐ · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
+> (deferred) · §3.6 ◐ (waiter entity bound; token-binding pending) · §3.7 ☐ (product decision pending). §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
 > default **shadow**) plus a mode-aware `RestaurantAuthorizationService.checkAccess(...)` for
@@ -83,9 +83,9 @@ Nothing downstream is trustworthy without this.
 >   users. ✅ Now **scoped at the query/controller layer** (the mitigation the `User`-not-`@Filter`ed
 >   decision relies on): listings use `RestaurantAuthorizationService.currentTenantScopeOrNull()`,
 >   create binds `restaurant_id` to the caller's tenant, and the `/{id}` mutators `checkAccess` the
->   target user's tenant. **Residuals:** waiters in `/employees` are still cross-tenant (no
->   `restaurant_id` until §3.6), and a tenant admin can still touch a `restaurant_id IS NULL`
->   (platform/legacy) user until those accounts are cleaned up (migration V147).
+>   target user's tenant. **Residual:** a tenant admin can still touch a `restaurant_id IS NULL`
+>   (platform/legacy) user until those accounts are cleaned up (migration V147). (The waiter
+>   `/employees` residual is now resolved by §3.6.)
 >
 > **§3.4 Hibernate backstop (this increment) — the systemic answer to the `/{id}` gap above:**
 > a global `@FilterDef("restaurantFilter")` on `Restaurant` + `@Filter(restaurant_id =
@@ -180,11 +180,24 @@ Nothing downstream is trustworthy without this.
   no fallback. Add a token/`tokenVersion` or Redis denylist so "suspend tenant" can hard-kill
   active sessions immediately (otherwise suspension waits for token expiry).
 
-### 3.6 Tenant-scope waiters
-- **Migration `V148`** — add `restaurant_id` to `waiters` (FK, backfill from related data).
-- **`modules/waiter/entity/Waiter.java`** — add the field/relationship.
-- **`modules/waiter/service/WaiterService.java`** — set tenant on creation; include
-  `restaurantId` in the waiter token (via `JwtUtil.generateWaiterAccessToken`).
+### 3.6 Tenant-scope waiters — ◐ ENTITY BOUND (token-binding pending)
+- ✅ **Migration `V148`** — adds `waiters.restaurant_id` (FK + index) and backfills it from each
+  waiter's activity: most-frequent `orders.restaurant_id`, then `waiter_performance`, then the
+  oldest restaurant for activity-less waiters. Left NULLABLE (a later migration can enforce NOT
+  NULL once every row is confirmed populated).
+- ✅ **`Waiter.java`** — `restaurantId` field + `@Filter` (now part of the §3.4 backstop). Safe
+  because every entity referencing a waiter does so within the same restaurant, so a backfilled
+  value keeps association fetches intact.
+- ✅ **`WaiterService.createWaiter`** — binds the new waiter to the creating admin's restaurant.
+- ✅ **`PayrollController GET /employees`** — waiters now scoped by tenant (clears the residual the
+  User-listing fix left open). `WaiterRepository.findByRestaurantIdOrderByNameAsc` added.
+- ☐ **Waiter token tenant-binding** — include `restaurantId` in the waiter token
+  (`JwtUtil.generateWaiterAccessToken`) and stash it in `TenantContext` from
+  `JwtAuthenticationFilter`, so *waiter-authenticated requests* (not just admin views of waiters)
+  are tenant-scoped. Until then, waiter requests carry no tenant and the backstop is inactive for
+  them.
+- ☐ Make `pin_code`/`email` unique **per restaurant** (currently global) and scope waiter login by
+  restaurant; enforce `restaurant_id` NOT NULL once backfill is confirmed.
 
 ### 3.7 Decide the customer-tenancy model
 Customers are currently global. Two options — pick one:

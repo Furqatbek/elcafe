@@ -36,6 +36,11 @@ public interface WaiterRepository extends JpaRepository<Waiter, Long> {
     List<Waiter> findAllByOrderByNameAsc();
 
     /**
+     * Find all waiters for a restaurant, sorted alphabetically by name (tenant-scoped listing).
+     */
+    List<Waiter> findByRestaurantIdOrderByNameAsc(Long restaurantId);
+
+    /**
      * Check if PIN code exists
      */
     boolean existsByPinCode(String pinCode);

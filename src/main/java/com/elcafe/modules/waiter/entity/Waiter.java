@@ -4,6 +4,7 @@ import com.elcafe.modules.waiter.enums.CommissionType;
 import com.elcafe.modules.waiter.enums.WaiterRole;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import org.hibernate.annotations.Filter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,11 +31,20 @@ import java.util.List;
 @jakarta.persistence.Table(name = "waiters")
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "waiterTables"})
+// Phase 0 §3.6: waiters are now tenant-scoped. Safe to @Filter — every entity that references a
+// waiter does so within the same restaurant, so a backfilled (non-null) restaurant_id keeps
+// association fetches intact under the tenant backstop.
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 public class Waiter {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // Phase 0 §3.6: the owning tenant. Nullable for now (existing rows backfilled by migration
+    // V148); set from the caller's restaurant on creation.
+    @Column(name = "restaurant_id")
+    private Long restaurantId;
 
     @Column(nullable = false, length = 100)
     private String name;

@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.service;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
@@ -33,6 +34,7 @@ class WaiterServiceTest {
     @Mock private RestaurantTableRepository tableRepository;
     @Spy  private ObjectMapper objectMapper = new ObjectMapper();
     @Mock private JwtUtil jwtUtil;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
 
     @InjectMocks private WaiterService waiterService;
 
@@ -167,8 +169,11 @@ class WaiterServiceTest {
         waiterService.deleteWaiter(1L);
 
         assertFalse(assignment.getActive());
+        assertFalse(waiter.getActive());
         verify(waiterTableRepository).saveAll(anyList());
-        verify(waiterRepository).delete(waiter);
+        // deleteWaiter is a SOFT delete (mark inactive + save) to preserve linked history —
+        // see WaiterService.deleteWaiter. (Was asserting a hard delete() that never happens.)
+        verify(waiterRepository).save(waiter);
     }
 
     @Test
