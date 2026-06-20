@@ -206,8 +206,13 @@ Nothing downstream is trustworthy without this.
   version trails the stored one (checked on every request via the filter, and on `/refresh`). It is
   bumped on password change/reset, so changing a password logs out all devices. The same
   `setTokenVersion(current + 1)` is the hook for a future "log out everywhere" endpoint / suspend-
-  tenant action. (Waiter-token revocation would need a per-request waiter lookup — separate,
-  lower-priority, since waiter access tokens are 12h and PIN-based.)
+  tenant action.
+- ✅ **Waiter-token revocation (done, V152)** — waiter access tokens are long-lived (30d) with no
+  refresh flow, so `JwtAuthenticationFilter` now loads the waiter per request and rejects the token
+  unless the waiter exists, is active, and its `tokenVersion` matches the claim. `waiters.token_version`
+  (V152) is bumped by `WaiterService` on PIN change and deactivation, instantly killing outstanding
+  tokens (the per-request lookup is the accepted cost). A missing claim counts as 0, so pre-V152
+  tokens stay valid until the first bump.
 
 ### 3.6 Tenant-scope waiters — ✅ TENANT-BOUND (PIN per-restaurant uniqueness is separate hardening)
 - ✅ **Migration `V148`** — adds `waiters.restaurant_id` (FK + index) and backfills it from each

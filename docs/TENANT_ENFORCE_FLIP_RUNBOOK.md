@@ -68,10 +68,14 @@ paths remain and should be spot-audited during the soak:
 - **`CrossTenantWriteException` → 500**: add an `@ExceptionHandler` mapping it to 403 for a cleaner
   client contract (optional).
 
-## Still open in Phase 0 (separate — not required for the flip)
+## Phase 0 hardening — complete
+
+All Phase 0 hardening items are now landed; the only remaining action is the enforce flip itself
+(this runbook).
 
 - **§3.6 waiter hardening** — ✅ done (V151): per-restaurant `pin_code`/`email`, waiter-login-by-
   restaurant (`WaiterAuthRequest.restaurantId` now required — update POS clients), `restaurant_id
   NOT NULL`.
-- **§3.5 waiter-token revocation** — still open: `tokenVersion` is enforced for users only; waiters
-  need a per-request lookup.
+- **§3.5 waiter-token revocation** — ✅ done (V152): waiter tokens carry a `tokenVersion`, checked
+  per request by `JwtAuthenticationFilter` (waiter loaded + must be active + version match); bumped
+  on PIN change / deactivation. Closes the gap where a changed/disabled PIN kept working for ~30d.

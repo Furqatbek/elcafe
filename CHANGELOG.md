@@ -70,6 +70,20 @@ must send it or login returns 400.
 `WaiterService` create/update scope their PIN/email uniqueness checks to the restaurant. Same H2/
 Flyway test caveat as V150: validate V151 on a Postgres copy before deploy.
 
+#### Waiter token revocation (§3.5)
+
+Waiter access tokens are long-lived (30 days) with no refresh flow, but the auth filter only checked
+role + expiry — so a changed or disabled PIN kept working for up to a month. Now revocable, mirroring
+the existing per-user `tokenVersion` mechanism.
+
+**Backend**: **V152** adds `waiters.token_version` (default 0). Waiter tokens now carry a
+`tokenVersion` claim; `JwtAuthenticationFilter` loads the waiter on each request and rejects the
+token unless the waiter still exists, is active, and the claim matches the stored version (a missing
+claim counts as 0, so tokens issued before V152 stay valid until the first bump). `WaiterService`
+bumps the version on PIN change and on deactivation/soft-delete, instantly invalidating outstanding
+tokens. This adds one waiter lookup per authenticated waiter request (the accepted cost of
+revocation). No API/client change.
+
 ### Added - 2026-06-08
 
 #### Customer Wallet & Loyalty Stages
