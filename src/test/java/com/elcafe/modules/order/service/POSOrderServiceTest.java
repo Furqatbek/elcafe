@@ -110,6 +110,16 @@ class POSOrderServiceTest {
 
     @Mock
     private POSTableService posTableService;
+    @Mock
+    private com.elcafe.modules.financial.service.RevenueService revenueService;
+    @Mock
+    private com.elcafe.modules.menu.service.PackagingService packagingService;
+    @Mock
+    private com.elcafe.modules.pos.shift.service.ShiftManagementService shiftManagementService;
+    @Mock
+    private com.elcafe.modules.pos.shift.service.ShiftEnforcementService shiftEnforcementService;
+    @Mock
+    private com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository employeeShiftRepository;
 
     @InjectMocks
     private POSOrderService posOrderService;
@@ -357,7 +367,7 @@ class POSOrderServiceTest {
             assertNotNull(response);
             assertEquals("John Doe", response.getCustomerName());
             assertEquals("+998901234567", response.getCustomerPhone());
-            verify(customerRepository).findByPhone("+998901234567");
+            verify(customerRepository).findByPhoneAndRestaurantId("+998901234567", 1L);
             verify(customerRepository, never()).save(any(Customer.class));
         }
 

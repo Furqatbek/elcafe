@@ -123,7 +123,7 @@ class ShiftScheduleServiceTest {
 
     @Test @DisplayName("auto-fill from WorkingHours")
     void autoFill() {
-        LocalDate monday = LocalDate.of(2026, 5, 5);
+        LocalDate monday = LocalDate.of(2026, 5, 4); // 2026-05-04 is a Monday (2026-05-05 is a Tuesday)
 
         WorkingHours wh = new WorkingHours();
         wh.setUser(employee);

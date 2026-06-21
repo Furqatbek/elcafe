@@ -40,7 +40,9 @@ public class ShiftReportService {
                     int orders = shift.getTotalOrders() != null ? shift.getTotalOrders() : 0;
                     long workedMin = shift.getWorkedMinutes();
                     int breakMin = shift.getBreakMinutes() != null ? shift.getBreakMinutes() : 0;
-                    long netMinutes = Math.max(0, workedMin - breakMin);
+                    // getWorkedMinutes() already excludes break time; do not subtract breakMin again
+                    // (that double-counted the break and understated paid labour hours).
+                    long netMinutes = Math.max(0, workedMin);
 
                     BigDecimal laborCost = hourlyRate != null
                             ? hourlyRate.multiply(BigDecimal.valueOf(netMinutes)).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP)

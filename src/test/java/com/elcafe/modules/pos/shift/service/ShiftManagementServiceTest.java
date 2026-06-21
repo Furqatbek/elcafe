@@ -48,6 +48,9 @@ class ShiftManagementServiceTest {
     @Mock private WaiterRepository waiterRepository;
     @Mock private CashDrawerRepository cashDrawerRepository;
     @Mock private ShiftScheduleService shiftScheduleService;
+    @Mock private com.elcafe.modules.order.repository.OrderRepository orderRepository;
+    @Mock private com.elcafe.modules.ownerbot.service.OwnerNotificationService ownerNotificationService;
+    @Mock private com.elcafe.modules.financial.service.SalaryAutoPayService salaryAutoPayService;
     @InjectMocks private ShiftManagementService shiftManagementService;
 
     private Restaurant restaurant;

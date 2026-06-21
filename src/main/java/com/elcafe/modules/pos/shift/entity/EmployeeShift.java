@@ -189,7 +189,10 @@ public class EmployeeShift {
 
     public void clockOut() {
         this.clockOut = OffsetDateTime.now();
-        this.status = ShiftStatus.APPROVED;
+        // Clocking out ends the shift pending manager approval; approval is a separate action
+        // (approve() / ShiftManagementService.approveShift sets APPROVED). Setting APPROVED here
+        // would bypass that workflow.
+        this.status = ShiftStatus.COMPLETED;
         calculateTotalBreakMinutes();
     }
 
