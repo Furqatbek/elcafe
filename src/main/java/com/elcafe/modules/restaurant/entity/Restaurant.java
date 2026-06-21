@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.entity;
 
+import com.elcafe.modules.billing.entity.SubscriptionPlan;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -110,6 +111,27 @@ public class Restaurant {
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    // Phase 1 (subscription tiers) mini-phase A1 — plan attachment. The DB enforces plan_id NOT NULL
+    // after backfill (V156); the JPA relation is intentionally left nullable so code/tests that build
+    // a Restaurant before plan assignment are unaffected (Hibernate `validate` ignores nullability).
+    // @JsonIgnore keeps the lazy association out of existing Restaurant payloads — the billing API
+    // exposes plan info via its own DTO (mini-phase A2/A3), not the raw entity.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "plan_id")
+    @JsonIgnore
+    private SubscriptionPlan plan;
+
+    @Column(name = "plan_started_at")
+    private LocalDateTime planStartedAt;
+
+    /** When the current plan lapses. NULL = no expiry (free Start tier). */
+    @Column(name = "plan_expires_at")
+    private LocalDateTime planExpiresAt;
+
+    @Column(name = "is_trial", nullable = false)
+    @Builder.Default
+    private Boolean isTrial = false;
 
     public void addBusinessHours(BusinessHours hours) {
         businessHours.add(hours);
