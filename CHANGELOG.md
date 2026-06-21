@@ -158,6 +158,25 @@ per-endpoint guard sprinkling is needed for tenancy.
 No migration. Enforce residuals (native/bulk queries, `getReferenceById`, `REQUIRES_NEW`) remain
 tracked in `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`.
 
+#### Notification tenant-scoping (§3.7 staff-side hardening)
+
+`Notification` had no `restaurant_id` and no `@Filter`, so staff could read/mutate any restaurant's
+notifications by id/`userId`, and `ADMIN`/`COURIER` "broadcasts" (`userId` NULL) fanned out across
+every restaurant. **V155** makes `Notification` a tenant entity, so the §3.4 filter scopes it like
+everything else — on the enforce flip a restaurant's staff see only their restaurant's notifications
+(SUPER_ADMIN sees all), closing the cross-tenant staff IDOR on both the list and by-id endpoints with
+no per-endpoint code, and ending the global broadcast leak.
+
+- **V155:** add `notifications.restaurant_id` (nullable), backfilled from each notification's order
+  (with `user_id`/customer fallbacks), + index + FK. Nullable on purpose — a stray un-backfillable row
+  stays invisible to tenant-scoped reads rather than failing the backfill; new rows are always stamped.
+- **`Notification` entity:** `restaurant_id` + `@Filter(restaurantFilter)` (nullable → no fixture
+  breakage). **`NotificationService`** stamps it from the order at the single creation site.
+- **`TenantBackstopIsolationTest`:** proves notifications are filter-scoped (list + `findById`).
+
+The other two sub-items dissolved: no `WAITER`-role notifications are ever created (no waiter principal
+id needed), and within-tenant cross-role reads are normal restaurant operation. Postgres-only migration.
+
 ### Added - 2026-06-08
 
 #### Customer Wallet & Loyalty Stages

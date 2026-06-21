@@ -268,19 +268,23 @@ Chose **(A) Customers belong to one restaurant.**
   `CustomerPrincipal`; `AddressController` rejects a `{customerId}` that isn't the caller's; and
   `NotificationController` forces a consumer to `(CUSTOMER, principal.getId())` and checks per-
   notification ownership on its by-id endpoints. Non-consumer (staff) principals are unchanged.
-- ☐ **Remaining (separate):** staff-side notification hardening — `NotificationController`'s
-  staff/admin path still trusts the client `role`/`userId`, and `Notification` has no tenant `@Filter`
-  (so it's cross-tenant for staff). A full fix needs per-role `userId` semantics, a waiter principal
-  that carries an id, and a `restaurant_id` + `@Filter` on `Notification`.
+- ✅ **Staff-side notification hardening done (V155).** `Notification` is now a tenant entity
+  (`restaurant_id` + `@Filter`), backfilled from each notification's order and stamped at the single
+  `NotificationService` creation site — so the §3.4 filter scopes notifications like everything else:
+  on the enforce flip a restaurant's staff see only their restaurant's notifications (SUPER_ADMIN all),
+  closing the cross-tenant staff IDOR for the list and by-id endpoints, and ending the global
+  ADMIN/COURIER broadcast leak. The other two sub-items dissolved on inspection: no `WAITER`-role
+  notifications are ever created (waiter-principal-id moot), and within-tenant cross-role reads are
+  normal restaurant operation, not an IDOR. Proven by `TenantBackstopIsolationTest`.
 
 ---
 
 ## 4. Phase 1 — Tenant & subscription data model
 
-New module `com.elcafe.modules.subscription`. Migrations start at **`V155`** — Phase 0 consumed
-V147–V154 (V147/V148 tenant backfill, V149 user `token_version`, V150 customers per-restaurant,
+New module `com.elcafe.modules.subscription`. Migrations start at **`V156`** — Phase 0 consumed
+V147–V155 (V147/V148 tenant backfill, V149 user `token_version`, V150 customers per-restaurant,
 V151 waiter identity, V152 waiter `token_version`, V153 loyalty per-restaurant, V154 tenant-assignment
-review).
+review, V155 notification tenant scope).
 
 ### 4.1 Entities (new)
 - `entity/BillingAccount.java` → table `billing_accounts` (owner user, company/billing name,
@@ -302,12 +306,12 @@ review).
 - `enums/InvoiceStatus.java`: `DRAFT, OPEN, PAID, UNCOLLECTIBLE, VOID`.
 
 ### 4.3 Migrations
-- `V155__create_billing_accounts.sql`
-- `V156__create_subscription_plans.sql` (+ seed default plans)
-- `V157__create_restaurant_subscriptions.sql`
-- `V158__create_subscription_invoices.sql`
-- `V159__create_billing_events.sql`
-- `V160__backfill_subscriptions_for_existing_restaurants.sql` — every existing restaurant
+- `V156__create_billing_accounts.sql`
+- `V157__create_subscription_plans.sql` (+ seed default plans)
+- `V158__create_restaurant_subscriptions.sql`
+- `V159__create_subscription_invoices.sql`
+- `V160__create_billing_events.sql`
+- `V161__backfill_subscriptions_for_existing_restaurants.sql` — every existing restaurant
   gets a `BillingAccount` + a subscription (grandfathered `ACTIVE` or `TRIALING`) so the new
   gate doesn't lock out current users on deploy. **Critical for a no-downtime rollout.**
 
@@ -390,7 +394,7 @@ review).
 - **Tests.** New: tenancy-isolation tests (user A cannot touch restaurant B via path/param),
   enforcement-filter tests (402 paths + allowlist), billing lifecycle, webhook idempotency.
   Module test dirs already exist under `src/test/java/com/elcafe/modules/*`.
-- **Rollout / data migration.** `V160` backfill must run so existing tenants land `ACTIVE`/
+- **Rollout / data migration.** `V161` backfill must run so existing tenants land `ACTIVE`/
   grandfathered; otherwise the gate locks everyone out on deploy. Stage behind a feature flag
   (`subscription.enforcement.enabled`) — ship enforcement OFF, verify data, then flip ON.
 - **Observability.** Metrics/alerts for failed charges, suspensions, webhook failures; audit
@@ -406,7 +410,7 @@ review).
 
 ```
 Phase 0  (security + tenancy)            ── must land first, gates everything
-   └─ Phase 1 (data model + V160 backfill)
+   └─ Phase 1 (data model + V161 backfill)
          └─ Phase 2 (enforcement gate, flag OFF)
                ├─ Phase 3 (billing engine + provider + webhooks)
                └─ Phase 4 (frontend paywall + billing UI)
@@ -420,7 +424,7 @@ Flip enforcement flag ON only after Phase 1 backfill verified in prod.
    Hibernate tenant filter (§3.4) as a backstop and broad isolation tests.
 2. **Immortal tokens vs. suspension** — without finite tokens + denylist (§3.5), a suspended
    tenant keeps working until their token expires.
-3. **Backfill correctness (`V160`)** — a wrong backfill either locks out paying users or hands
+3. **Backfill correctness (`V161`)** — a wrong backfill either locks out paying users or hands
    free access. Dry-run on a prod snapshot.
 4. **Customer-global model (§3.7)** — unresolved, this leaks PII across tenants; it's a product
    + privacy decision, not just code.
