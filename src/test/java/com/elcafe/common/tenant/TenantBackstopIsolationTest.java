@@ -3,6 +3,10 @@ package com.elcafe.common.tenant;
 import com.elcafe.config.JpaConfig;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.modules.notification.entity.Notification;
+import com.elcafe.modules.notification.enums.NotificationType;
+import com.elcafe.modules.notification.enums.UserRole;
+import com.elcafe.modules.notification.repository.NotificationRepository;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -45,6 +49,7 @@ class TenantBackstopIsolationTest {
 
     @Autowired private CustomerRepository customerRepository;
     @Autowired private OrderRepository orderRepository;
+    @Autowired private NotificationRepository notificationRepository;
     @Autowired private EntityManager em;
 
     private Long restaurantA;
@@ -53,6 +58,7 @@ class TenantBackstopIsolationTest {
     private Long custBId;
     private Long orderAId;
     private Long orderBId;
+    private Long notifBId;
 
     @BeforeEach
     void setUp() {
@@ -75,6 +81,11 @@ class TenantBackstopIsolationTest {
         em.persist(orderB);
         orderAId = orderA.getId();
         orderBId = orderB.getId();
+
+        Notification notifB = notification(restaurantB);
+        em.persist(notification(restaurantA));
+        em.persist(notifB);
+        notifBId = notifB.getId();
 
         em.flush();
         em.clear(); // detach everything so reads hit the DB (and the filter), not the 1st-level cache
@@ -180,6 +191,20 @@ class TenantBackstopIsolationTest {
                 .isEmpty();
     }
 
+    @Test
+    @DisplayName("FIX covers notifications (§3.7 staff hardening): foreign-tenant notifications hidden")
+    void filterOn_notificationsAreScoped() {
+        enableFilterFor(restaurantA);
+
+        // List + surrogate-id load both scope to the bound tenant — a staff member can no longer read
+        // another restaurant's notifications by id or by passing its userId, and ADMIN "broadcasts"
+        // stop fanning out across restaurants.
+        assertThat(notificationRepository.findAll()).hasSize(1);
+        assertThat(notificationRepository.findById(notifBId))
+                .as("foreign notification hidden by the filter")
+                .isEmpty();
+    }
+
     private static Restaurant restaurant(String name) {
         Restaurant r = new Restaurant();
         r.setName(name);
@@ -200,6 +225,15 @@ class TenantBackstopIsolationTest {
                 .status(OrderStatus.COMPLETED)
                 .subtotal(BigDecimal.TEN).tax(BigDecimal.ZERO).discount(BigDecimal.ZERO)
                 .deliveryFee(BigDecimal.ZERO).total(BigDecimal.TEN)
+                .build();
+    }
+
+    private static Notification notification(Long restaurantId) {
+        return Notification.builder()
+                .restaurantId(restaurantId)
+                .userRole(UserRole.ADMIN)
+                .type(NotificationType.NEW_ORDER)
+                .title("t").message("m")
                 .build();
     }
 }

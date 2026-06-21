@@ -6,6 +6,7 @@ import com.elcafe.modules.notification.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Filter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
     @Index(name = "idx_status", columnList = "status"),
     @Index(name = "idx_created_at", columnList = "created_at")
 })
+@Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,6 +34,14 @@ public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /**
+     * §3.7 follow-up: the owning tenant. Backfilled from the notification's order (V155) and stamped
+     * on create by NotificationService. Nullable so a stray un-backfillable row stays invisible to
+     * tenant-scoped reads (visible only to SUPER_ADMIN's null scope) rather than failing the backfill.
+     */
+    @Column(name = "restaurant_id")
+    private Long restaurantId;
 
     /**
      * The role this notification is for (ADMIN, RESTAURANT, CUSTOMER, COURIER, KITCHEN, WAITER)
