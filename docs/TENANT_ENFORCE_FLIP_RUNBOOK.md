@@ -52,21 +52,30 @@ principal type is tenant-bound at token-issue time: user (`UserPrincipal`), wait
 
 ## NOT yet covered by the systemic fixes — audit / monitor (or spot-fix)
 
-The `@Filter` + `findById` + insert-guard trio closes the high-severity classes. These narrower
-paths remain and should be spot-audited during the soak:
+The `@Filter` + `findById` + insert-guard trio closes the high-severity classes. The narrower paths
+below were audited as part of flip-readiness; status noted inline.
 
 - **Native queries** (`nativeQuery = true`, `createNativeQuery`) — `@Filter` does not apply to raw
-  SQL. Grep for them on tenant tables; scope by `restaurant_id` explicitly.
-- **Bulk `@Modifying` JPQL `UPDATE`/`DELETE`** — filters don't apply to bulk operations. Ensure they
-  carry a `restaurant_id` predicate.
-- **`getReferenceById(foreignId)`** — returns a lazy proxy initialised by a PK load (not filtered).
-  Not overridden by `TenantScopedJpaRepository`; mostly used to set associations, but avoid using it
-  to *read* cross-tenant data.
+  SQL. ✅ **Audited: none on tenant tables** (`grep -r "nativeQuery = true\|createNativeQuery"
+  modules` is empty). Re-check when adding any.
+- **`getReferenceById(foreignId)`** — lazy proxy from a PK load (not filtered), not overridden by
+  `TenantScopedJpaRepository`. ✅ **Audited: no usages in the codebase.** Avoid using it to *read*
+  cross-tenant data if introduced.
+- **`CrossTenantWriteException` → 500** — ✅ **Done:** mapped to **403** via `GlobalExceptionHandler`.
+- **Entities without their own `restaurant_id`** (e.g. `Payment`, scoped only via `Order`) — the
+  `@Filter`/`findById` fix can't cover their direct key lookups (`findByTransactionId`,
+  `findByOrderId`). ✅ The known reads (`PaymentService.getPaymentBy{Id,OrderId,TransactionId}`) now
+  carry an explicit `checkAccess(payment.getOrder().getRestaurant().getId())`. Watch for new such
+  finders on parent-scoped entities.
+- **Bulk `@Modifying` JPQL `UPDATE`/`DELETE`** — filters don't apply to bulk operations. ⚠️ **Still a
+  residual** — spot-audit during the soak. Notable: `NotificationRepository.markAllAsReadForUser`
+  keys on `(userRole, userId)` with no `restaurant_id` predicate (low impact: marks-as-read only, and
+  the consumer path forces the caller's own id).
 - **`REQUIRES_NEW` / non-MVC DB access** — the filter is enabled on the open-in-view request session
   only. Tenant-scoped queries in a new transaction or a scheduler are not scoped (by design for
   background work; confirm none are request-facing).
-- **`CrossTenantWriteException` → 500**: add an `@ExceptionHandler` mapping it to 403 for a cleaner
-  client contract (optional).
+- **§3.3 surrogate-id audit leftovers** — ✅ closed: consumer order-number track/cancel now enforce
+  per-customer ownership; the Payment-by-key reads are guarded (above).
 
 ## Phase 0 hardening — complete
 
