@@ -5,6 +5,7 @@ import com.elcafe.modules.order.dto.consumer.CreateOrderRequest;
 import com.elcafe.modules.order.dto.consumer.OrderResponse;
 import com.elcafe.modules.order.service.ConsumerOrderService;
 import com.elcafe.modules.promotion.dto.ValidateCouponResponse;
+import com.elcafe.security.CustomerPrincipal;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -45,17 +47,22 @@ public class ConsumerOrderController {
 
     @GetMapping("/{orderNumber}")
     @Operation(summary = "Track order", description = "Get order status and details by order number")
-    public ResponseEntity<ApiResponse<OrderResponse>> trackOrder(@PathVariable String orderNumber) {
-        OrderResponse response = consumerOrderService.getOrderByNumber(orderNumber);
+    public ResponseEntity<ApiResponse<OrderResponse>> trackOrder(
+            @AuthenticationPrincipal CustomerPrincipal principal,
+            @PathVariable String orderNumber) {
+        OrderResponse response = consumerOrderService.getOrderByNumber(
+                orderNumber, principal != null ? principal.getId() : null);
         return ResponseEntity.ok(ApiResponse.success("Order retrieved successfully", response));
     }
 
     @PostMapping("/{orderNumber}/cancel")
     @Operation(summary = "Cancel order", description = "Cancel an order (only if not yet preparing)")
     public ResponseEntity<ApiResponse<OrderResponse>> cancelOrder(
+            @AuthenticationPrincipal CustomerPrincipal principal,
             @PathVariable String orderNumber,
             @RequestParam(required = false) String reason) {
-        OrderResponse response = consumerOrderService.cancelOrder(orderNumber, reason);
+        OrderResponse response = consumerOrderService.cancelOrder(
+                orderNumber, reason, principal != null ? principal.getId() : null);
         return ResponseEntity.ok(ApiResponse.success("Order cancelled successfully", response));
     }
 

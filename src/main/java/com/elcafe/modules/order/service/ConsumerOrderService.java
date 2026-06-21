@@ -197,10 +197,24 @@ public class ConsumerOrderService {
         return mapToResponse(savedOrder);
     }
 
+    /**
+     * §3.7: order numbers are sequential and guessable, so a consumer may only track or cancel an
+     * order that belongs to them. These endpoints are authenticated, so requesterCustomerId is the
+     * caller's CustomerPrincipal id; a null id or a non-owning order is rejected.
+     */
+    private void assertOwnedBy(Order order, Long requesterCustomerId) {
+        if (requesterCustomerId == null || order.getCustomer() == null
+                || !order.getCustomer().getId().equals(requesterCustomerId)) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "This order does not belong to you");
+        }
+    }
+
     @Transactional(readOnly = true)
-    public OrderResponse getOrderByNumber(String orderNumber) {
+    public OrderResponse getOrderByNumber(String orderNumber, Long requesterCustomerId) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
+        assertOwnedBy(order, requesterCustomerId);
 
         // Force initialization of lazy relationships
         order.getRestaurant().getName();
@@ -216,9 +230,10 @@ public class ConsumerOrderService {
     }
 
     @Transactional
-    public OrderResponse cancelOrder(String orderNumber, String reason) {
+    public OrderResponse cancelOrder(String orderNumber, String reason, Long requesterCustomerId) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
+        assertOwnedBy(order, requesterCustomerId);
 
         // Only allow cancellation if order is not being prepared yet
         if (order.getStatus() == OrderStatus.PREPARING ||

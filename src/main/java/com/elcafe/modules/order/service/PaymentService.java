@@ -2,6 +2,7 @@ package com.elcafe.modules.order.service;
 
 import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.order.dto.*;
 import com.elcafe.modules.order.dto.pos.PaymentRequestDTO;
 import com.elcafe.modules.order.dto.pos.PaymentResponseDTO;
@@ -52,6 +53,7 @@ public class PaymentService {
     private final PaymentIdempotencyService idempotencyService;
     private final AuditService auditService;
     private final POSTableService posTableService;
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @Transactional(readOnly = true)
     public Page<PaymentResponse> getAllPayments(Pageable pageable) {
@@ -63,6 +65,7 @@ public class PaymentService {
     public PaymentResponse getPaymentById(Long orderId, Long paymentId) {
         Payment payment = paymentRepository.findByIdAndOrderId(paymentId, orderId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId + " for order: " + orderId));
+        restaurantAuthorizationService.checkAccess(payment.getOrder().getRestaurant().getId()); // §3.3: tenant guard
         return toResponse(payment);
     }
 
@@ -73,6 +76,7 @@ public class PaymentService {
             throw new RuntimeException("Payment not found for order: " + orderId);
         }
         // Return the first/primary payment (for backward compatibility)
+        restaurantAuthorizationService.checkAccess(payments.get(0).getOrder().getRestaurant().getId()); // §3.3: tenant guard
         return toResponse(payments.get(0));
     }
 
@@ -92,6 +96,7 @@ public class PaymentService {
     public PaymentResponse getPaymentByTransactionId(String transactionId) {
         Payment payment = paymentRepository.findByTransactionId(transactionId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with transaction ID: " + transactionId));
+        restaurantAuthorizationService.checkAccess(payment.getOrder().getRestaurant().getId()); // §3.3: tenant guard
         return toResponse(payment);
     }
 

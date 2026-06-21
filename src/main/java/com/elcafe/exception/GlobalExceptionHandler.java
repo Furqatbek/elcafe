@@ -1,5 +1,6 @@
 package com.elcafe.exception;
 
+import com.elcafe.common.tenant.TenantInsertGuard;
 import com.elcafe.modules.analytics.exception.AnalyticsCalculationException;
 import com.elcafe.modules.order.exception.PaymentTransactionException;
 import com.elcafe.utils.ApiResponse;
@@ -113,6 +114,21 @@ public class GlobalExceptionHandler {
             WebRequest request
     ) {
         log.error("Access denied: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("Access denied"));
+    }
+
+    /**
+     * §3.4 tenant insert-guard: a write targeting a foreign restaurant. Map to 403 rather than the
+     * default 500 so the client contract is clean once enforcement is on.
+     */
+    @ExceptionHandler(TenantInsertGuard.CrossTenantWriteException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCrossTenantWrite(
+            TenantInsertGuard.CrossTenantWriteException ex,
+            WebRequest request
+    ) {
+        log.error("Cross-tenant write blocked: {}", ex.getMessage());
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.error("Access denied"));

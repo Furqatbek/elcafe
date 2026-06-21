@@ -52,9 +52,10 @@ class ConsumerOrderServiceTest {
     @DisplayName("getOrderByNumber — returns order response")
     void getOrderByNumber_returnsResponse() {
         Order order = createOrder(1L, OrderStatus.PREPARING);
+        order.setCustomer(createCustomer()); // owner: customer id 1
         when(orderRepository.findByOrderNumber("ORD-001")).thenReturn(Optional.of(order));
 
-        OrderResponse result = consumerOrderService.getOrderByNumber("ORD-001");
+        OrderResponse result = consumerOrderService.getOrderByNumber("ORD-001", 1L);
 
         assertNotNull(result);
     }
@@ -64,18 +65,30 @@ class ConsumerOrderServiceTest {
     void getOrderByNumber_notFound_throws() {
         when(orderRepository.findByOrderNumber("NONE")).thenReturn(Optional.empty());
 
-        assertThrows(Exception.class, () -> consumerOrderService.getOrderByNumber("NONE"));
+        assertThrows(Exception.class, () -> consumerOrderService.getOrderByNumber("NONE", 1L));
     }
 
     @Test
     @DisplayName("cancelOrder — cancels existing order")
     void cancelOrder_cancels() {
         Order order = createOrder(1L, OrderStatus.NEW);
+        order.setCustomer(createCustomer()); // owner: customer id 1
         when(orderRepository.findByOrderNumber("ORD-001")).thenReturn(Optional.of(order));
         when(orderRepository.save(any(Order.class))).thenAnswer(i -> i.getArgument(0));
 
-        OrderResponse result = consumerOrderService.cancelOrder("ORD-001", "Changed mind");
+        OrderResponse result = consumerOrderService.cancelOrder("ORD-001", "Changed mind", 1L);
 
         assertNotNull(result);
+    }
+
+    @Test
+    @DisplayName("cancelOrder — rejects a non-owner (IDOR)")
+    void cancelOrder_nonOwner_denied() {
+        Order order = createOrder(1L, OrderStatus.NEW);
+        order.setCustomer(createCustomer()); // owner: customer id 1
+        when(orderRepository.findByOrderNumber("ORD-001")).thenReturn(Optional.of(order));
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> consumerOrderService.cancelOrder("ORD-001", "x", 999L)); // different customer
     }
 }
