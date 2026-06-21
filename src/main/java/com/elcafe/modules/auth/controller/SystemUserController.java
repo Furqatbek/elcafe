@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -94,8 +95,9 @@ public class SystemUserController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> update(@PathVariable Long id, @RequestBody UpdateRequest req) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        // Prevent cross-tenant account takeover (e.g. password reset) via a guessed id.
-        restaurantAuthorizationService.checkAccess(user.getRestaurantId());
+        // Prevent cross-tenant account takeover (e.g. password reset) via a guessed id,
+        // including platform/legacy (null-restaurant) accounts — see requireAccess.
+        requireAccess(user);
 
         if (req.firstName != null) user.setFirstName(req.firstName);
         if (req.lastName != null) user.setLastName(req.lastName);
@@ -114,11 +116,27 @@ public class SystemUserController {
     public ResponseEntity<ApiResponse<Void>> deactivate(@PathVariable Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        // Prevent cross-tenant deactivation via a guessed id.
-        restaurantAuthorizationService.checkAccess(user.getRestaurantId());
+        // Prevent cross-tenant deactivation via a guessed id (incl. null-restaurant accounts).
+        requireAccess(user);
         user.setActive(false);
         userRepository.save(user);
         return ResponseEntity.ok(ApiResponse.success("User deactivated", null));
+    }
+
+    /**
+     * Authorize a mutation on {@code user}. Beyond the standard tenant check, a platform/legacy
+     * account ({@code restaurant_id IS NULL}) must only be reachable by the cross-tenant operator:
+     * {@link RestaurantAuthorizationService#checkAccess(Long)} treats a null restaurantId as an
+     * unconstrained "aggregate" load, so without this guard any tenant admin could mutate such an
+     * account via a guessed id. Independent of enforcement mode (it is an authorization decision on
+     * the target, not a Hibernate-filter concern).
+     */
+    private void requireAccess(User user) {
+        // isAdmin() == SUPER_ADMIN, the only cross-tenant role (see RestaurantAuthorizationService).
+        if (user.getRestaurantId() == null && !restaurantAuthorizationService.isAdmin()) {
+            throw new AccessDeniedException("Access denied: platform account is operator-only");
+        }
+        restaurantAuthorizationService.checkAccess(user.getRestaurantId());
     }
 
     private Map<String, Object> toMap(User u) {

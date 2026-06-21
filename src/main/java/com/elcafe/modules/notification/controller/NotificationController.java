@@ -1,5 +1,6 @@
 package com.elcafe.modules.notification.controller;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.notification.entity.Notification;
 import com.elcafe.modules.notification.enums.UserRole;
 import com.elcafe.modules.notification.repository.NotificationRepository;
@@ -189,7 +190,9 @@ public class NotificationController {
         requireRole(role);
         log.info("Marking all notifications as read for role: {}, userId: {}", role, userId);
 
-        int count = notificationRepository.markAllAsReadForUser(role, userId);
+        // Scope the bulk update to the caller's tenant (null for SUPER_ADMIN / unbound). The
+        // @Filter does not cover bulk JPQL updates, so the tenant is passed explicitly.
+        int count = notificationRepository.markAllAsReadForUser(role, userId, TenantContext.getRestaurantId());
 
         return ResponseEntity.ok(
             ApiResponse.success("All notifications marked as read", Map.of("updated", count))

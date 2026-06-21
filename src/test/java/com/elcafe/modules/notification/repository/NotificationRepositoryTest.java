@@ -102,7 +102,7 @@ class NotificationRepositoryTest {
     @Test @Transactional
     @DisplayName("markAllAsReadForUser — marks unread notifications as read")
     void markAllAsReadForUser() {
-        int updated = repo.markAllAsReadForUser(UserRole.ADMIN, 1L);
+        int updated = repo.markAllAsReadForUser(UserRole.ADMIN, 1L, null);
 
         assertEquals(1, updated);
 
@@ -112,6 +112,29 @@ class NotificationRepositoryTest {
         // broadcast (userId=null) is not matched by markAllAsReadForUser (userId = :userId)
         Long unreadCount = repo.countUnreadForUser(UserRole.ADMIN, 1L);
         assertEquals(1L, unreadCount);
+    }
+
+    @Test @Transactional
+    @DisplayName("markAllAsReadForUser — scopes to the given restaurant (does not cross tenants)")
+    void markAllAsReadForUser_tenantScoped() {
+        em.persist(Notification.builder()
+                .userRole(UserRole.CUSTOMER).userId(777L).restaurantId(100L)
+                .type(NotificationType.NEW_ORDER).title("R100").message("r100")
+                .status(NotificationStatus.UNREAD).priority(1).build());
+        em.persist(Notification.builder()
+                .userRole(UserRole.CUSTOMER).userId(777L).restaurantId(200L)
+                .type(NotificationType.NEW_ORDER).title("R200").message("r200")
+                .status(NotificationStatus.UNREAD).priority(1).build());
+        em.flush();
+
+        // Only the caller's restaurant (100) is marked — without the predicate this would be 2.
+        int updated = repo.markAllAsReadForUser(UserRole.CUSTOMER, 777L, 100L);
+        assertEquals(1, updated);
+
+        em.flush();
+        em.clear();
+        // the other tenant's notification (restaurant 200) stays unread
+        assertEquals(1L, repo.countUnreadForUser(UserRole.CUSTOMER, 777L));
     }
 
     @Test @Transactional

@@ -75,13 +75,17 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     );
 
     /**
-     * Mark all notifications as read for a specific user
+     * Mark all notifications as read for a specific user, scoped to the caller's tenant.
+     * A {@code null} restaurantId (SUPER_ADMIN / unbound) applies no tenant constraint; a concrete
+     * tenant stops the bulk update from crossing restaurants — Hibernate's {@code @Filter} does not
+     * cover bulk JPQL updates, so the tenant must be applied here explicitly.
      */
     @Modifying
-    @Query("UPDATE Notification n SET n.status = 'READ', n.readAt = CURRENT_TIMESTAMP WHERE n.userRole = :role AND n.userId = :userId AND n.status = 'UNREAD'")
+    @Query("UPDATE Notification n SET n.status = 'READ', n.readAt = CURRENT_TIMESTAMP WHERE n.userRole = :role AND n.userId = :userId AND n.status = 'UNREAD' AND (:restaurantId IS NULL OR n.restaurantId = :restaurantId)")
     int markAllAsReadForUser(
         @Param("role") UserRole role,
-        @Param("userId") Long userId
+        @Param("userId") Long userId,
+        @Param("restaurantId") Long restaurantId
     );
 
     /**
