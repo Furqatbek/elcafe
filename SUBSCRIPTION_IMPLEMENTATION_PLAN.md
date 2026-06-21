@@ -62,7 +62,7 @@ Nothing downstream is trustworthy without this.
 > **Progress on this branch:** §3.1 ✅ · §3.2 ✅ · §3.3 ✅ (the tenant IDOR class is closed
 > *systemically* by §3.4 — the original "retrofit 104 controllers" was superseded; residual role-gap
 > reads are guarded) · §3.4 ✅ *in code* (READ + WRITE closed via `TenantScopedJpaRepository` +
-> `TenantInsertGuard`; all 68 business entities + `AuditLog` scoped, `User` excluded) · §3.5 ✅
+> `TenantInsertGuard`; all 75 business entities + `AuditLog` scoped, `User` excluded) · §3.5 ✅
 > (finite + revocable + secret hardened) · §3.6 ✅ (waiter tenant-bound + per-restaurant identity,
 > V151/V152) · §3.7 ✅ (customers per-restaurant + loyalty, V150/V153/V155). **Phase 0 is
 > code-complete and green; the one step left for the whole phase is operational — flip
@@ -113,8 +113,8 @@ Nothing downstream is trustworthy without this.
 > stay unscoped. Once active, a surrogate-`/{id}` lookup for a foreign tenant simply returns
 > nothing — closing the IDOR class at the data layer without per-endpoint code. Mode parsing is
 > now a single shared `TenantEnforcementMode` enum (used by the edge filter and the interceptor).
-> **Entity rollout complete:** `@Filter` covers **all 68 restaurant-owned business entities** plus
-> `common/audit/AuditLog`. The two special cases are resolved (`TenantFilterPolicyTest` guards
+> **Entity rollout complete:** `@Filter` covers **all 75 restaurant-owned business entities** plus
+> `common/audit/AuditLog` (76 with the filter in total). The two special cases are resolved (`TenantFilterPolicyTest` guards
 > them): AuditLog is filtered; `auth/User` is deliberately **excluded** — it's the auth principal
 > and the target of many required/EAGER associations, so a filtered fetch would 500 legitimate
 > flows. Next: staging validation of the `enforce` flip. **Limits:** relies on `spring.jpa.open-in-view=true`; does not cover
@@ -189,7 +189,7 @@ Nothing downstream is trustworthy without this.
 > `getReferenceById`, `REQUIRES_NEW`) and the flip procedure are in
 > `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`.
 - ✅ `@FilterDef("restaurantFilter", restaurantId: Long)` declared on `Restaurant`;
-  `@Filter(condition = "restaurant_id = :restaurantId")` applied to **all 68 restaurant-owned
+  `@Filter(condition = "restaurant_id = :restaurantId")` applied to **all 75 restaurant-owned
   business entities** — across financial, order, menu, inventory, pos, reservation, promotion,
   loyalty, referral, selfservice, restaurant, settings, waiter-derived, review, kitchen, bundle,
   pricing, notification and ownerbot. Verified by sweep: every `@Entity` with its own

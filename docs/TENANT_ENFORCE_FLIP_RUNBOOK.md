@@ -14,10 +14,11 @@ does **not** yet cover.
 
 | Access path | Mechanism | Proof |
 |---|---|---|
-| List / derived / JPQL queries (`findAll`, `findByPhone`, `@Query`) | `restaurantFilter` `@Filter` on 71 entities, enabled per-request by `TenantFilterInterceptor` | `TenantBackstopIsolationTest` |
+| List / derived / JPQL queries (`findAll`, `findByPhone`, `@Query`) | `restaurantFilter` `@Filter` on 76 entities (every restaurant-owned entity + `AuditLog`; verified by sweep), enabled per-request by `TenantFilterInterceptor` | `TenantBackstopIsolationTest` |
 | `findById(id)` / surrogate `/{id}` reads & mutators (`/{id}/approve`, `/{id}/pay`, …) | `TenantScopedJpaRepository` makes `findById` query-based (so the filter scopes it); a foreign id returns empty → `orElseThrow` 404s | `TenantBackstopIsolationTest.repositoryFindById_isScoped` |
 | Cross-tenant **inserts** (body `restaurantId` creating a row under another tenant) | `TenantInsertGuard` SessionFactory interceptor vetoes any insert whose `restaurant_id` ≠ bound tenant | `TenantInsertGuard*Test` |
 | Path/query `restaurantId` ≠ caller's tenant | Edge `TenantEnforcementFilter` returns 403 | `TenantEnforcementFilterTest` |
+| Authenticated caller with **no tenant** (`restaurant_id IS NULL`, non-SUPER_ADMIN) | `TenantEnforcementFilter` binds the `TenantContext.NO_ACCESS` sentinel (a restaurant id matching no row) → `@Filter` + `TenantInsertGuard` scope to nothing; `RestaurantAuthorizationService.currentTenantReadScope()` does the same for the `@Filter`-excluded `User` listings | `TenantEnforcementFilterTest`, `RestaurantAuthorizationServiceTest`, `SystemUserControllerTest` |
 
 All are **gated identically**: active only in `enforce` **and** only when `TenantContext` holds a
 concrete tenant. SUPER_ADMIN aggregates (null tenant) and background jobs stay unscoped. Every
@@ -67,10 +68,11 @@ below were audited as part of flip-readiness; status noted inline.
   `findByOrderId`). ✅ The known reads (`PaymentService.getPaymentBy{Id,OrderId,TransactionId}`) now
   carry an explicit `checkAccess(payment.getOrder().getRestaurant().getId())`. Watch for new such
   finders on parent-scoped entities.
-- **Bulk `@Modifying` JPQL `UPDATE`/`DELETE`** — filters don't apply to bulk operations. ⚠️ **Still a
-  residual** — spot-audit during the soak. Notable: `NotificationRepository.markAllAsReadForUser`
-  keys on `(userRole, userId)` with no `restaurant_id` predicate (low impact: marks-as-read only, and
-  the consumer path forces the caller's own id).
+- **Bulk `@Modifying` JPQL `UPDATE`/`DELETE`** — filters don't apply to bulk operations, so any new
+  bulk mutator still needs a spot-audit during the soak. ✅ The one previously-flagged case,
+  `NotificationRepository.markAllAsReadForUser`, now carries an explicit
+  `(:restaurantId IS NULL OR n.restaurantId = :restaurantId)` predicate (the controller passes
+  `TenantContext.getRestaurantId()`), so it is tenant-scoped.
 - **`REQUIRES_NEW` / non-MVC DB access** — the filter is enabled on the open-in-view request session
   only. Tenant-scoped queries in a new transaction or a scheduler are not scoped (by design for
   background work; confirm none are request-facing).
@@ -88,3 +90,10 @@ All Phase 0 hardening items are now landed; the only remaining action is the enf
 - **§3.5 waiter-token revocation** — ✅ done (V152): waiter tokens carry a `tokenVersion`, checked
   per request by `JwtAuthenticationFilter` (waiter loaded + must be active + version match); bumped
   on PIN change / deactivation. Closes the gap where a changed/disabled PIN kept working for ~30d.
+- **Null-tenant-principal bypass** — ✅ done: a non-SUPER_ADMIN caller with `restaurant_id IS NULL`
+  used to bind a null tenant the `@Filter` left unscoped (so it would see/affect everything under
+  `enforce`); it now binds the `TenantContext.NO_ACCESS` deny-all sentinel — the filter and
+  `TenantInsertGuard` scope it to nothing, and `RestaurantAuthorizationService.currentTenantReadScope()`
+  covers the `@Filter`-excluded `User` listings (SystemUser/Operator/Payroll). See the "what enforce
+  protects" table row. A blanket data migration was rejected as unsafe (the create flow legitimately
+  yields null-restaurant accounts under a SUPER_ADMIN creator).
