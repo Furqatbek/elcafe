@@ -123,7 +123,8 @@
       "systemUsers": "Foydalanuvchilar",
       "ordersByTables": "Stollar bo'yicha buyurtmalar",
       "mainDashboard": "Asosiy panel",
-      "ordersByShift": "Smenalar bo'yicha buyurtmalar"
+      "ordersByShift": "Smenalar bo'yicha buyurtmalar",
+      "subscription": "Obuna"
     }
   },
   "externalOrders": {
@@ -5021,6 +5022,36 @@
       "total": "Jami",
       "addOns": "Qo'shimchalar",
       "notes": "Izohlar"
+    }
+  },
+  "subscription": {
+    "title": "Obuna",
+    "currentPlan": "Joriy tarif",
+    "availablePlans": "Mavjud tariflar",
+    "adminSetPlan": "Restoran tarifini o'zgartirish",
+    "noExpiry": "Muddati cheksiz",
+    "expiredDaysAgo": "{{n}} kun oldin tugagan",
+    "daysRemaining": "{{n}} kun qoldi",
+    "unlockedModules": "Ochiq modullar",
+    "noPlan": "Tarif haqida ma'lumot yo'q",
+    "contactUpgrade": "Tarifni oshirish uchun biz bilan bog'laning.",
+    "perMonth": "oy",
+    "free": "Bepul",
+    "features": "funksiya",
+    "noPlans": "Tariflar mavjud emas",
+    "restaurantId": "Restoran ID",
+    "plan": "Tarif",
+    "selectPlan": "Tarifni tanlang",
+    "expiresAt": "Amal qilish muddati (ixtiyoriy)",
+    "markTrial": "Sinov sifatida belgilash",
+    "updatePlan": "Tarifni yangilash",
+    "updated": "Tarif yangilandi",
+    "updateFailed": "Tarifni yangilab bo'lmadi",
+    "status": {
+      "active": "Faol",
+      "trial": "Sinov",
+      "grace": "Imtiyozli muddat",
+      "readOnly": "Faqat o'qish (tugagan)"
     }
   }
 }

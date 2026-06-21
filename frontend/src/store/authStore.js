@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { authAPI } from '../services/api';
+import { authAPI, billingAPI } from '../services/api';
 
 // JWT token expiration constants (in milliseconds)
 const ACCESS_TOKEN_EXPIRY = 15 * 60 * 1000; // 15 minutes
@@ -120,6 +120,8 @@ export const useAuthStore = create((set) => ({
   user: getStoredUser(),
   token: localStorage.getItem('access_token'),
   isAuthenticated: validateStoredTokens(),
+  // Subscription plan awareness (mini-phase A3): the caller's billing status from GET /billing/me.
+  plan: null,
 
   login: async (credentials) => {
     try {
@@ -130,6 +132,8 @@ export const useAuthStore = create((set) => ({
       localStorage.setItem('user', JSON.stringify(user));
 
       set({ user, token: accessToken, isAuthenticated: true });
+      // Fire-and-forget plan load so the UI has plan awareness right after login.
+      billingAPI.getMe().then((r) => set({ plan: r.data?.data || null })).catch(() => {});
       return { success: true };
     } catch (error) {
       return {
@@ -148,6 +152,7 @@ export const useAuthStore = create((set) => ({
       localStorage.setItem('user', JSON.stringify(user));
 
       set({ user, token: accessToken, isAuthenticated: true });
+      billingAPI.getMe().then((r) => set({ plan: r.data?.data || null })).catch(() => {});
       return { success: true };
     } catch (error) {
       return {
@@ -185,7 +190,7 @@ export const useAuthStore = create((set) => ({
       localStorage.removeItem('refresh_token_expiry');
       localStorage.removeItem('token_set_time');
       localStorage.removeItem('user');
-      set({ user: null, token: null, isAuthenticated: false });
+      set({ user: null, token: null, isAuthenticated: false, plan: null });
       return { success: false, error: 'Session expired' };
     }
   },
@@ -197,12 +202,23 @@ export const useAuthStore = create((set) => ({
     localStorage.removeItem('refresh_token_expiry');
     localStorage.removeItem('token_set_time');
     localStorage.removeItem('user');
-    set({ user: null, token: null, isAuthenticated: false });
+    set({ user: null, token: null, isAuthenticated: false, plan: null });
   },
 
   // Method to update tokens (called from api interceptor)
   updateTokens: (accessToken, refreshToken) => {
     setTokenWithExpiry(accessToken, refreshToken || localStorage.getItem('refresh_token'));
     set({ token: accessToken, isAuthenticated: true });
+  },
+
+  // Load (or refresh) the caller's subscription plan into the store. Safe to call anytime;
+  // silently no-ops on error so plan awareness never blocks the app.
+  loadPlan: async () => {
+    try {
+      const r = await billingAPI.getMe();
+      set({ plan: r.data?.data || null });
+    } catch {
+      // ignore — features simply stay unknown until the next successful load
+    }
   },
 }));

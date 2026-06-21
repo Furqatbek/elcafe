@@ -20,6 +20,7 @@ import Reviews from './pages/Reviews';
 import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
 import SystemUsers from './pages/SystemUsers';
+import Subscription from './pages/Subscription';
 import Waiters from './pages/Waiters';
 import WaiterPerformance from './pages/WaiterPerformance';
 import ShiftDashboard from './pages/ShiftDashboard';
@@ -110,6 +111,10 @@ function App() {
   // /restaurants/active fallback chain; if none of them yield an id we
   // skip the call rather than guessing restaurant 1.
   useEffect(() => {
+    // Plan awareness (mini-phase A3): load the caller's subscription plan once on startup.
+    if (useAuthStore.getState().isAuthenticated) {
+      useAuthStore.getState().loadPlan();
+    }
     resolveCurrentRestaurantId().then((restaurantId) => {
       if (!restaurantId) return;
       receiptTemplateAPI.getTemplate(restaurantId)
@@ -157,6 +162,7 @@ function App() {
           }
         >
           <Route index element={<Navigate to="/orders" replace />} />
+          <Route path="subscription" element={<Subscription />} />
           <Route path="dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
           <Route path="dashboard/financial-analytics" element={<AdminRoute><FinancialAnalytics /></AdminRoute>} />
           <Route path="dashboard/operational-analytics" element={<AdminRoute><OperationalAnalytics /></AdminRoute>} />

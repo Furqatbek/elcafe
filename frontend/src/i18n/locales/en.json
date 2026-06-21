@@ -123,7 +123,8 @@
       "systemUsers": "System Users",
       "ordersByTables": "Orders by Tables",
       "mainDashboard": "Main Dashboard",
-      "ordersByShift": "Orders by Shift"
+      "ordersByShift": "Orders by Shift",
+      "subscription": "Subscription"
     }
   },
   "externalOrders": {
@@ -5213,6 +5214,36 @@
       "total": "Total",
       "addOns": "Add-ons",
       "notes": "Notes"
+    }
+  },
+  "subscription": {
+    "title": "Subscription",
+    "currentPlan": "Current plan",
+    "availablePlans": "Available plans",
+    "adminSetPlan": "Change a restaurant's plan",
+    "noExpiry": "No expiry",
+    "expiredDaysAgo": "Expired {{n}} day(s) ago",
+    "daysRemaining": "{{n}} day(s) remaining",
+    "unlockedModules": "Unlocked modules",
+    "noPlan": "No plan information available",
+    "contactUpgrade": "Contact us to upgrade your plan.",
+    "perMonth": "mo",
+    "free": "Free",
+    "features": "features",
+    "noPlans": "No plans available",
+    "restaurantId": "Restaurant ID",
+    "plan": "Plan",
+    "selectPlan": "Select a plan",
+    "expiresAt": "Expires at (optional)",
+    "markTrial": "Mark as trial",
+    "updatePlan": "Update plan",
+    "updated": "Plan updated",
+    "updateFailed": "Could not update plan",
+    "status": {
+      "active": "Active",
+      "trial": "Trial",
+      "grace": "Grace period",
+      "readOnly": "Read-only (expired)"
     }
   }
 }

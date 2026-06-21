@@ -162,6 +162,12 @@ export const restaurantAPI = {
   updateBusinessHours: (restaurantId, data) => api.put(`/restaurants/${restaurantId}/business-hours/bulk`, data),
 };
 
+export const billingAPI = {
+  getMe: () => api.get('/billing/me'),
+  getPlans: () => api.get('/billing/plans'),
+  adminSetPlan: (data) => api.post('/billing/admin/set-plan', data),
+};
+
 export const menuAPI = {
   getPublicMenu: (restaurantId) => api.get(`/menu/public/${restaurantId}`),
   getCategories: (restaurantId) => api.get(`/menu/restaurants/${restaurantId}/categories`),

@@ -123,7 +123,8 @@
       "systemUsers": "Пользователи",
       "ordersByTables": "Заказы по столам",
       "mainDashboard": "Главная панель",
-      "ordersByShift": "Заказы по сменам"
+      "ordersByShift": "Заказы по сменам",
+      "subscription": "Подписка"
     }
   },
   "externalOrders": {
@@ -4977,6 +4978,36 @@
       "total": "Итого",
       "addOns": "Добавки",
       "notes": "Примечания"
+    }
+  },
+  "subscription": {
+    "title": "Подписка",
+    "currentPlan": "Текущий тариф",
+    "availablePlans": "Доступные тарифы",
+    "adminSetPlan": "Изменить тариф ресторана",
+    "noExpiry": "Без срока действия",
+    "expiredDaysAgo": "Истёк {{n}} дн. назад",
+    "daysRemaining": "Осталось {{n}} дн.",
+    "unlockedModules": "Доступные модули",
+    "noPlan": "Нет информации о тарифе",
+    "contactUpgrade": "Свяжитесь с нами для повышения тарифа.",
+    "perMonth": "мес",
+    "free": "Бесплатно",
+    "features": "функций",
+    "noPlans": "Нет доступных тарифов",
+    "restaurantId": "ID ресторана",
+    "plan": "Тариф",
+    "selectPlan": "Выберите тариф",
+    "expiresAt": "Действует до (необязательно)",
+    "markTrial": "Отметить как пробный",
+    "updatePlan": "Обновить тариф",
+    "updated": "Тариф обновлён",
+    "updateFailed": "Не удалось обновить тариф",
+    "status": {
+      "active": "Активен",
+      "trial": "Пробный",
+      "grace": "Льготный период",
+      "readOnly": "Только чтение (истёк)"
     }
   }
 }
