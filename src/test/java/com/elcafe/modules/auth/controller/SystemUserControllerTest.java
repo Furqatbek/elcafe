@@ -1,6 +1,7 @@
 package com.elcafe.modules.auth.controller;
 
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -12,9 +13,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -56,5 +60,17 @@ class SystemUserControllerTest {
 
         assertThrows(AccessDeniedException.class, () -> controller.deactivate(42L));
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("getAll — a caller with no tenant (deny sentinel) sees no users")
+    void getAll_denySentinel_returnsEmpty() {
+        when(authz.currentTenantReadScope()).thenReturn(TenantContext.NO_ACCESS);
+        when(userRepository.findByRestaurantId(TenantContext.NO_ACCESS)).thenReturn(List.of());
+
+        var body = controller.getAll().getBody();
+
+        assertNotNull(body);
+        assertTrue(body.getData().isEmpty());
     }
 }

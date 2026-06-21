@@ -1,5 +1,6 @@
 package com.elcafe.common.security.service;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
@@ -126,5 +127,37 @@ class RestaurantAuthorizationServiceTest {
     void scope_enforce_noPrincipal_null() {
         setMode("enforce");
         assertThat(service.currentTenantScopeOrNull()).isNull();
+    }
+
+    @Test
+    @DisplayName("currentTenantReadScope ENFORCE — tenant caller returns own restaurant")
+    void readScope_enforce_tenantCaller_returnsOwn() {
+        authenticateAs(UserRole.ADMIN, 7L);
+        setMode("enforce");
+        assertThat(service.currentTenantReadScope()).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("currentTenantReadScope ENFORCE — caller with no restaurant gets deny-all sentinel")
+    void readScope_enforce_noRestaurant_sentinel() {
+        authenticateAs(UserRole.ADMIN, null);
+        setMode("enforce");
+        assertThat(service.currentTenantReadScope()).isEqualTo(TenantContext.NO_ACCESS);
+    }
+
+    @Test
+    @DisplayName("currentTenantReadScope ENFORCE — SUPER_ADMIN is unscoped (null)")
+    void readScope_enforce_superAdmin_null() {
+        authenticateAs(UserRole.SUPER_ADMIN, null);
+        setMode("enforce");
+        assertThat(service.currentTenantReadScope()).isNull();
+    }
+
+    @Test
+    @DisplayName("currentTenantReadScope SHADOW — unscoped (null) even with no restaurant")
+    void readScope_shadow_noRestaurant_null() {
+        authenticateAs(UserRole.ADMIN, null);
+        setMode("shadow");
+        assertThat(service.currentTenantReadScope()).isNull();
     }
 }

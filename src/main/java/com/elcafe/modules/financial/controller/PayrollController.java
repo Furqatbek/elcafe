@@ -49,7 +49,7 @@ public class PayrollController {
         // Scope staff to the caller's restaurant once enforcement is on. User is deliberately not
         // Hibernate-@Filtered (see User.java), so the tenant constraint is applied here at the
         // query layer; in shadow/off the scope is null and behaviour is unchanged.
-        Long tenantScope = restaurantAuthorizationService.currentTenantScopeOrNull();
+        Long tenantScope = restaurantAuthorizationService.currentTenantReadScope();
         List<User> staff = (tenantScope == null)
                 ? userRepository.findByRoleNotIn(List.of(UserRole.CUSTOMER))
                 : userRepository.findByRestaurantIdAndRoleNotIn(tenantScope, List.of(UserRole.CUSTOMER));

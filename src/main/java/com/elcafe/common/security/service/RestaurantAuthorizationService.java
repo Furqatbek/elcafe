@@ -1,5 +1,6 @@
 package com.elcafe.common.security.service;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.common.tenant.TenantEnforcementMode;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.security.UserPrincipal;
@@ -80,6 +81,27 @@ public class RestaurantAuthorizationService {
             return null;
         }
         return principal.getRestaurantId();
+    }
+
+    /**
+     * The restaurant a tenant-scoped <em>read listing over a {@code @Filter}-excluded entity</em>
+     * (notably {@code User}) must be constrained to. Identical to {@link #currentTenantScopeOrNull()}
+     * except that a tenant-scoped caller with <em>no assigned restaurant</em> resolves to the deny-all
+     * sentinel {@link TenantContext#NO_ACCESS} (which matches no row) instead of {@code null} —
+     * otherwise that principal would bind a null tenant and the {@code null → list-all} branch in
+     * these listings would leak every tenant's rows under {@code enforce}. SUPER_ADMIN and
+     * {@code off}/{@code shadow} stay {@code null} (unscoped), preserving pre-enforcement behaviour.
+     */
+    public Long currentTenantReadScope() {
+        if (TenantEnforcementMode.from(enforcementMode) != TenantEnforcementMode.ENFORCE) {
+            return null;
+        }
+        UserPrincipal principal = getCurrentUserPrincipal();
+        if (principal == null || principal.getRole() == UserRole.SUPER_ADMIN) {
+            return null;
+        }
+        Long tenant = principal.getRestaurantId();
+        return tenant != null ? tenant : TenantContext.NO_ACCESS;
     }
 
     /**

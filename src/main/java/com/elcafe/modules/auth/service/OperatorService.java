@@ -32,7 +32,7 @@ public class OperatorService {
      */
     @Transactional(readOnly = true)
     public Page<OperatorDTO> getAllOperators(Pageable pageable) {
-        Long tenantScope = restaurantAuthorizationService.currentTenantScopeOrNull();
+        Long tenantScope = restaurantAuthorizationService.currentTenantReadScope();
         Page<User> operators = (tenantScope == null)
                 ? userRepository.findByRole(UserRole.OPERATOR, pageable)
                 : userRepository.findByRoleAndRestaurantId(UserRole.OPERATOR, tenantScope, pageable);

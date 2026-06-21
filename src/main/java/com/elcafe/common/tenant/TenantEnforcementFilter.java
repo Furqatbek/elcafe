@@ -119,7 +119,10 @@ public class TenantEnforcementFilter extends OncePerRequestFilter {
         }
 
         Long callerTenant = principal.getRestaurantId();
-        TenantContext.setRestaurantId(callerTenant);
+        // A tenant-scoped caller with no assigned restaurant must not bind a *null* (unscoped)
+        // context — the §3.4 backstop reads null as "see everything". Bind the deny-all sentinel so
+        // the Hibernate filter and every TenantContext reader scope them to nothing under enforce.
+        TenantContext.setRestaurantId(callerTenant != null ? callerTenant : TenantContext.NO_ACCESS);
 
         for (Long requested : requestedRestaurantIds(request)) {
             // A caller with no assigned restaurant (callerTenant == null) has no business

@@ -40,8 +40,9 @@ public class SystemUserController {
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAll() {
         // User is deliberately not Hibernate-@Filtered (see User.java); constrain cross-tenant
         // enumeration here at the query layer. In shadow/off the scope is null and the listing is
-        // unchanged; once enforcement is on, a tenant admin sees only their own restaurant's users.
-        Long tenantScope = restaurantAuthorizationService.currentTenantScopeOrNull();
+        // unchanged; once enforcement is on, a tenant admin sees only their own restaurant's users
+        // and a caller with no assigned restaurant sees none (deny-all sentinel).
+        Long tenantScope = restaurantAuthorizationService.currentTenantReadScope();
         List<User> users = (tenantScope == null
                 ? userRepository.findAll()
                 : userRepository.findByRestaurantId(tenantScope)).stream()

@@ -155,4 +155,20 @@ class TenantEnforcementFilterTest {
         verify(chain, times(1)).doFilter(any(), any());
         assertThat(response.getStatus()).isEqualTo(200);
     }
+
+    @Test
+    @DisplayName("no-restaurant caller on a non-tenant path in ENFORCE → bound to deny-all sentinel")
+    void noTenantCaller_enforce_bindsSentinel() throws Exception {
+        authenticateAs(UserRole.ADMIN, null); // tenant-scoped role, but no restaurant assigned
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        Long[] boundDuringChain = new Long[1];
+        // The request carries no restaurantId, so there is no edge violation; capture what the
+        // backstop would see for this caller mid-chain (the filter clears the context in finally).
+        FilterChain chain = (req, res) -> boundDuringChain[0] = TenantContext.getRestaurantId();
+
+        new TenantEnforcementFilter("enforce").doFilter(get("/api/v1/system-users"), response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(boundDuringChain[0]).isEqualTo(TenantContext.NO_ACCESS); // scoped to nothing
+    }
 }

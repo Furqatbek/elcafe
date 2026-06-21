@@ -17,6 +17,16 @@ public final class TenantContext {
 
     private static final ThreadLocal<Long> CURRENT_RESTAURANT_ID = new ThreadLocal<>();
 
+    /**
+     * A restaurant id that intentionally matches no real row (restaurant ids are positive). Bound as
+     * the request's tenant for a tenant-scoped caller that has <em>no assigned restaurant</em>, so the
+     * Hibernate {@code @Filter} and query-layer scoping resolve to "see/affect nothing" under
+     * {@code enforce} instead of falling through to an unscoped "see everything". Set by
+     * {@code TenantEnforcementFilter}; honored by {@code TenantFilterInterceptor},
+     * {@code TenantInsertGuard}, and {@code RestaurantAuthorizationService.currentTenantReadScope()}.
+     */
+    public static final Long NO_ACCESS = -1L;
+
     private TenantContext() {
     }
 

@@ -49,7 +49,7 @@ class OperatorServiceTest {
 
     @Test @DisplayName("getAllOperators — returns paginated")
     void getAllOperators_returnsPage() {
-        when(restaurantAuthorizationService.currentTenantScopeOrNull()).thenReturn(null);
+        when(restaurantAuthorizationService.currentTenantReadScope()).thenReturn(null);
         when(userRepository.findByRole(UserRole.OPERATOR, PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(operator), PageRequest.of(0, 10), 1));
 
@@ -147,7 +147,7 @@ class OperatorServiceTest {
 
     @Test @DisplayName("getAllOperators — scopes to caller's tenant when set (§3.3)")
     void getAllOperators_scopedToTenant() {
-        when(restaurantAuthorizationService.currentTenantScopeOrNull()).thenReturn(7L);
+        when(restaurantAuthorizationService.currentTenantReadScope()).thenReturn(7L);
         when(userRepository.findByRoleAndRestaurantId(UserRole.OPERATOR, 7L, PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(operator), PageRequest.of(0, 10), 1));
 

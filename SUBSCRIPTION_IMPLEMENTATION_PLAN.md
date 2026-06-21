@@ -67,13 +67,17 @@ Nothing downstream is trustworthy without this.
 > V151/V152) · §3.7 ✅ (customers per-restaurant + loyalty, V150/V153/V155). **Phase 0 is
 > code-complete and green; the one step left for the whole phase is operational — flip
 > `app.security.tenant-enforcement.mode` from `shadow` to `enforce` after a staging soak (and set
-> `JWT_SECRET`), per `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`. Pre-flip triage: a non-`SUPER_ADMIN`
-> user with `restaurant_id IS NULL` binds a null tenant, which the §3.4 filter leaves *unscoped* in
-> `enforce` — audit those rows (assign a restaurant or deactivate) before flipping. The SystemUser
-> `/{id}` mutators already refuse such targets for non-operators and `markAllAsReadForUser` is now
-> tenant-scoped, but the broader null-tenant-principal bypass is closed only by cleaning up those
-> rows or a sentinel-scope change (a blanket data migration is unsafe: the create flow legitimately
-> yields null-restaurant accounts under a SUPER_ADMIN creator).** §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
+> `JWT_SECRET`), per `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`. The null-tenant-principal bypass (a
+> non-`SUPER_ADMIN` user with `restaurant_id IS NULL`, which previously bound a null tenant the §3.4
+> filter left *unscoped*) is now closed by a **deny-all sentinel**: `TenantEnforcementFilter` binds
+> `TenantContext.NO_ACCESS` (a restaurant id matching no row) for a tenant-scoped caller with no
+> restaurant, so the filter + `TenantInsertGuard` scope them to nothing in `enforce`, and
+> `RestaurantAuthorizationService.currentTenantReadScope()` does the same for the `@Filter`-excluded
+> `User` listings (SystemUser/Operator/Payroll). The SystemUser `/{id}` mutators also refuse such
+> targets for non-operators and `markAllAsReadForUser` is tenant-scoped. Auditing leftover
+> null-restaurant rows is still good hygiene but no longer a correctness gate. (A blanket data
+> migration was rejected as unsafe: the create flow legitimately yields null-restaurant accounts
+> under a SUPER_ADMIN creator.)** §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
 > default **shadow**) plus a mode-aware `RestaurantAuthorizationService.checkAccess(...)` for
