@@ -410,6 +410,14 @@ review, V155 notification tenant scope).
 - **Tests.** New: tenancy-isolation tests (user A cannot touch restaurant B via path/param),
   enforcement-filter tests (402 paths + allowlist), billing lifecycle, webhook idempotency.
   Module test dirs already exist under `src/test/java/com/elcafe/modules/*`.
+  - _Landed (Phase 0/1):_ tenant isolation via `TenantBackstopIsolationTest` /
+    `TenantFilterPolicyTest`; plan gating via `SubscriptionTierVerificationTest` (real gate +
+    interceptors + 403 mapping over MockMvc). First whole-app layers added: a context-load
+    `@SpringBootTest` (`ApplicationContextSmokeTest`) and a live-server HTTP smoke
+    (`HttpSmokeTest`). Frontend gained a Vitest unit suite and a Playwright E2E for the gating UX
+    (see `CHANGELOG.md`, `docs/subscription-tiers-plan.md` → Verification). Suite: 1848 backend
+    tests, 12 frontend unit + 3 E2E. Still to come: webhook idempotency + billing-lifecycle tests
+    (Phase 3) and enforcement-filter 402 tests (Phase 2).
 - **Rollout / data migration.** `V161` backfill must run so existing tenants land `ACTIVE`/
   grandfathered; otherwise the gate locks everyone out on deploy. Stage behind a feature flag
   (`subscription.enforcement.enabled`) — ship enforcement OFF, verify data, then flip ON.

@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-06-22
+
+#### Automated test coverage for the subscription tiers, plus the first end-to-end layers
+
+The subscription-tier work (plan gating, read-only mode, trial/expiry) and the app's overall wiring
+gained tests at four levels:
+
+- **Frontend unit tests (Vitest + Testing Library, jsdom)** — new harness (`frontend/vitest.config.js`,
+  kept separate from the Vite build) with specs for the plan-gating surface: `featureForPath` (mirrors
+  the backend `PlanFeatureGuardInterceptor`, so it catches frontend/backend drift), `usePlan`, and
+  `PlanExpiryBanner`. Run with `npm test` in `frontend/`.
+- **Frontend browser E2E (Playwright + Chromium)** — `frontend/e2e/plan-gating.spec.js` drives the real
+  app in a real browser with the backend stubbed at the network layer: Start tier blocks a paid module
+  (shows the plan-required page), Pro tier allows it, core modules are never gated. Run with
+  `npm run e2e`.
+- **Backend context-load smoke test** — `ApplicationContextSmokeTest` boots the full Spring context (the
+  suite's only `@SpringBootTest`) and asserts the Phase 1 billing beans are wired end to end.
+- **Backend live-server HTTP smoke test** — `HttpSmokeTest` boots embedded Tomcat on a random port and
+  drives it over real HTTP: actuator health is served, and unauthenticated / malformed-token requests
+  are rejected by the security filter chain (no 500s).
+
+Backend suite is now 1848 tests; frontend adds 12 unit + 3 E2E.
+
+### Fixed - 2026-06-22
+
+#### Admin SPA failed to load in the browser (`global is not defined`)
+
+`sockjs-client` (reached via `services/websocket.js`, which sits in `App.jsx`'s static import graph)
+references a bare `global` at module-evaluation time. That identifier is undefined in browsers and Vite
+polyfilled it in neither dev nor build, so the bundle threw before React mounted — a blank admin app on
+every route, in dev and the production build alike. Fixed by mapping `global → globalThis` via Vite's
+`define`. Surfaced by the new browser E2E.
+
+#### Web Push no longer aborts startup on a malformed VAPID key
+
+`WebPushService.init()` caught only `GeneralSecurityException`, but the webpush library throws
+`IllegalArgumentException` ("Invalid point encoding") for a malformed key — so a single bad
+`PUSH_VAPID_*` value crashed startup of the whole backend instead of just disabling push. The catch is
+broadened and `pushService` is nulled on failure, so a bad/placeholder key cleanly disables push
+(`isEnabled() == false`) and the app keeps running. Surfaced by the new context-load smoke test.
+
 ### Changed - 2026-06-20
 
 #### Customers are now per-restaurant (tenant-scoped identity)

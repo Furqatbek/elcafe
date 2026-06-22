@@ -669,3 +669,34 @@ backend + frontend dev stack:
 8. **Localization sweep**: switch UI to RU then UZ; confirm
    banner, plan-required page, and subscription page render
    correctly in both.
+
+### Automated coverage
+
+Much of the above is now exercised automatically, so the manual run
+is a final confirmation rather than the only check:
+
+- **Backend, staging-style** — `SubscriptionTierVerificationTest`
+  wires the real `PlanGateService` + both guard interceptors + the
+  403 mapping over MockMvc, with seeded Start / Pro / expired-Pro
+  restaurants. It reproduces scenarios 2 (Start gating → 403
+  `plan.feature_required:…`), 3 (Pro allows the same module), and 7
+  (past-grace → writes blocked, reads still work), plus the
+  super-admin bypass and the billing-status shape.
+- **Backend, smoke** — `ApplicationContextSmokeTest` boots the full
+  context and asserts the gating beans are wired;
+  `HttpSmokeTest` confirms the security filter chain rejects
+  unauthenticated/malformed-token requests over real HTTP.
+- **Frontend, unit** — Vitest specs cover `featureForPath` (the
+  path → feature-code map, kept in lockstep with the backend),
+  `usePlan`, and the `PlanExpiryBanner` wording across trial /
+  approaching / grace / read-only (scenarios 4–7, in EN).
+- **Frontend, E2E** — `e2e/plan-gating.spec.js` (Playwright) drives
+  a real browser through scenario 2 (Start → plan-required page on
+  direct navigation, CTA → `/subscription`), its inverse on Pro, and
+  a core module staying ungated.
+
+Still manual: the migration dry-run (1), the admin upgrade path and
+cache-TTL refresh (3), the live Telegram delivery in (6), and the
+RU/UZ localization sweep (8). Run backend tests with
+`mvn test`, frontend unit with `npm test`, and E2E with `npm run e2e`
+(see `frontend/README.md`).

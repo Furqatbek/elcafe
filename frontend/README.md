@@ -53,6 +53,32 @@ docker build -t elcafe-frontend .
 docker run -p 3000:80 elcafe-frontend
 ```
 
+## 🧪 Testing
+
+### Unit / component tests (Vitest + Testing Library)
+
+```bash
+npm test            # runs all specs under src/ once (jsdom)
+```
+
+Specs live next to the code they cover (`src/**/*.test.{js,jsx}`). Current coverage centres on the
+subscription plan-gating surface: `config/planFeatures` (the path → feature-code map, which mirrors the
+backend so drift is caught), `hooks/usePlan`, and `components/PlanExpiryBanner`. Config is in
+`vitest.config.js`, kept separate from the Vite build.
+
+### End-to-end (Playwright + Chromium)
+
+```bash
+npx playwright install chromium   # once, to fetch the browser
+npm run e2e                        # runs e2e/*.spec.js in a real browser
+```
+
+E2E specs (`e2e/`) drive the real app against the **real Vite dev server** (Playwright starts and stops
+it), with the backend stubbed at the network layer and an authenticated session forged via seeded
+`localStorage` — so they need no running Spring app or database. `e2e/plan-gating.spec.js` covers the
+Phase 1 gating UX: a Start-tier restaurant is blocked from a paid module (the plan-required page), a Pro
+restaurant is allowed, and core modules are never gated.
+
 ## 📁 Project Structure
 
 ```
