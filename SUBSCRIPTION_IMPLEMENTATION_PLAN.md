@@ -402,6 +402,15 @@ review, V155 notification tenant scope).
   reactivate, comp/extend trial, view invoices, MRR/churn metrics.
 - **Frontend** `frontend/src/pages/admin/PlatformConsole.jsx` + route gated to `SUPER_ADMIN`.
   None of this exists today (only per-restaurant admin/POS).
+  - _Landed (subscription scope):_ `PlatformAdminController` + `PlatformAdminService` at
+    `modules/billing/**` (class-level `@PreAuthorize("hasRole('SUPER_ADMIN')")`): list tenants
+    (name search, paged) + subscription state, change plan (delegates to the audited
+    `PlanGateService.setPlan`), extend expiry by N days, suspend/reactivate (`Restaurant.active`,
+    audited via `RESTAURANT_SUSPENDED`/`RESTAURANT_REACTIVATED`). Frontend `pages/PlatformConsole.jsx`
+    behind a `SUPER_ADMIN` route guard + sidebar entry, trilingual (en/ru/uz). Tested:
+    `PlatformAdminServiceTest`, `PlatformAdminControllerTest`, `PlatformConsole.test.jsx`.
+  - _Deferred (payment scope):_ invoices + MRR/churn metrics — these need the billing engine
+    (Phase 3), which is out until there's a payment-acquiring contract.
 
 ---
 

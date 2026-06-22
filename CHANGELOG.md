@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2026-06-22
 
+#### SUPER_ADMIN platform console (cross-tenant subscription management)
+
+Until now a plan could only be changed by an ADMIN within a single restaurant. The platform operator
+now gets a cross-tenant console.
+
+- **Backend** `PlatformAdminController` (`/api/v1/platform`, class-level
+  `@PreAuthorize("hasRole('SUPER_ADMIN')")`) over `PlatformAdminService`: list tenants with their
+  subscription state (name search, paged), change any tenant's plan (delegates to the audited
+  `PlanGateService.setPlan`), extend expiry by N days (from the current expiry when still future, else
+  from now), and suspend / reactivate a tenant (`Restaurant.active`). All mutations audited; two new
+  `AuditAction`s (`RESTAURANT_SUSPENDED`, `RESTAURANT_REACTIVATED`).
+- **Frontend** `pages/PlatformConsole.jsx` behind a `SUPER_ADMIN` route guard and a role-only sidebar
+  entry: tenant table with search, pagination, inline plan change, +30d extend, and suspend/reactivate.
+  Trilingual (en/ru/uz).
+- Tests: `PlatformAdminServiceTest` (8), `PlatformAdminControllerTest` (4), `PlatformConsole.test.jsx`
+  (4). Backend suite 1860 green; frontend 16 green.
+- Out of scope (needs the billing engine / a payment-acquiring contract): invoices and MRR/churn
+  metrics.
+
 #### Automated test coverage for the subscription tiers, plus the first end-to-end layers
 
 The subscription-tier work (plan gating, read-only mode, trial/expiry) and the app's overall wiring
