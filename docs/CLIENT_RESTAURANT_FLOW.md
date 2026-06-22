@@ -1628,7 +1628,7 @@ stompClient.connect(
 ### 8.3 JWT Configuration
 
 ```yaml
-JWT_SECRET: f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1
+JWT_SECRET: CHANGE_ME_generate_with_openssl_rand_hex_32   # never commit a real secret
 ACCESS_TOKEN_EXPIRATION: 3600000  # 1 hour
 REFRESH_TOKEN_EXPIRATION: 86400000  # 24 hours (admin)
 CONSUMER_ACCESS_TOKEN_EXPIRATION: 3600000  # 1 hour
@@ -2037,7 +2037,7 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 
 # JWT
-JWT_SECRET=f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1
+JWT_SECRET=CHANGE_ME_generate_with_openssl_rand_hex_32   # never commit a real secret
 
 # CORS
 CORS_ORIGINS=http://localhost:3000,http://localhost:8080
