@@ -12,7 +12,8 @@ public enum OwnerNotificationType {
     ORDER_READY("✅ Заказ готов", "Buyurtma tayyor"),
     SHIFT_OPENED("🟢 Смена открыта", "Smena ochildi"),
     SHIFT_CLOSED("🔴 Смена закрыта", "Smena yopildi"),
-    SYSTEM_ALERT("⚠️ Системное", "Tizim ogohlantirishlari");
+    SYSTEM_ALERT("⚠️ Системное", "Tizim ogohlantirishlari"),
+    PLAN_EXPIRY("⏰ Подписка истекает", "Obuna tugaydi");
 
     private final String titleRu;
     private final String titleUz;
@@ -47,6 +48,7 @@ public enum OwnerNotificationType {
             case SHIFT_OPENED -> "🟢";
             case SHIFT_CLOSED -> "🔴";
             case SYSTEM_ALERT -> "⚠️";
+            case PLAN_EXPIRY -> "⏰";
         };
     }
 }

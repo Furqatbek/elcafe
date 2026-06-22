@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,4 +31,13 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, J
         List<Restaurant> result = findFirstActiveRestaurant(Pageable.ofSize(1));
         return result.isEmpty() ? Optional.empty() : Optional.of(result.get(0));
     }
+
+    /**
+     * Restaurants whose plan expires within the given window (inclusive). The {@code JOIN FETCH}
+     * initialises the plan so the daily {@code PlanExpiryNotifier} can read it after the session
+     * closes (and implicitly restricts to restaurants that actually have a plan).
+     */
+    @Query("SELECT r FROM Restaurant r JOIN FETCH r.plan "
+            + "WHERE r.planExpiresAt IS NOT NULL AND r.planExpiresAt BETWEEN :start AND :end")
+    List<Restaurant> findWithPlanExpiringBetween(LocalDateTime start, LocalDateTime end);
 }

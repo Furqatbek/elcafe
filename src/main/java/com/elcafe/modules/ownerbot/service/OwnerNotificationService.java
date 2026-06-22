@@ -9,6 +9,7 @@ import com.elcafe.modules.ownerbot.enums.OwnerNotificationType;
 import com.elcafe.modules.ownerbot.repository.OwnerNotificationLogRepository;
 import com.elcafe.modules.ownerbot.repository.OwnerTelegramSubscriberRepository;
 import com.elcafe.modules.reservation.entity.Reservation;
+import com.elcafe.modules.restaurant.entity.Restaurant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -49,6 +50,62 @@ public class OwnerNotificationService {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final DateTimeFormatter DATETIME_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private static final NumberFormat CURRENCY_FORMAT = NumberFormat.getInstance(new Locale("uz", "UZ"));
+
+    /** Days of full access after expiry before read-only — keep in sync with PlanGateService.GRACE_DAYS. */
+    private static final int GRACE_DAYS = 3;
+
+    /**
+     * Notify a restaurant's owner subscribers that their subscription is approaching expiry, expiring
+     * today, in the grace window, or fully lapsed (mini-phase A6, driven by {@code PlanExpiryNotifier}).
+     * Billing is mandatory, so this reaches every active, verified owner subscriber and bypasses the
+     * per-type notification settings / quiet hours used by routine alerts.
+     *
+     * @param daysUntilExpiry whole days from today to {@code plan_expires_at} (negative once expired)
+     */
+    @Transactional
+    public void notifyPlanExpiry(Restaurant restaurant, long daysUntilExpiry) {
+        List<OwnerTelegramSubscriber> subscribers =
+                subscriberRepository.findByRestaurantIdAndIsActiveTrueAndIsVerifiedTrue(restaurant.getId());
+        if (subscribers.isEmpty()) {
+            return;
+        }
+        String message = buildPlanExpiryMessage(restaurant, daysUntilExpiry);
+        for (OwnerTelegramSubscriber subscriber : subscribers) {
+            sendNotificationDirect(subscriber, OwnerNotificationType.PLAN_EXPIRY, message, "RESTAURANT", restaurant.getId());
+        }
+        log.info("Plan-expiry notification (daysUntilExpiry={}) sent to {} owner subscriber(s) for restaurant {}",
+                daysUntilExpiry, subscribers.size(), restaurant.getId());
+    }
+
+    private String buildPlanExpiryMessage(Restaurant restaurant, long daysUntilExpiry) {
+        String plan = restaurant.getPlan() != null ? restaurant.getPlan().getName() : "—";
+        if (daysUntilExpiry > 0) {
+            return String.format(
+                    "⏰ <b>Срок подписки заканчивается</b>\n\n"
+                    + "Тариф «<b>%s</b>» истекает через <b>%d дн.</b>\n\n"
+                    + "Продлите подписку, чтобы не потерять доступ.",
+                    plan, daysUntilExpiry);
+        }
+        if (daysUntilExpiry == 0) {
+            return String.format(
+                    "⏰ <b>Подписка истекает сегодня</b>\n\n"
+                    + "Тариф «<b>%s</b>» истекает сегодня. Продлите подписку, чтобы сохранить доступ.",
+                    plan);
+        }
+        long graceLeft = GRACE_DAYS + daysUntilExpiry; // daysUntilExpiry is negative here
+        if (graceLeft > 0) {
+            return String.format(
+                    "🔴 <b>Подписка истекла</b>\n\n"
+                    + "Тариф «<b>%s</b>» истёк. Льготный период: осталось <b>%d дн.</b> до режима «только чтение».\n\n"
+                    + "Продлите подписку, чтобы продолжить работу.",
+                    plan, graceLeft);
+        }
+        return String.format(
+                "🔴 <b>Подписка истекла</b>\n\n"
+                + "Тариф «<b>%s</b>» истёк. Приложение переходит в режим «только чтение». "
+                + "Продлите подписку, чтобы возобновить работу.",
+                plan);
+    }
 
     /**
      * Send notification about a new order
