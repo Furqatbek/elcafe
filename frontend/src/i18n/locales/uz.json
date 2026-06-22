@@ -28,6 +28,7 @@
     "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
   },
   "nav": {
+    "platform": "Platforma",
     "dashboard": "Bosh sahifa",
     "pos": "Kassa",
     "orders": "Buyurtmalar",
@@ -5069,5 +5070,39 @@
     "title": "Tarifingizga kirmaydi",
     "body": "Bu modul yuqori tarifda mavjud. Ochish uchun tarifni oshiring.",
     "cta": "Tariflarni ko'rish"
+  },
+  "platform": {
+    "title": "Platforma konsoli",
+    "tenants": "Muassasalar",
+    "search": "Qidirish",
+    "searchPlaceholder": "Nomi bo'yicha qidirish",
+    "loadFailed": "Ro'yxatni yuklab bo'lmadi",
+    "actionFailed": "Amalni bajarib bo'lmadi",
+    "noTenants": "Muassasalar topilmadi",
+    "planChanged": "Tarif o'zgartirildi",
+    "extended": "30 kunga uzaytirildi",
+    "extend30": "+30 kun",
+    "suspend": "To'xtatish",
+    "suspended": "Muassasa to'xtatildi",
+    "reactivate": "Qayta faollashtirish",
+    "reactivated": "Muassasa qayta faollashtirildi",
+    "noExpiry": "Muddatsiz",
+    "expiredDaysAgo": "{{n}} kun oldin tugagan",
+    "daysLeft": "{{n}} kun qoldi",
+    "pageOf": "{{m}} dan {{n}}-sahifa",
+    "col": {
+      "name": "Nomi",
+      "plan": "Tarif",
+      "status": "Holati",
+      "expiry": "Muddat",
+      "actions": "Amallar"
+    },
+    "status": {
+      "active": "Faol",
+      "trial": "Sinov",
+      "grace": "Imtiyozli muddat",
+      "readOnly": "Faqat o'qish",
+      "suspended": "To'xtatilgan"
+    }
   }
 }

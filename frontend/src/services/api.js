@@ -168,6 +168,15 @@ export const billingAPI = {
   adminSetPlan: (data) => api.post('/billing/admin/set-plan', data),
 };
 
+// SUPER_ADMIN cross-tenant subscription management (PlatformAdminController).
+export const platformAPI = {
+  listTenants: (params) => api.get('/platform/tenants', { params }),
+  changePlan: (id, data) => api.post(`/platform/tenants/${id}/plan`, data),
+  extend: (id, days) => api.post(`/platform/tenants/${id}/extend`, { days }),
+  suspend: (id) => api.post(`/platform/tenants/${id}/suspend`),
+  reactivate: (id) => api.post(`/platform/tenants/${id}/reactivate`),
+};
+
 export const menuAPI = {
   getPublicMenu: (restaurantId) => api.get(`/menu/public/${restaurantId}`),
   getCategories: (restaurantId) => api.get(`/menu/restaurants/${restaurantId}/categories`),

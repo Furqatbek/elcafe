@@ -21,6 +21,7 @@ import CustomerSegments from './pages/CustomerSegments';
 import Operators from './pages/Operators';
 import SystemUsers from './pages/SystemUsers';
 import Subscription from './pages/Subscription';
+import PlatformConsole from './pages/PlatformConsole';
 import Waiters from './pages/Waiters';
 import WaiterPerformance from './pages/WaiterPerformance';
 import ShiftDashboard from './pages/ShiftDashboard';
@@ -101,6 +102,15 @@ function AdminRoute({ children }) {
   return children;
 }
 
+// Platform console is cross-tenant — only the SUPER_ADMIN platform operator may reach it.
+function SuperAdminRoute({ children }) {
+  const user = useAuthStore((state) => state.user);
+  if (user?.role !== 'SUPER_ADMIN') {
+    return <Navigate to="/orders" replace />;
+  }
+  return children;
+}
+
 function InventoryWrapper({ children }) {
   return <InventoryProvider>{children}</InventoryProvider>;
 }
@@ -163,6 +173,7 @@ function App() {
         >
           <Route index element={<Navigate to="/orders" replace />} />
           <Route path="subscription" element={<Subscription />} />
+          <Route path="platform" element={<SuperAdminRoute><PlatformConsole /></SuperAdminRoute>} />
           <Route path="dashboard" element={<AdminRoute><Dashboard /></AdminRoute>} />
           <Route path="dashboard/financial-analytics" element={<AdminRoute><FinancialAnalytics /></AdminRoute>} />
           <Route path="dashboard/operational-analytics" element={<AdminRoute><OperationalAnalytics /></AdminRoute>} />

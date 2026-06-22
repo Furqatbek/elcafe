@@ -67,6 +67,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   CreditCard,
+  Server,
 } from 'lucide-react';
 
 export default function Layout() {
@@ -262,6 +263,8 @@ export default function Layout() {
   // Filter menu items based on user role
   // OPERATOR role cannot access dashboard and finance
   const isOperator = user?.role === 'OPERATOR';
+  // SUPER_ADMIN (platform operator) gets a cross-tenant console no other role sees.
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   // Hide sub-items the current plan doesn't unlock (mini-phase A4c); drop a group when all of its
   // sub-items are hidden. A code-less path is core and always visible.
   const subItemVisible = (s) => {
@@ -275,9 +278,18 @@ export default function Layout() {
     }
     return item.subItems.some(subItemVisible);
   };
-  const filteredMenuItems = (isOperator
+  const baseMenuItems = isOperator
     ? menuItems.filter((item) => !['dashboard', 'finance', 'marketing'].includes(item.id))
-    : menuItems)
+    : isSuperAdmin
+      ? [...menuItems, {
+          id: 'platform',
+          label: t('nav.platform', 'Platform'),
+          icon: Server,
+          path: '/platform',
+          subItems: [],
+        }]
+      : menuItems;
+  const filteredMenuItems = baseMenuItems
     .filter(planVisible)
     .map((item) => ({ ...item, subItems: item.subItems.filter(subItemVisible) }));
 

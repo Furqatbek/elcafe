@@ -28,6 +28,7 @@
     "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
   },
   "nav": {
+    "platform": "Platform",
     "dashboard": "Dashboard",
     "pos": "Point of Sale",
     "orders": "Orders",
@@ -5261,5 +5262,39 @@
     "title": "Not included in your plan",
     "body": "This module is part of a higher plan. Upgrade to unlock it.",
     "cta": "View plans"
+  },
+  "platform": {
+    "title": "Platform console",
+    "tenants": "Tenants",
+    "search": "Search",
+    "searchPlaceholder": "Search by name",
+    "loadFailed": "Could not load tenants",
+    "actionFailed": "Action failed",
+    "noTenants": "No tenants found",
+    "planChanged": "Plan changed",
+    "extended": "Extended 30 days",
+    "extend30": "+30d",
+    "suspend": "Suspend",
+    "suspended": "Tenant suspended",
+    "reactivate": "Reactivate",
+    "reactivated": "Tenant reactivated",
+    "noExpiry": "No expiry",
+    "expiredDaysAgo": "Expired {{n}}d ago",
+    "daysLeft": "{{n}}d left",
+    "pageOf": "Page {{n}} of {{m}}",
+    "col": {
+      "name": "Name",
+      "plan": "Plan",
+      "status": "Status",
+      "expiry": "Expiry",
+      "actions": "Actions"
+    },
+    "status": {
+      "active": "Active",
+      "trial": "Trial",
+      "grace": "Grace",
+      "readOnly": "Read-only",
+      "suspended": "Suspended"
+    }
   }
 }
