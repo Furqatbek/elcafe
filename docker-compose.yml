@@ -97,6 +97,10 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-default_jwt_secret_change_in_production}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      # Tenant isolation mode: off | shadow | enforce (Phase 0 §3.3/§3.4). Defaults to shadow
+      # (observe + log, no blocking); set to 'enforce' to activate isolation after a staging soak —
+      # see docs/TENANT_ENFORCE_FLIP_RUNBOOK.md.
+      TENANT_ENFORCEMENT_MODE: ${TENANT_ENFORCEMENT_MODE:-shadow}
       # QR Code URL - used for generating QR code links
       SELFSERVICE_BASE_URL: ${SELFSERVICE_BASE_URL:-https://qahvoon.uz/order}
       FILE_BASE_URL: ${FILE_BASE_URL:-https://qahvoon.uz/uploads}
