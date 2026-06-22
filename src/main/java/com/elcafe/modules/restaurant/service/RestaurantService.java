@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.billing.repository.SubscriptionPlanRepository;
 import com.elcafe.modules.financial.service.AccountService;
 import com.elcafe.modules.restaurant.dto.RestaurantRequest;
 import com.elcafe.modules.restaurant.dto.RestaurantResponse;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,6 +31,11 @@ public class RestaurantService {
     private final RestaurantMapper restaurantMapper;
     @Lazy
     private final AccountService accountService;
+    private final SubscriptionPlanRepository planRepository;
+
+    // New restaurants land on a 14-day Pro trial (mini-phase A7).
+    private static final int TRIAL_DAYS = 14;
+    private static final String TRIAL_PLAN_CODE = "pro";
 
     @Transactional
     @CacheEvict(value = "restaurant", allEntries = true)
@@ -36,6 +43,7 @@ public class RestaurantService {
         log.info("Creating new restaurant: {}", request.getName());
 
         Restaurant restaurant = restaurantMapper.toEntity(request);
+        applyTrialIfNew(restaurant);
         restaurant = restaurantRepository.save(restaurant);
 
         // Initialize Chart of Accounts for financial module
@@ -49,6 +57,26 @@ public class RestaurantService {
 
         log.info("Restaurant created with ID: {}", restaurant.getId());
         return restaurantMapper.toResponse(restaurant);
+    }
+
+    /**
+     * Provision a fresh restaurant onto a 14-day Pro trial (mini-phase A7). No-op when the restaurant
+     * already has a plan or the Pro plan isn't seeded yet (e.g. tests with Flyway disabled), so
+     * existing restaurants and unseeded environments are unaffected.
+     */
+    private void applyTrialIfNew(Restaurant restaurant) {
+        if (restaurant.getPlan() != null) {
+            return;
+        }
+        planRepository.findByCode(TRIAL_PLAN_CODE).ifPresent(pro -> {
+            LocalDateTime now = LocalDateTime.now();
+            restaurant.setPlan(pro);
+            restaurant.setPlanStartedAt(now);
+            restaurant.setPlanExpiresAt(now.plusDays(TRIAL_DAYS));
+            restaurant.setIsTrial(true);
+            log.info("New restaurant provisioned on {}-day Pro trial (expires {})",
+                    TRIAL_DAYS, restaurant.getPlanExpiresAt());
+        });
     }
 
     @Transactional

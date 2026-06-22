@@ -17,7 +17,10 @@ export default function PlanExpiryBanner() {
 
   if (!planCode) return null;
   const approaching = daysUntilExpiry != null && daysUntilExpiry <= 7;
-  if (!isReadOnly && !inGracePeriod && !approaching) return null;
+  // A trial shows its countdown for the whole trial (e.g. "Trial ends in 14 days"), not just the
+  // final week (mini-phase A7).
+  const trialActive = isTrial && daysUntilExpiry != null && daysUntilExpiry > 0;
+  if (!isReadOnly && !inGracePeriod && !approaching && !trialActive) return null;
 
   let tone;
   let Icon;
