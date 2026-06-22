@@ -9,7 +9,7 @@ import { Lock } from 'lucide-react';
 export default function PlanRequired() {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
+    <div className="flex flex-col items-center justify-center py-24 text-center" data-testid="plan-required">
       <Lock className="h-12 w-12 text-muted-foreground mb-4" />
       <h1 className="text-2xl font-semibold mb-2">
         {t('planRequired.title', 'Not included in your plan')}

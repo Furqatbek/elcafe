@@ -282,7 +282,7 @@ export default function Layout() {
     .map((item) => ({ ...item, subItems: item.subItems.filter(subItemVisible) }));
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50" data-testid="app-shell">
       {/* Sidebar. Width animates so the main content slides into place
           rather than snapping. 300ms is the sweet spot — fast enough to
           feel responsive, slow enough to be readable. */}
