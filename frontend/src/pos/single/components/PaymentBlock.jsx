@@ -4,12 +4,14 @@ import { ChevronLeft } from 'lucide-react';
 import Button from './Button';
 import { fmtMoney, MONEY_STYLE } from '../theme';
 import usePosStore, { ticketSubtotal, ticketTax, ticketTotal } from '../store';
+import { usePlan } from '../../../hooks/usePlan';
 
 const TAX_RATE = 0.12;
 const QUICK_TENDERS = [50000, 100000, 200000, 500000];
 
 export default function PaymentBlock({ theme, ticket, restaurantId, restaurantCity, onBack, onCharged }) {
   const { t } = useTranslation();
+  const { isReadOnly } = usePlan();
   const setPayment = usePosStore((s) => s.setPayment);
   const charge = usePosStore((s) => s.chargeActive);
   const clearError = usePosStore((s) => s.clearSubmitError);
@@ -190,7 +192,8 @@ export default function PaymentBlock({ theme, ticket, restaurantId, restaurantCi
         theme={theme}
         variant="success"
         size="xl"
-        disabled={!canCharge}
+        disabled={!canCharge || isReadOnly}
+        title={isReadOnly ? t('subscription.readOnlyTooltip', 'Renew your plan to resume') : undefined}
         onClick={handleCharge}
         style={{ width: '100%' }}
       >

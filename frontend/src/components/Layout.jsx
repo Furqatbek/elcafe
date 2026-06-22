@@ -6,6 +6,7 @@ import { useNotificationStore } from '../store/notificationStore';
 import { Button } from './ui/button';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import PushPermissionPrompt from './PushPermissionPrompt';
+import PlanExpiryBanner from './PlanExpiryBanner';
 import NotificationBell from './OrderNotificationProvider';
 import {
   LayoutDashboard,
@@ -458,6 +459,7 @@ export default function Layout() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
+        <PlanExpiryBanner />
         <div className="p-8">
           <Outlet />
         </div>

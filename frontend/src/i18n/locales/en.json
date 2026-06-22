@@ -5244,6 +5244,17 @@
       "trial": "Trial",
       "grace": "Grace period",
       "readOnly": "Read-only (expired)"
+    },
+    "readOnlyTooltip": "Renew your plan to resume",
+    "banner": {
+      "readOnly": "Your plan has expired. The app is read-only — renew to resume.",
+      "readOnlyTrial": "Your trial has ended. The app is read-only — renew to resume.",
+      "grace": "Grace period — {{n}} day(s) left before the app becomes read-only.",
+      "expiresToday": "Your plan expires today.",
+      "trialEndsToday": "Your trial ends today.",
+      "expiresIn": "Your plan expires in {{n}} day(s).",
+      "trialEndsIn": "Your trial ends in {{n}} day(s).",
+      "renew": "Renew"
     }
   }
 }

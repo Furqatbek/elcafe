@@ -5052,6 +5052,17 @@
       "trial": "Sinov",
       "grace": "Imtiyozli muddat",
       "readOnly": "Faqat o'qish (tugagan)"
+    },
+    "readOnlyTooltip": "Davom etish uchun tarifni uzaytiring",
+    "banner": {
+      "readOnly": "Tarif muddati tugagan. Ilova faqat o'qish rejimida — davom etish uchun uzaytiring.",
+      "readOnlyTrial": "Sinov muddati tugagan. Ilova faqat o'qish rejimida — davom etish uchun uzaytiring.",
+      "grace": "Imtiyozli muddat — faqat o'qish rejimigacha {{n}} kun qoldi.",
+      "expiresToday": "Tarif muddati bugun tugaydi.",
+      "trialEndsToday": "Sinov muddati bugun tugaydi.",
+      "expiresIn": "Tarif muddati {{n}} kundan keyin tugaydi.",
+      "trialEndsIn": "Sinov muddati {{n}} kundan keyin tugaydi.",
+      "renew": "Uzaytirish"
     }
   }
 }

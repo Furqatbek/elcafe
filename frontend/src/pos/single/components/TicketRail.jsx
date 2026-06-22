@@ -9,9 +9,11 @@ import ModifierEditor from './ModifierEditor';
 import PaymentBlock from './PaymentBlock';
 import { fmtMoney, MONEY_STYLE } from '../theme';
 import usePosStore, { ticketSubtotal, ticketTotal } from '../store';
+import { usePlan } from '../../../hooks/usePlan';
 
 export default function TicketRail({ theme, ticket, tables, width, restaurantId, restaurantCity, onCharged }) {
   const { t } = useTranslation();
+  const { isReadOnly } = usePlan();
   const setType = usePosStore((s) => s.setType);
   const patchActive = usePosStore((s) => s.patchActive);
   const pauseActive = usePosStore((s) => s.pauseActive);
@@ -204,7 +206,8 @@ export default function TicketRail({ theme, ticket, tables, width, restaurantId,
             theme={theme}
             variant="primary"
             size="xl"
-            disabled={ticket.items.length === 0}
+            disabled={ticket.items.length === 0 || isReadOnly}
+            title={isReadOnly ? t('subscription.readOnlyTooltip', 'Renew your plan to resume') : undefined}
             onClick={() => setPaymentMode(true)}
             style={{ width: '100%' }}
           >
