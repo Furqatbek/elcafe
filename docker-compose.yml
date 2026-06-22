@@ -95,7 +95,9 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-elcafe_secret}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-default_jwt_secret_change_in_production}
+      # No insecure fallback: refuse to start unless a real secret is provided (§3.5). The app also
+      # rejects a too-short/old-default secret at boot. Generate: openssl rand -hex 32.
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET must be set; generate one with openssl rand -hex 32}"
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       # Tenant isolation mode: off | shadow | enforce (Phase 0 §3.3/§3.4). Defaults to shadow
       # (observe + log, no blocking); set to 'enforce' to activate isolation after a staging soak —
