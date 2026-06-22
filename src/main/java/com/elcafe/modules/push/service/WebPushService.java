@@ -69,8 +69,12 @@ public class WebPushService {
                 pushService.setPrivateKey(vapidPrivateKey);
                 pushService.setSubject(vapidSubject);
                 log.info("Web Push service initialized successfully");
-            } catch (GeneralSecurityException e) {
-                log.error("Failed to initialize Web Push service: {}", e.getMessage());
+            } catch (GeneralSecurityException | RuntimeException e) {
+                // Malformed keys throw IllegalArgumentException ("Invalid point encoding") from the
+                // webpush lib, not GeneralSecurityException. Either way, bad VAPID config should disable
+                // push (isEnabled() == false) and leave the app running — never abort startup.
+                pushService = null;
+                log.error("Failed to initialize Web Push service; push notifications disabled: {}", e.getMessage());
             }
         } else {
             log.warn("VAPID keys not configured. Web Push notifications will be disabled.");
