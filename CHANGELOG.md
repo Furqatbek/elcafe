@@ -48,6 +48,15 @@ every route, in dev and the production build alike. Fixed by mapping `global →
 broadened and `pushService` is nulled on failure, so a bad/placeholder key cleanly disables push
 (`isEnabled() == false`) and the app keeps running. Surfaced by the new context-load smoke test.
 
+#### Owner-bot money amounts now render identically on every host
+
+The shift-closed / shift-opened / employee-consumption owner-bot messages formatted money with
+`String.format("%,.2f", …)`, which uses the JVM's **default locale** — so the same amount rendered
+`250,000.00` on a US-locale host but `250 000,00` on a ru_RU one. That drifted the owner-facing output
+by machine and broke `OwnerNotificationServiceShiftClosedTest` for contributors on a Russian/European
+locale. These call sites are now pinned to a fixed `MONEY_LOCALE` (en-US), so output is deterministic
+everywhere. (`NumberFormat`-based messages were already locale-pinned and unaffected.)
+
 ### Changed - 2026-06-20
 
 #### Customers are now per-restaurant (tenant-scoped identity)

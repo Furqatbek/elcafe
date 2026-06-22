@@ -51,6 +51,14 @@ public class OwnerNotificationService {
     private static final DateTimeFormatter DATETIME_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     private static final NumberFormat CURRENCY_FORMAT = NumberFormat.getInstance(new Locale("uz", "UZ"));
 
+    /**
+     * Locale for the {@code %,.2f} money values in these messages. Pinned so the grouping/decimal
+     * separators don't depend on the host's default locale — otherwise the same amount renders
+     * "250,000.00" on one machine and "250 000,00" on another (e.g. a ru_RU JVM), which both drifts
+     * the owner-facing output and breaks formatting assertions in tests.
+     */
+    private static final Locale MONEY_LOCALE = Locale.US;
+
     /** Days of full access after expiry before read-only — keep in sync with PlanGateService.GRACE_DAYS. */
     private static final int GRACE_DAYS = 3;
 
@@ -294,7 +302,7 @@ public class OwnerNotificationService {
                 ? subscribers.get(0).getRestaurant().getName() : "ID: " + restaurantId;
 
         String lateLine = lateInfo != null
-                ? String.format("\n⚠️ <b>Опоздание на %d мин</b> — штраф %,.2f\n",
+                ? String.format(MONEY_LOCALE, "\n⚠️ <b>Опоздание на %d мин</b> — штраф %,.2f\n",
                         lateInfo.minutesLate(), lateInfo.fine())
                 : "";
 
@@ -322,7 +330,7 @@ public class OwnerNotificationService {
 
         if (subscribers.isEmpty()) return;
 
-        String message = String.format(
+        String message = String.format(MONEY_LOCALE,
             "🍽 <b>Потребление сотрудника</b>\n\n" +
             "👤 %s\n" +
             "📦 %s × %d\n" +
@@ -378,12 +386,12 @@ public class OwnerNotificationService {
         String profitEmoji = shiftProfit.compareTo(java.math.BigDecimal.ZERO) >= 0 ? "📈" : "📉";
 
         String cashText = totalCashSales != null && totalCashSales.compareTo(java.math.BigDecimal.ZERO) > 0
-                ? String.format("\n💵 Наличные: %,.2f", totalCashSales) : "";
+                ? String.format(MONEY_LOCALE, "\n💵 Наличные: %,.2f", totalCashSales) : "";
         String cardText = totalCardSales != null && totalCardSales.compareTo(java.math.BigDecimal.ZERO) > 0
-                ? String.format("\n💳 Карта: %,.2f", totalCardSales) : "";
+                ? String.format(MONEY_LOCALE, "\n💳 Карта: %,.2f", totalCardSales) : "";
 
         String lateText = lateInfo != null
-                ? String.format("\n⚠️ Опоздание: %d мин — штраф %,.2f", lateInfo.minutesLate(), lateInfo.fine())
+                ? String.format(MONEY_LOCALE, "\n⚠️ Опоздание: %d мин — штраф %,.2f", lateInfo.minutesLate(), lateInfo.fine())
                 : "";
 
         StringBuilder msg = new StringBuilder();
@@ -393,7 +401,7 @@ public class OwnerNotificationService {
                 clockInTime, clockOutTime, hours, mins, lateText));
         msg.append(String.format("📦 Заказов: %d\n", orderCount));
         msg.append(String.format("💰 Выручка: %s",
-                totalSales != null ? String.format("%,.2f", totalSales) : "0"));
+                totalSales != null ? String.format(MONEY_LOCALE, "%,.2f", totalSales) : "0"));
         msg.append(cashText).append(cardText);
 
         // Only render the expense / profit block when this shift actually
@@ -404,12 +412,12 @@ public class OwnerNotificationService {
                 || salesForProfit.signum() > 0;
         if (hasShiftFinancials) {
             if (drawerExpenses.signum() > 0) {
-                msg.append(String.format("\n🪙 Из кассы смены: %,.2f", drawerExpenses));
+                msg.append(String.format(MONEY_LOCALE, "\n🪙 Из кассы смены: %,.2f", drawerExpenses));
             }
             if (otherExpenses.signum() > 0) {
-                msg.append(String.format("\n🏦 Прочие расходы: %,.2f", otherExpenses));
+                msg.append(String.format(MONEY_LOCALE, "\n🏦 Прочие расходы: %,.2f", otherExpenses));
             }
-            msg.append(String.format("\n%s Чистая прибыль (смена): %,.2f", profitEmoji, shiftProfit));
+            msg.append(String.format(MONEY_LOCALE, "\n%s Чистая прибыль (смена): %,.2f", profitEmoji, shiftProfit));
         }
         String message = msg.toString();
 
