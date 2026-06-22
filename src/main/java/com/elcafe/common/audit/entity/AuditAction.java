@@ -85,7 +85,9 @@ public enum AuditAction {
     PRICING_CHANGED("Menu pricing changed"),
 
     // ==================== SUBSCRIPTION / BILLING ====================
-    PLAN_CHANGED("Restaurant subscription plan changed");
+    PLAN_CHANGED("Restaurant subscription plan changed"),
+    RESTAURANT_SUSPENDED("Restaurant suspended by platform operator"),
+    RESTAURANT_REACTIVATED("Restaurant reactivated by platform operator");
 
     private final String description;
 

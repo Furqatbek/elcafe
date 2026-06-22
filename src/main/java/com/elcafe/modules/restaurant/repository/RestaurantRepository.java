@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.repository;
 
 import com.elcafe.modules.restaurant.entity.Restaurant;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -15,6 +16,9 @@ import java.util.Optional;
 public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, JpaSpecificationExecutor<Restaurant> {
 
     List<Restaurant> findByActiveTrue();
+
+    /** Case-insensitive name search for the SUPER_ADMIN platform tenant list. */
+    Page<Restaurant> findByNameContainingIgnoreCase(String name, Pageable pageable);
 
     List<Restaurant> findByActiveTrueAndAcceptingOrdersTrue();
 
