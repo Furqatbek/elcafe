@@ -5256,5 +5256,10 @@
       "trialEndsIn": "Your trial ends in {{n}} day(s).",
       "renew": "Renew"
     }
+  },
+  "planRequired": {
+    "title": "Not included in your plan",
+    "body": "This module is part of a higher plan. Upgrade to unlock it.",
+    "cta": "View plans"
   }
 }

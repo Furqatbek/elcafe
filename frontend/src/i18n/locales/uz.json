@@ -5064,5 +5064,10 @@
       "trialEndsIn": "Sinov muddati {{n}} kundan keyin tugaydi.",
       "renew": "Uzaytirish"
     }
+  },
+  "planRequired": {
+    "title": "Tarifingizga kirmaydi",
+    "body": "Bu modul yuqori tarifda mavjud. Ochish uchun tarifni oshiring.",
+    "cta": "Tariflarni ko'rish"
   }
 }

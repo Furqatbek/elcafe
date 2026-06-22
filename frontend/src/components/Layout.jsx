@@ -7,6 +7,9 @@ import { Button } from './ui/button';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import PushPermissionPrompt from './PushPermissionPrompt';
 import PlanExpiryBanner from './PlanExpiryBanner';
+import PlanRequired from '../pages/PlanRequired';
+import { usePlan } from '../hooks/usePlan';
+import { featureForPath } from '../config/planFeatures';
 import NotificationBell from './OrderNotificationProvider';
 import {
   LayoutDashboard,
@@ -72,6 +75,7 @@ export default function Layout() {
   const location = useLocation();
   const { logout, user } = useAuthStore();
   const { unreadReservations } = useNotificationStore();
+  const { hasFeature } = usePlan();
   const [expandedMenus, setExpandedMenus] = useState({});
   // Persist sidebar collapse across reloads. Read once on mount.
   const [collapsed, setCollapsed] = useState(
@@ -258,9 +262,24 @@ export default function Layout() {
   // Filter menu items based on user role
   // OPERATOR role cannot access dashboard and finance
   const isOperator = user?.role === 'OPERATOR';
-  const filteredMenuItems = isOperator
+  // Hide sub-items the current plan doesn't unlock (mini-phase A4c); drop a group when all of its
+  // sub-items are hidden. A code-less path is core and always visible.
+  const subItemVisible = (s) => {
+    const code = featureForPath(s.path);
+    return !code || hasFeature(code);
+  };
+  const planVisible = (item) => {
+    if (item.subItems.length === 0) {
+      const code = featureForPath(item.path);
+      return !code || hasFeature(code);
+    }
+    return item.subItems.some(subItemVisible);
+  };
+  const filteredMenuItems = (isOperator
     ? menuItems.filter((item) => !['dashboard', 'finance', 'marketing'].includes(item.id))
-    : menuItems;
+    : menuItems)
+    .filter(planVisible)
+    .map((item) => ({ ...item, subItems: item.subItems.filter(subItemVisible) }));
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -461,7 +480,11 @@ export default function Layout() {
       <main className="flex-1 overflow-auto">
         <PlanExpiryBanner />
         <div className="p-8">
-          <Outlet />
+          {(() => {
+            // Fallback guard for direct-URL access to a module the plan doesn't include.
+            const code = featureForPath(location.pathname);
+            return code && !hasFeature(code) ? <PlanRequired /> : <Outlet />;
+          })()}
         </div>
       </main>
 
