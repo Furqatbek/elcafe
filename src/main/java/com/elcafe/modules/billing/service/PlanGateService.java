@@ -114,6 +114,19 @@ public class PlanGateService {
         }
     }
 
+    /**
+     * Like {@link #requireFeature(Long, String)} but a no-op when the restaurant has no plan at all.
+     * Production restaurants always have one (plan_id is NOT NULL since V156), so this gates as
+     * expected there; a null plan only arises in tests / unseeded edge cases, where gating must not
+     * fire. Used by the path-based {@code PlanFeatureGuardInterceptor} (mini-phase A4b).
+     */
+    public void requireFeatureIfPlanned(Long restaurantId, String featureCode) {
+        PlanSnapshot snapshot = getCurrentPlan(restaurantId);
+        if (snapshot != null && !snapshot.featureCodes().contains(featureCode)) {
+            throw new ForbiddenException("plan.feature_required:" + featureCode);
+        }
+    }
+
     // ---------------------------------------------------------------- expiry / read-only
 
     /** Past expiry + grace window — the restaurant can read but not create/accept new work. */
