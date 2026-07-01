@@ -700,3 +700,47 @@ cache-TTL refresh (3), the live Telegram delivery in (6), and the
 RU/UZ localization sweep (8). Run backend tests with
 `mvn test`, frontend unit with `npm test`, and E2E with `npm run e2e`
 (see `frontend/README.md`).
+
+## Post-Phase-A residuals & follow-ups
+
+Phase A (the tier system) is complete and tested. These are the known
+open items, recorded here so they survive into later phases instead of
+living only in a work session. A 7-agent completeness audit
+(2026-06-22) confirmed the rest of Phase A is done; the one real defect
+it found — promotion-analytics gated one tier too low — is already fixed
+(`/promotions/analytics → marketing.analytics`).
+
+### Open decision — backend gating of consumer/shared modules
+
+Self-service online orders and reservations are gated in the **UI only**
+(hidden in the sidebar), not 403'd by the backend. This is deliberate:
+their backends are consumer/public (booking, self-service ordering) and
+self-service **shares an endpoint with core POS takeaway**, so a naive
+backend rule would break takeaway for Start-tier restaurants (see
+`PlanFeatureGuardInterceptor` javadoc + commit `5fea6c2`). Consumer
+traffic isn't gated anyway (no staff tenant → null-tenant skip).
+
+- **Residual:** a Start-tier *staff* user could still reach the
+  staff-facing reservations-management API directly.
+- **Decision needed:** add defense-in-depth 403s on the staff
+  reservations endpoints (scoped to NOT touch consumer booking or POS
+  takeaway), or leave as designed. Same question applies to any
+  staff-only self-service management endpoints.
+
+### Pre-launch verification (manual — no CI coverage)
+
+- Migration dry-run of V156/V157 on a production-like snapshot: every
+  restaurant lands on Start, `plan_expires_at IS NULL`, no FK violations.
+- Live Telegram delivery of the expiry reminder (`PlanExpiryNotifier` →
+  owner bot) against a real bot.
+- Browser RU/UZ localization sweep: banner, plan-required page,
+  subscription page, platform console.
+- POS read-only UX: the place-order / charge buttons disable (with
+  tooltip) for an expired plan in the running app.
+
+### Noted (intentional, revisit only if tiers change)
+
+- Per-promotion performance `/promotions/{id}/analytics` stays at
+  `marketing` (Advance), unlike the analytics dashboard (`Pro`). It is
+  reached from the Advance promotions-management page, so this is by
+  design — flagged in case the tier boundary is ever reconsidered.
