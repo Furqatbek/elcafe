@@ -84,6 +84,20 @@ JWT_SECRET=your_super_secret_jwt_key_here  # Generate: openssl rand -hex 32
 CORS_ORIGINS=https://lacasa.uz,https://www.lacasa.uz
 ```
 
+> **`JWT_SECRET` is required** — the app fails to start without it (no insecure default) and rejects a
+> too-short or the old committed value.
+
+**Optional — enforcement flags** (both ship safe-by-default; flip only after a staging soak):
+```env
+# Cross-tenant isolation (Phase 0): off | shadow | enforce. Default shadow (observe + log, no block).
+# Flip to enforce per docs/TENANT_ENFORCE_FLIP_RUNBOOK.md.
+TENANT_ENFORCEMENT_MODE=shadow
+# Subscription access gate (Phase 2): off | shadow | enforce. Default off (dark). In 'enforce', a
+# SUPER_ADMIN-suspended tenant's staff and waiters get 402 SUBSCRIPTION_INACTIVE. Flip off -> shadow
+# (watch [subscription-shadow] logs) -> enforce.
+SUBSCRIPTION_ENFORCEMENT_MODE=off
+```
+
 ### 5. Configure NGINX Reverse Proxy
 
 ```bash

@@ -23,6 +23,8 @@
 14. [Push Notifications](#push-notifications)
 15. [Reviews](#reviews)
 16. [Packaging Rules](#packaging-rules)
+17. [Subscription & Billing](#subscription--billing)
+18. [Platform Admin (Super-Admin)](#platform-admin-super-admin)
 
 ---
 
@@ -3099,5 +3101,101 @@ Authorization: Bearer {token}
 
 ---
 
+## Subscription & Billing
+
+Plan-tier info for the current tenant, plus admin plan management. When the Phase 2 access gate is on
+(`app.subscription.enforcement.mode=enforce`), a **suspended** tenant's staff and waiter requests get
+`402 SUBSCRIPTION_INACTIVE` on every non-allowlisted endpoint (auth/billing/platform/health pass).
+
+### Current Plan (Authenticated)
+```http
+GET /api/v1/billing/me
+Authorization: Bearer {token}
+```
+**Response**: `BillingStatusDto` — the caller's restaurant plan and state.
+```json
+{
+  "restaurantId": 1,
+  "planCode": "pro",
+  "planName": "Pro",
+  "featureCodes": ["inventory", "payroll", "marketing.sms"],
+  "planExpiresAt": "2026-08-01T00:00:00",
+  "isTrial": false,
+  "daysUntilExpiry": 31,
+  "inGracePeriod": false,
+  "readOnly": false
+}
+```
+
+### Available Plans (Authenticated)
+```http
+GET /api/v1/billing/plans
+Authorization: Bearer {token}
+```
+**Response**: array of `PlanSummaryDto` (`code`, `name`, `monthlyPrice`, `featureCodes`, `sortOrder`) — active plans ordered for display.
+
+### Set Plan (Admin)
+```http
+POST /api/v1/billing/admin/set-plan
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "restaurantId": 1,
+  "planCode": "advance",
+  "planExpiresAt": "2026-09-01T00:00:00",
+  "isTrial": false
+}
+```
+Points the restaurant at a plan. `ADMIN` only; audited (`PLAN_CHANGED`). Returns the updated `BillingStatusDto`.
+
+---
+
+## Platform Admin (Super-Admin)
+
+Cross-tenant subscription management. Every endpoint requires `SUPER_ADMIN` (the only cross-tenant role).
+
+### List Tenants
+```http
+GET /api/v1/platform/tenants?search={name}&page=0&size=20
+Authorization: Bearer {token}
+```
+**Response**: a page of `TenantSummaryDto` (`restaurantId`, `name`, `active`, `planCode`, `planName`, `isTrial`, `planExpiresAt`, `daysUntilExpiry`, `inGracePeriod`, `readOnly`). `search` is an optional case-insensitive name filter.
+
+### Change a Tenant's Plan
+```http
+POST /api/v1/platform/tenants/{id}/plan
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "planCode": "pro",
+  "planExpiresAt": "2026-09-01T00:00:00",
+  "isTrial": false
+}
+```
+
+### Extend Expiry
+```http
+POST /api/v1/platform/tenants/{id}/extend
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "days": 30
+}
+```
+Extends from the current expiry when it's still in the future, otherwise from now (reviving a lapsed plan).
+
+### Suspend / Reactivate
+```http
+POST /api/v1/platform/tenants/{id}/suspend
+POST /api/v1/platform/tenants/{id}/reactivate
+Authorization: Bearer {token}
+```
+Toggles `Restaurant.active`. Suspending cuts the tenant off when the Phase 2 gate is in `enforce` (402 for its staff/waiters). Audited (`RESTAURANT_SUSPENDED` / `RESTAURANT_REACTIVATED`).
+
+---
+
 **API Version**: 1.0.0
-**Last Updated**: 2026-02-08
+**Last Updated**: 2026-07-01

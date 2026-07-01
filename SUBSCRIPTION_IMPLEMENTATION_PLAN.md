@@ -3,7 +3,21 @@
 **Model decided:** True multi-tenant SaaS. Each restaurant is a paying tenant with
 hard-enforced data isolation. Subscription status gates access to the platform.
 
-**Status:** Plan only. No code written yet. This document is the blueprint.
+**Status (living — updated as phases land):**
+
+- **Phase 0** (security + tenancy hardening) — ✅ landed. Tenant enforcement ships in `shadow` mode;
+  not yet flipped to `enforce` (see `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`).
+- **Phase 1** (subscription tier system) — ✅ complete: schema (V156/V157), plan gating, read-only mode,
+  expiry notifier, 14-day trial, admin plan management, en/ru/uz, tests.
+- **Phase 2** (access gate) — ✅ complete, dark-launched (`app.subscription.enforcement.mode=off`): a
+  suspended tenant's staff **and waiters** get 402, Redis-cached, and the frontend `SuspensionGate`
+  surfaces it. Scoped to no-payments (suspended-only; expired stays read-only).
+- **Phase 5** (super-admin platform console) — ✅ tenant list + plan change/extend + suspend/reactivate.
+- **Phase 3** (billing engine, provider, webhooks) and the payment UI of **Phase 4** — ⏸ deferred,
+  blocked on a payment-acquiring contract; plan prices stay 0. Invoices/MRR deferred with them.
+
+Per-section "_Landed_" notes below carry the detail. §1 is the original pre-work baseline (mostly
+resolved now) — read it as the motivation for this re-architecture, not the current state.
 
 > Read `Section 1` first. It is the reason this is a re-architecture, not a feature.
 > If you implement Sections 2–5 without Section 1 (Phase 0), the paywall is
@@ -12,6 +26,11 @@ hard-enforced data isolation. Subscription status gates access to the platform.
 ---
 
 ## 1. Current-state truth (evidence)
+
+> **Historical baseline — captured the app _before_ Phase 0/1/2.** Most rows below are now resolved
+> (self-registration hole closed, tokens finite/revocable, tenancy enforced in shadow, JWT secret
+> required, waiters/customers tenant-bound, the subscription/plan model built). Kept as the reason this
+> was a re-architecture, not a feature. See the Status block at the top for what's current.
 
 | Reality | Evidence |
 |---|---|

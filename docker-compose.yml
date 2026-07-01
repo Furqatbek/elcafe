@@ -105,6 +105,10 @@ services:
       # (observe + log, no blocking); set to 'enforce' to activate isolation after a staging soak —
       # see docs/TENANT_ENFORCE_FLIP_RUNBOOK.md.
       TENANT_ENFORCEMENT_MODE: ${TENANT_ENFORCEMENT_MODE:-shadow}
+      # Phase 2 subscription access gate: off | shadow | enforce. Defaults to off (dark). A suspended
+      # tenant's staff/waiters get 402 SUBSCRIPTION_INACTIVE only in 'enforce'. Flip off -> shadow
+      # (watch [subscription-shadow] logs) -> enforce, same cadence as TENANT_ENFORCEMENT_MODE.
+      SUBSCRIPTION_ENFORCEMENT_MODE: ${SUBSCRIPTION_ENFORCEMENT_MODE:-off}
       # QR Code URL - used for generating QR code links
       SELFSERVICE_BASE_URL: ${SELFSERVICE_BASE_URL:-https://qahvoon.uz/order}
       FILE_BASE_URL: ${FILE_BASE_URL:-https://qahvoon.uz/uploads}
