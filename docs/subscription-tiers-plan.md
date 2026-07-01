@@ -744,3 +744,21 @@ traffic isn't gated anyway (no staff tenant → null-tenant skip).
   `marketing` (Advance), unlike the analytics dashboard (`Pro`). It is
   reached from the Advance promotions-management page, so this is by
   design — flagged in case the tier boundary is ever reconsidered.
+
+### Phase 2 access-gate follow-ups
+
+Phase 2 landed the suspension access gate (`SubscriptionEnforcementFilter`,
+`app.subscription.enforcement.mode`, default `off`; suspended tenant → 402
+`SUBSCRIPTION_INACTIVE`). Open items:
+
+- **Flip procedure:** ship `off` → set `SUBSCRIPTION_ENFORCEMENT_MODE=shadow`
+  and watch `[subscription-shadow]` logs for a cycle → then `enforce`. Same
+  cadence as the tenant-enforcement flip (`TENANT_ENFORCE_FLIP_RUNBOOK.md`).
+- **Frontend 402 handling (Phase 4):** the axios layer doesn't yet special-case
+  402 `SUBSCRIPTION_INACTIVE`. Until it does, an enforced block surfaces as a
+  generic error. Add a clear "account suspended — contact support" screen before
+  flipping to `enforce` in production.
+- **Waiter/consumer-token gating:** the gate covers staff (`UserPrincipal`)
+  only, so a suspended tenant's waiter could still operate the POS via a waiter
+  token (consistent with how plan feature/write gating also skips waiters).
+  Decide whether suspension should also cut off waiter tokens.

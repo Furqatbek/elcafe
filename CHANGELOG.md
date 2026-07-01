@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - 2026-07-01
+
+#### Phase 2 — subscription access gate (dark-launched, suspended → 402)
+
+Operationalizes suspension. Before this, suspending a tenant in the platform console only dropped it
+from public listings — nothing in the security layer checked `Restaurant.active`, so its staff could
+still log in and operate normally.
+
+- **`SubscriptionEnforcementFilter`** (registered after `TenantEnforcementFilter`): for an
+  authenticated staff request (`UserPrincipal`) whose tenant a SUPER_ADMIN has suspended, returns
+  **402 `SUBSCRIPTION_INACTIVE`**. Always passes SUPER_ADMIN, an allowlist (auth / billing / platform /
+  health — so a suspended admin can still log in and view billing), and anything without a staff tenant
+  (consumer / waiter / public / unauthenticated). Fail-open on its own errors.
+- **Feature flag** `app.subscription.enforcement.mode` (`off` | `shadow` | `enforce`), default **off** —
+  ships dark, mirroring the Phase 0 `tenant-enforcement` flag. `shadow` logs `[subscription-shadow]`
+  would-be blocks without acting.
+- **`SubscriptionAccessService.isSuspended(restaurantId)`** — `Restaurant.active` over a 60s in-process
+  cache; `PlatformAdminService.setActive` invalidates it so suspend/reactivate takes effect immediately.
+- Scope: expired-not-suspended plans keep today's read-only mode (unchanged); waiter/consumer tokens
+  aren't gated (consistent with the plan feature/write interceptors). Frontend 402 handling and
+  waiter-token gating are noted as follow-ups (`docs/subscription-tiers-plan.md`).
+- Tests: `SubscriptionAccessServiceTest` (5), `SubscriptionEnforcementFilterTest` (7),
+  `PlatformAdminServiceTest` +1; context smoke test confirms the filter wires in at full boot.
+
 ### Added - 2026-06-22
 
 #### SUPER_ADMIN platform console (cross-tenant subscription management)
