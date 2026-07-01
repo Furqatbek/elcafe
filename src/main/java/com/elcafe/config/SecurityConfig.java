@@ -1,6 +1,7 @@
 package com.elcafe.config;
 
 import com.elcafe.common.tenant.TenantEnforcementFilter;
+import com.elcafe.modules.billing.enforcement.SubscriptionEnforcementFilter;
 import com.elcafe.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +41,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final TenantEnforcementFilter tenantEnforcementFilter;
+    private final SubscriptionEnforcementFilter subscriptionEnforcementFilter;
     private final UserDetailsService userDetailsService;
 
     @Value("${app.security.cors.allowed-origins}")
@@ -115,7 +117,10 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 // Tenant isolation runs right after authentication, so the principal is available.
-                .addFilterAfter(tenantEnforcementFilter, JwtAuthenticationFilter.class);
+                .addFilterAfter(tenantEnforcementFilter, JwtAuthenticationFilter.class)
+                // Phase 2 subscription gate runs after tenant resolution (principal + tenant available);
+                // 402s a suspended tenant's staff when app.subscription.enforcement.mode=enforce.
+                .addFilterAfter(subscriptionEnforcementFilter, TenantEnforcementFilter.class);
 
         return http.build();
     }

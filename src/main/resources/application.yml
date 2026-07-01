@@ -153,6 +153,14 @@ app:
       # Start in shadow, watch the [tenant-shadow] logs, then flip to enforce.
       mode: ${TENANT_ENFORCEMENT_MODE:shadow}
 
+  subscription:
+    enforcement:
+      # Phase 2 access gate. A suspended tenant (Restaurant.active=false, set via the platform console)
+      # gets 402 SUBSCRIPTION_INACTIVE on staff requests. Ships off; flip to shadow to watch the
+      # [subscription-shadow] logs, then enforce. Expired-not-suspended plans stay in read-only mode.
+      #   off | shadow | enforce
+      mode: ${SUBSCRIPTION_ENFORCEMENT_MODE:off}
+
   cache:
     menu-ttl: 1800 # 30 minutes
     restaurant-ttl: 3600 # 1 hour

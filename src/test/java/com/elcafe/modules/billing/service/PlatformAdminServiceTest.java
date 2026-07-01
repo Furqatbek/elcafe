@@ -42,6 +42,7 @@ class PlatformAdminServiceTest {
     @Mock private RestaurantRepository restaurantRepository;
     @Mock private PlanGateService planGateService;
     @Mock private AuditService auditService;
+    @Mock private SubscriptionAccessService subscriptionAccessService;
 
     @InjectMocks private PlatformAdminService service;
 
@@ -168,6 +169,7 @@ class PlatformAdminServiceTest {
         assertThat(dto.isActive()).isFalse();
         verify(restaurantRepository).save(r);
         verify(auditService).logAction(any());
+        verify(subscriptionAccessService).invalidate(3L); // gate refreshed immediately
     }
 
     @Test

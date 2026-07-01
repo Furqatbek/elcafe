@@ -34,6 +34,7 @@ public class PlatformAdminService {
     private final RestaurantRepository restaurantRepository;
     private final PlanGateService planGateService;
     private final AuditService auditService;
+    private final SubscriptionAccessService subscriptionAccessService;
 
     @Transactional(readOnly = true)
     public Page<TenantSummaryDto> listTenants(String search, Pageable pageable) {
@@ -112,6 +113,8 @@ public class PlatformAdminService {
 
         restaurant.setActive(active);
         restaurantRepository.save(restaurant);
+        // Refresh the access gate immediately so suspension/reactivation doesn't wait out the cache TTL.
+        subscriptionAccessService.invalidate(restaurantId);
 
         auditService.logAction(AuditService.AuditLogBuilder.create()
                 .action(active ? AuditAction.RESTAURANT_REACTIVATED : AuditAction.RESTAURANT_SUSPENDED)
