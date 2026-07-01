@@ -672,34 +672,43 @@ backend + frontend dev stack:
 
 ### Automated coverage
 
-Much of the above is now exercised automatically, so the manual run
-is a final confirmation rather than the only check:
+Most of the subscription system is exercised automatically; the manual
+run above is a final confirmation, not the only check. Coverage by area
+(the whole system, not just Phase A):
 
-- **Backend, staging-style** — `SubscriptionTierVerificationTest`
-  wires the real `PlanGateService` + both guard interceptors + the
-  403 mapping over MockMvc, with seeded Start / Pro / expired-Pro
-  restaurants. It reproduces scenarios 2 (Start gating → 403
-  `plan.feature_required:…`), 3 (Pro allows the same module), and 7
-  (past-grace → writes blocked, reads still work), plus the
-  super-admin bypass and the billing-status shape.
-- **Backend, smoke** — `ApplicationContextSmokeTest` boots the full
-  context and asserts the gating beans are wired;
-  `HttpSmokeTest` confirms the security filter chain rejects
-  unauthenticated/malformed-token requests over real HTTP.
-- **Frontend, unit** — Vitest specs cover `featureForPath` (the
-  path → feature-code map, kept in lockstep with the backend),
-  `usePlan`, and the `PlanExpiryBanner` wording across trial /
-  approaching / grace / read-only (scenarios 4–7, in EN).
-- **Frontend, E2E** — `e2e/plan-gating.spec.js` (Playwright) drives
-  a real browser through scenario 2 (Start → plan-required page on
-  direct navigation, CTA → `/subscription`), its inverse on Pro, and
-  a core module staying ungated.
+- **Tier data + gating (Phase 1)** — `SubscriptionPlanRepositoryTest`
+  (JSONB round-trip), `PlanFeaturesTest` (tier sizes + disjointness),
+  `PlanGateServiceTest` / `PlanGateServiceFeatureTest`
+  (expiry/grace/read-only, feature checks),
+  `PlanFeatureGuardInterceptorTest` / `PlanWriteGuardInterceptorTest`
+  (path→code map, read-only writes), and the staging-style
+  `SubscriptionTierVerificationTest` (real gate + both interceptors +
+  403 mapping over MockMvc; seeded Start / Pro / expired-Pro).
+- **Expiry + trial (Phase 1)** — `PlanExpiryNotifierTest` (notify
+  windows, one-failure resilience), `OwnerNotificationServicePlanExpiryTest`
+  (message body, subscriber filter), and trial assignment in
+  `RestaurantServiceTest` (14-day Pro).
+- **Access gate (Phase 2)** — `SubscriptionAccessServiceTest` (Redis
+  cache hit/miss, redis-down → DB fallback, invalidate) and
+  `SubscriptionEnforcementFilterTest` (off / shadow / enforce ×
+  staff / waiter / consumer / super-admin / allowlist).
+- **Super-admin platform console** — `PlatformAdminServiceTest`,
+  `PlatformAdminControllerTest`, and the `PlatformConsole.test.jsx`
+  Vitest spec.
+- **Whole-app smoke** — `ApplicationContextSmokeTest` (full context;
+  gating + gate beans wired) and `HttpSmokeTest` (real security filter
+  chain over HTTP).
+- **Frontend** — Vitest units for `featureForPath`, `usePlan`,
+  `PlanExpiryBanner`, `PlatformConsole`, and `SuspensionGate`; plus the
+  `plan-gating.spec.js` Playwright E2E (Start blocked → plan-required,
+  Pro allowed, core ungated).
 
-Still manual: the migration dry-run (1), the admin upgrade path and
-cache-TTL refresh (3), the live Telegram delivery in (6), and the
-RU/UZ localization sweep (8). Run backend tests with
-`mvn test`, frontend unit with `npm test`, and E2E with `npm run e2e`
-(see `frontend/README.md`).
+Totals: backend suite **1877** green; frontend **19 unit + 3 E2E**.
+Run: `mvn test`, `npm test`, and `npm run e2e` (see `frontend/README.md`).
+
+Still manual (no CI): the V156/V157 migration dry-run (scenario 1), the
+admin upgrade path + cache-TTL refresh (3), live Telegram delivery (6),
+and the RU/UZ localization sweep (8).
 
 ## Post-Phase-A residuals & follow-ups
 
