@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authAPI, billingAPI } from '../services/api';
+import { useSubscriptionStore } from './subscriptionStore';
 
 // JWT token expiration constants (in milliseconds)
 const ACCESS_TOKEN_EXPIRY = 15 * 60 * 1000; // 15 minutes
@@ -132,6 +133,7 @@ export const useAuthStore = create((set) => ({
       localStorage.setItem('user', JSON.stringify(user));
 
       set({ user, token: accessToken, isAuthenticated: true });
+      useSubscriptionStore.getState().setSuspended(false); // clear any stale suspension from a prior session
       // Fire-and-forget plan load so the UI has plan awareness right after login.
       billingAPI.getMe().then((r) => set({ plan: r.data?.data || null })).catch(() => {});
       return { success: true };
@@ -152,6 +154,7 @@ export const useAuthStore = create((set) => ({
       localStorage.setItem('user', JSON.stringify(user));
 
       set({ user, token: accessToken, isAuthenticated: true });
+      useSubscriptionStore.getState().setSuspended(false); // clear any stale suspension from a prior session
       billingAPI.getMe().then((r) => set({ plan: r.data?.data || null })).catch(() => {});
       return { success: true };
     } catch (error) {

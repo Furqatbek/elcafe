@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useSubscriptionStore } from '../store/subscriptionStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 
@@ -135,6 +136,13 @@ api.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // Phase 2 subscription access gate: a suspended tenant gets 402 SUBSCRIPTION_INACTIVE on every
+    // staff request. Flip the app-level flag so SuspensionGate takes over the UI, rather than a toast
+    // per blocked call. (Only when the gate is enabled server-side; ships off, so this is inert today.)
+    if (error.response?.status === 402 && error.response?.data?.error === 'SUBSCRIPTION_INACTIVE') {
+      useSubscriptionStore.getState().setSuspended(true);
     }
 
     return Promise.reject(error);

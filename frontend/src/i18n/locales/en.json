@@ -5296,5 +5296,11 @@
       "readOnly": "Read-only",
       "suspended": "Suspended"
     }
+  },
+  "suspended": {
+    "title": "Access suspended",
+    "body": "This restaurant's access has been suspended. Please contact support to restore it.",
+    "retry": "Retry",
+    "logout": "Log out"
   }
 }

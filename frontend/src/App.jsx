@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import Layout from './components/Layout';
 import SessionManager from './components/SessionManager';
+import SuspensionGate from './components/SuspensionGate';
 import { Toaster } from './components/ui/toaster';
 import { InventoryProvider } from './context/InventoryContext';
 import Login from './pages/Login';
@@ -141,6 +142,7 @@ function App() {
     <BrowserRouter basename="/admin">
       <SessionManager />
       <Toaster />
+      <SuspensionGate />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/pos/customer-display" element={<CustomerDisplayScreen />} />

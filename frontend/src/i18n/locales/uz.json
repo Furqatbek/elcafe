@@ -5104,5 +5104,11 @@
       "readOnly": "Faqat o'qish",
       "suspended": "To'xtatilgan"
     }
+  },
+  "suspended": {
+    "title": "Kirish to'xtatildi",
+    "body": "Ushbu muassasa kirishi to'xtatilgan. Tiklash uchun qo'llab-quvvatlash xizmatiga murojaat qiling.",
+    "retry": "Qayta urinish",
+    "logout": "Chiqish"
   }
 }
