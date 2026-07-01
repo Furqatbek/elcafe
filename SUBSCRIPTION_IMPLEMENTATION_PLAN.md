@@ -357,13 +357,15 @@ review, V155 notification tenant scope).
   `SubscriptionAccessService` at `modules/billing/**`, registered after
   `TenantEnforcementFilter`. Under the no-payments constraint the only "inactive" status is
   **suspended** (`Restaurant.active=false`, set by the platform console) → **402
-  `SUBSCRIPTION_INACTIVE`** for staff; expired-not-suspended plans stay in read-only mode. Behind
-  `app.subscription.enforcement.mode` (off/shadow/enforce, default **off**), mirroring the Phase 0
-  tenant-enforcement flag. Grace policy: allowlist auth/billing/platform/health so a suspended admin
-  can log in + see billing; SUPER_ADMIN and non-staff (consumer/waiter/public) always pass.
-  _Deferred to Phase 3:_ the payment-driven statuses (`PAST_DUE`, dunning, `CANCELLED`), Redis-backed
-  entitlement cache, and provider/webhook wiring. _Follow-ups:_ frontend 402 handling (Phase 4) and
-  optional waiter/consumer-token gating (see `docs/subscription-tiers-plan.md`).
+  `SUBSCRIPTION_INACTIVE`** for tenant-bound staff **and waiters** (POS); expired-not-suspended plans
+  stay in read-only mode. Behind `app.subscription.enforcement.mode` (off/shadow/enforce, default
+  **off**), mirroring the Phase 0 tenant-enforcement flag. The entitlement flag is cached in **Redis**
+  (short TTL, keyed by restaurant id, with cross-instance invalidation on suspend/reactivate; degrades
+  to the DB if Redis is down). Allowlist auth/billing/platform/health so a suspended admin can log in +
+  see billing; SUPER_ADMIN and non-tenant callers (consumer/public) always pass. The frontend surfaces
+  the 402 via `SuspensionGate` (`subscriptionStore` + axios interceptor), so the gate is flippable end
+  to end. _Deferred to Phase 3:_ payment-driven statuses (`PAST_DUE`, dunning, `CANCELLED`) and the
+  provider/webhook wiring.
 
 ---
 

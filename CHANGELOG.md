@@ -23,8 +23,10 @@ still log in and operate normally.
 - **Feature flag** `app.subscription.enforcement.mode` (`off` | `shadow` | `enforce`), default **off** —
   ships dark, mirroring the Phase 0 `tenant-enforcement` flag. `shadow` logs `[subscription-shadow]`
   would-be blocks without acting.
-- **`SubscriptionAccessService.isSuspended(restaurantId)`** — `Restaurant.active` over a 60s in-process
-  cache; `PlatformAdminService.setActive` invalidates it so suspend/reactivate takes effect immediately.
+- **`SubscriptionAccessService.isSuspended(restaurantId)`** — `Restaurant.active` cached in Redis (short
+  TTL, keyed by restaurant id, per the plan), shared across instances; `PlatformAdminService.setActive`
+  invalidates it so suspend/reactivate propagates everywhere immediately. Degrades to the DB if Redis
+  is down (never locks a tenant out).
 - Scope: expired-not-suspended plans keep today's read-only mode (unchanged). Both tenant-bound staff
   types are gated — regular staff (`UserPrincipal`) and waiters (`ROLE_WAITER`, so a suspended tenant's
   POS is cut off too); consumers are not gated (public backends, and a suspended restaurant already
