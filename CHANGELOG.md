@@ -31,6 +31,15 @@ still log in and operate normally.
 - Tests: `SubscriptionAccessServiceTest` (5), `SubscriptionEnforcementFilterTest` (7),
   `PlatformAdminServiceTest` +1; context smoke test confirms the filter wires in at full boot.
 
+#### Frontend: 402 SUBSCRIPTION_INACTIVE handling
+
+Makes the gate flippable end to end. The axios interceptor flips a small `subscriptionStore` flag on a
+402 `SUBSCRIPTION_INACTIVE`, and `SuspensionGate` (mounted in `App`) takes over the UI with a clear
+"account suspended — contact support" screen (Retry / Log out) instead of a generic error on every
+blocked call. The flag resets on login/register so a reactivated session never shows a stale overlay;
+the `isAuthenticated` guard covers logout. Trilingual (`suspended.*`), and inert until the gate is
+enabled server-side. Test: `SuspensionGate.test.jsx` (3).
+
 ### Added - 2026-06-22
 
 #### SUPER_ADMIN platform console (cross-tenant subscription management)

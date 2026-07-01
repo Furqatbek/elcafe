@@ -754,10 +754,11 @@ Phase 2 landed the suspension access gate (`SubscriptionEnforcementFilter`,
 - **Flip procedure:** ship `off` → set `SUBSCRIPTION_ENFORCEMENT_MODE=shadow`
   and watch `[subscription-shadow]` logs for a cycle → then `enforce`. Same
   cadence as the tenant-enforcement flip (`TENANT_ENFORCE_FLIP_RUNBOOK.md`).
-- **Frontend 402 handling (Phase 4):** the axios layer doesn't yet special-case
-  402 `SUBSCRIPTION_INACTIVE`. Until it does, an enforced block surfaces as a
-  generic error. Add a clear "account suspended — contact support" screen before
-  flipping to `enforce` in production.
+- **Frontend 402 handling — ✅ done.** The axios interceptor flips a
+  `subscriptionStore` flag on 402 `SUBSCRIPTION_INACTIVE`, and `SuspensionGate`
+  (mounted in `App`) takes over with an "account suspended — contact support"
+  screen (Retry / Log out), trilingual. Inert until the gate is enabled
+  server-side, so the enforce flip now has a proper UX.
 - **Waiter/consumer-token gating:** the gate covers staff (`UserPrincipal`)
   only, so a suspended tenant's waiter could still operate the POS via a waiter
   token (consistent with how plan feature/write gating also skips waiters).
