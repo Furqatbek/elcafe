@@ -25,9 +25,10 @@ still log in and operate normally.
   would-be blocks without acting.
 - **`SubscriptionAccessService.isSuspended(restaurantId)`** — `Restaurant.active` over a 60s in-process
   cache; `PlatformAdminService.setActive` invalidates it so suspend/reactivate takes effect immediately.
-- Scope: expired-not-suspended plans keep today's read-only mode (unchanged); waiter/consumer tokens
-  aren't gated (consistent with the plan feature/write interceptors). Frontend 402 handling and
-  waiter-token gating are noted as follow-ups (`docs/subscription-tiers-plan.md`).
+- Scope: expired-not-suspended plans keep today's read-only mode (unchanged). Both tenant-bound staff
+  types are gated — regular staff (`UserPrincipal`) and waiters (`ROLE_WAITER`, so a suspended tenant's
+  POS is cut off too); consumers are not gated (public backends, and a suspended restaurant already
+  drops from listings). Frontend 402 handling (`SuspensionGate`, below) completes the gate end to end.
 - Tests: `SubscriptionAccessServiceTest` (5), `SubscriptionEnforcementFilterTest` (7),
   `PlatformAdminServiceTest` +1; context smoke test confirms the filter wires in at full boot.
 

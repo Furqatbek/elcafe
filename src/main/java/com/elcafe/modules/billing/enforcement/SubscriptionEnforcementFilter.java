@@ -1,5 +1,6 @@
 package com.elcafe.modules.billing.enforcement;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.billing.service.SubscriptionAccessService;
 import com.elcafe.security.UserPrincipal;
@@ -27,11 +28,14 @@ import java.util.List;
  * <p>Governed by {@code app.subscription.enforcement.mode} ({@link SubscriptionEnforcementMode}); ships
  * {@code off}. In {@code shadow} it logs would-be blocks without acting. Always passes: SUPER_ADMIN, an
  * allowlist (auth, billing, platform, health) so a suspended admin can still log in and see billing, and
- * anything without a staff tenant (consumer / waiter / public / unauthenticated). Fail-open on its own
- * errors so a bug here can never take down request processing.
+ * anything without a tenant (consumer / public / unauthenticated). Fail-open on its own errors so a bug
+ * here can never take down request processing.
  *
- * <p>Scope note: expired-not-suspended plans stay in read-only mode (not gated here), and waiter/consumer
- * tokens aren't gated — consistent with the plan feature/write interceptors. See the residuals doc.
+ * <p>Scope note: expired-not-suspended plans stay in read-only mode (not gated here). Both tenant-bound
+ * staff types are gated — regular staff ({@link UserPrincipal}) and waiters ({@code ROLE_WAITER}, whose
+ * restaurant lives in {@link TenantContext}) — so suspension cuts off the POS too. Consumers are not
+ * gated (their booking/ordering backends are public and the suspended restaurant already drops from
+ * listings).
  */
 @Component
 public class SubscriptionEnforcementFilter extends OncePerRequestFilter {
@@ -89,14 +93,27 @@ public class SubscriptionEnforcementFilter extends OncePerRequestFilter {
             }
         }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
-            // No staff tenant: consumer / waiter (plain UserDetails) / public / unauthenticated.
+        if (auth == null) {
             return false;
         }
-        if (principal.getRole() == UserRole.SUPER_ADMIN) {
-            return false; // platform operator
+        Long tenant = tenantToGate(auth);
+        return tenant != null && accessService.isSuspended(tenant);
+    }
+
+    /**
+     * The tenant to check for suspension, or {@code null} for callers this gate doesn't apply to.
+     * Covers regular staff ({@link UserPrincipal}, tenant on the principal) and waiters ({@code
+     * ROLE_WAITER}, tenant in {@link TenantContext} — still populated here because the tenant filter
+     * clears it only after the downstream chain returns). SUPER_ADMIN, consumers, and public /
+     * unauthenticated requests are not gated.
+     */
+    private Long tenantToGate(Authentication auth) {
+        if (auth.getPrincipal() instanceof UserPrincipal staff) {
+            return staff.getRole() == UserRole.SUPER_ADMIN ? null : staff.getRestaurantId();
         }
-        return accessService.isSuspended(principal.getRestaurantId());
+        boolean isWaiter = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_WAITER".equals(a.getAuthority()));
+        return isWaiter ? TenantContext.getRestaurantId() : null;
     }
 
     private void writePaymentRequired(HttpServletRequest request, HttpServletResponse response) throws IOException {

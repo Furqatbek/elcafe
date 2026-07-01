@@ -759,7 +759,8 @@ Phase 2 landed the suspension access gate (`SubscriptionEnforcementFilter`,
   (mounted in `App`) takes over with an "account suspended — contact support"
   screen (Retry / Log out), trilingual. Inert until the gate is enabled
   server-side, so the enforce flip now has a proper UX.
-- **Waiter/consumer-token gating:** the gate covers staff (`UserPrincipal`)
-  only, so a suspended tenant's waiter could still operate the POS via a waiter
-  token (consistent with how plan feature/write gating also skips waiters).
-  Decide whether suspension should also cut off waiter tokens.
+- **Waiter-token gating — ✅ done.** The gate now also cuts off waiters (a
+  suspended tenant's POS): the filter treats a `ROLE_WAITER` principal as
+  tenant-bound (restaurant read from `TenantContext`, still populated when the
+  filter runs). Consumers remain intentionally ungated — their booking/ordering
+  backends are public and a suspended restaurant already drops from listings.
