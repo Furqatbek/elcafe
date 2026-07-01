@@ -43,6 +43,9 @@ class PlanFeatureGuardInterceptorTest {
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/telegram/subscribers")).isEqualTo("telegram.subscribers");
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/telegram/campaigns")).isEqualTo("marketing.telegram");
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/promotions")).isEqualTo("marketing");
+        // The promotion-analytics dashboard is Pro-only, gated one tier above plain /promotions (Advance).
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/promotions/analytics")).isEqualTo("marketing.analytics");
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/promotions/analytics/trends")).isEqualTo("marketing.analytics");
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/milestones")).isEqualTo("marketing.milestones");
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/referrals")).isEqualTo("marketing.referrals");
     }

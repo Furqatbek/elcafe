@@ -66,6 +66,9 @@ public class PlanFeatureGuardInterceptor implements HandlerInterceptor {
             new Rule("/api/v1/waiter-performance", true, PlanFeatures.STAFF_PERFORMANCE),
             new Rule("/api/v1/qr-codes", true, PlanFeatures.MARKETING),
             // Controllers based at /api/v1 with {restaurantId} in the path — match by segment.
+            // The promotion-analytics dashboard is Pro-only (marketing.analytics) — it must precede the
+            // general /promotions (Advance) rule so the dashboard endpoints aren't gated one tier too low.
+            new Rule("/promotions/analytics", false, PlanFeatures.MARKETING_ANALYTICS),
             new Rule("/promotions", false, PlanFeatures.MARKETING),
             new Rule("/coupons", false, PlanFeatures.MARKETING),
             new Rule("/happy-hours", false, PlanFeatures.MARKETING),
