@@ -8,11 +8,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/api/v1/restaurants/{restaurantId}/pos/barcode")
 @RequiredArgsConstructor
 @Tag(name = "Barcode Scanning", description = "Product lookup by barcode/SKU")
+@PreAuthorize("hasAnyRole('ADMIN','OWNER','MANAGER','OPERATOR','CASHIER','WAITER','SUPERVISOR','HEAD_WAITER')")
 public class BarcodeController {
 
     private final BarcodeService barcodeService;

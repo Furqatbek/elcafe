@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -23,6 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/instagram/config")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','OWNER','MANAGER')")
 public class InstagramBotConfigController {
 
     private final InstagramBotConfigService configService;

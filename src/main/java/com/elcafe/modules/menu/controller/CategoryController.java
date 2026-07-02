@@ -103,6 +103,9 @@ public class CategoryController {
 
         // Get existing category
         Category existingCategory = menuService.getCategoryById(id);
+        // Tenant ownership: createCategory checks the caller owns the restaurant; update/delete must
+        // too, or a tenant-A ADMIN could edit tenant B's category by id (mode-aware, flips with Phase 0).
+        restaurantAuthorizationService.checkAccess(existingCategory.getRestaurant().getId());
 
         // Get kitchen station if specified
         KitchenStation kitchenStation = null;
@@ -132,6 +135,8 @@ public class CategoryController {
     public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long id) {
         log.info("Deleting category: {}", id);
 
+        Category existingCategory = menuService.getCategoryById(id);
+        restaurantAuthorizationService.checkAccess(existingCategory.getRestaurant().getId());
         menuService.deleteCategory(id);
 
         return ResponseEntity.ok(ApiResponse.success("Category deleted successfully", null));

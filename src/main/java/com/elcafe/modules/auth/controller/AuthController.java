@@ -23,7 +23,13 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    @Operation(summary = "Register new user", description = "Register a new user account")
+    @Operation(summary = "Register new user", description = "Provision a new account (platform operator only)")
+    // SECURITY: public self-registration is closed. This endpoint used to be reachable anonymously
+    // (/api/v1/auth/** is permitAll) and minted a first-class ROLE_OWNER token for anyone on the
+    // internet — the root cause behind a broad class of RBAC holes. Account creation now goes through
+    // an authenticated flow: tenant staff via SystemUserController (ADMIN), platform accounts here
+    // (SUPER_ADMIN). @PreAuthorize is evaluated by method security even though the URL is permitAll.
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
         return ResponseEntity

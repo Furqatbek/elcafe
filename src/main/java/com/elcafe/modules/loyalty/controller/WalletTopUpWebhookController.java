@@ -178,8 +178,11 @@ public class WalletTopUpWebhookController {
                                          String amount, String action, String signTime,
                                          String providedSignature) {
         if (clickSecretKey == null || clickSecretKey.isBlank()) {
-            log.warn("click.secret-key not configured — accepting webhook without signature verification");
-            return true;
+            // Fail CLOSED: without the secret we cannot verify the signature, and an unconfigured Click
+            // integration cannot produce a legitimate signed webhook anyway. Accepting here let anyone
+            // forge a top-up completion and credit a wallet with no payment.
+            log.error("click.secret-key not configured — REJECTING unverifiable wallet webhook");
+            return false;
         }
         // Click MD5 input: click_trans_id + service_id + secret_key +
         // merchant_trans_id + [merchant_prepare_id] + amount + action + sign_time
@@ -273,8 +276,10 @@ public class WalletTopUpWebhookController {
 
     private boolean verifyPaymeAuth(String authHeader) {
         if (paymeMerchantKey == null || paymeMerchantKey.isBlank()) {
-            log.warn("payme.merchant-key not configured — accepting webhook without auth verification");
-            return true;
+            // Fail CLOSED (see verifyClickSignature): an unconfigured Payme integration cannot produce a
+            // legitimate authenticated webhook, so accepting one is a free-wallet-credit hole.
+            log.error("payme.merchant-key not configured — REJECTING unverifiable wallet webhook");
+            return false;
         }
         if (authHeader == null || !authHeader.startsWith("Basic ")) return false;
         String b64 = authHeader.substring("Basic ".length()).trim();

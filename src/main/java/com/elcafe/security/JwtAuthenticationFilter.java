@@ -145,7 +145,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     logger.debug("Processing regular user token");
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                    if (jwtUtil.validateToken(jwt, userDetails)) {
+                    // isEnabled() (== User.active) is defense-in-depth alongside the tokenVersion bump on
+                    // deactivate: a disabled account is rejected per-request even if some deactivation
+                    // path forgot to bump the version. (The waiter branch already checks active.)
+                    if (jwtUtil.validateToken(jwt, userDetails) && userDetails.isEnabled()) {
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 userDetails,
                                 null,
@@ -155,7 +158,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         SecurityContextHolder.getContext().setAuthentication(authToken);
                         logger.debug("User authentication set successfully for: " + username);
                     } else {
-                        logger.warn("Token validation failed for user: " + username);
+                        logger.warn("Token rejected (invalid or disabled account) for user: " + username);
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.CreateProductRequest;
 import com.elcafe.modules.menu.dto.ProductListDTO;
@@ -29,6 +30,9 @@ public class ProductController {
 
     private final MenuService menuService;
     private final CategoryRepository categoryRepository;
+    // Product is not @Filter'd, so the Hibernate tenant backstop can't scope it — these mutations
+    // must check ownership explicitly (mode-aware; flips with Phase 0 tenant enforcement).
+    private final RestaurantAuthorizationService restaurantAuthorizationService;
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -41,6 +45,7 @@ public class ProductController {
         // Validate category exists
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", request.getCategoryId()));
+        restaurantAuthorizationService.checkAccess(category.getRestaurant().getId());
 
         // Build product entity
         Product product = Product.builder()
@@ -109,9 +114,15 @@ public class ProductController {
     ) {
         log.info("Updating product: {} with data: {}", id, request.getName());
 
+        // Ownership on BOTH ends: the product being edited AND the target category must belong to the
+        // caller — otherwise a tenant-A ADMIN could reassign tenant B's product into A's category.
+        Product existingProduct = menuService.getProductById(id);
+        restaurantAuthorizationService.checkAccess(existingProduct.getCategory().getRestaurant().getId());
+
         // Validate category exists
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "id", request.getCategoryId()));
+        restaurantAuthorizationService.checkAccess(category.getRestaurant().getId());
 
         // Build product entity with updated data
         Product productData = Product.builder()
@@ -144,6 +155,8 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Product>> toggleProductStatus(@PathVariable Long id) {
         log.info("Toggling status for product: {}", id);
 
+        Product existingProduct = menuService.getProductById(id);
+        restaurantAuthorizationService.checkAccess(existingProduct.getCategory().getRestaurant().getId());
         Product product = menuService.toggleProductStatus(id);
 
         return ResponseEntity.ok(ApiResponse.success("Product status updated successfully", product));
@@ -155,6 +168,8 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long id) {
         log.info("Deleting product: {}", id);
 
+        Product existingProduct = menuService.getProductById(id);
+        restaurantAuthorizationService.checkAccess(existingProduct.getCategory().getRestaurant().getId());
         menuService.deleteProduct(id);
 
         return ResponseEntity.ok(ApiResponse.success("Product deleted successfully", null));

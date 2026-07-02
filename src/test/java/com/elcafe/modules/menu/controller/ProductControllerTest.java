@@ -7,6 +7,8 @@ import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.enums.ProductStatus;
 import com.elcafe.modules.menu.repository.CategoryRepository;
 import com.elcafe.modules.menu.service.MenuService;
+import com.elcafe.modules.restaurant.entity.Restaurant;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +41,7 @@ class ProductControllerTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
     @Mock private MenuService menuService;
     @Mock private CategoryRepository categoryRepository;
+    @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
     @InjectMocks private ProductController controller;
     private Category category;
     private Product product;
@@ -46,14 +49,19 @@ class ProductControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        Restaurant restaurant = new Restaurant();
+        restaurant.setId(1L);
         category = new Category();
         category.setId(1L);
         category.setName("Main");
+        category.setRestaurant(restaurant); // ownership checks read category.getRestaurant()
         product = new Product();
         product.setId(1L);
         product.setName("Steak");
         product.setPrice(new BigDecimal("80000"));
         product.setStatus(ProductStatus.LIVE);
+        product.setCategory(category);
+        when(menuService.getProductById(1L)).thenReturn(product); // update/toggle/delete load it
     }
 
     @Test @DisplayName("POST / — create") void create() throws Exception {

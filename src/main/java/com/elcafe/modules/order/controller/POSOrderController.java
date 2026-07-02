@@ -321,6 +321,11 @@ public class POSOrderController {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
 
+        // Tenant ownership: the role check authorizes the ACTION, not the target. Without this a staff
+        // member of one tenant could refund another tenant's order by enumerating orderId. Financial
+        // op → always-enforce (SUPER_ADMIN bypasses; same-tenant always passes).
+        restaurantAuthorizationService.validateRestaurantAccess(order.getRestaurant().getId());
+
         // Check refund authorization
         BigDecimal refundAmount = request.getAmount();
         FinancialOperationSecurityService.RefundAuthorizationResult authResult =
@@ -383,6 +388,9 @@ public class POSOrderController {
         // Get order for security check
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        // Tenant ownership (see processRefund) — block cross-tenant void by orderId enumeration.
+        restaurantAuthorizationService.validateRestaurantAccess(order.getRestaurant().getId());
 
         // Check void authorization
         FinancialOperationSecurityService.VoidAuthorizationResult authResult =

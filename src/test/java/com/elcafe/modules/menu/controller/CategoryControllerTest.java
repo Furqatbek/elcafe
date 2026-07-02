@@ -55,6 +55,8 @@ class CategoryControllerTest {
         category.setId(1L);
         category.setName("Main Course");
         category.setActive(true);
+        category.setRestaurant(restaurant); // update/delete ownership read category.getRestaurant()
+        when(menuService.getCategoryById(1L)).thenReturn(category); // delete loads it to check owner
     }
 
     @Test @DisplayName("GET / — active categories") void getActive() throws Exception {

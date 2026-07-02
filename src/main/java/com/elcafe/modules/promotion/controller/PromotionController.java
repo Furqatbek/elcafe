@@ -135,18 +135,21 @@ public class PromotionController {
     }
 
     @GetMapping("/coupons/{couponId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<CouponCodeResponse> getCoupon(@PathVariable Long couponId) {
         CouponCodeResponse response = couponService.getCoupon(couponId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/coupons/by-code/{code}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<CouponCodeResponse> getCouponByCode(@PathVariable String code) {
         CouponCodeResponse response = couponService.getCouponByCode(code);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/promotions/{promotionId}/coupons")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Page<CouponCodeResponse>> getCouponsByPromotion(
             @PathVariable Long promotionId,
             @RequestParam(defaultValue = "0") int page,
@@ -157,6 +160,7 @@ public class PromotionController {
     }
 
     @GetMapping("/restaurants/{restaurantId}/coupons")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Page<CouponCodeResponse>> getCouponsByRestaurant(
             @PathVariable Long restaurantId,
             @RequestParam(defaultValue = "0") int page,
@@ -168,6 +172,7 @@ public class PromotionController {
     }
 
     @GetMapping("/customers/{customerId}/coupons")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<List<CouponCodeResponse>> getCustomerCoupons(@PathVariable Long customerId) {
         List<CouponCodeResponse> coupons = couponService.getCustomerCoupons(customerId);
         return ResponseEntity.ok(coupons);

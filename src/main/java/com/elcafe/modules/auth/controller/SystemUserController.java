@@ -39,10 +39,11 @@ public class SystemUserController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAll() {
         // User is deliberately not Hibernate-@Filtered (see User.java); constrain cross-tenant
-        // enumeration here at the query layer. In shadow/off the scope is null and the listing is
-        // unchanged; once enforcement is on, a tenant admin sees only their own restaurant's users
+        // enumeration here at the query layer. Admin-user management is high-sensitivity (emails +
+        // roles of every tenant's privileged accounts), so this scopes ALWAYS — not just after the
+        // enforce flip: a tenant admin sees only their own restaurant's users, SUPER_ADMIN sees all,
         // and a caller with no assigned restaurant sees none (deny-all sentinel).
-        Long tenantScope = restaurantAuthorizationService.currentTenantReadScope();
+        Long tenantScope = restaurantAuthorizationService.currentTenantReadScopeStrict();
         List<User> users = (tenantScope == null
                 ? userRepository.findAll()
                 : userRepository.findByRestaurantId(tenantScope)).stream()
@@ -108,6 +109,14 @@ public class SystemUserController {
         if (req.password != null && !req.password.isBlank()) {
             user.setPassword(passwordEncoder.encode(req.password));
         }
+        // Revoke the target's existing tokens (access + refresh both carry tokenVersion, checked per
+        // request) when an admin deactivates or resets the password — otherwise a deprovisioned or
+        // taken-over account keeps working and can refresh indefinitely.
+        boolean deactivating = Boolean.FALSE.equals(req.active);
+        boolean passwordReset = req.password != null && !req.password.isBlank();
+        if (deactivating || passwordReset) {
+            bumpTokenVersion(user);
+        }
 
         User saved = userRepository.save(user);
         return ResponseEntity.ok(ApiResponse.success("User updated", toMap(saved)));
@@ -120,8 +129,16 @@ public class SystemUserController {
         // Prevent cross-tenant deactivation via a guessed id (incl. null-restaurant accounts).
         requireAccess(user);
         user.setActive(false);
+        bumpTokenVersion(user); // kill the deactivated account's live tokens immediately
         userRepository.save(user);
         return ResponseEntity.ok(ApiResponse.success("User deactivated", null));
+    }
+
+    /** Bump the revocation counter so every already-issued access/refresh token for this user fails
+     *  the per-request {@code tokenVersion} check in {@code JwtUtil.validateToken}. */
+    private void bumpTokenVersion(User user) {
+        int current = user.getTokenVersion() == null ? 0 : user.getTokenVersion();
+        user.setTokenVersion(current + 1);
     }
 
     /**
@@ -137,7 +154,10 @@ public class SystemUserController {
         if (user.getRestaurantId() == null && !restaurantAuthorizationService.isAdmin()) {
             throw new AccessDeniedException("Access denied: platform account is operator-only");
         }
-        restaurantAuthorizationService.checkAccess(user.getRestaurantId());
+        // ALWAYS-enforce (not the mode-aware checkAccess): cross-tenant password reset / role
+        // escalation / deactivation of another tenant's admin is never legitimate and must not wait
+        // for the shadow→enforce flip. SUPER_ADMIN bypasses; same-tenant always passes.
+        restaurantAuthorizationService.validateRestaurantAccess(user.getRestaurantId());
     }
 
     private Map<String, Object> toMap(User u) {

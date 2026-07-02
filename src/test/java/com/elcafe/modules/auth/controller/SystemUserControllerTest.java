@@ -3,6 +3,7 @@ package com.elcafe.modules.auth.controller;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.auth.entity.User;
+import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -19,6 +21,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -65,12 +69,41 @@ class SystemUserControllerTest {
     @Test
     @DisplayName("getAll — a caller with no tenant (deny sentinel) sees no users")
     void getAll_denySentinel_returnsEmpty() {
-        when(authz.currentTenantReadScope()).thenReturn(TenantContext.NO_ACCESS);
+        when(authz.currentTenantReadScopeStrict()).thenReturn(TenantContext.NO_ACCESS);
         when(userRepository.findByRestaurantId(TenantContext.NO_ACCESS)).thenReturn(List.of());
 
         var body = controller.getAll().getBody();
 
         assertNotNull(body);
         assertTrue(body.getData().isEmpty());
+    }
+    @Test
+    @DisplayName("deactivate — bumps tokenVersion, revoking the target's live access/refresh tokens")
+    void deactivate_bumpsTokenVersion() {
+        User u = User.builder().id(5L).restaurantId(9L).active(true).tokenVersion(3).build();
+        when(userRepository.findById(5L)).thenReturn(Optional.of(u));
+
+        controller.deactivate(5L);
+
+        ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(cap.capture());
+        assertFalse(cap.getValue().getActive());
+        assertEquals(4, cap.getValue().getTokenVersion());
+    }
+
+    @Test
+    @DisplayName("update — an admin password reset bumps tokenVersion (kills old sessions)")
+    void update_passwordReset_bumpsTokenVersion() {
+        User u = User.builder().id(5L).email("op@t.co").firstName("O").lastName("P").restaurantId(9L).active(true).tokenVersion(0).role(UserRole.OPERATOR).build();
+        when(userRepository.findById(5L)).thenReturn(Optional.of(u));
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var req = new SystemUserController.UpdateRequest(null, null, null, "newpass", null, null);
+        controller.update(5L, req);
+
+        ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(cap.capture());
+        assertEquals(1, cap.getValue().getTokenVersion());
     }
 }

@@ -105,6 +105,22 @@ public class RestaurantAuthorizationService {
     }
 
     /**
+     * Like {@link #currentTenantReadScope()} but scopes <em>regardless of enforcement mode</em>. For
+     * high-sensitivity listings where cross-tenant visibility is never legitimate and must not wait for
+     * the shadow→enforce flip (e.g. admin user management): a non-SUPER_ADMIN caller always resolves to
+     * its own {@code restaurantId} (or the deny-all sentinel if it has none); SUPER_ADMIN stays
+     * {@code null} (unscoped, cross-tenant).
+     */
+    public Long currentTenantReadScopeStrict() {
+        UserPrincipal principal = getCurrentUserPrincipal();
+        if (principal == null || principal.getRole() == UserRole.SUPER_ADMIN) {
+            return null;
+        }
+        Long tenant = principal.getRestaurantId();
+        return tenant != null ? tenant : TenantContext.NO_ACCESS;
+    }
+
+    /**
      * Validates that the current user has access to the specified restaurant.
      *
      * @param restaurantId the restaurant ID to validate access for

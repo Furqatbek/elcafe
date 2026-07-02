@@ -244,7 +244,7 @@ public class ExpenseController {
     }
 
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<ExpenseResponse>> approveExpense(
             @PathVariable Long id,
             @RequestParam String approvedBy) {
@@ -255,7 +255,7 @@ public class ExpenseController {
     }
 
     @PostMapping("/{id}/pay")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<ExpenseResponse>> recordPayment(
             @PathVariable Long id,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate paymentDate,
@@ -267,7 +267,7 @@ public class ExpenseController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<Void>> deleteExpense(@PathVariable Long id) {
         log.info("Soft deleting expense: {}", id);
 

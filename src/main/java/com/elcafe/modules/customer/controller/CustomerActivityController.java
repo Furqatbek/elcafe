@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/customers/activity")
 @RequiredArgsConstructor
+@PreAuthorize("hasAnyRole('ADMIN','OWNER','MANAGER','OPERATOR')")
 public class CustomerActivityController {
 
     private final CustomerActivityService customerActivityService;

@@ -71,7 +71,7 @@ public class AnalyticsController {
     // ========== Financial Analytics ==========
 
     @GetMapping("/financial/daily-revenue")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @RateLimited(type = RateLimitType.ANALYTICS)
     @Operation(summary = "Get daily revenue", description = "Daily revenue breakdown with payment methods. Uses restaurant's business hours for shift-aware date ranges.")
     public ResponseEntity<ApiResponse<List<DailyRevenueDTO>>> getDailyRevenue(
@@ -87,7 +87,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/financial/sales-by-category")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @RateLimited(type = RateLimitType.ANALYTICS)
     @Operation(summary = "Get sales per category", description = "Sales breakdown by product category. Uses restaurant's business hours for shift-aware date ranges.")
     public ResponseEntity<ApiResponse<List<SalesPerCategoryDTO>>> getSalesPerCategory(
@@ -103,7 +103,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/financial/cogs")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @RateLimited(type = RateLimitType.ANALYTICS)
     @Operation(summary = "Get COGS analytics", description = "Cost of Goods Sold and food cost percentage. Uses restaurant's business hours for shift-aware date ranges.")
     public ResponseEntity<ApiResponse<COGSAnalyticsDTO>> getCOGSAnalytics(
@@ -138,7 +138,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/financial/contribution-margins")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @RateLimited(type = RateLimitType.ANALYTICS)
     @Operation(summary = "Get contribution margins", description = "Contribution margin per menu item. Uses restaurant's business hours for shift-aware date ranges.")
     public ResponseEntity<ApiResponse<List<ContributionMarginDTO>>> getContributionMargins(
@@ -224,7 +224,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/operational/kitchen")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'KITCHEN_STAFF')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     @RateLimited(type = RateLimitType.ANALYTICS)
     @Operation(summary = "Get kitchen analytics", description = "Kitchen performance, preparation times, and chef metrics")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getKitchenAnalytics(
@@ -242,7 +242,7 @@ public class AnalyticsController {
     // ========== Customer Analytics ==========
 
     @GetMapping("/customer/retention")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @RateLimited(type = RateLimitType.EXPENSIVE_ENDPOINT, endpointName = "customer-retention")
     @Operation(summary = "Get customer retention", description = "Customer retention and churn rate")
     public ResponseEntity<ApiResponse<CustomerRetentionDTO>> getCustomerRetention(
@@ -258,7 +258,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/customer/ltv")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @RateLimited(type = RateLimitType.EXPENSIVE_ENDPOINT, endpointName = "customer-ltv")
     @Operation(summary = "Get customer lifetime value", description = "Customer LTV and related metrics")
     public ResponseEntity<ApiResponse<CustomerLTVDTO>> getCustomerLTV(
@@ -271,7 +271,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/customer/satisfaction")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     @RateLimited(type = RateLimitType.ANALYTICS)
     @Operation(summary = "Get customer satisfaction", description = "Aggregated satisfaction scores from operational metrics")
     public ResponseEntity<ApiResponse<CustomerSatisfactionDTO>> getCustomerSatisfaction(

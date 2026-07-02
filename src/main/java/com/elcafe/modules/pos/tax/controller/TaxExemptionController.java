@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.List;
 @RequestMapping("/api/v1/restaurants/{restaurantId}/pos/tax-exemptions")
 @RequiredArgsConstructor
 @Tag(name = "Tax Exemptions", description = "Tax exemption management")
+@PreAuthorize("hasAnyRole('ADMIN','OWNER','MANAGER','OPERATOR','CASHIER','WAITER','SUPERVISOR','HEAD_WAITER')")
 public class TaxExemptionController {
 
     private final TaxExemptionService taxExemptionService;

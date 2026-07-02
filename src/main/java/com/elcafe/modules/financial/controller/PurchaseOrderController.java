@@ -168,7 +168,7 @@ public class PurchaseOrderController {
     }
 
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> approvePurchaseOrder(
             @PathVariable Long id,
             @RequestParam String approvedBy) {
@@ -179,7 +179,7 @@ public class PurchaseOrderController {
     }
 
     @PostMapping("/{id}/receive")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> receivePurchaseOrder(
             @PathVariable Long id,
             @Valid @RequestBody ReceivePurchaseOrderRequest request) {
@@ -202,7 +202,7 @@ public class PurchaseOrderController {
     }
 
     @PostMapping("/{id}/payment")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<PurchaseOrderResponse>> recordPayment(
             @PathVariable Long id,
             @Valid @RequestBody RecordPaymentRequest request) {

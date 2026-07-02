@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ import java.util.List;
 @RequestMapping("/api/v1/inventory/suppliers")
 @RequiredArgsConstructor
 @Tag(name = "Suppliers", description = "Supplier management endpoints")
+@PreAuthorize("hasAnyRole('ADMIN','OWNER','MANAGER','OPERATOR')")
 public class SupplierController {
 
     private final SupplierService supplierService;

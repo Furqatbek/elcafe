@@ -108,6 +108,11 @@ public class AuthService {
         if (!jwtUtil.validateToken(request.getRefreshToken(), user)) {
             throw new BadRequestException("Invalid refresh token");
         }
+        // A deactivated account must not mint fresh tokens (login checks this too; the tokenVersion
+        // bump on deactivate already invalidates the refresh token — this is belt-and-braces).
+        if (!Boolean.TRUE.equals(user.getActive())) {
+            throw new BadRequestException("Account is inactive");
+        }
 
         String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = jwtUtil.generateRefreshToken(user);

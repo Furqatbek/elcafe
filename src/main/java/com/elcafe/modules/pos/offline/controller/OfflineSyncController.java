@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -19,6 +20,7 @@ import java.util.List;
 @RequestMapping("/api/v1/restaurants/{restaurantId}/pos/offline")
 @RequiredArgsConstructor
 @Tag(name = "POS Offline Mode", description = "Offline order synchronization")
+@PreAuthorize("hasAnyRole('ADMIN','OWNER','MANAGER','OPERATOR','CASHIER','WAITER','SUPERVISOR','HEAD_WAITER')")
 public class OfflineSyncController {
 
     private final OfflineSyncService offlineSyncService;

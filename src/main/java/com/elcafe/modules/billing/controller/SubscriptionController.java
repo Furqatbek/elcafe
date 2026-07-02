@@ -4,6 +4,7 @@ import com.elcafe.modules.billing.dto.BillingStatusDto;
 import com.elcafe.modules.billing.dto.PlanSummaryDto;
 import com.elcafe.modules.billing.dto.SetPlanRequest;
 import com.elcafe.modules.billing.service.PlanGateService;
+import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.security.UserPrincipal;
 import com.elcafe.utils.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,6 +27,7 @@ import java.util.List;
 public class SubscriptionController {
 
     private final PlanGateService planGateService;
+    private final RestaurantAuthorizationService authorizationService;
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
@@ -44,10 +46,15 @@ public class SubscriptionController {
 
     @PostMapping("/admin/set-plan")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Set a restaurant's plan", description = "ADMIN-only: change any restaurant's plan; audited")
+    @Operation(summary = "Set a restaurant's plan", description = "Change the caller's own restaurant plan; audited")
     public ResponseEntity<ApiResponse<BillingStatusDto>> setPlan(
             @Valid @RequestBody SetPlanRequest request,
             @AuthenticationPrincipal UserPrincipal actor) {
+        // Ownership: a tenant ADMIN may only set its OWN restaurant's plan. The restaurantId travels in
+        // the body, so hasRole('ADMIN') alone would let tenant A rewrite tenant B's plan/expiry (a
+        // cross-tenant DoS). validateRestaurantAccess always-enforces (SUPER_ADMIN bypasses; the
+        // cross-tenant platform path is the separate SUPER_ADMIN-gated PlatformAdminController).
+        authorizationService.validateRestaurantAccess(request.getRestaurantId());
         log.info("Admin set-plan: restaurant={}, plan={}", request.getRestaurantId(), request.getPlanCode());
         BillingStatusDto status = planGateService.setPlan(request, actor);
         return ResponseEntity.ok(ApiResponse.success("Plan updated", status));
