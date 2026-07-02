@@ -81,9 +81,11 @@ public class SystemUserController {
                 .role(req.role)
                 .active(true)
                 .emailVerified(true)
-                // Bind the new system user to the creator's restaurant once enforcement is on
-                // (null for SUPER_ADMIN / pre-enforcement, preserving current behaviour).
-                .restaurantId(restaurantAuthorizationService.currentTenantScopeOrNull())
+                // Bind the new system user to the creator's restaurant ALWAYS (not just under enforce):
+                // getAll() lists with the strict scope, so a mode-aware null binding here would orphan
+                // every user a tenant admin creates in shadow (invisible + unmanageable). null only for
+                // a SUPER_ADMIN creator (a platform account).
+                .restaurantId(restaurantAuthorizationService.currentTenantScopeStrict())
                 .build();
 
         User saved = userRepository.save(user);

@@ -37,13 +37,6 @@ class WebSocketService {
 
       this.client = new Client({
         webSocketFactory: () => new SockJS(wsUrl),
-        // Authenticate the STOMP CONNECT so the backend can bind this session's tenant and reject
-        // cross-tenant subscriptions (audit #21). Read lazily so a token refreshed mid-session is used
-        // on reconnect. STOMP CONNECT headers are separate from the SockJS HTTP handshake.
-        connectHeaders: (() => {
-          const token = localStorage.getItem('access_token');
-          return token ? { Authorization: `Bearer ${token}` } : {};
-        })(),
         reconnectDelay: this.reconnectDelay,
         heartbeatIncoming: 10000,
         heartbeatOutgoing: 10000,
@@ -51,6 +44,14 @@ class WebSocketService {
           if (import.meta.env.DEV) {
             console.log('[WebSocket Debug]', str);
           }
+        },
+        // Authenticate the STOMP CONNECT so the backend binds this session's tenant and rejects
+        // cross-tenant subscriptions (audit #21). beforeConnect re-reads the token on every (re)connect,
+        // so a token rotated mid-session by the axios refresh interceptor isn't stale on reconnect.
+        // STOMP CONNECT headers are separate from the SockJS HTTP handshake.
+        beforeConnect: () => {
+          const token = localStorage.getItem('access_token');
+          this.client.connectHeaders = token ? { Authorization: `Bearer ${token}` } : {};
         },
         onConnect: () => {
           console.log('[WebSocket] Connected successfully');

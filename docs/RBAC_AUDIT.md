@@ -72,6 +72,19 @@ is a product change:
 Shipping a blind change here would break order tracking, so it is flagged for a product decision rather
 than guessed. **Interim risk is live.**
 
+## Self-review round (fixes to the fixes)
+
+An adversarial review of the remediation diff caught three real defects, all fixed:
+- **Referral #25 was incomplete** — a third customer-parameterized endpoint (`GET
+  /referrals/customer/{customerId}`) still lacked the self-only guard; added.
+- **SystemUser regression (I introduced it)** — the list switched to always-strict scope while `create`
+  still bound the tenant mode-aware (null in shadow), so a tenant admin's created users vanished and
+  became unmanageable. `create` now binds via `currentTenantScopeStrict` (mode-independent).
+- **WebSocket bind bug (I introduced it)** — the CONNECT principal was set on a discarded
+  `StompHeaderAccessor.wrap()` copy, so it never persisted and every tenant-scoped SUBSCRIBE looked
+  unauthenticated (all legit subs would be shadow-logged / enforce-blocked). Now uses the live
+  `MessageHeaderAccessor.getAccessor(...)`.
+
 ## Rejected on verification (not real / mitigated)
 - CASHIER "dead role" (never issued, but not exploitable), courier webhook (verified signature path),
   and a UI-over-exposure that the backend correctly blocks.

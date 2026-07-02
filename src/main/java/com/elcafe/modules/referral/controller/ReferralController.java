@@ -174,6 +174,7 @@ public class ReferralController {
             @PathVariable Long restaurantId,
             @PathVariable Long customerId) {
         restaurantAuthorizationService.checkAccess(restaurantId);
+        enforceCustomerSelf(customerId); // a consumer may only read its OWN referrals (name/email PII)
         List<ReferralResponse> referrals = referralService.getCustomerReferrals(restaurantId, customerId);
         return ResponseEntity.ok(ApiResponse.success(referrals));
     }

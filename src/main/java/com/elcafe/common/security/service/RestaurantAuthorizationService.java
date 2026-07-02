@@ -121,6 +121,21 @@ public class RestaurantAuthorizationService {
     }
 
     /**
+     * The restaurant to bind a newly-created tenant-owned row to, <em>regardless of enforcement mode</em>:
+     * the caller's own {@code restaurantId}, or {@code null} for a SUPER_ADMIN (platform account) / an
+     * unassigned caller. The write-time twin of {@link #currentTenantReadScopeStrict()} — they must agree
+     * so a row created under a tenant admin is also visible to the same admin's (strictly-scoped) listing.
+     * Unlike {@link #currentTenantScopeOrNull()} this does not short-circuit to {@code null} in shadow.
+     */
+    public Long currentTenantScopeStrict() {
+        UserPrincipal principal = getCurrentUserPrincipal();
+        if (principal == null || principal.getRole() == UserRole.SUPER_ADMIN) {
+            return null;
+        }
+        return principal.getRestaurantId();
+    }
+
+    /**
      * Validates that the current user has access to the specified restaurant.
      *
      * @param restaurantId the restaurant ID to validate access for

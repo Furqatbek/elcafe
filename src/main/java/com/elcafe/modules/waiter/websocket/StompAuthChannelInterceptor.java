@@ -14,6 +14,7 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
@@ -57,7 +58,14 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         if (m == TenantEnforcementMode.OFF) {
             return message;
         }
-        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
+        // Use the LIVE mutable accessor, not StompHeaderAccessor.wrap(message): setUser() on a wrap()
+        // copy is discarded (its user-change callback is null), so the CONNECT identity would never
+        // persist to the STOMP session and every later SUBSCRIBE would look unauthenticated. getAccessor
+        // returns the mutable accessor Spring's StompSubProtocolHandler reads back per frame.
+        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        if (accessor == null) {
+            accessor = StompHeaderAccessor.wrap(message); // read-only fallback (e.g. unit tests)
+        }
         StompCommand cmd = accessor.getCommand();
         try {
             if (StompCommand.CONNECT.equals(cmd)) {

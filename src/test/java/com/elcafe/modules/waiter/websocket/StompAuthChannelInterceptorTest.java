@@ -51,6 +51,7 @@ class StompAuthChannelInterceptorTest {
     private Message<byte[]> connect(String authHeader) {
         StompHeaderAccessor a = StompHeaderAccessor.create(StompCommand.CONNECT);
         a.setSessionAttributes(new HashMap<>());
+        a.setLeaveMutable(true); // keep the accessor live so getAccessor() works, like the real pipeline
         if (authHeader != null) a.setNativeHeader("Authorization", authHeader);
         return MessageBuilder.createMessage(new byte[0], a.getMessageHeaders());
     }
@@ -101,8 +102,13 @@ class StompAuthChannelInterceptorTest {
 
         interceptor.preSend(msg, null);
 
-        Map<String, Object> attrs = StompHeaderAccessor.wrap(msg).getSessionAttributes();
+        StompHeaderAccessor bound = org.springframework.messaging.support.MessageHeaderAccessor
+                .getAccessor(msg, StompHeaderAccessor.class);
+        Map<String, Object> attrs = bound.getSessionAttributes();
         org.assertj.core.api.Assertions.assertThat(attrs.get("ws.restaurantId")).isEqualTo(5L);
+        // The CONNECT identity must persist on the live accessor (else every SUBSCRIBE looks anonymous).
+        org.assertj.core.api.Assertions.assertThat(bound.getUser()).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(bound.getUser().getName()).isEqualTo("a@t.co");
     }
 
     @Test

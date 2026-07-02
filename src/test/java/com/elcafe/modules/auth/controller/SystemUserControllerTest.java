@@ -106,4 +106,23 @@ class SystemUserControllerTest {
         verify(userRepository).save(cap.capture());
         assertEquals(1, cap.getValue().getTokenVersion());
     }
+    @Test
+    @DisplayName("create — binds the new user to the creator's restaurant (strict scope, works in shadow)")
+    void create_bindsCreatorRestaurant() {
+        when(authz.currentTenantScopeStrict()).thenReturn(5L);
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(userRepository.save(any())).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(99L); // persistence assigns the id
+            return u;
+        });
+
+        var req = new SystemUserController.CreateRequest("m@t.co", "pw", "M", "G", null, UserRole.MANAGER);
+        controller.create(req);
+
+        ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(cap.capture());
+        assertEquals(5L, cap.getValue().getRestaurantId());
+    }
 }
