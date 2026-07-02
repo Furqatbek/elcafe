@@ -127,6 +127,11 @@ public class WaiterService {
     public WaiterResponse updateWaiter(Long id, UpdateWaiterRequest request) {
         Waiter waiter = waiterRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + id));
+        // Tenant ownership: a SUPERVISOR-waiter (or staff) may only manage waiters of their OWN
+        // restaurant — otherwise, combined with the PIN/role fields below, this is a cross-tenant
+        // account-takeover / self-propagation vector. Mode-aware; enforces waiter tokens too (see
+        // RestaurantAuthorizationService non-UserPrincipal branch).
+        restaurantAuthorizationService.checkAccess(waiter.getRestaurantId());
 
         if (request.getName() != null) {
             waiter.setName(request.getName());
@@ -268,6 +273,7 @@ public class WaiterService {
     public void assignToTable(Long waiterId, Long tableId) {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
+        restaurantAuthorizationService.checkAccess(waiter.getRestaurantId()); // own-tenant waiters only
 
         RestaurantTable table = tableRepository.findById(tableId)
                 .orElseThrow(() -> new ResourceNotFoundException("Table not found with id: " + tableId));
@@ -297,6 +303,7 @@ public class WaiterService {
     public void unassignFromTable(Long waiterId, Long tableId) {
         WaiterTable assignment = waiterTableRepository.findByWaiterIdAndTableIdAndActiveTrue(waiterId, tableId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active assignment not found"));
+        restaurantAuthorizationService.checkAccess(assignment.getWaiter().getRestaurantId()); // own-tenant only
 
         assignment.unassign();
         waiterTableRepository.save(assignment);

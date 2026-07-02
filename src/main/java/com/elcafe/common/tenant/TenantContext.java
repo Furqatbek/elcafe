@@ -18,6 +18,14 @@ public final class TenantContext {
     private static final ThreadLocal<Long> CURRENT_RESTAURANT_ID = new ThreadLocal<>();
 
     /**
+     * The authenticated waiter's id for the current request, taken from the JWT {@code waiterId} claim
+     * (never a client header). Waiter tokens are plain {@code UserDetails} so the id can't ride on the
+     * principal; endpoints that act "as the current waiter" read it here instead of trusting a
+     * client-supplied {@code X-Waiter-Id}. Null for non-waiter requests. Cleared with the tenant id.
+     */
+    private static final ThreadLocal<Long> CURRENT_WAITER_ID = new ThreadLocal<>();
+
+    /**
      * A restaurant id that intentionally matches no real row (restaurant ids are positive). Bound as
      * the request's tenant for a tenant-scoped caller that has <em>no assigned restaurant</em>, so the
      * Hibernate {@code @Filter} and query-layer scoping resolve to "see/affect nothing" under
@@ -44,8 +52,19 @@ public final class TenantContext {
         return CURRENT_RESTAURANT_ID.get();
     }
 
-    /** Removes the thread-bound value. MUST be called at the end of every request. */
+    /** Sets the authenticated waiter id for the current request (from the JWT, not a client header). */
+    public static void setWaiterId(Long waiterId) {
+        CURRENT_WAITER_ID.set(waiterId);
+    }
+
+    /** @return the authenticated waiter id for the current request, or {@code null} if not a waiter. */
+    public static Long getWaiterId() {
+        return CURRENT_WAITER_ID.get();
+    }
+
+    /** Removes the thread-bound values. MUST be called at the end of every request. */
     public static void clear() {
         CURRENT_RESTAURANT_ID.remove();
+        CURRENT_WAITER_ID.remove();
     }
 }

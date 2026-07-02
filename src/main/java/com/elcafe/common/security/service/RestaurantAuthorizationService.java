@@ -133,12 +133,20 @@ public class RestaurantAuthorizationService {
 
         UserPrincipal principal = getCurrentUserPrincipal();
         if (principal == null) {
-            // Waiter tokens use plain UserDetails, not UserPrincipal.
-            // If authenticated, allow access — role security handled by @PreAuthorize.
+            // Waiter (ROLE_WAITER) and consumer (ROLE_CUSTOMER) tokens are plain UserDetails, not
+            // UserPrincipal. Their tenant is bound in TenantContext by the JWT filter (§3.6 waiter /
+            // V150 consumer), so enforce it just like a UserPrincipal. Previously this branch allowed
+            // ANY restaurantId, so the tenant guard was a silent no-op for these principals — a
+            // cross-tenant read/write hole that even the enforce flip did not close.
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth != null && auth.isAuthenticated()
                     && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
-                return;
+                Long boundTenant = TenantContext.getRestaurantId();
+                if (boundTenant != null && boundTenant.equals(restaurantId)) {
+                    return;
+                }
+                log.warn("Non-staff token (tenant {}) attempted access to restaurant {}", boundTenant, restaurantId);
+                throw new AccessDeniedException("Access denied: token is not bound to this restaurant");
             }
             throw new AccessDeniedException("User not authenticated");
         }

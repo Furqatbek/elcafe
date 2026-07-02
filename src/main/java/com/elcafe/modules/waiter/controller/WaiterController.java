@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.controller;
 
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.common.web.SortFieldWhitelist;
 import com.elcafe.modules.waiter.dto.CreateWaiterRequest;
 import com.elcafe.modules.waiter.dto.UpdateWaiterRequest;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,6 +38,16 @@ import java.util.List;
 public class WaiterController {
 
     private final WaiterService waiterService;
+
+    /** The authenticated waiter's id from the JWT (bound in TenantContext by the filter), never a
+     *  client-supplied header — otherwise any waiter could read another's profile/tables by id. */
+    private Long currentWaiterId() {
+        Long id = TenantContext.getWaiterId();
+        if (id == null) {
+            throw new AccessDeniedException("No authenticated waiter identity on this request");
+        }
+        return id;
+    }
 
     @PostMapping("/auth")
     @Operation(summary = "Authenticate waiter", description = "Authenticate waiter using PIN code")
@@ -83,18 +95,16 @@ public class WaiterController {
     @GetMapping("/me")
     @PreAuthorize("hasRole('WAITER')")
     @Operation(summary = "Get current waiter profile", description = "Get authenticated waiter's profile")
-    public ResponseEntity<ApiResponse<WaiterResponse>> getMyProfile(
-            @RequestHeader("X-Waiter-Id") Long waiterId) {
-        WaiterResponse waiter = waiterService.getById(waiterId);
+    public ResponseEntity<ApiResponse<WaiterResponse>> getMyProfile() {
+        WaiterResponse waiter = waiterService.getById(currentWaiterId());
         return ResponseEntity.ok(ApiResponse.success("Profile retrieved successfully", waiter));
     }
 
     @GetMapping("/me/tables")
     @PreAuthorize("hasRole('WAITER')")
     @Operation(summary = "Get assigned tables", description = "Get tables assigned to authenticated waiter")
-    public ResponseEntity<ApiResponse<List<RestaurantTable>>> getMyTables(
-            @RequestHeader("X-Waiter-Id") Long waiterId) {
-        List<RestaurantTable> tables = waiterService.getActiveTables(waiterId);
+    public ResponseEntity<ApiResponse<List<RestaurantTable>>> getMyTables() {
+        List<RestaurantTable> tables = waiterService.getActiveTables(currentWaiterId());
         return ResponseEntity.ok(ApiResponse.success("Tables retrieved successfully", tables));
     }
 

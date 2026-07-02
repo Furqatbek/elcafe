@@ -1,6 +1,8 @@
 package com.elcafe.modules.waiter.websocket;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -12,7 +14,19 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  */
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
+
+    /**
+     * Authenticate + tenant-authorize the STOMP inbound channel (audit #21). Servlet filters never see
+     * STOMP frames, so CONNECT auth and per-subscription tenant checks live here.
+     */
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(stompAuthChannelInterceptor);
+    }
 
     /**
      * Configure message broker

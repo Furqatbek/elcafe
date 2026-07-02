@@ -7,7 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed - 2026-07-02
+### Security - 2026-07-02
+
+#### RBAC remediation — closed 21 of 24 audited authorization defects
+
+A deep, adversarially-verified RBAC audit found 24 confirmed defects (3 critical, 11 high). 21 are
+fixed here; 3 (unauthenticated public order/reservation tracking PII) are flagged for a product
+decision because a blind change would break live consumer tracking. Full detail, root causes, and
+residuals in **`docs/RBAC_AUDIT.md`**.
+
+Highlights:
+- **Registration lockdown (the root cause):** `POST /auth/register` no longer anonymously mints a
+  `ROLE_OWNER` token — now SUPER_ADMIN-only. This closed the anonymous entry point behind most findings.
+- **Critical fixes:** gift-card issue/redeem/reload now role-gated (was any-authenticated-token financial
+  fraud); `set-plan` now enforces restaurant ownership (was cross-tenant); STOMP WebSocket gained CONNECT
+  JWT auth + per-subscription tenant checks (was zero auth), behind `app.websocket.auth.mode` (ships
+  shadow so the external print agent can be updated before enforce).
+- **Missing role gates** added to Supplier, TaxExemption, OfflineSync, Barcode, CustomerActivity,
+  Instagram, and coupon-read endpoints.
+- **Cross-tenant ownership** enforced on refund/void, product/category writes, and system-user
+  management (always-enforce for the high-severity admin/financial paths).
+- **Cross-principal:** the tenant guard no longer no-ops for waiter/consumer tokens (#22); waiter `me`
+  endpoints derive identity from the token, not the spoofable `X-Waiter-Id` header (#24); a consumer can
+  only read its own referral code (#25); waiter-management ops enforce tenant ownership (#13/#23).
+- **Token revocation:** deactivate + admin password-reset bump `token_version` (kills live tokens);
+  refresh rejects inactive accounts.
+- **Wallet webhooks fail closed** on a blank provider secret (was free wallet credit).
+- **Least-privilege:** financial/customer analytics restricted to ADMIN; WAITER removed from finance
+  approve/pay/delete.
+
+#### Staff reservations management is now backend-gated (residual closed)
 
 #### Staff reservations management is now backend-gated (residual closed)
 

@@ -3,16 +3,21 @@ package com.elcafe.modules.referral.controller;
 import com.elcafe.modules.referral.dto.*;
 import com.elcafe.modules.referral.service.ReferralService;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.security.CustomerPrincipal;
 import com.elcafe.utils.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/v1/restaurants/{restaurantId}/referrals")
@@ -21,6 +26,19 @@ public class ReferralController {
 
     private final ReferralService referralService;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
+
+    /**
+     * A CUSTOMER token may only act on its OWN customerId. Staff (ADMIN/MANAGER = a UserPrincipal, not
+     * a CustomerPrincipal) may pass any customerId. Without this a logged-in consumer could read any
+     * customer's referral code (name + email PII) by enumerating customerId.
+     */
+    private void enforceCustomerSelf(Long customerId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof CustomerPrincipal cp
+                && !Objects.equals(cp.getId(), customerId)) {
+            throw new AccessDeniedException("A customer may only access their own referral code");
+        }
+    }
 
     // ==================== Settings Endpoints ====================
 
@@ -73,6 +91,7 @@ public class ReferralController {
             @PathVariable Long restaurantId,
             @RequestParam Long customerId) {
         restaurantAuthorizationService.checkAccess(restaurantId);
+        enforceCustomerSelf(customerId);
         ReferralCodeResponse code = referralService.generateReferralCode(restaurantId, customerId);
         return ResponseEntity.ok(ApiResponse.success("Referral code generated", code));
     }
@@ -86,6 +105,7 @@ public class ReferralController {
             @PathVariable Long restaurantId,
             @PathVariable Long customerId) {
         restaurantAuthorizationService.checkAccess(restaurantId);
+        enforceCustomerSelf(customerId);
         ReferralCodeResponse code = referralService.getCustomerReferralCode(restaurantId, customerId);
         return ResponseEntity.ok(ApiResponse.success(code));
     }

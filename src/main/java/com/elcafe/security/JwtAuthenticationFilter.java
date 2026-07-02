@@ -107,6 +107,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         if (waiter.getRestaurantId() != null) {
                             TenantContext.setRestaurantId(waiter.getRestaurantId());
                         }
+                        // Bind the authenticated waiter's identity so "me" endpoints derive it from the
+                        // token instead of a spoofable X-Waiter-Id header (§3.6 horizontal-IDOR fix).
+                        TenantContext.setWaiterId(waiter.getId());
                     } else if (waiterId != null) {
                         logger.warn("Waiter token rejected (revoked, inactive, or unknown waiter) for waiterId="
                                 + waiterId);

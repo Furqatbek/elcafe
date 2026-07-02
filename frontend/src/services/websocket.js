@@ -37,6 +37,13 @@ class WebSocketService {
 
       this.client = new Client({
         webSocketFactory: () => new SockJS(wsUrl),
+        // Authenticate the STOMP CONNECT so the backend can bind this session's tenant and reject
+        // cross-tenant subscriptions (audit #21). Read lazily so a token refreshed mid-session is used
+        // on reconnect. STOMP CONNECT headers are separate from the SockJS HTTP handshake.
+        connectHeaders: (() => {
+          const token = localStorage.getItem('access_token');
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        })(),
         reconnectDelay: this.reconnectDelay,
         heartbeatIncoming: 10000,
         heartbeatOutgoing: 10000,

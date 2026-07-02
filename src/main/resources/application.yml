@@ -161,6 +161,15 @@ app:
       #   off | shadow | enforce
       mode: ${SUBSCRIPTION_ENFORCEMENT_MODE:off}
 
+  websocket:
+    auth:
+      # STOMP CONNECT authentication + per-subscription tenant check (audit #21). The waiter web app
+      # sends its Bearer token on CONNECT; the external PRINT AGENT must be updated to send a device
+      # token before flipping to enforce. Ships shadow (logs [ws-shadow] violations, blocks nothing) so
+      # the agent rollout can be sequenced.
+      #   off | shadow | enforce
+      mode: ${WEBSOCKET_AUTH_MODE:shadow}
+
   cache:
     menu-ttl: 1800 # 30 minutes
     restaurant-ttl: 3600 # 1 hour

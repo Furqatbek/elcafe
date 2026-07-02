@@ -1,6 +1,7 @@
 package com.elcafe.modules.pos.shift.controller;
 
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.pos.shift.entity.EmployeeConsumption;
 import com.elcafe.modules.pos.shift.repository.EmployeeConsumptionRepository;
 import com.elcafe.modules.pos.shift.service.ConsumptionLimitService;
@@ -10,9 +11,9 @@ import com.elcafe.utils.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -41,9 +42,15 @@ public class WaiterConsumptionController {
     @GetMapping
     @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR')")
     public ResponseEntity<ApiResponse<List<WaiterConsumptionResponse>>> getMyConsumptions(
-            @RequestHeader("X-Waiter-Id") Long waiterId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+
+        // Identity from the token (§3.6), not a spoofable X-Waiter-Id header — otherwise any waiter
+        // could read another's consumption history by supplying their id.
+        Long waiterId = TenantContext.getWaiterId();
+        if (waiterId == null) {
+            throw new AccessDeniedException("No authenticated waiter identity on this request");
+        }
 
         // Default to "today" when the client omits the range. The mobile
         // app's home tile typically shows just today; it can pass an
@@ -76,9 +83,12 @@ public class WaiterConsumptionController {
     @GetMapping("/quota")
     @PreAuthorize("hasAnyRole('WAITER', 'SUPERVISOR')")
     public ResponseEntity<ApiResponse<List<ConsumptionLimitService.QuotaStatus>>> getMyQuota(
-            @RequestHeader("X-Waiter-Id") Long waiterId,
             @RequestParam Long restaurantId) {
         restaurantAuthorizationService.checkAccess(restaurantId);
+        Long waiterId = TenantContext.getWaiterId(); // token identity, not a spoofable header
+        if (waiterId == null) {
+            throw new AccessDeniedException("No authenticated waiter identity on this request");
+        }
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new IllegalArgumentException("Waiter not found"));
         List<ConsumptionLimitService.QuotaStatus> statuses =
