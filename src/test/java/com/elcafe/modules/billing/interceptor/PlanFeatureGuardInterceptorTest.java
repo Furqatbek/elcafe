@@ -55,7 +55,8 @@ class PlanFeatureGuardInterceptorTest {
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/reservations")).isEqualTo("reservations");
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/reservations/date/2026-07-02")).isEqualTo("reservations");
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/reservations/9/confirm")).isEqualTo("reservations");
-        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/reservation-settings")).isEqualTo("reservations");
+        // The enable/disable off-switch stays core — every tier can close its booking channel.
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/reservation-settings")).isNull();
     }
 
     @Test
@@ -138,6 +139,19 @@ class PlanFeatureGuardInterceptorTest {
         when(authz.isAdmin()).thenReturn(true);
         mvc().perform(get("/api/v1/inventory/ingredients")).andExpect(status().isOk());
         verify(gate, never()).requireFeatureIfPlanned(anyLong(), anyString());
+    }
+
+    @Test
+    @DisplayName("percent-encoded path is still gated (matches the decoded path MVC routes by)")
+    void encodedPath_stillGated() throws Exception {
+        when(authz.isAdmin()).thenReturn(false);
+        when(authz.getCurrentUserRestaurantId()).thenReturn(5L);
+        // /api/v1/inventory/ingredient%73 decodes to .../ingredients — the raw URI matches no rule,
+        // but Spring dispatches to the gated handler, so the guard must see the decoded path.
+        // (java.net.URI overload: the String overload is a template MockMvc would re-encode to %2573.)
+        mvc().perform(get(java.net.URI.create("/api/v1/inventory/ingredient%73")))
+                .andExpect(status().isOk());
+        verify(gate).requireFeatureIfPlanned(5L, "inventory");
     }
 
     @RestController

@@ -1,5 +1,7 @@
 package com.elcafe.modules.reservation.controller;
 
+import com.elcafe.modules.billing.PlanFeatures;
+import com.elcafe.modules.billing.service.PlanGateService;
 import com.elcafe.modules.reservation.dto.AvailabilityResponse;
 import com.elcafe.modules.reservation.dto.CreateReservationRequest;
 import com.elcafe.modules.reservation.dto.ReservationResponse;
@@ -42,6 +44,7 @@ public class ReservationController {
     private final RestaurantRepository restaurantRepository;
     private final ReservationSettingsRepository reservationSettingsRepository;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
+    private final PlanGateService planGateService;
 
     // ========== Public Endpoints (for customers) ==========
 
@@ -50,6 +53,10 @@ public class ReservationController {
     public ResponseEntity<ApiResponse<List<RestaurantBasicInfo>>> getReservableRestaurants() {
         List<Restaurant> restaurants = restaurantRepository.findByActiveTrue();
         List<RestaurantBasicInfo> result = restaurants.stream()
+                // Reservations are a paid (Advance) feature: a restaurant whose plan lacks it must not
+                // be publicly bookable — its staff management API is plan-gated, so a booking taken
+                // here would be invisible to the restaurant.
+                .filter(r -> planGateService.hasFeatureIfPlanned(r.getId(), PlanFeatures.RESERVATIONS))
                 .filter(r -> {
                     return reservationSettingsRepository.findByRestaurantId(r.getId())
                             .map(ReservationSettings::getEnabled)

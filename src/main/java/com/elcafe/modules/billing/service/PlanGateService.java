@@ -102,6 +102,16 @@ public class PlanGateService {
         return snapshot != null && snapshot.featureCodes().contains(featureCode);
     }
 
+    /**
+     * The boolean twin of {@link #requireFeatureIfPlanned}: {@code true} when the restaurant has no
+     * plan at all (tests / unseeded setups must not gate), otherwise whether the plan carries the
+     * feature. For callers that filter or branch rather than throw — e.g. the public reservable list.
+     */
+    public boolean hasFeatureIfPlanned(Long restaurantId, String featureCode) {
+        PlanSnapshot snapshot = getCurrentPlan(restaurantId);
+        return snapshot == null || snapshot.featureCodes().contains(featureCode);
+    }
+
     /** Gate a paid module for the current request's restaurant. */
     public void requireFeature(String featureCode) {
         requireFeature(authorizationService.getCurrentUserRestaurantId(), featureCode);

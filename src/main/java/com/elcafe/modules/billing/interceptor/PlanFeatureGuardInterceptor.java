@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.util.UrlPathHelper;
 
 import java.util.List;
 
@@ -83,10 +84,12 @@ public class PlanFeatureGuardInterceptor implements HandlerInterceptor {
             new Rule("/referrals", false, PlanFeatures.MARKETING_REFERRALS),
             new Rule("/employee-consumptions", false, PlanFeatures.STAFF_CONSUMPTION),
             new Rule("/consumption-allowances", false, PlanFeatures.STAFF_CONSUMPTION),
-            // Staff reservations management (list/create/confirm/cancel + settings). Consumer booking
-            // lives under /api/v1/public/** which featureFor never gates (see the guard below).
-            new Rule("/reservations", false, PlanFeatures.RESERVATIONS),
-            new Rule("/reservation-settings", false, PlanFeatures.RESERVATIONS));
+            // Staff reservations management (list/create/confirm/cancel). Consumer booking lives under
+            // /api/v1/public/** which featureFor never gates (see the guard below), and consumer intake
+            // is additionally plan-checked at the source (reservable list + createReservation).
+            // /reservation-settings is deliberately NOT gated: the enable/disable off-switch is a core
+            // safety valve every tier keeps.
+            new Rule("/reservations", false, PlanFeatures.RESERVATIONS));
 
     private final PlanGateService planGateService;
     private final RestaurantAuthorizationService authorizationService;
@@ -112,7 +115,11 @@ public class PlanFeatureGuardInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        String code = featureFor(request.getRequestURI());
+        // Match on the DECODED path Spring routes by, not the raw request URI — otherwise
+        // percent-encoding a letter (/re%73ervations) slips past every rule while MVC still
+        // dispatches to the gated handler.
+        String path = UrlPathHelper.defaultInstance.getLookupPathForRequest(request);
+        String code = featureFor(path);
         if (code == null) {
             return true; // not a gated path
         }

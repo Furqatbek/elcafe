@@ -735,13 +735,27 @@ with core POS takeaway** (see `PlanFeatureGuardInterceptor` javadoc +
 commit `5fea6c2`).
 
 **Resolved (2026-07-02):** the *staff-facing* reservations-management
-API is now backend-gated (`/reservations` + `/reservation-settings` →
-`reservations` in `PlanFeatureGuardInterceptor`), closing the residual
-where a Start-tier staff user could reach it directly. Consumer booking
-is untouched: `featureFor` now categorically skips `/api/v1/public/**`,
-so the public booking/tracking endpoints can never be plan-gated — even
-with a staff token attached. Pinned by `PlanFeatureGuardInterceptorTest`
-(staff paths gated + four public reservation paths asserted null).
+API is now backend-gated (`/reservations` → `reservations` in
+`PlanFeatureGuardInterceptor`), closing the residual where a Start-tier
+staff user could reach it directly. The gate is coherent end to end:
+
+- **Consumer intake closes with the plan too** — the public reservable
+  list filters by the feature and public `createReservation` rejects
+  when the plan lacks it (via `PlanGateService.hasFeatureIfPlanned`,
+  fail-open when unplanned). Without this, a Start-tier restaurant
+  stayed publicly bookable while its staff couldn't see the bookings.
+  Existing bookings remain publicly trackable/cancellable by code.
+- **`/reservation-settings` is deliberately ungated** — the
+  enable/disable off-switch is a core safety valve for every tier.
+- `featureFor` categorically skips `/api/v1/public/**` and matches the
+  **decoded** lookup path (a raw-URI match was bypassable with
+  percent-encoding, e.g. `/re%73ervations`).
+- Pinned by `ReservationPlanGateTest` + `PlanFeatureGuardInterceptorTest`
+  (staff paths gated, public paths null, encoded-URI regression).
+
+Known residue: a tenant downgraded away from `reservations` with future
+bookings on the book loses staff API access to them (upgrade back or
+SUPER_ADMIN assists); no new bookings can arrive after the downgrade.
 **Self-service stays UI-only gated by design** — its backend endpoint is
 shared with core POS takeaway, so a backend rule would break takeaway
 for Start-tier restaurants; revisit only if the endpoints are ever

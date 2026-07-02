@@ -2,6 +2,8 @@ package com.elcafe.modules.reservation.service;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.billing.PlanFeatures;
+import com.elcafe.modules.billing.service.PlanGateService;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.financial.service.ShiftTimeService;
@@ -46,6 +48,7 @@ public class ReservationService {
     private final RestaurantTableRepository tableRepository;
     private final AvailabilityService availabilityService;
     private final ShiftTimeService shiftTimeService;
+    private final PlanGateService planGateService;
     @Lazy private final OwnerNotificationService ownerNotificationService;
     @Lazy private final CustomerNotificationService customerNotificationService;
 
@@ -62,6 +65,13 @@ public class ReservationService {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", "id", restaurantId));
+
+        // Reservations are a paid (Advance) feature. Without this check a Start-tier restaurant would
+        // keep collecting public bookings its staff can't even see (the staff management API is
+        // plan-gated) — the booking channel must close with the plan, not just the sidebar.
+        if (!planGateService.hasFeatureIfPlanned(restaurantId, PlanFeatures.RESERVATIONS)) {
+            throw new BadRequestException("This restaurant does not accept online reservations");
+        }
 
         ReservationSettings settings = settingsRepository.findByRestaurantId(restaurantId)
                 .orElseGet(() -> createDefaultSettings(restaurant));

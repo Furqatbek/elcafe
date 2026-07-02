@@ -39,9 +39,10 @@ export default function PlatformConsole() {
   // The tenant being plan-edited (dialog open when non-null) + the dialog's form state.
   const [planEdit, setPlanEdit] = useState(null);
 
+  // Returns its promise so callers can await the refresh (see runAction).
   const load = useCallback(() => {
     setLoading(true);
-    platformAPI.listTenants({ search: query || undefined, page, size: PAGE_SIZE })
+    return platformAPI.listTenants({ search: query || undefined, page, size: PAGE_SIZE })
       .then((r) => {
         // Page is serialized VIA_DTO → { content: [...], page: { totalPages, number, ... } }.
         const pg = r.data?.data || {};
@@ -64,7 +65,10 @@ export default function PlatformConsole() {
     try {
       await fn();
       toast({ title: t(successKey, fallback) });
-      load();
+      // Await the refresh: the row buttons re-enable only once the table shows post-action data.
+      // Otherwise "+30d" then a quick plan-edit would prefill the dialog from the pre-action row
+      // and silently write the stale expiry back (the backend writes all three fields as sent).
+      await load();
     } catch (err) {
       toast({
         title: t('platform.actionFailed', 'Action failed'),

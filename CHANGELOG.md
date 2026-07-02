@@ -12,12 +12,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Staff reservations management is now backend-gated (residual closed)
 
 The last recorded enforcement residual: a Start-tier *staff* user could reach the staff-facing
-reservations-management API directly (it was hidden in the UI only). Now
-`/reservations` + `/reservation-settings` → `reservations` (Advance) in `PlanFeatureGuardInterceptor`.
-Consumer booking is structurally protected: `featureFor` categorically skips `/api/v1/public/**`, so
-public booking/tracking can never be plan-gated even with a staff token attached. Self-service stays
-UI-only gated by design (shares its endpoint with core POS takeaway). Pinned by
-`PlanFeatureGuardInterceptorTest` (+8 cases).
+reservations-management API directly (it was hidden in the UI only). Now `/reservations` →
+`reservations` (Advance) in `PlanFeatureGuardInterceptor`. Consumer booking is structurally protected:
+`featureFor` categorically skips `/api/v1/public/**`, so public booking/tracking can never be
+plan-gated even with a staff token attached. Self-service stays UI-only gated by design (shares its
+endpoint with core POS takeaway). Pinned by `PlanFeatureGuardInterceptorTest`.
+
+Three review findings against the first cut of this gate, fixed in the same day:
+
+- **Consumer intake now closes with the plan.** Gating only the staff API would have left a Start-tier
+  restaurant publicly bookable (settings default `enabled=true`) while its staff couldn't even see the
+  bookings — guest walks in with a reservation nobody knew about. The public reservable list now
+  filters by the `reservations` feature and public `createReservation` rejects when the plan lacks it
+  (`PlanGateService.hasFeatureIfPlanned`, the fail-open boolean twin of `requireFeatureIfPlanned`).
+  Existing bookings stay publicly trackable/cancellable by confirmation code.
+- **`/reservation-settings` is deliberately NOT gated** — the enable/disable off-switch is a core
+  safety valve every tier keeps.
+- **Percent-encoding bypass closed.** `featureFor` matched the raw request URI while Spring routes the
+  decoded path, so `/restaurants/5/re%73ervations` slipped every rule (pre-existing weakness across all
+  rules; this gate was the first to advertise closing a direct-API hole). The interceptor now matches
+  the decoded lookup path (`UrlPathHelper`), pinned by an encoded-URI regression test.
+
+Known residue (documented): a tenant downgraded away from `reservations` with future bookings already
+on the book — staff lose API access to them (upgrade back, or a SUPER_ADMIN assists); no new bookings
+can arrive. Tests: `ReservationPlanGateTest` (intake), `PlanFeatureGuardInterceptorTest` (+9 cases).
 
 #### Frontend/backend drift closed after a full plan-vs-code audit (Phase 5 + frontend)
 
@@ -46,6 +64,11 @@ A 29-agent adversarially-verified audit of every frontend-related plan item surf
 - **i18n:** added missing `common.previous`/`common.next` (PlatformConsole, MenuCollections,
   OrdersHistory, SelfServiceOrders pagination) and `nav.sub.loyalty` to all three locales, plus
   trilingual strings for the new console actions/dialog and suspended-gate button.
+- **Console actions now await the table refresh** (review finding): `runAction` fired the reload
+  without awaiting it, so row buttons re-enabled against pre-action data — "+30d" followed by a quick
+  plan-edit would prefill the dialog with the stale expiry and silently write it back. Buttons now stay
+  disabled until the refreshed rows render. (Concurrent edits by a second operator remain unversioned —
+  backend optimistic locking is a known non-goal for now.)
 - **Tests:** the dark-shipped 402 path is no longer untested — `api.subscription.test.js` pins the
   interceptor's exact `402` + `error === 'SUBSCRIPTION_INACTIVE'` contract (backend half already pinned
   by `SubscriptionEnforcementFilterTest`), `authStore.suspension.test.js` pins the login/register flag
