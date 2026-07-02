@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 import { useAuthStore } from '../store/authStore';
@@ -9,15 +10,23 @@ import { Button } from './ui/button';
  * as suspended. The gate blocks every staff action, so a banner would leave a broken app underneath —
  * this replaces it. Only renders for an authenticated staff session; a reactivated tenant clears it by
  * retrying (the flag resets on login/logout, so a fresh session never shows a stale overlay).
+ *
+ * <p>The subscription page is exempt, mirroring the backend allowlist (/api/v1/billing/ still answers
+ * for a suspended tenant precisely so its admin can see their plan) — without the exemption the
+ * overlay would sit on top of the one page the backend deliberately left reachable.
  */
 export default function SuspensionGate() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const suspended = useSubscriptionStore((s) => s.suspended);
   const setSuspended = useSubscriptionStore((s) => s.setSuspended);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const logout = useAuthStore((s) => s.logout);
 
   if (!suspended || !isAuthenticated) return null;
+  // The billing self-view stays reachable, like the backend's auth/billing allowlist.
+  if (location.pathname === '/subscription') return null;
 
   const retry = () => {
     setSuspended(false);
@@ -41,7 +50,10 @@ export default function SuspensionGate() {
         <p className="mb-6 text-sm text-gray-600">
           {t('suspended.body', "This restaurant's access has been suspended. Please contact support to restore it.")}
         </p>
-        <div className="flex justify-center gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
+          <Button variant="outline" onClick={() => navigate('/subscription')}>
+            {t('suspended.viewBilling', 'View subscription')}
+          </Button>
           <Button variant="outline" onClick={retry}>{t('suspended.retry', 'Retry')}</Button>
           <Button variant="destructive" onClick={signOut}>{t('suspended.logout', 'Log out')}</Button>
         </div>

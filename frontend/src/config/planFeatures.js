@@ -48,6 +48,13 @@ const PATH_FEATURE = {
   '/marketing/milestones': 'marketing.milestones',
   '/marketing/loyalty': 'loyalty',
   '/marketing/analytics': 'marketing.analytics',
+  // Legacy alias routes (App.jsx keeps them for old bookmarks) — same gating as their
+  // /marketing/* homes, so a direct URL can't sidestep the guard.
+  '/promotions': 'marketing',
+  '/coupons': 'marketing',
+  '/happy-hours': 'marketing',
+  '/bundles': 'marketing',
+  '/referrals': 'marketing.referrals',
   '/reviews': 'reviews',
   // Finance
   '/finance/purchase-orders': 'finance',

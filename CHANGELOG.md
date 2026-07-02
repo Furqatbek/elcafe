@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed - 2026-07-02
+
+#### Frontend/backend drift closed after a full plan-vs-code audit (Phase 5 + frontend)
+
+A 29-agent adversarially-verified audit of every frontend-related plan item surfaced ten real gaps
+(and rejected seven false alarms); all ten are fixed:
+
+- **Platform console now surfaces the whole backend API.** `Cancel` (the sticky lifecycle end-state,
+  behind a confirm) joins Suspend/Reactivate/+30d, and the status column renders the persisted Phase 3
+  `subscriptionStatus` — a **Cancelled** tenant is no longer indistinguishable from a Suspended one.
+- **Console plan changes no longer silently wipe expiry/trial.** The backend writes
+  `planExpiresAt`/`isTrial` unconditionally on set-plan, and the console sent only `planCode` — so any
+  console plan change nulled the tenant's expiry ("never expires") and cleared its trial flag. Plan
+  changes now go through a dialog prefilled with the current expiry + trial state, which also gives the
+  operator the missing §8 "comp a trial" ability. Plan-catalogue load failures now toast instead of
+  silently leaving the picker empty.
+- **`SuspensionGate` exempts the subscription page** (and gained a "View subscription" button),
+  mirroring the backend allowlist — a suspended admin can actually see the billing page the backend
+  deliberately left reachable, instead of the overlay covering it.
+- **Legacy alias routes (`/promotions`, `/coupons`, `/happy-hours`, `/bundles`, `/referrals`) are now
+  plan-gated** in `planFeatures.js` like their `/marketing/*` homes — a direct URL no longer bypasses
+  the frontend guard (the backend 403 was already in place).
+- **`customers.segments` is now backend-gated**: `/api/v1/customers/activity` → `customers.segments`
+  in `PlanFeatureGuardInterceptor`. It was the one seeded paid feature gated in the UI only without a
+  documented reason; unlike self-service/reservations its endpoint is exclusively the segments page's,
+  so gating it breaks nothing. Core `/customers` CRUD stays ungated (pinned by test).
+- **i18n:** added missing `common.previous`/`common.next` (PlatformConsole, MenuCollections,
+  OrdersHistory, SelfServiceOrders pagination) and `nav.sub.loyalty` to all three locales, plus
+  trilingual strings for the new console actions/dialog and suspended-gate button.
+- **Tests:** the dark-shipped 402 path is no longer untested — `api.subscription.test.js` pins the
+  interceptor's exact `402` + `error === 'SUBSCRIPTION_INACTIVE'` contract (backend half already pinned
+  by `SubscriptionEnforcementFilterTest`), `authStore.suspension.test.js` pins the login/register flag
+  reset, and `SuspensionGate.test.jsx` now exercises Retry/Log out/View-subscription behaviour, not
+  just rendering. `PlatformConsole.test.jsx` covers cancel (confirm/decline/hidden-when-cancelled),
+  lifecycle badges, and the expiry-preserving plan dialog. Frontend suite: 37 tests (was 25).
+
 ### Added - 2026-07-01
 
 #### Phase 3 scaffolding — subscription lifecycle status (payment-agnostic)

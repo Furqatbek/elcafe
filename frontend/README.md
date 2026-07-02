@@ -62,9 +62,13 @@ npm test            # runs all specs under src/ once (jsdom)
 ```
 
 Specs live next to the code they cover (`src/**/*.test.{js,jsx}`). Current coverage centres on the
-subscription plan-gating surface: `config/planFeatures` (the path → feature-code map, which mirrors the
-backend so drift is caught), `hooks/usePlan`, and `components/PlanExpiryBanner`. Config is in
-`vitest.config.js`, kept separate from the Vite build.
+subscription surface: `config/planFeatures` (the path → feature-code map, which mirrors the backend so
+drift is caught — legacy alias routes included), `hooks/usePlan`, `components/PlanExpiryBanner`,
+`components/SuspensionGate` (overlay + Retry/Log out/View-subscription behaviour),
+`pages/PlatformConsole` (lifecycle badges, cancel, the expiry-preserving plan dialog),
+`services/api.subscription` (the 402 `SUBSCRIPTION_INACTIVE` interceptor contract), and
+`store/authStore.suspension` (flag reset on login/register). Config is in `vitest.config.js`, kept
+separate from the Vite build.
 
 ### End-to-end (Playwright + Chromium)
 

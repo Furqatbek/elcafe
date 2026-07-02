@@ -183,6 +183,7 @@ export const platformAPI = {
   extend: (id, days) => api.post(`/platform/tenants/${id}/extend`, { days }),
   suspend: (id) => api.post(`/platform/tenants/${id}/suspend`),
   reactivate: (id) => api.post(`/platform/tenants/${id}/reactivate`),
+  cancel: (id) => api.post(`/platform/tenants/${id}/cancel`),
 };
 
 export const menuAPI = {

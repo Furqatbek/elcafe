@@ -112,6 +112,7 @@
       "instagramMarketing": "Instagram",
       "ordersHistory": "Orders History",
       "milestones": "Milestones",
+      "loyalty": "Loyalty & wallet",
       "externalOrders": "Online Orders",
       "payroll": "Payroll",
       "financialAlerts": "Financial Alerts",
@@ -405,6 +406,8 @@
   },
   "common": {
     "cancel": "Cancel",
+    "previous": "Previous",
+    "next": "Next",
     "save": "Save",
     "create": "Create",
     "saving": "Saving...",
@@ -5282,6 +5285,18 @@
     "expiredDaysAgo": "Expired {{n}}d ago",
     "daysLeft": "{{n}}d left",
     "pageOf": "Page {{n}} of {{m}}",
+    "plansLoadFailed": "Could not load the plan catalogue",
+    "changePlan": "Change plan",
+    "changePlanFor": "Change plan \u2014 {{name}}",
+    "plan": "Plan",
+    "selectPlan": "Select a plan",
+    "expiresAt": "Expires at",
+    "expiryHint": "Leave empty for no expiry (e.g. the free Start tier).",
+    "markTrial": "Trial assignment",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "cancelConfirm": "Cancel this subscription? The tenant loses access and stays cancelled until explicitly reactivated.",
+    "cancelled": "Subscription cancelled",
     "col": {
       "name": "Name",
       "plan": "Plan",
@@ -5294,12 +5309,16 @@
       "trial": "Trial",
       "grace": "Grace",
       "readOnly": "Read-only",
-      "suspended": "Suspended"
+      "suspended": "Suspended",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "pastDue": "Past due"
     }
   },
   "suspended": {
     "title": "Access suspended",
     "body": "This restaurant's access has been suspended. Please contact support to restore it.",
+    "viewBilling": "View subscription",
     "retry": "Retry",
     "logout": "Log out"
   }

@@ -64,6 +64,9 @@ public class PlanFeatureGuardInterceptor implements HandlerInterceptor {
             new Rule("/api/v1/financial/reports", true, PlanFeatures.FINANCE),
             new Rule("/api/v1/pricing", true, PlanFeatures.FINANCE),
             new Rule("/api/v1/waiter-performance", true, PlanFeatures.STAFF_PERFORMANCE),
+            // RFM segments data. Safe to gate: its only consumer is the segments page (the core
+            // Customers page uses /customers, not /customers/activity).
+            new Rule("/api/v1/customers/activity", true, PlanFeatures.CUSTOMER_SEGMENTS),
             new Rule("/api/v1/qr-codes", true, PlanFeatures.MARKETING),
             // Controllers based at /api/v1 with {restaurantId} in the path — match by segment.
             // The promotion-analytics dashboard is Pro-only (marketing.analytics) — it must precede the

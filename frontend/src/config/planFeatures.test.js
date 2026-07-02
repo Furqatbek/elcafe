@@ -16,6 +16,14 @@ describe('featureForPath', () => {
     expect(featureForPath('/settings/telegram-subscribers')).toBe('telegram.subscribers');
   });
 
+  it('gates the legacy alias routes like their /marketing homes', () => {
+    expect(featureForPath('/promotions')).toBe('marketing');
+    expect(featureForPath('/coupons')).toBe('marketing');
+    expect(featureForPath('/happy-hours')).toBe('marketing');
+    expect(featureForPath('/bundles')).toBe('marketing');
+    expect(featureForPath('/referrals')).toBe('marketing.referrals');
+  });
+
   it('returns null for core (always-visible) paths, including /subscription', () => {
     expect(featureForPath('/orders')).toBeNull();
     expect(featureForPath('/orders/history')).toBeNull();

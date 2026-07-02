@@ -48,6 +48,9 @@ class PlanFeatureGuardInterceptorTest {
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/promotions/analytics/trends")).isEqualTo("marketing.analytics");
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/milestones")).isEqualTo("marketing.milestones");
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/referrals")).isEqualTo("marketing.referrals");
+        // RFM segments data is Advance-gated; the core /customers CRUD stays ungated (asserted below).
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/customers/activity")).isEqualTo("customers.segments");
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/customers/activity/filter")).isEqualTo("customers.segments");
     }
 
     @Test

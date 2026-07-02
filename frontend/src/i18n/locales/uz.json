@@ -110,6 +110,7 @@
       "instagramMarketing": "Instagram",
       "ordersHistory": "Buyurtmalar tarixi",
       "milestones": "Yutuqlar",
+      "loyalty": "Sodiqlik va hamyon",
       "externalOrders": "Onlayn buyurtmalar",
       "payroll": "Ish haqi",
       "financialAlerts": "Moliyaviy ogohlantirishlar",
@@ -1153,6 +1154,8 @@
   },
   "common": {
     "cancel": "Bekor qilish",
+    "previous": "Oldingi",
+    "next": "Keyingi",
     "save": "Saqlash",
     "create": "Yaratish",
     "saving": "Saqlanmoqda...",
@@ -5090,6 +5093,18 @@
     "expiredDaysAgo": "{{n}} kun oldin tugagan",
     "daysLeft": "{{n}} kun qoldi",
     "pageOf": "{{m}} dan {{n}}-sahifa",
+    "plansLoadFailed": "Tariflar katalogini yuklab bo'lmadi",
+    "changePlan": "Tarifni o'zgartirish",
+    "changePlanFor": "Tarifni o'zgartirish \u2014 {{name}}",
+    "plan": "Tarif",
+    "selectPlan": "Tarifni tanlang",
+    "expiresAt": "Amal qilish muddati",
+    "expiryHint": "Muddatsiz tarif uchun bo'sh qoldiring (masalan, bepul Start).",
+    "markTrial": "Sinov muddati",
+    "apply": "Qo'llash",
+    "cancel": "Bekor qilish",
+    "cancelConfirm": "Ushbu obuna bekor qilinsinmi? Muassasa kirish huquqini yo'qotadi va aniq qayta faollashtirilgunga qadar bekor qilingan holatda qoladi.",
+    "cancelled": "Obuna bekor qilindi",
     "col": {
       "name": "Nomi",
       "plan": "Tarif",
@@ -5102,12 +5117,16 @@
       "trial": "Sinov",
       "grace": "Imtiyozli muddat",
       "readOnly": "Faqat o'qish",
-      "suspended": "To'xtatilgan"
+      "suspended": "To'xtatilgan",
+      "cancelled": "Bekor qilingan",
+      "expired": "Muddati tugagan",
+      "pastDue": "To'lov muddati o'tgan"
     }
   },
   "suspended": {
     "title": "Kirish to'xtatildi",
     "body": "Ushbu muassasa kirishi to'xtatilgan. Tiklash uchun qo'llab-quvvatlash xizmatiga murojaat qiling.",
+    "viewBilling": "Obunani ko'rish",
     "retry": "Qayta urinish",
     "logout": "Chiqish"
   }

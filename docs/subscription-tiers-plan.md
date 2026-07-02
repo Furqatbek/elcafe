@@ -691,19 +691,26 @@ run above is a final confirmation, not the only check. Coverage by area
 - **Access gate (Phase 2)** — `SubscriptionAccessServiceTest` (Redis
   cache hit/miss, redis-down → DB fallback, invalidate) and
   `SubscriptionEnforcementFilterTest` (off / shadow / enforce ×
-  staff / waiter / consumer / super-admin / allowlist).
+  staff / waiter / consumer / super-admin / allowlist). The frontend
+  half of the 402 contract is pinned too: `api.subscription.test.js`
+  (interceptor flips on exactly `402` + `SUBSCRIPTION_INACTIVE`),
+  `authStore.suspension.test.js` (flag reset on login/register), and
+  `SuspensionGate.test.jsx` (overlay, subscription-page exemption,
+  Retry / Log out / View-subscription behaviour).
 - **Super-admin platform console** — `PlatformAdminServiceTest`,
   `PlatformAdminControllerTest`, and the `PlatformConsole.test.jsx`
-  Vitest spec.
+  Vitest spec (lifecycle badges, cancel confirm/decline, the
+  expiry-preserving plan dialog).
 - **Whole-app smoke** — `ApplicationContextSmokeTest` (full context;
   gating + gate beans wired) and `HttpSmokeTest` (real security filter
   chain over HTTP).
-- **Frontend** — Vitest units for `featureForPath`, `usePlan`,
-  `PlanExpiryBanner`, `PlatformConsole`, and `SuspensionGate`; plus the
-  `plan-gating.spec.js` Playwright E2E (Start blocked → plan-required,
-  Pro allowed, core ungated).
+- **Frontend** — Vitest units for `featureForPath` (incl. the legacy
+  alias routes), `usePlan`, `PlanExpiryBanner`, `PlatformConsole`,
+  `SuspensionGate`, the 402 interceptor, and the authStore suspension
+  reset; plus the `plan-gating.spec.js` Playwright E2E (Start blocked →
+  plan-required, Pro allowed, core ungated).
 
-Totals: backend suite **1877** green; frontend **19 unit + 3 E2E**.
+Totals: backend suite **1889** green; frontend **37 unit + 3 E2E**.
 Run: `mvn test`, `npm test`, and `npm run e2e` (see `frontend/README.md`).
 
 Still manual (no CI): the V156/V157 migration dry-run (scenario 1), the
@@ -753,6 +760,26 @@ traffic isn't gated anyway (no staff tenant → null-tenant skip).
   `marketing` (Advance), unlike the analytics dashboard (`Pro`). It is
   reached from the Advance promotions-management page, so this is by
   design — flagged in case the tier boundary is ever reconsidered.
+
+### Closed by the 2026-07-02 frontend/Phase-5 audit
+
+A second adversarially-verified audit (29 agents) swept every
+frontend-related plan item; its ten confirmed gaps are fixed (see
+CHANGELOG 2026-07-02). Notably closed:
+
+- **`customers.segments` is now backend-gated** —
+  `/api/v1/customers/activity` → `customers.segments` in the
+  interceptor. It had been the one paid feature gated UI-only without a
+  documented reason; unlike self-service/reservations (above), its
+  endpoint serves only the segments page, so gating it breaks nothing.
+- **Legacy alias routes** (`/promotions`, `/coupons`, `/happy-hours`,
+  `/bundles`, `/referrals`) now carry the same frontend feature-gate as
+  their `/marketing/*` homes.
+- **Platform console drift** — cancel action, lifecycle-status column,
+  and the expiry/trial-preserving plan-change dialog (a console plan
+  change used to silently null `plan_expires_at`).
+- **`SuspensionGate`** exempts the subscription page, matching the
+  backend's billing allowlist.
 
 ### Phase 2 access-gate follow-ups
 

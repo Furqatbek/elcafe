@@ -13,10 +13,15 @@ hard-enforced data isolation. Subscription status gates access to the platform.
   suspended tenant's staff **and waiters** get 402, Redis-cached, and the frontend `SuspensionGate`
   surfaces it. Scoped to no-payments (suspended-only; expired stays read-only). Flip is an ops action
   per environment — see `docs/SUBSCRIPTION_ENFORCE_FLIP_RUNBOOK.md` (do the tenant flip first).
-- **Phase 5** (super-admin platform console) — ✅ tenant list + plan change/extend + suspend/reactivate.
+- **Phase 4** (frontend) — ◐ the paywall/plan-awareness half is ✅, shipped under Phases 1–2 (see the
+  §7 landed note for the item-by-item mapping: `subscriptionStore` + 402 interceptor + `SuspensionGate`
+  = Phase 2; plan pages/banner/feature-gating = Phase 1). The **self-serve billing UI**
+  (`PlanSelection` checkout, `InvoiceHistory`) is ⏸ payment-deferred.
+- **Phase 5** (super-admin platform console) — ✅ tenant list + plan change (expiry/trial-aware) /
+  extend / suspend / reactivate / cancel, lifecycle status displayed.
 - **Phase 3** — ◐ payment-agnostic scaffolding landed (subscription lifecycle `SubscriptionStatus` +
   reconcile job); the **billing engine** (recurring charges, real provider, webhooks, invoices) and the
-  payment UI of **Phase 4** remain ⏸ deferred, blocked on an acquiring contract. Prices stay 0.
+  self-serve payment UI of **Phase 4** remain ⏸ deferred, blocked on an acquiring contract. Prices stay 0.
 
 Per-section "_Landed_" notes below carry the detail. §1 is the original pre-work baseline (mostly
 resolved now) — read it as the motivation for this re-architecture, not the current state.
@@ -439,6 +444,17 @@ review, V155 notification tenant scope).
   + route `/settings/billing` (none exists). Restrict to `OWNER`/`ADMIN`.
 - **i18n** — add en/ru/uz strings (repo is trilingual; see recent loyalty/wallet commits).
 
+- _Landed (split across Phases 1–2, item by item):_ the **402→paywall interceptor**,
+  `subscriptionStore`, and the app-shell block (`SuspensionGate`, mounted in `App.jsx`, subscription
+  page exempt to mirror the backend billing allowlist) shipped with **Phase 2**; **plan awareness**
+  (`authStore.loadPlan` + `usePlan`, hydrate on login), the **plan/status pages**
+  (`pages/Subscription.jsx` with the "contact us to upgrade" CTA + ADMIN set-plan form,
+  `pages/PlanRequired.jsx`), the **expiry banner**, and **route/sidebar feature-gating**
+  (`config/planFeatures.js` + the Layout direct-URL guard, legacy alias routes included) shipped with
+  **Phase 1** (mini-phases A3–A5). All trilingual. _Deferred (payment scope):_ `/settings/billing`
+  with `PlanSelection` self-serve checkout and `InvoiceHistory` — needs the Phase 3 billing engine and
+  an acquiring contract.
+
 ---
 
 ## 8. Phase 5 — Platform operations (super-admin)
@@ -452,9 +468,13 @@ review, V155 notification tenant scope).
     `modules/billing/**` (class-level `@PreAuthorize("hasRole('SUPER_ADMIN')")`): list tenants
     (name search, paged) + subscription state, change plan (delegates to the audited
     `PlanGateService.setPlan`), extend expiry by N days, suspend/reactivate (`Restaurant.active`,
-    audited via `RESTAURANT_SUSPENDED`/`RESTAURANT_REACTIVATED`). Frontend `pages/PlatformConsole.jsx`
-    behind a `SUPER_ADMIN` route guard + sidebar entry, trilingual (en/ru/uz). Tested:
-    `PlatformAdminServiceTest`, `PlatformAdminControllerTest`, `PlatformConsole.test.jsx`.
+    audited via `RESTAURANT_SUSPENDED`/`RESTAURANT_REACTIVATED`), cancel (sticky `CANCELLED`, audited
+    via `SUBSCRIPTION_CANCELLED`). Frontend `pages/PlatformConsole.jsx` behind a `SUPER_ADMIN` route
+    guard + sidebar entry, trilingual (en/ru/uz), surfaces the full API: lifecycle-status column
+    (Cancelled ≠ Suspended), confirm-guarded Cancel, and a plan-change dialog carrying
+    expiry + trial (prefilled — a plan change can't silently wipe them, and the operator can comp a
+    trial). Tested: `PlatformAdminServiceTest`, `PlatformAdminControllerTest`,
+    `PlatformConsole.test.jsx` (10).
   - _Deferred (payment scope):_ invoices + MRR/churn metrics — these need the billing engine
     (Phase 3), which is out until there's a payment-acquiring contract.
 

@@ -6,17 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Checkbox } from '../components/ui/checkbox';
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from '../components/ui/dialog';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../components/ui/select';
-import { Server, Search, Ban, CheckCircle2, CalendarPlus } from 'lucide-react';
+import { Server, Search, Ban, CheckCircle2, CalendarPlus, XCircle, Pencil } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
 /**
- * SUPER_ADMIN platform console: list every tenant with its subscription state and manage it
- * cross-tenant — change plan, extend expiry, suspend / reactivate. Backed by PlatformAdminController
- * (/api/v1/platform). The route is guarded to SUPER_ADMIN in App.jsx; the API is guarded server-side.
+ * SUPER_ADMIN platform console: list every tenant with its subscription lifecycle state and manage it
+ * cross-tenant — change plan (with expiry + trial, so a plan change can't silently wipe them), extend
+ * expiry, suspend / reactivate, cancel. Backed by PlatformAdminController (/api/v1/platform). The route
+ * is guarded to SUPER_ADMIN in App.jsx; the API is guarded server-side.
  */
 export default function PlatformConsole() {
   const { t } = useTranslation();
@@ -30,6 +36,8 @@ export default function PlatformConsole() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState(null);
+  // The tenant being plan-edited (dialog open when non-null) + the dialog's form state.
+  const [planEdit, setPlanEdit] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -46,8 +54,10 @@ export default function PlatformConsole() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    billingAPI.getPlans().then((r) => setPlans(r.data?.data || [])).catch(() => {});
-  }, []);
+    billingAPI.getPlans()
+      .then((r) => setPlans(r.data?.data || []))
+      .catch(() => toast({ title: t('platform.plansLoadFailed', 'Could not load the plan catalogue'), variant: 'destructive' }));
+  }, [toast, t]);
 
   const runAction = async (id, fn, successKey, fallback) => {
     setBusyId(id);
@@ -72,12 +82,63 @@ export default function PlatformConsole() {
     setQuery(search.trim());
   };
 
+  // Open the plan dialog prefilled with the tenant's current plan/expiry/trial, so applying without
+  // touching a field preserves it — the backend writes all three unconditionally, so sending only the
+  // plan code would silently null the expiry and clear the trial flag.
+  const openPlanEdit = (tn) => setPlanEdit({
+    tenant: tn,
+    planCode: tn.planCode || '',
+    // LocalDateTime "2026-07-30T12:00:00" → datetime-local input value "2026-07-30T12:00".
+    planExpiresAt: tn.planExpiresAt ? tn.planExpiresAt.slice(0, 16) : '',
+    isTrial: Boolean(tn.isTrial),
+  });
+
+  const submitPlanEdit = async (e) => {
+    e.preventDefault();
+    const { tenant: tn, planCode, planExpiresAt, isTrial } = planEdit;
+    setPlanEdit(null);
+    await runAction(
+      tn.restaurantId,
+      () => platformAPI.changePlan(tn.restaurantId, {
+        planCode,
+        planExpiresAt: planExpiresAt || null, // empty = no expiry (e.g. the free Start tier)
+        isTrial,
+      }),
+      'platform.planChanged', 'Plan changed');
+  };
+
+  const cancelSubscription = (tn) => {
+    // Sticky end-state (the daily reconcile never clears it; only Reactivate does) — confirm first.
+    if (!window.confirm(t('platform.cancelConfirm',
+      'Cancel this subscription? The tenant loses access and stays cancelled until explicitly reactivated.'))) {
+      return;
+    }
+    runAction(tn.restaurantId, () => platformAPI.cancel(tn.restaurantId),
+      'platform.cancelled', 'Subscription cancelled');
+  };
+
+  // Primary badge from the persisted lifecycle status (Phase 3); grace/read-only shown alongside
+  // since they are plan-expiry facets an ACTIVE/TRIAL status doesn't carry.
   const statusBadge = (tn) => {
-    if (!tn.active) return <Badge variant="destructive">{t('platform.status.suspended', 'Suspended')}</Badge>;
-    if (tn.readOnly) return <Badge variant="destructive">{t('platform.status.readOnly', 'Read-only')}</Badge>;
-    if (tn.inGracePeriod) return <Badge variant="secondary">{t('platform.status.grace', 'Grace')}</Badge>;
-    if (tn.isTrial) return <Badge>{t('platform.status.trial', 'Trial')}</Badge>;
-    return <Badge>{t('platform.status.active', 'Active')}</Badge>;
+    const byStatus = {
+      CANCELLED: <Badge variant="destructive">{t('platform.status.cancelled', 'Cancelled')}</Badge>,
+      SUSPENDED: <Badge variant="destructive">{t('platform.status.suspended', 'Suspended')}</Badge>,
+      EXPIRED: <Badge variant="destructive">{t('platform.status.expired', 'Expired')}</Badge>,
+      PAST_DUE: <Badge variant="secondary">{t('platform.status.pastDue', 'Past due')}</Badge>,
+      TRIAL: <Badge>{t('platform.status.trial', 'Trial')}</Badge>,
+      ACTIVE: <Badge>{t('platform.status.active', 'Active')}</Badge>,
+    };
+    // Fallback derivation for a row without the lifecycle field (shouldn't happen post-V158).
+    const primary = byStatus[tn.subscriptionStatus]
+      || (!tn.active ? byStatus.SUSPENDED : tn.isTrial ? byStatus.TRIAL : byStatus.ACTIVE);
+    return (
+      <div className="flex flex-wrap gap-1">
+        {primary}
+        {tn.subscriptionStatus !== 'EXPIRED' && tn.readOnly
+          && <Badge variant="destructive">{t('platform.status.readOnly', 'Read-only')}</Badge>}
+        {tn.inGracePeriod && <Badge variant="secondary">{t('platform.status.grace', 'Grace')}</Badge>}
+      </div>
+    );
   };
 
   const expiryText = (tn) => {
@@ -127,21 +188,15 @@ export default function PlatformConsole() {
                       <div className="font-medium">{tn.name}</div>
                       <div className="text-xs text-muted-foreground">#{tn.restaurantId}</div>
                     </td>
-                    <td className="py-3 pr-4">
-                      <Select
-                        value={tn.planCode || ''}
-                        onValueChange={(v) => v !== tn.planCode && runAction(
-                          tn.restaurantId,
-                          () => platformAPI.changePlan(tn.restaurantId, { planCode: v }),
-                          'platform.planChanged', 'Plan changed')}
+                    <td className="py-3 pr-4 whitespace-nowrap">
+                      <Button
+                        size="sm" variant="ghost" disabled={busyId === tn.restaurantId}
+                        onClick={() => openPlanEdit(tn)}
+                        aria-label={t('platform.changePlan', 'Change plan')}
                       >
-                        <SelectTrigger className="w-32">
-                          <SelectValue placeholder={tn.planName || '—'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {plans.map((p) => <SelectItem key={p.code} value={p.code}>{p.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                        {tn.planName || '—'}
+                        <Pencil className="h-3 w-3 ml-2 text-muted-foreground" />
+                      </Button>
                     </td>
                     <td className="py-3 pr-4">{statusBadge(tn)}</td>
                     <td className="py-3 pr-4 whitespace-nowrap">{expiryText(tn)}</td>
@@ -169,6 +224,15 @@ export default function PlatformConsole() {
                               'platform.reactivated', 'Tenant reactivated')}
                           >
                             <CheckCircle2 className="h-4 w-4 mr-1" />{t('platform.reactivate', 'Reactivate')}
+                          </Button>
+                        )}
+                        {tn.subscriptionStatus !== 'CANCELLED' && (
+                          <Button
+                            size="sm" variant="outline" disabled={busyId === tn.restaurantId}
+                            className="text-destructive"
+                            onClick={() => cancelSubscription(tn)}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />{t('platform.cancel', 'Cancel')}
                           </Button>
                         )}
                       </div>
@@ -201,6 +265,61 @@ export default function PlatformConsole() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={planEdit != null} onOpenChange={(open) => !open && setPlanEdit(null)}>
+        <DialogContent className="sm:max-w-md">
+          {planEdit && (
+            <form onSubmit={submitPlanEdit} className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>
+                  {t('platform.changePlanFor', 'Change plan — {{name}}', { name: planEdit.tenant.name })}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-2">
+                <Label>{t('platform.plan', 'Plan')}</Label>
+                <Select
+                  value={planEdit.planCode}
+                  onValueChange={(v) => setPlanEdit((s) => ({ ...s, planCode: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('platform.selectPlan', 'Select a plan')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plans.map((p) => <SelectItem key={p.code} value={p.code}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="platform-plan-expiry">{t('platform.expiresAt', 'Expires at')}</Label>
+                <Input
+                  id="platform-plan-expiry" type="datetime-local"
+                  value={planEdit.planExpiresAt}
+                  onChange={(e) => setPlanEdit((s) => ({ ...s, planExpiresAt: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t('platform.expiryHint', 'Leave empty for no expiry (e.g. the free Start tier).')}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="platform-plan-trial"
+                  checked={planEdit.isTrial}
+                  onCheckedChange={(v) => setPlanEdit((s) => ({ ...s, isTrial: Boolean(v) }))}
+                />
+                <Label htmlFor="platform-plan-trial">{t('platform.markTrial', 'Trial assignment')}</Label>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setPlanEdit(null)}>
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button type="submit" disabled={!planEdit.planCode}>
+                  {t('platform.apply', 'Apply')}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
