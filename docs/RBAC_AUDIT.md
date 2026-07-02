@@ -2,8 +2,9 @@
 
 A deep, adversarially-verified RBAC audit (role model, endpoint coverage, privilege escalation,
 cross-principal confusion, `permitAll` surface, frontend-vs-backend) found **24 confirmed defects**
-(3 critical, 11 high, 7 medium, 3 low), driven by six root causes. This records what was fixed, what is
-deferred, and why — so the remaining items survive into later work.
+(3 critical, 11 high, 7 medium, 3 low), driven by six root causes. **All 24 are now fixed** — the three
+public-tracking PII leaks, initially deferred as a product decision, were fixed once the decision was
+made (see the dedicated section below). This records what was fixed, how, and the rollout residuals.
 
 > **Load-bearing context:** `@PreAuthorize` is active (`@EnableMethodSecurity`), the role hierarchy is
 > only `SUPER_ADMIN > ADMIN`, and tenant/subscription enforcement ship in **shadow/off** (not yet
@@ -58,19 +59,21 @@ deferred, and why — so the remaining items survive into later work.
 - **WebSocket auth ships shadow** so the **external print agent** can be updated to send a device token
   before `enforce` (otherwise `/ws-print-agent` CONNECT would be rejected and printing would break).
 
-## Deferred — needs a product decision (NOT shipped)
+## Public tracking PII — #17 / #18 / #19 (now FIXED)
 
-**#17 / #18 / #19 — unauthenticated public order/reservation tracking leaks PII.**
-`GET /api/v1/public/orders/{orderNumber}/status`, `.../orders/track?phone=`, and
-`.../reservations/phone/{phone}` return order/reservation PII (incl. delivery address, courier phone,
-live courier lat/long) to unauthenticated callers, keyed by an **enumerable order number** or an
-**unverified phone number** (cross-tenant). These back live consumer tracking features; the correct fix
-is a product change:
-- replace enumerable order numbers with **opaque per-order tracking tokens**, and/or
-- **OTP-verify** phone ownership before returning results, and
-- trim courier GPS / exact address from the unauthenticated projection.
-Shipping a blind change here would break order tracking, so it is flagged for a product decision rather
-than guessed. **Interim risk is live.**
+Originally deferred as a product decision; the decision was made (fix them). Investigation showed the
+whole surface was **orphaned** — `OrderTrackingPage` isn't routed, `trackByPhone` / reservation
+`getByPhone` have no callers, and no backend flow generates a customer tracking link — so the fixes
+broke nothing live:
+
+| # | Fix |
+|---|---|
+| 17 | Orders gained an unguessable `tracking_token` (`V159`, generated on insert, backfilled). `GET /public/orders/{orderNumber}/status` + `/eta` now **require** a matching `?token=` — a mismatch/absent token is 404 (no enumeration, no existence oracle). The token is returned to the placer in the consumer `OrderResponse` so a tracking link can be built; delivery info (courier phone/GPS) is retained because the token now authorizes the request to the order's owner. |
+| 18 | `GET /public/orders/track?phone=` **removed** (returned any phone's recent orders cross-tenant with courier PII, no ownership proof, no caller). |
+| 19 | `GET /public/reservations/phone/{phone}` **removed** (cross-tenant reservation PII by enumerable phone, no caller). Consumers use the unguessable `/public/reservations/{confirmationCode}` instead. |
+
+Tests: `OrderTrackingServiceTest` (token match / wrong / null / not-found), `PublicOrderControllerTest`
+(token required → 400 without it).
 
 ## Self-review round (fixes to the fixes)
 

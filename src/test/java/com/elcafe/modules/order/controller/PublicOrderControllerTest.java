@@ -12,8 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.util.List;
-
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,24 +30,27 @@ class PublicOrderControllerTest {
     }
 
     @Test
-    @DisplayName("GET /{orderNumber}/status returns tracking")
-    void getStatus_returns200() throws Exception {
-        when(trackingService.getOrderTracking("ORD-001")).thenReturn(OrderTrackingResponse.builder().build());
-        mockMvc.perform(get("/api/v1/public/orders/ORD-001/status")).andExpect(status().isOk());
-    }
-
-    @Test
-    @DisplayName("GET /track returns orders by phone")
-    void trackByPhone_returns200() throws Exception {
-        when(trackingService.getRecentOrdersByPhone("+998901111111")).thenReturn(List.of());
-        mockMvc.perform(get("/api/v1/public/orders/track").param("phone", "+998901111111"))
+    @DisplayName("GET /{orderNumber}/status passes the tracking token and returns 200")
+    void getStatus_withToken_returns200() throws Exception {
+        when(trackingService.getOrderTracking(eq("ORD-001"), eq("tok")))
+                .thenReturn(OrderTrackingResponse.builder().build());
+        mockMvc.perform(get("/api/v1/public/orders/ORD-001/status").param("token", "tok"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("GET /{orderNumber}/eta returns ETA info")
-    void getEta_returns200() throws Exception {
-        when(trackingService.calculateETA("ORD-001")).thenReturn(OrderTrackingResponse.ETAInfo.builder().build());
-        mockMvc.perform(get("/api/v1/public/orders/ORD-001/eta")).andExpect(status().isOk());
+    @DisplayName("GET /{orderNumber}/status without a token → 400 (token is required)")
+    void getStatus_missingToken_returns400() throws Exception {
+        mockMvc.perform(get("/api/v1/public/orders/ORD-001/status"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("GET /{orderNumber}/eta passes the tracking token and returns 200")
+    void getEta_withToken_returns200() throws Exception {
+        when(trackingService.calculateETA(eq("ORD-001"), eq("tok")))
+                .thenReturn(OrderTrackingResponse.ETAInfo.builder().build());
+        mockMvc.perform(get("/api/v1/public/orders/ORD-001/eta").param("token", "tok"))
+                .andExpect(status().isOk());
     }
 }

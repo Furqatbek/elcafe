@@ -145,13 +145,10 @@ public class ReservationController {
         return ResponseEntity.ok(ApiResponse.success("Reservation cancelled", cancelled));
     }
 
-    @GetMapping("/public/reservations/phone/{phone}")
-    @Operation(summary = "Get reservations by phone", description = "Get customer's reservations by phone number")
-    public ResponseEntity<ApiResponse<List<ReservationResponse>>> getReservationsByPhone(
-            @PathVariable String phone) {
-        List<ReservationResponse> reservations = reservationService.getReservationsByPhone(phone);
-        return ResponseEntity.ok(ApiResponse.success(reservations));
-    }
+    // NOTE: GET /public/reservations/phone/{phone} was removed (audit #19) — it returned all reservations
+    // for any supplied phone number (name, party size, table, restaurant) cross-tenant with no ownership
+    // proof, unlike the sibling /public/reservations/{confirmationCode} which requires the unguessable
+    // code. It had no caller. Consumers look up a reservation by its confirmation code.
 
     // ========== Admin Endpoints ==========
 

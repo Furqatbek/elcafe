@@ -72,6 +72,15 @@ public class Order {
     @Column(nullable = false, unique = true, length = 50)
     private String orderNumber;
 
+    /**
+     * Unguessable secret for public order tracking. The order number is a human-friendly, sequential
+     * (enumerable) identifier, so it cannot authorize the public tracking endpoint on its own — the
+     * caller must also present this token, which is only known to whoever placed the order. Generated
+     * once on insert (see {@link #initializeDefaults()}).
+     */
+    @Column(name = "tracking_token", unique = true, length = 64)
+    private String trackingToken;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "restaurant_id", nullable = false)
     @JsonIgnore
@@ -497,6 +506,11 @@ public class Order {
     @PrePersist
     @PreUpdate
     protected void initializeDefaults() {
+        // Generate the public-tracking secret once, on first persist (guarded so @PreUpdate never rotates it).
+        if (trackingToken == null) {
+            trackingToken = java.util.UUID.randomUUID().toString().replace("-", "")
+                    + java.util.UUID.randomUUID().toString().replace("-", "");
+        }
         if (subtotal == null) subtotal = BigDecimal.ZERO;
         if (deliveryFee == null) deliveryFee = BigDecimal.ZERO;
         if (tax == null) tax = BigDecimal.ZERO;

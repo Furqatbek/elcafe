@@ -106,9 +106,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     List<Reservation> findByCustomerId(Long customerId);
 
-    @Query("SELECT r FROM Reservation r WHERE r.customerPhone = :phone ORDER BY r.createdAt DESC")
-    List<Reservation> findByCustomerPhone(@Param("phone") String phone);
-
     @Query("SELECT r FROM Reservation r WHERE r.status = :status " +
            "AND r.reservationDate = :date " +
            "AND r.reminderSent = false")

@@ -9,12 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security - 2026-07-02
 
-#### RBAC remediation — closed 21 of 24 audited authorization defects
+#### RBAC remediation — closed all 24 audited authorization defects
 
-A deep, adversarially-verified RBAC audit found 24 confirmed defects (3 critical, 11 high). 21 are
-fixed here; 3 (unauthenticated public order/reservation tracking PII) are flagged for a product
-decision because a blind change would break live consumer tracking. Full detail, root causes, and
-residuals in **`docs/RBAC_AUDIT.md`**.
+A deep, adversarially-verified RBAC audit found 24 confirmed defects (3 critical, 11 high), all now
+fixed. Full detail, root causes, and rollout residuals in **`docs/RBAC_AUDIT.md`**.
+
+**Public order/reservation tracking (#17/#18/#19):** orders gained an unguessable `tracking_token`
+(`V159`); the public order-status/eta endpoints now require it (`?token=`), so the enumerable order
+number no longer authorizes access — a wrong/absent token is 404. The two unauthenticated
+lookup-by-phone endpoints (order `track?phone=`, `reservations/phone/{phone}`) — cross-tenant PII with
+no ownership proof and no callers — were removed; reservations are looked up by their unguessable
+confirmation code. The token is returned to the placer in the consumer order response.
 
 Highlights:
 - **Registration lockdown (the root cause):** `POST /auth/register` no longer anonymously mints a

@@ -363,16 +363,8 @@ public class ReservationService {
         return ReservationResponse.from(saved);
     }
 
-    /**
-     * Get customer's reservations by phone
-     */
-    @Transactional(readOnly = true)
-    public List<ReservationResponse> getReservationsByPhone(String phone) {
-        return reservationRepository.findByCustomerPhone(phone)
-                .stream()
-                .map(ReservationResponse::from)
-                .collect(Collectors.toList());
-    }
+    // getReservationsByPhone(phone) was removed with its public endpoint (audit #19): unauthenticated
+    // cross-tenant PII disclosure by an enumerable phone number, with no caller.
 
     // Helper methods
 

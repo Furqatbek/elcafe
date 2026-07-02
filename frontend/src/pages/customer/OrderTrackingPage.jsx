@@ -33,6 +33,7 @@ const statusStepsPickup = [
 export default function OrderTrackingPage() {
   const { orderNumber } = useParams();
   const [searchParams] = useSearchParams();
+  const token = searchParams.get('token'); // unguessable order tracking secret (audit #17)
   const [tracking, setTracking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -56,7 +57,7 @@ export default function OrderTrackingPage() {
   const loadTracking = async () => {
     try {
       setError(null);
-      const response = await orderTrackingAPI.getStatus(orderNumber);
+      const response = await orderTrackingAPI.getStatus(orderNumber, token);
       setTracking(response.data.data);
       setLastUpdated(new Date());
     } catch (err) {

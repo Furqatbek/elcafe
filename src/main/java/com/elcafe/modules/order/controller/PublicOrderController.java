@@ -9,8 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/public/orders")
 @RequiredArgsConstructor
@@ -19,27 +17,26 @@ public class PublicOrderController {
 
     private final OrderTrackingService orderTrackingService;
 
+    // Tracking requires the order's unguessable token (audit #17): the order number is enumerable, so it
+    // cannot authorize access on its own. The customer receives the token when the order is placed.
     @GetMapping("/{orderNumber}/status")
-    @Operation(summary = "Get order status", description = "Get current order status and tracking information")
+    @Operation(summary = "Get order status", description = "Current status + tracking; requires the order tracking token")
     public ResponseEntity<ApiResponse<OrderTrackingResponse>> getOrderStatus(
-            @PathVariable String orderNumber) {
-        OrderTrackingResponse tracking = orderTrackingService.getOrderTracking(orderNumber);
+            @PathVariable String orderNumber,
+            @RequestParam String token) {
+        OrderTrackingResponse tracking = orderTrackingService.getOrderTracking(orderNumber, token);
         return ResponseEntity.ok(ApiResponse.success(tracking));
     }
 
     @GetMapping("/{orderNumber}/eta")
-    @Operation(summary = "Get order ETA", description = "Get estimated time of arrival/completion")
+    @Operation(summary = "Get order ETA", description = "ETA; requires the order tracking token")
     public ResponseEntity<ApiResponse<OrderTrackingResponse.ETAInfo>> getOrderETA(
-            @PathVariable String orderNumber) {
-        OrderTrackingResponse.ETAInfo eta = orderTrackingService.calculateETA(orderNumber);
+            @PathVariable String orderNumber,
+            @RequestParam String token) {
+        OrderTrackingResponse.ETAInfo eta = orderTrackingService.calculateETA(orderNumber, token);
         return ResponseEntity.ok(ApiResponse.success(eta));
     }
 
-    @GetMapping("/track")
-    @Operation(summary = "Track order by phone", description = "Get recent orders for a phone number")
-    public ResponseEntity<ApiResponse<List<OrderTrackingResponse>>> trackByPhone(
-            @RequestParam String phone) {
-        List<OrderTrackingResponse> orders = orderTrackingService.getRecentOrdersByPhone(phone);
-        return ResponseEntity.ok(ApiResponse.success(orders));
-    }
+    // NOTE: the /track?phone= endpoint was removed (audit #18) — it returned any phone's recent orders
+    // (delivery address, courier phone/GPS) cross-tenant with no ownership proof, and had no caller.
 }

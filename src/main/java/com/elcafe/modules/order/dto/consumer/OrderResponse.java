@@ -19,6 +19,8 @@ public class OrderResponse {
 
     private Long id;
     private String orderNumber;
+    /** Unguessable secret the customer uses to track this order (audit #17); returned only to the placer. */
+    private String trackingToken;
     private OrderStatus status;
     private OrderSource orderSource;
     private BigDecimal subtotal;

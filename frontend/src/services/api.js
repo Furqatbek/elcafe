@@ -1291,10 +1291,8 @@ export const reservationPublicAPI = {
     api.post(`/public/reservations/${confirmationCode}/cancel`, null, {
       params: { reason }
     }),
-
-  // Get reservations by phone
-  getByPhone: (phone) =>
-    api.get(`/public/reservations/phone/${phone}`),
+  // (getByPhone removed — the /public/reservations/phone endpoint was deleted server-side, audit #19;
+  //  look up a reservation by its confirmation code instead.)
 
   // Get tables with availability for reservation
   getTables: (restaurantId, date, time, partySize = 2) =>
@@ -1359,19 +1357,15 @@ export const reservationAPI = {
     api.put(`/restaurants/${restaurantId}/reservation-settings`, data),
 };
 
-// Order Tracking API (public endpoints)
+// Order Tracking API (public endpoints). The order number is enumerable, so the endpoints require the
+// order's unguessable tracking token (audit #17) — passed as ?token=. The customer receives it when the
+// order is placed. (The former track-by-phone endpoint was removed server-side, audit #18.)
 export const orderTrackingAPI = {
-  // Get order status by order number
-  getStatus: (orderNumber) =>
-    api.get(`/public/orders/${orderNumber}/status`),
+  getStatus: (orderNumber, token) =>
+    api.get(`/public/orders/${orderNumber}/status`, { params: { token } }),
 
-  // Get ETA
-  getETA: (orderNumber) =>
-    api.get(`/public/orders/${orderNumber}/eta`),
-
-  // Track orders by phone
-  trackByPhone: (phone) =>
-    api.get(`/public/orders/track`, { params: { phone } }),
+  getETA: (orderNumber, token) =>
+    api.get(`/public/orders/${orderNumber}/eta`, { params: { token } }),
 };
 
 export const packagingRuleAPI = {

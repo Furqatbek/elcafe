@@ -35,39 +35,34 @@ public class OrderTrackingService {
     private static final int AVG_DELIVERY_TIME = 30;
 
     /**
-     * Get full order tracking information
+     * Get full order tracking information. The caller must present the order's unguessable
+     * {@code trackingToken} (audit #17) — the sequential order number alone does not authorize access,
+     * so a foreign order is indistinguishable from a non-existent one (both 404).
      */
     @Transactional(readOnly = true)
-    public OrderTrackingResponse getOrderTracking(String orderNumber) {
-        Order order = orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
-
-        return buildTrackingResponse(order);
+    public OrderTrackingResponse getOrderTracking(String orderNumber, String token) {
+        return buildTrackingResponse(loadTracked(orderNumber, token));
     }
 
     /**
-     * Calculate ETA for an order
+     * Calculate ETA for an order (token-gated, see {@link #getOrderTracking}).
      */
     @Transactional(readOnly = true)
-    public OrderTrackingResponse.ETAInfo calculateETA(String orderNumber) {
-        Order order = orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
-
-        return calculateETAForOrder(order);
+    public OrderTrackingResponse.ETAInfo calculateETA(String orderNumber, String token) {
+        return calculateETAForOrder(loadTracked(orderNumber, token));
     }
 
-    /**
-     * Get recent orders by phone number for tracking
-     */
-    @Transactional(readOnly = true)
-    public List<OrderTrackingResponse> getRecentOrdersByPhone(String phone) {
-        // Get orders from last 24 hours using proper database query
-        OffsetDateTime since = OffsetDateTime.now().minusHours(24);
-
-        return orderRepository.findByCustomerPhoneAndCreatedAtAfterWithDetails(phone, since).stream()
-                .limit(5)
-                .map(this::buildTrackingResponse)
-                .collect(Collectors.toList());
+    /** Load an order by number only if the supplied tracking token matches; otherwise 404. */
+    private Order loadTracked(String orderNumber, String token) {
+        Order order = orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
+        // Constant-ish equality; a null/blank or mismatched token is treated as not-found (don't confirm
+        // the order exists to someone enumerating order numbers without the secret).
+        if (token == null || order.getTrackingToken() == null
+                || !order.getTrackingToken().equals(token)) {
+            throw new ResourceNotFoundException("Order", "orderNumber", orderNumber);
+        }
+        return order;
     }
 
     private OrderTrackingResponse buildTrackingResponse(Order order) {

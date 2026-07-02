@@ -378,6 +378,7 @@ public class ConsumerOrderService {
         return OrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
+                .trackingToken(order.getTrackingToken()) // returned to the ordering customer so they can build a tracking link (audit #17)
                 .status(order.getStatus())
                 .orderSource(order.getOrderSource())
                 .subtotal(order.getSubtotal())
