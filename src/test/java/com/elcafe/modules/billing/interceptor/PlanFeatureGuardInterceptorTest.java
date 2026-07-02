@@ -51,6 +51,11 @@ class PlanFeatureGuardInterceptorTest {
         // RFM segments data is Advance-gated; the core /customers CRUD stays ungated (asserted below).
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/customers/activity")).isEqualTo("customers.segments");
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/customers/activity/filter")).isEqualTo("customers.segments");
+        // Staff reservations management is Advance-gated; consumer booking (public, below) is not.
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/reservations")).isEqualTo("reservations");
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/reservations/date/2026-07-02")).isEqualTo("reservations");
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/reservations/9/confirm")).isEqualTo("reservations");
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/restaurants/5/reservation-settings")).isEqualTo("reservations");
     }
 
     @Test
@@ -67,6 +72,12 @@ class PlanFeatureGuardInterceptorTest {
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/billing/me")).isNull();
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/auth/login")).isNull();
         assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/self-service/start")).isNull();
+        // The whole consumer/public API is categorically ungated — even paths that would otherwise
+        // match a rule (consumer booking must never 403 on a Start-tier restaurant).
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/public/restaurants/5/reservations")).isNull();
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/public/reservations/ABC123")).isNull();
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/public/reservations/ABC123/cancel")).isNull();
+        assertThat(PlanFeatureGuardInterceptor.featureFor("/api/v1/public/restaurants/5/availability")).isNull();
     }
 
     // ---------------------------------------------------------------- preHandle wiring

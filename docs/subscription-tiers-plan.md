@@ -726,22 +726,26 @@ living only in a work session. A 7-agent completeness audit
 it found — promotion-analytics gated one tier too low — is already fixed
 (`/promotions/analytics → marketing.analytics`).
 
-### Open decision — backend gating of consumer/shared modules
+### Resolved decision — backend gating of consumer/shared modules
 
-Self-service online orders and reservations are gated in the **UI only**
-(hidden in the sidebar), not 403'd by the backend. This is deliberate:
-their backends are consumer/public (booking, self-service ordering) and
-self-service **shares an endpoint with core POS takeaway**, so a naive
-backend rule would break takeaway for Start-tier restaurants (see
-`PlanFeatureGuardInterceptor` javadoc + commit `5fea6c2`). Consumer
-traffic isn't gated anyway (no staff tenant → null-tenant skip).
+Self-service online orders and reservations were originally gated in the
+**UI only** (hidden in the sidebar), not 403'd by the backend, because
+their backends are consumer/public and self-service **shares an endpoint
+with core POS takeaway** (see `PlanFeatureGuardInterceptor` javadoc +
+commit `5fea6c2`).
 
-- **Residual:** a Start-tier *staff* user could still reach the
-  staff-facing reservations-management API directly.
-- **Decision needed:** add defense-in-depth 403s on the staff
-  reservations endpoints (scoped to NOT touch consumer booking or POS
-  takeaway), or leave as designed. Same question applies to any
-  staff-only self-service management endpoints.
+**Resolved (2026-07-02):** the *staff-facing* reservations-management
+API is now backend-gated (`/reservations` + `/reservation-settings` →
+`reservations` in `PlanFeatureGuardInterceptor`), closing the residual
+where a Start-tier staff user could reach it directly. Consumer booking
+is untouched: `featureFor` now categorically skips `/api/v1/public/**`,
+so the public booking/tracking endpoints can never be plan-gated — even
+with a staff token attached. Pinned by `PlanFeatureGuardInterceptorTest`
+(staff paths gated + four public reservation paths asserted null).
+**Self-service stays UI-only gated by design** — its backend endpoint is
+shared with core POS takeaway, so a backend rule would break takeaway
+for Start-tier restaurants; revisit only if the endpoints are ever
+split.
 
 ### Pre-launch verification (manual — no CI coverage)
 

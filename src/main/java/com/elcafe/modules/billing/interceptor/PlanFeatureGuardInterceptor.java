@@ -26,10 +26,13 @@ import java.util.List;
  *       tests / unseeded setups, where gating must not fire.</li>
  * </ul>
  *
- * <p>Core modules (POS, basic orders, menu, restaurant, customers, staff, settings) and consumer-facing
- * features whose backend is public (reservations booking, self-service) are intentionally <em>not</em>
- * mapped — they are hidden in the sidebar (A4c) rather than 403'd here. Frontend hiding is UX; this is
- * the independent backend enforcement.
+ * <p>Core modules (POS, basic orders, menu, restaurant, customers, staff, settings) are intentionally
+ * <em>not</em> mapped. The consumer/public API ({@code /api/v1/public/**}) is categorically never
+ * gated — even when a staff token happens to be attached — so consumer booking/tracking can't break.
+ * Self-service stays UI-only gated (it shares its endpoint with core POS takeaway), but the
+ * <em>staff-facing</em> reservations management API is gated: consumer booking is public, managing the
+ * reservation book is the paid Advance feature. Frontend hiding is UX; this is the independent backend
+ * enforcement.
  */
 @Component
 @RequiredArgsConstructor
@@ -79,7 +82,11 @@ public class PlanFeatureGuardInterceptor implements HandlerInterceptor {
             new Rule("/milestones", false, PlanFeatures.MARKETING_MILESTONES),
             new Rule("/referrals", false, PlanFeatures.MARKETING_REFERRALS),
             new Rule("/employee-consumptions", false, PlanFeatures.STAFF_CONSUMPTION),
-            new Rule("/consumption-allowances", false, PlanFeatures.STAFF_CONSUMPTION));
+            new Rule("/consumption-allowances", false, PlanFeatures.STAFF_CONSUMPTION),
+            // Staff reservations management (list/create/confirm/cancel + settings). Consumer booking
+            // lives under /api/v1/public/** which featureFor never gates (see the guard below).
+            new Rule("/reservations", false, PlanFeatures.RESERVATIONS),
+            new Rule("/reservation-settings", false, PlanFeatures.RESERVATIONS));
 
     private final PlanGateService planGateService;
     private final RestaurantAuthorizationService authorizationService;
@@ -87,6 +94,11 @@ public class PlanFeatureGuardInterceptor implements HandlerInterceptor {
     /** The feature code required for a request URI, or {@code null} if the path is not gated. */
     static String featureFor(String uri) {
         if (uri == null) {
+            return null;
+        }
+        // The consumer/public API is never plan-gated, whoever calls it — a staff token attached to a
+        // public booking/tracking call must not turn a consumer feature into a paid staff one.
+        if (uri.startsWith("/api/v1/public/")) {
             return null;
         }
         for (Rule rule : RULES) {

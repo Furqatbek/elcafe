@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed - 2026-07-02
 
+#### Staff reservations management is now backend-gated (residual closed)
+
+The last recorded enforcement residual: a Start-tier *staff* user could reach the staff-facing
+reservations-management API directly (it was hidden in the UI only). Now
+`/reservations` + `/reservation-settings` → `reservations` (Advance) in `PlanFeatureGuardInterceptor`.
+Consumer booking is structurally protected: `featureFor` categorically skips `/api/v1/public/**`, so
+public booking/tracking can never be plan-gated even with a staff token attached. Self-service stays
+UI-only gated by design (shares its endpoint with core POS takeaway). Pinned by
+`PlanFeatureGuardInterceptorTest` (+8 cases).
+
 #### Frontend/backend drift closed after a full plan-vs-code audit (Phase 5 + frontend)
 
 A 29-agent adversarially-verified audit of every frontend-related plan item surfaced ten real gaps
