@@ -6,6 +6,7 @@ import com.elcafe.modules.billing.dto.BillingStatusDto;
 import com.elcafe.modules.billing.dto.ChangePlanRequest;
 import com.elcafe.modules.billing.dto.SetPlanRequest;
 import com.elcafe.modules.billing.dto.TenantSummaryDto;
+import com.elcafe.modules.billing.enums.SubscriptionStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.security.UserPrincipal;
@@ -35,6 +36,7 @@ public class PlatformAdminService {
     private final PlanGateService planGateService;
     private final AuditService auditService;
     private final SubscriptionAccessService subscriptionAccessService;
+    private final BillingService billingService;
 
     @Transactional(readOnly = true)
     public Page<TenantSummaryDto> listTenants(String search, Pageable pageable) {
@@ -58,6 +60,7 @@ public class PlatformAdminService {
                 .daysUntilExpiry(b.getDaysUntilExpiry())
                 .inGracePeriod(b.getInGracePeriod())
                 .readOnly(b.getReadOnly())
+                .subscriptionStatus(r.getSubscriptionStatus())
                 .build();
     }
 
@@ -68,7 +71,10 @@ public class PlatformAdminService {
         setPlan.setPlanCode(request.getPlanCode());
         setPlan.setPlanExpiresAt(request.getPlanExpiresAt());
         setPlan.setIsTrial(request.getIsTrial());
-        return planGateService.setPlan(setPlan, actor);
+        BillingStatusDto status = planGateService.setPlan(setPlan, actor);
+        // Keep the lifecycle status coherent with the new plan/expiry/trial.
+        restaurantRepository.findById(restaurantId).ifPresent(billingService::reconcile);
+        return status;
     }
 
     /**
@@ -85,6 +91,7 @@ public class PlatformAdminService {
         LocalDateTime updated = base.plusDays(days);
 
         restaurant.setPlanExpiresAt(updated);
+        restaurant.setSubscriptionStatus(billingService.computeStatus(restaurant, now));
         restaurantRepository.save(restaurant);
         planGateService.invalidate(restaurantId);
 
@@ -112,6 +119,8 @@ public class PlatformAdminService {
         boolean previous = Boolean.TRUE.equals(restaurant.getActive());
 
         restaurant.setActive(active);
+        // Fresh derivation: suspend → SUSPENDED, reactivate → ACTIVE/TRIAL/EXPIRED (clears any CANCELLED).
+        restaurant.setSubscriptionStatus(billingService.computeStatus(restaurant, LocalDateTime.now()));
         restaurantRepository.save(restaurant);
         // Refresh the access gate immediately so suspension/reactivation doesn't wait out the cache TTL.
         subscriptionAccessService.invalidate(restaurantId);
@@ -129,6 +138,35 @@ public class PlatformAdminService {
                 .actionDetail((active ? "Restaurant reactivated" : "Restaurant suspended") + " via platform console"));
 
         log.info("Restaurant {} active set {} -> {} by platform operator", restaurantId, previous, active);
+        return toSummary(restaurant);
+    }
+
+    /**
+     * Terminate a tenant's subscription: status {@code CANCELLED} (sticky against the daily reconcile
+     * job) and access cut off ({@code active = false}). Distinct from {@link #setActive} suspend —
+     * cancel is a lifecycle end-state, not a temporary pause. Reactivate revives it.
+     */
+    @Transactional
+    public TenantSummaryDto cancel(Long restaurantId, UserPrincipal actor) {
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found: " + restaurantId));
+
+        restaurant.setActive(false);
+        restaurant.setSubscriptionStatus(SubscriptionStatus.CANCELLED);
+        restaurantRepository.save(restaurant);
+        subscriptionAccessService.invalidate(restaurantId);
+
+        auditService.logAction(AuditService.AuditLogBuilder.create()
+                .action(AuditAction.SUBSCRIPTION_CANCELLED)
+                .entityType("Restaurant")
+                .entityId(restaurantId)
+                .restaurantId(restaurantId)
+                .userId(actor != null ? actor.getId() : null)
+                .username(actor != null ? actor.getUsername() : "system")
+                .userRole(actor != null && actor.getRole() != null ? actor.getRole().name() : null)
+                .actionDetail("Subscription cancelled via platform console"));
+
+        log.info("Subscription cancelled for restaurant {} by platform operator", restaurantId);
         return toSummary(restaurant);
     }
 }

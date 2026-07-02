@@ -1,6 +1,7 @@
 package com.elcafe.modules.restaurant.entity;
 
 import com.elcafe.modules.billing.entity.SubscriptionPlan;
+import com.elcafe.modules.billing.enums.SubscriptionStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
@@ -132,6 +133,13 @@ public class Restaurant {
     @Column(name = "is_trial", nullable = false)
     @Builder.Default
     private Boolean isTrial = false;
+
+    // Phase 3 scaffolding: the formal lifecycle state, reconciled from plan/expiry/active by
+    // BillingService (CANCELLED is sticky). Derived today; the billing engine will drive PAST_DUE.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subscription_status", nullable = false, length = 20)
+    @Builder.Default
+    private SubscriptionStatus subscriptionStatus = SubscriptionStatus.ACTIVE;
 
     public void addBusinessHours(BusinessHours hours) {
         businessHours.add(hours);

@@ -115,4 +115,16 @@ class PlatformAdminControllerTest {
 
         verify(service).setActive(eq(5L), eq(true), any());
     }
+
+    @Test
+    @DisplayName("POST /platform/tenants/{id}/cancel delegates to cancel()")
+    void cancel() throws Exception {
+        when(service.cancel(eq(5L), any()))
+                .thenReturn(TenantSummaryDto.builder().restaurantId(5L).active(false).build());
+
+        mvc.perform(post("/api/v1/platform/tenants/5/cancel"))
+                .andExpect(status().isOk());
+
+        verify(service).cancel(eq(5L), any());
+    }
 }

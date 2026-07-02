@@ -1,5 +1,6 @@
 package com.elcafe.modules.billing.dto;
 
+import com.elcafe.modules.billing.enums.SubscriptionStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -28,4 +29,6 @@ public class TenantSummaryDto {
     private Long daysUntilExpiry;
     private Boolean inGracePeriod;
     private Boolean readOnly;
+    /** Formal lifecycle state (Phase 3): TRIAL / ACTIVE / PAST_DUE / SUSPENDED / EXPIRED / CANCELLED. */
+    private SubscriptionStatus subscriptionStatus;
 }

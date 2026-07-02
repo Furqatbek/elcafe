@@ -6,6 +6,7 @@ import com.elcafe.modules.billing.dto.BillingStatusDto;
 import com.elcafe.modules.billing.dto.ChangePlanRequest;
 import com.elcafe.modules.billing.dto.SetPlanRequest;
 import com.elcafe.modules.billing.dto.TenantSummaryDto;
+import com.elcafe.modules.billing.enums.SubscriptionStatus;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.security.UserPrincipal;
@@ -43,6 +44,7 @@ class PlatformAdminServiceTest {
     @Mock private PlanGateService planGateService;
     @Mock private AuditService auditService;
     @Mock private SubscriptionAccessService subscriptionAccessService;
+    @Mock private BillingService billingService;
 
     @InjectMocks private PlatformAdminService service;
 
@@ -183,5 +185,22 @@ class PlatformAdminServiceTest {
 
         assertThat(r.getActive()).isTrue();
         assertThat(dto.isActive()).isTrue();
+    }
+
+    @Test
+    @DisplayName("cancel terminates the subscription: CANCELLED + inactive, audited, gate invalidated")
+    void cancel_terminates() {
+        Restaurant r = restaurant(9L, "X", true);
+        when(restaurantRepository.findById(9L)).thenReturn(Optional.of(r));
+        when(planGateService.getBillingStatus(9L)).thenReturn(BillingStatusDto.builder().build());
+
+        TenantSummaryDto dto = service.cancel(9L, actor);
+
+        assertThat(r.getActive()).isFalse();
+        assertThat(r.getSubscriptionStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
+        assertThat(dto.getSubscriptionStatus()).isEqualTo(SubscriptionStatus.CANCELLED);
+        verify(restaurantRepository).save(r);
+        verify(subscriptionAccessService).invalidate(9L);
+        verify(auditService).logAction(any());
     }
 }

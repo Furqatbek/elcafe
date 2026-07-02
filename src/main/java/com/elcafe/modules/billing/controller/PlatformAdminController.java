@@ -75,4 +75,12 @@ public class PlatformAdminController {
         return ResponseEntity.ok(ApiResponse.success("Tenant reactivated",
                 platformAdminService.setActive(id, true, actor)));
     }
+
+    @PostMapping("/tenants/{id}/cancel")
+    @Operation(summary = "Cancel a tenant's subscription (status CANCELLED; access cut off)")
+    public ResponseEntity<ApiResponse<TenantSummaryDto>> cancel(
+            @PathVariable Long id, @AuthenticationPrincipal UserPrincipal actor) {
+        return ResponseEntity.ok(ApiResponse.success("Subscription cancelled",
+                platformAdminService.cancel(id, actor)));
+    }
 }
