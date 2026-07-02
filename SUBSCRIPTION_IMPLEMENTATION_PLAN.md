@@ -11,7 +11,8 @@ hard-enforced data isolation. Subscription status gates access to the platform.
   expiry notifier, 14-day trial, admin plan management, en/ru/uz, tests.
 - **Phase 2** (access gate) — ✅ complete, dark-launched (`app.subscription.enforcement.mode=off`): a
   suspended tenant's staff **and waiters** get 402, Redis-cached, and the frontend `SuspensionGate`
-  surfaces it. Scoped to no-payments (suspended-only; expired stays read-only).
+  surfaces it. Scoped to no-payments (suspended-only; expired stays read-only). Flip is an ops action
+  per environment — see `docs/SUBSCRIPTION_ENFORCE_FLIP_RUNBOOK.md` (do the tenant flip first).
 - **Phase 5** (super-admin platform console) — ✅ tenant list + plan change/extend + suspend/reactivate.
 - **Phase 3** — ◐ payment-agnostic scaffolding landed (subscription lifecycle `SubscriptionStatus` +
   reconcile job); the **billing engine** (recurring charges, real provider, webhooks, invoices) and the
@@ -384,8 +385,11 @@ review, V155 notification tenant scope).
   to the DB if Redis is down). Allowlist auth/billing/platform/health so a suspended admin can log in +
   see billing; SUPER_ADMIN and non-tenant callers (consumer/public) always pass. The frontend surfaces
   the 402 via `SuspensionGate` (`subscriptionStore` + axios interceptor), so the gate is flippable end
-  to end. _Deferred to Phase 3:_ payment-driven statuses (`PAST_DUE`, dunning, `CANCELLED`) and the
-  provider/webhook wiring.
+  to end. The `[subscription-shadow]`/`[subscription-enforce]` log lines carry `tenant=` + `caller=`
+  (parity with `[tenant-shadow]`) so a shadow soak can tell a real would-be block from a false
+  positive. The flip procedure (off → shadow → enforce, per environment, tenant flip first) lives in
+  `docs/SUBSCRIPTION_ENFORCE_FLIP_RUNBOOK.md`. _Deferred to Phase 3:_ payment-driven statuses
+  (`PAST_DUE`, dunning, `CANCELLED`) and the provider/webhook wiring.
 
 ---
 

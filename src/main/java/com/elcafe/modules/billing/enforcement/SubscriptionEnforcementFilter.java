@@ -64,40 +64,46 @@ public class SubscriptionEnforcementFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        boolean suspended = false;
+        Blocked blocked = null;
         try {
-            suspended = shouldBlock(request);
+            blocked = evaluate(request);
         } catch (Exception e) {
             // Never let a filter bug break the request.
             log.error("SubscriptionEnforcementFilter error; allowing request to proceed", e);
         }
 
-        if (suspended) {
+        if (blocked != null) {
             if (mode == SubscriptionEnforcementMode.ENFORCE) {
-                writePaymentRequired(request, response);
+                writePaymentRequired(request, response, blocked);
                 return;
             }
-            log.warn("[subscription-shadow] would block {} {} for suspended tenant",
-                    request.getMethod(), request.getRequestURI());
+            // Decision-grade shadow line: carries the suspended tenant + caller so a soak can tell a
+            // legitimate would-be block from a false positive (mirrors [tenant-shadow]).
+            log.warn("[subscription-shadow] would block {} {} for suspended tenant={} caller={}",
+                    request.getMethod(), request.getRequestURI(), blocked.tenant(), blocked.caller());
         }
         chain.doFilter(request, response);
     }
 
-    private boolean shouldBlock(HttpServletRequest request) {
+    /** The suspended tenant + caller to block, or {@code null} if the request should pass. */
+    private Blocked evaluate(HttpServletRequest request) {
         String uri = request.getRequestURI();
         if (uri != null) {
             for (String allowed : ALLOWLIST) {
                 if (uri.startsWith(allowed)) {
-                    return false;
+                    return null;
                 }
             }
         }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) {
-            return false;
+            return null;
         }
         Long tenant = tenantToGate(auth);
-        return tenant != null && accessService.isSuspended(tenant);
+        if (tenant != null && accessService.isSuspended(tenant)) {
+            return new Blocked(tenant, auth.getName());
+        }
+        return null;
     }
 
     /**
@@ -116,13 +122,18 @@ public class SubscriptionEnforcementFilter extends OncePerRequestFilter {
         return isWaiter ? TenantContext.getRestaurantId() : null;
     }
 
-    private void writePaymentRequired(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        log.warn("[subscription-enforce] BLOCKED {} {} for suspended tenant",
-                request.getMethod(), request.getRequestURI());
+    private void writePaymentRequired(HttpServletRequest request, HttpServletResponse response, Blocked blocked)
+            throws IOException {
+        log.warn("[subscription-enforce] BLOCKED {} {} for suspended tenant={} caller={}",
+                request.getMethod(), request.getRequestURI(), blocked.tenant(), blocked.caller());
         response.setStatus(HttpServletResponse.SC_PAYMENT_REQUIRED); // 402
         response.setContentType("application/json");
         response.getWriter().write(
                 "{\"error\":\"SUBSCRIPTION_INACTIVE\",\"status\":\"SUSPENDED\","
                         + "\"message\":\"This restaurant's access has been suspended. Please contact support.\"}");
+    }
+
+    /** A request that would be (shadow) or was (enforce) blocked: the suspended tenant + the caller. */
+    private record Blocked(Long tenant, String caller) {
     }
 }

@@ -50,8 +50,13 @@ still log in and operate normally.
   types are gated — regular staff (`UserPrincipal`) and waiters (`ROLE_WAITER`, so a suspended tenant's
   POS is cut off too); consumers are not gated (public backends, and a suspended restaurant already
   drops from listings). Frontend 402 handling (`SuspensionGate`, below) completes the gate end to end.
-- Tests: `SubscriptionAccessServiceTest` (5), `SubscriptionEnforcementFilterTest` (7),
-  `PlatformAdminServiceTest` +1; context smoke test confirms the filter wires in at full boot.
+- **Flip readiness** — the `[subscription-shadow]`/`[subscription-enforce]` log lines now carry
+  `tenant=` + `caller=` (parity with `[tenant-shadow]`), so a shadow soak can distinguish a genuinely
+  suspended tenant from a false positive before enforcing. The off → shadow → enforce procedure (per
+  environment, tenant flip first) is documented in `docs/SUBSCRIPTION_ENFORCE_FLIP_RUNBOOK.md`.
+- Tests: `SubscriptionAccessServiceTest` (5), `SubscriptionEnforcementFilterTest` (10, incl. waiter +
+  consumer paths), `PlatformAdminServiceTest` +1; context smoke test confirms the filter wires in at
+  full boot.
 
 #### Frontend: 402 SUBSCRIPTION_INACTIVE handling
 
