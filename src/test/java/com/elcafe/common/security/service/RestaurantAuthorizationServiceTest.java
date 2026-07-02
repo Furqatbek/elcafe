@@ -8,7 +8,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,12 +24,24 @@ class RestaurantAuthorizationServiceTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+        TenantContext.clear();
     }
 
     private void authenticateAs(UserRole role, Long restaurantId) {
         UserPrincipal principal = new UserPrincipal(1L, "user@test.com", "pw", role, true, restaurantId);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+    }
+
+    /** A waiter/consumer session: a plain UserDetails (not UserPrincipal) with its tenant in TenantContext. */
+    private void authenticateAsNonStaff(Long boundTenant) {
+        var details = User.builder().username("waiter@1").password("x")
+                .authorities(new SimpleGrantedAuthority("ROLE_WAITER")).build();
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(details, null, details.getAuthorities()));
+        if (boundTenant != null) {
+            TenantContext.setRestaurantId(boundTenant);
+        }
     }
 
     private void setMode(String mode) {
@@ -159,5 +173,62 @@ class RestaurantAuthorizationServiceTest {
         authenticateAs(UserRole.ADMIN, null);
         setMode("shadow");
         assertThat(service.currentTenantReadScope()).isNull();
+    }
+
+    // ---------------------------------------------------------------- #22: non-UserPrincipal (waiter/consumer)
+
+    @Test
+    @DisplayName("validateRestaurantAccess — waiter/consumer accessing their OWN bound tenant is allowed")
+    void validate_nonStaff_ownTenant_ok() {
+        authenticateAsNonStaff(5L);
+        assertThatCode(() -> service.validateRestaurantAccess(5L)).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("validateRestaurantAccess — waiter/consumer reaching ANOTHER tenant is denied (no more early-allow)")
+    void validate_nonStaff_crossTenant_throws() {
+        authenticateAsNonStaff(5L);
+        assertThatThrownBy(() -> service.validateRestaurantAccess(9L)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("validateRestaurantAccess — waiter/consumer with no bound tenant is denied")
+    void validate_nonStaff_noContext_throws() {
+        authenticateAsNonStaff(null); // authenticated UserDetails but TenantContext unset
+        assertThatThrownBy(() -> service.validateRestaurantAccess(5L)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    // ---------------------------------------------------------------- strict (mode-independent) scopes
+
+    @Test
+    @DisplayName("currentTenantReadScopeStrict SHADOW — still scopes a tenant caller to its own restaurant")
+    void readScopeStrict_shadow_scopes() {
+        authenticateAs(UserRole.ADMIN, 7L);
+        setMode("shadow");
+        assertThat(service.currentTenantReadScopeStrict()).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("currentTenantReadScopeStrict — SUPER_ADMIN is unscoped (null)")
+    void readScopeStrict_superAdmin_null() {
+        authenticateAs(UserRole.SUPER_ADMIN, 7L);
+        setMode("shadow");
+        assertThat(service.currentTenantReadScopeStrict()).isNull();
+    }
+
+    @Test
+    @DisplayName("currentTenantScopeStrict SHADOW — binds a new row to the creator's restaurant (agrees with the read scope)")
+    void scopeStrict_shadow_bindsOwn() {
+        authenticateAs(UserRole.ADMIN, 7L);
+        setMode("shadow");
+        assertThat(service.currentTenantScopeStrict()).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("currentTenantScopeStrict — SUPER_ADMIN creates a platform (null-restaurant) row")
+    void scopeStrict_superAdmin_null() {
+        authenticateAs(UserRole.SUPER_ADMIN, null);
+        setMode("shadow");
+        assertThat(service.currentTenantScopeStrict()).isNull();
     }
 }
