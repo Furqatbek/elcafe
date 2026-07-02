@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added - 2026-07-01
 
+#### Phase 3 scaffolding — subscription lifecycle status (payment-agnostic)
+
+Groundwork for the billing engine that needs no payment acquirer, so a real provider drops in later
+without reshaping the model. No charging (prices 0, only the Noop provider).
+
+- **`SubscriptionStatus`** (TRIAL / ACTIVE / PAST_DUE / SUSPENDED / EXPIRED / CANCELLED) persisted on
+  `Restaurant.subscription_status` (V158, backfilled from active/expiry/trial). Status lives on the
+  restaurant, not a separate `Subscription` entity, to avoid churning the working Phase 1/2 code.
+- **`BillingService`** derives status from active/expiry/trial vs the 3-day grace and reconciles it;
+  `CANCELLED` is sticky against automation (only an explicit reactivate clears it). `PAST_DUE` is
+  reserved for the future engine's failed-charge path — nothing produces it yet.
+- **`SubscriptionLifecycleJob`** (`@Scheduled` daily 08:30) self-heals every tenant's status; recurring
+  charging will plug in here once a provider exists. One failure doesn't stop the rest.
+- **Platform console** keeps status coherent on plan/suspend/extend and gains **`cancel`**
+  (→ `CANCELLED` + access cut off, audited `SUBSCRIPTION_CANCELLED`); `TenantSummaryDto` carries status.
+- Tests: `BillingServiceTest` (8), `SubscriptionLifecycleJobTest` (2), + cancel coverage.
+- **Deferred** (needs an acquiring contract): recurring charges, real provider impls, webhooks,
+  invoices, self-serve checkout.
+
 #### Phase 2 — subscription access gate (dark-launched, suspended → 402)
 
 Operationalizes suspension. Before this, suspending a tenant in the platform console only dropped it

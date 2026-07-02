@@ -13,8 +13,9 @@ hard-enforced data isolation. Subscription status gates access to the platform.
   suspended tenant's staff **and waiters** get 402, Redis-cached, and the frontend `SuspensionGate`
   surfaces it. Scoped to no-payments (suspended-only; expired stays read-only).
 - **Phase 5** (super-admin platform console) — ✅ tenant list + plan change/extend + suspend/reactivate.
-- **Phase 3** (billing engine, provider, webhooks) and the payment UI of **Phase 4** — ⏸ deferred,
-  blocked on a payment-acquiring contract; plan prices stay 0. Invoices/MRR deferred with them.
+- **Phase 3** — ◐ payment-agnostic scaffolding landed (subscription lifecycle `SubscriptionStatus` +
+  reconcile job); the **billing engine** (recurring charges, real provider, webhooks, invoices) and the
+  payment UI of **Phase 4** remain ⏸ deferred, blocked on an acquiring contract. Prices stay 0.
 
 Per-section "_Landed_" notes below carry the detail. §1 is the original pre-work baseline (mostly
 resolved now) — read it as the motivation for this re-architecture, not the current state.
@@ -408,6 +409,14 @@ review, V155 notification tenant scope).
   current subscription, available plans, subscribe/change/cancel, invoice history,
   hosted-checkout/portal link.
 - **Config** — provider keys/secrets in `application.yml` via env (no committed defaults).
+
+- _Landed (payment-agnostic scaffolding):_ `SubscriptionStatus` on `Restaurant` (V158) +
+  `BillingService` (status derivation/reconcile; `CANCELLED` sticky) + `SubscriptionLifecycleJob`
+  (daily reconcile — where recurring charging will hook in). `PaymentProvider` interface +
+  `NoopPaymentProvider` stub already exist; the platform console gained `cancel`. _Still deferred
+  (needs an acquiring contract; prices stay 0):_ the recurring-charge job, real provider impls
+  (Click/Payme — patterns exist under `loyalty/service/topup/`), `BillingWebhookController`, invoices,
+  and the self-serve `SubscriptionController`.
 
 ---
 
