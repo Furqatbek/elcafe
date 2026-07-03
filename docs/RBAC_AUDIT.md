@@ -108,6 +108,9 @@ rolls back with a one-line env var):
   every print agent needs `AGENT_TOKEN` set before it reconnects, or it's rejected.
 
 ## Residuals / follow-ups
+- **Print-agent token has no per-token revocation** (stateless, 1-year expiry). A leaked token exposes
+  only that one restaurant's print stream (subscription-tenant-gated). To force-revoke before expiry,
+  rotate `app.security.jwt.secret`. A per-restaurant agent-token version can be added if operationally needed.
 - **SMS/Telegram campaigns** are role-gated but not tenant-scoped at the service layer (cross-tenant
   among staff); scope the campaign service (now that tenant enforcement is on, this is the remaining gap).
 - **Global STOMP topics** (`/topic/kitchen`, `/topic/waiter/*`, `/topic/table`) are shared across

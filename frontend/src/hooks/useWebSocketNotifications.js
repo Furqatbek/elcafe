@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import websocketService from '../services/websocket';
 import { toast } from './useToast';
+import { useAuthStore } from '../store/authStore';
 
 // Audio notification for new orders
 const playNotificationSound = () => {
@@ -219,13 +220,24 @@ export function useWebSocketNotifications(options = {}) {
 
   // Connect and subscribe
   useEffect(() => {
-    if (!enabled || !restaurantId) {
+    // The backend binds this WebSocket session to the AUTHENTICATED user's own restaurant
+    // (WEBSOCKET_AUTH_MODE=enforce). A tenant-scoped user must therefore subscribe to their own
+    // restaurant — a UI-selected / localStorage restaurantId that differs would be rejected by the
+    // per-subscription tenant check, killing notifications and thrashing the connection. Only a
+    // SUPER_ADMIN (gate-bypassed) may follow the passed selection to observe another tenant.
+    const user = useAuthStore.getState().user;
+    const ownRestaurantId = Number(user?.restaurantId) || null;
+    const targetRestaurantId = (user?.role !== 'SUPER_ADMIN' && ownRestaurantId)
+      ? ownRestaurantId
+      : restaurantId;
+
+    if (!enabled || !targetRestaurantId) {
       return;
     }
 
     // Capture restaurant ID for this effect instance (for cleanup)
-    const effectRestaurantId = restaurantId;
-    currentRestaurantIdRef.current = restaurantId;
+    const effectRestaurantId = targetRestaurantId;
+    currentRestaurantIdRef.current = targetRestaurantId;
 
     let mounted = true;
 

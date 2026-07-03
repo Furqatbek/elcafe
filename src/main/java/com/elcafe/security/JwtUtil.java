@@ -143,7 +143,13 @@ public class JwtUtil {
      * Generate a long-lived token for a print agent (a headless device). Carries a {@code restaurantId}
      * claim so {@link com.elcafe.modules.waiter.websocket.StompAuthChannelInterceptor} binds the STOMP
      * session to that tenant and only lets it read its own restaurant's print topic. The agent presents
-     * this on the WebSocket CONNECT. Minted by an ADMIN for their own restaurant; re-mint to rotate.
+     * this on the WebSocket CONNECT. Minted by an ADMIN for their own restaurant.
+     *
+     * <p><b>Revocation limitation:</b> this is a stateless token with no per-token version, so minting a
+     * new one does NOT invalidate a previously issued one — both stay valid until the 1-year expiry. A
+     * leaked token exposes only that one restaurant's print stream (read + mark-job-done/failed, gated by
+     * the subscription tenant check). To force-revoke before expiry, rotate {@code app.security.jwt.secret}
+     * (invalidates ALL tokens). A dedicated per-restaurant agent-token version can be added if needed.
      */
     public String generatePrintAgentToken(Long restaurantId) {
         Map<String, Object> claims = new HashMap<>();

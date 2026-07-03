@@ -18,7 +18,8 @@ import java.util.Map;
  * Mints the long-lived token a headless print agent presents on the WebSocket CONNECT (audit #21). The
  * token is always scoped to the CALLER's own restaurant (from the principal, never a client value), so a
  * tenant admin cannot mint a token for another tenant. Paste the token into the agent's {@code .env}
- * ({@code AGENT_TOKEN}); re-mint to rotate.
+ * ({@code AGENT_TOKEN}). Note: minting a new token does not revoke a prior one (stateless, no per-token
+ * version) — see {@link JwtUtil#generatePrintAgentToken}.
  */
 @Slf4j
 @RestController
