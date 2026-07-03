@@ -24,7 +24,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/sms/campaigns")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
+// Platform-operated: the SMS module uses one shared Eskiz account and has no per-tenant data, so it is
+// locked to SUPER_ADMIN until per-tenant SMS exists — else a tenant admin reaches other tenants' campaigns
+// and customer PII. See docs/RBAC_AUDIT.md.
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 public class SmsCampaignController {
 
     private final SmsCampaignService campaignService;

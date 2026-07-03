@@ -51,4 +51,34 @@ class RbacGateAnnotationTest {
         assertThat(pa).as("AuthController.register must be @PreAuthorize-gated").isNotNull();
         assertThat(pa.value()).contains("SUPER_ADMIN");
     }
+
+    /**
+     * Platform-operated marketing controllers locked to SUPER_ADMIN: SMS runs on one shared Eskiz account
+     * and Telegram on one global bot, and neither module's tables carry a restaurant_id, so they cannot be
+     * tenant-isolated as-is. Until per-tenant marketing exists they must stay SUPER_ADMIN-only — a downgrade
+     * to hasAnyRole(ADMIN,…) re-opens cross-tenant campaign access and customer-PII disclosure.
+     */
+    private static final List<String> SUPER_ADMIN_ONLY = List.of(
+            "com.elcafe.modules.sms.controller.SmsController",
+            "com.elcafe.modules.sms.controller.SmsCampaignController",
+            "com.elcafe.modules.sms.controller.SmsTemplateController",
+            "com.elcafe.modules.sms.controller.SmsAutomationController",
+            "com.elcafe.modules.sms.controller.SmsLogController",
+            "com.elcafe.modules.telegram.controller.TelegramCampaignController",
+            "com.elcafe.modules.telegram.controller.TelegramSubscriberController",
+            "com.elcafe.modules.telegram.controller.TelegramTemplateController",
+            "com.elcafe.modules.telegram.controller.TelegramBotConfigController");
+
+    @Test
+    @DisplayName("platform-operated SMS/Telegram marketing controllers are locked to SUPER_ADMIN")
+    void marketingControllersAreSuperAdminOnly() throws Exception {
+        for (String fqcn : SUPER_ADMIN_ONLY) {
+            Class<?> c = Class.forName(fqcn);
+            PreAuthorize pa = c.getAnnotation(PreAuthorize.class);
+            assertThat(pa).as("%s must carry a class-level @PreAuthorize", fqcn).isNotNull();
+            assertThat(pa.value())
+                    .as("%s must be gated to SUPER_ADMIN (platform-operated, shared infra)", fqcn)
+                    .contains("SUPER_ADMIN");
+        }
+    }
 }

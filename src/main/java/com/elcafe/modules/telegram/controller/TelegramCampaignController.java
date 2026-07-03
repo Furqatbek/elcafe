@@ -22,7 +22,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/telegram/campaigns")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'OWNER', 'MANAGER')")
+// Platform-operated: the Telegram module uses one global bot + a shared subscriber pool with no per-tenant
+// data, so it is locked to SUPER_ADMIN until per-tenant bots exist — else a tenant admin reaches every
+// tenant's subscribers/campaigns and can hijack the shared bot. See docs/RBAC_AUDIT.md.
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 public class TelegramCampaignController {
 
     private final TelegramCampaignService campaignService;

@@ -219,9 +219,9 @@ export default function Layout() {
         { label: t('nav.sub.happyHours', 'Happy Hours'), icon: Wine, path: '/marketing/happy-hours' },
         { label: t('nav.sub.bundles', 'Bundles'), icon: Package, path: '/marketing/bundles' },
         { label: t('nav.sub.referrals', 'Referrals'), icon: Share2, path: '/marketing/referrals' },
-        { label: t('nav.sub.smsMarketing', 'SMS Marketing'), icon: MessageSquare, path: '/marketing/sms' },
-        { label: t('nav.sub.telegramMarketing', 'Telegram'), icon: Send, path: '/marketing/telegram' },
-        { label: t('nav.sub.telegramSubscribers', 'Telegram subscribers'), icon: Bot, path: '/settings/telegram-subscribers' },
+        { label: t('nav.sub.smsMarketing', 'SMS Marketing'), icon: MessageSquare, path: '/marketing/sms', superAdminOnly: true },
+        { label: t('nav.sub.telegramMarketing', 'Telegram'), icon: Send, path: '/marketing/telegram', superAdminOnly: true },
+        { label: t('nav.sub.telegramSubscribers', 'Telegram subscribers'), icon: Bot, path: '/settings/telegram-subscribers', superAdminOnly: true },
         { label: t('nav.sub.instagramMarketing', 'Instagram'), icon: Instagram, path: '/marketing/instagram' },
         { label: t('nav.sub.qrCodes', 'QR Codes'), icon: QrCode, path: '/marketing/qr-codes' },
         { label: t('nav.sub.milestones', 'Milestones'), icon: Stamp, path: '/marketing/milestones' },
@@ -255,7 +255,7 @@ export default function Layout() {
         { label: t('nav.sub.printers'), icon: Printer, path: '/settings/printers' },
         { label: t('nav.sub.receiptTemplate', 'Chek Shabloni'), icon: Receipt, path: '/settings/receipt-template' },
         { label: t('nav.sub.kitchenStations', 'Kitchen Stations'), icon: ChefHat, path: '/settings/kitchen-stations' },
-        { label: t('nav.sub.telegramSubscribers', 'Telegram subscribers'), icon: Send, path: '/settings/telegram-subscribers' },
+        { label: t('nav.sub.telegramSubscribers', 'Telegram subscribers'), icon: Send, path: '/settings/telegram-subscribers', superAdminOnly: true },
       ],
     },
   ];
@@ -268,6 +268,9 @@ export default function Layout() {
   // Hide sub-items the current plan doesn't unlock (mini-phase A4c); drop a group when all of its
   // sub-items are hidden. A code-less path is core and always visible.
   const subItemVisible = (s) => {
+    // SMS/Telegram marketing is platform-operated (shared account / global bot) and locked to SUPER_ADMIN
+    // on the backend; hide those links from tenant roles so they don't hit a 403.
+    if (s.superAdminOnly && !isSuperAdmin) return false;
     const code = featureForPath(s.path);
     return !code || hasFeature(code);
   };

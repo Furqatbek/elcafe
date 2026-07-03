@@ -14,11 +14,20 @@ import org.springframework.web.bind.annotation.*;
 /**
  * REST Controller for Eskiz.uz SMS broker integration
  * Provides endpoints for all available SMS operations
+ *
+ * <p><b>Platform-operated (audit residual):</b> the SMS module sends through a SINGLE shared Eskiz
+ * account (one balance / sender id for the whole platform) and none of its tables carry a
+ * {@code restaurant_id}, so it is not tenant-isolatable as-is. Until per-tenant SMS (per-restaurant
+ * sending accounts + tenant-scoped data) is built, the entire module is restricted to
+ * {@code SUPER_ADMIN}: a tenant admin could otherwise read/send/delete other restaurants' campaigns and
+ * read every restaurant's customer PII (names, phones, message bodies) from the shared tables. The
+ * class-level gate is the default; each method also carries it explicitly.
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/sms")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 public class SmsController {
 
     private final SmsService smsService;
@@ -28,7 +37,7 @@ public class SmsController {
      * POST /api/v1/sms/auth/login
      */
     @PostMapping("/auth/login")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthResponse>> authenticate() {
         log.info("Authenticating with SMS broker");
         AuthResponse response = smsService.authenticate();
@@ -40,7 +49,7 @@ public class SmsController {
      * PATCH /api/v1/sms/auth/refresh
      */
     @PatchMapping("/auth/refresh")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<AuthResponse>> refreshToken() {
         log.info("Refreshing SMS broker token");
         AuthResponse response = smsService.refreshToken();
@@ -52,7 +61,7 @@ public class SmsController {
      * GET /api/v1/sms/auth/user
      */
     @GetMapping("/auth/user")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<UserInfoResponse>> getUserInfo() {
         log.info("Getting SMS broker user info");
         UserInfoResponse response = smsService.getUserInfo();
@@ -64,7 +73,7 @@ public class SmsController {
      * GET /api/v1/sms/user/limit
      */
     @GetMapping("/user/limit")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<UserLimitResponse>> getUserLimit() {
         log.info("Getting SMS broker user limit");
         UserLimitResponse response = smsService.getUserLimit();
@@ -76,7 +85,7 @@ public class SmsController {
      * GET /api/v1/sms/broker/templates
      */
     @GetMapping("/broker/templates")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<TemplateResponse>> getBrokerTemplates() {
         log.info("Getting Eskiz broker SMS templates");
         TemplateResponse response = smsService.getTemplates();
@@ -88,7 +97,7 @@ public class SmsController {
      * POST /api/v1/sms/send
      */
     @PostMapping("/send")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<SendSmsResponse>> sendSms(@Valid @RequestBody SendSmsRequest request) {
         log.info("Sending SMS to {}", request.getMobilePhone());
         SendSmsResponse response = smsService.sendSms(request);
@@ -101,7 +110,7 @@ public class SmsController {
      * POST /api/v1/sms/send-batch
      */
     @PostMapping("/send-batch")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<SendSmsResponse>> sendBatchSms(@Valid @RequestBody SendBatchSmsRequest request) {
         log.info("Sending batch SMS with {} messages", request.getMessages().size());
         SendSmsResponse response = smsService.sendBatchSms(request);
@@ -114,7 +123,7 @@ public class SmsController {
      * POST /api/v1/sms/send-global
      */
     @PostMapping("/send-global")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<SendSmsResponse>> sendGlobalSms(@Valid @RequestBody SendGlobalSmsRequest request) {
         log.info("Sending global SMS");
         SendSmsResponse response = smsService.sendGlobalSms(request);
@@ -127,7 +136,7 @@ public class SmsController {
      * GET /api/v1/sms/message/{id}/status
      */
     @GetMapping("/message/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<MessageStatusResponse>> getMessageStatus(@PathVariable Long id) {
         log.info("Getting status for message {}", id);
         MessageStatusResponse response = smsService.getMessageStatus(id);
@@ -139,7 +148,7 @@ public class SmsController {
      * GET /api/v1/sms/messages
      */
     @GetMapping("/messages")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<UserMessagesResponse>> getUserMessages(
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer perPage
@@ -154,7 +163,7 @@ public class SmsController {
      * GET /api/v1/sms/dispatch/{dispatchId}/messages
      */
     @GetMapping("/dispatch/{dispatchId}/messages")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<UserMessagesResponse>> getUserMessagesByDispatch(
             @PathVariable Long dispatchId,
             @RequestParam(required = false) Integer page,
@@ -170,7 +179,7 @@ public class SmsController {
      * GET /api/v1/sms/dispatch/{dispatchId}/status
      */
     @GetMapping("/dispatch/{dispatchId}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<DispatchStatusResponse>> getDispatchStatus(@PathVariable Long dispatchId) {
         log.info("Getting status for dispatch {}", dispatchId);
         DispatchStatusResponse response = smsService.getDispatchStatus(dispatchId);

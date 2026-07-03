@@ -141,12 +141,32 @@ so scoping them broke nothing live.
   per-tenant destinations and send a Bearer token on CONNECT (already required under WS enforce). The docs
   (`WAITER_MODULE.md`, `WAITER_QUICKSTART.md`, `API_REFERENCE.md`) were updated to match.
 
+## SMS / Telegram marketing — locked to SUPER_ADMIN (2026-07-03)
+
+Both marketing modules are **platform-operated**, not multi-tenant: SMS sends through a *single shared
+Eskiz account* (one balance / sender id for the whole platform) and Telegram runs a *single global bot*
+over a shared subscriber pool. None of their tables carry a `restaurant_id`, and the schedulers/automation
+run on background threads with no `TenantContext` (so the Hibernate tenant filter can't scope them). Yet
+every controller was open to any tenant's ADMIN/OWNER/MANAGER, so a tenant admin could read/send/delete
+other restaurants' campaigns, read every restaurant's customer PII (names, phones, full message bodies)
+from the shared logs, deanonymize Telegram subscribers, and hijack or silence the shared bot.
+
+Because the modules are not tenant-isolatable without a schema migration **and** a product decision (per-
+restaurant sending accounts / per-restaurant bots vs. keeping shared infra), all nine controllers are
+restricted to **`SUPER_ADMIN`** (the platform operator) — a small, reversible, migration-free change that
+closes every cross-tenant hole immediately. This mirrors the registration "lock it down" choice. A
+reflection guard (`RbacGateAnnotationTest.marketingControllersAreSuperAdminOnly`) fails the build if any is
+silently downgraded.
+
+**Follow-up (product decision, deferred):** to give tenant admins their own marketing again, build
+per-tenant SMS (per-restaurant Eskiz credentials + `restaurant_id` on the SMS tables + tenant-scoped
+schedulers) and per-tenant Telegram (per-restaurant bots like the `ownerbot` module already does, or a
+shared bot with tenant-tagged subscriptions), then relax the gate to tenant roles with ownership checks.
+
 ## Residuals / follow-ups
 - **Print-agent token has no per-token revocation** (stateless, 1-year expiry). A leaked token exposes
   only that one restaurant's print stream (subscription-tenant-gated). To force-revoke before expiry,
   rotate `app.security.jwt.secret`. A per-restaurant agent-token version can be added if operationally needed.
-- **SMS/Telegram campaigns** are role-gated but not tenant-scoped at the service layer (cross-tenant
-  among staff); scope the campaign service (now that tenant enforcement is on, this is the remaining gap).
 - **Waiter authority naming** (`ROLE_SUPERVISOR`/`ROLE_HEAD_WAITER`) still overlaps staff `UserRole`
   names. Within-tenant waiter-supervisor management is by-design (explicit `@PreAuthorize`); the
   cross-tenant vector is closed by the ownership checks (#13/#23). A future rename to a distinct prefix
