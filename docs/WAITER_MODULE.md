@@ -571,35 +571,45 @@ http://localhost:8080/ws-waiter/sockjs
 const socket = new SockJS('http://localhost:8080/ws-waiter');
 const stompClient = Stomp.over(socket);
 
-stompClient.connect({}, (frame) => {
+// WebSocket auth is enforced: send the Bearer token on CONNECT (a waiter/staff JWT).
+// The order/kitchen/table topics are tenant-scoped — subscribe under your own restaurantId
+// (a waiter JWT carries a restaurantId claim; the login response returns it too).
+const token = '<access token>';
+const restaurantId = 1; // this client's restaurant
+
+stompClient.connect({ Authorization: 'Bearer ' + token }, (frame) => {
   console.log('Connected: ' + frame);
 
-  // Subscribe to waiter-specific notifications
+  // Subscribe to waiter-specific notifications (user-scoped)
   stompClient.subscribe('/user/queue/notifications', (message) => {
     const notification = JSON.parse(message.body);
     console.log('Notification:', notification);
     // { type: "INFO", message: "Order submitted", timestamp: "..." }
   });
 
-  // Subscribe to all waiter orders
-  stompClient.subscribe('/topic/waiter/orders', (message) => {
+  // Subscribe to this restaurant's waiter orders
+  stompClient.subscribe(`/topic/restaurant/${restaurantId}/waiter/orders`, (message) => {
     const orderUpdate = JSON.parse(message.body);
     console.log('Order update:', orderUpdate);
   });
 
-  // Subscribe to kitchen updates
-  stompClient.subscribe('/topic/kitchen', (message) => {
+  // Subscribe to this restaurant's kitchen updates
+  stompClient.subscribe(`/topic/restaurant/${restaurantId}/kitchen`, (message) => {
     const kitchenUpdate = JSON.parse(message.body);
     console.log('Kitchen update:', kitchenUpdate);
   });
 
-  // Subscribe to table status changes
-  stompClient.subscribe('/topic/table', (message) => {
+  // Subscribe to this restaurant's table status changes
+  stompClient.subscribe(`/topic/restaurant/${restaurantId}/table`, (message) => {
     const tableUpdate = JSON.parse(message.body);
     console.log('Table update:', tableUpdate);
   });
 });
 ```
+
+> **Tenant scoping:** the previous bare topics `/topic/waiter/orders`, `/topic/kitchen`, `/topic/table`
+> were shared across all restaurants and are now **retired** — subscribing to them is refused. Use the
+> per-restaurant destinations shown above; a session may only subscribe to its own restaurant's topics.
 
 ### WebSocket Topics
 
@@ -615,8 +625,8 @@ Personal notifications for a specific waiter.
 }
 ```
 
-#### 2. `/topic/waiter/orders` (Broadcast)
-Order status updates for all waiters.
+#### 2. `/topic/restaurant/{restaurantId}/waiter/orders` (Broadcast)
+Order status updates for this restaurant's waiters.
 
 **Message Format**:
 ```json
@@ -631,8 +641,8 @@ Order status updates for all waiters.
 }
 ```
 
-#### 3. `/topic/kitchen` (Broadcast)
-Updates from/to kitchen.
+#### 3. `/topic/restaurant/{restaurantId}/kitchen` (Broadcast)
+Updates from/to this restaurant's kitchen.
 
 **Message Format**:
 ```json
@@ -647,8 +657,8 @@ Updates from/to kitchen.
 }
 ```
 
-#### 4. `/topic/table` (Broadcast)
-Table status changes.
+#### 4. `/topic/restaurant/{restaurantId}/table` (Broadcast)
+Table status changes for this restaurant.
 
 **Message Format**:
 ```json

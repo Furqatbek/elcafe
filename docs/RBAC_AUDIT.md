@@ -107,15 +107,46 @@ rolls back with a one-line env var):
   job/restaurant against the CONNECT-bound tenant (closes the job-sabotage residual). **Deploy note:**
   every print agent needs `AGENT_TOKEN` set before it reconnects, or it's rejected.
 
+## Global STOMP topics — now tenant-scoped (2026-07-03)
+
+The bare global topics `/topic/kitchen`, `/topic/table`, and `/topic/waiter/*` were shared across every
+tenant. Because the WS interceptor only tenant-checked `/topic/restaurant/{id}/*` and
+`/topic/print-agent/{id}`, any authenticated session (including a low-privilege waiter token) could
+**SUBSCRIBE** to the bare topics and watch every tenant's live orders (numbers, totals, table numbers,
+waiter names, payment status), and could **SEND** to `/app/kitchen/*`, `/app/table/*`, `/app/waiter/*` to
+inject fabricated events into all tenants' streams — the `@MessageMapping` handlers did no tenant check.
+This was an **active** leak (not shadow-gated). Investigation found **zero in-repo consumers** of the
+global topics (the admin bell, Kitchen board, and POS status board all use `/topic/restaurant/{id}/orders`),
+so scoping them broke nothing live.
+
+- **Producers** (`WebSocketEventHandler`, `WaiterWebSocketController`) now publish to
+  `/topic/restaurant/{restaurantId}/{kitchen|table|waiter/...}`. The `restaurantId` is resolved
+  **server-side** — from the event's order/table for the event bridge, and from the CONNECT-bound session
+  tenant (`ws.restaurantId`) for the SEND handlers — never from a client payload. So a session can only
+  ever address its own tenant's stream, which closes the injection hole.
+- **Interceptor — SUBSCRIBE is now deny-by-default** for broker (`/topic/**`) destinations: a subscription
+  must name ONE concrete, numeric, tenant-scoped destination (`/topic/restaurant/{id}/**` or
+  `/topic/print-agent/{id}`) belonging to the session's own tenant. Everything else is refused — the
+  retired bare globals, stray topics, and (critically) **Ant-wildcard destinations**. An adversarial review
+  confirmed the SimpleBroker matches subscriptions with `AntPathMatcher`, so `/topic/restaurant/*/orders` or
+  `/topic/restaurant/**` would have fanned every tenant's stream to one subscriber, slipping past the
+  numeric-`\d+` check; pattern destinations are now rejected outright, even for a SUPER_ADMIN. `/user/**`
+  queues are per-session and not gated. All gated by `app.websocket.auth.mode` (shadow logs, enforce rejects).
+- **Interceptor — SEND is now authorized too.** Clients may only publish to `/app/**` (routed through the
+  `@MessageMapping` handlers, which derive the target from the session tenant). A client SEND straight to a
+  broker destination (`/topic/**`, `/queue/**`) — which the broker would relay to subscribers with no
+  controller check, letting an authenticated session inject fabricated events into any tenant's stream — is
+  refused. Server-side broadcasts use the broker/outbound channel and never pass through this inbound guard.
+- **External clients:** any waiter/kitchen client built from the old docs must subscribe to the new
+  per-tenant destinations and send a Bearer token on CONNECT (already required under WS enforce). The docs
+  (`WAITER_MODULE.md`, `WAITER_QUICKSTART.md`, `API_REFERENCE.md`) were updated to match.
+
 ## Residuals / follow-ups
 - **Print-agent token has no per-token revocation** (stateless, 1-year expiry). A leaked token exposes
   only that one restaurant's print stream (subscription-tenant-gated). To force-revoke before expiry,
   rotate `app.security.jwt.secret`. A per-restaurant agent-token version can be added if operationally needed.
 - **SMS/Telegram campaigns** are role-gated but not tenant-scoped at the service layer (cross-tenant
   among staff); scope the campaign service (now that tenant enforcement is on, this is the remaining gap).
-- **Global STOMP topics** (`/topic/kitchen`, `/topic/waiter/*`, `/topic/table`) are shared across
-  tenants (a pre-existing isolation gap the WS interceptor doesn't scope, since they carry no tenant id);
-  the tenant-scoped topics (`/topic/restaurant/{id}/*`, `/topic/print-agent/{id}`) are now guarded.
 - **Waiter authority naming** (`ROLE_SUPERVISOR`/`ROLE_HEAD_WAITER`) still overlaps staff `UserRole`
   names. Within-tenant waiter-supervisor management is by-design (explicit `@PreAuthorize`); the
   cross-tenant vector is closed by the ownership checks (#13/#23). A future rename to a distinct prefix

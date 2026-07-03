@@ -2,6 +2,8 @@ package com.elcafe.modules.waiter.websocket;
 
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.waiter.event.*;
 import com.elcafe.modules.waiter.websocket.dto.ItemReadyMessage;
 import com.elcafe.modules.waiter.websocket.dto.NotificationMessage;
@@ -19,8 +21,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Handles conversion of application events to WebSocket messages
- * Listens to waiter events and broadcasts them via WebSocket
+ * Bridges application events to WebSocket messages: listens to waiter/order events and rebroadcasts them.
+ *
+ * <p><b>Tenant scoping (audit residual):</b> order/kitchen/table broadcasts used to fan out to bare global
+ * topics ({@code /topic/kitchen}, {@code /topic/table}, {@code /topic/waiter/*}) shared across every
+ * tenant, letting any authenticated session watch all tenants' live orders. Each broadcast is now routed to
+ * {@code /topic/restaurant/{restaurantId}/...}, where {@code restaurantId} is resolved server-side from the
+ * event's order (or table) — never trusted from a client. The per-user {@code /queue/notifications} sends
+ * are already user-scoped and unchanged. Handlers run {@code @Async}; the resolver only reads a lazy
+ * {@code @ManyToOne} proxy's id (no extra initialization), matching the existing admin-panel broadcast.
  */
 @Slf4j
 @Component
@@ -29,6 +38,53 @@ public class WebSocketEventHandler {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final OrderRepository orderRepository;
+    private final RestaurantTableRepository restaurantTableRepository;
+
+    private static String kitchenDest(Long restaurantId) {
+        return "/topic/restaurant/" + restaurantId + "/kitchen";
+    }
+
+    private static String waiterDest(Long restaurantId, String suffix) {
+        return "/topic/restaurant/" + restaurantId + "/waiter/" + suffix;
+    }
+
+    private static String tableDest(Long restaurantId) {
+        return "/topic/restaurant/" + restaurantId + "/table";
+    }
+
+    /** Resolve the owning tenant of an order, or null if the order/restaurant is missing. */
+    private Long resolveRestaurantId(Long orderId) {
+        if (orderId == null) {
+            return null;
+        }
+        try {
+            Order order = orderRepository.findById(orderId).orElse(null);
+            if (order == null || order.getRestaurant() == null) {
+                return null;
+            }
+            return order.getRestaurant().getId();
+        } catch (Exception e) {
+            log.error("Error resolving restaurant for order {}: {}", orderId, e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /** Resolve the owning tenant of a table, or null if the table/restaurant is missing. */
+    private Long resolveRestaurantIdFromTable(Long tableId) {
+        if (tableId == null) {
+            return null;
+        }
+        try {
+            RestaurantTable table = restaurantTableRepository.findById(tableId).orElse(null);
+            if (table == null || table.getRestaurant() == null) {
+                return null;
+            }
+            return table.getRestaurant().getId();
+        } catch (Exception e) {
+            log.error("Error resolving restaurant for table {}: {}", tableId, e.getMessage(), e);
+            return null;
+        }
+    }
 
     /**
      * Handle order created events and broadcast via WebSocket
@@ -49,10 +105,13 @@ public class WebSocketEventHandler {
                     .timestamp(event.getEventTimestamp())
                     .build();
 
-            // Broadcast to all waiters
-            messagingTemplate.convertAndSend("/topic/waiter/orders", message);
+            // Broadcast to this tenant's waiters
+            Long restaurantId = resolveRestaurantId(event.getOrderId());
+            if (restaurantId != null) {
+                messagingTemplate.convertAndSend(waiterDest(restaurantId, "orders"), message);
+            }
 
-            // Send to specific waiter
+            // Send to specific waiter (user-scoped)
             if (event.getWaiterId() != null) {
                 messagingTemplate.convertAndSendToUser(
                         event.getWaiterId().toString(),
@@ -140,16 +199,18 @@ public class WebSocketEventHandler {
                     .timestamp(event.getEventTimestamp())
                     .build();
 
-            // Broadcast to kitchen
-            messagingTemplate.convertAndSend("/topic/kitchen", message);
-
-            // Broadcast to all waiters
-            messagingTemplate.convertAndSend("/topic/waiter/orders", message);
+            Long restaurantId = resolveRestaurantId(event.getOrderId());
+            if (restaurantId != null) {
+                // Broadcast to this tenant's kitchen
+                messagingTemplate.convertAndSend(kitchenDest(restaurantId), message);
+                // Broadcast to this tenant's waiters
+                messagingTemplate.convertAndSend(waiterDest(restaurantId, "orders"), message);
+            }
 
             // Broadcast to admin panel
             broadcastToAdminPanel(event.getOrderId(), "order.submitted");
 
-            // Notify specific waiter
+            // Notify specific waiter (user-scoped)
             if (event.getWaiterId() != null) {
                 messagingTemplate.convertAndSendToUser(
                         event.getWaiterId().toString(),
@@ -179,7 +240,7 @@ public class WebSocketEventHandler {
                     .timestamp(event.getEventTimestamp())
                     .build();
 
-            // Send to specific waiter with high priority
+            // Send to specific waiter with high priority (user-scoped)
             if (event.getWaiterId() != null) {
                 messagingTemplate.convertAndSendToUser(
                         event.getWaiterId().toString(),
@@ -190,11 +251,13 @@ public class WebSocketEventHandler {
                 );
             }
 
-            // Broadcast to all waiters
-            messagingTemplate.convertAndSend("/topic/waiter/orders", message);
-
-            // Broadcast to kitchen (to update display)
-            messagingTemplate.convertAndSend("/topic/kitchen", message);
+            Long restaurantId = resolveRestaurantId(event.getOrderId());
+            if (restaurantId != null) {
+                // Broadcast to this tenant's waiters
+                messagingTemplate.convertAndSend(waiterDest(restaurantId, "orders"), message);
+                // Broadcast to this tenant's kitchen (to update display)
+                messagingTemplate.convertAndSend(kitchenDest(restaurantId), message);
+            }
 
             // Broadcast to admin panel
             broadcastToAdminPanel(event.getOrderId(), "order.ready");
@@ -222,7 +285,7 @@ public class WebSocketEventHandler {
                     .timestamp(event.getEventTimestamp())
                     .build();
 
-            // Notify waiter
+            // Notify waiter (user-scoped)
             if (event.getWaiterId() != null) {
                 messagingTemplate.convertAndSendToUser(
                         event.getWaiterId().toString(),
@@ -231,8 +294,11 @@ public class WebSocketEventHandler {
                 );
             }
 
-            // Broadcast to all waiters
-            messagingTemplate.convertAndSend("/topic/waiter/orders", message);
+            // Broadcast to this tenant's waiters
+            Long restaurantId = resolveRestaurantId(event.getOrderId());
+            if (restaurantId != null) {
+                messagingTemplate.convertAndSend(waiterDest(restaurantId, "orders"), message);
+            }
 
             // Broadcast to admin panel
             broadcastToAdminPanel(event.getOrderId(), "order.bill_requested");
@@ -261,7 +327,7 @@ public class WebSocketEventHandler {
                     .timestamp(event.getEventTimestamp())
                     .build();
 
-            // Notify waiter
+            // Notify waiter (user-scoped)
             if (event.getWaiterId() != null) {
                 messagingTemplate.convertAndSendToUser(
                         event.getWaiterId().toString(),
@@ -270,8 +336,11 @@ public class WebSocketEventHandler {
                 );
             }
 
-            // Broadcast to all waiters
-            messagingTemplate.convertAndSend("/topic/waiter/orders", message);
+            // Broadcast to this tenant's waiters
+            Long restaurantId = resolveRestaurantId(event.getOrderId());
+            if (restaurantId != null) {
+                messagingTemplate.convertAndSend(waiterDest(restaurantId, "orders"), message);
+            }
 
             // Broadcast to admin panel
             broadcastToAdminPanel(event.getOrderId(), "order.paid");
@@ -334,7 +403,7 @@ public class WebSocketEventHandler {
     }
 
     /**
-     * Handle table status changed events and broadcast to all waiters
+     * Handle table status changed events and broadcast to this tenant's waiters
      */
     @Async
     @EventListener
@@ -351,10 +420,13 @@ public class WebSocketEventHandler {
                     .timestamp(event.getEventTimestamp())
                     .build();
 
-            // Broadcast to all waiters
-            messagingTemplate.convertAndSend("/topic/table", message);
+            // Broadcast to this tenant's waiters
+            Long restaurantId = resolveRestaurantIdFromTable(event.getTableId());
+            if (restaurantId != null) {
+                messagingTemplate.convertAndSend(tableDest(restaurantId), message);
+            }
 
-            // Notify specific waiter if assigned
+            // Notify specific waiter if assigned (user-scoped)
             if (event.getWaiterId() != null) {
                 messagingTemplate.convertAndSendToUser(
                         event.getWaiterId().toString(),
@@ -371,7 +443,7 @@ public class WebSocketEventHandler {
     }
 
     /**
-     * Send a custom notification to a specific waiter
+     * Send a custom notification to a specific waiter (user-scoped, not tenant-broadcast).
      */
     public void sendNotificationToWaiter(Long waiterId, String type, String message) {
         try {
@@ -386,22 +458,30 @@ public class WebSocketEventHandler {
     }
 
     /**
-     * Broadcast a message to all waiters
+     * Broadcast a message to a tenant's waiters. {@code restaurantId} identifies the target tenant.
      */
-    public void broadcastToAllWaiters(String topic, Object message) {
+    public void broadcastToAllWaiters(Long restaurantId, String topic, Object message) {
+        if (restaurantId == null) {
+            log.warn("Refusing to broadcast to waiters with no restaurantId (would leak cross-tenant)");
+            return;
+        }
         try {
-            messagingTemplate.convertAndSend("/topic/waiter/" + topic, message);
+            messagingTemplate.convertAndSend(waiterDest(restaurantId, topic), message);
         } catch (Exception e) {
-            log.error("Error broadcasting to all waiters: {}", e.getMessage(), e);
+            log.error("Error broadcasting to waiters: {}", e.getMessage(), e);
         }
     }
 
     /**
-     * Broadcast a message to kitchen
+     * Broadcast a message to a tenant's kitchen. {@code restaurantId} identifies the target tenant.
      */
-    public void broadcastToKitchen(Object message) {
+    public void broadcastToKitchen(Long restaurantId, Object message) {
+        if (restaurantId == null) {
+            log.warn("Refusing to broadcast to kitchen with no restaurantId (would leak cross-tenant)");
+            return;
+        }
         try {
-            messagingTemplate.convertAndSend("/topic/kitchen", message);
+            messagingTemplate.convertAndSend(kitchenDest(restaurantId), message);
         } catch (Exception e) {
             log.error("Error broadcasting to kitchen: {}", e.getMessage(), e);
         }

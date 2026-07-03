@@ -17,6 +17,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 
 import java.security.Principal;
 import java.util.Map;
@@ -29,8 +30,11 @@ import java.util.regex.Pattern;
  * the print-job @MessageMapping methods. Servlet filters never see STOMP frames, so this is enforced here.
  *
  * <p>On CONNECT it requires a valid Bearer JWT and binds the caller's tenant to the session. On SUBSCRIBE
- * to a tenant-scoped destination ({@code /topic/print-agent/{id}}, {@code /topic/restaurant/{id}/orders})
+ * to a tenant-scoped destination ({@code /topic/print-agent/{id}}, {@code /topic/restaurant/{id}/...})
  * it checks the destination tenant matches the session's — a session may only read its own tenant's stream.
+ * SUBSCRIBE to a retired bare global topic ({@code /topic/kitchen}, {@code /topic/table},
+ * {@code /topic/waiter/*}) is refused: those order/table/waiter streams are now published per-tenant under
+ * {@code /topic/restaurant/{id}/...}, and the bare topics used to leak every tenant's live orders.
  *
  * <p>Governed by {@code app.websocket.auth.mode} (off/shadow/enforce), default <b>shadow</b>, mirroring the
  * Phase 0 tenant-enforcement rollout: it logs {@code [ws-shadow]} violations without blocking so the real
@@ -41,10 +45,20 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
+    /**
+     * The only legitimate broker (pub/sub) subscriptions: a concrete, numeric, tenant-scoped destination.
+     * Anything else under the {@code /topic} prefix — the retired bare globals (e.g. {@code /topic/kitchen}),
+     * a stray topic, or (critically) an Ant-wildcard destination (a restaurant path with a wildcard in the
+     * id slot) that the SimpleBroker's {@link AntPathMatcher} would fan out across every tenant — is refused
+     * by default.
+     */
     private static final Pattern TENANT_DEST =
             Pattern.compile("/topic/(?:print-agent/(\\d+)|restaurant/(\\d+)/.*)");
-    private static final String ATTR_TENANT = "ws.restaurantId";
+    /** STOMP session attribute holding the caller's tenant, read by tenant-scoped SEND handlers. */
+    static final String ATTR_TENANT = "ws.restaurantId";
     private static final String ATTR_SUPERADMIN = "ws.superAdmin";
+    /** Same matcher the SimpleBroker uses, to detect (and refuse) Ant-pattern subscription destinations. */
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
@@ -72,6 +86,8 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 authenticateConnect(accessor);
             } else if (StompCommand.SUBSCRIBE.equals(cmd)) {
                 authorizeSubscription(accessor);
+            } else if (StompCommand.SEND.equals(cmd)) {
+                authorizeSend(accessor);
             }
         } catch (AccessDeniedException e) {
             if (m == TenantEnforcementMode.ENFORCE) {
@@ -118,21 +134,34 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 claims.getSubject(), restaurantId, superAdmin);
     }
 
+    /**
+     * Authorize a broker (pub/sub) subscription. Only {@code /topic/**} is gated — {@code /user/**} queues
+     * are per-session and not tenant-broadcast. A subscription must name ONE concrete, numeric,
+     * tenant-scoped destination ({@link #TENANT_DEST}) belonging to the session's own tenant; everything
+     * else is refused by default (the retired bare globals, and stray topics). Ant-pattern destinations
+     * are rejected outright — even for a SUPER_ADMIN — because the SimpleBroker matches subscriptions with
+     * {@link AntPathMatcher}, so a restaurant path with a wildcard id (or a trailing double-star) would
+     * otherwise fan every tenant's stream to one subscriber.
+     */
     private void authorizeSubscription(StompHeaderAccessor accessor) {
         String dest = accessor.getDestination();
-        if (dest == null) {
-            return;
-        }
-        Matcher matcher = TENANT_DEST.matcher(dest);
-        if (!matcher.matches()) {
-            return; // not a tenant-scoped destination (global topics handled separately)
+        if (dest == null || !dest.startsWith("/topic/")) {
+            return; // non-broker (e.g. /user/**) subscriptions are per-session, not tenant-broadcast
         }
         Map<String, Object> sessionAttrs = accessor.getSessionAttributes();
         if (sessionAttrs == null || accessor.getUser() == null) {
             throw new AccessDeniedException("unauthenticated subscription");
         }
+        if (PATH_MATCHER.isPattern(dest)) {
+            throw new AccessDeniedException("pattern subscription destination is not allowed: " + dest);
+        }
         if (Boolean.TRUE.equals(sessionAttrs.get(ATTR_SUPERADMIN))) {
-            return; // platform operator may observe any tenant
+            return; // platform operator may observe any (concrete) tenant
+        }
+        Matcher matcher = TENANT_DEST.matcher(dest);
+        if (!matcher.matches()) {
+            throw new AccessDeniedException(
+                    "subscription to non-tenant-scoped topic " + dest + " is refused");
         }
         Long sessionTenant = (Long) sessionAttrs.get(ATTR_TENANT);
         String idStr = matcher.group(1) != null ? matcher.group(1) : matcher.group(2);
@@ -140,6 +169,22 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         if (!destTenant.equals(sessionTenant)) {
             throw new AccessDeniedException(
                     "session tenant " + sessionTenant + " may not subscribe to tenant " + destTenant);
+        }
+    }
+
+    /**
+     * Authorize a client SEND. Clients must publish only to application destinations ({@code /app/**},
+     * handled by {@code @MessageMapping}, which derive their broadcast target from the session tenant). A
+     * SEND straight to a broker pub/sub destination ({@code /topic/**}, {@code /queue/**}) is relayed to
+     * subscribers with NO controller check, letting an authenticated session inject fabricated events into
+     * any tenant's stream — so it is refused. Server-side broadcasts use the broker/outbound channel and
+     * never pass through this inbound interceptor, so they are unaffected.
+     */
+    private void authorizeSend(StompHeaderAccessor accessor) {
+        String dest = accessor.getDestination();
+        if (dest != null && (dest.startsWith("/topic/") || dest.startsWith("/queue/"))) {
+            throw new AccessDeniedException(
+                    "clients may not SEND directly to broker destination " + dest + "; use /app/**");
         }
     }
 

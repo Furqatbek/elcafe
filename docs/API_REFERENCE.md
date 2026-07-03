@@ -1831,18 +1831,24 @@ Authorization: Bearer {token}
 ## WebSocket
 
 ### Connection
+WebSocket auth is enforced: send a Bearer token on CONNECT. Order/kitchen topics are tenant-scoped —
+subscribe under your own `restaurantId` (a session may only read its own restaurant's topics).
+
 ```javascript
 const socket = new SockJS('http://localhost:8080/ws');
 const stompClient = Stomp.over(socket);
 
-stompClient.connect({}, function(frame) {
+const token = '<access token>';
+const restaurantId = 1;
+
+stompClient.connect({ Authorization: 'Bearer ' + token }, function(frame) {
   console.log('Connected: ' + frame);
 });
 ```
 
 ### Subscribe to Order Updates
 ```javascript
-stompClient.subscribe('/topic/orders', function(message) {
+stompClient.subscribe(`/topic/restaurant/${restaurantId}/orders`, function(message) {
   const orderUpdate = JSON.parse(message.body);
   console.log('Order Update:', orderUpdate);
 });
@@ -1850,7 +1856,7 @@ stompClient.subscribe('/topic/orders', function(message) {
 
 ### Subscribe to Kitchen Updates
 ```javascript
-stompClient.subscribe('/topic/kitchen', function(message) {
+stompClient.subscribe(`/topic/restaurant/${restaurantId}/kitchen`, function(message) {
   const kitchenUpdate = JSON.parse(message.body);
   console.log('Kitchen Update:', kitchenUpdate);
 });

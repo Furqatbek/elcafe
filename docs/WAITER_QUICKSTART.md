@@ -160,17 +160,22 @@ curl -X POST http://localhost:8080/api/v1/orders/100/submit \
 const socket = new SockJS('http://localhost:8080/ws-waiter');
 const stompClient = Stomp.over(socket);
 
-stompClient.connect({}, (frame) => {
+// WebSocket auth is enforced — send the Bearer token on CONNECT.
+// Topics are tenant-scoped: subscribe under your own restaurantId.
+const token = '<access token>';
+const restaurantId = 1;
+
+stompClient.connect({ Authorization: 'Bearer ' + token }, (frame) => {
   console.log('Connected!');
 
-  // Subscribe to waiter notifications
+  // Subscribe to waiter notifications (user-scoped)
   stompClient.subscribe('/user/queue/notifications', (message) => {
     const notification = JSON.parse(message.body);
     console.log('New notification:', notification);
   });
 
-  // Subscribe to order updates
-  stompClient.subscribe('/topic/waiter/orders', (message) => {
+  // Subscribe to this restaurant's order updates
+  stompClient.subscribe(`/topic/restaurant/${restaurantId}/waiter/orders`, (message) => {
     const orderUpdate = JSON.parse(message.body);
     console.log('Order update:', orderUpdate);
   });
@@ -266,12 +271,13 @@ curl http://localhost:8080/api/v1/orders/100/events \
 
 ### WebSocket not connecting
 - Verify endpoint URL: `http://localhost:8080/ws-waiter`
+- Ensure you send `Authorization: Bearer <token>` on CONNECT — WebSocket auth is enforced
 - Check CORS settings for your frontend origin
 - Try SockJS fallback if WebSocket fails
 
 ### Order not appearing in kitchen
 - Make sure to call `/orders/{id}/submit` after creating order
-- Check WebSocket subscription to `/topic/kitchen`
+- Check WebSocket subscription to `/topic/restaurant/{restaurantId}/kitchen` (the bare `/topic/kitchen` is retired)
 - Verify order status is not CANCELLED
 
 ## Next Steps

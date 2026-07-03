@@ -64,6 +64,14 @@ class StompAuthChannelInterceptorTest {
         return MessageBuilder.createMessage(new byte[0], a.getMessageHeaders());
     }
 
+    private Message<byte[]> send(String dest) {
+        StompHeaderAccessor a = StompHeaderAccessor.create(StompCommand.SEND);
+        a.setSessionAttributes(new HashMap<>());
+        a.setDestination(dest);
+        a.setUser(() -> "u@t.co");
+        return MessageBuilder.createMessage(new byte[0], a.getMessageHeaders());
+    }
+
     private void stubValidStaffToken(String email, Long restaurantId, UserRole role) {
         when(jwtUtil.extractAllClaims("tok")).thenReturn(claims);
         when(jwtUtil.isTokenExpired("tok")).thenReturn(false);
@@ -142,11 +150,89 @@ class StompAuthChannelInterceptorTest {
     }
 
     @Test
-    @DisplayName("ENFORCE + SUBSCRIBE to a non-tenant (global) topic → allowed")
-    void subscribe_globalTopic_allowed() {
+    @DisplayName("ENFORCE + SUBSCRIBE to a retired bare global topic → rejected")
+    void subscribe_legacyGlobalTopic_rejected() {
         Map<String, Object> session = new HashMap<>();
         session.put("ws.restaurantId", 5L);
+        session.put("ws.superAdmin", false);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("/topic/kitchen", session), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("/topic/waiter/orders", session), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("/topic/table", session), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("SHADOW + SUBSCRIBE to a retired bare global topic → allowed (logged, not blocked)")
+    void subscribe_legacyGlobalTopic_shadow_allowed() {
+        setMode("shadow");
+        Map<String, Object> session = new HashMap<>();
+        session.put("ws.restaurantId", 5L);
+        session.put("ws.superAdmin", false);
         assertThatCode(() -> interceptor.preSend(subscribe("/topic/kitchen", session), null))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("ENFORCE + SUBSCRIBE to own tenant's per-tenant kitchen topic → allowed")
+    void subscribe_ownTenantKitchen_allowed() {
+        Map<String, Object> session = new HashMap<>();
+        session.put("ws.restaurantId", 5L);
+        session.put("ws.superAdmin", false);
+        assertThatCode(() -> interceptor.preSend(subscribe("/topic/restaurant/5/kitchen", session), null))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("ENFORCE + SUBSCRIBE to another tenant's per-tenant kitchen topic → rejected")
+    void subscribe_crossTenantKitchen_rejected() {
+        Map<String, Object> session = new HashMap<>();
+        session.put("ws.restaurantId", 5L);
+        session.put("ws.superAdmin", false);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("/topic/restaurant/9/kitchen", session), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("ENFORCE + SUBSCRIBE to an Ant-wildcard tenant destination → rejected (broker fans out patterns)")
+    void subscribe_wildcardPattern_rejected() {
+        Map<String, Object> session = new HashMap<>();
+        session.put("ws.restaurantId", 5L);
+        session.put("ws.superAdmin", false);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("/topic/restaurant/*/orders", session), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("/topic/restaurant/**", session), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("/topic/print-agent/*", session), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("ENFORCE + a SUPER_ADMIN may NOT wildcard-subscribe (must name a concrete tenant)")
+    void subscribe_wildcardPattern_rejectedForSuperAdmin() {
+        Map<String, Object> session = new HashMap<>();
+        session.put("ws.restaurantId", null);
+        session.put("ws.superAdmin", true);
+        assertThatThrownBy(() -> interceptor.preSend(subscribe("/topic/restaurant/**", session), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("ENFORCE + client SEND straight to a broker destination → rejected (would bypass controller routing)")
+    void send_toBrokerDestination_rejected() {
+        assertThatThrownBy(() -> interceptor.preSend(send("/topic/restaurant/9/orders"), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(send("/topic/kitchen"), null))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> interceptor.preSend(send("/queue/anything"), null))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("ENFORCE + client SEND to an /app application destination → allowed")
+    void send_toAppDestination_allowed() {
+        assertThatCode(() -> interceptor.preSend(send("/app/kitchen/order-status"), null))
                 .doesNotThrowAnyException();
     }
 }

@@ -29,10 +29,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     /**
-     * Configure message broker
-     * - /topic/waiter: Broadcast waiter-related updates
-     * - /topic/kitchen: Broadcast kitchen updates
-     * - /topic/table: Broadcast table status updates
+     * Configure message broker. Order/kitchen/table/waiter streams are tenant-scoped under
+     * {@code /topic/restaurant/{restaurantId}/...} (kitchen, table, waiter/orders, waiter/requests,
+     * waiter/calls, waiter/status); {@link StompAuthChannelInterceptor} tenant-checks subscriptions and
+     * refuses the retired bare global topics.
+     * - /topic: Broadcast destinations (tenant-scoped under /topic/restaurant/{id}/...)
+     * - /queue + /user: user-specific destinations (e.g. /user/queue/notifications)
      * - /app: Prefix for messages routed to @MessageMapping methods
      */
     @Override
