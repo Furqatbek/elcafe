@@ -140,6 +140,20 @@ public class JwtUtil {
     }
 
     /**
+     * Generate a long-lived token for a print agent (a headless device). Carries a {@code restaurantId}
+     * claim so {@link com.elcafe.modules.waiter.websocket.StompAuthChannelInterceptor} binds the STOMP
+     * session to that tenant and only lets it read its own restaurant's print topic. The agent presents
+     * this on the WebSocket CONNECT. Minted by an ADMIN for their own restaurant; re-mint to rotate.
+     */
+    public String generatePrintAgentToken(Long restaurantId) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "print-agent");
+        claims.put("restaurantId", restaurantId);
+        long oneYearMs = 365L * 24 * 60 * 60 * 1000;
+        return createToken(claims, "print-agent:" + restaurantId, oneYearMs);
+    }
+
+    /**
      * Generate refresh token for waiter
      */
     public String generateWaiterRefreshToken(String identifier) {

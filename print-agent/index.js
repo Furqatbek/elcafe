@@ -21,6 +21,10 @@ const TicketFormatter = require('./lib/ticket-formatter');
 const config = {
     serverUrl: process.env.SERVER_URL || 'ws://localhost:8080/ws-print-agent',
     restaurantId: parseInt(process.env.RESTAURANT_ID || '1'),
+    // Auth token the backend requires on the WebSocket CONNECT once app.websocket.auth.mode=enforce
+    // (audit #21). Mint it in the admin panel: POST /api/v1/settings/print-agent/token. Without it the
+    // connection is rejected under enforce (and only logged under shadow).
+    agentToken: process.env.AGENT_TOKEN || null,
     agentId: process.env.AGENT_ID || `agent-${uuidv4().substring(0, 8)}`,
     reconnectDelay: parseInt(process.env.RECONNECT_DELAY || '5000'),
     printerName: process.env.PRINTER_NAME || null, // Auto-detect if not set
@@ -57,8 +61,16 @@ let isConnected = false;
 function connect() {
     console.log('[WS] Connecting to server...');
 
+    if (!config.agentToken) {
+        console.warn('[WS] AGENT_TOKEN is not set — the server will reject this connection when ' +
+            'websocket auth is enforced. Mint one via the admin panel and set AGENT_TOKEN in .env.');
+    }
+
     stompClient = new Client({
         webSocketFactory: () => new WebSocket(config.serverUrl),
+        // Authenticate the STOMP CONNECT so the backend binds this session to the restaurant and only
+        // lets it read its own print topic (audit #21).
+        connectHeaders: config.agentToken ? { Authorization: `Bearer ${config.agentToken}` } : {},
         reconnectDelay: config.reconnectDelay,
         heartbeatIncoming: 10000,
         heartbeatOutgoing: 10000,

@@ -6,7 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
+
+import java.util.Map;
 
 /**
  * WebSocket controller for print agent communication
@@ -21,11 +24,29 @@ public class PrintAgentWebSocketController {
     private final PrintJobService printJobService;
 
     /**
+     * A print-agent SEND frame carries a client-supplied restaurantId/jobId; verify it belongs to the
+     * tenant bound to this STOMP session at CONNECT ({@code ws.restaurantId}, set by
+     * {@link StompAuthChannelInterceptor}). Only enforced when the session is authenticated (the attr is
+     * present) — an unauthenticated session (websocket auth OFF, or shadow with no token) has no bound
+     * tenant, so this is a no-op there and doesn't break the pre-enforce rollout. Closes the cross-tenant
+     * job-sabotage / job-enumeration residual (audit #21).
+     */
+    private void assertSessionOwns(SimpMessageHeaderAccessor headerAccessor, Long targetRestaurantId) {
+        Map<String, Object> attrs = headerAccessor.getSessionAttributes();
+        Object bound = attrs == null ? null : attrs.get("ws.restaurantId");
+        if (bound instanceof Long boundId && targetRestaurantId != null && !boundId.equals(targetRestaurantId)) {
+            throw new AccessDeniedException(
+                    "print-agent session (restaurant " + boundId + ") may not act on restaurant " + targetRestaurantId);
+        }
+    }
+
+    /**
      * Handle print agent connection/registration
      * Agent sends: { "agentId": "agent-123", "restaurantId": 1 }
      */
     @MessageMapping("/print-agent/connect")
     public void handleAgentConnect(@Payload AgentConnectMessage message, SimpMessageHeaderAccessor headerAccessor) {
+        assertSessionOwns(headerAccessor, message.restaurantId());
         String sessionId = headerAccessor.getSessionId();
         log.info("Print agent connecting: {} for restaurant {} (session: {})",
                 message.agentId(), message.restaurantId(), sessionId);
@@ -52,7 +73,8 @@ public class PrintAgentWebSocketController {
      * Agent sends: { "jobId": 123, "agentId": "agent-123" }
      */
     @MessageMapping("/print-agent/job-received")
-    public void handleJobReceived(@Payload JobReceivedMessage message) {
+    public void handleJobReceived(@Payload JobReceivedMessage message, SimpMessageHeaderAccessor headerAccessor) {
+        assertSessionOwns(headerAccessor, printJobService.restaurantIdOfJob(message.jobId()));
         log.info("Print job {} received by agent {}", message.jobId(), message.agentId());
         printJobService.markJobSent(message.jobId(), message.agentId());
     }
@@ -62,7 +84,8 @@ public class PrintAgentWebSocketController {
      * Agent sends: { "jobId": 123, "agentId": "agent-123" }
      */
     @MessageMapping("/print-agent/job-completed")
-    public void handleJobCompleted(@Payload JobCompletedMessage message) {
+    public void handleJobCompleted(@Payload JobCompletedMessage message, SimpMessageHeaderAccessor headerAccessor) {
+        assertSessionOwns(headerAccessor, printJobService.restaurantIdOfJob(message.jobId()));
         log.info("Print job {} completed by agent {}", message.jobId(), message.agentId());
         printJobService.markJobCompleted(message.jobId());
     }
@@ -72,7 +95,8 @@ public class PrintAgentWebSocketController {
      * Agent sends: { "jobId": 123, "agentId": "agent-123", "error": "Printer offline" }
      */
     @MessageMapping("/print-agent/job-failed")
-    public void handleJobFailed(@Payload JobFailedMessage message) {
+    public void handleJobFailed(@Payload JobFailedMessage message, SimpMessageHeaderAccessor headerAccessor) {
+        assertSessionOwns(headerAccessor, printJobService.restaurantIdOfJob(message.jobId()));
         log.warn("Print job {} failed: {}", message.jobId(), message.error());
         printJobService.markJobFailed(message.jobId(), message.error());
     }
@@ -82,7 +106,8 @@ public class PrintAgentWebSocketController {
      * Agent sends: { "agentId": "agent-123", "restaurantId": 1 }
      */
     @MessageMapping("/print-agent/get-jobs")
-    public void handleGetJobs(@Payload GetJobsMessage message) {
+    public void handleGetJobs(@Payload GetJobsMessage message, SimpMessageHeaderAccessor headerAccessor) {
+        assertSessionOwns(headerAccessor, message.restaurantId());
         log.debug("Agent {} requesting pending jobs for restaurant {}", message.agentId(), message.restaurantId());
         printAgentHandler.sendPendingJobs(message.agentId(), message.restaurantId());
     }

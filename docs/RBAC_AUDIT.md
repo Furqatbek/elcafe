@@ -92,12 +92,27 @@ An adversarial review of the remediation diff caught three real defects, all fix
 - CASHIER "dead role" (never issued, but not exploitable), courier webhook (verified signature path),
   and a UI-over-exposure that the backend correctly blocks.
 
+## Enforcement flips — now ENFORCE (2026-07-03)
+
+Both gates were flipped shadow → `enforce` (defaults in `application.yml` + `docker-compose.yml`; each
+rolls back with a one-line env var):
+
+- **Tenant isolation** (`TENANT_ENFORCEMENT_MODE=enforce`) — cross-tenant access now 403s; activates the
+  mode-aware subset (product/category, waiter-management, #22 waiter/consumer enforcement). Built on the
+  full Phase 0 hardening. Post-deploy validation in `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`.
+- **WebSocket** (`WEBSOCKET_AUTH_MODE=enforce`) — CONNECT requires a Bearer token; a session reads only
+  its own tenant's topics. Made safe first by building **print-agent auth**:
+  `JwtUtil.generatePrintAgentToken` + `POST /api/v1/settings/print-agent/token` (ADMIN, own-restaurant
+  scoped); the in-repo `print-agent/` sends `AGENT_TOKEN` on CONNECT; the SEND handlers now verify the
+  job/restaurant against the CONNECT-bound tenant (closes the job-sabotage residual). **Deploy note:**
+  every print agent needs `AGENT_TOKEN` set before it reconnects, or it's rejected.
+
 ## Residuals / follow-ups
-- **The enforce flip is now the activation** for the mode-aware subset (product/category, waiter mgmt,
-  and the #22 waiter/consumer enforcement). Do the tenant flip after a shadow soak.
-- **WebSocket enforce** waits on the print-agent update (device token) — see `WEBSOCKET_AUTH_MODE`.
 - **SMS/Telegram campaigns** are role-gated but not tenant-scoped at the service layer (cross-tenant
-  among staff); scope the campaign service before/with the enforce flip.
+  among staff); scope the campaign service (now that tenant enforcement is on, this is the remaining gap).
+- **Global STOMP topics** (`/topic/kitchen`, `/topic/waiter/*`, `/topic/table`) are shared across
+  tenants (a pre-existing isolation gap the WS interceptor doesn't scope, since they carry no tenant id);
+  the tenant-scoped topics (`/topic/restaurant/{id}/*`, `/topic/print-agent/{id}`) are now guarded.
 - **Waiter authority naming** (`ROLE_SUPERVISOR`/`ROLE_HEAD_WAITER`) still overlaps staff `UserRole`
   names. Within-tenant waiter-supervisor management is by-design (explicit `@PreAuthorize`); the
   cross-tenant vector is closed by the ownership checks (#13/#23). A future rename to a distinct prefix

@@ -150,8 +150,9 @@ app:
       #   shadow  - LOG any request whose URL/query restaurantId != the caller's tenant, but
       #             do NOT block. Use this to observe real traffic before enforcing.
       #   enforce - additionally return 403 on a cross-tenant mismatch.
-      # Start in shadow, watch the [tenant-shadow] logs, then flip to enforce.
-      mode: ${TENANT_ENFORCEMENT_MODE:shadow}
+      # Flipped to enforce after the shadow soak + the Phase 0 hardening (V148-V155, IDOR sweep,
+      # backstop filter, insert guard) landed and were verified. Rollback: set the env var to shadow.
+      mode: ${TENANT_ENFORCEMENT_MODE:enforce}
 
   subscription:
     enforcement:
@@ -163,12 +164,11 @@ app:
 
   websocket:
     auth:
-      # STOMP CONNECT authentication + per-subscription tenant check (audit #21). The waiter web app
-      # sends its Bearer token on CONNECT; the external PRINT AGENT must be updated to send a device
-      # token before flipping to enforce. Ships shadow (logs [ws-shadow] violations, blocks nothing) so
-      # the agent rollout can be sequenced.
+      # STOMP CONNECT authentication + per-subscription tenant check (audit #21). The admin/waiter web
+      # app sends its Bearer token on CONNECT; the print agent now sends its AGENT_TOKEN (minted via
+      # POST /api/v1/settings/print-agent/token). Now ENFORCE. Rollback: set the env var to shadow.
       #   off | shadow | enforce
-      mode: ${WEBSOCKET_AUTH_MODE:shadow}
+      mode: ${WEBSOCKET_AUTH_MODE:enforce}
 
   cache:
     menu-ttl: 1800 # 30 minutes

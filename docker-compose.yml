@@ -101,14 +101,18 @@ services:
       # setup. The app also rejects a too-short or old-leaked secret.
       JWT_SECRET: "${JWT_SECRET:-}"
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
-      # Tenant isolation mode: off | shadow | enforce (Phase 0 §3.3/§3.4). Defaults to shadow
-      # (observe + log, no blocking); set to 'enforce' to activate isolation after a staging soak —
-      # see docs/TENANT_ENFORCE_FLIP_RUNBOOK.md.
-      TENANT_ENFORCEMENT_MODE: ${TENANT_ENFORCEMENT_MODE:-shadow}
+      # Tenant isolation mode: off | shadow | enforce (Phase 0 §3.3/§3.4). Now ENFORCE — isolation is
+      # active after the Phase 0 hardening + shadow soak (see docs/TENANT_ENFORCE_FLIP_RUNBOOK.md).
+      # Rollback is a one-liner: set this to shadow.
+      TENANT_ENFORCEMENT_MODE: ${TENANT_ENFORCEMENT_MODE:-enforce}
       # Phase 2 subscription access gate: off | shadow | enforce. Defaults to off (dark). A suspended
       # tenant's staff/waiters get 402 SUBSCRIPTION_INACTIVE only in 'enforce'. Flip off -> shadow
       # (watch [subscription-shadow] logs) -> enforce, same cadence as TENANT_ENFORCEMENT_MODE.
       SUBSCRIPTION_ENFORCEMENT_MODE: ${SUBSCRIPTION_ENFORCEMENT_MODE:-off}
+      # STOMP WebSocket auth: off | shadow | enforce (audit #21). Now ENFORCE — CONNECT requires a
+      # Bearer token and a session may only read its own tenant's topics. The print agent must send its
+      # AGENT_TOKEN (POST /api/v1/settings/print-agent/token). Rollback: set to shadow.
+      WEBSOCKET_AUTH_MODE: ${WEBSOCKET_AUTH_MODE:-enforce}
       # QR Code URL - used for generating QR code links
       SELFSERVICE_BASE_URL: ${SELFSERVICE_BASE_URL:-https://qahvoon.uz/order}
       FILE_BASE_URL: ${FILE_BASE_URL:-https://qahvoon.uz/uploads}

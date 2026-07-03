@@ -116,6 +116,12 @@ public class PrintJobService {
         });
     }
 
+    /** The restaurant a job belongs to (or null if the job is gone) — for the WS ownership check. */
+    @Transactional(readOnly = true)
+    public Long restaurantIdOfJob(Long jobId) {
+        return printJobRepository.findById(jobId).map(j -> j.getRestaurant().getId()).orElse(null);
+    }
+
     /**
      * Mark job as failed with exponential backoff retry.
      */

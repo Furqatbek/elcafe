@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security - 2026-07-03
+
+#### Enforcement flipped ON: tenant isolation + WebSocket auth now enforce
+
+Both dark-launched gates are now `enforce` by default (`application.yml` + `docker-compose.yml`; each
+rolls back via its env var).
+
+- **Tenant isolation** (`TENANT_ENFORCEMENT_MODE=enforce`): cross-tenant data access now returns 403.
+  This activates the mode-aware ownership checks landed in the RBAC remediation (product/category,
+  waiter-management, and the #22 waiter/consumer tenant enforcement), on top of the Phase 0 hardening.
+  Runtime validation + rollback in `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`.
+- **WebSocket** (`WEBSOCKET_AUTH_MODE=enforce`): STOMP CONNECT requires a Bearer token and a session may
+  only read its own tenant's topics. Made safe first by building print-agent auth:
+  - `JwtUtil.generatePrintAgentToken` + `POST /api/v1/settings/print-agent/token` (ADMIN-only, scoped to
+    the caller's own restaurant). The in-repo print agent sends `AGENT_TOKEN` on CONNECT (see
+    `print-agent/.env.example`) — **it must be set before the agent reconnects, or it's rejected.**
+  - The print-agent SEND handlers (`get-jobs`, `job-completed/failed/received`) now verify the target
+    job/restaurant against the CONNECT-bound tenant, closing the cross-tenant job-sabotage residual.
+  - Tests: `JwtUtilTest` (+1), `PrintAgentTokenControllerTest` (2), `PrintAgentWebSocketControllerTest`
+    (5), plus the enforce-default boot tests. Full suite green.
+
 ### Security - 2026-07-02
 
 #### RBAC remediation — closed all 24 audited authorization defects

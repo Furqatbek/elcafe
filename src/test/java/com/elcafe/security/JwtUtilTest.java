@@ -126,4 +126,13 @@ class JwtUtilTest {
         assertThat(jwtUtil.validateToken(token, afterRevoke)).isFalse();   // version bumped -> revoked
         assertThat(jwtUtil.validateToken(token, principal)).isTrue();      // same version -> still valid
     }
+    @Test
+    @DisplayName("generatePrintAgentToken — carries restaurantId + type and is a valid unexpired token")
+    void printAgentToken_hasScopedClaims() {
+        String token = jwtUtil.generatePrintAgentToken(7L);
+        Claims claims = jwtUtil.extractAllClaims(token);
+        assertThat(claims.get("type", String.class)).isEqualTo("print-agent");
+        assertThat(claims.get("restaurantId", Long.class)).isEqualTo(7L);
+        assertThat(jwtUtil.isTokenExpired(token)).isFalse();
+    }
 }

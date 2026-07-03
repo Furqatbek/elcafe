@@ -1,14 +1,20 @@
 # Tenant Enforcement — `enforce` flip runbook (Phase 0 §3.3/§3.4)
 
-Tenant isolation is built but gated behind one switch:
+> **STATUS: FLIPPED — the default is now `enforce`** (`application.yml` + `docker-compose.yml`).
+> Rollback is a one-liner: set `TENANT_ENFORCEMENT_MODE=shadow` and restart. Runtime validation to do
+> per environment after deploy: smoke-test each principal type (owner/manager admin, waiter, consumer,
+> SUPER_ADMIN cross-tenant) and watch for the signals in "Flip procedure" below — a 403 on a
+> *legitimate same-tenant* flow means a client is sending the wrong `restaurantId` (e.g. a stale
+> `selectedRestaurantId` in the web app) and needs fixing, not a rollback.
+
+Tenant isolation is gated behind one switch:
 
 ```yaml
-app.security.tenant-enforcement.mode: ${TENANT_ENFORCEMENT_MODE:shadow}   # off | shadow | enforce
+app.security.tenant-enforcement.mode: ${TENANT_ENFORCEMENT_MODE:enforce}   # off | shadow | enforce
 ```
 
-Flipping to `enforce` is an **ops action per environment** (set the env var), not a code
-change. This runbook is the gate: what `enforce` now protects, how to flip safely, and what it
-does **not** yet cover.
+This runbook is the gate: what `enforce` protects, how to validate/roll back, and what it does
+**not** cover.
 
 ## What `enforce` protects (verified by tests)
 
