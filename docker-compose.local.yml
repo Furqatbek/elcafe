@@ -5,6 +5,12 @@ services:
   backend:
     environment:
       SPRING_PROFILES_ACTIVE: dev
+      # Allow any origin in local dev (mobile web on localhost:5173, a LAN IP,
+      # emulator, etc.). Overrides whatever CORS_ORIGINS is in .env — typically
+      # the production domains copied from .env.example — so local requests
+      # aren't rejected with "Invalid CORS request". The backend reflects the
+      # origin per-request, so "*" stays compatible with allow-credentials.
+      CORS_ORIGINS: "*"
       # Local QR code URL - override production default
       SELFSERVICE_BASE_URL: http://localhost/order
       FILE_BASE_URL: http://localhost/uploads
