@@ -11,6 +11,14 @@ services:
       # aren't rejected with "Invalid CORS request". The backend reflects the
       # origin per-request, so "*" stays compatible with allow-credentials.
       CORS_ORIGINS: "*"
+      # Never poll Telegram from local dev. A restored production database
+      # carries active bot tokens in owner_telegram_bot_config /
+      # telegram_bot_config; without these flags the local backend would poll
+      # the same tokens as prod and both get "409 Conflict: terminated by
+      # other getUpdates request". These hard-disable both bots regardless of
+      # DB content. Flip to "true" (with your OWN test-bot token) to test bots.
+      TELEGRAM_OWNER_BOT_ENABLED: "false"
+      TELEGRAM_BOT_ENABLED: "false"
       # Local QR code URL - override production default
       SELFSERVICE_BASE_URL: http://localhost/order
       FILE_BASE_URL: http://localhost/uploads

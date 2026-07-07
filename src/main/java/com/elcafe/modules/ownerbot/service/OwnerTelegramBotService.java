@@ -82,6 +82,13 @@ public class OwnerTelegramBotService {
         this.consumptionRepository = consumptionRepository;
     }
 
+    // Hard off-switch, independent of the DB config. Lets local dev disable
+    // the bot even when a restored production database contains an active bot
+    // token — otherwise local would poll the same token as prod and both get
+    // Telegram's "409 Conflict: terminated by other getUpdates request".
+    @org.springframework.beans.factory.annotation.Value("${telegram.owner-bot.enabled:true}")
+    private boolean ownerBotEnabled;
+
     private OwnerBot bot;
     private BotSession botSession;
     private String currentToken;
@@ -102,6 +109,12 @@ public class OwnerTelegramBotService {
     public synchronized void initializeBot() {
         // Stop existing bot if running
         stopBot();
+
+        if (!ownerBotEnabled) {
+            log.info("Owner Telegram bot disabled via telegram.owner-bot.enabled=false — not starting "
+                    + "(ignores any active bot config in the database).");
+            return;
+        }
 
         // Load config from database
         Optional<OwnerTelegramBotConfig> configOpt = configRepository.findByIsActiveTrue();

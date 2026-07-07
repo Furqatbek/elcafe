@@ -68,6 +68,12 @@ public class TelegramBotService {
     private final CustomerRepository customerRepository;
     private final TelegramBotRegistry botRegistry;
 
+    // Hard off-switch, independent of the DB config — see OwnerTelegramBotService.
+    // Prevents a local backend (with a restored prod DB) from polling the same
+    // bot token as production and triggering Telegram's 409 Conflict.
+    @org.springframework.beans.factory.annotation.Value("${telegram.bot.enabled:true}")
+    private boolean sellerBotEnabled;
+
     private ElCafeBot bot;
     private BotSession botSession;
     private String currentToken;
@@ -83,6 +89,12 @@ public class TelegramBotService {
 
     public synchronized void initializeBot() {
         stopBot();
+
+        if (!sellerBotEnabled) {
+            log.info("Telegram seller-bot disabled via telegram.bot.enabled=false — not starting "
+                    + "(ignores any active bot config in the database).");
+            return;
+        }
 
         Optional<TelegramBotConfig> configOpt = configRepository.findByIsActiveTrue();
         if (configOpt.isEmpty()) {
