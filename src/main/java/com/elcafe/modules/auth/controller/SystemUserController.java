@@ -3,6 +3,7 @@ package com.elcafe.modules.auth.controller;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.repository.UserRepository;
+import com.elcafe.security.UserPrincipal;
 import com.elcafe.utils.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -12,7 +13,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -80,9 +83,17 @@ public class SystemUserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> update(@PathVariable Long id, @RequestBody UpdateRequest req) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> update(
+            @PathVariable Long id,
+            @RequestBody UpdateRequest req,
+            @AuthenticationPrincipal UserPrincipal caller) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // A SUPER_ADMIN outranks ADMIN. Only a SUPER_ADMIN may modify a
+        // SUPER_ADMIN account (password/active/etc), so a plain ADMIN can't
+        // reset its credentials and take it over.
+        requireSuperAdminToTouchSuperAdmin(user, caller);
 
         if (req.firstName != null) user.setFirstName(req.firstName);
         if (req.lastName != null) user.setLastName(req.lastName);
@@ -98,12 +109,28 @@ public class SystemUserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deactivate(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deactivate(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal caller) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        requireSuperAdminToTouchSuperAdmin(user, caller);
         user.setActive(false);
         userRepository.save(user);
         return ResponseEntity.ok(ApiResponse.success("User deactivated", null));
+    }
+
+    /**
+     * Guards a SUPER_ADMIN target from being modified by anyone who is not
+     * themselves a SUPER_ADMIN. The class is gated on hasRole('ADMIN'), which
+     * a SUPER_ADMIN also satisfies, so without this a plain ADMIN could reset
+     * or disable the platform's highest-privileged account.
+     */
+    private void requireSuperAdminToTouchSuperAdmin(User target, UserPrincipal caller) {
+        if (target.getRole() == UserRole.SUPER_ADMIN
+                && (caller == null || caller.getRole() != UserRole.SUPER_ADMIN)) {
+            throw new AccessDeniedException("Only a SUPER_ADMIN may modify a SUPER_ADMIN account");
+        }
     }
 
     private Map<String, Object> toMap(User u) {

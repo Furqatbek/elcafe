@@ -91,6 +91,28 @@ class JwtAuthenticationFilterTest {
         verify(filterChain).doFilter(request, response);
     }
 
+    @Test @DisplayName("disabled account (e.g. UNKNOWN role) — token is rejected, no auth set")
+    void disabledAccount_tokenRejected() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Authorization", "Bearer valid-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        when(jwtUtil.extractUsername("valid-token")).thenReturn("ghost@test.com");
+        Claims claims = Jwts.claims().subject("ghost@test.com").build();
+        when(jwtUtil.extractAllClaims("valid-token")).thenReturn(claims);
+
+        // Disabled principal (active=false stands in for any isEnabled()==false,
+        // including UNKNOWN role). validateToken would pass, but isEnabled gates it.
+        UserPrincipal disabled = new UserPrincipal(9L, "ghost@test.com", "pw", UserRole.OPERATOR, false, 1L);
+        when(userDetailsService.loadUserByUsername("ghost@test.com")).thenReturn(disabled);
+        when(jwtUtil.validateToken("valid-token", disabled)).thenReturn(true);
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+        verify(filterChain).doFilter(request, response);
+    }
+
     @Test @DisplayName("consumer token — sets CustomerPrincipal")
     void consumerToken_setsCustomerPrincipal() throws ServletException, IOException {
         MockHttpServletRequest request = new MockHttpServletRequest();

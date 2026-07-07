@@ -9,7 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 
 /**
  * Custom UserDetails implementation that wraps the User entity
@@ -41,9 +41,13 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_" + role.name())
-        );
+        if (role == null) {
+            return List.of();
+        }
+        // SUPER_ADMIN → ROLE_SUPER_ADMIN + ROLE_ADMIN, UNKNOWN → none.
+        return role.grantedRoleNames().stream()
+                .map(name -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + name))
+                .toList();
     }
 
     @Override
@@ -73,6 +77,6 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return active;
+        return active && role != null && role.isUsable();
     }
 }

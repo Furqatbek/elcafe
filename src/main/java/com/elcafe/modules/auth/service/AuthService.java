@@ -5,6 +5,7 @@ import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.auth.dto.*;
 import com.elcafe.modules.auth.entity.User;
+import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.mapper.UserMapper;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.security.JwtUtil;
@@ -33,6 +34,18 @@ public class AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
         log.info("Registering new user with email: {}", request.getEmail());
+
+        // /api/v1/auth/register is a public (permitAll) endpoint. Never let an
+        // anonymous caller self-assign an administrative role — that would be a
+        // full platform takeover with no prior credentials. Admin/super-admin
+        // accounts are created only via the ADMIN-gated SystemUserController or
+        // a trusted seed. (Non-admin staff self-registration remains as before.)
+        UserRole requestedRole = request.getRole();
+        if (requestedRole == null || requestedRole == UserRole.UNKNOWN || requestedRole.isAdminLevel()) {
+            log.warn("Rejected public registration attempt for {} with disallowed role {}",
+                    request.getEmail(), requestedRole);
+            throw new BadRequestException("This role cannot be self-assigned during registration");
+        }
 
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ConflictException("Email already registered");
@@ -94,11 +107,29 @@ public class AuthService {
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         log.info("Refreshing token");
 
-        String email = jwtUtil.extractUsername(request.getRefreshToken());
+        // A refresh token signed with an old key (e.g. after a JWT secret /
+        // key-derivation change) or one that has expired makes jjwt throw an
+        // unchecked JwtException. Catch it and surface a clean 400 so clients
+        // re-login, rather than letting it fall through to a generic 500.
+        String email;
+        try {
+            email = jwtUtil.extractUsername(request.getRefreshToken());
+        } catch (io.jsonwebtoken.JwtException e) {
+            log.warn("Refresh token could not be parsed: {}", e.getMessage());
+            throw new BadRequestException("Invalid or expired refresh token");
+        }
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (!jwtUtil.validateToken(request.getRefreshToken(), user)) {
+        boolean valid;
+        try {
+            valid = jwtUtil.validateToken(request.getRefreshToken(), user);
+        } catch (io.jsonwebtoken.JwtException e) {
+            log.warn("Refresh token validation failed: {}", e.getMessage());
+            throw new BadRequestException("Invalid or expired refresh token");
+        }
+        if (!valid) {
             throw new BadRequestException("Invalid refresh token");
         }
 

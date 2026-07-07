@@ -1,6 +1,5 @@
 package com.elcafe.common.security.service;
 
-import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.security.UserPrincipal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -39,8 +38,8 @@ public class RestaurantAuthorizationService {
             throw new AccessDeniedException("User not authenticated");
         }
 
-        // ADMIN users have access to all restaurants
-        if (principal.getRole() == UserRole.ADMIN) {
+        // ADMIN / SUPER_ADMIN users have access to all restaurants
+        if (principal.getRole() != null && principal.getRole().isAdminLevel()) {
             log.debug("Admin user {} accessing restaurant {}", principal.getEmail(), restaurantId);
             return;
         }
@@ -83,7 +82,7 @@ public class RestaurantAuthorizationService {
      */
     public boolean isAdmin() {
         UserPrincipal principal = getCurrentUserPrincipal();
-        return principal != null && principal.getRole() == UserRole.ADMIN;
+        return principal != null && principal.getRole() != null && principal.getRole().isAdminLevel();
     }
 
     /**
@@ -108,8 +107,8 @@ public class RestaurantAuthorizationService {
             return requestedRestaurantId;
         }
 
-        // If no restaurant specified, ADMIN can query all, others get their own
-        if (principal.getRole() == UserRole.ADMIN) {
+        // If no restaurant specified, ADMIN/SUPER_ADMIN can query all, others get their own
+        if (principal.getRole() != null && principal.getRole().isAdminLevel()) {
             return null; // ADMIN can see aggregate data across all restaurants
         }
 

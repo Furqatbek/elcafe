@@ -1,5 +1,6 @@
 package com.elcafe.modules.auth.entity;
 
+import com.elcafe.modules.auth.converter.UserRoleConverter;
 import com.elcafe.modules.auth.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -47,7 +48,10 @@ public class User implements UserDetails {
     @Column(length = 20)
     private String phone;
 
-    @Enumerated(EnumType.STRING)
+    // Converter (not @Enumerated) so an unrecognised role string in the DB
+    // resolves to UserRole.UNKNOWN instead of throwing during hydration and
+    // 500-ing login. On-disk representation is unchanged (the role name).
+    @Convert(converter = UserRoleConverter.class)
     @Column(nullable = false)
     private UserRole role;
 
@@ -76,7 +80,12 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        if (role == null) {
+            return List.of();
+        }
+        return role.grantedRoleNames().stream()
+                .map(name -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + name))
+                .toList();
     }
 
     @Override
@@ -101,7 +110,9 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return active;
+        // An account whose role we can't classify (UNKNOWN) must not
+        // authenticate — treat it as disabled rather than a live session.
+        return active && role != null && role.isUsable();
     }
 
     public String getFullName() {

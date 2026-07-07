@@ -387,7 +387,9 @@ public class ConsumerAuthService {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessTokenExpiration);
 
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+        // Derive the SAME key JwtUtil uses so the auth filter (which parses
+        // every token type through JwtUtil) can verify consumer tokens.
+        SecretKey key = com.elcafe.security.JwtKeys.deriveSigningKey(jwtSecret);
 
         return Jwts.builder()
                 .setSubject(phoneNumber)

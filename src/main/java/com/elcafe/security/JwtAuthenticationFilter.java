@@ -116,7 +116,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     logger.debug("Processing regular user token");
                     UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                    if (jwtUtil.validateToken(jwt, userDetails)) {
+                    // Reject disabled accounts (inactive, or a role we can no
+                    // longer classify -> UNKNOWN) even if they present a
+                    // structurally valid, non-expiring token.
+                    if (!userDetails.isEnabled()) {
+                        logger.warn("Rejecting token for disabled account: " + username);
+                    } else if (jwtUtil.validateToken(jwt, userDetails)) {
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 userDetails,
                                 null,

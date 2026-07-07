@@ -77,10 +77,46 @@ class AuthServiceTest {
         verify(passwordEncoder).encode("password123");
     }
 
+    @Test @DisplayName("register — rejects self-assigning ADMIN (privilege escalation)")
+    void register_rejectsAdminRole() {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("attacker@test.com"); request.setPassword("password123");
+        request.setFirstName("A"); request.setLastName("B"); request.setRole(UserRole.ADMIN);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("cannot be self-assigned");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test @DisplayName("register — rejects self-assigning SUPER_ADMIN")
+    void register_rejectsSuperAdminRole() {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("attacker@test.com"); request.setPassword("password123");
+        request.setFirstName("A"); request.setLastName("B"); request.setRole(UserRole.SUPER_ADMIN);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("cannot be self-assigned");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test @DisplayName("register — rejects UNKNOWN role")
+    void register_rejectsUnknownRole() {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("x@test.com"); request.setPassword("password123");
+        request.setFirstName("A"); request.setLastName("B"); request.setRole(UserRole.UNKNOWN);
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(BadRequestException.class);
+        verify(userRepository, never()).save(any());
+    }
+
     @Test @DisplayName("register — duplicate email throws")
     void register_duplicateEmail_throws() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("admin@test.com");
+        request.setRole(UserRole.OPERATOR); // valid non-admin role so it reaches the dup-email check
         when(userRepository.existsByEmail("admin@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
@@ -142,6 +178,21 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.refreshToken(request))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Invalid refresh token");
+    }
+
+    @Test @DisplayName("refreshToken — unparseable token (old key/expired) yields 400, not 500")
+    void refreshToken_jwtException_yields400() {
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("signed-with-old-key");
+
+        // Simulates the mass key-invalidation at deploy: jjwt throws an
+        // unchecked JwtException on parse. Must surface as BadRequest, not 500.
+        when(jwtUtil.extractUsername("signed-with-old-key"))
+                .thenThrow(new io.jsonwebtoken.security.SignatureException("bad MAC"));
+
+        assertThatThrownBy(() -> authService.refreshToken(request))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Invalid or expired refresh token");
     }
 
     @Test @DisplayName("changePassword — success")
