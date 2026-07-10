@@ -1,0 +1,79 @@
+name: CI
+
+# Runs on every push and PR. Nothing merges red. This is the gate the audit
+# (docs/PRODUCTION_READINESS_AUDIT.md) flagged as absent — 1900+ tests only ever
+# ran by hand before this.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend tests (H2 suite + enforcement)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # Includes EnforcementChainTest, which boots the full security filter chain and proves
+      # RBAC / tenant / subscription enforcement over real HTTP.
+      - name: mvn test
+        run: mvn -B --no-transfer-progress test
+
+  migrations:
+    name: Flyway chain on real PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: elcafe_mig
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      # Runs the whole V1..V159 chain against a real Postgres 16 (the prod engine), which the H2
+      # suite never does — catches PG-only DDL and entity/schema drift before a prod deploy.
+      - name: Migration chain (MigrationChainIT)
+        env:
+          MIG_TEST_JDBC_URL: jdbc:postgresql://localhost:5432/elcafe_mig
+          MIG_TEST_USER: postgres
+          MIG_TEST_PASSWORD: postgres
+        run: mvn -B --no-transfer-progress test -Dtest=MigrationChainIT -DfailIfNoTests=false
+
+  frontend:
+    name: Frontend build + lint + tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
