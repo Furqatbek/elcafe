@@ -101,7 +101,7 @@ public class OrderController {
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR', 'WAITER')")
     @Operation(summary = "Get orders for a specific shift")
     public ResponseEntity<ApiResponse<List<Order>>> getOrdersByShift(@PathVariable Long shiftId) {
-        List<Order> orders = orderRepository.findByShiftIdWithItems(shiftId);
+        List<Order> orders = orderService.getOrdersByShift(shiftId);
         return ResponseEntity.ok(ApiResponse.success("Orders retrieved for shift", orders));
     }
 
@@ -213,12 +213,7 @@ public class OrderController {
             Pageable pageable
     ) {
         restaurantAuthorizationService.checkAccess(restaurantId);
-        Page<SelfServiceOrder> orders;
-        if (restaurantId != null) {
-            orders = selfServiceOrderRepository.findByOrderRestaurantIdOrderByCreatedAtDesc(restaurantId, pageable);
-        } else {
-            orders = selfServiceOrderRepository.findAll(pageable);
-        }
+        Page<SelfServiceOrder> orders = orderService.getSelfServiceOrders(restaurantId, pageable);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 
@@ -242,12 +237,7 @@ public class OrderController {
         // If specific source is requested, filter by that
         List<OrderSource> sourcesToFilter = source != null ? List.of(source) : externalSources;
 
-        Page<Order> orders;
-        if (restaurantId != null) {
-            orders = orderRepository.findByRestaurantIdAndOrderSourceIn(restaurantId, sourcesToFilter, pageable);
-        } else {
-            orders = orderRepository.findByOrderSourceIn(sourcesToFilter, pageable);
-        }
+        Page<Order> orders = orderService.getExternalOrders(restaurantId, sourcesToFilter, pageable);
         return ResponseEntity.ok(ApiResponse.success(orders));
     }
 }

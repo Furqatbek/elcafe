@@ -8,6 +8,7 @@ import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.order.service.OrderJsonHydration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -41,19 +42,22 @@ public class CourierOrderService {
      * Get orders that are ready for courier assignment. The per-restaurant list is naturally small and
      * stays uncapped; the cross-tenant list is capped at {@value #AVAILABLE_ORDERS_CAP} newest.
      */
+    @Transactional(readOnly = true)
     public List<Order> getAvailableOrders(Long restaurantId) {
         if (restaurantId != null) {
-            return orderRepository.findByRestaurant_IdAndStatus(restaurantId, OrderStatus.READY);
+            return OrderJsonHydration.forJson(
+                    orderRepository.findByRestaurant_IdAndStatus(restaurantId, OrderStatus.READY));
         }
-        return orderRepository.findByStatus(OrderStatus.READY,
-                PageRequest.of(0, AVAILABLE_ORDERS_CAP, Sort.by(Sort.Direction.DESC, "createdAt")));
+        return OrderJsonHydration.forJson(orderRepository.findByStatus(OrderStatus.READY,
+                PageRequest.of(0, AVAILABLE_ORDERS_CAP, Sort.by(Sort.Direction.DESC, "createdAt"))));
     }
 
     /**
      * Get orders assigned to a specific courier
      */
+    @Transactional(readOnly = true)
     public List<Order> getCourierOrders(Long courierId) {
-        return orderRepository.findByDeliveryInfo_CourierId(courierId);
+        return OrderJsonHydration.forJson(orderRepository.findByDeliveryInfo_CourierId(courierId));
     }
 
     /**
@@ -97,7 +101,7 @@ public class CourierOrderService {
         notificationService.notifyCourierAccepted(savedOrder, courier.getUser().getFirstName());
 
         log.info("Courier {} accepted order {}", courierId, order.getOrderNumber());
-        return savedOrder;
+        return OrderJsonHydration.forJson(savedOrder);
     }
 
     /**
@@ -146,7 +150,7 @@ public class CourierOrderService {
         notificationService.notifyCourierAssigned(savedOrder, courier.getId(), courier.getUser().getFirstName());
 
         log.info("Courier {} manually assigned to order {}", courierId, order.getOrderNumber());
-        return savedOrder;
+        return OrderJsonHydration.forJson(savedOrder);
     }
 
     /**
@@ -187,7 +191,7 @@ public class CourierOrderService {
         notificationService.notifyOrderOnDelivery(savedOrder);
 
         log.info("Courier {} started delivery for order {}", courierId, order.getOrderNumber());
-        return savedOrder;
+        return OrderJsonHydration.forJson(savedOrder);
     }
 
     /**
@@ -232,6 +236,6 @@ public class CourierOrderService {
         notificationService.notifyOrderDelivered(savedOrder);
 
         log.info("Courier {} completed delivery for order {}", courierId, order.getOrderNumber());
-        return savedOrder;
+        return OrderJsonHydration.forJson(savedOrder);
     }
 }

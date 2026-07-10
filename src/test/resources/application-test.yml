@@ -14,7 +14,7 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: false
         globally_quoted_identifiers: false
-    open-in-view: true
+    open-in-view: false
 
   flyway:
     enabled: false

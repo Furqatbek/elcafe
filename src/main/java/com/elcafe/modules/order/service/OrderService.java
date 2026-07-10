@@ -9,9 +9,12 @@ import com.elcafe.modules.inventory.service.InventoryValuationService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
+import com.elcafe.modules.selfservice.entity.SelfServiceOrder;
+import com.elcafe.modules.selfservice.repository.SelfServiceOrderRepository;
 import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.settings.service.PrintService;
 import com.elcafe.modules.order.enums.PaymentStatus;
@@ -48,6 +51,7 @@ public class OrderService {
     private final RestaurantTableRepository restaurantTableRepository;
     private final ShiftTimeService shiftTimeService;
     private final PaymentRepository paymentRepository;
+    private final SelfServiceOrderRepository selfServiceOrderRepository;
     @Lazy private final RevenueService revenueService;
     @Lazy private final PrintService printService;
     @Lazy private final InventoryValuationService inventoryValuationService;
@@ -90,7 +94,7 @@ public class OrderService {
             // Don't fail order creation if notification fails
         }
 
-        return order;
+        return OrderJsonHydration.forJson(order);
     }
 
     @Transactional
@@ -205,7 +209,7 @@ public class OrderService {
             }
         }
 
-        return order;
+        return OrderJsonHydration.forJson(order);
     }
 
     /**
@@ -220,20 +224,20 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public Order getOrderById(Long id) {
-        return orderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", id));
+        return OrderJsonHydration.forJson(orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", id)));
     }
 
     @Transactional(readOnly = true)
     public Order getOrderByNumber(String orderNumber) {
-        return orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderNumber", orderNumber));
+        return OrderJsonHydration.forJson(orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "orderNumber", orderNumber)));
     }
 
     @Transactional(readOnly = true)
     public Page<Order> getAllOrders(Pageable pageable) {
         // Use spec-based findAll to ensure @EntityGraph loads items
-        return orderRepository.findAll((Specification<Order>) null, pageable);
+        return OrderJsonHydration.forJson(orderRepository.findAll((Specification<Order>) null, pageable));
     }
 
     /**
@@ -293,7 +297,7 @@ public class OrderService {
                 search
         );
 
-        return orderRepository.findAll(spec, pageable);
+        return OrderJsonHydration.forJson(orderRepository.findAll(spec, pageable));
     }
 
     /**
@@ -309,11 +313,11 @@ public class OrderService {
                 restaurantId, sevenDaysAgo, today
         );
 
-        return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+        return OrderJsonHydration.forJson(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
                 restaurantId,
                 shiftRange.start(),
                 shiftRange.end()
-        );
+        ));
     }
 
     /**
@@ -322,12 +326,49 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public List<Order> getOrdersByCustomer(Long customerId) {
-        return orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customerId, PageRequest.of(0, 500));
+        return OrderJsonHydration.forJson(orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customerId, PageRequest.of(0, 500)));
     }
 
     @Transactional(readOnly = true)
     public List<Order> getPendingOrders() {
-        return orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.NEW);
+        return OrderJsonHydration.forJson(orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.NEW));
+    }
+
+    /**
+     * Orders of one shift, hydrated for serialization. Moved out of the controller: repository calls
+     * from non-transactional controller code returned detached entities, which only serialized their
+     * lazy state thanks to open-in-view.
+     */
+    @Transactional(readOnly = true)
+    public List<Order> getOrdersByShift(Long shiftId) {
+        return OrderJsonHydration.forJson(orderRepository.findByShiftIdWithItems(shiftId));
+    }
+
+    /** External-source order listing (website/bot/app/phone), hydrated for serialization. */
+    @Transactional(readOnly = true)
+    public Page<Order> getExternalOrders(Long restaurantId, List<OrderSource> sources, Pageable pageable) {
+        Page<Order> orders = (restaurantId != null)
+                ? orderRepository.findByRestaurantIdAndOrderSourceIn(restaurantId, sources, pageable)
+                : orderRepository.findByOrderSourceIn(sources, pageable);
+        return OrderJsonHydration.forJson(orders);
+    }
+
+    /**
+     * Self-service (QR) order listing. The wrapper's lazy references — the order itself (hydrated for
+     * its payload), the session, and the QR code — are initialized in-transaction so the response does
+     * not depend on open-in-view.
+     */
+    @Transactional(readOnly = true)
+    public Page<SelfServiceOrder> getSelfServiceOrders(Long restaurantId, Pageable pageable) {
+        Page<SelfServiceOrder> orders = (restaurantId != null)
+                ? selfServiceOrderRepository.findByOrderRestaurantIdOrderByCreatedAtDesc(restaurantId, pageable)
+                : selfServiceOrderRepository.findAll(pageable);
+        orders.forEach(wrapper -> {
+            OrderJsonHydration.forJson(wrapper.getOrder());
+            org.hibernate.Hibernate.initialize(wrapper.getSession());
+            org.hibernate.Hibernate.initialize(wrapper.getQrCode());
+        });
+        return orders;
     }
 
     @Transactional
@@ -465,7 +506,7 @@ public class OrderService {
         order = orderRepository.save(order);
         log.info("Order {} reverted from {} to {}", orderId, currentStatus, targetStatus);
 
-        return order;
+        return OrderJsonHydration.forJson(order);
     }
 
     /**

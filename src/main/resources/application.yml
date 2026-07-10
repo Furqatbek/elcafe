@@ -60,7 +60,12 @@ spring:
           batch_size: 25
         order_inserts: true
         order_updates: true
-    open-in-view: true
+    # E2 stage 2 (PERF-1 second half): no request-pinned DB connection; sessions live only as long
+    # as their transaction. Tenant enforcement survives via TenantAwareJpaTransactionManager; payload
+    # completeness is guaranteed by in-transaction hydration (OrderJsonHydration + kitchen hydration),
+    # pinned by OsivOffPayloadPinTest and the full suite (which also runs with this off). Env override
+    # is the instant rollback if a prod-only path (external courier app?) turns out to rely on OSIV.
+    open-in-view: ${SPRING_JPA_OPEN_IN_VIEW:false}
 
   flyway:
     enabled: true

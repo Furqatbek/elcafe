@@ -62,6 +62,22 @@ log/error-tracking infra) and monetization (H).
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **E2 stage 2 — `open-in-view` OFF (PERF-1 fully closed).** Sessions now live only as long as their
+  transaction: no request-pinned pool connection, no connection-per-lazy-access. What made the flip
+  safe: (1) tenant enforcement moved to `TenantAwareJpaTransactionManager` (below); (2) entity payloads
+  are hydrated in-transaction — `OrderJsonHydration` (items+add-ons, payments for the computed
+  `payment/fullyPaid/totalPaid/remainingBalance` properties, `orderTables` for `tableIdList`, waiter,
+  table) wired through every Order-returning service path incl. mutation returns, courier, waiter, and
+  the three endpoints that previously called repositories straight from the controller; kitchen orders
+  hydrate their nested order. The frontend-consumption audit (all in-repo consumers mapped file:line)
+  determined the association set. Evidence: `OsivOffPayloadPinTest` drives the real HTTP+Jackson chain
+  with OSIV off and pins the consumed payload fields — it caught a nasty pre-existing hazard class in
+  the process: a computed getter touching an uninitialized lazy (`getTableIdList`) aborts Jackson
+  MID-STREAM, returning a 200 with a truncated body that silently drops every later property. Whole
+  suite (2000 tests) runs with OSIV off; zero LazyInitializationException in the run log. Env override
+  `SPRING_JPA_OPEN_IN_VIEW` is the instant rollback. Residual risk: prod-only clients not in this repo
+  (external courier app) — courier endpoints are hydrated too, but a smoke on a running app remains the
+  final check before calling PERF-1 done-done in prod.
 - **E2 stage 2 groundwork — tenant backstop decoupled from OSIV.** `TenantAwareJpaTransactionManager`
   (replacing Boot's default tx manager) enables the Hibernate `restaurantFilter` on every transaction
   begin — every Spring Data repository call is transactional, so this covers all data access including
@@ -135,11 +151,10 @@ log/error-tracking infra) and monetization (H).
 - ~~E0 — scale topology~~ **decided & done** (single-node + ShedLock; see Done above and
   `docs/DEPLOYMENT_TOPOLOGY.md`). The multi-node track (external STOMP relay, Redis-backed
   rate-limits/lockouts) stays deferred until a second replica is actually needed.
-- **E2 stage 2 — `open-in-view: false`.** ~~enable_lazy_load_no_trans~~ off; ~~tenant-filter OSIV
-  dependency~~ **removed** (TenantAwareJpaTransactionManager — see Done). The flip is now gated ONLY on
-  the payload audit: with jackson-datatype-hibernate6, uninitialized lazy fields serialize as null, so
-  entity-returning endpoints (e.g. courier order lists) must be checked for associations the clients
-  rely on (fetch joins/DTOs), then smoke-tested on a running app. ~~E3~~ **fully done**.
+- ~~E2~~ **fully done** — `enable_lazy_load_no_trans` off, `open-in-view` off, tenant backstop
+  transaction-scoped, payloads hydrated + pinned (see Done). One follow-through when a running app
+  exists: smoke the courier endpoints against the external courier client (not in this repo), with
+  `SPRING_JPA_OPEN_IN_VIEW=true` as the instant rollback. ~~E3~~ **fully done**.
 - **F3/F4 — JSON logging + error tracking (Sentry/equivalent):** needs the target infra/DSN.
 - ~~Low-value cleanup~~ **done** — FUNC-7 (dead waiter-event cluster) and FUNC-13 (broken, uncalled
   weekly-overtime path) deleted; see Done above.

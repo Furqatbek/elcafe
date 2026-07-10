@@ -22,6 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import com.elcafe.modules.order.service.OrderJsonHydration;
+import org.hibernate.Hibernate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
 
@@ -65,9 +67,10 @@ public class KitchenOrderService {
                 .estimatedPreparationTimeMinutes(DEFAULT_PREPARATION_TIME_MINUTES)
                 .build();
 
-        return kitchenOrderRepository.save(kitchenOrder);
+        return hydrateForJson(kitchenOrderRepository.save(kitchenOrder));
     }
 
+    @Transactional(readOnly = true)
     public List<KitchenOrder> getActiveOrders(Long restaurantId) {
         List<KitchenOrderStatus> activeStatuses = Arrays.asList(
                 KitchenOrderStatus.PENDING,
@@ -76,6 +79,7 @@ public class KitchenOrderService {
         return getOrdersByStatuses(restaurantId, activeStatuses);
     }
 
+    @Transactional(readOnly = true)
     public List<KitchenOrder> getReadyOrders(Long restaurantId) {
         List<KitchenOrderStatus> readyStatuses = List.of(KitchenOrderStatus.READY);
         return getOrdersByStatuses(restaurantId, readyStatuses);
@@ -86,10 +90,30 @@ public class KitchenOrderService {
      * Reduces code duplication between getActiveOrders and getReadyOrders.
      */
     private List<KitchenOrder> getOrdersByStatuses(Long restaurantId, List<KitchenOrderStatus> statuses) {
-        if (restaurantId != null) {
-            return kitchenOrderRepository.findByRestaurantAndStatuses(restaurantId, statuses);
+        List<KitchenOrder> orders = (restaurantId != null)
+                ? kitchenOrderRepository.findByRestaurantAndStatuses(restaurantId, statuses)
+                : kitchenOrderRepository.findByStatusInOrderByPriorityDescCreatedAtAsc(statuses);
+        return hydrateForJson(orders);
+    }
+
+    /**
+     * The kitchen board reads {@code kitchenOrder.order.orderNumber} from the serialized payload, so the
+     * lazy order reference must be initialized inside the transaction — without open-in-view an
+     * uninitialized proxy serializes as null and the board card crashes.
+     */
+    private List<KitchenOrder> hydrateForJson(List<KitchenOrder> orders) {
+        orders.forEach(this::hydrateForJson);
+        return orders;
+    }
+
+    private KitchenOrder hydrateForJson(KitchenOrder kitchenOrder) {
+        if (kitchenOrder != null) {
+            // The nested order serializes its FULL payload (items, computed payment properties, ...),
+            // so it needs the complete order hydration, not just proxy initialization.
+            Hibernate.initialize(kitchenOrder.getOrder());
+            OrderJsonHydration.forJson(kitchenOrder.getOrder());
         }
-        return kitchenOrderRepository.findByStatusInOrderByPriorityDescCreatedAtAsc(statuses);
+        return kitchenOrder;
     }
 
     @Transactional
@@ -122,7 +146,7 @@ public class KitchenOrderService {
         notificationService.notifyOrderPreparing(order);
 
         log.info("Kitchen order {} started preparation by {}", kitchenOrder.getId(), chefName);
-        return savedOrder;
+        return hydrateForJson(savedOrder);
     }
 
     @Transactional
@@ -155,7 +179,7 @@ public class KitchenOrderService {
         notificationService.notifyOrderReady(order);
 
         log.info("Kitchen order {} marked as ready", kitchenOrder.getId());
-        return savedOrder;
+        return hydrateForJson(savedOrder);
     }
 
     @Transactional
@@ -186,7 +210,7 @@ public class KitchenOrderService {
         orderRepository.save(order);
 
         log.info("Kitchen order {} marked as picked up", kitchenOrder.getId());
-        return savedOrder;
+        return hydrateForJson(savedOrder);
     }
 
     @Transactional
@@ -203,7 +227,7 @@ public class KitchenOrderService {
 
         kitchenOrder.setPriority(priority);
         log.info("Kitchen order {} priority updated to {}", kitchenOrderId, priority);
-        return kitchenOrderRepository.save(kitchenOrder);
+        return hydrateForJson(kitchenOrderRepository.save(kitchenOrder));
     }
 
     // ==================== SECURE METHODS WITH AUTHORIZATION ====================
@@ -280,7 +304,7 @@ public class KitchenOrderService {
 
         log.info("Kitchen order {} started preparation by {} (user: {})",
                 kitchenOrder.getId(), sanitizedChefName, currentUser.getEmail());
-        return savedOrder;
+        return hydrateForJson(savedOrder);
     }
 
     /**
@@ -347,7 +371,7 @@ public class KitchenOrderService {
         markRequestProcessed(effectiveKey);
 
         log.info("Kitchen order {} marked as ready by {}", kitchenOrder.getId(), currentUser.getEmail());
-        return savedOrder;
+        return hydrateForJson(savedOrder);
     }
 
     /**
@@ -415,7 +439,7 @@ public class KitchenOrderService {
         markRequestProcessed(effectiveKey);
 
         log.info("Kitchen order {} marked as picked up by {}", kitchenOrder.getId(), currentUser.getEmail());
-        return savedOrder;
+        return hydrateForJson(savedOrder);
     }
 
     /**
@@ -438,7 +462,7 @@ public class KitchenOrderService {
 
         kitchenOrder.setPriority(priority);
         log.info("Kitchen order {} priority updated to {} by {}", kitchenOrderId, priority, currentUser.getEmail());
-        return kitchenOrderRepository.save(kitchenOrder);
+        return hydrateForJson(kitchenOrderRepository.save(kitchenOrder));
     }
 
     // ==================== HELPER METHODS ====================

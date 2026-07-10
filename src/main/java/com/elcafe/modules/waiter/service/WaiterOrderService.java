@@ -20,6 +20,7 @@ import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.OrderType;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.order.service.OrderJsonHydration;
 import com.elcafe.modules.waiter.dto.AddOrderItemRequest;
 import com.elcafe.modules.waiter.dto.CreateOrderRequest;
 import com.elcafe.modules.waiter.dto.DailyRevenueData;
@@ -209,7 +210,7 @@ public class WaiterOrderService {
                 savedOrder.getOrderNumber(), table.getTableNumber(), waiter.getName(),
                 savedOrder.getItems().size());
 
-        return savedOrder;
+        return OrderJsonHydration.forJson(savedOrder);
     }
 
     /**
@@ -325,7 +326,7 @@ public class WaiterOrderService {
 
         log.info("Added {} items to order {}", items.size(), order.getOrderNumber());
 
-        return updatedOrder;
+        return OrderJsonHydration.forJson(updatedOrder);
     }
 
     /**
@@ -393,7 +394,7 @@ public class WaiterOrderService {
 
         log.info("Updated item {} in order {}", itemId, order.getOrderNumber());
 
-        return updatedOrder;
+        return OrderJsonHydration.forJson(updatedOrder);
     }
 
     /**
@@ -433,7 +434,7 @@ public class WaiterOrderService {
 
         log.info("Removed item {} from order {}", itemId, order.getOrderNumber());
 
-        return updatedOrder;
+        return OrderJsonHydration.forJson(updatedOrder);
     }
 
     /**
@@ -496,7 +497,7 @@ public class WaiterOrderService {
 
         log.info("Submitted order {} to kitchen by waiter {}", order.getOrderNumber(), waiter.getName());
 
-        return updatedOrder;
+        return OrderJsonHydration.forJson(updatedOrder);
     }
 
     /**
@@ -529,7 +530,7 @@ public class WaiterOrderService {
 
         log.info("Marked item {} as delivered in order {}", itemId, order.getOrderNumber());
 
-        return order;
+        return OrderJsonHydration.forJson(order);
     }
 
     /**
@@ -555,7 +556,7 @@ public class WaiterOrderService {
 
         log.info("Bill requested for order {} by waiter {}", order.getOrderNumber(), waiter.getName());
 
-        return order;
+        return OrderJsonHydration.forJson(order);
     }
 
     /**
@@ -597,7 +598,7 @@ public class WaiterOrderService {
 
         log.info("Closed order {} by waiter {}", order.getOrderNumber(), waiter.getName());
 
-        return updatedOrder;
+        return OrderJsonHydration.forJson(updatedOrder);
     }
 
     /**
@@ -605,8 +606,8 @@ public class WaiterOrderService {
      */
     @Transactional(readOnly = true)
     public Order getOrder(Long orderId) {
-        return orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        return OrderJsonHydration.forJson(orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId)));
     }
 
     /**
@@ -617,9 +618,9 @@ public class WaiterOrderService {
         RestaurantTable table = tableRepository.findById(tableId)
                 .orElseThrow(() -> new ResourceNotFoundException("Table not found with id: " + tableId));
 
-        return table.getOrders().stream()
+        return OrderJsonHydration.forJson(table.getOrders().stream()
                 .filter(o -> o.getStatus() != OrderStatus.COMPLETED && o.getStatus() != OrderStatus.CANCELLED)
-                .toList();
+                .toList());
     }
 
     /**
@@ -630,7 +631,7 @@ public class WaiterOrderService {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
-        return orderRepository.findByWaiterWithItemsOrderByCreatedAtDesc(waiter);
+        return OrderJsonHydration.forJson(orderRepository.findByWaiterWithItemsOrderByCreatedAtDesc(waiter));
     }
 
     /**
@@ -641,10 +642,10 @@ public class WaiterOrderService {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
-        return orderRepository.findByWaiterAndStatusInWithItemsOrderByCreatedAtDesc(
+        return OrderJsonHydration.forJson(orderRepository.findByWaiterAndStatusInWithItemsOrderByCreatedAtDesc(
                 waiter,
                 List.of(OrderStatus.NEW, OrderStatus.PREPARING, OrderStatus.READY, OrderStatus.ON_DELIVERY)
-        );
+        ));
     }
 
     /**
@@ -771,7 +772,7 @@ public class WaiterOrderService {
         log.info("Discount applied to order {} by waiter {}: discount={}, newTotal={}",
                 orderId, waiter.getName(), savedOrder.getDiscount(), savedOrder.getTotal());
 
-        return savedOrder;
+        return OrderJsonHydration.forJson(savedOrder);
     }
 
     /**
@@ -811,7 +812,7 @@ public class WaiterOrderService {
 
         log.info("Discount removed from order {} by waiter {}", orderId, waiter.getName());
 
-        return savedOrder;
+        return OrderJsonHydration.forJson(savedOrder);
     }
 
     /**
