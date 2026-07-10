@@ -50,9 +50,11 @@ spring:
         # The whole test suite runs with this value. Env override is the emergency revert switch.
         enable_lazy_load_no_trans: ${HIBERNATE_LAZY_LOAD_NO_TRANS:false}
         # Batch lazy proxy/collection loads into IN(...) queries instead of one-per-parent (N+1), and
-        # batch inserts/updates. Pure performance — no behavior change; complements the still-open
-        # open-in-view (turning that off is a separate change gated on the TenantFilterInterceptor
-        # redesign — it relies on the OSIV session to enable the tenant filter).
+        # batch inserts/updates. Pure performance — no behavior change. open-in-view (below) is no
+        # longer load-bearing for tenant enforcement — TenantAwareJpaTransactionManager scopes every
+        # transaction — so flipping it off is now only a payload question: with the Jackson Hibernate6
+        # module, uninitialized lazy fields serialize as null, so entity-returning endpoints must be
+        # audited (fetch joins / DTOs) and smoke-tested before the flip.
         default_batch_fetch_size: 25
         jdbc:
           batch_size: 25

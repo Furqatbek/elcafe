@@ -79,9 +79,10 @@ below were audited as part of flip-readiness; status noted inline.
   `NotificationRepository.markAllAsReadForUser`, now carries an explicit
   `(:restaurantId IS NULL OR n.restaurantId = :restaurantId)` predicate (the controller passes
   `TenantContext.getRestaurantId()`), so it is tenant-scoped.
-- **`REQUIRES_NEW` / non-MVC DB access** — the filter is enabled on the open-in-view request session
-  only. Tenant-scoped queries in a new transaction or a scheduler are not scoped (by design for
-  background work; confirm none are request-facing).
+- **`REQUIRES_NEW` / non-MVC DB access** — ✅ closed: `TenantAwareJpaTransactionManager` enables the
+  filter on every transaction begin, so `REQUIRES_NEW` sessions on request threads are scoped too
+  (and the backstop no longer depends on open-in-view). Schedulers/async stay unscoped by design —
+  they never populate `TenantContext`. Proven in `TenantAwareTransactionManagerTest`.
 - **§3.3 surrogate-id audit leftovers** — ✅ closed: consumer order-number track/cancel now enforce
   per-customer ownership; the Payment-by-key reads are guarded (above).
 

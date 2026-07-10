@@ -36,10 +36,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
  *       payroll auto-pay require.</li>
  * </ul>
  *
- * <p>Relies on {@code spring.jpa.open-in-view=true}: the request's {@link EntityManager} is already
- * bound to the thread by the time {@code preHandle} runs, so enabling the filter there also covers
- * queries issued by {@code @Transactional} service methods that join the same persistence context.
- * Sessions opened independently (e.g. {@code REQUIRES_NEW}) are out of scope for this v1 backstop.
+ * <p>Coverage is layered with {@link TenantAwareJpaTransactionManager}, which enables the same
+ * filter on every transaction begin: this interceptor scopes the request's open-in-view session
+ * (covering any non-transactional reads on it), while the transaction manager covers every
+ * Spring-managed transaction — including {@code REQUIRES_NEW} sessions this v1 backstop could not
+ * reach — and keeps the backstop alive if {@code open-in-view} is ever turned off. When both fire
+ * on the same session the second enable is idempotent.
  */
 @Component
 public class TenantFilterInterceptor implements HandlerInterceptor {
