@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { receiptTemplateAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { generateReceiptHTML } from '../components/PrintReceipt';
@@ -58,6 +59,7 @@ const Input = ({ value, onChange, placeholder, maxLength }) => (
 );
 
 const ReceiptTemplateSettings = () => {
+  const { t } = useTranslation();
   const { selectedRestaurantId } = useAuthStore();
   const [form, setForm] = useState(DEFAULT_TEMPLATE);
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ const ReceiptTemplateSettings = () => {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
-      alert('Saqlashda xato: ' + (err?.response?.data?.message || err.message));
+      alert(t('receiptTemplate.saveError', { error: err?.response?.data?.message || err.message }));
     } finally {
       setSaving(false);
     }
@@ -118,8 +120,8 @@ const ReceiptTemplateSettings = () => {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Chek Shabloni</h1>
-          <p className="text-sm text-gray-500 mt-1">Chekda ko'rinadigan ma'lumotlarni tahrirlang</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('receiptTemplate.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('receiptTemplate.subtitle')}</p>
         </div>
         <button
           onClick={handleSave}
@@ -129,7 +131,7 @@ const ReceiptTemplateSettings = () => {
           } disabled:opacity-50`}
         >
           {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          {saved ? 'Saqlandi ✓' : 'Saqlash'}
+          {saved ? t('receiptTemplate.saved') : t('common.save')}
         </button>
       </div>
 
@@ -139,35 +141,35 @@ const ReceiptTemplateSettings = () => {
 
           {/* Header */}
           <section className="bg-white rounded-lg border p-5">
-            <h2 className="text-base font-semibold text-gray-800 mb-4">Sarlavha</h2>
-            <Field label="Restoran nomi" hint="Chekda ko'rinadigan katta sarlavha">
+            <h2 className="text-base font-semibold text-gray-800 mb-4">{t('receiptTemplate.sections.header')}</h2>
+            <Field label={t('receiptTemplate.fields.restaurantName')} hint={t('receiptTemplate.fields.restaurantNameHint')}>
               <Input value={form.restaurantName} onChange={set('restaurantName')} placeholder="Jangirov's" maxLength={100} />
             </Field>
-            <Field label="Tagline / Shior" hint="Ixtiyoriy — nom ostida kichik matn">
+            <Field label={t('receiptTemplate.fields.tagline')} hint={t('receiptTemplate.fields.taglineHint')}>
               <Input value={form.tagline} onChange={set('tagline')} placeholder="Maza qiling!" maxLength={200} />
             </Field>
           </section>
 
           {/* Footer */}
           <section className="bg-white rounded-lg border p-5">
-            <h2 className="text-base font-semibold text-gray-800 mb-4">Alt qism (Footer)</h2>
-            <Field label="Telefon raqami">
+            <h2 className="text-base font-semibold text-gray-800 mb-4">{t('receiptTemplate.sections.footer')}</h2>
+            <Field label={t('receiptTemplate.fields.phone')}>
               <Input value={form.phone} onChange={set('phone')} placeholder="+998770049909" maxLength={50} />
             </Field>
-            <Field label="Veb-sayt">
+            <Field label={t('receiptTemplate.fields.website')}>
               <Input value={form.website} onChange={set('website')} placeholder="www.qahvoon.uz" maxLength={100} />
             </Field>
-            <Field label="Rahmat matni">
+            <Field label={t('receiptTemplate.fields.footerMessage')}>
               <Input value={form.footerMessage} onChange={set('footerMessage')} placeholder="*** RAHMAT! ***" maxLength={200} />
             </Field>
-            <Field label="Valyuta" hint="Chekdagi narxlar yonida ko'rsatiladi">
+            <Field label={t('receiptTemplate.fields.currency')} hint={t('receiptTemplate.fields.currencyHint')}>
               <Input value={form.currency} onChange={set('currency')} placeholder="UZS" maxLength={10} />
             </Field>
           </section>
 
           {/* QR Code */}
           <section className="bg-white rounded-lg border p-5">
-            <h2 className="text-base font-semibold text-gray-800 mb-4">QR Kod</h2>
+            <h2 className="text-base font-semibold text-gray-800 mb-4">{t('receiptTemplate.sections.qr')}</h2>
             <Field label="">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -176,18 +178,18 @@ const ReceiptTemplateSettings = () => {
                   onChange={setCheck('showQrCode')}
                   className="h-4 w-4 accent-blue-600"
                 />
-                <span className="text-sm text-gray-700">Chekda QR kod ko'rsatilsin</span>
+                <span className="text-sm text-gray-700">{t('receiptTemplate.fields.showQr')}</span>
               </label>
             </Field>
             {form.showQrCode !== false && (
               <>
-                <Field label="QR URL" hint="Mijozlar skaner qilganda ochadigan havola">
+                <Field label={t('receiptTemplate.fields.qrUrl')} hint={t('receiptTemplate.fields.qrUrlHint')}>
                   <Input value={form.qrUrl} onChange={set('qrUrl')} placeholder="https://qahvoon.uz/menu" maxLength={500} />
                 </Field>
-                <Field label="QR sarlavhasi">
+                <Field label={t('receiptTemplate.fields.qrTitle')}>
                   <Input value={form.qrTitle} onChange={set('qrTitle')} placeholder="ONLINE BUYURTMA" maxLength={100} />
                 </Field>
-                <Field label="QR izoh matni">
+                <Field label={t('receiptTemplate.fields.qrSubtitle')}>
                   <Input value={form.qrSubtitle} onChange={set('qrSubtitle')} placeholder="Skanerlang va buyurtma bering" maxLength={100} />
                 </Field>
               </>
@@ -196,21 +198,21 @@ const ReceiptTemplateSettings = () => {
 
           {/* Paper & Kitchen */}
           <section className="bg-white rounded-lg border p-5">
-            <h2 className="text-base font-semibold text-gray-800 mb-4">Bosib chiqarish</h2>
-            <Field label="Qog'oz kengligi (mm)">
+            <h2 className="text-base font-semibold text-gray-800 mb-4">{t('receiptTemplate.sections.printing')}</h2>
+            <Field label={t('receiptTemplate.fields.paperWidth')}>
               <select
                 value={form.paperWidthMm || 58}
                 onChange={(e) => set('paperWidthMm')(Number(e.target.value))}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value={58}>58mm (kichik termal)</option>
-                <option value={80}>80mm (katta termal)</option>
+                <option value={58}>{t('receiptTemplate.paper.small')}</option>
+                <option value={80}>{t('receiptTemplate.paper.large')}</option>
               </select>
             </Field>
-            <Field label="Oshxona cheki sarlavhasi" hint="Oshxona printer chiqaradigan sarlavha">
+            <Field label={t('receiptTemplate.fields.kitchenHeader')} hint={t('receiptTemplate.fields.kitchenHeaderHint')}>
               <Input value={form.kitchenHeaderText} onChange={set('kitchenHeaderText')} placeholder="*** OSHXONA BUYURTMASI ***" maxLength={100} />
             </Field>
-            <Field label="Oshxona cheki alt matni" hint="Oshxona printer chiqaradigan quyi matn">
+            <Field label={t('receiptTemplate.fields.kitchenFooter')} hint={t('receiptTemplate.fields.kitchenFooterHint')}>
               <Input value={form.kitchenFooterText} onChange={set('kitchenFooterText')} placeholder="HOZIR TAYYORLANG!" maxLength={100} />
             </Field>
           </section>
@@ -221,7 +223,7 @@ const ReceiptTemplateSettings = () => {
           <div className="sticky top-6">
             <div className="flex items-center gap-2 mb-3 text-sm font-medium text-gray-700">
               <Eye className="h-4 w-4" />
-              Jonli ko'rinish
+              {t('receiptTemplate.preview.title')}
             </div>
             <div className="bg-gray-100 rounded-lg p-3 border">
               <div
@@ -240,7 +242,7 @@ const ReceiptTemplateSettings = () => {
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-2 text-center">Namuna ma'lumotlar bilan ko'rsatilmoqda</p>
+            <p className="text-xs text-gray-400 mt-2 text-center">{t('receiptTemplate.preview.note')}</p>
           </div>
         </div>
       </div>

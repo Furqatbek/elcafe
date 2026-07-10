@@ -5507,5 +5507,46 @@
     "totalItems": "Total items",
     "totalSuppliers": "Total suppliers",
     "unitPrice": "Unit price"
+  },
+  "receiptTemplate": {
+    "title": "Receipt Template",
+    "subtitle": "Edit the information shown on the receipt",
+    "saved": "Saved ✓",
+    "saveError": "Save failed: {{error}}",
+    "sections": {
+      "header": "Header",
+      "footer": "Footer",
+      "qr": "QR Code",
+      "printing": "Printing"
+    },
+    "fields": {
+      "restaurantName": "Restaurant name",
+      "restaurantNameHint": "The large heading shown on the receipt",
+      "tagline": "Tagline / Slogan",
+      "taglineHint": "Optional — small text under the name",
+      "phone": "Phone number",
+      "website": "Website",
+      "footerMessage": "Thank-you message",
+      "currency": "Currency",
+      "currencyHint": "Shown next to prices on the receipt",
+      "showQr": "Show QR code on the receipt",
+      "qrUrl": "QR URL",
+      "qrUrlHint": "The link customers open when they scan",
+      "qrTitle": "QR title",
+      "qrSubtitle": "QR caption text",
+      "paperWidth": "Paper width (mm)",
+      "kitchenHeader": "Kitchen ticket header",
+      "kitchenHeaderHint": "The header the kitchen printer outputs",
+      "kitchenFooter": "Kitchen ticket footer",
+      "kitchenFooterHint": "The footer the kitchen printer outputs"
+    },
+    "paper": {
+      "small": "58mm (small thermal)",
+      "large": "80mm (large thermal)"
+    },
+    "preview": {
+      "title": "Live preview",
+      "note": "Showing with sample data"
+    }
   }
 }

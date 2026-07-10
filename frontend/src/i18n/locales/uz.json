@@ -5507,5 +5507,46 @@
     "totalItems": "Jami mahsulotlar",
     "totalSuppliers": "Jami yetkazib beruvchilar",
     "unitPrice": "Birlik narxi"
+  },
+  "receiptTemplate": {
+    "title": "Chek Shabloni",
+    "subtitle": "Chekda ko'rinadigan ma'lumotlarni tahrirlang",
+    "saved": "Saqlandi ✓",
+    "saveError": "Saqlashda xato: {{error}}",
+    "sections": {
+      "header": "Sarlavha",
+      "footer": "Alt qism (Footer)",
+      "qr": "QR Kod",
+      "printing": "Bosib chiqarish"
+    },
+    "fields": {
+      "restaurantName": "Restoran nomi",
+      "restaurantNameHint": "Chekda ko'rinadigan katta sarlavha",
+      "tagline": "Tagline / Shior",
+      "taglineHint": "Ixtiyoriy — nom ostida kichik matn",
+      "phone": "Telefon raqami",
+      "website": "Veb-sayt",
+      "footerMessage": "Rahmat matni",
+      "currency": "Valyuta",
+      "currencyHint": "Chekdagi narxlar yonida ko'rsatiladi",
+      "showQr": "Chekda QR kod ko'rsatilsin",
+      "qrUrl": "QR URL",
+      "qrUrlHint": "Mijozlar skaner qilganda ochadigan havola",
+      "qrTitle": "QR sarlavhasi",
+      "qrSubtitle": "QR izoh matni",
+      "paperWidth": "Qog'oz kengligi (mm)",
+      "kitchenHeader": "Oshxona cheki sarlavhasi",
+      "kitchenHeaderHint": "Oshxona printer chiqaradigan sarlavha",
+      "kitchenFooter": "Oshxona cheki alt matni",
+      "kitchenFooterHint": "Oshxona printer chiqaradigan quyi matn"
+    },
+    "paper": {
+      "small": "58mm (kichik termal)",
+      "large": "80mm (katta termal)"
+    },
+    "preview": {
+      "title": "Jonli ko'rinish",
+      "note": "Namuna ma'lumotlar bilan ko'rsatilmoqda"
+    }
   }
 }
