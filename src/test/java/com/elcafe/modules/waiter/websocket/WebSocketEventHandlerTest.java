@@ -33,7 +33,7 @@ class WebSocketEventHandlerTest {
 
     @Test @DisplayName("handleOrderCreated broadcasts") void created() {
         Order order = createOrder(1L, OrderStatus.NEW);
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdForNotification(1L)).thenReturn(Optional.of(order));
         OrderCreatedEvent event = new OrderCreatedEvent(this, 1L, "W001", 1L, 1L, "Ali", 2);
         handler.handleOrderCreatedForWebSocket(event);
         verify(messagingTemplate, atLeastOnce()).convertAndSend(anyString(), any(Object.class));

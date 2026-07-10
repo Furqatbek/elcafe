@@ -26,7 +26,13 @@ public interface SelfServiceOrderRepository extends JpaRepository<SelfServiceOrd
 
     List<SelfServiceOrder> findBySessionId(Long sessionId);
 
-    @EntityGraph(attributePaths = {"order", "order.items", "session", "qrCode"})
+    /**
+     * No {@code order.items} in this graph: a collection fetch combined with {@code Pageable} makes
+     * Hibernate paginate in memory (HHH90003004) — every self-service order of the restaurant would
+     * be materialised to serve one page. The to-one references stay fetched (no pagination hazard);
+     * the service initialises each order's payload via {@code OrderJsonHydration}.
+     */
+    @EntityGraph(attributePaths = {"order", "session", "qrCode"})
     Page<SelfServiceOrder> findByOrderRestaurantIdOrderByCreatedAtDesc(Long restaurantId, Pageable pageable);
 
     @Query("SELECT o FROM SelfServiceOrder o WHERE o.order.restaurant.id = :restaurantId " +

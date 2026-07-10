@@ -275,9 +275,24 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Override
     Page<Order> findAll(Specification<Order> spec, Pageable pageable);
 
-    @Override
-    @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)
-    Optional<Order> findById(Long id);
+    /**
+     * Loader for code that reads an order OUTSIDE any session — the {@code @Async} notification
+     * paths (admin-panel WebSocket broadcast, owner-bot Telegram) hand orders across threads after
+     * the loading transaction is gone, so everything they read must be initialised here: items,
+     * waiter, dining table, customer, restaurant. Explicit {@code JOIN FETCH} because the
+     * {@code @EntityGraph} that used to sit on a redeclared {@code findById} was silently IGNORED
+     * (Spring Data resolves the override as a derived query and the graph hint never reached the
+     * SQL — verified empirically; {@code OrderAsyncNotificationLoadTest} pins the working variant).
+     * Single-row by id: the one collection fetch is safe — never add a {@code Pageable} here.
+     */
+    @Query("SELECT o FROM Order o "
+            + "LEFT JOIN FETCH o.items "
+            + "LEFT JOIN FETCH o.waiter "
+            + "LEFT JOIN FETCH o.diningTable "
+            + "LEFT JOIN FETCH o.customer "
+            + "LEFT JOIN FETCH o.restaurant "
+            + "WHERE o.id = :id")
+    Optional<Order> findByIdForNotification(@Param("id") Long id);
 
     Optional<Order> findByOrderNumber(String orderNumber);
 
@@ -469,14 +484,18 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             @Param("endDate") OffsetDateTime endDate);
 
     /**
-     * Find orders by source (for external orders page)
+     * Find orders by source (for the platform external-orders page). No {@code JOIN FETCH o.items}:
+     * a collection fetch with {@code Pageable} pages in memory (HHH90003004) — and this variant is
+     * cross-tenant, so it would materialise every external order on the platform to serve one page.
+     * The payload is batch-initialised by {@code OrderJsonHydration} in the service.
      */
-    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.orderSource IN :sources AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
+    @Query("SELECT o FROM Order o WHERE o.orderSource IN :sources AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
     Page<Order> findByOrderSourceIn(@Param("sources") List<OrderSource> sources, Pageable pageable);
 
     /**
-     * Find orders by restaurant and source (for external orders page)
+     * Find orders by restaurant and source (for external orders page). Same no-collection-fetch rule
+     * as {@link #findByOrderSourceIn}.
      */
-    @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.restaurant.id = :restaurantId AND o.orderSource IN :sources AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
+    @Query("SELECT o FROM Order o WHERE o.restaurant.id = :restaurantId AND o.orderSource IN :sources AND o.deletedAt IS NULL ORDER BY o.createdAt DESC")
     Page<Order> findByRestaurantIdAndOrderSourceIn(@Param("restaurantId") Long restaurantId, @Param("sources") List<OrderSource> sources, Pageable pageable);
 }

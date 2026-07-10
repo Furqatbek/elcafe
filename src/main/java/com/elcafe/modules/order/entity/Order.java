@@ -55,14 +55,6 @@ import java.util.stream.Collectors;
 @EntityListeners(AuditingEntityListener.class)
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Filter(name = "restaurantFilter", condition = "restaurant_id = :restaurantId")
-@NamedEntityGraph(
-    name = "Order.withItems",
-    attributeNodes = {
-        @NamedAttributeNode("items"),
-        @NamedAttributeNode("diningTable"),
-        @NamedAttributeNode("waiter")
-    }
-)
 public class Order {
 
     @Id

@@ -64,6 +64,30 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **Async-notification lazy sweep: admin realtime broadcast fixed; two more in-memory paginations
+  killed; the Order entity graph was a no-op all along.** Following the plan-gate bug class
+  (lazy access after the loading session is gone) across every listener/@Async surface found one
+  real casualty: `WebSocketEventHandler.broadcastToAdminPanel` re-loads the order on an @Async
+  thread and reads items/diningTable/customer — with open-in-view off that threw
+  LazyInitializationException into its catch-all, so the admin-panel realtime order feed was
+  silently dropped for every order. Root cause is worse than missed hydration: the
+  `@EntityGraph("Order.withItems")` on the redeclared `findById` was NEVER APPLIED — Spring Data
+  executes the override as a plain derived query (proven by SQL: no joins; the new
+  `OrderFindByIdGraphTest` originally asserted the graph and caught it). The inert graph + override
+  are deleted; the notification paths now use an explicit fetch-join loader
+  (`findByIdForNotification`: items, waiter, diningTable, customer, restaurant — pinned detached in
+  the test). The sweep also cleared: OrderEventListener (re-loads in its own REQUIRES_NEW tx),
+  owner-bot notifications (scalar reads / in-memory-initialised create-path state),
+  NotificationService (synchronous, in-tx), loyalty/milestone (proxy-id reads + FK writes only),
+  marketing SMS (events carry loaded customers). Two more collection-fetch+Pageable in-memory
+  paginations fixed (same class as the listing one): the external-orders page — whose no-tenant
+  variant materialised every external order PLATFORM-WIDE per page — and the self-service listing
+  (graph trimmed to its to-one nodes). **New functional finding (FUNC-15, product-gated):**
+  `publishOrderCompleted` has no callers — order-completion loyalty accrual (points, milestones,
+  first-order bonus) and the thank-you/first-order SMS automations have never fired in prod; the
+  listeners are wired and detachment-safe, so activating them is one publish call at completion,
+  but granting bonuses is a product decision, not a code fix. (`OrderRefundedEvent` is likewise
+  never published.)
 - **E2 load criterion verified locally + the order listing's in-memory pagination killed.** A
   40-worker concurrency test (2× the Hikari pool) drove 18,400 authenticated tenant-scoped requests
   through the running app on real Postgres, prod-shaped (tenant + WS + subscription enforcement on,
@@ -359,6 +383,7 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
 | FUNC-12 | MED | Hardcoded, untranslatable customer components (0 `t()`): OrderStatus/OrderTracking pages (English), ReceiptTemplateSettings (Uzbek), KitchenTicket (English). | `pages/customer/*`, `ReceiptTemplateSettings.jsx`, `pos/components/KitchenTicket.jsx` |
 | FUNC-13 | MED | Overtime pay loads every tenant's shifts for the week into memory then filters (`restaurant = null`). | `OvertimeRuleService.java:95` |
 | FUNC-14 | LOW | Subscription billing charges nothing **by design** (Noop provider, prices 0) — monetization is Phase B, gated on an acquiring contract. Not a bug. | `NoopPaymentProvider.java:23`; `SubscriptionPlan.java:51` |
+| FUNC-15 | MED | Order-completion loyalty accrual (points/milestones/first-order bonus) and thank-you/first-order SMS never fire: `publishOrderCompleted` has 0 callers (`OrderRefundedEvent` likewise never published). Listeners are wired and detachment-safe — activation is one publish call at completion, but granting bonuses is a **product decision**. | `MarketingEventPublisher.java:35`; `LoyaltyOrderEventListener.java:38` |
 
 ### 2.7 What is genuinely solid (do not regress)
 

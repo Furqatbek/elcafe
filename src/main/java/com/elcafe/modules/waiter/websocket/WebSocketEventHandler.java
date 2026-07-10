@@ -49,7 +49,7 @@ public class WebSocketEventHandler {
             return null;
         }
         try {
-            Order order = orderRepository.findById(orderId).orElse(null);
+            Order order = orderRepository.findByIdForNotification(orderId).orElse(null);
             if (order == null || order.getRestaurant() == null) {
                 return null;
             }
@@ -108,7 +108,11 @@ public class WebSocketEventHandler {
      */
     private void broadcastToAdminPanel(Long orderId, String eventType) {
         try {
-            Order order = orderRepository.findById(orderId).orElse(null);
+            // Fetch-joined loader: this runs on an @Async thread with no session, and the message
+            // below reads items, diningTable, and customer — an uninitialized lazy here threw
+            // LazyInitializationException into the catch block and silently dropped the broadcast
+            // for every order with items (i.e. all of them) once open-in-view went off.
+            Order order = orderRepository.findByIdForNotification(orderId).orElse(null);
             if (order == null || order.getRestaurant() == null) {
                 log.warn("Cannot broadcast to admin panel - order or restaurant not found for orderId: {}", orderId);
                 return;
