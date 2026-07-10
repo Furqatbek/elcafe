@@ -4,21 +4,14 @@ import com.elcafe.modules.notification.service.TelegramBotService;
 import com.elcafe.modules.sms.enums.CampaignStatus;
 import com.elcafe.modules.sms.enums.MessageStatus;
 import com.elcafe.modules.telegram.entity.*;
-import com.elcafe.modules.telegram.enums.TelegramMessageType;
 import com.elcafe.modules.telegram.repository.*;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,9 +27,8 @@ public class TelegramCampaignExecutor {
     private final TelegramBotService botService;
     private final TelegramCampaignRepository campaignRepository;
     private final TelegramCampaignRecipientRepository recipientRepository;
-    private final TelegramLogRepository logRepository;
     private final TelegramTemplateRepository templateRepository;
-    private final ObjectMapper objectMapper;
+    private final TelegramCampaignPersistence persistence;
 
     // Telegram rate limit: 30 messages per second, we'll be conservative with 25
     private static final int MESSAGES_PER_SECOND = 25;
@@ -64,9 +56,10 @@ public class TelegramCampaignExecutor {
         }
 
         try {
-            // Get all pending recipients
+            // Get all pending recipients, subscriber eagerly fetched: this loop runs on an @Async thread
+            // with no bound session, so a lazy subscriber access below would otherwise fault.
             List<TelegramCampaignRecipient> recipients = recipientRepository
-                    .findByCampaignIdAndStatus(campaignId, MessageStatus.PENDING);
+                    .findByCampaignIdAndStatusWithSubscriber(campaignId, MessageStatus.PENDING);
 
             log.info("Campaign {} has {} pending recipients", campaignId, recipients.size());
 
@@ -99,7 +92,7 @@ public class TelegramCampaignExecutor {
                     break;
                 } catch (Exception e) {
                     log.error("Error sending to recipient {}: {}", recipient.getTelegramUserId(), e.getMessage());
-                    markRecipientFailed(recipient, e.getMessage());
+                    persistence.markRecipientFailed(recipient, e.getMessage());
                     failedCount++;
                     campaign.incrementFailedCount();
                 }
@@ -146,12 +139,12 @@ public class TelegramCampaignExecutor {
         }
 
         if (messageId != null) {
-            markRecipientSent(recipient, messageId, message);
-            logMessage(campaign, recipient, message, messageId, MessageStatus.SENT, null);
+            persistence.markRecipientSent(recipient, messageId, message);
+            persistence.logCampaignMessage(campaign, recipient, message, messageId, MessageStatus.SENT, null);
             return true;
         } else {
-            markRecipientFailed(recipient, "Failed to send message");
-            logMessage(campaign, recipient, message, null, MessageStatus.FAILED, "Failed to send message");
+            persistence.markRecipientFailed(recipient, "Failed to send message");
+            persistence.logCampaignMessage(campaign, recipient, message, null, MessageStatus.FAILED, "Failed to send message");
             return false;
         }
     }
@@ -228,55 +221,6 @@ public class TelegramCampaignExecutor {
     }
 
     /**
-     * Mark recipient as sent
-     */
-    @Transactional
-    public void markRecipientSent(TelegramCampaignRecipient recipient, Integer messageId, String message) {
-        recipient.setStatus(MessageStatus.SENT);
-        recipient.setSentAt(LocalDateTime.now());
-        recipient.setTelegramMessageId(messageId != null ? messageId.longValue() : null);
-        recipient.setMessageContent(message);
-        recipientRepository.save(recipient);
-    }
-
-    /**
-     * Mark recipient as failed
-     */
-    @Transactional
-    public void markRecipientFailed(TelegramCampaignRecipient recipient, String errorMessage) {
-        recipient.setStatus(MessageStatus.FAILED);
-        recipient.setErrorMessage(errorMessage);
-        recipientRepository.save(recipient);
-    }
-
-    /**
-     * Log message to telegram_logs
-     */
-    @Transactional
-    public void logMessage(TelegramCampaign campaign, TelegramCampaignRecipient recipient,
-                           String message, Integer telegramMessageId, MessageStatus status, String errorMessage) {
-        try {
-            TelegramLog logEntry = TelegramLog.builder()
-                    .subscriber(recipient.getSubscriber())
-                    .telegramUserId(recipient.getTelegramUserId())
-                    .username(recipient.getSubscriber() != null ? recipient.getSubscriber().getUsername() : null)
-                    .message(message)
-                    .messageType(TelegramMessageType.CAMPAIGN)
-                    .template(campaign.getTemplate())
-                    .campaign(campaign)
-                    .telegramMessageId(telegramMessageId != null ? telegramMessageId.longValue() : null)
-                    .status(status)
-                    .sentAt(status == MessageStatus.SENT ? LocalDateTime.now() : null)
-                    .errorMessage(errorMessage)
-                    .build();
-
-            logRepository.save(logEntry);
-        } catch (Exception e) {
-            log.error("Failed to log message: {}", e.getMessage());
-        }
-    }
-
-    /**
      * Send a single message (for automation or manual sending)
      */
     public boolean sendSingleMessage(Long chatId, String message, String imageUrl,
@@ -323,9 +267,9 @@ public class TelegramCampaignExecutor {
 
         // Log the message
         if (success) {
-            logTemplateMessage(subscriber, template, message, MessageStatus.SENT, null);
+            persistence.logTemplateMessage(subscriber, template, message, MessageStatus.SENT, null);
         } else {
-            logTemplateMessage(subscriber, template, message, MessageStatus.FAILED, "Failed to send");
+            persistence.logTemplateMessage(subscriber, template, message, MessageStatus.FAILED, "Failed to send");
         }
 
         // Update template usage count
@@ -335,26 +279,5 @@ public class TelegramCampaignExecutor {
         }
 
         return success;
-    }
-
-    private void logTemplateMessage(TelegramSubscriber subscriber, TelegramTemplate template,
-                                    String message, MessageStatus status, String error) {
-        try {
-            TelegramLog logEntry = TelegramLog.builder()
-                    .subscriber(subscriber)
-                    .telegramUserId(subscriber.getTelegramUserId())
-                    .username(subscriber.getUsername())
-                    .message(message)
-                    .messageType(TelegramMessageType.AUTOMATION)
-                    .template(template)
-                    .status(status)
-                    .sentAt(status == MessageStatus.SENT ? LocalDateTime.now() : null)
-                    .errorMessage(error)
-                    .build();
-
-            logRepository.save(logEntry);
-        } catch (Exception e) {
-            log.error("Failed to log template message: {}", e.getMessage());
-        }
     }
 }
