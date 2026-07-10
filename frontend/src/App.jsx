@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import Layout from './components/Layout';
@@ -6,84 +6,86 @@ import SessionManager from './components/SessionManager';
 import SuspensionGate from './components/SuspensionGate';
 import { Toaster } from './components/ui/toaster';
 import { InventoryProvider } from './context/InventoryContext';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Orders from './pages/Orders';
-import Restaurants from './pages/Restaurants';
-import Tables from './pages/Tables';
-import WorkingHours from './pages/WorkingHours';
-import Products from './pages/Products';
-import LinkedItems from './pages/LinkedItems';
-import Menu from './pages/Menu';
-import Categories from './pages/Categories';
-import Customers from './pages/Customers';
-import Reviews from './pages/Reviews';
-import CustomerSegments from './pages/CustomerSegments';
-import Operators from './pages/Operators';
-import SystemUsers from './pages/SystemUsers';
-import Subscription from './pages/Subscription';
-import PlatformConsole from './pages/PlatformConsole';
-import Waiters from './pages/Waiters';
-import WaiterPerformance from './pages/WaiterPerformance';
-import ShiftDashboard from './pages/ShiftDashboard';
-import ShiftSchedule from './pages/ShiftSchedule';
-import MobileClockIn from './pages/MobileClockIn';
-import Couriers from './pages/Couriers';
-import CourierMap from './pages/CourierMap';
-import MenuCollections from './pages/MenuCollections';
-import KitchenDashboard from './pages/KitchenDashboard';
-import FinancialAnalytics from './pages/FinancialAnalytics';
-import OperationalAnalytics from './pages/OperationalAnalytics';
-import CustomerAnalytics from './pages/CustomerAnalytics';
-import InventoryAnalytics from './pages/InventoryAnalytics';
-import PromotionAnalytics from './pages/PromotionAnalytics';
-import PurchaseOrders from './pages/PurchaseOrders';
-import POSuggestions from './pages/POSuggestions';
-import Expenses from './pages/Expenses';
-import FinancialReports from './pages/FinancialReports';
-import PrinterSettings from './pages/PrinterSettings';
-import ReceiptTemplateSettings from './pages/ReceiptTemplateSettings';
 import { receiptTemplateAPI } from './services/api';
 import { resolveCurrentRestaurantId } from './utils/restaurant';
-import KitchenStations from './pages/KitchenStations';
-import PricingDashboard from './pages/PricingDashboard';
-import FinancialAlerts from './pages/FinancialAlerts';
-import Payroll from './pages/Payroll';
-import EmployeeConsumption from './pages/EmployeeConsumption';
-import ConsumptionAllowances from './pages/ConsumptionAllowances';
-import Promotions from './pages/Promotions';
-import CouponCodes from './pages/CouponCodes';
-import HappyHours from './pages/HappyHours';
-import Bundles from './pages/Bundles';
-import ReferralProgram from './pages/ReferralProgram';
-import SmsMarketing from './pages/SmsMarketing';
-import TelegramMarketing from './pages/TelegramMarketing';
-import OwnerBotSubscribers from './pages/OwnerBotSubscribers';
-import InstagramMarketing from './pages/InstagramMarketing';
-import QRCodes from './pages/QRCodes';
-import LoyaltyMilestones from './pages/LoyaltyMilestones';
-import LoyaltySettings from './pages/LoyaltySettings';
-import Reservations from './pages/Reservations';
-import {
-  InventoryIngredients,
-  InventoryRecipes,
-  InventoryExpiry,
-  InventoryStockCounts,
-  InventoryWaste,
-  InventorySuppliers,
-  InventoryAlerts,
-  InventoryValuation,
-  ProductionBatches,
-} from './pages/inventory';
-import POSApp from './pos/POSApp';
-import SinglePagePOS from './pos/single/SinglePagePOS';
-import CustomerDisplayScreen from './pos/screens/CustomerDisplayScreen';
-import OrderStatusBoardScreen from './pos/screens/OrderStatusBoardScreen';
-import ReviewPage from './pages/customer/ReviewPage';
-import OrdersHistory from './pages/OrdersHistory';
-import OrdersByShift from './pages/OrdersByShift';
-import SelfServiceOrders from './pages/SelfServiceOrders';
-import Profile from './pages/Profile';
+
+// Route pages are lazy-loaded so the initial bundle stays small; each becomes its own chunk
+// fetched on navigation (rendered under the <Suspense> boundary below).
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Orders = lazy(() => import('./pages/Orders'));
+const Restaurants = lazy(() => import('./pages/Restaurants'));
+const Tables = lazy(() => import('./pages/Tables'));
+const WorkingHours = lazy(() => import('./pages/WorkingHours'));
+const Products = lazy(() => import('./pages/Products'));
+const LinkedItems = lazy(() => import('./pages/LinkedItems'));
+const Menu = lazy(() => import('./pages/Menu'));
+const Categories = lazy(() => import('./pages/Categories'));
+const Customers = lazy(() => import('./pages/Customers'));
+const Reviews = lazy(() => import('./pages/Reviews'));
+const CustomerSegments = lazy(() => import('./pages/CustomerSegments'));
+const Operators = lazy(() => import('./pages/Operators'));
+const SystemUsers = lazy(() => import('./pages/SystemUsers'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const PlatformConsole = lazy(() => import('./pages/PlatformConsole'));
+const Waiters = lazy(() => import('./pages/Waiters'));
+const WaiterPerformance = lazy(() => import('./pages/WaiterPerformance'));
+const ShiftDashboard = lazy(() => import('./pages/ShiftDashboard'));
+const ShiftSchedule = lazy(() => import('./pages/ShiftSchedule'));
+const MobileClockIn = lazy(() => import('./pages/MobileClockIn'));
+const Couriers = lazy(() => import('./pages/Couriers'));
+const CourierMap = lazy(() => import('./pages/CourierMap'));
+const MenuCollections = lazy(() => import('./pages/MenuCollections'));
+const KitchenDashboard = lazy(() => import('./pages/KitchenDashboard'));
+const FinancialAnalytics = lazy(() => import('./pages/FinancialAnalytics'));
+const OperationalAnalytics = lazy(() => import('./pages/OperationalAnalytics'));
+const CustomerAnalytics = lazy(() => import('./pages/CustomerAnalytics'));
+const InventoryAnalytics = lazy(() => import('./pages/InventoryAnalytics'));
+const PromotionAnalytics = lazy(() => import('./pages/PromotionAnalytics'));
+const PurchaseOrders = lazy(() => import('./pages/PurchaseOrders'));
+const POSuggestions = lazy(() => import('./pages/POSuggestions'));
+const Expenses = lazy(() => import('./pages/Expenses'));
+const FinancialReports = lazy(() => import('./pages/FinancialReports'));
+const PrinterSettings = lazy(() => import('./pages/PrinterSettings'));
+const ReceiptTemplateSettings = lazy(() => import('./pages/ReceiptTemplateSettings'));
+const KitchenStations = lazy(() => import('./pages/KitchenStations'));
+const PricingDashboard = lazy(() => import('./pages/PricingDashboard'));
+const FinancialAlerts = lazy(() => import('./pages/FinancialAlerts'));
+const Payroll = lazy(() => import('./pages/Payroll'));
+const EmployeeConsumption = lazy(() => import('./pages/EmployeeConsumption'));
+const ConsumptionAllowances = lazy(() => import('./pages/ConsumptionAllowances'));
+const Promotions = lazy(() => import('./pages/Promotions'));
+const CouponCodes = lazy(() => import('./pages/CouponCodes'));
+const HappyHours = lazy(() => import('./pages/HappyHours'));
+const Bundles = lazy(() => import('./pages/Bundles'));
+const ReferralProgram = lazy(() => import('./pages/ReferralProgram'));
+const SmsMarketing = lazy(() => import('./pages/SmsMarketing'));
+const TelegramMarketing = lazy(() => import('./pages/TelegramMarketing'));
+const OwnerBotSubscribers = lazy(() => import('./pages/OwnerBotSubscribers'));
+const InstagramMarketing = lazy(() => import('./pages/InstagramMarketing'));
+const QRCodes = lazy(() => import('./pages/QRCodes'));
+const LoyaltyMilestones = lazy(() => import('./pages/LoyaltyMilestones'));
+const LoyaltySettings = lazy(() => import('./pages/LoyaltySettings'));
+const Reservations = lazy(() => import('./pages/Reservations'));
+const POSApp = lazy(() => import('./pos/POSApp'));
+const SinglePagePOS = lazy(() => import('./pos/single/SinglePagePOS'));
+const CustomerDisplayScreen = lazy(() => import('./pos/screens/CustomerDisplayScreen'));
+const OrderStatusBoardScreen = lazy(() => import('./pos/screens/OrderStatusBoardScreen'));
+const ReviewPage = lazy(() => import('./pages/customer/ReviewPage'));
+const OrdersHistory = lazy(() => import('./pages/OrdersHistory'));
+const OrdersByShift = lazy(() => import('./pages/OrdersByShift'));
+const SelfServiceOrders = lazy(() => import('./pages/SelfServiceOrders'));
+const Profile = lazy(() => import('./pages/Profile'));
+// Inventory pages are named exports of ./pages/inventory — map each to a default for lazy().
+const InventoryIngredients = lazy(() => import('./pages/inventory').then((m) => ({ default: m.InventoryIngredients })));
+const InventoryRecipes = lazy(() => import('./pages/inventory').then((m) => ({ default: m.InventoryRecipes })));
+const InventoryExpiry = lazy(() => import('./pages/inventory').then((m) => ({ default: m.InventoryExpiry })));
+const InventoryStockCounts = lazy(() => import('./pages/inventory').then((m) => ({ default: m.InventoryStockCounts })));
+const InventoryWaste = lazy(() => import('./pages/inventory').then((m) => ({ default: m.InventoryWaste })));
+const InventorySuppliers = lazy(() => import('./pages/inventory').then((m) => ({ default: m.InventorySuppliers })));
+const InventoryAlerts = lazy(() => import('./pages/inventory').then((m) => ({ default: m.InventoryAlerts })));
+const InventoryValuation = lazy(() => import('./pages/inventory').then((m) => ({ default: m.InventoryValuation })));
+const ProductionBatches = lazy(() => import('./pages/inventory').then((m) => ({ default: m.ProductionBatches })));
 
 function PrivateRoute({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -143,6 +145,7 @@ function App() {
       <SessionManager />
       <Toaster />
       <SuspensionGate />
+      <Suspense fallback={<div className="flex h-screen items-center justify-center text-gray-500">Loading…</div>}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/pos/customer-display" element={<CustomerDisplayScreen />} />
@@ -250,6 +253,7 @@ function App() {
           <Route path="*" element={<Navigate to="/orders" replace />} />
         </Route>
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
