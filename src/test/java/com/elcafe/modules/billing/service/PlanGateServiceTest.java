@@ -55,7 +55,7 @@ class PlanGateServiceTest {
     }
 
     private void stubRestaurant(Restaurant r) {
-        when(restaurantRepository.findById(r.getId())).thenReturn(Optional.of(r));
+        when(restaurantRepository.findByIdWithPlanFeatures(r.getId())).thenReturn(Optional.of(r));
     }
 
     @Test @DisplayName("getBillingStatus — free plan, no expiry: not grace/read-only, days null")
@@ -128,7 +128,9 @@ class PlanGateServiceTest {
     void setPlan_changesAndAudits() {
         Restaurant r = restaurant(1L, plan("start", "Start", Set.of()), null, false);
         SubscriptionPlan pro = plan("pro", "Pro", Set.of("kitchen.dashboard"));
+        // setPlan itself loads via findById; the returned status reloads through the gate finder.
         when(restaurantRepository.findById(1L)).thenReturn(Optional.of(r));
+        when(restaurantRepository.findByIdWithPlanFeatures(1L)).thenReturn(Optional.of(r));
         when(planRepository.findByCode("pro")).thenReturn(Optional.of(pro));
         when(restaurantRepository.save(any(Restaurant.class))).thenAnswer(i -> i.getArgument(0));
 

@@ -44,4 +44,14 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, Long>, J
     @Query("SELECT r FROM Restaurant r JOIN FETCH r.plan "
             + "WHERE r.planExpiresAt IS NOT NULL AND r.planExpiresAt BETWEEN :start AND :end")
     List<Restaurant> findWithPlanExpiringBetween(LocalDateTime start, LocalDateTime end);
+
+    /**
+     * Plan-gate loader: the restaurant with its plan fully initialised by one query inside the
+     * repository's own transaction (the feature codes are a JSONB column on the plan row, so they
+     * materialise with it). The plan-gate interceptors call this outside any transaction and
+     * {@code open-in-view} is off, so a lazy plan proxy surviving this load is a guaranteed
+     * {@code LazyInitializationException} on the first gated request of a planned tenant.
+     */
+    @Query("SELECT r FROM Restaurant r LEFT JOIN FETCH r.plan WHERE r.id = :id")
+    Optional<Restaurant> findByIdWithPlanFeatures(Long id);
 }

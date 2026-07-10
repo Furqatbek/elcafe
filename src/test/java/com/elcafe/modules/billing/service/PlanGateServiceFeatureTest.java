@@ -52,7 +52,7 @@ class PlanGateServiceFeatureTest {
             when(plan.getFeatureCodes()).thenReturn(codes);
             when(r.getPlan()).thenReturn(plan);
         }
-        when(restaurantRepository.findById(id)).thenReturn(Optional.of(r));
+        when(restaurantRepository.findByIdWithPlanFeatures(id)).thenReturn(Optional.of(r));
     }
 
     @Test
@@ -81,7 +81,7 @@ class PlanGateServiceFeatureTest {
     @Test
     @DisplayName("restaurant not found → allowed (no plan to gate on)")
     void restaurantMissing_allows() {
-        when(restaurantRepository.findById(4L)).thenReturn(Optional.empty());
+        when(restaurantRepository.findByIdWithPlanFeatures(4L)).thenReturn(Optional.empty());
         assertThatCode(() -> service.requireFeatureIfPlanned(4L, "inventory")).doesNotThrowAnyException();
     }
 }

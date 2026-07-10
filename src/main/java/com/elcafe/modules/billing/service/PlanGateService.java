@@ -78,7 +78,13 @@ public class PlanGateService {
     }
 
     private PlanSnapshot load(Long restaurantId) {
-        Restaurant restaurant = restaurantRepository.findById(restaurantId).orElse(null);
+        // Must not rely on an ambient session: the gate interceptors reach here through unannotated
+        // entry points (requireWriteAccess/requireFeatureIfPlanned are self-invocations as far as
+        // @Transactional is concerned), and open-in-view is off. The fetch-joined finder returns the
+        // plan + feature codes fully initialised from the repository's own transaction; plain
+        // findById handed back lazy proxies that blew up with LazyInitializationException on every
+        // gated request of a planned tenant (caught by the post-OSIV-flip boot smoke).
+        Restaurant restaurant = restaurantRepository.findByIdWithPlanFeatures(restaurantId).orElse(null);
         if (restaurant == null || restaurant.getPlan() == null) {
             return null;
         }

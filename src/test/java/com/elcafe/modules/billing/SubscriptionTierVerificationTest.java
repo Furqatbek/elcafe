@@ -68,14 +68,14 @@ class SubscriptionTierVerificationTest {
         SubscriptionPlan start = plan("start", Set.of());
         SubscriptionPlan pro = plan("pro", new LinkedHashSet<>(PlanFeatures.pro()));
 
-        // Build the restaurant mocks before stubbing findById: restaurant()/plan() stub internally,
+        // Build the restaurant mocks before stubbing the finder: restaurant()/plan() stub internally,
         // and Mockito forbids nested stubbing inside a when(...) argument.
         Restaurant startRestaurant = restaurant(start, null);
         Restaurant proRestaurant = restaurant(pro, null);
         Restaurant expiredRestaurant = restaurant(pro, LocalDateTime.now().minusDays(10));
-        when(restaurantRepo.findById(START_RID)).thenReturn(Optional.of(startRestaurant));
-        when(restaurantRepo.findById(PRO_RID)).thenReturn(Optional.of(proRestaurant));
-        when(restaurantRepo.findById(EXPIRED_RID)).thenReturn(Optional.of(expiredRestaurant));
+        when(restaurantRepo.findByIdWithPlanFeatures(START_RID)).thenReturn(Optional.of(startRestaurant));
+        when(restaurantRepo.findByIdWithPlanFeatures(PRO_RID)).thenReturn(Optional.of(proRestaurant));
+        when(restaurantRepo.findByIdWithPlanFeatures(EXPIRED_RID)).thenReturn(Optional.of(expiredRestaurant));
 
         mvc = MockMvcBuilders.standaloneSetup(new DummyController())
                 .addInterceptors(new PlanWriteGuardInterceptor(gate, authz),

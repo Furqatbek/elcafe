@@ -64,6 +64,21 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **Plan-gate LazyInitializationException fixed — the OSIV flip's one real casualty, caught live.**
+  The `LOG_FORMAT=json` verification boot surfaced it within minutes: with `open-in-view` off, EVERY
+  staff write and every plan-gated module request of a tenant that HAS a plan 500'd.
+  `PlanGateService.load()` touched the lazy `Restaurant.plan` proxy from the MVC gate interceptors —
+  outside any transaction, because `requireWriteAccess`/`requireFeatureIfPlanned` are unannotated and
+  their calls into the `@Transactional getCurrentPlan` are self-invocations the proxy never
+  intercepts. OSIV's request session had been silently absorbing exactly this. The whole 1999-test
+  suite missed it because every test tenant is planless (`load()` short-circuits before the proxy).
+  Fix: `load()` now uses a fetch-joined finder (`findByIdWithPlanFeatures`; the feature codes are a
+  JSONB column on the plan row, so one join covers it) — correct from any entry point, zero cost on
+  cache hits. `PlanGateOsivRegressionTest` seeds the missing case (tenant-bound ADMIN on a planned
+  restaurant, OSIV off) and pins all the surfaces: the unannotated service entry, the write guard
+  (PATCH → 404 not 500), a granted-feature module (200), a missing-feature module (structured
+  `plan.feature_required` 403). Re-smoked live on real Postgres: the failing write now 200s, the
+  gates 403 correctly, zero LazyInitializationException in the log. Suite: 2003 green.
 - **F3 + F4 (code half) — switchable JSON logs, tenant in MDC, dormant Sentry, liveness healthcheck.**
   `LOG_FORMAT=json` switches the console stream to one JSON object per line (logstash encoder: level,
   logger, message, stack traces, full MDC) with no rebuild; unset keeps the exact plain output, still
