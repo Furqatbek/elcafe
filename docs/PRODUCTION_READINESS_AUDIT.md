@@ -62,6 +62,19 @@ log/error-tracking infra) and monetization (H).
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **E3 — analytics full-table loaders killed (PERF-2 BLOCKER, PERF-8, PERF-9).**
+  `FinancialAnalyticsService` no longer materializes every order of the range (with items/payments N+1)
+  to aggregate in Java: all four reports now run on DB-side aggregates/projections behind one shared
+  `REVENUE_QUALIFYING_WHERE` (exact SQL translation of the old in-Java filter incl. `isFullyPaid`
+  tips/refunds arithmetic and grandTotal fallback — pinned branch-by-branch in
+  `RevenueAggregateQueriesTest`). Business-day attribution stays in Java but on scalar rows with the
+  restaurant's hours preloaded once (`ShiftTimeService.businessDayResolver`, equivalence-tested against
+  the per-call path — which was itself an N+1: two hours-queries per order). PERF-8:
+  `calculateOrderMetrics` now uses 3 COUNT queries. PERF-9: capped the unbounded finders (cross-tenant
+  courier READY scan → newest 200; customer order history → newest 500; SMS log lists → newest 1000).
+  NOTE: the sibling analytics services (Customer/Operational/Inventory/Promotion analytics,
+  FinancialReportsService) still use the old full-range loaders — same pattern, lower blast radius;
+  migrate them onto the same aggregates as a follow-up.
 - **FUNC-7 + FUNC-13 — dead code removed.** The never-published waiter-event cluster is gone
   (4 `OrderEventPublisher` methods with 0 callers, the 4 event classes, their 8 never-firing listener
   methods across `OrderEventListener`/`WebSocketEventHandler`, the void-item KPI write
@@ -93,8 +106,10 @@ log/error-tracking infra) and monetization (H).
 - ~~E0 — scale topology~~ **decided & done** (single-node + ShedLock; see Done above and
   `docs/DEPLOYMENT_TOPOLOGY.md`). The multi-node track (external STOMP relay, Redis-backed
   rate-limits/lockouts) stays deferred until a second replica is actually needed.
-- **E2/E3 — `open-in-view: false` + kill the remaining full-table loaders** (analytics loaders, `OvertimeRuleService`
-  weekly query FUNC-13). Behaviour-affecting; wants a running-app smoke, not just green unit tests.
+- **E2 — `open-in-view: false` flip** (+ `enable_lazy_load_no_trans: false`). Behaviour-affecting; wants a
+  running-app smoke, not just green unit tests. ~~E3~~ **done** for the flagged blocker
+  (FinancialAnalyticsService — see Done); remaining: migrate the sibling analytics services onto the same
+  DB aggregates (Customer/Operational/Inventory/Promotion, FinancialReportsService).
 - **F3/F4 — JSON logging + error tracking (Sentry/equivalent):** needs the target infra/DSN.
 - ~~Low-value cleanup~~ **done** — FUNC-7 (dead waiter-event cluster) and FUNC-13 (broken, uncalled
   weekly-overtime path) deleted; see Done above.

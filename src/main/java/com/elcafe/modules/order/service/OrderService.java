@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -315,9 +316,13 @@ public class OrderService {
         );
     }
 
+    /**
+     * A customer's order history, newest first, capped at the most recent 500 (audit PERF-9): the
+     * unbounded variant materialized a customer's lifetime orders with item graphs on every profile view.
+     */
     @Transactional(readOnly = true)
     public List<Order> getOrdersByCustomer(Long customerId) {
-        return orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customerId);
+        return orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customerId, PageRequest.of(0, 500));
     }
 
     @Transactional(readOnly = true)

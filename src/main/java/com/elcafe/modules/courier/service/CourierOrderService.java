@@ -10,6 +10,8 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CourierOrderService {
 
+    /**
+     * Upper bound for the cross-tenant "available orders" scan (audit PERF-9): the no-restaurant variant
+     * otherwise grows with total platform volume. More simultaneously-READY orders than this is not a
+     * pick-list a courier can act on anyway; newest first.
+     */
+    private static final int AVAILABLE_ORDERS_CAP = 200;
+
     private final OrderRepository orderRepository;
     private final CourierProfileRepository courierProfileRepository;
     private final NotificationService notificationService;
@@ -29,13 +38,15 @@ public class CourierOrderService {
     private final CourierWalletService courierWalletService;
 
     /**
-     * Get orders that are ready for courier assignment
+     * Get orders that are ready for courier assignment. The per-restaurant list is naturally small and
+     * stays uncapped; the cross-tenant list is capped at {@value #AVAILABLE_ORDERS_CAP} newest.
      */
     public List<Order> getAvailableOrders(Long restaurantId) {
         if (restaurantId != null) {
             return orderRepository.findByRestaurant_IdAndStatus(restaurantId, OrderStatus.READY);
         }
-        return orderRepository.findByStatus(OrderStatus.READY);
+        return orderRepository.findByStatus(OrderStatus.READY,
+                PageRequest.of(0, AVAILABLE_ORDERS_CAP, Sort.by(Sort.Direction.DESC, "createdAt")));
     }
 
     /**

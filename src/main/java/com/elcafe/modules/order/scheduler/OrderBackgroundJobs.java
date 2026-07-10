@@ -146,17 +146,13 @@ public class OrderBackgroundJobs {
             OffsetDateTime startOfDay = OffsetDateTime.now(ZoneOffset.UTC).withHour(0).withMinute(0).withSecond(0).withNano(0);
             OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
-            // Get today's orders
-            List<Order> todayOrders = orderRepository
-                    .findByCreatedAtBetween(startOfDay, now);
-
-            long totalOrders = todayOrders.size();
-            long completedOrders = todayOrders.stream()
-                    .filter(o -> o.getStatus() == OrderStatus.COMPLETED)
-                    .count();
-            long cancelledOrders = todayOrders.stream()
-                    .filter(o -> o.getStatus() == OrderStatus.CANCELLED)
-                    .count();
+            // Count in the database — this job only logs 3 numbers, so materializing every order of the
+            // day (entities + associations), hourly, was pure heap burn (audit PERF-8).
+            long totalOrders = orderRepository.countByCreatedAtBetween(startOfDay, now);
+            long completedOrders = orderRepository.countByStatusAndCreatedAtBetween(
+                    OrderStatus.COMPLETED, startOfDay, now);
+            long cancelledOrders = orderRepository.countByStatusAndCreatedAtBetween(
+                    OrderStatus.CANCELLED, startOfDay, now);
 
             log.info("Order metrics - Total: {}, Completed: {}, Cancelled: {}",
                     totalOrders, completedOrders, cancelledOrders);

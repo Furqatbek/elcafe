@@ -87,13 +87,22 @@ public interface SmsLogRepository extends JpaRepository<SmsLog, Long> {
 
     List<SmsLog> findByCustomerIdOrderByCreatedAtDesc(Long customerId);
 
+    /** Bounded variant — caps how many rows a per-customer log view materializes (PERF-9). */
+    List<SmsLog> findByCustomerIdOrderByCreatedAtDesc(Long customerId, Pageable pageable);
+
     List<SmsLog> findByCampaignIdOrderByCreatedAtDesc(Long campaignId);
+
+    /** Bounded variant — a campaign's log can be the whole subscriber base (PERF-9). */
+    List<SmsLog> findByCampaignIdOrderByCreatedAtDesc(Long campaignId, Pageable pageable);
 
     Page<SmsLog> findByMessageTypeOrderByCreatedAtDesc(SmsMessageType messageType, Pageable pageable);
 
     Page<SmsLog> findByStatusOrderByCreatedAtDesc(MessageStatus status, Pageable pageable);
 
     List<SmsLog> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime from, LocalDateTime to);
+
+    /** Bounded variant — an arbitrary caller-supplied date range must not be an unbounded scan (PERF-9). */
+    List<SmsLog> findByCreatedAtBetweenOrderByCreatedAtDesc(LocalDateTime from, LocalDateTime to, Pageable pageable);
 
     boolean existsByCustomerIdAndAutomationRuleIdAndCreatedAtAfter(Long customerId, Long automationRuleId, LocalDateTime after);
 

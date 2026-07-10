@@ -7,6 +7,7 @@ import com.elcafe.modules.sms.repository.SmsLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,9 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class SmsLogService {
+
+    /** Cap for the list-shaped (non-paginated) log endpoints; newest rows win (audit PERF-9). */
+    private static final int LIST_CAP = 1000;
 
     private final SmsLogRepository smsLogRepository;
 
@@ -64,19 +68,19 @@ public class SmsLogService {
     }
 
     /**
-     * Get logs by customer ID
+     * Get logs by customer ID (newest {@value #LIST_CAP}; unbounded lists are a heap risk — PERF-9)
      */
     @Transactional(readOnly = true)
     public List<SmsLog> getLogsByCustomer(Long customerId) {
-        return smsLogRepository.findByCustomerIdOrderByCreatedAtDesc(customerId);
+        return smsLogRepository.findByCustomerIdOrderByCreatedAtDesc(customerId, PageRequest.of(0, LIST_CAP));
     }
 
     /**
-     * Get logs by campaign ID
+     * Get logs by campaign ID (newest {@value #LIST_CAP}; a campaign's log can span the whole subscriber base)
      */
     @Transactional(readOnly = true)
     public List<SmsLog> getLogsByCampaign(Long campaignId) {
-        return smsLogRepository.findByCampaignIdOrderByCreatedAtDesc(campaignId);
+        return smsLogRepository.findByCampaignIdOrderByCreatedAtDesc(campaignId, PageRequest.of(0, LIST_CAP));
     }
 
     /**
@@ -96,11 +100,11 @@ public class SmsLogService {
     }
 
     /**
-     * Get logs within date range
+     * Get logs within date range (newest {@value #LIST_CAP}; the range is caller-supplied and unbounded)
      */
     @Transactional(readOnly = true)
     public List<SmsLog> getLogsByDateRange(LocalDateTime from, LocalDateTime to) {
-        return smsLogRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(from, to);
+        return smsLogRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(from, to, PageRequest.of(0, LIST_CAP));
     }
 
     /**

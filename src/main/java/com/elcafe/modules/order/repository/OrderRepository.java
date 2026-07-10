@@ -1,8 +1,12 @@
 package com.elcafe.modules.order.repository;
 
+import com.elcafe.modules.order.dto.ProductSalesRow;
+import com.elcafe.modules.order.dto.RevenueOrderRow;
+import com.elcafe.modules.order.dto.RevenueTotalsRow;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.waiter.entity.Waiter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,11 +20,72 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
+
+    /**
+     * Shared WHERE fragment selecting "revenue-qualifying" orders for analytics. This is the exact SQL
+     * translation of the Java filter analytics used before (FinancialAnalyticsService.getCompletedOrders):
+     * not CANCELLED, and (revenue status OR paymentStatus COMPLETED OR fully paid). "Fully paid" mirrors
+     * {@code Order.isFullyPaid()}: effective total (grandTotal if &gt; 0, else total) must be positive and
+     * covered by the sum of COMPLETED payments' net amounts (amount + tip − refunded,
+     * {@code Payment.getNetAmount()}). Deliberately does NOT filter {@code deletedAt} — the Java filter it
+     * replaces never did, and changing which orders count is not this rewrite's job.
+     */
+    String REVENUE_QUALIFYING_WHERE = """
+             o.createdAt BETWEEN :start AND :end
+             AND (:restaurantId IS NULL OR o.restaurant.id = :restaurantId)
+             AND o.status <> :cancelled
+             AND ( o.status IN :revenueStatuses
+                OR o.paymentStatus = :completedPayment
+                OR ( (CASE WHEN o.grandTotal IS NOT NULL AND o.grandTotal > 0 THEN o.grandTotal ELSE COALESCE(o.total, 0) END) > 0
+                  AND COALESCE((SELECT SUM(p.amount + COALESCE(p.tipAmount, 0) - COALESCE(p.refundedAmount, 0))
+                                FROM Payment p WHERE p.order = o AND p.status = :completedPayment), 0)
+                      >= (CASE WHEN o.grandTotal IS NOT NULL AND o.grandTotal > 0 THEN o.grandTotal ELSE COALESCE(o.total, 0) END) ) )
+            """;
+
+    /**
+     * One scalar row per revenue-qualifying order (no entity graphs). The first-payment subquery is the
+     * deterministic form of {@code Order.getPayment()} (first element ≙ lowest id).
+     */
+    @Query("SELECT new com.elcafe.modules.order.dto.RevenueOrderRow(o.createdAt, o.total, "
+            + " (SELECT p1.method FROM Payment p1 WHERE p1.order = o AND p1.id = "
+            + "   (SELECT MIN(p2.id) FROM Payment p2 WHERE p2.order = o))) "
+            + "FROM Order o WHERE " + REVENUE_QUALIFYING_WHERE)
+    List<RevenueOrderRow> findRevenueOrderRows(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("cancelled") OrderStatus cancelled,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses,
+            @Param("completedPayment") PaymentStatus completedPayment);
+
+    /** Per-product line-total and quantity sums over revenue-qualifying orders, aggregated in the DB. */
+    @Query("SELECT new com.elcafe.modules.order.dto.ProductSalesRow(oi.productId, SUM(oi.totalPrice), SUM(oi.quantity)) "
+            + "FROM OrderItem oi JOIN oi.order o WHERE oi.productId IS NOT NULL AND " + REVENUE_QUALIFYING_WHERE
+            + " GROUP BY oi.productId")
+    List<ProductSalesRow> sumProductSales(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("cancelled") OrderStatus cancelled,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses,
+            @Param("completedPayment") PaymentStatus completedPayment);
+
+    /** Total revenue (SUM of order totals) and order count over revenue-qualifying orders. */
+    @Query("SELECT new com.elcafe.modules.order.dto.RevenueTotalsRow(COALESCE(SUM(o.total), 0), COUNT(o)) "
+            + "FROM Order o WHERE " + REVENUE_QUALIFYING_WHERE)
+    RevenueTotalsRow sumRevenueTotals(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("cancelled") OrderStatus cancelled,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses,
+            @Param("completedPayment") PaymentStatus completedPayment);
 
     @Override
     @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)
@@ -56,6 +121,9 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     List<Order> findByCustomer_IdOrderByCreatedAtDesc(Long customerId);
 
+    /** Bounded variant — pass a {@code PageRequest} to cap how much history is materialized (PERF-9). */
+    List<Order> findByCustomer_IdOrderByCreatedAtDesc(Long customerId, Pageable pageable);
+
     @Query("SELECT DISTINCT o FROM Order o LEFT JOIN FETCH o.items WHERE o.customer.id = :customerId ORDER BY o.createdAt DESC")
     List<Order> findByCustomer_IdWithItemsOrderByCreatedAtDesc(@Param("customerId") Long customerId);
 
@@ -78,6 +146,14 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Order> findByDiningTable_IdAndStatusIn(Long tableId, List<OrderStatus> statuses);
 
     List<Order> findByStatus(OrderStatus status);
+
+    /** Bounded variant — caps a cross-tenant status scan to one page (PERF-9). */
+    List<Order> findByStatus(OrderStatus status, Pageable pageable);
+
+    /** Count-only variants of {@code findByCreatedAtBetween} for metrics jobs (PERF-8). */
+    long countByCreatedAtBetween(OffsetDateTime startDate, OffsetDateTime endDate);
+
+    long countByStatusAndCreatedAtBetween(OrderStatus status, OffsetDateTime startDate, OffsetDateTime endDate);
 
     List<Order> findByDeliveryInfo_CourierId(Long courierId);
 

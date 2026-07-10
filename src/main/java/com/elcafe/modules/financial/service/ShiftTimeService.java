@@ -7,13 +7,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Shared service for calculating shift time ranges based on business hours.
@@ -243,14 +248,56 @@ public class ShiftTimeService {
         if (restaurantId == null) {
             return timestamp.toLocalDate();
         }
+        return computeBusinessDay(timestamp,
+                dayOfWeek -> businessHoursRepository.findByRestaurant_IdAndDayOfWeek(restaurantId, dayOfWeek));
+    }
 
+    /**
+     * Batch-friendly variant of {@link #getBusinessDay}: loads the restaurant's business hours ONCE and
+     * returns a resolver that computes business days purely in memory. {@code getBusinessDay} issues up
+     * to two business-hours queries per call, which turns per-order grouping in analytics into an N+1 —
+     * use this whenever attributing many timestamps (audit PERF-2).
+     */
+    public BusinessDayResolver businessDayResolver(Long restaurantId) {
+        if (restaurantId == null) {
+            return new BusinessDayResolver(null);
+        }
+        Map<DayOfWeek, BusinessHours> hoursByDay = businessHoursRepository.findByRestaurant_Id(restaurantId)
+                .stream()
+                .collect(Collectors.toMap(BusinessHours::getDayOfWeek, hours -> hours, (first, dup) -> first));
+        return new BusinessDayResolver(hoursByDay);
+    }
+
+    /** In-memory business-day computer; obtain via {@link #businessDayResolver(Long)}. */
+    public static final class BusinessDayResolver {
+        private final Map<DayOfWeek, BusinessHours> hoursByDay;
+
+        private BusinessDayResolver(Map<DayOfWeek, BusinessHours> hoursByDay) {
+            this.hoursByDay = hoursByDay;
+        }
+
+        /** Same contract as {@code getBusinessDay}: null restaurant (no hours map) → calendar date. */
+        public LocalDate businessDayFor(LocalDateTime timestamp) {
+            if (hoursByDay == null) {
+                return timestamp.toLocalDate();
+            }
+            return computeBusinessDay(timestamp, dayOfWeek -> Optional.ofNullable(hoursByDay.get(dayOfWeek)));
+        }
+    }
+
+    /**
+     * Core business-day attribution, shared by the per-call and batch paths so they cannot drift:
+     * a timestamp before today's opening time, on a day whose previous day's shift crosses midnight,
+     * belongs to the previous business day.
+     */
+    private static LocalDate computeBusinessDay(LocalDateTime timestamp,
+                                                Function<DayOfWeek, Optional<BusinessHours>> hoursLookup) {
         LocalDate timestampDate = timestamp.toLocalDate();
         LocalTime timestampTime = timestamp.toLocalTime();
 
         // Check if the timestamp falls in the "after midnight" portion of yesterday's shift
         LocalDate yesterday = timestampDate.minusDays(1);
-        var yesterdayHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
-            restaurantId, yesterday.getDayOfWeek());
+        var yesterdayHours = hoursLookup.apply(yesterday.getDayOfWeek());
 
         if (yesterdayHours.isPresent() && !yesterdayHours.get().getClosed()) {
             LocalTime yesterdayOpen = yesterdayHours.get().getOpenTime();
@@ -263,8 +310,7 @@ public class ShiftTimeService {
             if (yesterdayCrossesMidnight) {
                 // Yesterday's shift crosses midnight - check if timestamp is in the "after midnight" portion
                 // The shift from yesterday extends until today's opening time
-                var todayHours = businessHoursRepository.findByRestaurant_IdAndDayOfWeek(
-                    restaurantId, timestampDate.getDayOfWeek());
+                var todayHours = hoursLookup.apply(timestampDate.getDayOfWeek());
 
                 LocalTime todayOpen = todayHours.isPresent() && !todayHours.get().getClosed()
                     ? todayHours.get().getOpenTime()
