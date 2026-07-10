@@ -11,6 +11,7 @@ import com.elcafe.modules.settings.websocket.PrintAgentWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -387,6 +388,7 @@ public class PrintJobService {
      * Scheduled cleanup of old print jobs (runs daily at 3 AM)
      */
     @Scheduled(cron = "0 0 3 * * *")
+    @SchedulerLock(name = "print-job-cleanup", lockAtLeastFor = "PT30S")
     @Transactional
     public void cleanupOldJobs() {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(7);
@@ -400,6 +402,7 @@ public class PrintJobService {
      * Scheduled reset of stuck jobs (runs every 5 minutes)
      */
     @Scheduled(fixedRate = 300000) // 5 minutes
+    @SchedulerLock(name = "print-job-reset-stuck", lockAtLeastFor = "PT30S")
     @Transactional
     public void resetStuckJobs() {
         LocalDateTime timeout = LocalDateTime.now().minusMinutes(2);

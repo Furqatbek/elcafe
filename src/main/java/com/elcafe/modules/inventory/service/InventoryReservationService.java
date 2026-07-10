@@ -10,6 +10,7 @@ import com.elcafe.modules.inventory.repository.InventoryReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -221,6 +222,7 @@ public class InventoryReservationService {
      * Clean up expired reservations (scheduled task).
      */
     @Scheduled(fixedRate = 60000) // Every minute
+    @SchedulerLock(name = "inventory-reservation-expiry", lockAtLeastFor = "PT30S")
     @Transactional
     public void cleanupExpiredReservations() {
         int expired = reservationRepository.expireOldReservations(LocalDateTime.now());

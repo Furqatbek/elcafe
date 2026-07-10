@@ -88,7 +88,12 @@ public class LoginAttemptService {
         attempts.remove(key(email));
     }
 
-    /** Evict entries whose window and any lockout have both elapsed, so the map stays bounded. */
+    /**
+     * Evict entries whose window and any lockout have both elapsed, so the map stays bounded.
+     *
+     * <p>Deliberately NOT {@code @SchedulerLock}ed: {@code attempts} is this node's own in-memory map, so
+     * every instance must run its own sweep — a shared lock would leave all but one node leaking.
+     */
     @Scheduled(fixedRate = 600_000) // every 10 minutes
     void evictStale() {
         Instant cutoffFailure = Instant.now().minus(Duration.ofMinutes(attemptWindowMinutes));

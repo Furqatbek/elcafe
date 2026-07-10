@@ -19,6 +19,7 @@ import com.elcafe.modules.telegram.service.TelegramCampaignExecutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +55,7 @@ public class TelegramScheduler {
      * If a campaign's scheduledAt time has passed, start sending.
      */
     @Scheduled(fixedRate = 60000) // Every minute
+    @SchedulerLock(name = "telegram-campaign-dispatch", lockAtLeastFor = "PT30S")
     @Transactional
     public void processScheduledCampaigns() {
         try {
@@ -84,6 +86,7 @@ public class TelegramScheduler {
      * Sends birthday messages to subscribers whose linked customers have birthday today.
      */
     @Scheduled(cron = "0 0 9 * * ?") // Every day at 9:00 AM
+    @SchedulerLock(name = "telegram-birthday-automation", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     @Transactional
     public void processBirthdayAutomation() {
         try {
@@ -144,6 +147,7 @@ public class TelegramScheduler {
      * Sends win-back messages to subscribers who haven't interacted recently.
      */
     @Scheduled(cron = "0 0 10 * * ?") // Every day at 10:00 AM
+    @SchedulerLock(name = "telegram-inactive-winback", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     @Transactional
     public void processInactiveUserAutomation() {
         try {
@@ -215,6 +219,7 @@ public class TelegramScheduler {
      * Campaigns stuck in SENDING status for more than 2 hours are marked as failed.
      */
     @Scheduled(fixedRate = 3600000) // Every hour
+    @SchedulerLock(name = "telegram-stuck-campaign-cleanup", lockAtLeastFor = "PT30S")
     @Transactional
     public void cleanupStuckCampaigns() {
         try {

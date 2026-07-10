@@ -8,6 +8,7 @@ import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -30,6 +31,7 @@ public class LowStockAlertScheduler {
      * Check for low stock items every 2 hours during working hours
      */
     @Scheduled(cron = "0 0 8-22/2 * * *")
+    @SchedulerLock(name = "owner-low-stock-alerts", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     public void checkLowStockAlerts() {
         log.info("Checking for low stock alerts...");
 

@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -338,6 +339,7 @@ public class GiftCardService {
      * Scheduled task to expire gift cards.
      */
     @Scheduled(cron = "0 0 1 * * *") // Run at 1 AM daily
+    @SchedulerLock(name = "gift-card-expiry", lockAtLeastFor = "PT30S")
     @Transactional
     public void expireGiftCards() {
         List<GiftCard> expiredCards = giftCardRepository.findExpiredCards(OffsetDateTime.now());

@@ -7,6 +7,7 @@ import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -31,6 +32,7 @@ public class SubscriptionLifecycleJob {
     private final BillingService billingService;
 
     @Scheduled(cron = "0 30 8 * * *")
+    @SchedulerLock(name = "subscription-lifecycle-daily", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     public void runDaily() {
         runOnce();
     }

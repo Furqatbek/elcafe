@@ -62,6 +62,13 @@ log/error-tracking infra) and monetization (H).
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **E0 — scale topology DECIDED: single-node + ShedLock.** Every shared-state `@Scheduled` job (30) now
+  carries `@SchedulerLock` (JDBC provider, `shedlock` table `V160`, DB-clock based), so crons are safe at
+  any instance count — including the two-instance overlap of a rolling deploy (no double SMS/salary/print
+  runs). The two in-memory eviction jobs are deliberately unlocked (node-local) and allowlisted;
+  `SchedulerLockGuardTest` fails the build if a future cron ships unlocked. Scheduler pool 4 → 8
+  (PERF-10). Topology, constraints, and the multi-node prerequisites: `docs/DEPLOYMENT_TOPOLOGY.md`.
+  V1..V160 chain re-verified on real Postgres 16.
 
 **Operational actions still on you (can't be done from the repo)**
 - **Rotate** the JWT secret and DB password — they are public in git history, so untracking the file is not
@@ -74,8 +81,9 @@ log/error-tracking infra) and monetization (H).
 
 **Remaining before real users / growth** (each is gated — needs a decision, a running-app smoke, or infra)
 - **C (full):** rehearse the backfills on a copy of real *populated* prod data (the fresh-DB rehearsal is done).
-- **E0 — scale topology (decision):** single-node (+ShedLock on crons) vs multi-node (external STOMP relay,
-  Redis-backed rate limits). Blocks the multi-instance-only work. *Needs your call.*
+- ~~E0 — scale topology~~ **decided & done** (single-node + ShedLock; see Done above and
+  `docs/DEPLOYMENT_TOPOLOGY.md`). The multi-node track (external STOMP relay, Redis-backed
+  rate-limits/lockouts) stays deferred until a second replica is actually needed.
 - **E2/E3 — `open-in-view: false` + kill the remaining full-table loaders** (analytics loaders, `OvertimeRuleService`
   weekly query FUNC-13). Behaviour-affecting; wants a running-app smoke, not just green unit tests.
 - **F3/F4 — JSON logging + error tracking (Sentry/equivalent):** needs the target infra/DSN.

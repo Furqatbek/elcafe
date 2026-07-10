@@ -12,6 +12,7 @@ import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -63,6 +64,7 @@ public class DailyFinancialReportService {
      * Runs every 15 minutes to check if any reports need to be sent
      */
     @Scheduled(fixedRateString = "#{${financial-alert.check-interval-minutes:15} * 60000}", initialDelayString = "120000")
+    @SchedulerLock(name = "daily-financial-reports", lockAtLeastFor = "PT30S")
     @Transactional
     public void checkAndSendDailyReports() {
         if (!alertConfig.isEnabled()) {

@@ -7,6 +7,7 @@ import com.elcafe.modules.reservation.repository.ReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ public class ReservationReminderScheduler {
      * Send reminders for today's reservations at 9:00 AM
      */
     @Scheduled(cron = "0 0 9 * * *")
+    @SchedulerLock(name = "reservation-reminders-today", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     public void sendDailyReservationReminders() {
         log.info("Sending reservation reminders for today...");
 
@@ -52,6 +54,7 @@ public class ReservationReminderScheduler {
      * Send reminders for tomorrow's reservations at 6:00 PM
      */
     @Scheduled(cron = "0 0 18 * * *")
+    @SchedulerLock(name = "reservation-reminders-tomorrow", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     public void sendTomorrowReservationReminders() {
         log.info("Sending reservation reminders for tomorrow...");
 

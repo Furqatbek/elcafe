@@ -42,7 +42,9 @@ public class AsyncConfig implements SchedulingConfigurer {
     @Bean
     public TaskScheduler taskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(4);
+        // ~30 registered jobs, several at 1-minute cadence; 4 threads meant one slow daily batch could
+        // starve the minute jobs (PERF-10). 8 keeps sub-minute jobs on time under batch overlap.
+        scheduler.setPoolSize(8);
         scheduler.setThreadNamePrefix("scheduler-");
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
         scheduler.setAwaitTerminationSeconds(30);

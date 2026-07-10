@@ -9,6 +9,7 @@ import com.elcafe.modules.sms.service.SmsAutomationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class SmsAutomationScheduler {
      * Runs daily at 9 AM.
      */
     @Scheduled(cron = "0 0 9 * * ?")
+    @SchedulerLock(name = "sms-birthday-greetings", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     @Transactional
     public void processBirthdayGreetings() {
         log.info("Starting birthday greetings scheduler");
@@ -75,6 +77,7 @@ public class SmsAutomationScheduler {
      * Runs daily at 10 AM.
      */
     @Scheduled(cron = "0 0 10 * * ?")
+    @SchedulerLock(name = "sms-inactive-winback", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     @Transactional
     public void processInactiveCustomers() {
         log.info("Starting inactive customer re-engagement scheduler");
@@ -125,6 +128,7 @@ public class SmsAutomationScheduler {
      * Runs daily at 11 AM - sends review requests 3 days after delivery.
      */
     @Scheduled(cron = "0 0 11 * * ?")
+    @SchedulerLock(name = "sms-review-requests", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     @Transactional
     public void processReviewRequests() {
         log.info("Starting review request scheduler");

@@ -4,6 +4,7 @@ import com.elcafe.modules.referral.service.ReferralService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 
 /**
@@ -27,6 +28,7 @@ public class ReferralBackgroundJobs {
      * (default 30 days) are automatically expired.
      */
     @Scheduled(cron = "0 0 2 * * *") // Every day at 2 AM
+    @SchedulerLock(name = "referral-expiry", lockAtLeastFor = "PT30S")
     public void expirePendingReferrals() {
         try {
             log.info("Starting referral expiration job");

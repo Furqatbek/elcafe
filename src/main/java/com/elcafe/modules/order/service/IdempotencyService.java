@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -169,6 +170,7 @@ public class IdempotencyService {
      * Clean up expired idempotency keys (scheduled task)
      */
     @Scheduled(fixedRate = 3600000) // Every hour
+    @SchedulerLock(name = "idempotency-key-cleanup", lockAtLeastFor = "PT30S")
     @Transactional
     public void cleanupExpiredKeys() {
         int deleted = idempotencyKeyRepository.deleteExpiredKeys(LocalDateTime.now());

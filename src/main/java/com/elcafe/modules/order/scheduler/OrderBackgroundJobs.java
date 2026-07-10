@@ -8,6 +8,7 @@ import com.elcafe.modules.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ public class OrderBackgroundJobs {
      * are automatically rejected and refunded.
      */
     @Scheduled(cron = "0 * * * * *") // Every minute
+    @SchedulerLock(name = "order-auto-reject-expired", lockAtLeastFor = "PT30S")
     @Transactional
     public void autoRejectExpiredOrders() {
         try {
@@ -82,6 +84,7 @@ public class OrderBackgroundJobs {
      * are automatically cancelled.
      */
     @Scheduled(cron = "0 */5 * * * *") // Every 5 minutes
+    @SchedulerLock(name = "order-verify-pending-payments", lockAtLeastFor = "PT30S")
     @Transactional
     public void verifyPendingPayments() {
         try {
@@ -135,6 +138,7 @@ public class OrderBackgroundJobs {
      * - Popular products
      */
     @Scheduled(cron = "0 0 * * * *") // Every hour
+    @SchedulerLock(name = "order-metrics-hourly", lockAtLeastFor = "PT30S")
     public void calculateOrderMetrics() {
         try {
             log.info("Starting order metrics calculation job");
@@ -173,6 +177,7 @@ public class OrderBackgroundJobs {
      * Runs every 6 hours.
      */
     @Scheduled(cron = "0 0 */6 * * *") // Every 6 hours
+    @SchedulerLock(name = "order-data-cleanup", lockAtLeastFor = "PT30S")
     public void cleanupOldData() {
         try {
             log.info("Starting cleanup job");

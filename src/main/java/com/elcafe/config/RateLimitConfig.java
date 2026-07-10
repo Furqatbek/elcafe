@@ -57,6 +57,9 @@ public class RateLimitConfig {
      * / source IPs. Clearing only resets rate windows (worst case a fresh 1-minute window); per-account
      * lockout (LoginAttemptService) is separate and unaffected. {@code endpointBuckets} is keyed by a
      * finite set of endpoint names, so it is already bounded and left alone.
+     *
+     * <p>Deliberately NOT {@code @SchedulerLock}ed: this sweeps this node's own in-memory maps, so every
+     * instance must run it locally — a shared lock would leave all but one node leaking.
      */
     @Scheduled(fixedRate = 3_600_000) // hourly
     void evictRateLimitBuckets() {

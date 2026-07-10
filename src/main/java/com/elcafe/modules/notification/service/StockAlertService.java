@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +47,7 @@ public class StockAlertService {
      * Runs based on configuration (default: every 30 minutes)
      */
     @Scheduled(fixedRateString = "#{${stock-alert.check-interval-minutes:30} * 60000}", initialDelayString = "60000")
+    @SchedulerLock(name = "stock-alerts-check", lockAtLeastFor = "PT30S")
     @Transactional
     public void checkAndSendAlerts() {
         if (!alertConfig.isEnabled()) {
@@ -226,6 +228,7 @@ public class StockAlertService {
      * Runs daily to alert about expiring and expired batches.
      */
     @Scheduled(cron = "0 0 6 * * *") // Run daily at 6 AM
+    @SchedulerLock(name = "stock-expiry-alerts-daily", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     @Transactional
     public void checkAndSendExpiryAlerts() {
         if (!alertConfig.isEnabled()) {

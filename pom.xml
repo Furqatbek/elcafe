@@ -23,6 +23,7 @@
         <spring-cloud.version>2023.0.1</spring-cloud.version>
         <springdoc.version>2.5.0</springdoc.version>
         <jjwt.version>0.12.5</jjwt.version>
+        <shedlock.version>5.16.0</shedlock.version>
     </properties>
 
     <dependencies>
@@ -226,6 +227,19 @@
             <groupId>org.glassfish.jaxb</groupId>
             <artifactId>jaxb-runtime</artifactId>
             <version>2.3.9</version>
+        </dependency>
+
+        <!-- ShedLock: distributed lock on @Scheduled jobs so a second app instance (deliberate scale-out
+             or an accidental overlap during a rolling deploy) cannot double-run crons (E0). -->
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-spring</artifactId>
+            <version>${shedlock.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-jdbc-template</artifactId>
+            <version>${shedlock.version}</version>
         </dependency>
 
         <!-- Test -->

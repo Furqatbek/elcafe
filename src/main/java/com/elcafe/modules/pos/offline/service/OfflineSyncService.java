@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -197,6 +198,7 @@ public class OfflineSyncService {
      * Scheduled task to retry failed synchronizations.
      */
     @Scheduled(fixedRate = 300000) // Every 5 minutes
+    @SchedulerLock(name = "offline-sync-retry", lockAtLeastFor = "PT30S")
     @Transactional
     public void retryFailedSyncs() {
         OffsetDateTime cutoff = OffsetDateTime.now().minusMinutes(RETRY_DELAY_MINUTES);

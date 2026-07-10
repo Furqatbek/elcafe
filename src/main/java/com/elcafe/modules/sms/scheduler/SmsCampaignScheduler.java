@@ -7,6 +7,7 @@ import com.elcafe.modules.sms.service.SmsCampaignService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ public class SmsCampaignScheduler {
      * Runs every minute.
      */
     @Scheduled(fixedRate = 60000) // Every 60 seconds
+    @SchedulerLock(name = "sms-campaign-dispatch", lockAtLeastFor = "PT30S")
     @Transactional
     public void processScheduledCampaigns() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
@@ -62,6 +64,7 @@ public class SmsCampaignScheduler {
      * Runs daily at 2 AM.
      */
     @Scheduled(cron = "0 0 2 * * ?")
+    @SchedulerLock(name = "sms-campaign-cleanup", lockAtLeastFor = "PT30S")
     @Transactional
     public void cleanupOldCampaignData() {
         OffsetDateTime thresholdDate = OffsetDateTime.now(ZoneOffset.UTC).minusDays(90);

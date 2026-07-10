@@ -6,6 +6,7 @@ import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -38,6 +39,7 @@ public class PlanExpiryNotifier {
     private final OwnerNotificationService ownerNotificationService;
 
     @Scheduled(cron = "0 0 9 * * *")
+    @SchedulerLock(name = "plan-expiry-notifications", lockAtLeastFor = "PT30S", lockAtMostFor = "PT30M")
     public void notifyExpiringPlans() {
         runOnce(LocalDate.now());
     }
