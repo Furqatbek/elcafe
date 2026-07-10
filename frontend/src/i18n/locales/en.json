@@ -295,7 +295,10 @@
       "ordersPerSeat": "Orders Per Seat",
       "peakStart": "Peak Start",
       "peakEnd": "Peak End",
-      "peakPercentage": "Peak %"
+      "peakPercentage": "Peak %",
+      "orders": "Orders",
+      "percentage": "Percentage",
+      "revenue": "Revenue"
     },
     "customer": {
       "title": "Customer Analytics",
@@ -453,7 +456,79 @@
     "selectRestaurant": "Select restaurant",
     "edit": "Edit",
     "actions": "Actions",
-    "delete": "Delete"
+    "delete": "Delete",
+    "all": "All",
+    "allStatuses": "All statuses",
+    "apply": "Apply",
+    "average": "Average",
+    "card": "Card",
+    "cash": "Cash",
+    "category": "Category",
+    "clickRefresh": "Click refresh to load data",
+    "date": "Date",
+    "dateRange": "Date range",
+    "day": "Day",
+    "days": "Days",
+    "endDate": "End date",
+    "export": "Export",
+    "filter": "Filter",
+    "from": "From",
+    "hour": "Hour",
+    "ingredient": "Ingredient",
+    "items": "Items",
+    "margin": "Margin",
+    "max": "Max",
+    "median": "Median",
+    "messages": {
+      "noProductsFound": "No products found"
+    },
+    "min": "Min",
+    "more": "More",
+    "na": "N/A",
+    "no": "No",
+    "noData": "No data",
+    "none": "None",
+    "of": "of",
+    "online": "Online",
+    "or": "or",
+    "page": "Page",
+    "product": "Product",
+    "reset": "Reset",
+    "select": "Select",
+    "startDate": "Start date",
+    "status": "Status",
+    "to": "To",
+    "total": "Total",
+    "type": "Type",
+    "unavailable": "Unavailable",
+    "unlimited": "Unlimited",
+    "update": "Update",
+    "view": "View",
+    "yes": "Yes",
+    "placeholders": {
+      "allCategories": "All categories",
+      "contactEmail": "Contact email",
+      "decimalValue": "0.00",
+      "email": "Email",
+      "employeeId": "Employee ID",
+      "imageUrl": "Image URL",
+      "name": "Name",
+      "optionalDescription": "Description (optional)",
+      "password": "Password",
+      "phone": "Phone",
+      "searchProducts": "Search products...",
+      "searchWaiters": "Search waiters...",
+      "selectCategory": "Select a category",
+      "tags": "Tags",
+      "variantExample": "e.g. Small, Medium, Large"
+    },
+    "buttons": {
+      "approve": "Approve",
+      "delete": "Delete",
+      "edit": "Edit",
+      "recordPayment": "Record payment",
+      "viewHistory": "View history"
+    }
   },
   "shift": {
     "dashboard": {
@@ -1044,7 +1119,21 @@
       "SIMILAR": "Similar",
       "UPSELL": "Upsell",
       "COMPLEMENTARY": "Complementary"
-    }
+    },
+    "categoryImage": "Category image",
+    "createCategoryDescription": "Create a new category to organize your menu",
+    "filteredResults": "Filtered results",
+    "messages": {
+      "confirmDeleteCategory": "Are you sure you want to delete this category?",
+      "createCategoryError": "Failed to create category",
+      "createProductError": "Failed to create product",
+      "deleteCategoryError": "Failed to delete category",
+      "deleteProductError": "Failed to delete product",
+      "updateCategoryError": "Failed to update category",
+      "updateProductError": "Failed to update product"
+    },
+    "orEnterImageUrl": "Or enter an image URL",
+    "updateCategoryDescription": "Update this category's details"
   },
   "menuCollections": {
     "title": "Menu Collections",
@@ -1617,7 +1706,8 @@
       "edit": "Edit",
       "delete": "Delete",
       "save": "Save",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "recording": "Recording..."
     },
     "purchaseOrders": {
       "title": "Purchase Orders",
@@ -1759,14 +1849,16 @@
         "paymentError": "Failed to record payment",
         "deleteSuccess": "Expense deleted successfully",
         "confirmDelete": "Are you sure you want to delete this expense?",
-        "cannotDeletePaid": "Cannot delete a paid expense"
+        "cannotDeletePaid": "Cannot delete a paid expense",
+        "deleteError": "Failed to delete expense"
       },
       "paymentStatus": {
         "UNPAID": "Unpaid",
         "PAID": "Paid",
         "PARTIALLY_PAID": "Partially paid"
       },
-      "managedInPayroll": "Managed in Payroll"
+      "managedInPayroll": "Managed in Payroll",
+      "saving": "Saving..."
     },
     "reports": {
       "title": "Financial Reports",
@@ -2011,13 +2103,16 @@
       "status": "Status",
       "active": "Active",
       "trackInventory": "Track Inventory",
-      "trackExpiry": "Track Expiry"
+      "trackExpiry": "Track Expiry",
+      "category": "Category",
+      "quantity": "Quantity"
     },
     "placeholders": {
       "name": "e.g., Tomatoes, Chicken Breast",
       "sku": "e.g., ING-001",
       "description": "Brief description of the ingredient",
-      "supplier": "e.g., ABC Food Suppliers"
+      "supplier": "e.g., ABC Food Suppliers",
+      "selectIngredient": "Select an ingredient"
     },
     "units": {
       "kg": "Kilograms (kg)",
@@ -4450,7 +4545,8 @@
     "wed": "Wed",
     "thu": "Thu",
     "fri": "Fri",
-    "sat": "Sat"
+    "sat": "Sat",
+    "table": "Table"
   },
   "reservations": {
     "title": "Reservations",
@@ -5287,7 +5383,7 @@
     "pageOf": "Page {{n}} of {{m}}",
     "plansLoadFailed": "Could not load the plan catalogue",
     "changePlan": "Change plan",
-    "changePlanFor": "Change plan \u2014 {{name}}",
+    "changePlanFor": "Change plan — {{name}}",
     "plan": "Plan",
     "selectPlan": "Select a plan",
     "expiresAt": "Expires at",
@@ -5321,5 +5417,31 @@
     "viewBilling": "View subscription",
     "retry": "Retry",
     "logout": "Log out"
+  },
+  "poSuggestions": {
+    "allStocked": "Everything is well stocked",
+    "confirmGenerateAll": "Generate purchase orders for all suggested items?",
+    "createAllPOs": "Create all POs",
+    "createPO": "Create PO",
+    "currentStock": "Current stock",
+    "estimatedCost": "Estimated cost",
+    "ingredient": "Ingredient",
+    "itemsNeedReorder": "items need reordering",
+    "messages": {
+      "allPOsCreated": "All purchase orders created",
+      "poCreateError": "Failed to create purchase order",
+      "poCreated": "Purchase order created"
+    },
+    "noSuggestions": "No reorder suggestions",
+    "paymentTerms": "Payment terms",
+    "reorderLevel": "Reorder level",
+    "sku": "SKU",
+    "subtitle": "Ingredients below their reorder level",
+    "suggestedQty": "Suggested quantity",
+    "title": "Purchase order suggestions",
+    "total": "Total",
+    "totalItems": "Total items",
+    "totalSuppliers": "Total suppliers",
+    "unitPrice": "Unit price"
   }
 }
