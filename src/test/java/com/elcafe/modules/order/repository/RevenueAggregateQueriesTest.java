@@ -372,6 +372,18 @@ class RevenueAggregateQueriesTest {
         assertThat(lifetime.get(0).totalSpent()).isEqualByComparingTo("100");
         assertThat(lifetime.get(0).orderCount()).isEqualTo(1);
         assertThat(lifetime.get(0).firstOrderAt()).isEqualTo(lifetime.get(0).lastOrderAt());
+
+        // RFM activity rows: ALL statuses, all time → T-REV + T-FULLPAID (100 + 80)
+        var activity = orderRepository.findCustomerActivityRows();
+        assertThat(activity).hasSize(1);
+        assertThat(activity.get(0).orderCount()).isEqualTo(2);
+        assertThat(activity.get(0).totalSpent()).isEqualByComparingTo("180");
+        assertThat(activity.get(0).lastOrderAt()).isNotNull();
+
+        // Distinct sources for the customer's orders (both seeded as WAITER)
+        var sources = orderRepository.findCustomerOrderSources();
+        assertThat(sources).hasSize(1);
+        assertThat(sources.get(0).orderSource()).isEqualTo(OrderSource.WAITER);
     }
 
     @Test

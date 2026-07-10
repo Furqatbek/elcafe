@@ -42,10 +42,17 @@ spring:
         format_sql: false
         use_sql_comments: false
         default_schema: public
-        enable_lazy_load_no_trans: true
+        # E2 stage 1 (PERF-1): no more silent connection-per-lazy-access outside transactions. A lazy
+        # touch with no session now throws LazyInitializationException instead of quietly grabbing a
+        # pool connection — which is what exhausted the pool under load. Request threads still have the
+        # open-in-view session; async/scheduled code must be @Transactional or use fetch-joins (the
+        # known offenders were fixed: Telegram campaign executor, analytics aggregates, WS resolvers).
+        # The whole test suite runs with this value. Env override is the emergency revert switch.
+        enable_lazy_load_no_trans: ${HIBERNATE_LAZY_LOAD_NO_TRANS:false}
         # Batch lazy proxy/collection loads into IN(...) queries instead of one-per-parent (N+1), and
         # batch inserts/updates. Pure performance — no behavior change; complements the still-open
-        # open-in-view (turning that off is a separate, load-tested change).
+        # open-in-view (turning that off is a separate change gated on the TenantFilterInterceptor
+        # redesign — it relies on the OSIV session to enable the tenant filter).
         default_batch_fetch_size: 25
         jdbc:
           batch_size: 25

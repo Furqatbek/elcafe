@@ -5,7 +5,8 @@ import com.elcafe.modules.customer.dto.CustomerActivityFilterDTO;
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
-import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.dto.CustomerActivityRow;
+import com.elcafe.modules.order.dto.CustomerSourceRow;
 import com.elcafe.modules.order.enums.OrderSource;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -41,8 +43,20 @@ public class CustomerActivityService {
         List<Customer> customers = (tenantId != null)
                 ? customerRepository.findByRestaurantIdAndActiveTrue(tenantId)
                 : customerRepository.findByActiveTrue();
+
+        // Two grouped queries for the whole listing — the old code ran three queries PER customer
+        // (full order-history entities for count/recency, a SUM, a distinct-sources lookup), which
+        // scaled as 3N queries and N full order graphs (audit E3 tail).
+        Map<Long, CustomerActivityRow> activityByCustomer = orderRepository.findCustomerActivityRows()
+                .stream().collect(Collectors.toMap(CustomerActivityRow::customerId, row -> row));
+        Map<Long, List<OrderSource>> sourcesByCustomer = orderRepository.findCustomerOrderSources()
+                .stream().collect(Collectors.groupingBy(CustomerSourceRow::customerId,
+                        Collectors.mapping(CustomerSourceRow::orderSource, Collectors.toList())));
+
         List<CustomerActivityDTO> activityList = customers.stream()
-                .map(this::calculateCustomerActivity)
+                .map(customer -> calculateCustomerActivity(customer,
+                        activityByCustomer.get(customer.getId()),
+                        sourcesByCustomer.getOrDefault(customer.getId(), List.of())))
                 .collect(Collectors.toList());
 
         // Calculate RFM scores
@@ -63,20 +77,14 @@ public class CustomerActivityService {
     }
 
     /**
-     * Calculate activity metrics for a single customer
+     * Calculate activity metrics for a single customer from the pre-aggregated row (null when the
+     * customer has no orders — same as the old empty-list case).
      */
-    private CustomerActivityDTO calculateCustomerActivity(Customer customer) {
-        // Get all customer orders
-        List<Order> orders = orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customer.getId());
-
-        // Calculate frequency (total orders)
-        Integer frequency = orders.size();
-
-        // Calculate monetary (total spent)
-        BigDecimal monetary = orderRepository.sumTotalByCustomerId(customer.getId());
-        if (monetary == null) {
-            monetary = BigDecimal.ZERO;
-        }
+    private CustomerActivityDTO calculateCustomerActivity(Customer customer, CustomerActivityRow row,
+                                                          List<OrderSource> orderSources) {
+        // Frequency (total orders) and monetary (total spent) — unfiltered, as before
+        Integer frequency = row != null ? row.orderCount().intValue() : 0;
+        BigDecimal monetary = row != null ? row.totalSpent() : BigDecimal.ZERO;
 
         // Calculate average check
         BigDecimal averageCheck = BigDecimal.ZERO;
@@ -87,13 +95,10 @@ public class CustomerActivityService {
         // Calculate recency (days since last order)
         Integer recency = null;
         LocalDateTime lastOrderDate = null;
-        if (!orders.isEmpty()) {
-            lastOrderDate = orders.get(0).getCreatedAt().toLocalDateTime();
+        if (row != null && row.lastOrderAt() != null) {
+            lastOrderDate = row.lastOrderAt().toLocalDateTime();
             recency = (int) ChronoUnit.DAYS.between(lastOrderDate, LocalDateTime.now());
         }
-
-        // Get unique order sources
-        List<OrderSource> orderSources = orderRepository.findDistinctOrderSourcesByCustomerId(customer.getId());
 
         return CustomerActivityDTO.builder()
                 .customerId(customer.getId())

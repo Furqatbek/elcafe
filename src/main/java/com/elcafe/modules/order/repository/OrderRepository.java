@@ -1,9 +1,11 @@
 package com.elcafe.modules.order.repository;
 
 import com.elcafe.modules.order.dto.CouponSalesRow;
+import com.elcafe.modules.order.dto.CustomerActivityRow;
 import com.elcafe.modules.order.dto.CustomerLifetimeRow;
 import com.elcafe.modules.order.dto.CustomerOrderCountRow;
 import com.elcafe.modules.order.dto.CustomerOrderStatsRow;
+import com.elcafe.modules.order.dto.CustomerSourceRow;
 import com.elcafe.modules.order.dto.DiscountOrderRow;
 import com.elcafe.modules.order.dto.HourlySalesRow;
 import com.elcafe.modules.order.dto.OrderTimingRow;
@@ -213,6 +215,20 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             @Param("restaurantId") Long restaurantId,
             @Param("start") OffsetDateTime start,
             @Param("end") OffsetDateTime end);
+
+    /**
+     * Lifetime per-customer activity (count / total spent / last order) over ALL orders, no status
+     * filter — the RFM listing's semantics. One grouped query instead of three per customer.
+     */
+    @Query("SELECT new com.elcafe.modules.order.dto.CustomerActivityRow(o.customer.id, COUNT(o), "
+            + " COALESCE(SUM(o.total), 0), MAX(o.createdAt)) "
+            + "FROM Order o WHERE o.customer IS NOT NULL GROUP BY o.customer.id")
+    List<CustomerActivityRow> findCustomerActivityRows();
+
+    /** Distinct (customer, order source) pairs over all orders — batch form of the per-customer lookup. */
+    @Query("SELECT DISTINCT new com.elcafe.modules.order.dto.CustomerSourceRow(o.customer.id, o.orderSource) "
+            + "FROM Order o WHERE o.customer IS NOT NULL")
+    List<CustomerSourceRow> findCustomerOrderSources();
 
     /** One scalar discount row per paid order (promotion analytics + daily discount trends). */
     @Query("SELECT new com.elcafe.modules.order.dto.DiscountOrderRow(o.createdAt, o.total, o.discount, o.discountType) "

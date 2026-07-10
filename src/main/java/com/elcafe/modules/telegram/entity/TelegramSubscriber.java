@@ -88,6 +88,12 @@ public class TelegramSubscriber {
     private OffsetDateTime updatedAt;
 
     public String getDisplayName() {
+        // The name the user typed during bot-wizard registration wins. This getter used to shadow the
+        // stored display_name field entirely (derived names only), so wizard-collected names were saved
+        // but never used in greetings/campaigns.
+        if (displayName != null && !displayName.isBlank()) {
+            return displayName;
+        }
         if (firstName != null && lastName != null) {
             return firstName + " " + lastName;
         } else if (firstName != null) {

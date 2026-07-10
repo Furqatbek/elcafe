@@ -62,6 +62,19 @@ log/error-tracking infra) and monetization (H).
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **E2 stage 1 — `enable_lazy_load_no_trans` OFF (PERF-1 first half).** Lazy access outside a session
+  now throws instead of silently opening a pool connection per touch (the pool-exhaustion mechanism).
+  Env-overridable (`HIBERNATE_LAZY_LOAD_NO_TRANS`) as the emergency revert. Evidence: the full suite —
+  1993 tests including scheduler/async firings in live contexts — runs with the flag off and the run
+  log contains zero LazyInitializationException. Remaining risk: prod-only paths tests don't drive
+  (live Telegram bot handlers); the escape hatch covers that. Stage 2 (`open-in-view: false`) is now
+  explicitly gated on redesigning `TenantFilterInterceptor`, which relies on the OSIV session to enable
+  the Hibernate tenant filter — flipping OSIV naively would silently weaken tenant isolation.
+- **E3 tail — RFM listing de-N+1'd; wizard display-name bug fixed.** `CustomerActivityService` ran 3
+  queries per customer (full order-history graphs for count/recency + SUM + sources) for every active
+  customer on each RFM view — now 2 grouped queries total, H2-pinned. `TelegramSubscriber.getDisplayName()`
+  shadowed the stored wizard-entered name (saved, never used in greetings/campaigns); stored name now
+  wins, derived-name fallback preserved, preference order pinned by test.
 - **E3 — analytics full-table loaders killed (PERF-2 BLOCKER, PERF-8, PERF-9).**
   `FinancialAnalyticsService` no longer materializes every order of the range (with items/payments N+1)
   to aggregate in Java: all four reports now run on DB-side aggregates/projections behind one shared
@@ -114,10 +127,11 @@ log/error-tracking infra) and monetization (H).
 - ~~E0 — scale topology~~ **decided & done** (single-node + ShedLock; see Done above and
   `docs/DEPLOYMENT_TOPOLOGY.md`). The multi-node track (external STOMP relay, Redis-backed
   rate-limits/lockouts) stays deferred until a second replica is actually needed.
-- **E2 — `open-in-view: false` flip** (+ `enable_lazy_load_no_trans: false`). Behaviour-affecting; wants a
-  running-app smoke, not just green unit tests. ~~E3~~ **fully done** — FinancialAnalyticsService AND all
-  five sibling services now run on DB aggregates (see Done); no analytics path materializes order graphs
-  anymore, which also shrinks the blast radius of the eventual E2 flip.
+- **E2 stage 2 — `open-in-view: false`.** ~~enable_lazy_load_no_trans~~ **off (stage 1 done, see Done).**
+  The OSIV flip itself is gated on two things: (1) redesigning `TenantFilterInterceptor`, which depends on
+  the OSIV session to enable the Hibernate tenant filter (naive flip = silent tenant-isolation weakening),
+  and (2) a running-app smoke for entity-serialization paths. ~~E3~~ **fully done** — no code path
+  materializes order graphs for analytics anymore.
 - **F3/F4 — JSON logging + error tracking (Sentry/equivalent):** needs the target infra/DSN.
 - ~~Low-value cleanup~~ **done** — FUNC-7 (dead waiter-event cluster) and FUNC-13 (broken, uncalled
   weekly-overtime path) deleted; see Done above.
