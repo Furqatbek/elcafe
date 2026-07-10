@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import CustomerApp from './CustomerApp.jsx'
 import './index.css'
-import './i18n/config'
+import { ready as i18nReady } from './i18n/config'
 import branding from './config/branding'
 
 // Check if we're on a customer-facing route
@@ -51,10 +51,13 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      {isCustomerRoute ? <CustomerApp /> : <App />}
-    </ErrorBoundary>
-  </React.StrictMode>,
-)
+// Wait for i18n (active language + en fallback) before the first render so nothing flashes raw keys.
+i18nReady.finally(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        {isCustomerRoute ? <CustomerApp /> : <App />}
+      </ErrorBoundary>
+    </React.StrictMode>,
+  )
+})
