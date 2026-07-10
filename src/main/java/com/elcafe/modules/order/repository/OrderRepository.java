@@ -264,13 +264,16 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
             @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses,
             @Param("completedPayment") PaymentStatus completedPayment);
 
+    /**
+     * Deliberately NO {@code @EntityGraph} here: {@code items} is a collection, and a collection
+     * fetch combined with {@code Pageable} makes Hibernate paginate IN MEMORY (HHH90003004) — it
+     * materialises every matching order of the tenant to return one page (surfaced by the E2 load
+     * test: one warning per listing request). Pagination stays in SQL; the payload associations are
+     * batch-initialised afterwards by {@code OrderJsonHydration} (a handful of {@code @BatchSize}
+     * IN-selects per page).
+     */
     @Override
-    @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)
     Page<Order> findAll(Specification<Order> spec, Pageable pageable);
-
-    @Override
-    @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)
-    List<Order> findAll(Specification<Order> spec);
 
     @Override
     @EntityGraph(value = "Order.withItems", type = EntityGraph.EntityGraphType.FETCH)

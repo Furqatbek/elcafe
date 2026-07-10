@@ -64,6 +64,23 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **E2 load criterion verified locally + the order listing's in-memory pagination killed.** A
+  40-worker concurrency test (2× the Hikari pool) drove 18,400 authenticated tenant-scoped requests
+  through the running app on real Postgres, prod-shaped (tenant + WS + subscription enforcement on,
+  Redis cache live): 100% HTTP 200, ~570 req/s locally, p50 63 ms / p99 ≤ 205 ms, the pool saturated
+  at its max of 20 with pending queues that fully drained — zero connection timeouts, zero leak
+  detections, zero errors, pool idle after the run. That is the OSIV-off pool behavior E2's accept
+  criterion asked for ("pool doesn't exhaust under a load test"); a traffic-shaped run on prod infra
+  stays nice-to-have. The run also surfaced a real defect: every `GET /api/v1/orders` logged
+  HHH90003004 — the paged Specification finder carried an `@EntityGraph` fetching the `items`
+  collection, which makes Hibernate paginate IN MEMORY: it materialises every matching order of the
+  tenant to return one page (a hidden full-history loader on the hottest listing). Fixed by dropping
+  the graph from the paged override only — pagination stays in SQL; the payload associations were
+  already batch-initialised by `OrderJsonHydration` on that exact path (pinned by
+  `OsivOffPayloadPinTest`), and `findById` keeps its graph (single row, no hazard). Load re-run:
+  zero HHH90003004, payload intact. Also swept the filter/interceptor layer for more
+  lazy-outside-transaction access (the plan-gate bug class): `SubscriptionAccessService` reads only
+  scalar columns behind a proxied `@Transactional` — clean.
 - **Plan-gate LazyInitializationException fixed — the OSIV flip's one real casualty, caught live.**
   The `LOG_FORMAT=json` verification boot surfaced it within minutes: with `open-in-view` off, EVERY
   staff write and every plan-gated module request of a tenant that HAS a plan 500'd.
