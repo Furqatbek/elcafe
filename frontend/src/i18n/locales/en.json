@@ -4471,7 +4471,71 @@
     "takeawayRequiresDetails": "Name and phone number are required for takeaway orders",
     "nameRequired": "Please enter your name",
     "phoneRequired": "Please enter your phone number",
-    "fillRequiredFields": "Please fill in all required fields"
+    "fillRequiredFields": "Please fill in all required fields",
+    "tracking": {
+      "loadingStatus": "Loading order status...",
+      "notFoundTitle": "Order Not Found",
+      "notFoundError": "Order not found or tracking unavailable",
+      "checkNumber": "Please check your order number and try again.",
+      "orderLabel": "Order #{{number}}",
+      "refresh": "Refresh",
+      "cancelledTitle": "Order Cancelled",
+      "cancelledDesc": "This order has been cancelled.",
+      "estimatedDelivery": "Estimated Delivery",
+      "estimatedReady": "Estimated Ready",
+      "delayMessage": "Slight delay - {{reason}}",
+      "orderProgress": "Order Progress",
+      "orderItems": "Order Items",
+      "deliveryDetails": "Delivery Details",
+      "deliveryAddress": "Delivery Address",
+      "lastUpdated": "Last updated: {{time}}",
+      "error": "Error",
+      "orderNotFoundShort": "Order not found",
+      "loadError": "Failed to load order status",
+      "tryAgain": "Try Again",
+      "estimatedReadyLabel": "Estimated ready",
+      "readyAtLabel": "Ready at",
+      "totalAmount": "Total Amount",
+      "orderAgain": "Order Again",
+      "readyDineInMessage": "Your order is ready! It will be served to your table shortly.",
+      "readyTakeawayMessage": "Your order is ready! Please proceed to the counter to collect it.",
+      "steps": {
+        "orderPlaced": "Order Placed",
+        "confirmed": "Confirmed",
+        "preparing": "Preparing",
+        "ready": "Ready",
+        "onTheWay": "On the Way",
+        "delivered": "Delivered",
+        "readyForPickup": "Ready for Pickup",
+        "pickedUp": "Picked Up"
+      },
+      "statuses": {
+        "PENDING": {
+          "label": "Order Received",
+          "description": "Your order has been received and is waiting for confirmation"
+        },
+        "CONFIRMED": {
+          "label": "Confirmed",
+          "description": "Your order has been confirmed"
+        },
+        "PREPARING": {
+          "label": "Preparing",
+          "description": "Our kitchen is preparing your order"
+        },
+        "READY": {
+          "label": "Ready",
+          "description": "Your order is ready for pickup!"
+        },
+        "COMPLETED": {
+          "label": "Completed",
+          "description": "Order completed. Thank you!"
+        },
+        "CANCELLED": {
+          "label": "Cancelled",
+          "description": "This order has been cancelled"
+        }
+      }
+    }
   },
   "customerReservation": {
     "title": "Reserve a Table",

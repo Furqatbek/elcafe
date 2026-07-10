@@ -4473,7 +4473,71 @@
     "takeawayRequiresDetails": "Для заказа на вынос требуется указать имя и телефон",
     "nameRequired": "Пожалуйста, введите ваше имя",
     "phoneRequired": "Пожалуйста, введите номер телефона",
-    "fillRequiredFields": "Пожалуйста, заполните все обязательные поля"
+    "fillRequiredFields": "Пожалуйста, заполните все обязательные поля",
+    "tracking": {
+      "loadingStatus": "Загрузка статуса заказа...",
+      "notFoundTitle": "Заказ не найден",
+      "notFoundError": "Заказ не найден или отслеживание недоступно",
+      "checkNumber": "Проверьте номер заказа и попробуйте снова.",
+      "orderLabel": "Заказ №{{number}}",
+      "refresh": "Обновить",
+      "cancelledTitle": "Заказ отменён",
+      "cancelledDesc": "Этот заказ был отменён.",
+      "estimatedDelivery": "Ожидаемая доставка",
+      "estimatedReady": "Ожидаемая готовность",
+      "delayMessage": "Небольшая задержка — {{reason}}",
+      "orderProgress": "Ход выполнения",
+      "orderItems": "Позиции заказа",
+      "deliveryDetails": "Детали доставки",
+      "deliveryAddress": "Адрес доставки",
+      "lastUpdated": "Обновлено: {{time}}",
+      "error": "Ошибка",
+      "orderNotFoundShort": "Заказ не найден",
+      "loadError": "Не удалось загрузить статус заказа",
+      "tryAgain": "Попробовать снова",
+      "estimatedReadyLabel": "Ожидаемая готовность",
+      "readyAtLabel": "Готов в",
+      "totalAmount": "Итоговая сумма",
+      "orderAgain": "Заказать снова",
+      "readyDineInMessage": "Ваш заказ готов! Его скоро принесут к вашему столу.",
+      "readyTakeawayMessage": "Ваш заказ готов! Пожалуйста, подойдите к стойке, чтобы забрать его.",
+      "steps": {
+        "orderPlaced": "Заказ размещён",
+        "confirmed": "Подтверждён",
+        "preparing": "Готовится",
+        "ready": "Готов",
+        "onTheWay": "В пути",
+        "delivered": "Доставлен",
+        "readyForPickup": "Готов к выдаче",
+        "pickedUp": "Получен"
+      },
+      "statuses": {
+        "PENDING": {
+          "label": "Заказ получен",
+          "description": "Ваш заказ получен и ожидает подтверждения"
+        },
+        "CONFIRMED": {
+          "label": "Подтверждён",
+          "description": "Ваш заказ подтверждён"
+        },
+        "PREPARING": {
+          "label": "Готовится",
+          "description": "Наша кухня готовит ваш заказ"
+        },
+        "READY": {
+          "label": "Готов",
+          "description": "Ваш заказ готов к выдаче!"
+        },
+        "COMPLETED": {
+          "label": "Завершён",
+          "description": "Заказ завершён. Спасибо!"
+        },
+        "CANCELLED": {
+          "label": "Отменён",
+          "description": "Этот заказ был отменён"
+        }
+      }
+    }
   },
   "customerReservation": {
     "title": "Забронировать столик",

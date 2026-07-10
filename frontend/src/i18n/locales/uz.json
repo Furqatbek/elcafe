@@ -4471,7 +4471,71 @@
     "takeawayRequiresDetails": "Olib ketish buyurtmasi uchun ism va telefon raqami talab qilinadi",
     "nameRequired": "Iltimos, ismingizni kiriting",
     "phoneRequired": "Iltimos, telefon raqamingizni kiriting",
-    "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring"
+    "fillRequiredFields": "Iltimos, barcha majburiy maydonlarni to'ldiring",
+    "tracking": {
+      "loadingStatus": "Buyurtma holati yuklanmoqda...",
+      "notFoundTitle": "Buyurtma topilmadi",
+      "notFoundError": "Buyurtma topilmadi yoki kuzatuv mavjud emas",
+      "checkNumber": "Buyurtma raqamini tekshirib, qayta urinib ko'ring.",
+      "orderLabel": "Buyurtma №{{number}}",
+      "refresh": "Yangilash",
+      "cancelledTitle": "Buyurtma bekor qilindi",
+      "cancelledDesc": "Ushbu buyurtma bekor qilindi.",
+      "estimatedDelivery": "Taxminiy yetkazish",
+      "estimatedReady": "Taxminiy tayyorlik",
+      "delayMessage": "Ozgina kechikish — {{reason}}",
+      "orderProgress": "Buyurtma jarayoni",
+      "orderItems": "Buyurtma tarkibi",
+      "deliveryDetails": "Yetkazish tafsilotlari",
+      "deliveryAddress": "Yetkazish manzili",
+      "lastUpdated": "Yangilandi: {{time}}",
+      "error": "Xatolik",
+      "orderNotFoundShort": "Buyurtma topilmadi",
+      "loadError": "Buyurtma holatini yuklab bo'lmadi",
+      "tryAgain": "Qayta urinish",
+      "estimatedReadyLabel": "Taxminan tayyor",
+      "readyAtLabel": "Tayyor bo'ldi",
+      "totalAmount": "Umumiy summa",
+      "orderAgain": "Yana buyurtma berish",
+      "readyDineInMessage": "Buyurtmangiz tayyor! Tez orada stolingizga olib kelinadi.",
+      "readyTakeawayMessage": "Buyurtmangiz tayyor! Uni olish uchun kassaga murojaat qiling.",
+      "steps": {
+        "orderPlaced": "Buyurtma berildi",
+        "confirmed": "Tasdiqlandi",
+        "preparing": "Tayyorlanmoqda",
+        "ready": "Tayyor",
+        "onTheWay": "Yo'lda",
+        "delivered": "Yetkazildi",
+        "readyForPickup": "Olib ketishga tayyor",
+        "pickedUp": "Olib ketildi"
+      },
+      "statuses": {
+        "PENDING": {
+          "label": "Buyurtma qabul qilindi",
+          "description": "Buyurtmangiz qabul qilindi va tasdiqlashni kutmoqda"
+        },
+        "CONFIRMED": {
+          "label": "Tasdiqlandi",
+          "description": "Buyurtmangiz tasdiqlandi"
+        },
+        "PREPARING": {
+          "label": "Tayyorlanmoqda",
+          "description": "Oshxonamiz buyurtmangizni tayyorlamoqda"
+        },
+        "READY": {
+          "label": "Tayyor",
+          "description": "Buyurtmangiz olib ketishga tayyor!"
+        },
+        "COMPLETED": {
+          "label": "Yakunlandi",
+          "description": "Buyurtma yakunlandi. Rahmat!"
+        },
+        "CANCELLED": {
+          "label": "Bekor qilindi",
+          "description": "Ushbu buyurtma bekor qilindi"
+        }
+      }
+    }
   },
   "customerReservation": {
     "title": "Stol band qilish",

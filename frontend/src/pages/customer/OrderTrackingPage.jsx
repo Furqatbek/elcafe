@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { orderTrackingAPI } from '../../services/api';
 import {
   Clock,
@@ -14,23 +15,24 @@ import {
 } from 'lucide-react';
 
 const statusSteps = [
-  { key: 'NEW', icon: Clock, label: 'Order Placed' },
-  { key: 'CONFIRMED', icon: CheckCircle, label: 'Confirmed' },
-  { key: 'PREPARING', icon: ChefHat, label: 'Preparing' },
-  { key: 'READY', icon: Package, label: 'Ready' },
-  { key: 'OUT_FOR_DELIVERY', icon: Truck, label: 'On the Way' },
-  { key: 'DELIVERED', icon: MapPin, label: 'Delivered' },
+  { key: 'NEW', icon: Clock, labelKey: 'selfService.tracking.steps.orderPlaced' },
+  { key: 'CONFIRMED', icon: CheckCircle, labelKey: 'selfService.tracking.steps.confirmed' },
+  { key: 'PREPARING', icon: ChefHat, labelKey: 'selfService.tracking.steps.preparing' },
+  { key: 'READY', icon: Package, labelKey: 'selfService.tracking.steps.ready' },
+  { key: 'OUT_FOR_DELIVERY', icon: Truck, labelKey: 'selfService.tracking.steps.onTheWay' },
+  { key: 'DELIVERED', icon: MapPin, labelKey: 'selfService.tracking.steps.delivered' },
 ];
 
 const statusStepsPickup = [
-  { key: 'NEW', icon: Clock, label: 'Order Placed' },
-  { key: 'CONFIRMED', icon: CheckCircle, label: 'Confirmed' },
-  { key: 'PREPARING', icon: ChefHat, label: 'Preparing' },
-  { key: 'READY', icon: Package, label: 'Ready for Pickup' },
-  { key: 'COMPLETED', icon: CheckCircle, label: 'Picked Up' },
+  { key: 'NEW', icon: Clock, labelKey: 'selfService.tracking.steps.orderPlaced' },
+  { key: 'CONFIRMED', icon: CheckCircle, labelKey: 'selfService.tracking.steps.confirmed' },
+  { key: 'PREPARING', icon: ChefHat, labelKey: 'selfService.tracking.steps.preparing' },
+  { key: 'READY', icon: Package, labelKey: 'selfService.tracking.steps.readyForPickup' },
+  { key: 'COMPLETED', icon: CheckCircle, labelKey: 'selfService.tracking.steps.pickedUp' },
 ];
 
 export default function OrderTrackingPage() {
+  const { t } = useTranslation();
   const { orderNumber } = useParams();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token'); // unguessable order tracking secret (audit #17)
@@ -61,7 +63,7 @@ export default function OrderTrackingPage() {
       setTracking(response.data.data);
       setLastUpdated(new Date());
     } catch (err) {
-      setError('Order not found or tracking unavailable');
+      setError(t('selfService.tracking.notFoundError'));
       console.error('Failed to load tracking:', err);
     } finally {
       setLoading(false);
@@ -97,7 +99,7 @@ export default function OrderTrackingPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading order status...</p>
+          <p className="text-gray-600">{t('selfService.tracking.loadingStatus')}</p>
         </div>
       </div>
     );
@@ -108,10 +110,10 @@ export default function OrderTrackingPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
           <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Order Not Found</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">{t('selfService.tracking.notFoundTitle')}</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <p className="text-sm text-gray-500">
-            Please check your order number and try again.
+            {t('selfService.tracking.checkNumber')}
           </p>
         </div>
       </div>
@@ -128,13 +130,13 @@ export default function OrderTrackingPage() {
         <div className="max-w-lg mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Order #{orderNumber}</h1>
+              <h1 className="text-lg font-bold text-gray-900">{t('selfService.tracking.orderLabel', { number: orderNumber })}</h1>
               <p className="text-sm text-gray-500">{tracking?.restaurantName}</p>
             </div>
             <button
               onClick={loadTracking}
               className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
-              title="Refresh"
+              title={t('selfService.tracking.refresh')}
             >
               <RefreshCw className="h-5 w-5" />
             </button>
@@ -147,8 +149,8 @@ export default function OrderTrackingPage() {
         {tracking?.status === 'CANCELLED' ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
             <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-            <h2 className="font-semibold text-red-800">Order Cancelled</h2>
-            <p className="text-sm text-red-600">This order has been cancelled.</p>
+            <h2 className="font-semibold text-red-800">{t('selfService.tracking.cancelledTitle')}</h2>
+            <p className="text-sm text-red-600">{t('selfService.tracking.cancelledDesc')}</p>
           </div>
         ) : (
           <>
@@ -157,7 +159,7 @@ export default function OrderTrackingPage() {
               <div className="bg-white rounded-lg shadow-sm p-4">
                 <div className="text-center">
                   <div className="text-sm text-gray-500 mb-1">
-                    {tracking.orderType === 'DELIVERY' ? 'Estimated Delivery' : 'Estimated Ready'}
+                    {tracking.orderType === 'DELIVERY' ? t('selfService.tracking.estimatedDelivery') : t('selfService.tracking.estimatedReady')}
                   </div>
                   <div className="text-3xl font-bold text-blue-600">
                     {tracking.eta.etaMessage}
@@ -165,7 +167,7 @@ export default function OrderTrackingPage() {
                   {tracking.eta.isDelayed && (
                     <div className="mt-2 text-sm text-orange-600 flex items-center justify-center gap-1">
                       <AlertCircle className="h-4 w-4" />
-                      Slight delay - {tracking.eta.delayReason}
+                      {t('selfService.tracking.delayMessage', { reason: tracking.eta.delayReason })}
                     </div>
                   )}
                 </div>
@@ -174,7 +176,7 @@ export default function OrderTrackingPage() {
 
             {/* Progress Steps */}
             <div className="bg-white rounded-lg shadow-sm p-4">
-              <h3 className="font-semibold text-gray-900 mb-4">Order Progress</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('selfService.tracking.orderProgress')}</h3>
               <div className="relative">
                 {/* Progress Line */}
                 <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200" />
@@ -203,7 +205,7 @@ export default function OrderTrackingPage() {
                         </div>
                         <div className="ml-4 flex-1">
                           <div className={`font-medium ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
-                            {step.label}
+                            {t(step.labelKey)}
                           </div>
                           {tracking?.statusHistory?.find(h => h.status === step.key) && (
                             <div className="text-xs text-gray-500">
@@ -223,7 +225,7 @@ export default function OrderTrackingPage() {
         {/* Order Items */}
         {tracking?.items && tracking.items.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Order Items</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">{t('selfService.tracking.orderItems')}</h3>
             <div className="space-y-2">
               {tracking.items.map((item, index) => (
                 <div key={index} className="flex justify-between text-sm">
@@ -240,7 +242,7 @@ export default function OrderTrackingPage() {
                 </div>
               ))}
               <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
-                <span>Total</span>
+                <span>{t('selfService.total')}</span>
                 <span>{tracking.totalAmount?.toFixed(2)}</span>
               </div>
             </div>
@@ -250,12 +252,12 @@ export default function OrderTrackingPage() {
         {/* Delivery Info */}
         {tracking?.deliveryInfo && tracking.orderType === 'DELIVERY' && (
           <div className="bg-white rounded-lg shadow-sm p-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Delivery Details</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">{t('selfService.tracking.deliveryDetails')}</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
                 <div>
-                  <div className="text-sm font-medium">Delivery Address</div>
+                  <div className="text-sm font-medium">{t('selfService.tracking.deliveryAddress')}</div>
                   <div className="text-sm text-gray-600">{tracking.deliveryInfo.deliveryAddress}</div>
                 </div>
               </div>
@@ -282,7 +284,7 @@ export default function OrderTrackingPage() {
 
         {/* Restaurant Info */}
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <h3 className="font-semibold text-gray-900 mb-3">Restaurant</h3>
+          <h3 className="font-semibold text-gray-900 mb-3">{t('selfService.restaurant')}</h3>
           <div className="space-y-2">
             <div className="font-medium">{tracking?.restaurantName}</div>
             {tracking?.restaurantAddress && (
@@ -306,7 +308,7 @@ export default function OrderTrackingPage() {
         {/* Last Updated */}
         {lastUpdated && (
           <div className="text-center text-xs text-gray-400">
-            Last updated: {lastUpdated.toLocaleTimeString()}
+            {t('selfService.tracking.lastUpdated', { time: lastUpdated.toLocaleTimeString() })}
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { selfServiceAPI } from '../../services/api';
 import {
   Clock,
@@ -14,48 +15,48 @@ import {
 const STATUS_CONFIG = {
   PENDING: {
     icon: Clock,
-    label: 'Order Received',
-    description: 'Your order has been received and is waiting for confirmation',
+    labelKey: 'selfService.tracking.statuses.PENDING.label',
+    descriptionKey: 'selfService.tracking.statuses.PENDING.description',
     color: 'text-orange-500',
     bgColor: 'bg-orange-50',
     step: 1,
   },
   CONFIRMED: {
     icon: CheckCircle,
-    label: 'Confirmed',
-    description: 'Your order has been confirmed',
+    labelKey: 'selfService.tracking.statuses.CONFIRMED.label',
+    descriptionKey: 'selfService.tracking.statuses.CONFIRMED.description',
     color: 'text-blue-500',
     bgColor: 'bg-blue-50',
     step: 2,
   },
   PREPARING: {
     icon: ChefHat,
-    label: 'Preparing',
-    description: 'Our kitchen is preparing your order',
+    labelKey: 'selfService.tracking.statuses.PREPARING.label',
+    descriptionKey: 'selfService.tracking.statuses.PREPARING.description',
     color: 'text-purple-500',
     bgColor: 'bg-purple-50',
     step: 3,
   },
   READY: {
     icon: Package,
-    label: 'Ready',
-    description: 'Your order is ready for pickup!',
+    labelKey: 'selfService.tracking.statuses.READY.label',
+    descriptionKey: 'selfService.tracking.statuses.READY.description',
     color: 'text-green-500',
     bgColor: 'bg-green-50',
     step: 4,
   },
   COMPLETED: {
     icon: CheckCircle,
-    label: 'Completed',
-    description: 'Order completed. Thank you!',
+    labelKey: 'selfService.tracking.statuses.COMPLETED.label',
+    descriptionKey: 'selfService.tracking.statuses.COMPLETED.description',
     color: 'text-green-600',
     bgColor: 'bg-green-50',
     step: 5,
   },
   CANCELLED: {
     icon: AlertCircle,
-    label: 'Cancelled',
-    description: 'This order has been cancelled',
+    labelKey: 'selfService.tracking.statuses.CANCELLED.label',
+    descriptionKey: 'selfService.tracking.statuses.CANCELLED.description',
     color: 'text-red-500',
     bgColor: 'bg-red-50',
     step: 0,
@@ -63,6 +64,7 @@ const STATUS_CONFIG = {
 };
 
 export default function OrderStatusPage() {
+  const { t } = useTranslation();
   const { orderId } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
@@ -83,7 +85,7 @@ export default function OrderStatusPage() {
       setOrder(response.data);
       setError(null);
     } catch (err) {
-      setError('Failed to load order status');
+      setError(t('selfService.tracking.loadError'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -118,13 +120,13 @@ export default function OrderStatusPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
           <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error</h2>
-          <p className="text-gray-600 mb-4">{error || 'Order not found'}</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">{t('selfService.tracking.error')}</h2>
+          <p className="text-gray-600 mb-4">{error || t('selfService.tracking.orderNotFoundShort')}</p>
           <button
             onClick={handleRefresh}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700"
           >
-            Try Again
+            {t('selfService.tracking.tryAgain')}
           </button>
         </div>
       </div>
@@ -143,8 +145,8 @@ export default function OrderStatusPage() {
         <div className="max-w-lg mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Order #{order.orderNumber}</h1>
-              <p className="text-sm text-gray-500">{order.orderType === 'TAKEAWAY' ? 'Takeaway' : 'Dine In'}</p>
+              <h1 className="text-lg font-bold text-gray-900">{t('selfService.tracking.orderLabel', { number: order.orderNumber })}</h1>
+              <p className="text-sm text-gray-500">{order.orderType === 'TAKEAWAY' ? t('selfService.takeaway') : t('selfService.dineIn')}</p>
             </div>
             <button
               onClick={handleRefresh}
@@ -166,9 +168,9 @@ export default function OrderStatusPage() {
             </div>
             <div>
               <h2 className={`text-xl font-bold ${statusConfig.color}`}>
-                {statusConfig.label}
+                {t(statusConfig.labelKey)}
               </h2>
-              <p className="text-gray-600 mt-1">{statusConfig.description}</p>
+              <p className="text-gray-600 mt-1">{t(statusConfig.descriptionKey)}</p>
             </div>
           </div>
 
@@ -177,7 +179,7 @@ export default function OrderStatusPage() {
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-center gap-2 text-gray-700">
                 <Clock className="w-5 h-5" />
-                <span>Estimated ready: <strong>{formatTime(order.estimatedReadyTime)}</strong></span>
+                <span>{t('selfService.tracking.estimatedReadyLabel')}: <strong>{formatTime(order.estimatedReadyTime)}</strong></span>
               </div>
             </div>
           )}
@@ -187,7 +189,7 @@ export default function OrderStatusPage() {
             <div className="mt-2">
               <div className="flex items-center gap-2 text-green-600">
                 <CheckCircle className="w-5 h-5" />
-                <span>Ready at: <strong>{formatTime(order.actualReadyTime)}</strong></span>
+                <span>{t('selfService.tracking.readyAtLabel')}: <strong>{formatTime(order.actualReadyTime)}</strong></span>
               </div>
             </div>
           )}
@@ -196,7 +198,7 @@ export default function OrderStatusPage() {
         {/* Progress Steps */}
         {order.status !== 'CANCELLED' && (
           <div className="bg-white rounded-xl p-6 shadow-sm">
-            <h3 className="font-semibold text-gray-900 mb-4">Order Progress</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('selfService.tracking.orderProgress')}</h3>
             <div className="relative">
               {/* Progress Line */}
               <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-gray-200">
@@ -231,10 +233,10 @@ export default function OrderStatusPage() {
                       </div>
                       <div>
                         <p className={`font-medium ${isCompleted ? 'text-gray-900' : 'text-gray-400'}`}>
-                          {stepConfig.label}
+                          {t(stepConfig.labelKey)}
                         </p>
                         {isCurrent && (
-                          <p className="text-sm text-blue-600">{stepConfig.description}</p>
+                          <p className="text-sm text-blue-600">{t(stepConfig.descriptionKey)}</p>
                         )}
                       </div>
                     </div>
@@ -248,7 +250,7 @@ export default function OrderStatusPage() {
         {/* Order Total */}
         <div className="bg-white rounded-xl p-6 shadow-sm">
           <div className="flex justify-between items-center">
-            <span className="text-gray-600">Total Amount</span>
+            <span className="text-gray-600">{t('selfService.tracking.totalAmount')}</span>
             <span className="text-xl font-bold text-blue-600">{formatPrice(order.total)}</span>
           </div>
         </div>
@@ -260,7 +262,7 @@ export default function OrderStatusPage() {
             className="w-full bg-blue-600 text-white rounded-xl py-4 font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
           >
             <Home className="w-5 h-5" />
-            Order Again
+            {t('selfService.tracking.orderAgain')}
           </button>
         )}
 
@@ -268,7 +270,7 @@ export default function OrderStatusPage() {
         {order.status === 'READY' && order.orderType === 'DINE_IN' && (
           <div className="bg-green-50 rounded-xl p-4 text-center">
             <p className="text-green-700 font-medium">
-              Your order is ready! It will be served to your table shortly.
+              {t('selfService.tracking.readyDineInMessage')}
             </p>
           </div>
         )}
@@ -276,7 +278,7 @@ export default function OrderStatusPage() {
         {order.status === 'READY' && order.orderType === 'TAKEAWAY' && (
           <div className="bg-green-50 rounded-xl p-4 text-center">
             <p className="text-green-700 font-medium">
-              Your order is ready! Please proceed to the counter to collect it.
+              {t('selfService.tracking.readyTakeawayMessage')}
             </p>
           </div>
         )}
