@@ -44,8 +44,8 @@ class InventoryAnalyticsServiceTest {
                 .thenReturn(new ShiftTimeService.ShiftTimeRange(
                         OffsetDateTime.now(ZoneOffset.UTC).minusDays(30), OffsetDateTime.now(ZoneOffset.UTC),
                         LocalTime.of(9, 0), LocalTime.of(23, 0)));
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
-                .thenReturn(List.of());
+        when(orderRepository.sumProductSalesByStatus(anyLong(), any(), any(), any())).thenReturn(List.of());
+        when(productRepository.findAllById(any())).thenReturn(List.of());
         when(batchConsumptionService.calculateTotalCOGS(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(ingredientRepository.findByIsActiveTrue()).thenReturn(List.of());
         assertNotNull(inventoryAnalyticsService.getInventoryTurnover(LocalDate.now().minusDays(30), LocalDate.now(), 1L));

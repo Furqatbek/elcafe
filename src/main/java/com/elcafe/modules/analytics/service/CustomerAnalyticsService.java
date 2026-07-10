@@ -4,10 +4,12 @@ import com.elcafe.config.CacheConfig;
 import com.elcafe.modules.analytics.dto.CustomerLTVDTO;
 import com.elcafe.modules.analytics.dto.CustomerRetentionDTO;
 import com.elcafe.modules.analytics.dto.CustomerSatisfactionDTO;
-import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.financial.service.ShiftTimeService;
-import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.dto.CustomerLifetimeRow;
+import com.elcafe.modules.order.dto.CustomerOrderCountRow;
+import com.elcafe.modules.order.dto.CustomerOrderStatsRow;
+import com.elcafe.modules.order.dto.OrderVolumeCountsRow;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -57,26 +59,20 @@ public class CustomerAnalyticsService {
         OffsetDateTime shiftStartOffset = shift.start();
         OffsetDateTime shiftEndOffset = shift.end();
 
-        // Get all customers that existed at the start of the period (strictly before start)
-        List<Customer> customersAtStart = customerRepository.findByCreatedAtBefore(shiftStartOffset);
+        // Population counts, computed in the DB (the old code loaded three full customer lists to size())
+        long customersAtStartCount = customerRepository.countByCreatedAtBefore(shiftStartOffset);
+        long newCustomersCount = customerRepository.countByCreatedAtBetween(shiftStartOffset, shiftEndOffset);
+        long customersAtEndCount = customerRepository.countByCreatedAtLessThanEqual(shiftEndOffset);
 
-        // Get new customers during the period (inclusive boundaries for shift-aware consistency)
-        List<Customer> newCustomers = customerRepository.findByCreatedAtBetween(shiftStartOffset, shiftEndOffset);
+        // Per-customer order counts over revenue-status orders in the period, one grouped query —
+        // serves both the returning-customer count and the one-time/repeat split
+        List<CustomerOrderStatsRow> customerStats = orderRepository.findCustomerOrderStats(
+                restaurantId, shift.start(), shift.end(), ShiftTimeService.REVENUE_STATUSES);
 
-        // Get all customers at the end of the period (up to and including end)
-        List<Customer> customersAtEnd = customerRepository.findByCreatedAtLessThanEqual(shiftEndOffset);
-
-        // Get returning customers (customers who made orders during the period)
-        Set<Long> returningCustomerIds = getCompletedOrders(shift.start(), shift.end(), restaurantId).stream()
-                .filter(order -> order.getCustomer() != null)
-                .map(order -> order.getCustomer().getId())
-                .filter(customerId -> customersAtStart.stream().anyMatch(c -> c.getId().equals(customerId)))
-                .collect(Collectors.toSet());
-
-        int customersAtStartCount = customersAtStart.size();
-        int newCustomersCount = newCustomers.size();
-        int customersAtEndCount = customersAtEnd.size();
-        int returningCustomersCount = returningCustomerIds.size();
+        // Returning customers = ordered in the period AND existed strictly before it started
+        long returningCustomersCount = customerStats.stream()
+                .filter(row -> row.customerCreatedAt() != null && row.customerCreatedAt().isBefore(shiftStartOffset))
+                .count();
 
         // Retention Rate = ((Customers at End - New Customers) / Customers at Start) * 100
         double retentionRate = customersAtStartCount > 0
@@ -87,32 +83,25 @@ public class CustomerAnalyticsService {
         double churnRate = 100.0 - retentionRate;
 
         // Count one-time vs repeat customers
-        Map<Long, Long> orderCountByCustomer = getCompletedOrders(shift.start(), shift.end(), restaurantId).stream()
-                .filter(order -> order.getCustomer() != null)
-                .collect(Collectors.groupingBy(
-                        order -> order.getCustomer().getId(),
-                        Collectors.counting()
-                ));
-
-        long oneTimeCustomers = orderCountByCustomer.values().stream()
-                .filter(count -> count == 1)
+        long oneTimeCustomers = customerStats.stream()
+                .filter(row -> row.orderCount() == 1)
                 .count();
 
-        long repeatCustomers = orderCountByCustomer.values().stream()
-                .filter(count -> count > 1)
+        long repeatCustomers = customerStats.stream()
+                .filter(row -> row.orderCount() > 1)
                 .count();
 
-        double repeatCustomerRate = orderCountByCustomer.size() > 0
-                ? ((double) repeatCustomers / orderCountByCustomer.size()) * 100
+        double repeatCustomerRate = !customerStats.isEmpty()
+                ? ((double) repeatCustomers / customerStats.size()) * 100
                 : 0.0;
 
         return CustomerRetentionDTO.builder()
                 .startDate(startDate)
                 .endDate(endDate)
-                .customersAtStart(customersAtStartCount)
-                .newCustomers(newCustomersCount)
-                .customersAtEnd(customersAtEndCount)
-                .returningCustomers(returningCustomersCount)
+                .customersAtStart((int) customersAtStartCount)
+                .newCustomers((int) newCustomersCount)
+                .customersAtEnd((int) customersAtEndCount)
+                .returningCustomers((int) returningCustomersCount)
                 .retentionRate(retentionRate)
                 .churnRate(churnRate)
                 .oneTimeCustomers((int) oneTimeCustomers)
@@ -128,13 +117,13 @@ public class CustomerAnalyticsService {
                key = "'ltv:' + #restaurantId",
                unless = "#result == null")
     public CustomerLTVDTO getCustomerLTV(Long restaurantId) {
-        // Use active customers only for LTV calculation
-        List<Customer> allCustomers = customerRepository.findByActiveTrue();
-
-        // Calculate metrics for each customer
-        List<CustomerMetrics> customerMetrics = allCustomers.stream()
-                .map(customer -> calculateCustomerMetrics(customer, restaurantId))
-                .filter(Objects::nonNull)
+        // One grouped query: per-active-customer lifetime sums over revenue-status orders. The old code
+        // loaded EVERY active customer's ENTIRE order history one customer at a time — the single worst
+        // loader in the codebase (audit E3). Customers without qualifying orders drop out of the GROUP BY
+        // exactly as calculateCustomerMetrics used to return null for them.
+        List<CustomerMetrics> customerMetrics = orderRepository
+                .findCustomerLifetimeStats(restaurantId, ShiftTimeService.REVENUE_STATUSES).stream()
+                .map(CustomerAnalyticsService::toCustomerMetrics)
                 .collect(Collectors.toList());
 
         if (customerMetrics.isEmpty()) {
@@ -232,40 +221,31 @@ public class CustomerAnalyticsService {
                 restaurantId, startDate, endDate);
         log.debug("Customer satisfaction using shift range: {} to {}", shift.start(), shift.end());
 
-        // Get all orders in the period
-        List<Order> allOrders = getAllOrdersInPeriod(shift.start(), shift.end(), restaurantId);
+        // Order volumes over ALL statuses in the period, counted in the DB
+        OrderVolumeCountsRow volumes = orderRepository.countOrderVolumes(
+                restaurantId, shift.start(), shift.end(), ShiftTimeService.REVENUE_STATUSES, OrderStatus.CANCELLED);
 
-        if (allOrders.isEmpty()) {
+        int totalOrders = volumes.totalOrders().intValue();
+        if (totalOrders == 0) {
             return buildEmptySatisfactionDTO(startDate, endDate, restaurantId);
         }
 
-        // Calculate operational satisfaction metrics
-        int totalOrders = allOrders.size();
-
-        // Completed orders (successfully delivered/served)
-        long completedOrders = allOrders.stream()
-                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                .count();
-
-        // Cancelled orders
-        long cancelledOrders = allOrders.stream()
-                .filter(order -> order.getStatus() == OrderStatus.CANCELLED)
-                .count();
+        long completedOrders = volumes.completedOrders();
+        long cancelledOrders = volumes.cancelledOrders();
 
         // Calculate rates
         double completionRate = totalOrders > 0 ? (double) completedOrders / totalOrders * 100 : 0.0;
         double cancellationRate = totalOrders > 0 ? (double) cancelledOrders / totalOrders * 100 : 0.0;
 
-        // Calculate repeat customer metrics
-        Map<Long, Long> ordersByCustomer = allOrders.stream()
-                .filter(order -> order.getCustomer() != null)
-                .collect(Collectors.groupingBy(order -> order.getCustomer().getId(), Collectors.counting()));
+        // Calculate repeat customer metrics from grouped per-customer counts
+        List<CustomerOrderCountRow> ordersByCustomer = orderRepository.findCustomerOrderCounts(
+                restaurantId, shift.start(), shift.end());
 
-        long repeatCustomerCount = ordersByCustomer.values().stream()
-                .filter(count -> count > 1)
+        long repeatCustomerCount = ordersByCustomer.stream()
+                .filter(row -> row.orderCount() > 1)
                 .count();
 
-        double repeatCustomerRate = ordersByCustomer.size() > 0
+        double repeatCustomerRate = !ordersByCustomer.isEmpty()
                 ? (double) repeatCustomerCount / ordersByCustomer.size() * 100 : 0.0;
 
         // Calculate internal satisfaction score (weighted average of operational metrics)
@@ -308,18 +288,6 @@ public class CustomerAnalyticsService {
                 .build();
     }
 
-    /**
-     * Get all orders in a time period (including cancelled) for satisfaction analysis.
-     */
-    private List<Order> getAllOrdersInPeriod(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
-        if (restaurantId != null) {
-            return orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                    restaurantId, startDateTime, endDateTime);
-        } else {
-            return orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
-        }
-    }
-
     private CustomerSatisfactionDTO buildEmptySatisfactionDTO(LocalDate startDate, LocalDate endDate, Long restaurantId) {
         return CustomerSatisfactionDTO.builder()
                 .startDate(startDate)
@@ -346,58 +314,14 @@ public class CustomerAnalyticsService {
 
     // Helper methods
 
-    /**
-     * Get orders with revenue-generating statuses within the given time range.
-     * Uses shared REVENUE_STATUSES for consistency across all reports.
-     */
-    private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
-        List<Order> orders;
-        if (restaurantId != null) {
-            orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                    restaurantId,
-                    startDateTime,
-                    endDateTime
-            );
-        } else {
-            // Use proper repository query instead of findAll()
-            orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
-        }
+    /** Same math as the old per-customer entity walk, applied to one aggregate row. */
+    private static CustomerMetrics toCustomerMetrics(CustomerLifetimeRow row) {
+        BigDecimal totalSpent = row.totalSpent();
+        int orderCount = row.orderCount().intValue();
 
-        return orders.stream()
-                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                .collect(Collectors.toList());
-    }
-
-    private CustomerMetrics calculateCustomerMetrics(Customer customer, Long restaurantId) {
-        List<Order> customerOrders = orderRepository.findByCustomer_IdOrderByCreatedAtDesc(customer.getId()).stream()
-                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                .filter(order -> restaurantId == null || order.getRestaurant().getId().equals(restaurantId))
-                .collect(Collectors.toList());
-
-        if (customerOrders.isEmpty()) {
-            return null;
-        }
-
-        // Total spent
-        BigDecimal totalSpent = customerOrders.stream()
-                .map(Order::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        // Order count
-        int orderCount = customerOrders.size();
-
-        // Customer lifespan (from first to last order)
-        LocalDateTime firstOrderDate = customerOrders.stream()
-                .map(order -> order.getCreatedAt().toLocalDateTime())
-                .min(LocalDateTime::compareTo)
-                .orElse(customer.getCreatedAt() != null ? customer.getCreatedAt().toLocalDateTime() : LocalDateTime.now());
-
-        LocalDateTime lastOrderDate = customerOrders.stream()
-                .map(order -> order.getCreatedAt().toLocalDateTime())
-                .max(LocalDateTime::compareTo)
-                .orElse(LocalDateTime.now());
+        // Customer lifespan (from first to last order); rows always carry both (COUNT >= 1)
+        LocalDateTime firstOrderDate = row.firstOrderAt().toLocalDateTime();
+        LocalDateTime lastOrderDate = row.lastOrderAt().toLocalDateTime();
 
         long lifespanDays = ChronoUnit.DAYS.between(firstOrderDate, lastOrderDate);
         if (lifespanDays == 0) {

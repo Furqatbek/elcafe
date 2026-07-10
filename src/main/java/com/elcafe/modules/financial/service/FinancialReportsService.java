@@ -8,7 +8,7 @@ import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.financial.repository.ExpenseRepository;
 import com.elcafe.modules.financial.repository.PayrollEntryRepository;
 import com.elcafe.modules.financial.repository.TransactionRepository;
-import com.elcafe.modules.order.entity.Order;
+import com.elcafe.modules.order.dto.PnlOrderRow;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -51,66 +51,59 @@ public class FinancialReportsService {
                 restaurantId, startDate, endDate);
         log.info("P&L: Using shift time range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                restaurantId, shift.start(), shift.end());
-
-        // Filter to revenue-generating orders:
-        // 1. Orders with status in REVENUE_STATUSES (ACCEPTED, PREPARING, READY, etc.)
-        // 2. OR orders that are fully paid (regardless of status - handles POS orders)
-        // 3. Exclude CANCELLED orders
-        List<Order> completedOrders = orders.stream()
-                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
-                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
-                          || o.isFullyPaid()
-                          || o.getPaymentStatus() == PaymentStatus.COMPLETED)
-                .collect(Collectors.toList());
+        // One scalar money row per revenue-qualifying order — the filter (revenue status OR fully paid
+        // OR paymentStatus COMPLETED, minus CANCELLED) runs in the DB via the shared fragment that
+        // mirrors Order.isFullyPaid() exactly (audit E3); no order/payment entity graphs are loaded.
+        List<PnlOrderRow> completedOrders = orderRepository.findPnlOrderRows(
+                restaurantId, shift.start(), shift.end(),
+                OrderStatus.CANCELLED, ShiftTimeService.REVENUE_STATUSES, PaymentStatus.COMPLETED);
 
         // Calculate revenue breakdown
         BigDecimal salesRevenue = completedOrders.stream()
-                .map(Order::getSubtotal)
+                .map(PnlOrderRow::subtotal)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal serviceFeeRevenue = completedOrders.stream()
-                .map(Order::getServiceFee)
+                .map(PnlOrderRow::serviceFee)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal deliveryFeeRevenue = completedOrders.stream()
-                .map(Order::getDeliveryFee)
+                .map(PnlOrderRow::deliveryFee)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal tipRevenue = completedOrders.stream()
-                .map(Order::getTipAmount)
+                .map(PnlOrderRow::tipAmount)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Calculate total discounts (contra-revenue)
         BigDecimal totalDiscounts = completedOrders.stream()
-                .map(Order::getDiscount)
+                .map(PnlOrderRow::discount)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Calculate discount breakdown by type
         Map<String, BigDecimal> discountsByType = completedOrders.stream()
-                .filter(o -> o.getDiscount() != null && o.getDiscount().compareTo(BigDecimal.ZERO) > 0)
+                .filter(o -> o.discount() != null && o.discount().compareTo(BigDecimal.ZERO) > 0)
                 .collect(Collectors.groupingBy(
-                        o -> o.getDiscountType() != null ? o.getDiscountType() : "UNKNOWN",
-                        Collectors.reducing(BigDecimal.ZERO, Order::getDiscount, BigDecimal::add)
+                        o -> o.discountType() != null ? o.discountType() : "UNKNOWN",
+                        Collectors.reducing(BigDecimal.ZERO, PnlOrderRow::discount, BigDecimal::add)
                 ));
 
         // Gross revenue (before discounts) = sum of subtotals + fees
         BigDecimal grossRevenue = salesRevenue.add(serviceFeeRevenue).add(deliveryFeeRevenue).add(tipRevenue);
 
-        // Net revenue = gross revenue - discounts (Order.getTotal() already accounts for discounts)
+        // Net revenue = gross revenue - discounts (the order total already accounts for discounts)
         BigDecimal totalRevenue = completedOrders.stream()
-                .map(Order::getTotal)
+                .map(PnlOrderRow::total)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        log.info("P&L: Found {} orders, {} revenue-counted, gross: {}, discounts: {}, net: {}",
-                orders.size(), completedOrders.size(), grossRevenue, totalDiscounts, totalRevenue);
+        log.info("P&L: {} revenue-counted orders, gross: {}, discounts: {}, net: {}",
+                completedOrders.size(), grossRevenue, totalDiscounts, totalRevenue);
 
         // Filter expenses by the SAME timestamp window used for orders,
         // not by calendar date. The old date-only query swept in any
@@ -175,7 +168,7 @@ public class FinancialReportsService {
 
         // Count orders with discounts
         long discountedOrderCount = completedOrders.stream()
-                .filter(o -> o.getDiscount() != null && o.getDiscount().compareTo(BigDecimal.ZERO) > 0)
+                .filter(o -> o.discount() != null && o.discount().compareTo(BigDecimal.ZERO) > 0)
                 .count();
 
         return ProfitLossReport.builder()
@@ -337,18 +330,12 @@ public class FinancialReportsService {
                 restaurantId, Account.AccountCategory.COGS);
         BigDecimal totalCogs = calculateAccountsTotal(cogsAccounts, startDate, txEndDate);
 
-        // Get revenue from orders (consistent with P&L report)
-        List<Order> orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                restaurantId, shift.start(), shift.end());
-
-        BigDecimal totalRevenue = orders.stream()
-                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
-                .filter(o -> ShiftTimeService.REVENUE_STATUSES.contains(o.getStatus())
-                          || o.isFullyPaid()
-                          || o.getPaymentStatus() == PaymentStatus.COMPLETED)
-                .map(Order::getTotal)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Get revenue from orders (consistent with P&L report) — aggregated in the DB with the same
+        // revenue-qualifying filter
+        BigDecimal totalRevenue = orderRepository.sumRevenueTotals(
+                restaurantId, shift.start(), shift.end(),
+                OrderStatus.CANCELLED, ShiftTimeService.REVENUE_STATUSES, PaymentStatus.COMPLETED)
+                .totalRevenue();
 
         log.info("COGS: Total COGS: {}, Total Revenue: {}", totalCogs, totalRevenue);
 

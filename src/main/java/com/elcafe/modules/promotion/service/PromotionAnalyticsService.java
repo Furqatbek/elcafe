@@ -1,5 +1,7 @@
 package com.elcafe.modules.promotion.service;
 
+import com.elcafe.modules.order.dto.CouponSalesRow;
+import com.elcafe.modules.order.dto.DiscountOrderRow;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentStatus;
@@ -45,30 +47,26 @@ public class PromotionAnalyticsService {
         OffsetDateTime startDateTime = startDate.atStartOfDay().atZone(zoneId).toOffsetDateTime();
         OffsetDateTime endDateTime = endDate.atTime(LocalTime.MAX).atZone(zoneId).toOffsetDateTime();
 
-        // Get all completed orders in the period
-        List<Order> allOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                restaurantId, startDateTime, endDateTime);
-
-        List<Order> completedOrders = allOrders.stream()
-                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
-                .filter(o -> o.isFullyPaid() || o.getPaymentStatus() == PaymentStatus.COMPLETED)
-                .collect(Collectors.toList());
+        // One scalar row per paid order (total, discount, type) — the paid filter runs in the DB,
+        // including the fully-paid arithmetic that used to require the payments graph (audit E3)
+        List<DiscountOrderRow> completedOrders = orderRepository.findPaidDiscountOrderRows(
+                restaurantId, startDateTime, endDateTime, OrderStatus.CANCELLED, PaymentStatus.COMPLETED);
 
         // Orders with discounts
-        List<Order> discountedOrders = completedOrders.stream()
-                .filter(o -> o.getDiscount() != null && o.getDiscount().compareTo(BigDecimal.ZERO) > 0)
+        List<DiscountOrderRow> discountedOrders = completedOrders.stream()
+                .filter(o -> o.discount() != null && o.discount().compareTo(BigDecimal.ZERO) > 0)
                 .collect(Collectors.toList());
 
         // Calculate totals
         // Net revenue = sum of order totals (final paid amount after discounts)
         BigDecimal totalRevenue = completedOrders.stream()
-                .map(Order::getTotal)
+                .map(DiscountOrderRow::total)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Total discounts from all orders with discounts
         BigDecimal totalDiscounts = completedOrders.stream()
-                .map(Order::getDiscount)
+                .map(DiscountOrderRow::discount)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -79,14 +77,14 @@ public class PromotionAnalyticsService {
         // Discount breakdown by type
         Map<String, BigDecimal> discountByType = discountedOrders.stream()
                 .collect(Collectors.groupingBy(
-                        o -> o.getDiscountType() != null ? o.getDiscountType() : "UNKNOWN",
-                        Collectors.reducing(BigDecimal.ZERO, Order::getDiscount, BigDecimal::add)
+                        o -> o.discountType() != null ? o.discountType() : "UNKNOWN",
+                        Collectors.reducing(BigDecimal.ZERO, DiscountOrderRow::discount, BigDecimal::add)
                 ));
 
         // Count by type
         Map<String, Long> orderCountByDiscountType = discountedOrders.stream()
                 .collect(Collectors.groupingBy(
-                        o -> o.getDiscountType() != null ? o.getDiscountType() : "UNKNOWN",
+                        o -> o.discountType() != null ? o.discountType() : "UNKNOWN",
                         Collectors.counting()
                 ));
 
@@ -96,7 +94,7 @@ public class PromotionAnalyticsService {
 
         BigDecimal avgDiscountedOrderValue = discountedOrders.isEmpty() ? BigDecimal.ZERO :
                 discountedOrders.stream()
-                        .map(Order::getTotal)
+                        .map(DiscountOrderRow::total)
                         .filter(Objects::nonNull)
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .divide(BigDecimal.valueOf(discountedOrders.size()), 2, RoundingMode.HALF_UP);
@@ -228,33 +226,35 @@ public class PromotionAnalyticsService {
     public List<DailyDiscountTrend> getDiscountTrends(Long restaurantId, LocalDate startDate, LocalDate endDate) {
         log.info("Getting discount trends for restaurant {} from {} to {}", restaurantId, startDate, endDate);
 
+        // ONE rows query for the whole range (the old loop issued a full-day entity load per day),
+        // then group by local calendar day — the same boundaries the per-day queries used.
+        ZoneId zoneId = ZoneId.systemDefault();
+        OffsetDateTime rangeStart = startDate.atStartOfDay().atZone(zoneId).toOffsetDateTime();
+        OffsetDateTime rangeEnd = endDate.atTime(LocalTime.MAX).atZone(zoneId).toOffsetDateTime();
+
+        List<DiscountOrderRow> rows = orderRepository.findPaidDiscountOrderRows(
+                restaurantId, rangeStart, rangeEnd, OrderStatus.CANCELLED, PaymentStatus.COMPLETED);
+
+        Map<LocalDate, List<DiscountOrderRow>> rowsByDay = rows.stream()
+                .collect(Collectors.groupingBy(
+                        row -> row.createdAt().atZoneSameInstant(zoneId).toLocalDate()));
+
         List<DailyDiscountTrend> trends = new ArrayList<>();
         LocalDate currentDate = startDate;
-
-        ZoneId zoneId = ZoneId.systemDefault();
         while (!currentDate.isAfter(endDate)) {
-            OffsetDateTime dayStart = currentDate.atStartOfDay().atZone(zoneId).toOffsetDateTime();
-            OffsetDateTime dayEnd = currentDate.atTime(LocalTime.MAX).atZone(zoneId).toOffsetDateTime();
+            List<DiscountOrderRow> completedOrders = rowsByDay.getOrDefault(currentDate, List.of());
 
-            List<Order> dayOrders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                    restaurantId, dayStart, dayEnd);
-
-            List<Order> completedOrders = dayOrders.stream()
-                    .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
-                    .filter(o -> o.isFullyPaid() || o.getPaymentStatus() == PaymentStatus.COMPLETED)
-                    .collect(Collectors.toList());
-
-            List<Order> discountedOrders = completedOrders.stream()
-                    .filter(o -> o.getDiscount() != null && o.getDiscount().compareTo(BigDecimal.ZERO) > 0)
+            List<DiscountOrderRow> discountedOrders = completedOrders.stream()
+                    .filter(o -> o.discount() != null && o.discount().compareTo(BigDecimal.ZERO) > 0)
                     .collect(Collectors.toList());
 
             BigDecimal dayRevenue = completedOrders.stream()
-                    .map(Order::getTotal)
+                    .map(DiscountOrderRow::total)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal dayDiscounts = discountedOrders.stream()
-                    .map(Order::getDiscount)
+                    .map(DiscountOrderRow::discount)
                     .filter(Objects::nonNull)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -282,38 +282,20 @@ public class PromotionAnalyticsService {
         OffsetDateTime startDateTime = startDate.atStartOfDay().atZone(zoneId).toOffsetDateTime();
         OffsetDateTime endDateTime = endDate.atTime(LocalTime.MAX).atZone(zoneId).toOffsetDateTime();
 
-        List<Order> ordersWithCoupons = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                        restaurantId, startDateTime, endDateTime).stream()
-                .filter(o -> o.getCouponCode() != null && !o.getCouponCode().isEmpty())
-                .filter(o -> o.getStatus() != OrderStatus.CANCELLED)
-                .collect(Collectors.toList());
-
-        // Group by coupon code
-        Map<String, List<Order>> ordersByCoupon = ordersWithCoupons.stream()
-                .collect(Collectors.groupingBy(Order::getCouponCode));
+        // Per-coupon sums grouped in the DB — no order entities materialized
+        List<CouponSalesRow> couponSales = orderRepository.sumCouponSales(
+                restaurantId, startDateTime, endDateTime, OrderStatus.CANCELLED);
 
         List<CouponPerformance> performances = new ArrayList<>();
-        for (Map.Entry<String, List<Order>> entry : ordersByCoupon.entrySet()) {
-            String couponCode = entry.getKey();
-            List<Order> orders = entry.getValue();
-
-            BigDecimal totalRevenue = orders.stream()
-                    .map(Order::getTotal)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            BigDecimal totalDiscount = orders.stream()
-                    .map(Order::getDiscount)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+        for (CouponSalesRow row : couponSales) {
+            int redemptions = row.redemptionCount().intValue();
             performances.add(CouponPerformance.builder()
-                    .couponCode(couponCode)
-                    .redemptionCount(orders.size())
-                    .totalRevenue(totalRevenue)
-                    .totalDiscount(totalDiscount)
-                    .avgOrderValue(orders.isEmpty() ? BigDecimal.ZERO :
-                            totalRevenue.divide(BigDecimal.valueOf(orders.size()), 2, RoundingMode.HALF_UP))
+                    .couponCode(row.couponCode())
+                    .redemptionCount(redemptions)
+                    .totalRevenue(row.revenue())
+                    .totalDiscount(row.discount())
+                    .avgOrderValue(redemptions == 0 ? BigDecimal.ZERO :
+                            row.revenue().divide(BigDecimal.valueOf(redemptions), 2, RoundingMode.HALF_UP))
                     .build());
         }
 

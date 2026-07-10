@@ -10,9 +10,7 @@ import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductIngredient;
 import com.elcafe.modules.menu.repository.IngredientRepository;
 import com.elcafe.modules.menu.repository.ProductRepository;
-import com.elcafe.modules.order.entity.Order;
-import com.elcafe.modules.order.entity.OrderItem;
-import com.elcafe.modules.order.enums.OrderStatus;
+import com.elcafe.modules.order.dto.ProductSalesRow;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,8 +61,10 @@ public class InventoryAnalyticsService {
                 restaurantId, startDate, endDate);
         log.debug("Inventory turnover using shift range: {} to {}", shift.start(), shift.end());
 
-        // Get all completed orders in the period
-        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
+        // Per-product quantity sums over revenue-status orders, aggregated in the DB (audit E3) — no
+        // order/item entity graphs are materialized.
+        List<ProductSalesRow> productSales = orderRepository.sumProductSalesByStatus(
+                restaurantId, shift.start(), shift.end(), ShiftTimeService.REVENUE_STATUSES);
 
         // Try to get COGS from batch consumption data first
         BigDecimal totalCOGS = BigDecimal.ZERO;
@@ -77,15 +77,19 @@ public class InventoryAnalyticsService {
             }
         }
 
-        // Fall back to product-based COGS if no batch data. Use the
-        // product-referencing items only (productItemsOf skips bundle/
-        // packaging rows that have null productId).
+        // Batch-load the products once (the old fallback did a findById per order item — an N+1 on top
+        // of the full-range load). The aggregate already excludes bundle/packaging rows (null productId).
+        Map<Long, Product> productsById = productRepository.findAllById(
+                        productSales.stream().map(ProductSalesRow::productId).collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(Product::getId, p -> p));
+
+        // Fall back to product-based COGS if no batch data
         if (totalCOGS.compareTo(BigDecimal.ZERO) == 0) {
-            totalCOGS = OrderItem.productItemsOf(orders)
-                    .map(item -> {
-                        Product product = productRepository.findById(item.getProductId()).orElse(null);
+            totalCOGS = productSales.stream()
+                    .map(row -> {
+                        Product product = productsById.get(row.productId());
                         if (product != null && product.getCostPrice() != null) {
-                            return product.getCostPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
+                            return product.getCostPrice().multiply(BigDecimal.valueOf(row.quantitySold()));
                         }
                         return BigDecimal.ZERO;
                     })
@@ -121,7 +125,7 @@ public class InventoryAnalyticsService {
         }
 
         // Calculate ingredient usage during the period
-        Map<Long, BigDecimal> ingredientUsage = calculateIngredientUsage(orders);
+        Map<Long, BigDecimal> ingredientUsage = calculateIngredientUsage(productSales, productsById);
 
         // Calculate turnover metrics for each ingredient
         List<InventoryTurnoverDTO.IngredientTurnoverDTO> ingredientTurnovers = allIngredients.stream()
@@ -193,65 +197,35 @@ public class InventoryAnalyticsService {
     // Helper methods
 
     /**
-     * Get orders with revenue-generating statuses within the given time range.
-     * Uses shared REVENUE_STATUSES for consistency across all reports.
+     * Calculate total ingredient usage based on products sold. Works on per-product quantity sums
+     * (summing per product first is algebraically identical to the old per-item merge).
      */
-    private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
-        List<Order> orders;
-        if (restaurantId != null) {
-            orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                    restaurantId,
-                    startDateTime,
-                    endDateTime
-            );
-        } else {
-            // Use proper repository query instead of findAll()
-            orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
-        }
-
-        return orders.stream()
-                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Calculate total ingredient usage based on products sold
-     */
-    private Map<Long, BigDecimal> calculateIngredientUsage(List<Order> orders) {
+    private Map<Long, BigDecimal> calculateIngredientUsage(List<ProductSalesRow> productSales,
+                                                           Map<Long, Product> productsById) {
         Map<Long, BigDecimal> ingredientUsage = new HashMap<>();
 
-        // OrderItem.productIds / productItemsOf skip bundle/packaging rows
-        // — see OrderItem.productId javadoc for why.
-        Set<Long> productIds = OrderItem.productIds(orders);
+        for (ProductSalesRow row : productSales) {
+            Product product = productsById.get(row.productId());
+            if (product != null && product.getIngredients() != null) {
+                // For each ingredient in the product, add the quantity used
+                product.getIngredients().forEach(productIngredient -> {
+                    Long ingredientId = productIngredient.getIngredient().getId();
+                    BigDecimal quantityPerProduct = productIngredient.getQuantity() != null
+                            ? productIngredient.getQuantity()
+                            : BigDecimal.ZERO;
 
-        // Batch load all products
-        Map<Long, Product> productsMap = productRepository.findAllById(productIds).stream()
-                .collect(Collectors.toMap(Product::getId, p -> p));
+                    BigDecimal totalQuantityUsed = quantityPerProduct.multiply(
+                            BigDecimal.valueOf(row.quantitySold())
+                    );
 
-        OrderItem.productItemsOf(orders)
-                .forEach(item -> {
-                    Product product = productsMap.get(item.getProductId());
-                    if (product != null && product.getIngredients() != null) {
-                        // For each ingredient in the product, add the quantity used
-                        product.getIngredients().forEach(productIngredient -> {
-                            Long ingredientId = productIngredient.getIngredient().getId();
-                            BigDecimal quantityPerProduct = productIngredient.getQuantity() != null
-                                    ? productIngredient.getQuantity()
-                                    : BigDecimal.ZERO;
-
-                            BigDecimal totalQuantityUsed = quantityPerProduct.multiply(
-                                    BigDecimal.valueOf(item.getQuantity())
-                            );
-
-                            ingredientUsage.merge(
-                                    ingredientId,
-                                    totalQuantityUsed,
-                                    BigDecimal::add
-                            );
-                        });
-                    }
+                    ingredientUsage.merge(
+                            ingredientId,
+                            totalQuantityUsed,
+                            BigDecimal::add
+                    );
                 });
+            }
+        }
 
         return ingredientUsage;
     }

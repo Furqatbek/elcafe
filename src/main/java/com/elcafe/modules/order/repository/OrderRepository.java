@@ -1,5 +1,14 @@
 package com.elcafe.modules.order.repository;
 
+import com.elcafe.modules.order.dto.CouponSalesRow;
+import com.elcafe.modules.order.dto.CustomerLifetimeRow;
+import com.elcafe.modules.order.dto.CustomerOrderCountRow;
+import com.elcafe.modules.order.dto.CustomerOrderStatsRow;
+import com.elcafe.modules.order.dto.DiscountOrderRow;
+import com.elcafe.modules.order.dto.HourlySalesRow;
+import com.elcafe.modules.order.dto.OrderTimingRow;
+import com.elcafe.modules.order.dto.OrderVolumeCountsRow;
+import com.elcafe.modules.order.dto.PnlOrderRow;
 import com.elcafe.modules.order.dto.ProductSalesRow;
 import com.elcafe.modules.order.dto.RevenueOrderRow;
 import com.elcafe.modules.order.dto.RevenueTotalsRow;
@@ -27,26 +36,48 @@ import java.util.Optional;
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecificationExecutor<Order> {
 
-    /**
-     * Shared WHERE fragment selecting "revenue-qualifying" orders for analytics. This is the exact SQL
-     * translation of the Java filter analytics used before (FinancialAnalyticsService.getCompletedOrders):
-     * not CANCELLED, and (revenue status OR paymentStatus COMPLETED OR fully paid). "Fully paid" mirrors
-     * {@code Order.isFullyPaid()}: effective total (grandTotal if &gt; 0, else total) must be positive and
-     * covered by the sum of COMPLETED payments' net amounts (amount + tip − refunded,
-     * {@code Payment.getNetAmount()}). Deliberately does NOT filter {@code deletedAt} — the Java filter it
-     * replaces never did, and changing which orders count is not this rewrite's job.
-     */
-    String REVENUE_QUALIFYING_WHERE = """
+    /** Range + optional-tenant base shared by every analytics aggregate on this repository. */
+    String RANGE_TENANT_WHERE = """
              o.createdAt BETWEEN :start AND :end
              AND (:restaurantId IS NULL OR o.restaurant.id = :restaurantId)
-             AND o.status <> :cancelled
-             AND ( o.status IN :revenueStatuses
-                OR o.paymentStatus = :completedPayment
-                OR ( (CASE WHEN o.grandTotal IS NOT NULL AND o.grandTotal > 0 THEN o.grandTotal ELSE COALESCE(o.total, 0) END) > 0
-                  AND COALESCE((SELECT SUM(p.amount + COALESCE(p.tipAmount, 0) - COALESCE(p.refundedAmount, 0))
-                                FROM Payment p WHERE p.order = o AND p.status = :completedPayment), 0)
-                      >= (CASE WHEN o.grandTotal IS NOT NULL AND o.grandTotal > 0 THEN o.grandTotal ELSE COALESCE(o.total, 0) END) ) )
             """;
+
+    /**
+     * Exact SQL translation of {@code Order.isFullyPaid()}: effective total (grandTotal if &gt; 0, else
+     * total) must be positive and covered by the sum of COMPLETED payments' net amounts
+     * (amount + tip − refunded, {@code Payment.getNetAmount()}).
+     */
+    String FULLY_PAID_PREDICATE = """
+             ( (CASE WHEN o.grandTotal IS NOT NULL AND o.grandTotal > 0 THEN o.grandTotal ELSE COALESCE(o.total, 0) END) > 0
+               AND COALESCE((SELECT SUM(p.amount + COALESCE(p.tipAmount, 0) - COALESCE(p.refundedAmount, 0))
+                             FROM Payment p WHERE p.order = o AND p.status = :completedPayment), 0)
+                   >= (CASE WHEN o.grandTotal IS NOT NULL AND o.grandTotal > 0 THEN o.grandTotal ELSE COALESCE(o.total, 0) END) )
+            """;
+
+    /**
+     * "Revenue-qualifying" orders (FinancialAnalyticsService / FinancialReportsService filter): not
+     * CANCELLED, and (revenue status OR paymentStatus COMPLETED OR fully paid). Deliberately does NOT
+     * filter {@code deletedAt} — the Java filter it replaced never did, and changing which orders count
+     * is not the aggregate rewrite's job.
+     */
+    String REVENUE_QUALIFYING_WHERE = RANGE_TENANT_WHERE
+            + " AND o.status <> :cancelled "
+            + " AND ( o.status IN :revenueStatuses OR o.paymentStatus = :completedPayment OR " + FULLY_PAID_PREDICATE + " ) ";
+
+    /**
+     * Status-only revenue filter (Operational/Inventory/Customer analytics): just
+     * {@code status IN REVENUE_STATUSES}. CANCELLED can never match (it is not a revenue status), so the
+     * old code's separate not-CANCELLED check is subsumed.
+     */
+    String REVENUE_STATUS_WHERE = RANGE_TENANT_WHERE + " AND o.status IN :revenueStatuses ";
+
+    /**
+     * Paid-only filter (promotion analytics): not CANCELLED and (paymentStatus COMPLETED OR fully paid)
+     * — the qualifying filter without the revenue-status branch.
+     */
+    String PAID_ORDER_WHERE = RANGE_TENANT_WHERE
+            + " AND o.status <> :cancelled "
+            + " AND ( o.paymentStatus = :completedPayment OR " + FULLY_PAID_PREDICATE + " ) ";
 
     /**
      * One scalar row per revenue-qualifying order (no entity graphs). The first-payment subquery is the
@@ -80,6 +111,136 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     @Query("SELECT new com.elcafe.modules.order.dto.RevenueTotalsRow(COALESCE(SUM(o.total), 0), COUNT(o)) "
             + "FROM Order o WHERE " + REVENUE_QUALIFYING_WHERE)
     RevenueTotalsRow sumRevenueTotals(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("cancelled") OrderStatus cancelled,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses,
+            @Param("completedPayment") PaymentStatus completedPayment);
+
+    /** Per-hour revenue/count over revenue-status orders (sales-per-hour analytics). */
+    @Query("SELECT new com.elcafe.modules.order.dto.HourlySalesRow(EXTRACT(HOUR FROM o.createdAt), "
+            + " COALESCE(SUM(o.total), 0), COUNT(o)) FROM Order o WHERE " + REVENUE_STATUS_WHERE
+            + " GROUP BY EXTRACT(HOUR FROM o.createdAt)")
+    List<HourlySalesRow> findHourlySales(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses);
+
+    /** Count of revenue-status orders with no delivery info — i.e. dine-in (table turnover). */
+    @Query("SELECT COUNT(o) FROM Order o WHERE " + REVENUE_STATUS_WHERE
+            + " AND NOT EXISTS (SELECT d.id FROM DeliveryInfo d WHERE d.order = o)")
+    long countDineInRevenueOrders(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses);
+
+    /**
+     * One scalar timing row per revenue-status order: kitchen prep minutes, delivery-info presence and
+     * actual delivery time, history row count, and the first NEW/READY/DELIVERED history timestamps —
+     * all via correlated subselects, replacing the per-order KitchenOrder + status-history N+1s.
+     */
+    @Query("SELECT new com.elcafe.modules.order.dto.OrderTimingRow(o.id, o.status, o.createdAt, o.updatedAt, "
+            + " d.id, d.actualDeliveryTime, "
+            + " (SELECT MIN(k.actualPreparationTimeMinutes) FROM KitchenOrder k WHERE k.order = o), "
+            + " (SELECT COUNT(h) FROM OrderStatusHistory h WHERE h.order = o), "
+            + " (SELECT MIN(h1.createdAt) FROM OrderStatusHistory h1 WHERE h1.order = o AND h1.status = :newStatus), "
+            + " (SELECT MIN(h2.createdAt) FROM OrderStatusHistory h2 WHERE h2.order = o AND h2.status = :readyStatus), "
+            + " (SELECT MIN(h3.createdAt) FROM OrderStatusHistory h3 WHERE h3.order = o AND h3.status = :deliveredStatus)) "
+            + "FROM Order o LEFT JOIN DeliveryInfo d ON d.order = o WHERE " + REVENUE_STATUS_WHERE)
+    List<OrderTimingRow> findOrderTimingRows(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses,
+            @Param("newStatus") OrderStatus newStatus,
+            @Param("readyStatus") OrderStatus readyStatus,
+            @Param("deliveredStatus") OrderStatus deliveredStatus);
+
+    /** Per-product sums over revenue-STATUS orders (Inventory analytics' simpler filter). */
+    @Query("SELECT new com.elcafe.modules.order.dto.ProductSalesRow(oi.productId, SUM(oi.totalPrice), SUM(oi.quantity)) "
+            + "FROM OrderItem oi JOIN oi.order o WHERE oi.productId IS NOT NULL AND " + REVENUE_STATUS_WHERE
+            + " GROUP BY oi.productId")
+    List<ProductSalesRow> sumProductSalesByStatus(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses);
+
+    /** Per-customer order count over revenue-status orders in the range, with customer creation time. */
+    @Query("SELECT new com.elcafe.modules.order.dto.CustomerOrderStatsRow(c.id, COUNT(o), c.createdAt) "
+            + "FROM Order o JOIN o.customer c WHERE " + REVENUE_STATUS_WHERE
+            + " GROUP BY c.id, c.createdAt")
+    List<CustomerOrderStatsRow> findCustomerOrderStats(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses);
+
+    /**
+     * Lifetime (no date range) per-active-customer aggregate over revenue-status orders. Replaces the
+     * LTV path that loaded every active customer's entire order history one customer at a time.
+     */
+    @Query("SELECT new com.elcafe.modules.order.dto.CustomerLifetimeRow(c.id, COALESCE(SUM(o.total), 0), COUNT(o), "
+            + " MIN(o.createdAt), MAX(o.createdAt)) "
+            + "FROM Order o JOIN o.customer c "
+            + "WHERE c.active = true AND (:restaurantId IS NULL OR o.restaurant.id = :restaurantId) "
+            + " AND o.status IN :revenueStatuses "
+            + "GROUP BY c.id")
+    List<CustomerLifetimeRow> findCustomerLifetimeStats(
+            @Param("restaurantId") Long restaurantId,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses);
+
+    /** Total / revenue-status / cancelled counts over ALL orders in the range (satisfaction proxy). */
+    @Query("SELECT new com.elcafe.modules.order.dto.OrderVolumeCountsRow(COUNT(o), "
+            + " COALESCE(SUM(CASE WHEN o.status IN :revenueStatuses THEN 1L ELSE 0L END), 0L), "
+            + " COALESCE(SUM(CASE WHEN o.status = :cancelled THEN 1L ELSE 0L END), 0L)) "
+            + "FROM Order o WHERE " + RANGE_TENANT_WHERE)
+    OrderVolumeCountsRow countOrderVolumes(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("revenueStatuses") Collection<OrderStatus> revenueStatuses,
+            @Param("cancelled") OrderStatus cancelled);
+
+    /** Per-customer order counts over ALL orders in the range (repeat-customer rate). */
+    @Query("SELECT new com.elcafe.modules.order.dto.CustomerOrderCountRow(o.customer.id, COUNT(o)) "
+            + "FROM Order o WHERE " + RANGE_TENANT_WHERE + " AND o.customer IS NOT NULL "
+            + "GROUP BY o.customer.id")
+    List<CustomerOrderCountRow> findCustomerOrderCounts(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end);
+
+    /** One scalar discount row per paid order (promotion analytics + daily discount trends). */
+    @Query("SELECT new com.elcafe.modules.order.dto.DiscountOrderRow(o.createdAt, o.total, o.discount, o.discountType) "
+            + "FROM Order o WHERE " + PAID_ORDER_WHERE)
+    List<DiscountOrderRow> findPaidDiscountOrderRows(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("cancelled") OrderStatus cancelled,
+            @Param("completedPayment") PaymentStatus completedPayment);
+
+    /** Per-coupon redemption/revenue/discount sums over non-cancelled orders carrying a coupon code. */
+    @Query("SELECT new com.elcafe.modules.order.dto.CouponSalesRow(o.couponCode, COUNT(o), "
+            + " COALESCE(SUM(o.total), 0), COALESCE(SUM(o.discount), 0)) "
+            + "FROM Order o WHERE " + RANGE_TENANT_WHERE
+            + " AND o.status <> :cancelled AND o.couponCode IS NOT NULL AND o.couponCode <> '' "
+            + "GROUP BY o.couponCode")
+    List<CouponSalesRow> sumCouponSales(
+            @Param("restaurantId") Long restaurantId,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end,
+            @Param("cancelled") OrderStatus cancelled);
+
+    /** One scalar money row per revenue-qualifying order (P&L report). */
+    @Query("SELECT new com.elcafe.modules.order.dto.PnlOrderRow(o.subtotal, o.serviceFee, o.deliveryFee, "
+            + " o.tipAmount, o.discount, o.total, o.discountType) "
+            + "FROM Order o WHERE " + REVENUE_QUALIFYING_WHERE)
+    List<PnlOrderRow> findPnlOrderRows(
             @Param("restaurantId") Long restaurantId,
             @Param("start") OffsetDateTime start,
             @Param("end") OffsetDateTime end,
@@ -279,14 +440,6 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
     List<Order> findByCustomerPhoneAndCreatedAtAfterWithDetails(
             @Param("phone") String phone,
             @Param("since") OffsetDateTime since);
-
-    /**
-     * Find orders by date range (for analytics when restaurantId is null)
-     */
-    @Query("SELECT o FROM Order o WHERE o.createdAt >= :startDate AND o.createdAt <= :endDate ORDER BY o.createdAt DESC")
-    List<Order> findByCreatedAtBetweenOrderByCreatedAtDesc(
-            @Param("startDate") OffsetDateTime startDate,
-            @Param("endDate") OffsetDateTime endDate);
 
     /**
      * Find orders by date range with items (for analytics)

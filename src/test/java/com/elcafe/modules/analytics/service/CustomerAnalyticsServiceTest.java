@@ -40,11 +40,8 @@ class CustomerAnalyticsServiceTest {
                         OffsetDateTime.now(ZoneOffset.UTC),
                         java.time.LocalTime.of(0, 0),
                         java.time.LocalTime.of(23, 59)));
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(anyLong(), any(), any()))
+        when(orderRepository.findCustomerOrderStats(anyLong(), any(), any(), any()))
                 .thenReturn(List.of());
-        when(customerRepository.findByCreatedAtBefore(any())).thenReturn(List.of());
-        when(customerRepository.findByCreatedAtBetween(any(), any())).thenReturn(List.of());
-        when(customerRepository.findByCreatedAtLessThanEqual(any())).thenReturn(List.of());
 
         CustomerRetentionDTO result = customerAnalyticsService.getCustomerRetention(
                 LocalDate.now().minusDays(7), LocalDate.now(), 1L);
@@ -54,7 +51,7 @@ class CustomerAnalyticsServiceTest {
     @Test
     @DisplayName("getCustomerLTV — returns LTV data")
     void getLTV_returnsData() {
-        when(customerRepository.findByActiveTrue()).thenReturn(List.of());
+        when(orderRepository.findCustomerLifetimeStats(anyLong(), any())).thenReturn(List.of());
 
         CustomerLTVDTO result = customerAnalyticsService.getCustomerLTV(1L);
         assertNotNull(result);

@@ -40,8 +40,7 @@ class OperationalAnalyticsServiceTest {
                         OffsetDateTime.now(ZoneOffset.UTC).minusDays(7), OffsetDateTime.now(ZoneOffset.UTC),
                         LocalTime.of(9, 0), LocalTime.of(23, 0)));
         when(shiftTimeService.getRevenueStatusList()).thenReturn(List.of());
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
-                .thenReturn(List.of());
+        when(orderRepository.findHourlySales(anyLong(), any(), any(), any())).thenReturn(List.of());
     }
 
     @Test @DisplayName("getSalesPerHour returns") void salesPerHour() {

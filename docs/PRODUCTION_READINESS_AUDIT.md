@@ -72,9 +72,17 @@ log/error-tracking infra) and monetization (H).
   the per-call path — which was itself an N+1: two hours-queries per order). PERF-8:
   `calculateOrderMetrics` now uses 3 COUNT queries. PERF-9: capped the unbounded finders (cross-tenant
   courier READY scan → newest 200; customer order history → newest 500; SMS log lists → newest 1000).
-  NOTE: the sibling analytics services (Customer/Operational/Inventory/Promotion analytics,
-  FinancialReportsService) still use the old full-range loaders — same pattern, lower blast radius;
-  migrate them onto the same aggregates as a follow-up.
+  **Follow-up done:** the five sibling services are migrated onto the same aggregate layer —
+  OperationalAnalytics (hourly sales GROUP BY, dine-in COUNT, and a scalar timing projection that also
+  killed two hidden N+1s: a per-order KitchenOrder lookup and a per-order status-history walk),
+  CustomerAnalytics (retention/satisfaction on grouped counts; LTV — previously the worst loader in the
+  codebase, every active customer's entire order history one customer at a time — now one GROUP BY),
+  InventoryAnalytics (per-product sums; also killed a per-item product findById N+1), PromotionAnalytics
+  (paid-filter rows with the fully-paid arithmetic in SQL; trends now one query instead of one per day;
+  coupon GROUP BY), FinancialReportsService (P&L scalar rows + shared revenue totals). The no-tenant
+  full-range order finder is deleted; the only remaining caller of the tenant variant is bounded to 7
+  days. Three filter tiers live as shared fragments in `OrderRepository` (qualifying / status-only /
+  paid-only), each pinned against H2 in `RevenueAggregateQueriesTest`.
 - **FUNC-7 + FUNC-13 — dead code removed.** The never-published waiter-event cluster is gone
   (4 `OrderEventPublisher` methods with 0 callers, the 4 event classes, their 8 never-firing listener
   methods across `OrderEventListener`/`WebSocketEventHandler`, the void-item KPI write
@@ -107,9 +115,9 @@ log/error-tracking infra) and monetization (H).
   `docs/DEPLOYMENT_TOPOLOGY.md`). The multi-node track (external STOMP relay, Redis-backed
   rate-limits/lockouts) stays deferred until a second replica is actually needed.
 - **E2 — `open-in-view: false` flip** (+ `enable_lazy_load_no_trans: false`). Behaviour-affecting; wants a
-  running-app smoke, not just green unit tests. ~~E3~~ **done** for the flagged blocker
-  (FinancialAnalyticsService — see Done); remaining: migrate the sibling analytics services onto the same
-  DB aggregates (Customer/Operational/Inventory/Promotion, FinancialReportsService).
+  running-app smoke, not just green unit tests. ~~E3~~ **fully done** — FinancialAnalyticsService AND all
+  five sibling services now run on DB aggregates (see Done); no analytics path materializes order graphs
+  anymore, which also shrinks the blast radius of the eventual E2 flip.
 - **F3/F4 — JSON logging + error tracking (Sentry/equivalent):** needs the target infra/DSN.
 - ~~Low-value cleanup~~ **done** — FUNC-7 (dead waiter-event cluster) and FUNC-13 (broken, uncalled
   weekly-overtime path) deleted; see Done above.

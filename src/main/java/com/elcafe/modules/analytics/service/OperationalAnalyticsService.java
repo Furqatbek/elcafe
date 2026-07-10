@@ -5,9 +5,8 @@ import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.kitchen.entity.KitchenOrder;
 import com.elcafe.modules.kitchen.enums.KitchenOrderStatus;
 import com.elcafe.modules.kitchen.repository.KitchenOrderRepository;
-import com.elcafe.modules.order.entity.DeliveryInfo;
-import com.elcafe.modules.order.entity.Order;
-import com.elcafe.modules.order.entity.OrderStatusHistory;
+import com.elcafe.modules.order.dto.HourlySalesRow;
+import com.elcafe.modules.order.dto.OrderTimingRow;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
@@ -51,26 +50,18 @@ public class OperationalAnalyticsService {
                 restaurantId, startDate, endDate);
         log.debug("Sales per hour using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
+        // Per-hour sums aggregated in the DB — no order entities materialized (audit E3)
+        List<HourlySalesRow> hourlySales = orderRepository.findHourlySales(
+                restaurantId, shift.start(), shift.end(), ShiftTimeService.REVENUE_STATUSES);
 
-        BigDecimal totalRevenue = orders.stream()
-                .map(Order::getTotal)
+        BigDecimal totalRevenue = hourlySales.stream()
+                .map(HourlySalesRow::revenue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Group by hour
-        Map<Integer, List<Order>> ordersByHour = orders.stream()
-                .collect(Collectors.groupingBy(order -> order.getCreatedAt().getHour()));
-
-        return ordersByHour.entrySet().stream()
-                .map(entry -> {
-                    Integer hour = entry.getKey();
-                    List<Order> hourlyOrders = entry.getValue();
-
-                    BigDecimal hourRevenue = hourlyOrders.stream()
-                            .map(Order::getTotal)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-                    int orderCount = hourlyOrders.size();
+        return hourlySales.stream()
+                .map(row -> {
+                    BigDecimal hourRevenue = row.revenue();
+                    int orderCount = row.orderCount().intValue();
 
                     BigDecimal avgOrderValue = orderCount > 0
                             ? hourRevenue.divide(BigDecimal.valueOf(orderCount), 2, RoundingMode.HALF_UP)
@@ -81,7 +72,7 @@ public class OperationalAnalyticsService {
                             : BigDecimal.ZERO;
 
                     return SalesPerHourDTO.builder()
-                            .hour(hour)
+                            .hour(row.hour())
                             .totalRevenue(hourRevenue)
                             .totalOrders(orderCount)
                             .averageOrderValue(avgOrderValue)
@@ -158,12 +149,9 @@ public class OperationalAnalyticsService {
                 restaurantId, startDate, endDate);
         log.debug("Table turnover using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
-
-        // Count dine-in orders (orders without delivery info)
-        long totalDineInOrders = orders.stream()
-                .filter(order -> order.getDeliveryInfo() == null)
-                .count();
+        // Count dine-in orders (orders without delivery info) — counted in the DB, no entities loaded
+        long totalDineInOrders = orderRepository.countDineInRevenueOrders(
+                restaurantId, shift.start(), shift.end(), ShiftTimeService.REVENUE_STATUSES);
 
         long daysBetween = Duration.between(shift.start(), shift.end()).toDays() + 1;
 
@@ -248,7 +236,12 @@ public class OperationalAnalyticsService {
                 restaurantId, startDate, endDate);
         log.debug("Order timing analytics using shift range: {} to {}", shift.start(), shift.end());
 
-        List<Order> orders = getCompletedOrders(shift.start(), shift.end(), restaurantId);
+        // One scalar timing row per order (kitchen prep, delivery info, first status-history timestamps
+        // via correlated subselects) — replaces the order graphs plus per-order KitchenOrder and
+        // status-history lookups (three N+1s).
+        List<OrderTimingRow> orders = orderRepository.findOrderTimingRows(
+                restaurantId, shift.start(), shift.end(), ShiftTimeService.REVENUE_STATUSES,
+                OrderStatus.NEW, OrderStatus.READY, OrderStatus.DELIVERED);
 
         // Calculate preparation times (from NEW to PREPARING to READY/COMPLETED)
         List<Double> preparationTimes = orders.stream()
@@ -258,15 +251,15 @@ public class OperationalAnalyticsService {
 
         // Calculate dine-in wait times (from READY to COMPLETED for non-delivery orders)
         List<Double> dineInWaitTimes = orders.stream()
-                .filter(order -> order.getDeliveryInfo() == null)
+                .filter(row -> row.deliveryInfoId() == null)
                 .map(this::calculateWaitTime)
                 .filter(time -> time > 0)
                 .collect(Collectors.toList());
 
         // Calculate delivery times (from READY to DELIVERED for delivery orders)
         List<Double> deliveryTimes = orders.stream()
-                .filter(order -> order.getDeliveryInfo() != null)
-                .filter(order -> order.getStatus() == OrderStatus.DELIVERED)
+                .filter(row -> row.deliveryInfoId() != null)
+                .filter(row -> row.status() == OrderStatus.DELIVERED)
                 .map(this::calculateDeliveryTime)
                 .filter(time -> time > 0)
                 .collect(Collectors.toList());
@@ -313,41 +306,17 @@ public class OperationalAnalyticsService {
                 .build();
     }
 
-    // Helper methods
+    // Helper methods — same timing semantics as the old entity-walking versions, on scalar rows
 
-    /**
-     * Get orders with revenue-generating statuses within the given time range.
-     * Uses shared REVENUE_STATUSES for consistency across all reports.
-     */
-    private List<Order> getCompletedOrders(OffsetDateTime startDateTime, OffsetDateTime endDateTime, Long restaurantId) {
-        List<Order> orders;
-        if (restaurantId != null) {
-            orders = orderRepository.findByRestaurant_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                    restaurantId,
-                    startDateTime,
-                    endDateTime
-            );
-        } else {
-            // Use proper repository query instead of findAll()
-            orders = orderRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(startDateTime, endDateTime);
-        }
-
-        return orders.stream()
-                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
-                .filter(order -> ShiftTimeService.REVENUE_STATUSES.contains(order.getStatus()))
-                .collect(Collectors.toList());
-    }
-
-    private double calculatePreparationTime(Order order) {
-        // Try to get accurate preparation time from KitchenOrder first
-        Optional<KitchenOrder> kitchenOrder = kitchenOrderRepository.findByOrderId(order.getId());
-        if (kitchenOrder.isPresent() && kitchenOrder.get().getActualPreparationTimeMinutes() != null) {
-            return kitchenOrder.get().getActualPreparationTimeMinutes().doubleValue();
+    private double calculatePreparationTime(OrderTimingRow row) {
+        // Accurate preparation time from KitchenOrder wins when recorded
+        if (row.kitchenPrepMinutes() != null) {
+            return row.kitchenPrepMinutes().doubleValue();
         }
 
         // Fallback to status history calculation
-        Optional<LocalDateTime> newTime = findStatusTime(order, OrderStatus.NEW);
-        Optional<LocalDateTime> readyTime = findStatusTime(order, OrderStatus.READY);
+        Optional<LocalDateTime> newTime = statusTime(row, OrderStatus.NEW, row.newAt());
+        Optional<LocalDateTime> readyTime = statusTime(row, OrderStatus.READY, row.readyAt());
 
         if (newTime.isPresent() && readyTime.isPresent()) {
             return Duration.between(newTime.get(), readyTime.get()).toMinutes();
@@ -355,15 +324,15 @@ public class OperationalAnalyticsService {
 
         // Fallback: use creation time to first status change
         if (newTime.isPresent()) {
-            return Duration.between(newTime.get(), order.getUpdatedAt().toLocalDateTime()).toMinutes();
+            return Duration.between(newTime.get(), row.updatedAt().toLocalDateTime()).toMinutes();
         }
 
         return 0.0;
     }
 
-    private double calculateWaitTime(Order order) {
-        Optional<LocalDateTime> readyTime = findStatusTime(order, OrderStatus.READY);
-        Optional<LocalDateTime> deliveredTime = findStatusTime(order, OrderStatus.DELIVERED);
+    private double calculateWaitTime(OrderTimingRow row) {
+        Optional<LocalDateTime> readyTime = statusTime(row, OrderStatus.READY, row.readyAt());
+        Optional<LocalDateTime> deliveredTime = statusTime(row, OrderStatus.DELIVERED, row.deliveredAt());
 
         if (readyTime.isPresent() && deliveredTime.isPresent()) {
             return Duration.between(readyTime.get(), deliveredTime.get()).toMinutes();
@@ -372,20 +341,19 @@ public class OperationalAnalyticsService {
         return 0.0;
     }
 
-    private double calculateDeliveryTime(Order order) {
-        DeliveryInfo deliveryInfo = order.getDeliveryInfo();
-        if (deliveryInfo == null) {
+    private double calculateDeliveryTime(OrderTimingRow row) {
+        if (row.deliveryInfoId() == null) {
             return 0.0;
         }
 
-        Optional<LocalDateTime> readyTime = findStatusTime(order, OrderStatus.READY);
+        Optional<LocalDateTime> readyTime = statusTime(row, OrderStatus.READY, row.readyAt());
 
-        if (readyTime.isPresent() && deliveryInfo.getActualDeliveryTime() != null) {
-            return Duration.between(readyTime.get(), deliveryInfo.getActualDeliveryTime().toLocalDateTime()).toMinutes();
+        if (readyTime.isPresent() && row.actualDeliveryTime() != null) {
+            return Duration.between(readyTime.get(), row.actualDeliveryTime().toLocalDateTime()).toMinutes();
         }
 
         // Fallback to delivered status time
-        Optional<LocalDateTime> deliveredTime = findStatusTime(order, OrderStatus.DELIVERED);
+        Optional<LocalDateTime> deliveredTime = statusTime(row, OrderStatus.DELIVERED, row.deliveredAt());
         if (readyTime.isPresent() && deliveredTime.isPresent()) {
             return Duration.between(readyTime.get(), deliveredTime.get()).toMinutes();
         }
@@ -393,19 +361,18 @@ public class OperationalAnalyticsService {
         return 0.0;
     }
 
-    private Optional<LocalDateTime> findStatusTime(Order order, OrderStatus status) {
-        if (order.getStatusHistory() == null || order.getStatusHistory().isEmpty()) {
-            // Fallback to current status
-            if (order.getStatus() == status) {
-                return Optional.of(order.getCreatedAt().toLocalDateTime());
+    /**
+     * First history timestamp for a status, with the legacy fallback: an order with NO history rows at
+     * all counts its creation time when its current status matches.
+     */
+    private Optional<LocalDateTime> statusTime(OrderTimingRow row, OrderStatus status, OffsetDateTime firstAt) {
+        if (row.historyCount() == null || row.historyCount() == 0) {
+            if (row.status() == status) {
+                return Optional.of(row.createdAt().toLocalDateTime());
             }
             return Optional.empty();
         }
-
-        return order.getStatusHistory().stream()
-                .filter(history -> history.getStatus() == status)
-                .map(h -> h.getCreatedAt().toLocalDateTime())
-                .min(LocalDateTime::compareTo);
+        return Optional.ofNullable(firstAt).map(OffsetDateTime::toLocalDateTime);
     }
 
     private double calculateAverage(List<Double> values) {

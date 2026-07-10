@@ -47,8 +47,10 @@ class FinancialReportsServiceTest {
                 LocalTime.of(9, 0), LocalTime.of(23, 0));
         when(shiftTimeService.getShiftTimeRangeForPeriod(anyLong(), any(), any())).thenReturn(range);
         when(shiftTimeService.getRevenueStatusList()).thenReturn(List.of());
-        when(orderRepository.findByRestaurant_IdAndCreatedAtBetweenWithItemsOrderByCreatedAtDesc(anyLong(), any(), any()))
+        when(orderRepository.findPnlOrderRows(anyLong(), any(), any(), any(), any(), any()))
                 .thenReturn(List.of());
+        when(orderRepository.sumRevenueTotals(anyLong(), any(), any(), any(), any(), any()))
+                .thenReturn(new com.elcafe.modules.order.dto.RevenueTotalsRow(java.math.BigDecimal.ZERO, 0L));
         when(expenseRepository.findByRestaurant_IdAndExpenseDateBetween(anyLong(), any(), any())).thenReturn(List.of());
         when(payrollRepository.findByRestaurant_IdAndPayPeriodEndBetween(anyLong(), any(), any())).thenReturn(List.of());
         when(accountRepository.findByRestaurant_IdAndActiveTrue(anyLong())).thenReturn(List.of());
