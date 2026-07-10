@@ -1,5 +1,6 @@
 package com.elcafe.modules.auth.controller;
 
+import com.elcafe.common.ratelimit.RateLimited;
 import com.elcafe.modules.auth.dto.*;
 import com.elcafe.modules.auth.service.AuthService;
 import com.elcafe.security.UserPrincipal;
@@ -38,6 +39,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @RateLimited(type = RateLimited.RateLimitType.AUTH)
     @Operation(summary = "Login", description = "Authenticate user and get access tokens")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
@@ -52,13 +54,17 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
+    @RateLimited(type = RateLimited.RateLimitType.AUTH)
     @Operation(summary = "Forgot password", description = "Request password reset token")
     public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
-        return ResponseEntity.ok(ApiResponse.success("Password reset instructions sent to email", null));
+        // Generic response — do not reveal whether the email is registered (no account-existence oracle).
+        return ResponseEntity.ok(ApiResponse.success(
+                "If an account exists for that email, password reset instructions have been sent.", null));
     }
 
     @PostMapping("/reset-password")
+    @RateLimited(type = RateLimited.RateLimitType.AUTH)
     @Operation(summary = "Reset password", description = "Reset password using token")
     public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);

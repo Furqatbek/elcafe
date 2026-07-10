@@ -2,6 +2,7 @@ package com.elcafe.common.ratelimit;
 
 import com.elcafe.config.RateLimitConfig;
 import com.elcafe.exception.RateLimitExceededException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -11,6 +12,8 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * Aspect that enforces rate limiting on methods annotated with @RateLimited.
@@ -44,6 +47,12 @@ public class RateLimitAspect {
                           rateLimitConfig.tryConsumeExpensiveEndpoint(endpointName);
                 break;
 
+            case AUTH:
+                // Unauthenticated endpoint — key by client IP + endpoint, not username.
+                String authKey = getEndpointName(joinPoint, rateLimited) + ":" + getClientIp();
+                allowed = rateLimitConfig.tryConsumeAuth(authKey);
+                break;
+
             default:
                 allowed = true;
         }
@@ -73,5 +82,38 @@ public class RateLimitAspect {
         }
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         return signature.getDeclaringType().getSimpleName() + "." + signature.getName();
+    }
+
+    /**
+     * Client IP for rate-limit keying. The app runs behind nginx, which sets {@code X-Real-IP} to the
+     * real TCP peer ({@code $remote_addr}) and OVERWRITES any client-supplied value — so it is
+     * spoof-resistant, unlike {@code X-Forwarded-For} whose leading entries are attacker-controlled (a
+     * brute-forcer could otherwise rotate XFF to dodge the limit). Prefer X-Real-IP; fall back to the
+     * last XFF hop (nginx's view of the client), then the socket address.
+     */
+    private String getClientIp() {
+        try {
+            ServletRequestAttributes attrs =
+                    (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return "unknown";
+            }
+            HttpServletRequest request = attrs.getRequest();
+
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isBlank()) {
+                return realIp.trim();
+            }
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                // last hop was appended by the trusted proxy; leading hops are client-spoofable
+                String[] hops = forwarded.split(",");
+                return hops[hops.length - 1].trim();
+            }
+            String remote = request.getRemoteAddr();
+            return remote != null ? remote : "unknown";
+        } catch (Exception e) {
+            return "unknown";
+        }
     }
 }

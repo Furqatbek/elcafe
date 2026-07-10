@@ -1,5 +1,6 @@
 package com.elcafe.modules.waiter.controller;
 
+import com.elcafe.common.ratelimit.RateLimited;
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.common.web.SortFieldWhitelist;
 import com.elcafe.modules.waiter.dto.CreateWaiterRequest;
@@ -50,6 +51,7 @@ public class WaiterController {
     }
 
     @PostMapping("/auth")
+    @RateLimited(type = RateLimited.RateLimitType.AUTH)
     @Operation(summary = "Authenticate waiter", description = "Authenticate waiter using PIN code")
     public ResponseEntity<ApiResponse<WaiterAuthResponse>> authenticate(
             @Valid @RequestBody WaiterAuthRequest request) {

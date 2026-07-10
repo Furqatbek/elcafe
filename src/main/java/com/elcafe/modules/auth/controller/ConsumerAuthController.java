@@ -1,5 +1,6 @@
 package com.elcafe.modules.auth.controller;
 
+import com.elcafe.common.ratelimit.RateLimited;
 import com.elcafe.modules.auth.dto.*;
 import com.elcafe.modules.auth.service.ConsumerAuthService;
 import com.elcafe.utils.ApiResponse;
@@ -31,12 +32,13 @@ public class ConsumerAuthController {
      * POST /api/v1/consumer/auth/login
      */
     @PostMapping("/login")
+    @RateLimited(type = RateLimited.RateLimitType.AUTH)
     @Operation(summary = "Request OTP code", description = "Send OTP code to phone number via SMS")
     public ResponseEntity<ApiResponse<ConsumerLoginResponse>> requestOtp(
             @Valid @RequestBody ConsumerLoginRequest request,
             HttpServletRequest httpRequest
     ) {
-        log.info("OTP requested for phone: {}", request.getPhoneNumber());
+        log.debug("OTP requested"); // no PII (phone number) in logs
 
         String ipAddress = getClientIpAddress(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
@@ -51,12 +53,13 @@ public class ConsumerAuthController {
      * POST /api/v1/consumer/auth/verify
      */
     @PostMapping("/verify")
+    @RateLimited(type = RateLimited.RateLimitType.AUTH)
     @Operation(summary = "Verify OTP code", description = "Verify OTP code and receive authentication tokens")
     public ResponseEntity<ApiResponse<ConsumerAuthResponse>> verifyOtp(
             @Valid @RequestBody VerifyOtpRequest request,
             HttpServletRequest httpRequest
     ) {
-        log.info("OTP verification requested for phone: {}", request.getPhoneNumber());
+        log.debug("OTP verification requested"); // no PII (phone number) in logs
 
         String ipAddress = getClientIpAddress(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");

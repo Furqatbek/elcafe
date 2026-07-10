@@ -4,6 +4,7 @@ import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
 import io.github.bucket4j.Refill;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -23,6 +24,43 @@ public class RateLimitConfig {
 
     // Rate limit buckets per endpoint (keyed by endpoint name)
     private final Map<String, Bucket> endpointBuckets = new ConcurrentHashMap<>();
+
+    // Strict buckets for unauthenticated auth endpoints, keyed by endpoint + client IP (brute-force
+    // defense). Kept in a separate map so it can be swept without touching the per-user limits.
+    private final Map<String, Bucket> authBuckets = new ConcurrentHashMap<>();
+
+    /**
+     * Consume a token from a per-IP auth bucket (login / PIN / OTP / password-reset). Strict: 10 requests
+     * per minute per key. Returns true if allowed, false if the caller should be throttled (429).
+     */
+    public boolean tryConsumeAuth(String key) {
+        Bucket bucket = authBuckets.computeIfAbsent(key, k -> createAuthBucket());
+        boolean consumed = bucket.tryConsume(1);
+        if (!consumed) {
+            log.warn("Auth rate limit exceeded for key {}", key);
+        }
+        return consumed;
+    }
+
+    private Bucket createAuthBucket() {
+        // 10 attempts/minute per IP+endpoint — comfortable for a human, hostile to a brute-forcer.
+        Bandwidth limit = Bandwidth.classic(10, Refill.greedy(10, Duration.ofMinutes(1)));
+        return Bucket.builder().addLimit(limit).build();
+    }
+
+    /**
+     * Evict auth buckets periodically so an attacker rotating source IPs can't grow the map without
+     * bound. Clearing only resets rate windows (worst case a fresh 1-minute window), and per-account
+     * lockout (LoginAttemptService) is unaffected, so this is safe.
+     */
+    @Scheduled(fixedRate = 3_600_000) // hourly
+    void evictAuthBuckets() {
+        int size = authBuckets.size();
+        if (size > 0) {
+            authBuckets.clear();
+            log.debug("Cleared {} auth rate-limit buckets", size);
+        }
+    }
 
     /**
      * Get or create a rate limit bucket for a user.

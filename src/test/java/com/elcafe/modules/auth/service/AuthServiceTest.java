@@ -39,6 +39,8 @@ class AuthServiceTest {
     @Mock private JwtUtil jwtUtil;
     @Mock private AuthenticationManager authenticationManager;
     @Mock private UserMapper userMapper;
+    @Mock private LoginAttemptService loginAttemptService;
+    @Mock private EmailService emailService;
     @InjectMocks private AuthService authService;
 
     private User user;
@@ -194,6 +196,45 @@ class AuthServiceTest {
         verify(userRepository).save(any());
         assertThat(user.getResetToken()).isNotNull();
         assertThat(user.getResetTokenExpiry()).isNotNull();
+        verify(emailService).sendPasswordReset(eq("admin@test.com"), any());
+    }
+
+    @Test @DisplayName("forgotPassword — unknown email returns quietly (no account-existence oracle)")
+    void forgotPassword_unknownEmail_noOracle() {
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("nobody@test.com");
+        when(userRepository.findByEmail("nobody@test.com")).thenReturn(Optional.empty());
+
+        // must NOT throw (would reveal the email is unregistered) and must not touch the DB / mail
+        authService.forgotPassword(request);
+
+        verify(userRepository, never()).save(any());
+        verify(emailService, never()).sendPasswordReset(any(), any());
+    }
+
+    @Test @DisplayName("login — a locked account is rejected without hitting authentication")
+    void login_lockedAccount_rejected() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("admin@test.com");
+        request.setPassword("pw");
+        when(loginAttemptService.isLocked("admin@test.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(org.springframework.security.authentication.LockedException.class);
+        verify(authenticationManager, never()).authenticate(any());
+    }
+
+    @Test @DisplayName("login — a bad password records a failed attempt")
+    void login_badPassword_recordsFailure() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("admin@test.com");
+        request.setPassword("wrong");
+        when(loginAttemptService.isLocked("admin@test.com")).thenReturn(false);
+        when(authenticationManager.authenticate(any())).thenThrow(new BadCredentialsException("bad"));
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(BadCredentialsException.class);
+        verify(loginAttemptService).recordFailure("admin@test.com");
     }
 
     @Test @DisplayName("resetPassword — resets with valid token")

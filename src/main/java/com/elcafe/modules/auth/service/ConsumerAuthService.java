@@ -1,5 +1,8 @@
 package com.elcafe.modules.auth.service;
 
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.RateLimitExceededException;
+import com.elcafe.exception.UnauthorizedException;
 import com.elcafe.modules.auth.dto.*;
 import com.elcafe.modules.auth.entity.ConsumerSession;
 import com.elcafe.modules.auth.entity.OtpCode;
@@ -247,18 +250,18 @@ public class ConsumerAuthService {
         } else {
             // Production mode: strict OTP validation
             otp = otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse(phoneNumber, otpCode)
-                    .orElseThrow(() -> new RuntimeException("Invalid OTP code"));
+                    .orElseThrow(() -> new UnauthorizedException("Invalid OTP code"));
 
             // Check if expired
             if (otp.isExpired()) {
-                throw new RuntimeException("OTP code has expired");
+                throw new BadRequestException("OTP code has expired");
             }
 
             // Check attempts
             otp.incrementAttempts();
             if (otp.getAttempts() > maxOtpAttempts) {
                 otpCodeRepository.save(otp);
-                throw new RuntimeException("Maximum verification attempts exceeded");
+                throw new BadRequestException("Maximum verification attempts exceeded");
             }
         }
 
@@ -324,13 +327,13 @@ public class ConsumerAuthService {
 
         // Find session by refresh token
         ConsumerSession session = sessionRepository.findByRefreshTokenAndIsActiveTrue(refreshToken)
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+                .orElseThrow(() -> new BadRequestException("Invalid refresh token"));
 
         // Check if refresh token expired
         if (session.isRefreshExpired()) {
             session.invalidate();
             sessionRepository.save(session);
-            throw new RuntimeException("Refresh token has expired");
+            throw new BadRequestException("Refresh token has expired");
         }
 
         // Generate new access token, preserving the customer's restaurant binding.
@@ -430,7 +433,7 @@ public class ConsumerAuthService {
         long recentCount = otpCodeRepository.countRecentOtpsByPhoneNumber(phoneNumber, since);
 
         if (recentCount >= rateLimitCount) {
-            throw new RuntimeException(
+            throw new RateLimitExceededException(
                     String.format("Too many OTP requests. Please wait %d minute(s) before trying again.",
                             rateLimitMinutes)
             );

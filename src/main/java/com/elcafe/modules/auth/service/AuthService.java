@@ -12,6 +12,8 @@ import com.elcafe.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,8 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
     private final UserMapper userMapper;
+    private final LoginAttemptService loginAttemptService;
+    private final EmailService emailService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -70,16 +74,30 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        log.info("Login attempt for email: {}", request.getEmail());
+        String email = request.getEmail();
+        log.info("Login attempt for email: {}", email);
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+        // Per-account brute-force lockout (complements the per-IP @RateLimited(AUTH) on the endpoint).
+        if (loginAttemptService.isLocked(email)) {
+            long mins = (loginAttemptService.secondsUntilUnlock(email) + 59) / 60;
+            throw new LockedException("Account temporarily locked due to too many failed login attempts. "
+                    + "Try again in about " + Math.max(1, mins) + " minute(s).");
+        }
 
-        User user = userRepository.findByEmail(request.getEmail())
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            email,
+                            request.getPassword()
+                    )
+            );
+        } catch (BadCredentialsException e) {
+            loginAttemptService.recordFailure(email);
+            throw e; // GlobalExceptionHandler maps this to 401
+        }
+        loginAttemptService.recordSuccess(email);
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!user.getActive()) {
@@ -126,10 +144,14 @@ public class AuthService {
 
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
-        log.info("Password reset requested for email: {}", request.getEmail());
+        log.info("Password reset requested");
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        // Do NOT reveal whether the email is registered — return quietly for unknown emails so this
+        // endpoint is not an account-existence oracle. The controller always returns a generic message.
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user == null) {
+            return;
+        }
 
         String resetToken = UUID.randomUUID().toString();
         user.setResetToken(resetToken);
@@ -137,8 +159,9 @@ public class AuthService {
 
         userRepository.save(user);
 
-        // TODO: Send email with reset token
-        log.info("Password reset token generated for user: {}", user.getEmail());
+        // Deliver the reset link by email. When SMTP is not configured, EmailService logs a warning and
+        // no email is sent (the flow is honest — it does not silently pretend to have delivered).
+        emailService.sendPasswordReset(user.getEmail(), resetToken);
     }
 
     @Transactional

@@ -119,6 +119,18 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Access denied"));
     }
 
+    /** Account brute-force lockout (LoginAttemptService). 429 with the reason, so clients can back off. */
+    @ExceptionHandler(org.springframework.security.authentication.LockedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleLockedException(
+            org.springframework.security.authentication.LockedException ex,
+            WebRequest request
+    ) {
+        log.warn("Login blocked (locked): {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
     /**
      * §3.4 tenant insert-guard: a write targeting a foreign restaurant. Map to 403 rather than the
      * default 500 so the client contract is clean once enforcement is on.

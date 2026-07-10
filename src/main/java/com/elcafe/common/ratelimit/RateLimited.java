@@ -38,6 +38,13 @@ public @interface RateLimited {
         /**
          * Global expensive endpoint limiting (10 requests/minute)
          */
-        EXPENSIVE_ENDPOINT
+        EXPENSIVE_ENDPOINT,
+
+        /**
+         * Per-IP limiting for unauthenticated auth endpoints (login / PIN / OTP / password reset).
+         * Strict (10 requests/minute per IP) — brute-force defense. Keyed by client IP, not username,
+         * because the caller is anonymous at this point.
+         */
+        AUTH
     }
 }
