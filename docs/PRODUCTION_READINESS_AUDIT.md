@@ -28,8 +28,10 @@ multi-instance) · **MEDIUM** · **LOW**.
 
 ## 0. Progress log (updated 2026-07-10)
 
-Phases **A–D of §3 are landed** (commits `f77f085`, `67a6be7`, `cd419c3`, `af9c5fd`, `018de15`). The
-launch gate is close; what remains is scale/observability/functional polish (E–G) and monetization (H).
+Phases **A–D of §3 are landed** (commits `f77f085`, `67a6be7`, `cd419c3`, `af9c5fd`, `018de15`), and the
+**safe, non-gated parts of E–G are landed too**. The launch gate is met; what remains is the
+decision- or infra-gated work (scale topology, load-tested `open-in-view` flip, populated-data rehearsal,
+log/error-tracking infra) and monetization (H).
 
 **Done**
 - **A — config lockdown:** `application-prod.yml` + a `prod`-profile fail-fast validator (OTP dev-mode off,
@@ -46,6 +48,20 @@ launch gate is close; what remains is scale/observability/functional polish (E�
 - **D — CI + enforcement testing:** GitHub Actions (`ci.yml`) runs the suite, the migration chain against a
   Postgres 16 service container, and the frontend build/tests on every push/PR; `EnforcementChainTest`
   proves RBAC / tenant / subscription enforcement end-to-end through the real filter chain.
+- **E (safe subset) — memory/perf hardening** (`15ea408`, `80cf946`): container-aware JVM heap
+  (`MaxRAMPercentage` + heap-dump/exit-on-OOM); Hikari pool sizing + leak detection; Hibernate batch
+  fetch/insert; SMS stats/purge moved to SQL aggregates instead of full-table loads; **E5 fixed** — the
+  `@Async` Telegram campaign loop no longer relies on self-invoked `@Transactional` (extracted a proxied
+  `TelegramCampaignPersistence`) nor on `enable_lazy_load_no_trans` (subscriber is now fetch-joined), so it
+  survives the future `open-in-view` flip.
+- **F (safe subset) — observability foundation** (`da9b07c`): Micrometer/Prometheus endpoint (auth-gated);
+  `RequestIdFilter` stamps a correlation id into MDC + logs and honours inbound `X-Request-Id`.
+- **G — frontend/functional** (`002de08`, `308e212`, `d058e73`, `8966fc9`, `bde87ea`, `10a96f0`, `9a550d8`,
+  `0a6bdf4`): i18n raw-key leak fixed (FUNC-2); route-level code splitting dropped the initial bundle
+  1.85 MB → ~73 kB (PERF-6); locales lazy-load per language; orphaned mock `PaymentGatewayService` deleted
+  (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
+  payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
+  OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
 
 **Operational actions still on you (can't be done from the repo)**
 - **Rotate** the JWT secret and DB password — they are public in git history, so untracking the file is not
@@ -56,13 +72,16 @@ launch gate is close; what remains is scale/observability/functional polish (E�
   with a checksum error — audit the diff, then `flyway repair`. And decide the **V153 question**: if prod has
   not yet applied it and holds real loyalty balances, snapshot `customer_loyalty` before deploying.
 
-**Remaining before real users / growth**
+**Remaining before real users / growth** (each is gated — needs a decision, a running-app smoke, or infra)
 - **C (full):** rehearse the backfills on a copy of real *populated* prod data (the fresh-DB rehearsal is done).
-- **E — scale/resilience:** decide single-node (+ShedLock on crons) vs multi-node (external STOMP relay,
-  Redis-backed rate limits); container-aware JVM heap; `open-in-view: false`; kill the full-table loaders.
-- **F — observability:** metrics, request IDs, error alerting (currently blind).
-- **G — frontend/functional:** i18n key leak, code splitting, reconcile the dead/stub features (esp. the
-  orphaned mock `PaymentGatewayService`).
+- **E0 — scale topology (decision):** single-node (+ShedLock on crons) vs multi-node (external STOMP relay,
+  Redis-backed rate limits). Blocks the multi-instance-only work. *Needs your call.*
+- **E2/E3 — `open-in-view: false` + kill the remaining full-table loaders** (analytics loaders, `OvertimeRuleService`
+  weekly query FUNC-13). Behaviour-affecting; wants a running-app smoke, not just green unit tests.
+- **F3/F4 — JSON logging + error tracking (Sentry/equivalent):** needs the target infra/DSN.
+- **Low-value cleanup (optional):** FUNC-7 dead waiter-event publishers (0 callers) and FUNC-13's broken-but-
+  uncalled `getWeeklyMinutes` (queries `restaurant.id = null` → always returns 0). Both are unwired, so zero
+  production impact today; delete-vs-wire-up is a product call.
 - **H — monetization:** deferred until an acquiring contract.
 
 ---
