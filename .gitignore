@@ -31,7 +31,11 @@ Thumbs.db
 
 # Application
 application-local.yml
+# Secrets — ignore all env files, keep the *.example templates.
 .env
+.env.*
+!.env.example
+!.env.docker.example
 template-smith-forge/
 
 # Docker bind-mount data (Postgres lives here in dev)

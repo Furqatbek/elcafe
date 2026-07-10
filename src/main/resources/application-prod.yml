@@ -1,0 +1,58 @@
+# ============================================================================
+# Production profile — activated with SPRING_PROFILES_ACTIVE=prod.
+#
+# Hardens the developer-friendly (fail-OPEN) defaults in application.yml for
+# real traffic. Everything here is an override of the base file. A companion
+# fail-fast, com.elcafe.config.ProductionConfigValidator, refuses to boot if
+# any unsafe setting slips through (e.g. OTP dev-mode left on, wildcard CORS
+# with credentials, Swagger enabled), so this profile cannot silently degrade.
+# ============================================================================
+
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+
+server:
+  error:
+    # Do not echo internal exception messages / binding details to clients.
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+logging:
+  level:
+    # No DEBUG in prod — it is noisy, slows requests, and risks leaking data.
+    com.elcafe: INFO
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+
+springdoc:
+  # The API surface must not be browsable by anonymous users in production.
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+  show-actuator: false
+
+management:
+  endpoint:
+    health:
+      # Do not disclose dependency detail (DB/Redis) even to authenticated callers.
+      show-details: never
+
+app:
+  security:
+    cors:
+      # No wildcard fallback in prod. CORS_ORIGINS MUST be an explicit,
+      # comma-separated origin list (e.g. https://admin.example.com,https://app.example.com).
+      # Blank or "*" with credentials is rejected at startup by ProductionConfigValidator.
+      allowed-origins: ${CORS_ORIGINS:}
+  consumer:
+    otp:
+      # CRITICAL: dev-mode accepts ANY OTP code and fabricates a record — never true in prod.
+      development-mode: false
+      include-in-response: false

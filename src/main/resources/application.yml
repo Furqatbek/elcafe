@@ -14,6 +14,10 @@ spring:
   application:
     name: restaurant-delivery-service
 
+  lifecycle:
+    # Grace window for graceful shutdown to drain in-flight work before the JVM exits.
+    timeout-per-shutdown-phase: 30s
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:elcafe_db}
     username: ${DB_USER:postgres}
@@ -81,6 +85,9 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Drain in-flight requests on SIGTERM instead of dropping them (paired with the exec-form Docker
+  # entrypoint so the JVM actually receives the signal as PID 1).
+  shutdown: graceful
   error:
     include-message: always
     include-binding-errors: always
@@ -175,7 +182,9 @@ app:
     restaurant-ttl: 3600 # 1 hour
 
   courier:
-    webhook-secret: ${COURIER_WEBHOOK_SECRET:change-me-in-production}
+    # No default — the courier webhook fails CLOSED (rejects all callbacks) until COURIER_WEBHOOK_SECRET
+    # is set. Callers must send it as the X-Webhook-Secret header.
+    webhook-secret: ${COURIER_WEBHOOK_SECRET:}
 
   consumer:
     otp:
@@ -186,8 +195,11 @@ app:
       include-in-response: ${CONSUMER_OTP_INCLUDE_IN_RESPONSE:false} # Include OTP in response (dev/test only)
       development-mode: ${CONSUMER_OTP_DEVELOPMENT_MODE:true} # Accept any OTP in dev mode (no SMS sending)
     session:
-      access-token-expiration: 315360000000000 # 10000 years (effectively no expiration)
-      refresh-token-expiration: 315360000000000 # 10000 years (effectively no expiration)
+      # Finite, env-tunable consumer session lifetimes (ms). A stolen consumer token must not be valid
+      # forever; clients refresh the access token via the consumer refresh flow. Do NOT restore the old
+      # "10000 years" values.
+      access-token-expiration: ${CONSUMER_ACCESS_TOKEN_EXPIRATION_MS:3600000}      # 1 hour
+      refresh-token-expiration: ${CONSUMER_REFRESH_TOKEN_EXPIRATION_MS:2592000000} # 30 days
 
   file:
     upload-dir: ${FILE_UPLOAD_DIR:uploads}

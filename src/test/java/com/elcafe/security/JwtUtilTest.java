@@ -109,6 +109,10 @@ class JwtUtilTest {
         ReflectionTestUtils.setField(jwtUtil, "secret",
                 "f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1");
         assertThatThrownBy(jwtUtil::validateSecret).isInstanceOf(IllegalStateException.class);
+
+        // the committed .env.docker placeholder is long enough but public — must also be rejected
+        ReflectionTestUtils.setField(jwtUtil, "secret", "your_super_secret_jwt_key_minimum_256_bits_here");
+        assertThatThrownBy(jwtUtil::validateSecret).isInstanceOf(IllegalStateException.class);
     }
 
     @Test @DisplayName("validateSecret — accepts a strong, non-default secret")

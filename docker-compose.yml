@@ -17,7 +17,8 @@ services:
       # ./data/postgres in the repo root (gitignored).
       - ./data/postgres:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      # Loopback-only: reachable for local admin on the host, NOT exposed to the network.
+      - "127.0.0.1:5432:5432"
     networks:
       - elcafe-network
     healthcheck:
@@ -63,14 +64,18 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Tashkent
+      # Required — compose refuses to start without it, so Redis is never unauthenticated.
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set (see .env.docker.example)}
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
     ports:
-      - "6379:6379"
+      # Loopback-only: not exposed to the network.
+      - "127.0.0.1:6379:6379"
     networks:
       - elcafe-network
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -95,12 +100,15 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-elcafe_secret}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set (see .env.docker.example)}
       # No insecure fallback. If unset the app fails closed at boot (§3.5 validateSecret), so prod
       # must supply a real JWT_SECRET (.env / environment; generate: openssl rand -hex 32). Local
       # dev gets a dev-only default from docker-compose.local.yml, so the local override needs no
       # setup. The app also rejects a too-short or old-leaked secret.
       JWT_SECRET: "${JWT_SECRET:-}"
-      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      # No wildcard default. In the prod profile a blank/`*` origin with credentials is rejected at
+      # startup (ProductionConfigValidator); set CORS_ORIGINS to an explicit comma-separated origin list.
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       # Tenant isolation mode: off | shadow | enforce (Phase 0 §3.3/§3.4). Now ENFORCE — isolation is
       # active after the Phase 0 hardening + shadow soak (see docs/TENANT_ENFORCE_FLIP_RUNBOOK.md).
       # Rollback is a one-liner: set this to shadow.

@@ -78,15 +78,10 @@ public class ConsumerAuthService {
         String phoneNumber = normalizePhoneNumber(request.getPhoneNumber());
         Long restaurantId = request.getRestaurantId();
 
-        // Debug logging to see what data is received
-        log.info("Login request received - phone: {}, restaurantId: {}, firstName: {}, lastName: {}, birthDate: {}, source: {}, language: {}",
-                phoneNumber,
-                restaurantId,
-                request.getFirstName(),
-                request.getLastName(),
-                request.getBirthDate(),
-                request.getRegistrationSource(),
-                request.getLanguage());
+        // Do NOT log customer PII (phone, name, birth date) — logs are shipped/retained. Log only the
+        // non-identifying context needed to trace a request.
+        log.debug("Consumer login request - restaurantId: {}, source: {}, language: {}",
+                restaurantId, request.getRegistrationSource(), request.getLanguage());
 
         // Rate limiting check
         checkRateLimit(phoneNumber);
@@ -156,10 +151,13 @@ public class ConsumerAuthService {
         // Generate 6-digit OTP
         String otpCode = generateOtpCode();
 
-        // Always log OTP to console for development
-        log.info("=================================================");
-        log.info("OTP CODE GENERATED for {}: {}", phoneNumber, otpCode);
-        log.info("=================================================");
+        // Never log the OTP code or phone number in production — logs are shipped/retained and a live
+        // OTP + phone is an account-takeover primitive. The actual code is printed only in dev mode.
+        if (developmentMode) {
+            log.info("[dev] OTP for {}: {}", phoneNumber, otpCode);
+        } else {
+            log.debug("OTP generated and dispatched");
+        }
 
         // Calculate expiration
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(otpExpirationMinutes);
@@ -209,10 +207,10 @@ public class ConsumerAuthService {
                 .expiresInSeconds(expiresInSeconds)
                 .build();
 
-        // Include OTP in response for development/testing (controlled by config)
+        // Include OTP in response for development/testing (controlled by config; forced false in prod).
         if (includeOtpInResponse) {
             response.setOtpCode(otpCode);
-            log.warn("OTP code included in response (development mode): {}", otpCode);
+            log.warn("OTP code included in response (dev/test config is ON)");
         }
 
         return response;

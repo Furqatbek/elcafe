@@ -33,9 +33,16 @@ public class JwtUtil {
     @Value("${app.security.jwt.waiter-token-expiration}")
     private Long waiterTokenExpiration;
 
-    /** The secret that used to ship as a committed default in application.yml — now rejected. */
-    private static final String LEAKED_DEFAULT_SECRET =
-            "f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1";
+    /**
+     * Secrets that have been committed to this repo and are therefore public. The app refuses to boot
+     * with any of them — a valid-length-but-known secret is as good as no secret, since anyone can forge
+     * tokens. Add any value that ever appears in git (application.yml default, .env.docker, etc.).
+     */
+    private static final java.util.Set<String> PUBLIC_SECRETS = java.util.Set.of(
+            // former committed default in application.yml
+            "f54a0f3634b3fb7083d03dfe8f54d090a18be3517a0560bab3eb7c192c56edd1",
+            // committed placeholder in .env.docker (passes the >=32-byte check, so must be blacklisted)
+            "your_super_secret_jwt_key_minimum_256_bits_here");
 
     /**
      * Fail closed at startup if the signing secret is missing, too weak, or the old public default.
@@ -53,10 +60,10 @@ public class JwtUtil {
             throw new IllegalStateException(
                     "app.security.jwt.secret must be at least 32 bytes (256 bits) for HS256.");
         }
-        if (LEAKED_DEFAULT_SECRET.equals(secret)) {
+        if (PUBLIC_SECRETS.contains(secret)) {
             throw new IllegalStateException(
-                    "app.security.jwt.secret is the old committed default, which is public. "
-                            + "Set a fresh JWT_SECRET and rotate.");
+                    "app.security.jwt.secret is a value that was committed to the repo, which makes it "
+                            + "public. Generate a fresh JWT_SECRET (openssl rand -hex 32) and rotate.");
         }
     }
 
