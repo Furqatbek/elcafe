@@ -116,10 +116,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # prometheus = the metrics scrape endpoint (observability). It is NOT in the SecurityConfig
+        # permitAll list, so /actuator/prometheus requires authentication — scrape it from an authenticated
+        # context or move actuator to a separate internal management port in prod.
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 logging:
   level:
@@ -138,8 +144,10 @@ logging:
       max-history: 30
       total-size-cap: 500MB
   pattern:
-    console: '%d{yyyy-MM-dd HH:mm:ss} - %msg%n'
-    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n'
+    # [%X{requestId}] is the per-request correlation id (RequestIdFilter); empty on background/scheduled
+    # threads. Lets you grep every log line for one request.
+    console: '%d{yyyy-MM-dd HH:mm:ss} [%X{requestId:-}] - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] [%X{requestId:-}] %-5level %logger{36} - %msg%n'
 
 springdoc:
   api-docs:
