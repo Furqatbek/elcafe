@@ -26,6 +26,47 @@ multi-instance) · **MEDIUM** · **LOW**.
 
 ---
 
+## 0. Progress log (updated 2026-07-10)
+
+Phases **A–D of §3 are landed** (commits `f77f085`, `67a6be7`, `cd419c3`, `af9c5fd`, `018de15`). The
+launch gate is close; what remains is scale/observability/functional polish (E–G) and monetization (H).
+
+**Done**
+- **A — config lockdown:** `application-prod.yml` + a `prod`-profile fail-fast validator (OTP dev-mode off,
+  DEBUG off, Swagger off, `include-message` never, wildcard-CORS-with-credentials rejected); `.env.docker`
+  untracked + `.env.docker.example`; the committed JWT default blacklisted; CORS allowlist; consumer token
+  TTL sane; courier webhook signed (fail-closed); OTP/PII no longer logged; Postgres/Redis loopback-pinned
+  + Redis password required; non-root container + exec-form entrypoint (SIGTERM) + graceful shutdown.
+- **B — auth abuse protection:** IP-keyed rate limiting on login/PIN/reset/OTP (app + nginx edge),
+  per-account lockout (`LoginAttemptService`), forgot-password now actually sends email (FUNC-1 fixed),
+  typed auth exceptions (no more 500s), OTP verify no longer filters by the submitted code.
+- **C — migration safety:** the full V1..V159 chain **rehearsed on real PostgreSQL 16** (was never run
+  outside prod); the loyalty **jsonb bug (MIG-6) reproduced and fixed on real Postgres** (`@JdbcTypeCode`);
+  reassign-tool now moves child rows (MIG-8); Flyway `validate-on-migrate: true` + `baseline-on-migrate: false`.
+- **D — CI + enforcement testing:** GitHub Actions (`ci.yml`) runs the suite, the migration chain against a
+  Postgres 16 service container, and the frontend build/tests on every push/PR; `EnforcementChainTest`
+  proves RBAC / tenant / subscription enforcement end-to-end through the real filter chain.
+
+**Operational actions still on you (can't be done from the repo)**
+- **Rotate** the JWT secret and DB password — they are public in git history, so untracking the file is not
+  enough (CFG-2). Generate a fresh `JWT_SECRET` (`openssl rand -hex 32`) and DB password in your secret store.
+- **Set** `CORS_ORIGINS`, `REDIS_PASSWORD`, `COURIER_WEBHOOK_SECRET`, and SMTP config in the prod env (the
+  app now fails closed without them).
+- **First deploy after C:** if the prod schema drifted while `validate-on-migrate` was off, the deploy fails
+  with a checksum error — audit the diff, then `flyway repair`. And decide the **V153 question**: if prod has
+  not yet applied it and holds real loyalty balances, snapshot `customer_loyalty` before deploying.
+
+**Remaining before real users / growth**
+- **C (full):** rehearse the backfills on a copy of real *populated* prod data (the fresh-DB rehearsal is done).
+- **E — scale/resilience:** decide single-node (+ShedLock on crons) vs multi-node (external STOMP relay,
+  Redis-backed rate limits); container-aware JVM heap; `open-in-view: false`; kill the full-table loaders.
+- **F — observability:** metrics, request IDs, error alerting (currently blind).
+- **G — frontend/functional:** i18n key leak, code splitting, reconcile the dead/stub features (esp. the
+  orphaned mock `PaymentGatewayService`).
+- **H — monetization:** deferred until an acquiring contract.
+
+---
+
 ## 1. Readiness scorecard
 
 | Dimension | State | One-line truth |
