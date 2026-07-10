@@ -43,8 +43,10 @@ public class RateLimitConfig {
     }
 
     private Bucket createAuthBucket() {
-        // 10 attempts/minute per IP+endpoint — comfortable for a human, hostile to a brute-forcer.
-        Bandwidth limit = Bandwidth.classic(10, Refill.greedy(10, Duration.ofMinutes(1)));
+        // 30 attempts/minute per IP+endpoint. Lenient enough not to collapse a shared NAT/CGNAT egress
+        // IP (many users, one IP); the real brute-force defense is the per-account/per-tenant lockout and
+        // the OTP attempt cap, so this per-IP layer only needs to blunt high-rate flooding.
+        Bandwidth limit = Bandwidth.classic(30, Refill.greedy(30, Duration.ofMinutes(1)));
         return Bucket.builder().addLimit(limit).build();
     }
 

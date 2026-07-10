@@ -35,6 +35,7 @@ class WaiterServiceTest {
     @Spy  private ObjectMapper objectMapper = new ObjectMapper();
     @Mock private JwtUtil jwtUtil;
     @Mock private RestaurantAuthorizationService restaurantAuthorizationService;
+    @Mock private com.elcafe.modules.auth.service.LoginAttemptService loginAttemptService;
 
     @InjectMocks private WaiterService waiterService;
 

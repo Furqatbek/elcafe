@@ -122,7 +122,7 @@ class ConsumerAuthServiceTest {
                 .id(1L).phoneNumber("+998901234567").otpCode("123456")
                 .expiresAt(LocalDateTime.now().plusMinutes(5)).isVerified(false).attempts(0).build();
 
-        when(otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse("+998901234567", "123456"))
+        when(otpCodeRepository.findLatestValidOtp(eq("+998901234567"), any()))
                 .thenReturn(Optional.of(otp));
         when(otpCodeRepository.save(any())).thenAnswer(i -> i.getArgument(0));
         when(customerRepository.findByPhoneAndRestaurantId("+998901234567", 10L)).thenReturn(Optional.of(customer));
@@ -136,36 +136,35 @@ class ConsumerAuthServiceTest {
         verify(sessionRepository).invalidateAllSessionsByCustomerId(1L);
     }
 
-    @Test @DisplayName("verifyOtp — invalid code throws")
+    @Test @DisplayName("verifyOtp — wrong code counts an attempt and throws (does not silently no-op)")
     void verifyOtp_invalidCode_throws() {
         VerifyOtpRequest request = new VerifyOtpRequest();
         request.setPhoneNumber("+998901234567");
         request.setOtpCode("000000");
 
-        when(otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse("+998901234567", "000000"))
+        OtpCode active = OtpCode.builder()
+                .id(1L).phoneNumber("+998901234567").otpCode("123456")
+                .expiresAt(LocalDateTime.now().plusMinutes(5)).isVerified(false).attempts(0).build();
+        when(otpCodeRepository.findLatestValidOtp(eq("+998901234567"), any()))
+                .thenReturn(Optional.of(active));
+        when(otpCodeRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        assertThatThrownBy(() -> consumerAuthService.verifyOtp(request, "127.0.0.1", "TestAgent"))
+                .hasMessageContaining("Invalid OTP");
+        // the wrong guess must be counted against the active OTP (else it's brute-forceable)
+        assertThat(active.getAttempts()).isEqualTo(1);
+    }
+
+    @Test @DisplayName("verifyOtp — no active OTP (none/expired) throws")
+    void verifyOtp_noActiveOtp_throws() {
+        VerifyOtpRequest request = new VerifyOtpRequest();
+        request.setPhoneNumber("+998901234567");
+        request.setOtpCode("000000");
+        when(otpCodeRepository.findLatestValidOtp(eq("+998901234567"), any()))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> consumerAuthService.verifyOtp(request, "127.0.0.1", "TestAgent"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Invalid OTP");
-    }
-
-    @Test @DisplayName("verifyOtp — expired OTP throws")
-    void verifyOtp_expired_throws() {
-        VerifyOtpRequest request = new VerifyOtpRequest();
-        request.setPhoneNumber("+998901234567");
-        request.setOtpCode("123456");
-
-        OtpCode expired = OtpCode.builder()
-                .id(1L).phoneNumber("+998901234567").otpCode("123456")
-                .expiresAt(LocalDateTime.now().minusMinutes(1)).isVerified(false).attempts(0).build();
-
-        when(otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse("+998901234567", "123456"))
-                .thenReturn(Optional.of(expired));
-
-        assertThatThrownBy(() -> consumerAuthService.verifyOtp(request, "127.0.0.1", "TestAgent"))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("expired");
+                .hasMessageContaining("No active OTP");
     }
 
     @Test @DisplayName("refreshAccessToken — success")

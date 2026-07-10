@@ -3,6 +3,7 @@ package com.elcafe.modules.waiter.service;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.modules.auth.service.LoginAttemptService;
 import com.elcafe.modules.waiter.dto.CreateWaiterRequest;
 import com.elcafe.modules.waiter.dto.UpdateWaiterRequest;
 import com.elcafe.modules.waiter.dto.WaiterAuthRequest;
@@ -45,6 +46,7 @@ public class WaiterService {
     private final ObjectMapper objectMapper;
     private final JwtUtil jwtUtil;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
+    private final LoginAttemptService loginAttemptService;
 
     /**
      * Get all waiters with pagination
@@ -234,14 +236,31 @@ public class WaiterService {
      */
     @Transactional(readOnly = true)
     public WaiterAuthResponse authenticate(WaiterAuthRequest request) {
+        // Per-RESTAURANT brute-force lockout for the short PIN space. Keyed by restaurant (not PIN) so a
+        // brute-forcer enumerating different PINs still trips one shared counter — unlike the per-IP limit
+        // it can't be dodged by rotating IPs. LockedException -> 429 (GlobalExceptionHandler).
+        String lockKey = "waiter-pin:" + request.getRestaurantId();
+        if (loginAttemptService.isLocked(lockKey)) {
+            long mins = (loginAttemptService.secondsUntilUnlock(lockKey) + 59) / 60;
+            throw new org.springframework.security.authentication.LockedException(
+                    "Too many failed PIN attempts for this restaurant. Try again in about "
+                            + Math.max(1, mins) + " minute(s).");
+        }
+
         // V151: PINs are unique per restaurant, so authenticate within the restaurant the device is
         // signing into (carried in the request).
         Waiter waiter = waiterRepository.findByRestaurantIdAndPinCode(request.getRestaurantId(), request.getPinCode())
-                .orElseThrow(() -> new BadRequestException("Invalid PIN code"));
+                .orElse(null);
+        if (waiter == null) {
+            loginAttemptService.recordFailure(lockKey);
+            throw new BadRequestException("Invalid PIN code");
+        }
 
         if (!waiter.getActive()) {
+            loginAttemptService.recordFailure(lockKey);
             throw new BadRequestException("Waiter account is inactive");
         }
+        loginAttemptService.recordSuccess(lockKey);
 
         // Generate JWT token for waiter
         String identifier = waiter.getEmail() != null && !waiter.getEmail().isEmpty()

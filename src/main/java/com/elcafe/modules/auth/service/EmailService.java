@@ -5,6 +5,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 /**
@@ -35,6 +36,12 @@ public class EmailService {
         return mailSender != null;
     }
 
+    /**
+     * Sent on a background thread so the HTTP response time of {@code /forgot-password} does not depend on
+     * whether the email exists or on SMTP latency — closing a timing side-channel that would otherwise
+     * leak account existence.
+     */
+    @Async
     public void sendPasswordReset(String toEmail, String resetToken) {
         String link = (resetPasswordUrl == null || resetPasswordUrl.isBlank())
                 ? "(configure app.mail.reset-password-url) token=" + resetToken

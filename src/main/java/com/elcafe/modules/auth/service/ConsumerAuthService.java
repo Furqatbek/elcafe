@@ -248,20 +248,29 @@ public class ConsumerAuthService {
                         return otpCodeRepository.save(tempOtp);
                     });
         } else {
-            // Production mode: strict OTP validation
-            otp = otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse(phoneNumber, otpCode)
-                    .orElseThrow(() -> new UnauthorizedException("Invalid OTP code"));
+            // Production mode: strict OTP validation.
+            // Fetch the phone's active OTP WITHOUT filtering by the submitted code, then compare in
+            // application code — otherwise a wrong guess returns no row and the attempt counter never
+            // increments, so the max-attempts cap can't fire and the code is brute-forceable.
+            otp = otpCodeRepository.findLatestValidOtp(phoneNumber, LocalDateTime.now())
+                    .orElseThrow(() -> new UnauthorizedException("No active OTP. Please request a new code."));
 
-            // Check if expired
-            if (otp.isExpired()) {
-                throw new BadRequestException("OTP code has expired");
+            if (!java.security.MessageDigest.isEqual(
+                    otp.getOtpCode().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    otpCode == null ? new byte[0] : otpCode.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
+                // Wrong code: count the attempt against the phone's active OTP; retire it once exhausted.
+                otp.incrementAttempts();
+                otpCodeRepository.save(otp);
+                if (otp.getAttempts() >= maxOtpAttempts) {
+                    otp.setIsVerified(true); // burn it so it can no longer be guessed
+                    otpCodeRepository.save(otp);
+                    throw new BadRequestException("Maximum verification attempts exceeded. Request a new code.");
+                }
+                throw new UnauthorizedException("Invalid OTP code");
             }
 
-            // Check attempts
-            otp.incrementAttempts();
-            if (otp.getAttempts() > maxOtpAttempts) {
-                otpCodeRepository.save(otp);
-                throw new BadRequestException("Maximum verification attempts exceeded");
+            if (otp.getAttempts() >= maxOtpAttempts) {
+                throw new BadRequestException("Maximum verification attempts exceeded. Request a new code.");
             }
         }
 
@@ -272,10 +281,9 @@ public class ConsumerAuthService {
 
         // Find the per-restaurant customer (created during the matching login request).
         Customer customer = customerRepository.findByPhoneAndRestaurantId(phoneNumber, restaurantId)
-                .orElseThrow(() -> new RuntimeException("Customer not found. Please request OTP first."));
+                .orElseThrow(() -> new BadRequestException("Customer not found. Please request OTP first."));
 
-        log.info("Customer authenticated: phone={}, restaurantId={}, customerId={}",
-                phoneNumber, restaurantId, customer.getId());
+        log.info("Customer authenticated: restaurantId={}, customerId={}", restaurantId, customer.getId());
 
         // Invalidate this customer's existing sessions (scoped to the restaurant, not the phone).
         sessionRepository.invalidateAllSessionsByCustomerId(customer.getId());

@@ -157,13 +157,6 @@ app:
       max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
       lock-minutes: ${LOGIN_LOCK_MINUTES:15}
       attempt-window-minutes: ${LOGIN_ATTEMPT_WINDOW_MINUTES:15}
-
-  # Password-reset email. SMTP is configured via the standard spring.mail.* env vars (SPRING_MAIL_HOST,
-  # ...); if unset, JavaMailSender is absent and the reset flow logs a warning instead of sending (see
-  # EmailService). reset-password-url is the front-end reset page; the token is appended as ?token=.
-  mail:
-    from: ${MAIL_FROM:no-reply@${branding.domain}}
-    reset-password-url: ${MAIL_RESET_PASSWORD_URL:}
     tenant-enforcement:
       # Cross-tenant access control mode (Phase 0 §3.3):
       #   off     - filter disabled (no-op)
@@ -198,6 +191,13 @@ app:
     # No default — the courier webhook fails CLOSED (rejects all callbacks) until COURIER_WEBHOOK_SECRET
     # is set. Callers must send it as the X-Webhook-Secret header.
     webhook-secret: ${COURIER_WEBHOOK_SECRET:}
+
+  # Password-reset email. SMTP is configured via the standard spring.mail.* env vars (SPRING_MAIL_HOST,
+  # ...); if unset, JavaMailSender is absent and the reset flow logs a warning instead of sending (see
+  # EmailService). reset-password-url is the front-end reset page; the token is appended as ?token=.
+  mail:
+    from: ${MAIL_FROM:no-reply@${branding.domain}}
+    reset-password-url: ${MAIL_RESET_PASSWORD_URL:}
 
   consumer:
     otp:

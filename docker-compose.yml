@@ -125,7 +125,10 @@ services:
       SELFSERVICE_BASE_URL: ${SELFSERVICE_BASE_URL:-https://qahvoon.uz/order}
       FILE_BASE_URL: ${FILE_BASE_URL:-https://qahvoon.uz/uploads}
     ports:
-      - "8080:8080"
+      # Loopback-only. nginx reaches the app over the compose network (upstream backend -> backend:8080),
+      # so the app must NOT be published on the network — that would let clients bypass nginx (and forge
+      # X-Real-IP to defeat the per-IP auth rate limit). Kept on 127.0.0.1 for host-local debugging.
+      - "127.0.0.1:8080:8080"
     networks:
       - elcafe-network
     volumes:
