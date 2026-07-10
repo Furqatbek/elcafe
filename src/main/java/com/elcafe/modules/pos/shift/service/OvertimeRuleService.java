@@ -2,7 +2,6 @@ package com.elcafe.modules.pos.shift.service;
 
 import com.elcafe.modules.pos.shift.entity.EmployeeShift;
 import com.elcafe.modules.pos.shift.entity.ShiftRules;
-import com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository;
 import com.elcafe.modules.pos.shift.repository.ShiftRulesRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -13,9 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -23,7 +19,6 @@ import java.util.List;
 public class OvertimeRuleService {
 
     private final ShiftRulesRepository rulesRepository;
-    private final EmployeeShiftRepository shiftRepository;
     private final RestaurantRepository restaurantRepository;
 
     /**
@@ -61,14 +56,6 @@ public class OvertimeRuleService {
     }
 
     /**
-     * Check if approaching overtime (within notify threshold).
-     */
-    public boolean isApproachingOvertime(EmployeeShift shift, ShiftRules rules) {
-        long workedMinutes = shift.getWorkedMinutes();
-        return workedMinutes >= (long) rules.getNotifyOvertimeAtHours() * 60;
-    }
-
-    /**
      * Check if a break is required (worked > minBreakAfterHours without break).
      */
     public boolean isBreakRequired(EmployeeShift shift, ShiftRules rules) {
@@ -83,28 +70,6 @@ public class OvertimeRuleService {
     public boolean shouldAutoClockOut(EmployeeShift shift, ShiftRules rules) {
         long workedMinutes = shift.getWorkedMinutes();
         return workedMinutes >= (long) rules.getAutoClockOutAfterHours() * 60;
-    }
-
-    /**
-     * Calculate weekly hours for an employee (current week).
-     */
-    @Transactional(readOnly = true)
-    public long getWeeklyMinutes(Long employeeId, LocalDate weekStart) {
-        LocalDate weekEnd = weekStart.plusDays(6);
-        List<EmployeeShift> shifts = shiftRepository.findByRestaurantAndDateRange(
-                null, weekStart, weekEnd); // TODO: filter by employee properly
-
-        return shifts.stream()
-                .filter(s -> s.getEmployee() != null && s.getEmployee().getId().equals(employeeId))
-                .mapToLong(EmployeeShift::getWorkedMinutes)
-                .sum();
-    }
-
-    /**
-     * Check if weekly hours exceed maximum.
-     */
-    public boolean isWeeklyOvertimeExceeded(long weeklyMinutes, ShiftRules rules) {
-        return weeklyMinutes > (long) rules.getMaxWeeklyHours() * 60;
     }
 
     /**

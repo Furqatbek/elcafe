@@ -532,18 +532,18 @@ GET /api/v1/orders/{orderId}/events
   {
     "id": 2,
     "orderId": 100,
-    "eventType": "ITEM_ADDED",
-    "description": "Added item: Margherita Pizza x2",
-    "triggeredBy": "John Doe",
-    "createdAt": "2025-12-02T10:01:00"
-  },
-  {
-    "id": 3,
-    "orderId": 100,
     "eventType": "ORDER_SUBMITTED",
     "description": "Order submitted to kitchen",
     "triggeredBy": "John Doe",
     "createdAt": "2025-12-02T10:05:00"
+  },
+  {
+    "id": 3,
+    "orderId": 100,
+    "eventType": "BILL_REQUESTED",
+    "description": "Bill requested",
+    "triggeredBy": "John Doe",
+    "createdAt": "2025-12-02T10:45:00"
   }
 ]
 ```
@@ -750,15 +750,7 @@ Fired when order is submitted to kitchen.
 - `totalAmount`
 - `triggeredBy`
 
-#### 3. OrderReadyEvent
-Fired when kitchen marks order as ready.
-
-**Fields**:
-- `orderId`, `orderNumber`
-- `tableId`, `waiterId`
-- `triggeredBy`
-
-#### 4. BillRequestedEvent
+#### 3. BillRequestedEvent
 Fired when customer requests the bill.
 
 **Fields**:
@@ -767,7 +759,7 @@ Fired when customer requests the bill.
 - `totalAmount`
 - `triggeredBy`
 
-#### 5. OrderPaidEvent
+#### 4. OrderPaidEvent
 Fired when payment is completed.
 
 **Fields**:
@@ -776,32 +768,10 @@ Fired when payment is completed.
 - `amount`, `paymentMethod`
 - `triggeredBy`
 
-#### 6. OrderItemAddedEvent
-Fired when item is added to order.
-
-**Fields**:
-- `orderId`, `orderNumber`
-- `itemName`, `quantity`
-- `waiterId`
-- `triggeredBy`
-
-#### 7. OrderItemRemovedEvent
-Fired when item is removed from order.
-
-**Fields**:
-- `orderId`, `orderNumber`
-- `itemName`, `reason`
-- `waiterId`
-- `triggeredBy`
-
-#### 8. TableStatusChangedEvent
-Fired when table status changes.
-
-**Fields**:
-- `tableId`, `tableNumber`
-- `oldStatus`, `newStatus`
-- `waiterId`
-- `triggeredBy`
+> A former `OrderReadyEvent` / `OrderItemAddedEvent` / `OrderItemRemovedEvent` /
+> `TableStatusChangedEvent` cluster was removed as dead code: nothing ever published those events
+> (the publisher methods had no callers), so their listeners — including the void-item performance
+> KPI — could never fire. Re-introduce them only together with code paths that actually publish them.
 
 ---
 

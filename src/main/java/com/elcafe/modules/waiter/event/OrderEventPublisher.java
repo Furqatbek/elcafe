@@ -1,8 +1,6 @@
 package com.elcafe.modules.waiter.event;
 
 import com.elcafe.modules.order.entity.Order;
-import com.elcafe.modules.restaurant.entity.RestaurantTable;
-import com.elcafe.modules.restaurant.entity.RestaurantTable.TableStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -63,25 +61,6 @@ public class OrderEventPublisher {
     }
 
     /**
-     * Publish event when an order is ready for pickup
-     */
-    public void publishOrderReady(Order order, Long kitchenOrderId, String triggeredBy) {
-        log.info("Publishing order ready event for order: {}", order.getOrderNumber());
-
-        OrderReadyEvent event = new OrderReadyEvent(
-                this,
-                order.getId(),
-                order.getOrderNumber(),
-                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
-                order.getWaiter() != null ? order.getWaiter().getId() : null,
-                triggeredBy,
-                kitchenOrderId
-        );
-
-        eventPublisher.publishEvent(event);
-    }
-
-    /**
      * Publish event when bill is requested
      */
     public void publishBillRequested(Order order, String paymentMethod, String triggeredBy) {
@@ -122,79 +101,6 @@ public class OrderEventPublisher {
                 amount,
                 paymentMethod,
                 transactionId
-        );
-
-        eventPublisher.publishEvent(event);
-    }
-
-    /**
-     * Publish event when an item is added to an order
-     */
-    public void publishItemAdded(
-            Order order,
-            String itemName,
-            Integer quantity,
-            BigDecimal price,
-            String triggeredBy) {
-        log.info("Publishing item added event for order: {}", order.getOrderNumber());
-
-        OrderItemAddedEvent event = new OrderItemAddedEvent(
-                this,
-                order.getId(),
-                order.getOrderNumber(),
-                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
-                order.getWaiter() != null ? order.getWaiter().getId() : null,
-                triggeredBy,
-                itemName,
-                quantity,
-                price
-        );
-
-        eventPublisher.publishEvent(event);
-    }
-
-    /**
-     * Publish event when an item is removed from an order
-     */
-    public void publishItemRemoved(
-            Order order,
-            String itemName,
-            String reason,
-            String triggeredBy) {
-        log.info("Publishing item removed event for order: {}", order.getOrderNumber());
-
-        OrderItemRemovedEvent event = new OrderItemRemovedEvent(
-                this,
-                order.getId(),
-                order.getOrderNumber(),
-                order.getDiningTable() != null ? order.getDiningTable().getId() : null,
-                order.getWaiter() != null ? order.getWaiter().getId() : null,
-                triggeredBy,
-                itemName,
-                reason
-        );
-
-        eventPublisher.publishEvent(event);
-    }
-
-    /**
-     * Publish event when table status changes
-     */
-    public void publishTableStatusChanged(
-            RestaurantTable table,
-            TableStatus oldStatus,
-            TableStatus newStatus,
-            String triggeredBy) {
-        log.info("Publishing table status changed event for table: {}", table.getTableNumber());
-
-        TableStatusChangedEvent event = new TableStatusChangedEvent(
-                this,
-                table.getId(),
-                Integer.parseInt(table.getTableNumber()),
-                null, // No currentWaiter in RestaurantTable
-                triggeredBy,
-                oldStatus,
-                newStatus
         );
 
         eventPublisher.publishEvent(event);

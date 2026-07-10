@@ -429,22 +429,6 @@ class WaiterPerformanceServiceTest {
                     .divide(BigDecimal.valueOf(3), 2, RoundingMode.HALF_UP);
             assertEquals(0, expectedAvg.compareTo(saved.getAvgCustomerRating()));
         }
-
-        @Test
-        @DisplayName("14. recordVoidItem increments count and value")
-        void recordVoidItem_incrementsCountAndValue() {
-            WaiterPerformance existing = createPerformance(WAITER_ID, LocalDate.now());
-            existing.setVoidItemsCount(1);
-            existing.setVoidItemsValue(BigDecimal.valueOf(10));
-            stubExistingPerformance(existing);
-
-            performanceService.recordVoidItem(WAITER_ID, RESTAURANT_ID, BigDecimal.valueOf(25));
-
-            verify(performanceRepository).save(performanceCaptor.capture());
-            WaiterPerformance saved = performanceCaptor.getValue();
-            assertEquals(2, saved.getVoidItemsCount());
-            assertEquals(0, BigDecimal.valueOf(35).compareTo(saved.getVoidItemsValue()));
-        }
     }
 
     // ==================== Performance Summary ====================

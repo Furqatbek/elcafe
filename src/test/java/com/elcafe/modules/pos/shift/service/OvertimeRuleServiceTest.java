@@ -98,18 +98,6 @@ class OvertimeRuleServiceTest {
         assertThat(service.shouldAutoClockOut(shift, rules)).isFalse();
     }
 
-    @Test @DisplayName("weekly hours accumulation check")
-    void weeklyOvertimeExceeded() {
-        long weeklyMinutes = 41 * 60; // 41h > 40h max
-        assertThat(service.isWeeklyOvertimeExceeded(weeklyMinutes, rules)).isTrue();
-    }
-
-    @Test @DisplayName("weekly hours within limit")
-    void weeklyHoursOk() {
-        long weeklyMinutes = 38 * 60; // 38h < 40h
-        assertThat(service.isWeeklyOvertimeExceeded(weeklyMinutes, rules)).isFalse();
-    }
-
     @Test @DisplayName("overtime pay multiplier applied correctly")
     void overtimePay() {
         setWorkedHours(10, 0); // 10h = 2h overtime

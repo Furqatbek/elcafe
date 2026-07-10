@@ -2,13 +2,9 @@ package com.elcafe.modules.waiter.websocket;
 
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.repository.OrderRepository;
-import com.elcafe.modules.restaurant.entity.RestaurantTable;
-import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
 import com.elcafe.modules.waiter.event.*;
-import com.elcafe.modules.waiter.websocket.dto.ItemReadyMessage;
 import com.elcafe.modules.waiter.websocket.dto.NotificationMessage;
 import com.elcafe.modules.waiter.websocket.dto.OrderStatusMessage;
-import com.elcafe.modules.waiter.websocket.dto.TableStatusMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -27,7 +23,7 @@ import java.util.Map;
  * topics ({@code /topic/kitchen}, {@code /topic/table}, {@code /topic/waiter/*}) shared across every
  * tenant, letting any authenticated session watch all tenants' live orders. Each broadcast is now routed to
  * {@code /topic/restaurant/{restaurantId}/...}, where {@code restaurantId} is resolved server-side from the
- * event's order (or table) — never trusted from a client. The per-user {@code /queue/notifications} sends
+ * event's order — never trusted from a client. The per-user {@code /queue/notifications} sends
  * are already user-scoped and unchanged. Handlers run {@code @Async}; the resolver only reads a lazy
  * {@code @ManyToOne} proxy's id (no extra initialization), matching the existing admin-panel broadcast.
  */
@@ -38,7 +34,6 @@ public class WebSocketEventHandler {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final OrderRepository orderRepository;
-    private final RestaurantTableRepository restaurantTableRepository;
 
     private static String kitchenDest(Long restaurantId) {
         return "/topic/restaurant/" + restaurantId + "/kitchen";
@@ -46,10 +41,6 @@ public class WebSocketEventHandler {
 
     private static String waiterDest(Long restaurantId, String suffix) {
         return "/topic/restaurant/" + restaurantId + "/waiter/" + suffix;
-    }
-
-    private static String tableDest(Long restaurantId) {
-        return "/topic/restaurant/" + restaurantId + "/table";
     }
 
     /** Resolve the owning tenant of an order, or null if the order/restaurant is missing. */
@@ -65,23 +56,6 @@ public class WebSocketEventHandler {
             return order.getRestaurant().getId();
         } catch (Exception e) {
             log.error("Error resolving restaurant for order {}: {}", orderId, e.getMessage(), e);
-            return null;
-        }
-    }
-
-    /** Resolve the owning tenant of a table, or null if the table/restaurant is missing. */
-    private Long resolveRestaurantIdFromTable(Long tableId) {
-        if (tableId == null) {
-            return null;
-        }
-        try {
-            RestaurantTable table = restaurantTableRepository.findById(tableId).orElse(null);
-            if (table == null || table.getRestaurant() == null) {
-                return null;
-            }
-            return table.getRestaurant().getId();
-        } catch (Exception e) {
-            log.error("Error resolving restaurant for table {}: {}", tableId, e.getMessage(), e);
             return null;
         }
     }
@@ -224,49 +198,6 @@ public class WebSocketEventHandler {
     }
 
     /**
-     * Handle order ready events and notify waiter
-     */
-    @Async
-    @EventListener
-    public void handleOrderReadyForWebSocket(OrderReadyEvent event) {
-        log.debug("Broadcasting order ready event via WebSocket: {}", event.getOrderNumber());
-
-        try {
-            ItemReadyMessage message = ItemReadyMessage.builder()
-                    .orderId(event.getOrderId())
-                    .orderNumber(event.getOrderNumber())
-                    .tableId(event.getTableId())
-                    .waiterId(event.getWaiterId())
-                    .timestamp(event.getEventTimestamp())
-                    .build();
-
-            // Send to specific waiter with high priority (user-scoped)
-            if (event.getWaiterId() != null) {
-                messagingTemplate.convertAndSendToUser(
-                        event.getWaiterId().toString(),
-                        "/queue/notifications",
-                        new NotificationMessage("WARNING",
-                                String.format("Order %s is ready for pickup!", event.getOrderNumber()),
-                                LocalDateTime.now())
-                );
-            }
-
-            Long restaurantId = resolveRestaurantId(event.getOrderId());
-            if (restaurantId != null) {
-                // Broadcast to this tenant's waiters
-                messagingTemplate.convertAndSend(waiterDest(restaurantId, "orders"), message);
-                // Broadcast to this tenant's kitchen (to update display)
-                messagingTemplate.convertAndSend(kitchenDest(restaurantId), message);
-            }
-
-            // Broadcast to admin panel
-            broadcastToAdminPanel(event.getOrderId(), "order.ready");
-        } catch (Exception e) {
-            log.error("Error broadcasting order ready event: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
      * Handle bill requested events
      */
     @Async
@@ -346,99 +277,6 @@ public class WebSocketEventHandler {
             broadcastToAdminPanel(event.getOrderId(), "order.paid");
         } catch (Exception e) {
             log.error("Error broadcasting order paid event: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Handle item added events
-     */
-    @Async
-    @EventListener
-    public void handleItemAddedForWebSocket(OrderItemAddedEvent event) {
-        log.debug("Broadcasting item added event via WebSocket: {}", event.getOrderNumber());
-
-        try {
-            if (event.getWaiterId() != null) {
-                messagingTemplate.convertAndSendToUser(
-                        event.getWaiterId().toString(),
-                        "/queue/notifications",
-                        new NotificationMessage("INFO",
-                                String.format("Item '%s' added to order", event.getItemName()),
-                                LocalDateTime.now())
-                );
-            }
-
-            // Broadcast to admin panel
-            broadcastToAdminPanel(event.getOrderId(), "order.item_added");
-        } catch (Exception e) {
-            log.error("Error broadcasting item added event: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Handle item removed events
-     */
-    @Async
-    @EventListener
-    public void handleItemRemovedForWebSocket(OrderItemRemovedEvent event) {
-        log.debug("Broadcasting item removed event via WebSocket: {}", event.getOrderNumber());
-
-        try {
-            if (event.getWaiterId() != null) {
-                messagingTemplate.convertAndSendToUser(
-                        event.getWaiterId().toString(),
-                        "/queue/notifications",
-                        new NotificationMessage("WARNING",
-                                String.format("Item '%s' removed - Reason: %s",
-                                        event.getItemName(), event.getReason()),
-                                LocalDateTime.now())
-                );
-            }
-
-            // Broadcast to admin panel
-            broadcastToAdminPanel(event.getOrderId(), "order.item_removed");
-        } catch (Exception e) {
-            log.error("Error broadcasting item removed event: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Handle table status changed events and broadcast to this tenant's waiters
-     */
-    @Async
-    @EventListener
-    public void handleTableStatusChangedForWebSocket(TableStatusChangedEvent event) {
-        log.debug("Broadcasting table status changed event via WebSocket: Table {}",
-                event.getTableNumber());
-
-        try {
-            TableStatusMessage message = TableStatusMessage.builder()
-                    .tableId(event.getTableId())
-                    .tableNumber(event.getTableNumber())
-                    .status(event.getNewStatus().name())
-                    .waiterId(event.getWaiterId())
-                    .timestamp(event.getEventTimestamp())
-                    .build();
-
-            // Broadcast to this tenant's waiters
-            Long restaurantId = resolveRestaurantIdFromTable(event.getTableId());
-            if (restaurantId != null) {
-                messagingTemplate.convertAndSend(tableDest(restaurantId), message);
-            }
-
-            // Notify specific waiter if assigned (user-scoped)
-            if (event.getWaiterId() != null) {
-                messagingTemplate.convertAndSendToUser(
-                        event.getWaiterId().toString(),
-                        "/queue/notifications",
-                        new NotificationMessage("INFO",
-                                String.format("Table %d status changed to %s",
-                                        event.getTableNumber(), event.getNewStatus()),
-                                LocalDateTime.now())
-                );
-            }
-        } catch (Exception e) {
-            log.error("Error broadcasting table status changed event: {}", e.getMessage(), e);
         }
     }
 

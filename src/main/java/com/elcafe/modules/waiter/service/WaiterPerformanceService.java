@@ -244,20 +244,6 @@ public class WaiterPerformanceService {
     }
 
     /**
-     * Record void item
-     */
-    @Transactional
-    public void recordVoidItem(Long waiterId, Long restaurantId, BigDecimal itemValue) {
-        LocalDate today = LocalDate.now();
-        WaiterPerformance performance = getOrCreateTodayPerformance(waiterId, restaurantId, today);
-
-        performance.setVoidItemsCount(performance.getVoidItemsCount() + 1);
-        performance.setVoidItemsValue(performance.getVoidItemsValue().add(itemValue));
-
-        performanceRepository.save(performance);
-    }
-
-    /**
      * Record shift start
      */
     @Transactional

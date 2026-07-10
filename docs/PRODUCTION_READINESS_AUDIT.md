@@ -62,6 +62,15 @@ log/error-tracking infra) and monetization (H).
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **FUNC-7 + FUNC-13 — dead code removed.** The never-published waiter-event cluster is gone
+  (4 `OrderEventPublisher` methods with 0 callers, the 4 event classes, their 8 never-firing listener
+  methods across `OrderEventListener`/`WebSocketEventHandler`, the void-item KPI write
+  `WaiterPerformanceService.recordVoidItem`, and the two WS helpers only the dead handlers used). Also
+  removed `OvertimeRuleService.getWeeklyMinutes` — the FUNC-13 "full-table loader" was in fact dead AND
+  broken (queried `restaurant.id = NULL` → always returned 0, zero callers) — plus its dead companions
+  `isApproachingOvertime` / `isWeeklyOvertimeExceeded`. `WaiterPerformance.voidItems*` and
+  `ShiftRules.maxWeeklyHours/notifyOvertimeAtHours` columns stay (schema untouched; they were never
+  populated/evaluated in prod anyway). WAITER_MODULE.md updated to match.
 - **E0 — scale topology DECIDED: single-node + ShedLock.** Every shared-state `@Scheduled` job (30) now
   carries `@SchedulerLock` (JDBC provider, `shedlock` table `V160`, DB-clock based), so crons are safe at
   any instance count — including the two-instance overlap of a rolling deploy (no double SMS/salary/print
@@ -87,9 +96,8 @@ log/error-tracking infra) and monetization (H).
 - **E2/E3 — `open-in-view: false` + kill the remaining full-table loaders** (analytics loaders, `OvertimeRuleService`
   weekly query FUNC-13). Behaviour-affecting; wants a running-app smoke, not just green unit tests.
 - **F3/F4 — JSON logging + error tracking (Sentry/equivalent):** needs the target infra/DSN.
-- **Low-value cleanup (optional):** FUNC-7 dead waiter-event publishers (0 callers) and FUNC-13's broken-but-
-  uncalled `getWeeklyMinutes` (queries `restaurant.id = null` → always returns 0). Both are unwired, so zero
-  production impact today; delete-vs-wire-up is a product call.
+- ~~Low-value cleanup~~ **done** — FUNC-7 (dead waiter-event cluster) and FUNC-13 (broken, uncalled
+  weekly-overtime path) deleted; see Done above.
 - **H — monetization:** deferred until an acquiring contract.
 
 ---

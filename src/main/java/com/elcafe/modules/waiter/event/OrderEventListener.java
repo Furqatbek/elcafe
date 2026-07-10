@@ -17,8 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import java.math.BigDecimal;
-
 /**
  * Listener for all waiter-related events
  * Handles event processing, logging, and integration with other modules
@@ -85,32 +83,6 @@ public class OrderEventListener {
     }
 
     /**
-     * Handle order ready events
-     * - Log the event
-     * - Create audit trail
-     * - Notify waiter via WebSocket
-     * - Update order status
-     */
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handleOrderReady(OrderReadyEvent event) {
-        log.info("Handling OrderReadyEvent: {}", event.getEventDescription());
-
-        try {
-            createAuditTrail(event);
-
-            // TODO: Send notification to waiter via WebSocket
-            // webSocketService.notifyWaiter(event.getWaiterId(), "Order ready for pickup");
-
-            log.info("Order {} is ready for pickup at table {}",
-                    event.getOrderNumber(), event.getTableId());
-        } catch (Exception e) {
-            log.error("Error handling OrderReadyEvent: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
      * Handle bill requested events
      * - Log the event
      * - Create audit trail
@@ -170,85 +142,6 @@ public class OrderEventListener {
                     event.getOrderNumber(), event.getAmount(), event.getTransactionId());
         } catch (Exception e) {
             log.error("Error handling OrderPaidEvent: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Handle item added events
-     * - Log the event
-     * - Create audit trail
-     */
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handleItemAdded(OrderItemAddedEvent event) {
-        log.info("Handling OrderItemAddedEvent: {}", event.getEventDescription());
-
-        try {
-            createAuditTrail(event);
-        } catch (Exception e) {
-            log.error("Error handling OrderItemAddedEvent: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Handle item removed events
-     * - Log the event
-     * - Create audit trail
-     * - Track waste/void items
-     */
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handleItemRemoved(OrderItemRemovedEvent event) {
-        log.info("Handling OrderItemRemovedEvent: {}", event.getEventDescription());
-
-        try {
-            createAuditTrail(event);
-
-            // Track void items for waiter performance
-            if (event.getWaiterId() != null && event.getOrderId() != null) {
-                try {
-                    Order order = orderRepository.findById(event.getOrderId()).orElse(null);
-                    if (order != null && order.getRestaurant() != null) {
-                        BigDecimal itemValue = event.getItemPrice() != null
-                                ? event.getItemPrice() : BigDecimal.ZERO;
-                        performanceService.recordVoidItem(event.getWaiterId(),
-                                order.getRestaurant().getId(), itemValue);
-                        log.info("Recorded void item for waiter {}", event.getWaiterId());
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed to record void item: {}", e.getMessage());
-                }
-            }
-
-            log.info("Item '{}' removed from order {} - Reason: {}",
-                    event.getItemName(), event.getOrderNumber(), event.getReason());
-        } catch (Exception e) {
-            log.error("Error handling OrderItemRemovedEvent: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Handle table status changed events
-     * - Log the event
-     * - Broadcast to all waiters via WebSocket
-     * - Update table availability
-     */
-    @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void handleTableStatusChanged(TableStatusChangedEvent event) {
-        log.info("Handling TableStatusChangedEvent: {}", event.getEventDescription());
-
-        try {
-            // TODO: Broadcast to all waiters via WebSocket
-            // webSocketService.broadcastTableStatus(event.getTableId(), event.getNewStatus());
-
-            log.info("Table {} status changed from {} to {}",
-                    event.getTableNumber(), event.getOldStatus(), event.getNewStatus());
-        } catch (Exception e) {
-            log.error("Error handling TableStatusChangedEvent: {}", e.getMessage(), e);
         }
     }
 
