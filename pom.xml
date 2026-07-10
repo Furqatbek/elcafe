@@ -24,6 +24,7 @@
         <springdoc.version>2.5.0</springdoc.version>
         <jjwt.version>0.12.5</jjwt.version>
         <shedlock.version>5.16.0</shedlock.version>
+        <sentry.version>8.16.0</sentry.version>
     </properties>
 
     <dependencies>
@@ -240,6 +241,35 @@
             <groupId>net.javacrumbs.shedlock</groupId>
             <artifactId>shedlock-provider-jdbc-template</artifactId>
             <version>${shedlock.version}</version>
+        </dependency>
+
+        <!-- Structured logging (F3): LOG_FORMAT=json switches the console stream to one-JSON-object-per-line
+             (see logback-spring.xml). janino powers logback's <if> conditional; both are inert while the
+             default plain format is active. -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.codehaus.janino</groupId>
+            <artifactId>janino</artifactId>
+            <version>3.1.12</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- Error tracking (F4): fully dormant until a SENTRY_DSN env var is provided (the auto-configuration
+             is gated on the sentry.dsn property). sentry-logback additionally forwards ERROR log events once
+             active. -->
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+            <version>${sentry.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-logback</artifactId>
+            <version>${sentry.version}</version>
         </dependency>
 
         <!-- Test -->

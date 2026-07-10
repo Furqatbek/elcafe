@@ -137,11 +137,33 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      probes:
+        # Exposes /actuator/health/liveness and /readiness as separate groups. The container
+        # healthcheck targets liveness (process alive) so a Redis/SMTP dependency blip degrades the
+        # aggregate /actuator/health without restart-looping the container (audit F4).
+        enabled: true
   metrics:
     tags:
       application: ${spring.application.name}
 
+# Error tracking (audit F4). DORMANT BY DEFAULT: without a sentry.dsn property the auto-configuration
+# does not even load (@ConditionalOnProperty); an empty value (docker-compose passes SENTRY_DSN
+# through, defaulting to empty) loads the wiring but Sentry's empty-DSN convention keeps the SDK
+# disabled. Either way nothing is captured or sent until a real DSN is supplied — at which point
+# unhandled server errors are reported with stack trace + requestId/tenantId MDC context, and
+# everything below takes effect.
+sentry:
+  # No performance tracing — errors only. Raise deliberately if tracing is ever wanted (cost!).
+  traces-sample-rate: 0.0
+  # Never attach user PII (emails, IPs) to events; order/customer data stays out of the tracker.
+  send-default-pii: false
+  # Marks our frames as in-app so grouping/stack traces highlight elcafe code, not framework noise.
+  in-app-includes: com.elcafe
+  environment: ${SENTRY_ENVIRONMENT:production}
+
 logging:
+  # Console format is switchable to JSON for log aggregation via LOG_FORMAT=json (audit F3) — see
+  # logback-spring.xml. The patterns below drive the plain (default) format and the rolling file.
   level:
     root: INFO
     com.elcafe: DEBUG

@@ -124,6 +124,13 @@ services:
       # QR Code URL - used for generating QR code links
       SELFSERVICE_BASE_URL: ${SELFSERVICE_BASE_URL:-https://qahvoon.uz/order}
       FILE_BASE_URL: ${FILE_BASE_URL:-https://qahvoon.uz/uploads}
+      # Console log format: json = one JSON object per line for log aggregation; unset/plain = the
+      # human-readable default (see logback-spring.xml). The rolling file in ./logs stays plain either way.
+      LOG_FORMAT: ${LOG_FORMAT:-}
+      # Error tracking (Sentry, audit F4). DORMANT unless a DSN is set — with it, unhandled server
+      # errors are reported with stack trace + requestId/tenantId context.
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
     ports:
       # Loopback-only. nginx reaches the app over the compose network (upstream backend -> backend:8080),
       # so the app must NOT be published on the network — that would let clients bypass nginx (and forge
@@ -135,7 +142,10 @@ services:
       - uploads:/app/uploads
       - ./logs:/app/logs
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      # Liveness, not the aggregate /actuator/health: a Redis/SMTP dependency blip must degrade the
+      # health report, not restart-loop the app container (audit F4). Readiness lives at
+      # /actuator/health/readiness for anything that needs the dependency view.
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/liveness"]
       interval: 30s
       timeout: 10s
       retries: 3

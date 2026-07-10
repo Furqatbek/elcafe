@@ -1,5 +1,7 @@
 package com.elcafe.common.tenant;
 
+import org.slf4j.MDC;
+
 /**
  * Holds the tenant (restaurant) the current request is authoritatively scoped to, derived from
  * the authenticated principal — never from a client-supplied path/query value.
@@ -12,8 +14,16 @@ package com.elcafe.common.tenant;
  * <p>Thread-bound via {@link ThreadLocal} (one request = one thread under the standard servlet
  * model). The filter's {@code finally} block guarantees cleanup so values never leak across
  * pooled threads.
+ *
+ * <p>The tenant id is mirrored into the SLF4J {@link MDC} as {@code tenantId} so every log line a
+ * scoped request emits carries its tenant (plain patterns can render {@code %X{tenantId}}; the JSON
+ * console format includes the MDC wholesale). The mirror follows this holder's lifecycle exactly:
+ * set here, removed on {@link #clear()}.
  */
 public final class TenantContext {
+
+    /** MDC key under which the current tenant id appears in log output. */
+    public static final String MDC_TENANT_KEY = "tenantId";
 
     private static final ThreadLocal<Long> CURRENT_RESTAURANT_ID = new ThreadLocal<>();
 
@@ -41,6 +51,11 @@ public final class TenantContext {
     /** Sets the restaurant id the current request is scoped to (may be {@code null}). */
     public static void setRestaurantId(Long restaurantId) {
         CURRENT_RESTAURANT_ID.set(restaurantId);
+        if (restaurantId != null) {
+            MDC.put(MDC_TENANT_KEY, String.valueOf(restaurantId));
+        } else {
+            MDC.remove(MDC_TENANT_KEY);
+        }
     }
 
     /**
@@ -66,5 +81,6 @@ public final class TenantContext {
     public static void clear() {
         CURRENT_RESTAURANT_ID.remove();
         CURRENT_WAITER_ID.remove();
+        MDC.remove(MDC_TENANT_KEY);
     }
 }

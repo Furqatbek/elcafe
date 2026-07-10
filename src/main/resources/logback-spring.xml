@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Console log format is an env switch (audit F3), no rebuild needed:
+
+    LOG_FORMAT=json   one JSON object per line (logstash-logback-encoder): @timestamp, level,
+                      logger_name, message, stack_trace, and the full MDC - requestId
+                      (RequestIdFilter) and tenantId (TenantContext) - so any aggregator
+                      (Loki / ELK / CloudWatch) can ingest the container stdout without a
+                      parsing pipeline.
+    unset / anything else
+                      the plain console output exactly as before, still driven by
+                      logging.pattern.console and friends in application.yml.
+
+  The rolling FILE appender (logging.file.name) intentionally stays plain in both modes: it is the
+  on-box grep artifact; shippers should read stdout. Boot maps all logging.* properties to the
+  LOG_* / CONSOLE_* / FILE_* variables these includes consume, so yaml keeps working unchanged.
+  The <if> needs janino (runtime dep). Pinned by LogFormatSwitchTest.
+-->
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Resolution order: logback/system property, then OS environment, then the plain default. -->
+    <variable name="LOG_FORMAT" value="${LOG_FORMAT:-plain}"/>
+
+    <if condition='property("LOG_FORMAT").equalsIgnoreCase("json")'>
+        <then>
+            <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+                <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+            </appender>
+        </then>
+        <else>
+            <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+        </else>
+    </if>
+
+    <include resource="org/springframework/boot/logging/logback/file-appender.xml"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>

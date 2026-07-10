@@ -77,7 +77,11 @@ public class SecurityConfig {
                                 "/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
+                                // health/** = the liveness/readiness probe groups the container
+                                // healthcheck polls. Anonymous callers see status only (show-details
+                                // is when-authorized, `never` in prod) — no dependency detail leaks.
                                 "/actuator/health",
+                                "/actuator/health/**",
                                 "/actuator/info",
                                 "/uploads/**",
                                 "/ws-waiter/**",            // WebSocket endpoint for waiter updates

@@ -32,8 +32,8 @@ Phases **A–D of §3 are landed** (commits `f77f085`, `67a6be7`, `cd419c3`, `af
 **E–G are now essentially landed too**: scale topology decided + ShedLock'd (E0), analytics on DB
 aggregates (E3), `open-in-view` off (E2) and boot-smoked against migrated Postgres. The launch gate is
 met; what remains is decision- or infra-gated work (populated-data migration rehearsal, an
-`open-in-view` load test under real concurrency, JSON-log/error-tracking infra F3–F4, the subscription
-enforcement product flip) and monetization (H).
+`open-in-view` load test under real concurrency, the infra half of F3–F4 — log shipper, Sentry
+DSN + alert rules — and the subscription enforcement product flip) and monetization (H).
 
 **Done**
 - **A — config lockdown:** `application-prod.yml` + a `prod`-profile fail-fast validator (OTP dev-mode off,
@@ -64,6 +64,25 @@ enforcement product flip) and monetization (H).
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **F3 + F4 (code half) — switchable JSON logs, tenant in MDC, dormant Sentry, liveness healthcheck.**
+  `LOG_FORMAT=json` switches the console stream to one JSON object per line (logstash encoder: level,
+  logger, message, stack traces, full MDC) with no rebuild; unset keeps the exact plain output, still
+  driven by the `logging.*` yaml (`logback-spring.xml`; pinned by `LogFormatSwitchTest`, incl. the
+  unknown-value→plain fallback). Tenant now reaches logs: `TenantContext` mirrors the scoped
+  restaurant id into the `tenantId` MDC key, lifecycle-exact with the ThreadLocal (pinned by
+  `TenantContextMdcTest`) — with `requestId` that completes F3's accept fields (level, logger,
+  request id, tenant). Error tracking: `sentry-spring-boot-starter-jakarta` + `sentry-logback` are on
+  the classpath but DORMANT — the auto-config is `@ConditionalOnProperty(sentry.dsn)` (verified in
+  the jar), so without `SENTRY_DSN` it does not even load; with a DSN, unhandled errors report with
+  stack trace + requestId/tenantId context, PII off, tracing off. F4's probe split is in too:
+  liveness/readiness health groups enabled, `/actuator/health/**` permitted (status-only for
+  anonymous), and the container healthcheck now polls `/actuator/health/liveness` — a Redis/SMTP
+  blip degrades the aggregate health report instead of restart-looping the app. Verified live on a
+  real boot (migrated Postgres, Redis absent): the console streamed parseable JSON with
+  `requestId`/`tenantId` on request-scoped lines, and `/health/liveness`+`/health/readiness` held
+  200 while the aggregate `/health` reported 503 — the exact blip scenario, no restart loop.
+  Remaining F3/F4 is genuinely infra: a shipper reading the stdout JSON, a real DSN + alert rules,
+  frontend Sentry.
 - **Boot smoke on migrated PostgreSQL — the app runs, and the OSIV-off payloads survive real HTTP.**
   First-ever full boot against the real V1..V160-migrated Postgres 16 schema: `ddl-auto: validate`
   passed, i.e. the entity mappings match the migrated schema exactly. Prod-shaped flags (tenant + WS
@@ -173,7 +192,9 @@ enforcement product flip) and monetization (H).
   transaction-scoped, payloads hydrated + pinned (see Done). One follow-through when a running app
   exists: smoke the courier endpoints against the external courier client (not in this repo), with
   `SPRING_JPA_OPEN_IN_VIEW=true` as the instant rollback. ~~E3~~ **fully done**.
-- **F3/F4 — JSON logging + error tracking (Sentry/equivalent):** needs the target infra/DSN.
+- **F3/F4 — the infra half:** the code sides are landed (see Done: JSON log switch, tenant/request
+  MDC, dormant Sentry, liveness healthcheck). Still needed on infra: a shipper for the stdout JSON,
+  a real `SENTRY_DSN` + alert rules (error-rate spike, healthcheck flap), and the frontend Sentry SDK.
 - ~~Low-value cleanup~~ **done** — FUNC-7 (dead waiter-event cluster) and FUNC-13 (broken, uncalled
   weekly-overtime path) deleted; see Done above.
 - **H — monetization:** deferred until an acquiring contract.
