@@ -28,10 +28,12 @@ multi-instance) · **MEDIUM** · **LOW**.
 
 ## 0. Progress log (updated 2026-07-10)
 
-Phases **A–D of §3 are landed** (commits `f77f085`, `67a6be7`, `cd419c3`, `af9c5fd`, `018de15`), and the
-**safe, non-gated parts of E–G are landed too**. The launch gate is met; what remains is the
-decision- or infra-gated work (scale topology, load-tested `open-in-view` flip, populated-data rehearsal,
-log/error-tracking infra) and monetization (H).
+Phases **A–D of §3 are landed** (commits `f77f085`, `67a6be7`, `cd419c3`, `af9c5fd`, `018de15`), and
+**E–G are now essentially landed too**: scale topology decided + ShedLock'd (E0), analytics on DB
+aggregates (E3), `open-in-view` off (E2) and boot-smoked against migrated Postgres. The launch gate is
+met; what remains is decision- or infra-gated work (populated-data migration rehearsal, an
+`open-in-view` load test under real concurrency, JSON-log/error-tracking infra F3–F4, the subscription
+enforcement product flip) and monetization (H).
 
 **Done**
 - **A — config lockdown:** `application-prod.yml` + a `prod`-profile fail-fast validator (OTP dev-mode off,
@@ -62,6 +64,21 @@ log/error-tracking infra) and monetization (H).
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **Boot smoke on migrated PostgreSQL — the app runs, and the OSIV-off payloads survive real HTTP.**
+  First-ever full boot against the real V1..V160-migrated Postgres 16 schema: `ddl-auto: validate`
+  passed, i.e. the entity mappings match the migrated schema exactly. Prod-shaped flags (tenant + WS
+  auth `enforce`, subscription off). Verified live over HTTP: the auth chain (anonymous → 401/403,
+  role gates active — SUPER_ADMIN correctly denied the courier endpoints), admin reads all 200
+  (orders page + pending, kitchen active, customers, waiters, products), and a seeded CASH-paid
+  order's detail payload fully intact with OSIV off — items, `fullyPaid=true`, `totalPaid`,
+  `remainingBalance`, `payment.method` — exactly the fields the mid-stream truncation hazard would
+  silently eat. The E3 aggregates ran on the real Postgres dialect for the first time: daily-revenue
+  and sales-per-hour returned the seeded order correctly (`EXTRACT(HOUR ...)` bucket 20, totals
+  100.00). ShedLock acquired locks on real PG (six job rows with `locked_by` set). Zero
+  ERROR/LazyInitializationException/HttpMessageNotWritable lines in the entire app log. **No code
+  changes needed** — the smoke found nothing to fix. E2's "running-app smoke" residual is hereby
+  covered except the one thing a local run cannot reach: the external courier app against a first
+  deploy (keep `SPRING_JPA_OPEN_IN_VIEW=true` ready as the instant rollback there).
 - **E2 stage 2 — `open-in-view` OFF (PERF-1 fully closed).** Sessions now live only as long as their
   transaction: no request-pinned pool connection, no connection-per-lazy-access. What made the flip
   safe: (1) tenant enforcement moved to `TenantAwareJpaTransactionManager` (below); (2) entity payloads
@@ -76,8 +93,9 @@ log/error-tracking infra) and monetization (H).
   MID-STREAM, returning a 200 with a truncated body that silently drops every later property. Whole
   suite (2000 tests) runs with OSIV off; zero LazyInitializationException in the run log. Env override
   `SPRING_JPA_OPEN_IN_VIEW` is the instant rollback. Residual risk: prod-only clients not in this repo
-  (external courier app) — courier endpoints are hydrated too, but a smoke on a running app remains the
-  final check before calling PERF-1 done-done in prod.
+  (external courier app) — courier endpoints are hydrated too, and the running-app smoke has since been
+  done (see the boot-smoke entry above: live payloads intact over real HTTP on migrated Postgres); what
+  remains is only the external courier client against a first deploy.
 - **E2 stage 2 groundwork — tenant backstop decoupled from OSIV.** `TenantAwareJpaTransactionManager`
   (replacing Boot's default tx manager) enables the Hibernate `restaurantFilter` on every transaction
   begin — every Spring Data repository call is transactional, so this covers all data access including
