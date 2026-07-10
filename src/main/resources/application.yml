@@ -45,10 +45,17 @@ spring:
 
   flyway:
     enabled: true
-    baseline-on-migrate: true
+    # false: never silently baseline a non-empty schema at v1 (which would skip/misapply migrations).
+    # This app is Flyway-managed from V1, so a fresh DB applies the whole chain without baselining, and
+    # an existing DB already has flyway_schema_history — so this is safe and closes the mis-baseline trap.
+    baseline-on-migrate: false
     locations: classpath:db/migration
     schemas: public
-    validate-on-migrate: false
+    # true: verify the checksum/order of applied migrations on every startup, so a migration file edited
+    # after it was applied is caught instead of drifting silently. NOTE: if the prod schema already drifted
+    # while this was false, the first deploy after this change will fail with a checksum error — audit the
+    # difference, then run `flyway repair` to realign the history before redeploying.
+    validate-on-migrate: true
 
   data:
     redis:

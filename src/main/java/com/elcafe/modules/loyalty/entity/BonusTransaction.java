@@ -1,6 +1,5 @@
 package com.elcafe.modules.loyalty.entity;
 
-import com.elcafe.modules.loyalty.converter.JsonMapConverter;
 import com.elcafe.modules.order.entity.Order;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.math.BigDecimal;
@@ -62,7 +63,11 @@ public class BonusTransaction {
     @Column(name = "idempotency_key", unique = true)
     private String idempotencyKey;
 
-    @Convert(converter = JsonMapConverter.class)
+    // Hibernate 6 native JSON binding. The old @Convert(JsonMapConverter) bound a VARCHAR param, which
+    // Postgres rejects against a jsonb column (SQLSTATE 42804) — and the loyalty listener swallowed the
+    // error, so points silently never accrued in prod. @JdbcTypeCode(JSON) binds the correct type
+    // (verified: SmsCampaign uses the same pattern; H2 test mode accepts it too).
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> metadata;
 

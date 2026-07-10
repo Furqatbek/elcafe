@@ -1,7 +1,6 @@
 package com.elcafe.modules.loyalty.entity;
 
 import com.elcafe.modules.customer.entity.Customer;
-import com.elcafe.modules.loyalty.converter.JsonMapConverter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -10,7 +9,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Filter;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -75,7 +76,9 @@ public class WalletTopUp {
     @Column(name = "failure_reason", columnDefinition = "TEXT")
     private String failureReason;
 
-    @Convert(converter = JsonMapConverter.class)
+    // Hibernate 6 native JSON binding — see BonusTransaction.metadata. The old @Convert bound a VARCHAR,
+    // which Postgres rejects against jsonb (42804), silently breaking wallet top-up metadata writes.
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> metadata;
 

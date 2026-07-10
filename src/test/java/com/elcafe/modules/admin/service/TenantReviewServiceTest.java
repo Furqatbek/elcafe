@@ -27,6 +27,7 @@ class TenantReviewServiceTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private WaiterRepository waiterRepository;
     @Mock private RestaurantRepository restaurantRepository;
+    @Mock private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     @InjectMocks private TenantReviewService service;
 
     @Test
@@ -43,6 +44,11 @@ class TenantReviewServiceTest {
 
         assertThat(result.getRestaurantId()).isEqualTo(9L);
         assertThat(result.getTenantAssignmentConfidence()).isEqualTo(AssignmentConfidence.HIGH);
+        // the customer's loyalty/wallet/bonus/tier child rows must be moved to the new restaurant too,
+        // else they orphan on the old tenant (invisible under enforce; loyalty re-INSERT -> 500)
+        verify(jdbcTemplate, org.mockito.Mockito.times(4))
+                .update(org.mockito.ArgumentMatchers.anyString(),
+                        org.mockito.ArgumentMatchers.eq(9L), org.mockito.ArgumentMatchers.eq(1L));
     }
 
     @Test
