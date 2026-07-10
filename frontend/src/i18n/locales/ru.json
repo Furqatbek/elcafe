@@ -295,7 +295,10 @@
       "ordersPerSeat": "Заказов на место",
       "peakStart": "Начало пика",
       "peakEnd": "Конец пика",
-      "peakPercentage": "Пик %"
+      "peakPercentage": "Пик %",
+      "orders": "Заказы",
+      "percentage": "Процент",
+      "revenue": "Выручка"
     },
     "customer": {
       "title": "Аналитика клиентов",
@@ -943,7 +946,21 @@
       "SIMILAR": "Похожие",
       "UPSELL": "Премиум-альтернатива",
       "COMPLEMENTARY": "Дополняющие"
-    }
+    },
+    "categoryImage": "Изображение категории",
+    "createCategoryDescription": "Создайте новую категорию для организации меню",
+    "filteredResults": "Отфильтрованные результаты",
+    "messages": {
+      "confirmDeleteCategory": "Вы уверены, что хотите удалить эту категорию?",
+      "createCategoryError": "Не удалось создать категорию",
+      "createProductError": "Не удалось создать товар",
+      "deleteCategoryError": "Не удалось удалить категорию",
+      "deleteProductError": "Не удалось удалить товар",
+      "updateCategoryError": "Не удалось обновить категорию",
+      "updateProductError": "Не удалось обновить товар"
+    },
+    "orEnterImageUrl": "Или введите URL изображения",
+    "updateCategoryDescription": "Обновите данные этой категории"
   },
   "customers": {
     "title": "Клиенты",
@@ -1201,7 +1218,79 @@
     "selectRestaurant": "Выберите ресторан",
     "edit": "Изменить",
     "actions": "Действия",
-    "delete": "Удалить"
+    "delete": "Удалить",
+    "all": "Все",
+    "allStatuses": "Все статусы",
+    "apply": "Применить",
+    "average": "Среднее",
+    "buttons": {
+      "approve": "Одобрить",
+      "delete": "Удалить",
+      "edit": "Изменить",
+      "recordPayment": "Записать платёж",
+      "viewHistory": "История"
+    },
+    "card": "Карта",
+    "cash": "Наличные",
+    "category": "Категория",
+    "clickRefresh": "Нажмите «Обновить», чтобы загрузить данные",
+    "date": "Дата",
+    "dateRange": "Период",
+    "day": "День",
+    "days": "Дней",
+    "endDate": "Дата окончания",
+    "export": "Экспорт",
+    "filter": "Фильтр",
+    "from": "От",
+    "hour": "Час",
+    "ingredient": "Ингредиент",
+    "items": "Позиции",
+    "margin": "Маржа",
+    "max": "Макс.",
+    "median": "Медиана",
+    "messages": {
+      "noProductsFound": "Товары не найдены"
+    },
+    "min": "Мин.",
+    "more": "Ещё",
+    "na": "Н/Д",
+    "no": "Нет",
+    "noData": "Нет данных",
+    "none": "Нет",
+    "of": "из",
+    "online": "Онлайн",
+    "or": "или",
+    "page": "Страница",
+    "placeholders": {
+      "allCategories": "Все категории",
+      "contactEmail": "Контактный email",
+      "decimalValue": "0.00",
+      "email": "Email",
+      "employeeId": "ID сотрудника",
+      "imageUrl": "URL изображения",
+      "name": "Имя",
+      "optionalDescription": "Описание (необязательно)",
+      "password": "Пароль",
+      "phone": "Телефон",
+      "searchProducts": "Поиск товаров...",
+      "searchWaiters": "Поиск официантов...",
+      "selectCategory": "Выберите категорию",
+      "tags": "Теги",
+      "variantExample": "напр. Маленький, Средний, Большой"
+    },
+    "product": "Товар",
+    "reset": "Сбросить",
+    "select": "Выбрать",
+    "startDate": "Дата начала",
+    "status": "Статус",
+    "to": "До",
+    "total": "Итого",
+    "type": "Тип",
+    "unavailable": "Недоступно",
+    "unlimited": "Без лимита",
+    "update": "Обновить",
+    "view": "Просмотр",
+    "yes": "Да"
   },
   "shift": {
     "dashboard": {
@@ -1617,7 +1706,8 @@
       "edit": "Редактировать",
       "delete": "Удалить",
       "save": "Сохранить",
-      "saving": "Сохранение..."
+      "saving": "Сохранение...",
+      "recording": "Запись..."
     },
     "purchaseOrders": {
       "title": "Заказы на закупку",
@@ -1759,14 +1849,16 @@
         "paymentError": "Не удалось записать оплату",
         "deleteSuccess": "Расход успешно удален",
         "confirmDelete": "Вы уверены, что хотите удалить этот расход?",
-        "cannotDeletePaid": "Невозможно удалить оплаченный расход"
+        "cannotDeletePaid": "Невозможно удалить оплаченный расход",
+        "deleteError": "Не удалось удалить расход"
       },
       "paymentStatus": {
         "UNPAID": "Не оплачено",
         "PAID": "Оплачено",
         "PARTIALLY_PAID": "Частично оплачено"
       },
-      "managedInPayroll": "Управляется в Зарплата"
+      "managedInPayroll": "Управляется в Зарплата",
+      "saving": "Сохранение..."
     },
     "reports": {
       "title": "Финансовые отчеты",
@@ -2011,13 +2103,16 @@
       "status": "Статус",
       "active": "Активно",
       "trackInventory": "Отслеживать запасы",
-      "trackExpiry": "Отслеживать срок годности"
+      "trackExpiry": "Отслеживать срок годности",
+      "category": "Категория",
+      "quantity": "Количество"
     },
     "placeholders": {
       "name": "напр., Помидоры, Куриная грудка",
       "sku": "напр., ING-001",
       "description": "Краткое описание ингредиента",
-      "supplier": "напр., ABC Поставщики продуктов"
+      "supplier": "напр., ABC Поставщики продуктов",
+      "selectIngredient": "Выберите ингредиент"
     },
     "units": {
       "kg": "Килограммы (кг)",
@@ -2470,7 +2565,65 @@
         "batchNumber": "№ партии"
       },
       "errors": {
-        "saveFailed": "Не удалось сохранить настройки оценки"
+        "saveFailed": "Не удалось сохранить настройки оценки",
+        "calculateFailed": "Не удалось рассчитать стоимость запасов",
+        "loadFailed": "Не удалось загрузить данные оценки"
+      },
+      "cogs": {
+        "description": "Себестоимость рассчитана по фактическим партиям",
+        "orderCOGS": "Себестоимость заказа",
+        "period": "Период",
+        "title": "Себестоимость проданных товаров",
+        "totalCOGS": "Итого себестоимость"
+      },
+      "reports": {
+        "comparison": {
+          "description": "Сравните стоимость запасов по методам FIFO, LIFO и средневзвешенной",
+          "fifoVsLifo": "FIFO против LIFO",
+          "fifoVsWac": "FIFO против WAC",
+          "ingredientComparisons": "Сравнение ингредиентов",
+          "lifoVsWac": "LIFO против WAC",
+          "maxVariance": "Макс. отклонение",
+          "recommendation": "Рекомендация",
+          "title": "Отчёт сравнения себестоимости",
+          "variance": "Отклонение",
+          "variancePercent": "Отклонение %"
+        },
+        "inventory": {
+          "activeBatches": "Активные партии",
+          "averageCost": "Средняя стоимость",
+          "byCategory": "По категориям",
+          "byIngredient": "По ингредиентам",
+          "description": "Детальная разбивка оценки запасов по категориям и ингредиентам",
+          "ingredientsWithStock": "Ингредиенты в наличии",
+          "newestBatchCost": "Стоимость новейшей партии",
+          "ofTotal": "от общего",
+          "oldestBatchCost": "Стоимость старейшей партии",
+          "percentOfTotal": "% от общего",
+          "title": "Отчёт об оценке запасов"
+        },
+        "title": "Отчёты об оценке",
+        "variance": {
+          "actualCost": "Фактическая стоимость",
+          "description": "Анализ отклонений фактической стоимости от нормативной",
+          "favorable": "Благоприятное",
+          "favorableVariances": "Благоприятные отклонения",
+          "generate": "Сформировать отчёт",
+          "selectDateRange": "Выберите период",
+          "standardCost": "Нормативная стоимость",
+          "title": "Отчёт об отклонениях себестоимости",
+          "totalVariance": "Итого отклонение",
+          "unfavorable": "Неблагоприятное",
+          "unfavorableVariances": "Неблагоприятные отклонения",
+          "varianceReason": "Причина отклонения"
+        }
+      },
+      "wac": {
+        "currentWAC": "Текущая WAC",
+        "lastUpdated": "Последнее обновление",
+        "recalculate": "Пересчитать WAC",
+        "recalculated": "WAC успешно пересчитан",
+        "title": "Средневзвешенная стоимость"
       }
     },
     "valuationMethods": {
@@ -2518,6 +2671,10 @@
       "CRITICAL": "Критично",
       "HIGH": "Высокий",
       "MEDIUM": "Средний"
+    },
+    "form": {
+      "newQuantity": "Новое количество *",
+      "notes": "Примечания"
     }
   },
   "linkedItems": {
@@ -2647,7 +2804,13 @@
       "cancel": "Отмена",
       "required": "Обязательно",
       "optional": "Необязательно",
-      "noModifiers": "Опции настройки недоступны"
+      "noModifiers": "Опции настройки недоступны",
+      "addOns": "Добавки и дополнения",
+      "backToMenu": "Назад в меню",
+      "instructionsPlaceholder": "Напр.: без лука, соус отдельно...",
+      "selectSize": "Выберите размер",
+      "sizeLabel": "Размер: {{size}}",
+      "specialInstructions": "Особые пожелания"
     },
     "orderDetails": {
       "title": "Детали заказа",
@@ -2700,13 +2863,7 @@
         "card": "Карта",
         "mobile": "Мобильный платеж"
       },
-      "cashPayment": {
-        "title": "Оплата наличными",
-        "amountTendered": "Внесенная сумма",
-        "amountPlaceholder": "Введите полученную сумму",
-        "changeDue": "Сдача",
-        "quickAmounts": "Быстрые суммы"
-      },
+      "cashPayment": "Оплата наличными",
       "summary": {
         "orderSummary": "Сводка заказа",
         "subtotal": "Промежуточный итог",
@@ -2731,7 +2888,17 @@
       "orderPaid": "Заказ полностью оплачен",
       "completeOrder": "Завершить заказ",
       "refund": "Возврат",
-      "voidOrder": "Аннулировать заказ"
+      "voidOrder": "Аннулировать заказ",
+      "amountPlaceholder": "0.00",
+      "amountTendered": "Полученная сумма",
+      "changeDue": "Сдача",
+      "completePayment": "Завершить оплату",
+      "finalizing": "Завершение транзакции...",
+      "insufficientAmount": "Недостаточная сумма. Нужно ещё {{remaining}}.",
+      "processing": "Обработка платежа...",
+      "quickAmounts": "Быстрые суммы",
+      "waitingCard": "Ожидание карты...",
+      "waitingMobile": "Ожидание мобильного платежа..."
     },
     "confirmation": {
       "title": "Заказ подтвержден!",
@@ -2739,7 +2906,17 @@
       "orderNumber": "Номер заказа",
       "printReceipt": "Распечатать чек",
       "newOrder": "Начать новый заказ",
-      "viewOrders": "Просмотр заказов"
+      "viewOrders": "Просмотр заказов",
+      "name": "Имя",
+      "paymentMethod": "Способ оплаты",
+      "phone": "Телефон",
+      "printKitchen": "Печать кухонного чека",
+      "processing": "Обработка...",
+      "readyForPickup": "Заказ готов к выдаче!",
+      "sentToKitchen": "Заказ отправлен на кухню",
+      "startNew": "Новый заказ",
+      "thankYou": "Спасибо за заказ",
+      "totalAmount": "Итоговая сумма"
     },
     "errors": {
       "loadMenuFailed": "Не удалось загрузить меню",
@@ -2938,6 +3115,157 @@
       "phonePlaceholder": "Номер телефона…",
       "noMatches": "Совпадений нет",
       "noOrderYet": "Сохраните заказ перед привязкой клиента."
+    },
+    "details": {
+      "addressPlaceholder": "ул. Главная, 123",
+      "backToCart": "Назад в корзину",
+      "city": "Город",
+      "cityPlaceholder": "Ташкент",
+      "customerInfo": "Информация о клиенте",
+      "customerName": "Имя клиента",
+      "deliveryAddress": "Адрес доставки",
+      "deliveryInstructions": "Инструкции по доставке (необязательно)",
+      "emailOptional": "Email (необязательно)",
+      "emailPlaceholder": "customer@example.com",
+      "errors": {
+        "addressRequired": "Укажите адрес",
+        "cityRequired": "Укажите город",
+        "guestCountMin": "Количество гостей должно быть не менее 1",
+        "nameRequired": "Укажите имя",
+        "phoneRequired": "Укажите номер телефона",
+        "tableRequired": "Укажите номер стола",
+        "zipRequired": "Укажите почтовый индекс"
+      },
+      "instructionsPlaceholder": "Напр.: позвоните в дверь, оставьте у двери...",
+      "namePlaceholder": "Введите имя клиента",
+      "numberOfGuests": "Количество гостей",
+      "phoneNumber": "Номер телефона",
+      "phonePlaceholder": "+998 90 123-45-67",
+      "proceedToPayment": "Перейти к оплате",
+      "streetAddress": "Улица и дом",
+      "tableInfo": "Информация о столе",
+      "tableNumber": "Номер стола",
+      "tablePlaceholder": "напр., 12, A5",
+      "title": "Детали заказа",
+      "zipCode": "Почтовый индекс",
+      "zipPlaceholder": "100001"
+    },
+    "kitchen": {
+      "estimatedTime": "Расчётное время: {{minutes}} мин",
+      "inQueue": "В очереди на кухне",
+      "notSent": "Ожидание",
+      "pending": "В ожидании",
+      "pickedUp": "Выдан",
+      "preparedBy": "Готовит {{chef}}",
+      "preparing": "Готовится",
+      "ready": "Готов",
+      "status": "Статус кухни"
+    },
+    "kitchenTicket": {
+      "customer": "Клиент",
+      "deliveryTo": "Доставка по адресу",
+      "guests": "Гостей",
+      "items": "Позиции",
+      "note": "Примечание",
+      "orderNotes": "Примечания к заказу",
+      "orderNumber": "Заказ №",
+      "pending": "В ожидании",
+      "table": "Стол",
+      "title": "Кухонный заказ",
+      "type": "Тип"
+    },
+    "modify": {
+      "addItems": "Добавить позиции",
+      "changesSaved": "Изменения успешно сохранены",
+      "currentItems": "Текущие позиции",
+      "itemAdded": "Позиция добавлена",
+      "modified": "ИЗМЕНЕНО",
+      "new": "НОВОЕ",
+      "noItems": "Нет позиций в заказе",
+      "noOrderSelected": "Заказ не выбран",
+      "originalTotal": "Изначально",
+      "saveChanges": "Сохранить изменения",
+      "saveError": "Не удалось сохранить изменения",
+      "title": "Изменить заказ"
+    },
+    "split": {
+      "addPerson": "Добавить человека",
+      "amountsDesc": "Введите конкретную сумму для каждого",
+      "assignItems": "Распределить позиции",
+      "assignRemaining": "Пожалуйста, распределите оставшуюся сумму",
+      "billSplit": "Разделение счёта",
+      "changeMode": "Изменить способ разделения",
+      "chooseMode": "Как разделить счёт?",
+      "customAmounts": "Произвольные суммы",
+      "error": "Не удалось разделить счёт",
+      "evenlyDesc": "Разделить счёт поровну между гостями",
+      "items": "позиций",
+      "itemsDesc": "Распределить позиции между гостями",
+      "noOrder": "Заказ не выбран",
+      "numberOfPeople": "Количество человек",
+      "originalTotal": "Изначальная сумма",
+      "over": "Переплата",
+      "paid": "Оплачено",
+      "payNow": "Оплатить сейчас",
+      "people": "Человек",
+      "person": "Человек",
+      "reduceAmounts": "Сумма превышает счёт",
+      "remaining": "Осталось",
+      "splitBill": "Разделить счёт",
+      "splitByItems": "Разделить по позициям",
+      "splitEvenly": "Разделить поровну",
+      "success": "Счёт успешно разделён!",
+      "summary": "Итог разделения",
+      "title": "Разделить счёт",
+      "unpaid": "Не оплачено"
+    },
+    "tables": {
+      "addTablesHint": "Добавьте столы в настройках",
+      "allSections": "Все секции",
+      "available": "Свободен",
+      "capacity": "Вместимость",
+      "cleaning": "Уборка",
+      "clearSelection": "Очистить",
+      "confirmTable": "Подтвердить стол",
+      "confirmTables": "Подтвердить {{count}} столов",
+      "floorPlan": "План зала",
+      "gridView": "Сетка",
+      "guests": "Гостей",
+      "merge": {
+        "confirm": "Объединить столы",
+        "description": "Выберите основной стол. Остальные будут объединены с ним.",
+        "error": "Не удалось объединить столы",
+        "main": "Основной",
+        "selectMain": "Выберите основной стол",
+        "success": "Столы успешно объединены",
+        "tablesCount": "Столов для объединения",
+        "title": "Объединить столы",
+        "totalCapacity": "Общая вместимость",
+        "warning": "Объединённые столы разделят один заказ и могут быть разделены позже."
+      },
+      "merged": "Объединён",
+      "noTables": "Столы не найдены",
+      "noTablesInSection": "В этой секции нет столов",
+      "occupied": "Занят",
+      "outOfService": "Не обслуживается",
+      "reserved": "Забронирован",
+      "selectTable": "Выберите стол",
+      "selectTableDesc": "Выберите стол для заказа в зале",
+      "selectTablePrompt": "Нажмите на свободный стол, чтобы выбрать",
+      "selectTables": "Выберите столы",
+      "selectTablesDesc": "Выберите один или несколько столов для заказа в зале",
+      "selectTablesPrompt": "Нажимайте на свободные столы, чтобы выбрать (можно несколько)",
+      "selected": "Выбрано",
+      "table": "Стол",
+      "tableSelected": "Стол {{number}} выбран",
+      "tablesSelected": "Выбрано столов: {{count}}",
+      "totalCapacity": "Общая вместимость",
+      "unmerge": {
+        "confirm": "Разделить столы",
+        "error": "Не удалось разделить столы",
+        "success": "Столы успешно разделены",
+        "title": "Разделить столы"
+      }
     }
   },
   "pages": {
@@ -3304,7 +3632,12 @@
       "firstOrderOnly": "Только первый заказ",
       "stackable": "Суммируется",
       "orderTypes": "Типы заказов",
-      "applicableDays": "Дни недели"
+      "applicableDays": "Дни недели",
+      "noCategories": "Нет доступных категорий",
+      "noProducts": "Нет доступных товаров",
+      "selectCategories": "Выберите категории",
+      "selectProducts": "Выберите товары",
+      "selectedCount": "Выбрано: {{count}}"
     },
     "messages": {
       "fillRequired": "Заполните все обязательные поля",
@@ -4214,7 +4547,8 @@
     "wed": "Ср",
     "thu": "Чт",
     "fri": "Пт",
-    "sat": "Сб"
+    "sat": "Сб",
+    "table": "Стол"
   },
   "reservations": {
     "title": "Бронирования",
@@ -5051,7 +5385,7 @@
     "pageOf": "Страница {{n}} из {{m}}",
     "plansLoadFailed": "Не удалось загрузить каталог тарифов",
     "changePlan": "Сменить тариф",
-    "changePlanFor": "Смена тарифа \u2014 {{name}}",
+    "changePlanFor": "Смена тарифа — {{name}}",
     "plan": "Тариф",
     "selectPlan": "Выберите тариф",
     "expiresAt": "Действует до",
@@ -5085,5 +5419,31 @@
     "viewBilling": "Просмотр подписки",
     "retry": "Повторить",
     "logout": "Выйти"
+  },
+  "poSuggestions": {
+    "allStocked": "Все товары в достаточном количестве",
+    "confirmGenerateAll": "Создать заказы на закупку для всех предложенных позиций?",
+    "createAllPOs": "Создать все заказы",
+    "createPO": "Создать заказ",
+    "currentStock": "Текущий запас",
+    "estimatedCost": "Ориентировочная стоимость",
+    "ingredient": "Ингредиент",
+    "itemsNeedReorder": "позиций требуют пополнения",
+    "messages": {
+      "allPOsCreated": "Все заказы на закупку созданы",
+      "poCreateError": "Не удалось создать заказ на закупку",
+      "poCreated": "Заказ на закупку создан"
+    },
+    "noSuggestions": "Нет предложений по пополнению",
+    "paymentTerms": "Условия оплаты",
+    "reorderLevel": "Уровень пополнения",
+    "sku": "Артикул",
+    "subtitle": "Ингредиенты ниже уровня пополнения",
+    "suggestedQty": "Рекомендуемое количество",
+    "title": "Предложения по заказам на закупку",
+    "total": "Итого",
+    "totalItems": "Всего позиций",
+    "totalSuppliers": "Всего поставщиков",
+    "unitPrice": "Цена за единицу"
   }
 }

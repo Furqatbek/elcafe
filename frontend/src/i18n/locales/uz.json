@@ -295,7 +295,10 @@
       "ordersPerSeat": "O'ringa buyurtmalar",
       "peakStart": "Pik boshlanishi",
       "peakEnd": "Pik tugashi",
-      "peakPercentage": "Pik %"
+      "peakPercentage": "Pik %",
+      "orders": "Buyurtmalar",
+      "percentage": "Foiz",
+      "revenue": "Daromad"
     },
     "customer": {
       "title": "Mijozlar tahlili",
@@ -943,7 +946,21 @@
       "SIMILAR": "O'xshash",
       "UPSELL": "Premium muqobil",
       "COMPLEMENTARY": "Qo'shimcha"
-    }
+    },
+    "categoryImage": "Kategoriya rasmi",
+    "createCategoryDescription": "Menyuni tartibga solish uchun yangi kategoriya yarating",
+    "filteredResults": "Filtrlangan natijalar",
+    "messages": {
+      "confirmDeleteCategory": "Ushbu kategoriyani o'chirmoqchimisiz?",
+      "createCategoryError": "Kategoriya yaratib bo'lmadi",
+      "createProductError": "Mahsulot yaratib bo'lmadi",
+      "deleteCategoryError": "Kategoriyani o'chirib bo'lmadi",
+      "deleteProductError": "Mahsulotni o'chirib bo'lmadi",
+      "updateCategoryError": "Kategoriyani yangilab bo'lmadi",
+      "updateProductError": "Mahsulotni yangilab bo'lmadi"
+    },
+    "orEnterImageUrl": "Yoki rasm URL manzilini kiriting",
+    "updateCategoryDescription": "Ushbu kategoriya ma'lumotlarini yangilang"
   },
   "customers": {
     "title": "Mijozlar",
@@ -1201,7 +1218,79 @@
     "selectRestaurant": "Restoranni tanlang",
     "edit": "Tahrirlash",
     "actions": "Harakatlar",
-    "delete": "O‘chirish"
+    "delete": "O‘chirish",
+    "all": "Barchasi",
+    "allStatuses": "Barcha holatlar",
+    "apply": "Qo'llash",
+    "average": "O'rtacha",
+    "buttons": {
+      "approve": "Tasdiqlash",
+      "delete": "O'chirish",
+      "edit": "Tahrirlash",
+      "recordPayment": "To'lovni qayd etish",
+      "viewHistory": "Tarixni ko'rish"
+    },
+    "card": "Karta",
+    "cash": "Naqd",
+    "category": "Kategoriya",
+    "clickRefresh": "Ma'lumotlarni yuklash uchun yangilashni bosing",
+    "date": "Sana",
+    "dateRange": "Sana oralig'i",
+    "day": "Kun",
+    "days": "Kun",
+    "endDate": "Tugash sanasi",
+    "export": "Eksport",
+    "filter": "Filtr",
+    "from": "Dan",
+    "hour": "Soat",
+    "ingredient": "Ingredient",
+    "items": "Mahsulotlar",
+    "margin": "Marja",
+    "max": "Maks.",
+    "median": "Mediana",
+    "messages": {
+      "noProductsFound": "Mahsulotlar topilmadi"
+    },
+    "min": "Min.",
+    "more": "Ko'proq",
+    "na": "Mavjud emas",
+    "no": "Yo'q",
+    "noData": "Ma'lumot yo'q",
+    "none": "Yo'q",
+    "of": "dan",
+    "online": "Onlayn",
+    "or": "yoki",
+    "page": "Sahifa",
+    "placeholders": {
+      "allCategories": "Barcha kategoriyalar",
+      "contactEmail": "Aloqa email",
+      "decimalValue": "0.00",
+      "email": "Email",
+      "employeeId": "Xodim ID",
+      "imageUrl": "Rasm URL",
+      "name": "Ism",
+      "optionalDescription": "Tavsif (ixtiyoriy)",
+      "password": "Parol",
+      "phone": "Telefon",
+      "searchProducts": "Mahsulotlarni qidirish...",
+      "searchWaiters": "Ofitsiantlarni qidirish...",
+      "selectCategory": "Kategoriyani tanlang",
+      "tags": "Teglar",
+      "variantExample": "masalan, Kichik, O'rta, Katta"
+    },
+    "product": "Mahsulot",
+    "reset": "Tozalash",
+    "select": "Tanlash",
+    "startDate": "Boshlanish sanasi",
+    "status": "Holat",
+    "to": "Gacha",
+    "total": "Jami",
+    "type": "Tur",
+    "unavailable": "Mavjud emas",
+    "unlimited": "Cheksiz",
+    "update": "Yangilash",
+    "view": "Ko'rish",
+    "yes": "Ha"
   },
   "shift": {
     "dashboard": {
@@ -1617,7 +1706,8 @@
       "edit": "Tahrirlash",
       "delete": "O'chirish",
       "save": "Saqlash",
-      "saving": "Saqlanmoqda..."
+      "saving": "Saqlanmoqda...",
+      "recording": "Qayd etilmoqda..."
     },
     "purchaseOrders": {
       "title": "Xarid buyurtmalari",
@@ -1759,14 +1849,16 @@
         "paymentError": "To'lovni qayd etib bo'lmadi",
         "deleteSuccess": "Xarajat muvaffaqiyatli o'chirildi",
         "confirmDelete": "Ushbu xarajatni o'chirishga ishonchingiz komilmi?",
-        "cannotDeletePaid": "To'langan xarajatni o'chirib bo'lmaydi"
+        "cannotDeletePaid": "To'langan xarajatni o'chirib bo'lmaydi",
+        "deleteError": "Xarajatni o'chirib bo'lmadi"
       },
       "paymentStatus": {
         "UNPAID": "To'lanmagan",
         "PAID": "To'langan",
         "PARTIALLY_PAID": "Qisman to'langan"
       },
-      "managedInPayroll": "Ish haqi bo'limida boshqariladi"
+      "managedInPayroll": "Ish haqi bo'limida boshqariladi",
+      "saving": "Saqlanmoqda..."
     },
     "reports": {
       "title": "Moliyaviy hisobotlar",
@@ -2011,13 +2103,16 @@
       "status": "Holat",
       "active": "Faol",
       "trackInventory": "Inventarni kuzatish",
-      "trackExpiry": "Yaroqlilik muddatini kuzatish"
+      "trackExpiry": "Yaroqlilik muddatini kuzatish",
+      "category": "Kategoriya",
+      "quantity": "Miqdor"
     },
     "placeholders": {
       "name": "masalan, Pomidor, Tovuq go'shti",
       "sku": "masalan, ING-001",
       "description": "Ingredient haqida qisqacha tavsif",
-      "supplier": "masalan, ABC Oziq-ovqat yetkazib beruvchilar"
+      "supplier": "masalan, ABC Oziq-ovqat yetkazib beruvchilar",
+      "selectIngredient": "Ingredientni tanlang"
     },
     "units": {
       "kg": "Kilogramm (kg)",
@@ -2470,7 +2565,65 @@
         "batchNumber": "Partiya №"
       },
       "errors": {
-        "saveFailed": "Baholash sozlamalarini saqlab bo'lmadi"
+        "saveFailed": "Baholash sozlamalarini saqlab bo'lmadi",
+        "calculateFailed": "Zaxira qiymatini hisoblab bo'lmadi",
+        "loadFailed": "Baholash ma'lumotlarini yuklab bo'lmadi"
+      },
+      "cogs": {
+        "description": "COGS haqiqiy partiya tannarxlari asosida hisoblangan",
+        "orderCOGS": "Buyurtma tannarxi",
+        "period": "Davr",
+        "title": "Sotilgan tovarlar tannarxi",
+        "totalCOGS": "Jami tannarx"
+      },
+      "reports": {
+        "comparison": {
+          "description": "Zaxira qiymatini FIFO, LIFO va o'rtacha vaznli usullar bo'yicha solishtiring",
+          "fifoVsLifo": "FIFO va LIFO",
+          "fifoVsWac": "FIFO va WAC",
+          "ingredientComparisons": "Ingredientlar solishtiruvi",
+          "lifoVsWac": "LIFO va WAC",
+          "maxVariance": "Maks. og'ish",
+          "recommendation": "Tavsiya",
+          "title": "Tannarx solishtiruv hisoboti",
+          "variance": "Og'ish",
+          "variancePercent": "Og'ish %"
+        },
+        "inventory": {
+          "activeBatches": "Faol partiyalar",
+          "averageCost": "O'rtacha tannarx",
+          "byCategory": "Kategoriyalar bo'yicha",
+          "byIngredient": "Ingredientlar bo'yicha",
+          "description": "Zaxira qiymatining kategoriya va ingredientlar bo'yicha batafsil taqsimoti",
+          "ingredientsWithStock": "Zaxiradagi ingredientlar",
+          "newestBatchCost": "Eng yangi partiya tannarxi",
+          "ofTotal": "jamidan",
+          "oldestBatchCost": "Eng eski partiya tannarxi",
+          "percentOfTotal": "Jamidan %",
+          "title": "Zaxira baholash hisoboti"
+        },
+        "title": "Baholash hisobotlari",
+        "variance": {
+          "actualCost": "Haqiqiy tannarx",
+          "description": "Haqiqiy va standart tannarx og'ishlarini tahlil qilish",
+          "favorable": "Ijobiy",
+          "favorableVariances": "Ijobiy og'ishlar",
+          "generate": "Hisobot yaratish",
+          "selectDateRange": "Sana oralig'ini tanlang",
+          "standardCost": "Standart tannarx",
+          "title": "Tannarx og'ishi hisoboti",
+          "totalVariance": "Jami og'ish",
+          "unfavorable": "Salbiy",
+          "unfavorableVariances": "Salbiy og'ishlar",
+          "varianceReason": "Og'ish sababi"
+        }
+      },
+      "wac": {
+        "currentWAC": "Joriy WAC",
+        "lastUpdated": "Oxirgi yangilanish",
+        "recalculate": "WAC ni qayta hisoblash",
+        "recalculated": "WAC muvaffaqiyatli qayta hisoblandi",
+        "title": "O'rtacha vaznli tannarx"
       }
     },
     "valuationMethods": {
@@ -2518,6 +2671,10 @@
       "CRITICAL": "Tanqidiy",
       "HIGH": "Yuqori",
       "MEDIUM": "O'rta"
+    },
+    "form": {
+      "newQuantity": "Yangi miqdor *",
+      "notes": "Izohlar"
     }
   },
   "linkedItems": {
@@ -2647,7 +2804,13 @@
       "cancel": "Bekor qilish",
       "required": "Majburiy",
       "optional": "Ixtiyoriy",
-      "noModifiers": "Moslashtirish parametrlari mavjud emas"
+      "noModifiers": "Moslashtirish parametrlari mavjud emas",
+      "addOns": "Qo'shimchalar",
+      "backToMenu": "Menyuga qaytish",
+      "instructionsPlaceholder": "Masalan: piyozsiz, alohida sous...",
+      "selectSize": "O'lchamni tanlang",
+      "sizeLabel": "O'lcham: {{size}}",
+      "specialInstructions": "Maxsus ko'rsatmalar"
     },
     "orderDetails": {
       "title": "Buyurtma tafsilotlari",
@@ -2743,7 +2906,17 @@
       "orderNumber": "Buyurtma raqami",
       "printReceipt": "Chekni chop etish",
       "newOrder": "Yangi buyurtma boshlash",
-      "viewOrders": "Buyurtmalarni ko'rish"
+      "viewOrders": "Buyurtmalarni ko'rish",
+      "name": "Ism",
+      "paymentMethod": "To'lov usuli",
+      "phone": "Telefon",
+      "printKitchen": "Oshxona chekini chop etish",
+      "processing": "Ishlanmoqda...",
+      "readyForPickup": "Buyurtma olib ketishga tayyor!",
+      "sentToKitchen": "Buyurtma oshxonaga yuborildi",
+      "startNew": "Yangi buyurtma",
+      "thankYou": "Buyurtmangiz uchun rahmat",
+      "totalAmount": "Umumiy summa"
     },
     "errors": {
       "loadMenuFailed": "Menyuni yuklashda xatolik",
@@ -2848,7 +3021,8 @@
       "error": "Hisobni bo'lishda xatolik",
       "originalTotal": "Asl jami",
       "paid": "To'langan",
-      "unpaid": "To'lanmagan"
+      "unpaid": "To'lanmagan",
+      "payNow": "Hozir to'lash"
     },
     "shift": {
       "noActiveShift": "Faol smena yo'q",
@@ -2982,6 +3156,114 @@
       "phonePlaceholder": "Telefon raqami…",
       "noMatches": "Mos keladigan natija yo‘q",
       "noOrderYet": "Mijozni bog‘lashdan oldin buyurtmani saqlang."
+    },
+    "details": {
+      "addressPlaceholder": "Asosiy ko'cha, 123",
+      "backToCart": "Savatga qaytish",
+      "city": "Shahar",
+      "cityPlaceholder": "Toshkent",
+      "customerInfo": "Mijoz ma'lumotlari",
+      "customerName": "Mijoz ismi",
+      "deliveryAddress": "Yetkazish manzili",
+      "deliveryInstructions": "Yetkazish bo'yicha ko'rsatmalar (ixtiyoriy)",
+      "emailOptional": "Email (ixtiyoriy)",
+      "emailPlaceholder": "customer@example.com",
+      "errors": {
+        "addressRequired": "Manzil kiritilishi shart",
+        "cityRequired": "Shahar kiritilishi shart",
+        "guestCountMin": "Mehmonlar soni kamida 1 bo'lishi kerak",
+        "nameRequired": "Ism kiritilishi shart",
+        "phoneRequired": "Telefon raqami kiritilishi shart",
+        "tableRequired": "Stol raqami kiritilishi shart",
+        "zipRequired": "Pochta indeksi kiritilishi shart"
+      },
+      "instructionsPlaceholder": "Masalan: eshik qo'ng'irog'ini bosing, eshik oldida qoldiring...",
+      "namePlaceholder": "Mijoz ismini kiriting",
+      "numberOfGuests": "Mehmonlar soni",
+      "phoneNumber": "Telefon raqami",
+      "phonePlaceholder": "+998 90 123-45-67",
+      "proceedToPayment": "To'lovga o'tish",
+      "streetAddress": "Ko'cha manzili",
+      "tableInfo": "Stol ma'lumotlari",
+      "tableNumber": "Stol raqami",
+      "tablePlaceholder": "masalan, 12, A5",
+      "title": "Buyurtma tafsilotlari",
+      "zipCode": "Pochta indeksi",
+      "zipPlaceholder": "100001"
+    },
+    "enterFullscreen": "To'liq ekran",
+    "exitFullscreen": "To'liq ekrandan chiqish (ESC)",
+    "kitchen": {
+      "estimatedTime": "Taxminiy vaqt: {{minutes}} daqiqa",
+      "inQueue": "Oshxona navbatida",
+      "notSent": "Kutilmoqda",
+      "pending": "Kutilmoqda",
+      "pickedUp": "Olib ketildi",
+      "preparedBy": "{{chef}} tomonidan tayyorlanmoqda",
+      "preparing": "Tayyorlanmoqda",
+      "ready": "Tayyor",
+      "status": "Oshxona holati"
+    },
+    "kitchenTicket": {
+      "customer": "Mijoz",
+      "deliveryTo": "Yetkazish manzili",
+      "guests": "Mehmonlar",
+      "items": "Mahsulotlar",
+      "note": "Izoh",
+      "orderNotes": "Buyurtma izohlari",
+      "orderNumber": "Buyurtma №",
+      "pending": "Kutilmoqda",
+      "table": "Stol",
+      "title": "Oshxona buyurtmasi",
+      "type": "Turi"
+    },
+    "tables": {
+      "addTablesHint": "Stollarni sozlamalarda qo'shing",
+      "allSections": "Barcha bo'limlar",
+      "available": "Bo'sh",
+      "capacity": "Sig'im",
+      "cleaning": "Tozalanmoqda",
+      "clearSelection": "Tozalash",
+      "confirmTable": "Stolni tasdiqlash",
+      "confirmTables": "{{count}} ta stolni tasdiqlash",
+      "floorPlan": "Zal rejasi",
+      "gridView": "To'r ko'rinishi",
+      "guests": "Mehmonlar",
+      "merge": {
+        "confirm": "Stollarni birlashtirish",
+        "description": "Asosiy stolni tanlang. Boshqa stollar unga birlashtiriladi.",
+        "error": "Stollarni birlashtirib bo'lmadi",
+        "main": "Asosiy",
+        "selectMain": "Asosiy stolni tanlang",
+        "success": "Stollar birlashtirildi",
+        "tablesCount": "Birlashtiriladigan stollar",
+        "title": "Stollarni birlashtirish",
+        "totalCapacity": "Umumiy sig'im",
+        "warning": "Birlashtirilgan stollar bitta buyurtmani baham ko'radi va keyinroq ajratilishi mumkin."
+      },
+      "merged": "Birlashtirilgan",
+      "noTables": "Stollar topilmadi",
+      "noTablesInSection": "Bu bo'limda stollar yo'q",
+      "occupied": "Band",
+      "outOfService": "Xizmatdan tashqari",
+      "reserved": "Band qilingan",
+      "selectTable": "Stolni tanlang",
+      "selectTableDesc": "Zaldagi buyurtma uchun stol tanlang",
+      "selectTablePrompt": "Tanlash uchun bo'sh stolni bosing",
+      "selectTables": "Stollarni tanlang",
+      "selectTablesDesc": "Zaldagi buyurtma uchun bir yoki bir nechta stol tanlang",
+      "selectTablesPrompt": "Tanlash uchun bo'sh stollarni bosing (bir nechta mumkin)",
+      "selected": "Tanlangan",
+      "table": "Stol",
+      "tableSelected": "{{number}}-stol tanlandi",
+      "tablesSelected": "{{count}} ta stol tanlandi",
+      "totalCapacity": "Umumiy sig'im",
+      "unmerge": {
+        "confirm": "Stollarni ajratish",
+        "error": "Stollarni ajratib bo'lmadi",
+        "success": "Stollar ajratildi",
+        "title": "Stollarni ajratish"
+      }
     }
   },
   "pages": {
@@ -3348,7 +3630,12 @@
       "firstOrderOnly": "Faqat birinchi buyurtma",
       "stackable": "Jamlash mumkin",
       "orderTypes": "Buyurtma turlari",
-      "applicableDays": "Hafta kunlari"
+      "applicableDays": "Hafta kunlari",
+      "noCategories": "Kategoriyalar mavjud emas",
+      "noProducts": "Mahsulotlar mavjud emas",
+      "selectCategories": "Kategoriyalarni tanlang",
+      "selectProducts": "Mahsulotlarni tanlang",
+      "selectedCount": "{{count}} ta tanlandi"
     },
     "messages": {
       "fillRequired": "Barcha majburiy maydonlarni to'ldiring",
@@ -4258,7 +4545,8 @@
     "wed": "Chor",
     "thu": "Pay",
     "fri": "Jum",
-    "sat": "Shan"
+    "sat": "Shan",
+    "table": "Stol"
   },
   "reservations": {
     "title": "Band qilishlar",
@@ -5095,7 +5383,7 @@
     "pageOf": "{{m}} dan {{n}}-sahifa",
     "plansLoadFailed": "Tariflar katalogini yuklab bo'lmadi",
     "changePlan": "Tarifni o'zgartirish",
-    "changePlanFor": "Tarifni o'zgartirish \u2014 {{name}}",
+    "changePlanFor": "Tarifni o'zgartirish — {{name}}",
     "plan": "Tarif",
     "selectPlan": "Tarifni tanlang",
     "expiresAt": "Amal qilish muddati",
@@ -5129,5 +5417,31 @@
     "viewBilling": "Obunani ko'rish",
     "retry": "Qayta urinish",
     "logout": "Chiqish"
+  },
+  "poSuggestions": {
+    "allStocked": "Hamma narsa yetarli zaxirada",
+    "confirmGenerateAll": "Barcha taklif qilingan mahsulotlar uchun xarid buyurtmalari yaratilsinmi?",
+    "createAllPOs": "Barcha buyurtmalarni yaratish",
+    "createPO": "Buyurtma yaratish",
+    "currentStock": "Joriy zaxira",
+    "estimatedCost": "Taxminiy narx",
+    "ingredient": "Ingredient",
+    "itemsNeedReorder": "mahsulot to'ldirishni talab qiladi",
+    "messages": {
+      "allPOsCreated": "Barcha xarid buyurtmalari yaratildi",
+      "poCreateError": "Xarid buyurtmasini yaratib bo'lmadi",
+      "poCreated": "Xarid buyurtmasi yaratildi"
+    },
+    "noSuggestions": "To'ldirish bo'yicha takliflar yo'q",
+    "paymentTerms": "To'lov shartlari",
+    "reorderLevel": "To'ldirish darajasi",
+    "sku": "SKU",
+    "subtitle": "To'ldirish darajasidan past ingredientlar",
+    "suggestedQty": "Tavsiya etilgan miqdor",
+    "title": "Xarid buyurtmalari takliflari",
+    "total": "Jami",
+    "totalItems": "Jami mahsulotlar",
+    "totalSuppliers": "Jami yetkazib beruvchilar",
+    "unitPrice": "Birlik narxi"
   }
 }
