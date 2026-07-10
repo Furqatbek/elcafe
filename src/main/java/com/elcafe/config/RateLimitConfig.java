@@ -51,16 +51,20 @@ public class RateLimitConfig {
     }
 
     /**
-     * Evict auth buckets periodically so an attacker rotating source IPs can't grow the map without
-     * bound. Clearing only resets rate windows (worst case a fresh 1-minute window), and per-account
-     * lockout (LoginAttemptService) is unaffected, so this is safe.
+     * Evict rate-limit buckets periodically so the maps can't grow without bound. {@code authBuckets}
+     * (per IP+endpoint) and {@code userBuckets} (per username, plus {@code "analytics:"+username}) both
+     * accrue one permanent entry per distinct key — a slow heap leak proportional to distinct principals
+     * / source IPs. Clearing only resets rate windows (worst case a fresh 1-minute window); per-account
+     * lockout (LoginAttemptService) is separate and unaffected. {@code endpointBuckets} is keyed by a
+     * finite set of endpoint names, so it is already bounded and left alone.
      */
     @Scheduled(fixedRate = 3_600_000) // hourly
-    void evictAuthBuckets() {
-        int size = authBuckets.size();
-        if (size > 0) {
-            authBuckets.clear();
-            log.debug("Cleared {} auth rate-limit buckets", size);
+    void evictRateLimitBuckets() {
+        int cleared = authBuckets.size() + userBuckets.size();
+        authBuckets.clear();
+        userBuckets.clear();
+        if (cleared > 0) {
+            log.debug("Cleared {} rate-limit buckets (auth + user)", cleared);
         }
     }
 
@@ -140,15 +144,5 @@ public class RateLimitConfig {
     public long getRemainingAnalyticsTokens(String username) {
         Bucket bucket = getAnalyticsBucket(username);
         return bucket.getAvailableTokens();
-    }
-
-    /**
-     * Clear expired buckets (call periodically for cleanup).
-     */
-    public void cleanupExpiredBuckets() {
-        // In production, you'd implement TTL-based cleanup
-        // For now, we rely on ConcurrentHashMap's bounded size
-        log.debug("Bucket cleanup - current user buckets: {}, endpoint buckets: {}",
-                  userBuckets.size(), endpointBuckets.size());
     }
 }

@@ -45,6 +45,23 @@ public interface SmsLogRepository extends JpaRepository<SmsLog, Long> {
     @Query("SELECT l.messageType, COUNT(l) FROM SmsLog l WHERE l.createdAt >= :since GROUP BY l.messageType")
     List<Object[]> getTypeCountsSince(@Param("since") LocalDateTime since);
 
+    // Range-based aggregates for getStatistics(from, to) — computed in the DB so a month of logs is never
+    // loaded into heap just to be counted in Java (audit PERF-4).
+    @Query("SELECT l.status, COUNT(l) FROM SmsLog l WHERE l.createdAt BETWEEN :from AND :to GROUP BY l.status")
+    List<Object[]> getStatusCountsBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("SELECT l.messageType, COUNT(l) FROM SmsLog l WHERE l.createdAt BETWEEN :from AND :to GROUP BY l.messageType")
+    List<Object[]> getTypeCountsBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    @Query("SELECT COALESCE(SUM(l.cost), 0) FROM SmsLog l WHERE l.createdAt BETWEEN :from AND :to")
+    BigDecimal getTotalCostBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // Bulk retention delete — a single DELETE instead of loading every expired row into the persistence
+    // context first (audit PERF-12).
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM SmsLog l WHERE l.createdAt < :before")
+    int bulkDeleteByCreatedAtBefore(@Param("before") LocalDateTime before);
+
     @Query("SELECT DATE(l.createdAt), COUNT(l), SUM(CASE WHEN l.status = 'DELIVERED' THEN 1 ELSE 0 END) " +
            "FROM SmsLog l WHERE l.createdAt >= :since GROUP BY DATE(l.createdAt) ORDER BY DATE(l.createdAt)")
     List<Object[]> getDailyStatsSince(@Param("since") LocalDateTime since);

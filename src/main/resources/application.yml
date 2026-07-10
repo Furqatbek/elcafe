@@ -24,11 +24,13 @@ spring:
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
       minimum-idle: 5
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+      # Warn if a connection is held longer than this (ms) — surfaces leaks and open-in-view stalls.
+      leak-detection-threshold: 30000
 
   jpa:
     hibernate:
@@ -41,6 +43,14 @@ spring:
         use_sql_comments: false
         default_schema: public
         enable_lazy_load_no_trans: true
+        # Batch lazy proxy/collection loads into IN(...) queries instead of one-per-parent (N+1), and
+        # batch inserts/updates. Pure performance — no behavior change; complements the still-open
+        # open-in-view (turning that off is a separate, load-tested change).
+        default_batch_fetch_size: 25
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
     open-in-view: true
 
   flyway:

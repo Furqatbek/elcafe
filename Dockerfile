@@ -28,7 +28,12 @@ USER app
 
 EXPOSE 8080
 
-ENV JAVA_OPTS="-Xmx512m -Xms256m -Duser.timezone=Asia/Tashkent"
+# Container-aware heap: size to the container's memory limit (set one in compose/k8s) instead of a fixed
+# 512m that OOMs under real load, and dump the heap on OOM so a crash is diagnosable rather than silent.
+# -XX:+ExitOnOutOfMemoryError lets the orchestrator restart cleanly. Override JAVA_OPTS to tune.
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50 \
+-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/logs -XX:+ExitOnOutOfMemoryError \
+-Duser.timezone=Asia/Tashkent"
 
 # exec form so the JVM replaces the shell and becomes PID 1 — SIGTERM then reaches it and Spring's
 # graceful shutdown (server.shutdown=graceful) can drain in-flight requests instead of being SIGKILLed.

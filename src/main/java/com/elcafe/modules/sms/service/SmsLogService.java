@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -116,39 +117,46 @@ public class SmsLogService {
      */
     @Transactional(readOnly = true)
     public Map<String, Object> getStatistics(LocalDateTime from, LocalDateTime to) {
+        // Aggregate in the DB (GROUP BY / SUM) instead of loading every log row in the window into memory
+        // and counting in Java — a month of a shared account's SMS on a small heap was an OOM (PERF-4).
+        Map<MessageStatus, Long> byStatus = toCountMap(smsLogRepository.getStatusCountsBetween(from, to));
+        Map<SmsMessageType, Long> byType = toCountMap(smsLogRepository.getTypeCountsBetween(from, to));
+        BigDecimal cost = smsLogRepository.getTotalCostBetween(from, to);
+
+        long totalSent = byStatus.values().stream().mapToLong(Long::longValue).sum();
+        long delivered = count(byStatus, MessageStatus.DELIVERED);
+        long failed = count(byStatus, MessageStatus.FAILED) + count(byStatus, MessageStatus.REJECTED);
+        long pending = count(byStatus, MessageStatus.PENDING) + count(byStatus, MessageStatus.QUEUED)
+                + count(byStatus, MessageStatus.SENT);
+
         Map<String, Object> stats = new HashMap<>();
-
-        List<SmsLog> logs = smsLogRepository.findByCreatedAtBetweenOrderByCreatedAtDesc(from, to);
-
-        long totalSent = logs.size();
-        long delivered = logs.stream().filter(l -> l.getStatus() == MessageStatus.DELIVERED).count();
-        long failed = logs.stream().filter(l -> l.getStatus() == MessageStatus.FAILED || l.getStatus() == MessageStatus.REJECTED).count();
-        long pending = logs.stream().filter(l -> l.getStatus() == MessageStatus.PENDING || l.getStatus() == MessageStatus.QUEUED || l.getStatus() == MessageStatus.SENT).count();
-
-        // Count by type
-        long campaignCount = logs.stream().filter(l -> l.getMessageType() == SmsMessageType.CAMPAIGN).count();
-        long automationCount = logs.stream().filter(l -> l.getMessageType() == SmsMessageType.AUTOMATION).count();
-        long transactionalCount = logs.stream().filter(l -> l.getMessageType() == SmsMessageType.TRANSACTIONAL).count();
-        long manualCount = logs.stream().filter(l -> l.getMessageType() == SmsMessageType.MANUAL).count();
-
-        // Calculate total cost
-        double totalCost = logs.stream()
-                .filter(l -> l.getCost() != null)
-                .mapToDouble(l -> l.getCost().doubleValue())
-                .sum();
-
         stats.put("totalSent", totalSent);
         stats.put("delivered", delivered);
         stats.put("failed", failed);
         stats.put("pending", pending);
         stats.put("deliveryRate", totalSent > 0 ? (delivered * 100.0 / totalSent) : 0);
-        stats.put("campaignMessages", campaignCount);
-        stats.put("automationMessages", automationCount);
-        stats.put("transactionalMessages", transactionalCount);
-        stats.put("manualMessages", manualCount);
-        stats.put("totalCost", totalCost);
-
+        stats.put("campaignMessages", count(byType, SmsMessageType.CAMPAIGN));
+        stats.put("automationMessages", count(byType, SmsMessageType.AUTOMATION));
+        stats.put("transactionalMessages", count(byType, SmsMessageType.TRANSACTIONAL));
+        stats.put("manualMessages", count(byType, SmsMessageType.MANUAL));
+        stats.put("totalCost", cost == null ? 0.0 : cost.doubleValue());
         return stats;
+    }
+
+    private static <K> Map<K, Long> toCountMap(List<Object[]> rows) {
+        Map<K, Long> m = new HashMap<>();
+        for (Object[] row : rows) {
+            if (row[0] != null) {
+                @SuppressWarnings("unchecked")
+                K key = (K) row[0];
+                m.put(key, ((Number) row[1]).longValue());
+            }
+        }
+        return m;
+    }
+
+    private static <K> long count(Map<K, Long> m, K key) {
+        return m.getOrDefault(key, 0L);
     }
 
     /**
@@ -156,9 +164,8 @@ public class SmsLogService {
      */
     @Transactional
     public int deleteOldLogs(LocalDateTime before) {
-        List<SmsLog> oldLogs = smsLogRepository.findByCreatedAtBefore(before);
-        int count = oldLogs.size();
-        smsLogRepository.deleteAll(oldLogs);
+        // Bulk DELETE — don't load every expired row into the persistence context first (OOM at scale).
+        int count = smsLogRepository.bulkDeleteByCreatedAtBefore(before);
         log.info("Deleted {} old SMS logs before {}", count, before);
         return count;
     }
