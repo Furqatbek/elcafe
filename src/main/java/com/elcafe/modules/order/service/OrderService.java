@@ -22,6 +22,7 @@ import com.elcafe.modules.order.repository.PaymentRepository;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
 import com.elcafe.modules.notification.service.CustomerNotificationService;
 import com.elcafe.modules.order.service.OrderEventBroadcaster;
+import com.elcafe.modules.marketing.event.OrderCompletionEvents;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
@@ -56,6 +57,7 @@ public class OrderService {
     @Lazy private final PrintService printService;
     @Lazy private final InventoryValuationService inventoryValuationService;
     @Lazy private final OwnerNotificationService ownerNotificationService;
+    private final OrderCompletionEvents orderCompletionEvents;
     @Lazy private final CustomerNotificationService customerNotificationService;
     @Lazy private final OrderEventBroadcaster orderEventBroadcaster;
 
@@ -170,6 +172,12 @@ public class OrderService {
                     // Don't fail the order status update if revenue recording fails
                 }
             }
+        }
+
+        // Loyalty/marketing completion chain (audit FUNC-15): fires once, the first time the order
+        // is settled AND fully paid. Payments are untouched here, so current paidness == prior.
+        if (orderCompletionEvents != null) {
+            orderCompletionEvents.publishIfQualified(order, currentStatus, order.isFullyPaid());
         }
 
         // Release tables when dine-in order is completed, delivered, or cancelled

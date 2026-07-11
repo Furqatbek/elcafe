@@ -78,6 +78,20 @@ public class LoyaltyService {
     }
 
     /**
+     * Whether completion accrual already ran for this order, keyed by the bonus ledger's
+     * idempotency entry. Used by {@code LoyaltyOrderEventListener} as a replay guard: the ledger
+     * itself dedupes, but the stats update and milestone visit counters do not.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasProcessedOrderCompletion(Long orderId) {
+        return bonusService.transactionExists(orderBonusKey(orderId));
+    }
+
+    private static String orderBonusKey(Long orderId) {
+        return "order-bonus-" + orderId;
+    }
+
+    /**
      * Process bonus accrual when order is completed
      */
     @Transactional
@@ -110,7 +124,7 @@ public class LoyaltyService {
         BigDecimal finalBonus = applyPromotions(bonusWithTier, order, config);
 
         // Record the transaction
-        String idempotencyKey = "order-bonus-" + order.getId();
+        String idempotencyKey = orderBonusKey(order.getId());
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("orderId", order.getId());
         metadata.put("orderAmount", order.getTotal());

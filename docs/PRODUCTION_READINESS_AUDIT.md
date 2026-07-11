@@ -64,6 +64,24 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **FUNC-15 wired, dark: loyalty accrual + completion SMS are now one env flip away.** The dormant
+  order-completed chain (loyalty points, milestone visits, first-order bonus, thank-you/first-order
+  SMS) is connected behind `ORDER_COMPLETED_EVENTS_ENABLED` (default OFF — pinned by
+  `OrderCompletedEventDefaultOffTest`: a deploy alone can never start granting bonuses). One decision
+  point, `OrderCompletionEvents`, publishes exactly once per order — on the first moment it is
+  settled (COMPLETED/DELIVERED) AND fully paid AND has a customer — wired into all six mutation
+  sites that can reach that moment (status PATCH, POS auto-pay birth, waiter close, PaymentService
+  full-payment edge, courier delivery, POS table close), each passing its pre-mutation state so
+  re-transitions (paid DELIVERED→COMPLETED, waiter re-close) never double-fire. That matters because
+  the recon found the chain is NOT replay-safe: the bonus ledger dedupes by idempotency key, but
+  loyalty stats (totalSpent/orderCount → tier upgrades), milestone visit counters, and SMS sends do
+  not. Listeners hardened for the residual edge (admin revert + re-complete): the loyalty listener
+  now checks the ledger key before processing, and both listeners skip null-customer events instead
+  of NPE-ing. `isFirstOrder` is computed from a settled-status count (new
+  `countByCustomer_IdAndStatusIn`), not the cancelled-inflated all-orders count. Evidence:
+  `OrderCompletionEventsTest` (10 gate-edge cases), `LoyaltyOrderEventListenerTest`,
+  `OrderCompletedEventFlowTest` (real transition path, enabled: publish-once, isFirstOrder
+  true/false, walk-in/unpaid/re-transition publish nothing).
 - **Async-notification lazy sweep: admin realtime broadcast fixed; two more in-memory paginations
   killed; the Order entity graph was a no-op all along.** Following the plan-gate bug class
   (lazy access after the loading session is gone) across every listener/@Async surface found one
@@ -383,7 +401,7 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
 | FUNC-12 | MED | Hardcoded, untranslatable customer components (0 `t()`): OrderStatus/OrderTracking pages (English), ReceiptTemplateSettings (Uzbek), KitchenTicket (English). | `pages/customer/*`, `ReceiptTemplateSettings.jsx`, `pos/components/KitchenTicket.jsx` |
 | FUNC-13 | MED | Overtime pay loads every tenant's shifts for the week into memory then filters (`restaurant = null`). | `OvertimeRuleService.java:95` |
 | FUNC-14 | LOW | Subscription billing charges nothing **by design** (Noop provider, prices 0) — monetization is Phase B, gated on an acquiring contract. Not a bug. | `NoopPaymentProvider.java:23`; `SubscriptionPlan.java:51` |
-| FUNC-15 | MED | Order-completion loyalty accrual (points/milestones/first-order bonus) and thank-you/first-order SMS never fire: `publishOrderCompleted` has 0 callers (`OrderRefundedEvent` likewise never published). Listeners are wired and detachment-safe — activation is one publish call at completion, but granting bonuses is a **product decision**. | `MarketingEventPublisher.java:35`; `LoyaltyOrderEventListener.java:38` |
+| FUNC-15 | MED | ~~Order-completion loyalty accrual and thank-you/first-order SMS never fire~~ **Wired, dark**: the chain now publishes behind `ORDER_COMPLETED_EVENTS_ENABLED` (default off — enabling grants bonuses, a product call). Fires once per order via `OrderCompletionEvents` (settled ∧ fully paid ∧ has customer). `OrderRefundedEvent` remains unpublished (refund reversal still dormant). | `OrderCompletionEvents.java`; `MarketingEventPublisher.java:35` |
 
 ### 2.7 What is genuinely solid (do not regress)
 

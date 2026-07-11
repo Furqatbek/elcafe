@@ -20,6 +20,7 @@ import com.elcafe.modules.order.repository.PaymentRepository;
 import com.elcafe.modules.financial.service.RevenueRecordingService;
 import com.elcafe.modules.financial.service.RevenueService;
 import jakarta.persistence.OptimisticLockException;
+import com.elcafe.modules.marketing.event.OrderCompletionEvents;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -48,6 +49,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final OrderCompletionEvents orderCompletionEvents;
     private final RevenueService revenueService;
     private final RevenueRecordingService revenueRecordingService;
     private final PaymentIdempotencyService idempotencyService;
@@ -366,6 +368,11 @@ public class PaymentService {
                     PaymentFailureReason.DATABASE_ERROR, e);
         }
 
+        // State BEFORE this payment lands — the completion gate publishes only on the
+        // not-qualified -> qualified edge (audit FUNC-15).
+        OrderStatus statusBeforePayment = order.getStatus();
+        boolean fullyPaidBeforePayment = order.isFullyPaid();
+
         order.addPayment(savedPayment);
 
         // Update order tip if this payment includes tip
@@ -385,6 +392,11 @@ public class PaymentService {
 
             // Record revenue when order is fully paid (non-critical - logged but doesn't rollback)
             recordRevenueNonCritical(order, orderId);
+
+            // Loyalty/marketing completion chain (audit FUNC-15): the paid-side qualifying edge.
+            if (orderCompletionEvents != null) {
+                orderCompletionEvents.publishIfQualified(order, statusBeforePayment, fullyPaidBeforePayment);
+            }
         }
 
         try {

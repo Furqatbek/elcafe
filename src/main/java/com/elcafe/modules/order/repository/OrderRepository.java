@@ -365,6 +365,12 @@ public interface OrderRepository extends JpaRepository<Order, Long>, JpaSpecific
 
     long countByCustomer_Id(Long customerId);
 
+    /**
+     * Settled-order count for a customer ({@code OrderCompletionEvents}' isFirstOrder computation) —
+     * unlike {@link #countByCustomer_Id} it excludes cancelled/pending noise by status set.
+     */
+    long countByCustomer_IdAndStatusIn(Long customerId, Collection<OrderStatus> statuses);
+
     @Query("SELECT DISTINCT o.orderSource FROM Order o WHERE o.customer.id = :customerId")
     List<OrderSource> findDistinctOrderSourcesByCustomerId(@Param("customerId") Long customerId);
 

@@ -5,6 +5,7 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
+import com.elcafe.modules.marketing.event.OrderCompletionEvents;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ import java.util.List;
 public class POSTableService {
 
     private final OrderRepository orderRepository;
+    private final OrderCompletionEvents orderCompletionEvents;
     private final RestaurantTableRepository restaurantTableRepository;
 
     /**
@@ -41,6 +43,8 @@ public class POSTableService {
                     "Process payment before closing the order.");
         }
 
+        OrderStatus statusBeforeClose = order.getStatus();
+
         // Update order status to DELIVERED/COMPLETED if not already
         if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.CANCELLED) {
             order.setStatus(OrderStatus.DELIVERED);
@@ -50,7 +54,16 @@ public class POSTableService {
         // Release all tables associated with this order
         releaseTablesForOrder(order);
 
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+
+        // Loyalty/marketing completion chain (audit FUNC-15): normally the qualifying edge fired when
+        // PaymentService recorded full payment (which sets DELIVERED); this covers a paid order that
+        // somehow reaches table close still unsettled. Payments are untouched here.
+        if (orderCompletionEvents != null) {
+            orderCompletionEvents.publishIfQualified(saved, statusBeforeClose, saved.isFullyPaid());
+        }
+
+        return saved;
     }
 
     /**

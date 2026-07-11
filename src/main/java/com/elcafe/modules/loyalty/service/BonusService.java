@@ -27,6 +27,13 @@ public class BonusService {
 
     private final BonusTransactionRepository bonusTransactionRepository;
 
+    /** Whether a ledger entry with this idempotency key exists (replay guard for event listeners). */
+    @Transactional(readOnly = true)
+    public boolean transactionExists(String idempotencyKey) {
+        return idempotencyKey != null
+                && bonusTransactionRepository.findByIdempotencyKey(idempotencyKey).isPresent();
+    }
+
     /**
      * Record a bonus transaction (idempotent)
      */

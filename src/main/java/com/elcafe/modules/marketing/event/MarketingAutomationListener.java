@@ -51,6 +51,11 @@ public class MarketingAutomationListener {
     @Async
     public void handleOrderCompleted(OrderCompletedEvent event) {
         Customer customer = event.getCustomer();
+        if (customer == null || event.getOrder() == null) {
+            // Walk-in orders carry no customer; nothing to message. (OrderCompletionEvents never
+            // publishes without one — this protects against any future publisher that might.)
+            return;
+        }
         log.info("Marketing automation triggered for order completion: {} (customer: {})",
                 event.getOrder().getId(), customer.getId());
 

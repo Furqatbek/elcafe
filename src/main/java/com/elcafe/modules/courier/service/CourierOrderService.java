@@ -9,6 +9,7 @@ import com.elcafe.modules.order.entity.OrderStatusHistory;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
 import com.elcafe.modules.order.service.OrderJsonHydration;
+import com.elcafe.modules.marketing.event.OrderCompletionEvents;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +34,7 @@ public class CourierOrderService {
     private static final int AVAILABLE_ORDERS_CAP = 200;
 
     private final OrderRepository orderRepository;
+    private final OrderCompletionEvents orderCompletionEvents;
     private final CourierProfileRepository courierProfileRepository;
     private final NotificationService notificationService;
     private final KitchenOrderService kitchenOrderService;
@@ -211,6 +213,7 @@ public class CourierOrderService {
             throw new RuntimeException("Order is not out for delivery");
         }
 
+        OrderStatus statusBeforeDelivery = order.getStatus();
         order.setStatus(OrderStatus.DELIVERED);
         order.getDeliveryInfo().setDeliveryTime(OffsetDateTime.now(ZoneOffset.UTC));
 
@@ -223,6 +226,12 @@ public class CourierOrderService {
         order.addStatusHistory(statusHistory);
 
         Order savedOrder = orderRepository.save(order);
+
+        // Loyalty/marketing completion chain (audit FUNC-15): fires now if the delivery was already
+        // paid (prepaid); an unpaid COD order fires later, when PaymentService records full payment.
+        if (orderCompletionEvents != null) {
+            orderCompletionEvents.publishIfQualified(savedOrder, statusBeforeDelivery, savedOrder.isFullyPaid());
+        }
 
         // Credit courier wallet for delivery
         try {

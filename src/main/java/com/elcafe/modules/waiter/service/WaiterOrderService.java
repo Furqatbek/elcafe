@@ -34,6 +34,7 @@ import com.elcafe.modules.waiter.entity.Waiter;
 import com.elcafe.modules.waiter.event.OrderEventPublisher;
 import com.elcafe.modules.waiter.enums.OrderEventType;
 import com.elcafe.modules.waiter.repository.WaiterRepository;
+import com.elcafe.modules.marketing.event.OrderCompletionEvents;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -63,6 +64,7 @@ import java.util.stream.Collectors;
 public class WaiterOrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderCompletionEvents orderCompletionEvents;
     private final RestaurantTableRepository tableRepository;
     private final WaiterRepository waiterRepository;
     private final CustomerRepository customerRepository;
@@ -576,6 +578,7 @@ public class WaiterOrderService {
                     "Process payment before closing the order.");
         }
 
+        OrderStatus statusBeforeClose = order.getStatus();
         order.setStatus(OrderStatus.COMPLETED);
 
         // Update table status to cleaning
@@ -595,6 +598,12 @@ public class WaiterOrderService {
         waiterCommissionService.calculateCommissionForOrder(updatedOrder)
                 .ifPresent(commission -> log.info("Commission calculated for order {}: {} ({}%)",
                         order.getOrderNumber(), commission.getCommissionAmount(), commission.getCommissionPercent()));
+
+        // Loyalty/marketing completion chain (audit FUNC-15). closeOrder requires full payment, so
+        // prior paidness is true — re-closing an already-settled order is not a new qualifying edge.
+        if (orderCompletionEvents != null) {
+            orderCompletionEvents.publishIfQualified(updatedOrder, statusBeforeClose, true);
+        }
 
         log.info("Closed order {} by waiter {}", order.getOrderNumber(), waiter.getName());
 

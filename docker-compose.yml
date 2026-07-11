@@ -131,6 +131,9 @@ services:
       # errors are reported with stack trace + requestId/tenantId context.
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      # Order-completion event chain (FUNC-15): loyalty accrual + completion SMS. OFF by default —
+      # setting this to true starts granting customer bonuses (product decision).
+      ORDER_COMPLETED_EVENTS_ENABLED: ${ORDER_COMPLETED_EVENTS_ENABLED:-false}
     ports:
       # Loopback-only. nginx reaches the app over the compose network (upstream backend -> backend:8080),
       # so the app must NOT be published on the network — that would let clients bypass nginx (and forge

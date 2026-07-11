@@ -236,6 +236,15 @@ app:
       #   off | shadow | enforce
       mode: ${SUBSCRIPTION_ENFORCEMENT_MODE:off}
 
+  marketing:
+    order-completed-events:
+      # Activates the order-completion event chain (audit FUNC-15): loyalty point accrual, milestone
+      # visits, first-order bonus, and thank-you/first-order SMS automations. The chain shipped fully
+      # built but DARK — nothing published the event. OFF by default because enabling starts granting
+      # customer bonuses (a product decision, not an ops one). Fires once per order, the first time it
+      # is settled (COMPLETED/DELIVERED) AND fully paid AND has a customer (OrderCompletionEvents).
+      enabled: ${ORDER_COMPLETED_EVENTS_ENABLED:false}
+
   websocket:
     auth:
       # STOMP CONNECT authentication + per-subscription tenant check (audit #21). The admin/waiter web

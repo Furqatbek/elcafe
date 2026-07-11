@@ -36,6 +36,7 @@ import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.restaurant.repository.RestaurantTableRepository;
+import com.elcafe.modules.marketing.event.OrderCompletionEvents;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -65,6 +66,7 @@ import java.util.stream.Collectors;
 public class POSOrderService {
 
     private final OrderRepository orderRepository;
+    private final OrderCompletionEvents orderCompletionEvents;
     private final RestaurantRepository restaurantRepository;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
@@ -245,6 +247,12 @@ public class POSOrderService {
                 } catch (Exception e) {
                     log.error("Failed to record revenue for POS order {}: {}",
                             savedOrder.getOrderNumber(), e.getMessage());
+                }
+
+                // Loyalty/marketing completion chain (audit FUNC-15): POS auto-paid orders are born
+                // settled+paid; null previousStatus = newly created, so this is the qualifying edge.
+                if (orderCompletionEvents != null) {
+                    orderCompletionEvents.publishIfQualified(savedOrder, null, false);
                 }
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid payment method '{}', skipping auto-payment", request.getPaymentMethod());

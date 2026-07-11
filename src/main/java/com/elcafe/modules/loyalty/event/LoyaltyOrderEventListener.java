@@ -37,9 +37,22 @@ public class LoyaltyOrderEventListener {
     @Async
     public void handleOrderCompleted(OrderCompletedEvent event) {
         try {
-            log.info("Handling order completed event for order {}", event.getOrder().getId());
-            loyaltyService.processOrderCompletion(event.getOrder());
-            milestoneService.processOrderCompletion(event.getOrder());
+            Order order = event.getOrder();
+            // Loyalty accrues to a customer; walk-in orders carry none. (OrderCompletionEvents never
+            // publishes without one — this protects against any future publisher that might.)
+            if (order == null || event.getCustomer() == null) {
+                return;
+            }
+            // Replay guard: the bonus ledger dedupes by idempotency key, but the loyalty stats
+            // (totalSpent/orderCount) and milestone visit counters would double-count if the same
+            // order's completion event ever fired twice (e.g. an admin revert + re-complete).
+            if (loyaltyService.hasProcessedOrderCompletion(order.getId())) {
+                log.info("Loyalty already processed for order {}, skipping replay", order.getId());
+                return;
+            }
+            log.info("Handling order completed event for order {}", order.getId());
+            loyaltyService.processOrderCompletion(order);
+            milestoneService.processOrderCompletion(order);
         } catch (Exception e) {
             log.error("Error processing loyalty for completed order {}", event.getOrder().getId(), e);
             // Don't throw exception - loyalty processing should not fail the order
