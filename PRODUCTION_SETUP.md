@@ -87,15 +87,31 @@ CORS_ORIGINS=https://lacasa.uz,https://www.lacasa.uz
 > **`JWT_SECRET` is required** — the app fails to start without it (no insecure default) and rejects a
 > too-short or the old committed value.
 
-**Optional — enforcement flags** (both ship safe-by-default; flip only after a staging soak):
+**Enforcement flags** (tenant isolation and WebSocket auth now DEFAULT TO ENFORCE after their
+shadow soaks; each env var is the one-line rollback):
 ```env
-# Cross-tenant isolation (Phase 0): off | shadow | enforce. Default shadow (observe + log, no block).
-# Flip to enforce per docs/TENANT_ENFORCE_FLIP_RUNBOOK.md.
-TENANT_ENFORCEMENT_MODE=shadow
+# Cross-tenant isolation (Phase 0): off | shadow | enforce. DEFAULT ENFORCE — cross-tenant access
+# returns 403. Rollback: set to shadow. Runbook: docs/TENANT_ENFORCE_FLIP_RUNBOOK.md.
+TENANT_ENFORCEMENT_MODE=enforce
+# STOMP WebSocket auth: off | shadow | enforce. DEFAULT ENFORCE — CONNECT requires a Bearer token
+# (the print agent sends its AGENT_TOKEN). Rollback: set to shadow.
+WEBSOCKET_AUTH_MODE=enforce
 # Subscription access gate (Phase 2): off | shadow | enforce. Default off (dark). In 'enforce', a
 # SUPER_ADMIN-suspended tenant's staff and waiters get 402 SUBSCRIPTION_INACTIVE. Flip off -> shadow
-# (watch [subscription-shadow] logs) -> enforce.
+# (watch [subscription-shadow] logs) -> enforce. Runbook: docs/SUBSCRIPTION_ENFORCE_FLIP_RUNBOOK.md.
 SUBSCRIPTION_ENFORCEMENT_MODE=off
+# Loyalty/marketing order-completion chain (points, milestones, thank-you SMS): default false.
+# Setting true starts granting customer bonuses — a product decision.
+ORDER_COMPLETED_EVENTS_ENABLED=false
+```
+
+**Observability switches** (both dormant by default):
+```env
+# json = one JSON object per log line (for Loki/ELK/CloudWatch); unset = plain text.
+LOG_FORMAT=json
+# Error tracking: dormant without a DSN; with one, unhandled 500s report with request/tenant context.
+SENTRY_DSN=
+SENTRY_ENVIRONMENT=production
 ```
 
 ### 5. Configure NGINX Reverse Proxy
@@ -497,8 +513,17 @@ cat /backups/elcafe/backup_YYYYMMDD_HHMMSS.sql | docker-compose exec -T db psql 
 | `DB_USER` | elcafe | Database user |
 | `DB_PASSWORD` | - | Database password (required) |
 | `JWT_SECRET` | - | JWT signing key (required) |
+| `REDIS_PASSWORD` | - | Redis password (required) |
 | `SPRING_PROFILES_ACTIVE` | prod | Spring profile |
-| `CORS_ORIGINS` | localhost | Allowed origins |
+| `CORS_ORIGINS` | localhost | Allowed origins (HTTP + WebSocket) |
+| `TENANT_ENFORCEMENT_MODE` | enforce | Tenant isolation: off/shadow/enforce |
+| `WEBSOCKET_AUTH_MODE` | enforce | STOMP auth: off/shadow/enforce |
+| `SUBSCRIPTION_ENFORCEMENT_MODE` | off | Suspended-tenant gate: off/shadow/enforce |
+| `ORDER_COMPLETED_EVENTS_ENABLED` | false | Loyalty/SMS completion chain (product flip) |
+| `LOG_FORMAT` | plain | `json` = structured console logs |
+| `SENTRY_DSN` | - | Error tracking (dormant without) |
+| `SPRING_JPA_OPEN_IN_VIEW` | false | Emergency OSIV rollback switch |
+| `HIBERNATE_LAZY_LOAD_NO_TRANS` | false | Emergency lazy-load rollback switch |
 | `VITE_API_URL` | /api | Frontend API URL |
 
 ## Support
@@ -511,4 +536,4 @@ For issues:
 
 ---
 
-**Last Updated:** 2025-12-20
+**Last Updated:** 2026-07-11

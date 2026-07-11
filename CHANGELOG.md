@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Production hardening — 2026-07-09 → 2026-07-11
+
+The production-readiness audit (`docs/PRODUCTION_READINESS_AUDIT.md`) was executed through phases
+A–G. Highlights, newest first (full detail + evidence in the audit's §0 progress log):
+
+- **Async/lazy correctness sweep** after the `open-in-view` flip: fixed the plan-gate 500 for planned
+  tenants, the silently-dropped admin realtime broadcast, the silently-skipped COGS journal entries,
+  and retired the never-applied `Order.withItems` entity graph in favour of explicit fetch-join
+  loaders. WebSocket STOMP origins now reuse the `CORS_ORIGINS` allowlist.
+- **Loyalty/marketing completion chain wired, dark** (`ORDER_COMPLETED_EVENTS_ENABLED`, default
+  false): points, milestones, first-order bonus and thank-you SMS fire exactly once per order via a
+  durable marker (V161); replay guards at listener and milestone level; idempotent waiter close.
+- **Observability (code half):** `LOG_FORMAT=json` structured console logs with request + tenant ids
+  in MDC; Sentry dormant-unless-DSN; liveness/readiness probes with the container healthcheck on
+  liveness; typed 4xx errors on payment CRUD + courier endpoints.
+- **Performance:** `open-in-view` OFF (with in-transaction payload hydration, pinned by tests);
+  analytics rewritten onto DB-side aggregates (the full-table loaders and their hidden N+1s are
+  gone); in-memory pagination killed on the order/external/self-service listings; local load test:
+  18,400 requests at 2× pool concurrency, zero errors.
+- **Scale topology decided:** single-node + ShedLock on all 30 shared-state crons (guard test
+  enforces it); `docs/DEPLOYMENT_TOPOLOGY.md` documents the constraint and multi-node prerequisites.
+- **Migrations:** V1..V161 rehearsed on real PostgreSQL 16 in CI on every push; loyalty jsonb
+  mapping fixed; suite grew 1943 → 2028 tests, including real-filter-chain enforcement and OSIV
+  payload pins.
+
+Rollback levers (env): `SPRING_JPA_OPEN_IN_VIEW=true`, `HIBERNATE_LAZY_LOAD_NO_TRANS=true`,
+`TENANT_ENFORCEMENT_MODE=shadow`, `WEBSOCKET_AUTH_MODE=shadow`.
+
 ### Security - 2026-07-03
 
 #### Enforcement flipped ON: tenant isolation + WebSocket auth now enforce

@@ -1,5 +1,10 @@
 # ElCafe Memory Optimization Plan
 
+> **HISTORICAL (2026-07-11):** this plan's load-bearing items are now implemented — container-aware
+> JVM (`MaxRAMPercentage` + heap-dump-on-OOM), Hibernate batch fetching, `open-in-view` off,
+> Hikari sizing + leak detection, DB-side analytics aggregates. Current state and evidence:
+> `docs/PRODUCTION_READINESS_AUDIT.md` §0. Kept as the original analysis record.
+
 ## System Summary
 
 - **Stack**: Spring Boot 3.3.0, Java 21, PostgreSQL 16, Redis 7, Hibernate 6.x

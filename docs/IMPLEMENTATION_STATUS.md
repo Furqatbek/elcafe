@@ -1,6 +1,9 @@
 # Implementation Status Report
 **Based on CLIENT_RESTAURANT_FLOW.md Documentation**
 
+> **Stale (last updated 2025-12-15).** For the current production-readiness state — findings register
+> with statuses, phase progress, and the go-live gate — see `PRODUCTION_READINESS_AUDIT.md`.
+
 Last Updated: 2025-12-15
 
 ---

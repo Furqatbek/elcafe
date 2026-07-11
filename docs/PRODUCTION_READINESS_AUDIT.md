@@ -10,6 +10,12 @@
 >
 > This document is the audit record and the plan to close it. Findings were produced by six independent
 > investigators and the load-bearing claims were re-verified against the code by hand.
+>
+> **Update 2026-07-11 — the verdict above is the 2026-07-09 point-in-time record.** The roadmap has
+> since been executed through phases A–G (see §0): the go-live gate items are closed except the
+> populated-data migration rehearsal + V153 decision, and every finding in §2 now carries a status
+> marker (✅ fixed · ⏳ gated on ops/product/infra · 🔴 still open). Current one-line verdict:
+> **production-ready for a bounded single-node launch once the ops-gated items in §0 are done.**
 
 ## How to read this
 
@@ -26,14 +32,16 @@ multi-instance) · **MEDIUM** · **LOW**.
 
 ---
 
-## 0. Progress log (updated 2026-07-10)
+## 0. Progress log (updated 2026-07-11)
 
 Phases **A–D of §3 are landed** (commits `f77f085`, `67a6be7`, `cd419c3`, `af9c5fd`, `018de15`), and
 **E–G are now essentially landed too**: scale topology decided + ShedLock'd (E0), analytics on DB
 aggregates (E3), `open-in-view` off (E2) and boot-smoked against migrated Postgres. The launch gate is
-met; what remains is decision- or infra-gated work (populated-data migration rehearsal, an
-`open-in-view` load test under real concurrency, the infra half of F3–F4 — log shipper, Sentry
-DSN + alert rules — and the subscription enforcement product flip) and monetization (H).
+met; what remains is decision- or infra-gated work (populated-data migration rehearsal + the V153
+decision, the infra half of F3–F4 — log shipper, Sentry DSN + alert rules — the subscription- and
+loyalty-activation product flips, and first-deploy checks: external courier client, prod-infra load
+test) and monetization (H). A local load test (18,400 requests at 2× pool concurrency, zero errors)
+already satisfied E2's pool-behavior criterion.
 
 **Done**
 - **A — config lockdown:** `application-prod.yml` + a `prod`-profile fail-fast validator (OTP dev-mode off,
@@ -311,16 +319,18 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
 
 ## 1. Readiness scorecard
 
+*(Refreshed 2026-07-11 — the 2026-07-09 audit-time scorecard is preserved in git history.)*
+
 | Dimension | State | One-line truth |
 |---|---|---|
-| Code authorization (RBAC/tenant/WS) | 🟢 Solid | The work of the last cycle; genuinely good. |
-| Runtime config / secrets / deploy | 🔴 Fail-open | No prod profile; committed secrets; OTP bypass on by default. |
-| Data / migrations | 🔴 Unrehearsed surgery | 159 migrations never run outside prod; one zeroes all loyalty balances. |
-| Architecture / scale | 🔴 Single-node | In-memory broker, per-instance state, unlocked crons — cannot run 2 instances safely. |
-| Observability / ops | 🔴 Blind | No metrics, tracing, request IDs, CI, or graceful shutdown. |
-| Performance / memory | 🟠 Will OOM | 512 MB fixed heap + full-table loads + open-in-view; optimization plan never implemented. |
-| Test suite | 🟠 Overstated | 1943 real tests, but enforcement is annotation-checked and the prod schema is untested. |
-| Functional completeness | 🟠 Gaps + fakes | Correct money math, but forgot-password/Payme/courier/several features are dead or stubbed. |
+| Code authorization (RBAC/tenant/WS) | 🟢 Solid | Enforce mode live for tenant + WS auth; transaction-scoped Hibernate tenant filter; proven end-to-end by `EnforcementChainTest`. |
+| Runtime config / secrets / deploy | 🟢 Locked down | Prod profile + fail-fast validator; secrets untracked/blacklisted; non-root, graceful shutdown. Rotation of the historically-leaked secrets is still an ops task. |
+| Data / migrations | 🟡 Rehearsed on fresh, not populated | V1..V161 green on real PG 16 in CI on every push; populated-data rehearsal + the V153 loyalty-zeroing decision remain before touching a real prod DB. |
+| Architecture / scale | 🟢 Single-node by decision | All 30 shared-state crons ShedLock'd (guard test enforces it); topology + multi-node prerequisites in `DEPLOYMENT_TOPOLOGY.md`. |
+| Observability / ops | 🟡 Code done, infra pending | Metrics, request+tenant IDs, JSON-log switch, dormant Sentry, liveness/readiness probes. Needs a log shipper, a DSN, and alert rules to be *operated*. |
+| Performance / memory | 🟢 Hardened | Container-aware JVM; `open-in-view` off; analytics on DB aggregates; in-memory pagination killed; 18.4k-request local load test: 0 errors, pool drains. |
+| Test suite | 🟢 Behavioral | 2028 backend tests incl. real-filter-chain enforcement, OSIV payload pins, H2-pinned aggregates; CI runs suite + real-PG migration chain + frontend on every push. |
+| Functional completeness | 🟡 Core solid, edges product-gated | Loyalty chain wired dark (`ORDER_COMPLETED_EVENTS_ENABLED`); forgot-password/i18n/dead-code fixed; SMS segments/delays, courier adapter, shift variance, admin status filter remain stubs (FUNC-5, 8–11). |
 | Monetization | ⚪ By design unbuilt | Prices 0, Noop provider — intentional, gated on an acquiring contract. |
 
 ---
@@ -331,109 +341,111 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
 
 | ID | Sev | Finding | Evidence |
 |---|---|---|---|
-| CFG-1 | BLOCKER | Consumer OTP `development-mode` defaults **true**; `verifyOtp` then accepts ANY code and fabricates a record → account takeover by phone number alone. `.env.docker` never sets the flag. | `application.yml:187`; `ConsumerAuthService.java:233-248` |
-| CFG-2 | BLOCKER | A valid, working `JWT_SECRET` is committed to git (47 bytes, passes validation, sourced by the deploy script) → anyone with repo access forges tokens for any user/role/tenant. | `.env.docker:40`; `deploy-docker.sh:19-21`; `.gitignore:34` |
-| CFG-3 | BLOCKER | No prod profile. `SPRING_PROFILES_ACTIVE=prod` loads base `application.yml` → DEBUG logging, Swagger, `include-message:always`, and CFG-1 all live in "production". | only `application.yml`, `application-test.yml` exist |
-| CFG-4 | BLOCKER | Committed default DB password + wildcard CORS in the tracked deploy env. | `.env.docker:34,52` |
-| CFG-5 | HIGH | OTP codes + full customer PII logged in plaintext on every request; logs bind-mounted to host. | `ConsumerAuthService.java:161,215,82-89`; `docker-compose.yml:125` |
-| CFG-6 | HIGH | CORS reflects any origin **with credentials** (`setAllowedOriginPatterns` makes `*`+credentials actually work). | `application.yml:143-146`; `SecurityConfig.java:131-135` |
-| CFG-7 | HIGH | Consumer access + refresh tokens have a **10,000-year** lifetime, no revocation path. | `application.yml:189-190` |
-| CFG-8 | HIGH | Postgres (5432) and Redis (6379) published to the host; Redis has no password. | `docker-compose.yml:19-20,66-67`; `application.yml:53` |
-| CFG-9 | HIGH | Courier webhook is `permitAll`, unsigned, mutates order state from a raw `Map`; the configured `courier.webhook-secret` is dead config. | `CourierWebhookController.java:23-36`; `SecurityConfig.java:72` |
-| CFG-10 | MED | WebSocket `setAllowedOriginPatterns("*")`, hardcoded, decoupled from `CORS_ORIGINS`. | `WebSocketConfig.java:61,66` |
-| CFG-11 | MED | Swagger UI + `/api-docs` public in prod (anonymous full API surface disclosure). | `SecurityConfig.java:77-79`; `application.yml:125` |
-| CFG-12 | MED | Both containers run as root (no `USER`). | `Dockerfile`, `frontend/Dockerfile` |
-| CFG-13 | MED | Committed demo admin password. | `.env.docker:25` |
-| CFG-14 | MED | `server.error.include-message: always` echoes internal exception messages to clients. | `application.yml:85` |
+| CFG-1 | BLOCKER | **✅** — Consumer OTP `development-mode` defaults **true**; `verifyOtp` then accepts ANY code and fabricates a record → account takeover by phone number alone. `.env.docker` never sets the flag. | `application.yml:187`; `ConsumerAuthService.java:233-248` |
+| CFG-2 | BLOCKER | **✅ code (rotation = ops)** — A valid, working `JWT_SECRET` is committed to git (47 bytes, passes validation, sourced by the deploy script) → anyone with repo access forges tokens for any user/role/tenant. | `.env.docker:40`; `deploy-docker.sh:19-21`; `.gitignore:34` |
+| CFG-3 | BLOCKER | **✅** — No prod profile. `SPRING_PROFILES_ACTIVE=prod` loads base `application.yml` → DEBUG logging, Swagger, `include-message:always`, and CFG-1 all live in "production". | only `application.yml`, `application-test.yml` exist |
+| CFG-4 | BLOCKER | **✅ code (rotation = ops)** — Committed default DB password + wildcard CORS in the tracked deploy env. | `.env.docker:34,52` |
+| CFG-5 | HIGH | **✅** — OTP codes + full customer PII logged in plaintext on every request; logs bind-mounted to host. | `ConsumerAuthService.java:161,215,82-89`; `docker-compose.yml:125` |
+| CFG-6 | HIGH | **✅** — CORS reflects any origin **with credentials** (`setAllowedOriginPatterns` makes `*`+credentials actually work). | `application.yml:143-146`; `SecurityConfig.java:131-135` |
+| CFG-7 | HIGH | **✅** — Consumer access + refresh tokens have a **10,000-year** lifetime, no revocation path. | `application.yml:189-190` |
+| CFG-8 | HIGH | **✅** — Postgres (5432) and Redis (6379) published to the host; Redis has no password. | `docker-compose.yml:19-20,66-67`; `application.yml:53` |
+| CFG-9 | HIGH | **✅** — Courier webhook is `permitAll`, unsigned, mutates order state from a raw `Map`; the configured `courier.webhook-secret` is dead config. | `CourierWebhookController.java:23-36`; `SecurityConfig.java:72` |
+| CFG-10 | MED | **✅ (2026-07-11: WS origins now reuse the CORS allowlist; STOMP auth additionally requires a token)** — WebSocket `setAllowedOriginPatterns("*")`, hardcoded, decoupled from `CORS_ORIGINS`. | `WebSocketConfig.java:61,66` |
+| CFG-11 | MED | **✅** — Swagger UI + `/api-docs` public in prod (anonymous full API surface disclosure). | `SecurityConfig.java:77-79`; `application.yml:125` |
+| CFG-12 | MED | **✅** — Both containers run as root (no `USER`). | `Dockerfile`, `frontend/Dockerfile` |
+| CFG-13 | MED | **✅** — Committed demo admin password. | `.env.docker:25` |
+| CFG-14 | MED | **✅** — `server.error.include-message: always` echoes internal exception messages to clients. | `application.yml:85` |
 
 ### 2.2 Data / migrations (MIG)
 
 | ID | Sev | Finding | Evidence |
 |---|---|---|---|
-| MIG-1 | CRIT | V153 zeroes **every** loyalty balance platform-wide — `UPDATE customer_loyalty SET current_balance=0, lifetime_earned=0, lifetime_spent=0, tier_id=NULL` with **no WHERE clause**, no snapshot, no undo. Includes wallet-funded (real-money) credit. | `V153__loyalty_per_restaurant.sql:40` |
-| MIG-2 | CRIT | V150 fragments multi-restaurant customers into shadow rows and drops the id-mapping (`TEMP TABLE … ON COMMIT DROP`) → irreversible, no audit trail; a wrong "primary = most orders" guess is silent corruption stamped HIGH-confidence. | `V150:60-65,88-113`; `V154:17-20` |
-| MIG-3 | CRIT | The entire 159-migration chain has **never executed anywhere but a future prod DB**: tests disable Flyway + use H2, there is no CI, no Testcontainers. | `application-test.yml:19-20`; no `.github/workflows` |
-| MIG-4 | HIGH | "Oldest restaurant" fallback silently donates orphan customers'/waiters' PII to tenant #1. | `V150:118-120`; `V148:48-50` |
-| MIG-5 | HIGH | New composite uniques hard-abort the migration mid-deploy if any restaurant has duplicate phones/emails (common with imports). First test against real data = mid-prod-deploy. | `V150:131-132`; `V153:43-46`; `V159:14` |
-| MIG-6 | HIGH | Loyalty jsonb columns mapped via `@Convert`+`columnDefinition="jsonb"` but **no `@JdbcTypeCode`** → Hibernate 6.5 binds VARCHAR, Postgres rejects vs jsonb (42804); the loyalty listener swallows the exception → post-migration nobody earns points and only the error log knows. `SmsCampaign` does it right. | `BonusTransaction.java:65-67`; `WalletTopUp.java:78-80`; `LoyaltyOrderEventListener.java:39-46`; cf. `SmsCampaign.java:52` |
-| MIG-7 | HIGH | LOW-confidence tenant assignments have only a passive admin list — nothing forces reconciliation. Under `enforce`, mis-assigned rows are invisible to their real owner and visible to the wrong tenant, indefinitely. | `TenantReviewController.java`; `application.yml:155` |
-| MIG-8 | HIGH | The reassign tool updates only `customers.restaurant_id`, leaving loyalty/wallet/notifications on the old tenant → next loyalty touch INSERTs and hits the `customer_id UNIQUE` → 500. | `TenantReviewService.java:44-51`; `V27:39` |
-| MIG-9 | MED | V155 backfills `restaurant_id = user_id` on a column pun; wrong rows leak or blow the FK add. | `V155:24-25,32-33` |
-| MIG-10 | MED | Flyway `validate-on-migrate:false` + `baseline-on-migrate:true` → applied migrations can be edited undetected; pointing at a non-empty schema silently mis-baselines. | `application.yml:44,47` |
-| MIG-11 | MED | Promo-usage / saved-addresses / personalized coupons stay on the primary id after fragmentation → per-customer promo limits reset, secondary-restaurant customers lose addresses/coupons. | `V57:65,74-78`; `V101`; `V12` |
-| MIG-12 | MED | Whole-table `orders` rewrites inside single deploy transactions → long locks on the hottest table, untested at scale. | `V159:9-14`; `V102`; `V150:88-89` |
-| MIG-13 | MED | Leftover unscoped `findByPhone` for SUPER_ADMIN callers + V150 duplicate phones → `IncorrectResultSizeDataAccessException`. | `CustomerRepository.java:20`; `CustomerService.java:315-318` |
+| MIG-1 | CRIT | **⏳ decision + snapshot before prod deploy** — V153 zeroes **every** loyalty balance platform-wide — `UPDATE customer_loyalty SET current_balance=0, lifetime_earned=0, lifetime_spent=0, tier_id=NULL` with **no WHERE clause**, no snapshot, no undo. Includes wallet-funded (real-money) credit. | `V153__loyalty_per_restaurant.sql:40` |
+| MIG-2 | CRIT | **⏳ populated-data rehearsal** — V150 fragments multi-restaurant customers into shadow rows and drops the id-mapping (`TEMP TABLE … ON COMMIT DROP`) → irreversible, no audit trail; a wrong "primary = most orders" guess is silent corruption stamped HIGH-confidence. | `V150:60-65,88-113`; `V154:17-20` |
+| MIG-3 | CRIT | **✅ (CI runs V1..V161 on real PG 16)** — The entire 159-migration chain has **never executed anywhere but a future prod DB**: tests disable Flyway + use H2, there is no CI, no Testcontainers. | `application-test.yml:19-20`; no `.github/workflows` |
+| MIG-4 | HIGH | **⏳ populated-data rehearsal** — "Oldest restaurant" fallback silently donates orphan customers'/waiters' PII to tenant #1. | `V150:118-120`; `V148:48-50` |
+| MIG-5 | HIGH | **⏳ populated-data rehearsal** — New composite uniques hard-abort the migration mid-deploy if any restaurant has duplicate phones/emails (common with imports). First test against real data = mid-prod-deploy. | `V150:131-132`; `V153:43-46`; `V159:14` |
+| MIG-6 | HIGH | **✅** — Loyalty jsonb columns mapped via `@Convert`+`columnDefinition="jsonb"` but **no `@JdbcTypeCode`** → Hibernate 6.5 binds VARCHAR, Postgres rejects vs jsonb (42804); the loyalty listener swallows the exception → post-migration nobody earns points and only the error log knows. `SmsCampaign` does it right. | `BonusTransaction.java:65-67`; `WalletTopUp.java:78-80`; `LoyaltyOrderEventListener.java:39-46`; cf. `SmsCampaign.java:52` |
+| MIG-7 | HIGH | **⏳ ops process** — LOW-confidence tenant assignments have only a passive admin list — nothing forces reconciliation. Under `enforce`, mis-assigned rows are invisible to their real owner and visible to the wrong tenant, indefinitely. | `TenantReviewController.java`; `application.yml:155` |
+| MIG-8 | HIGH | **✅** — The reassign tool updates only `customers.restaurant_id`, leaving loyalty/wallet/notifications on the old tenant → next loyalty touch INSERTs and hits the `customer_id UNIQUE` → 500. | `TenantReviewService.java:44-51`; `V27:39` |
+| MIG-9 | MED | **⏳ populated-data rehearsal** — V155 backfills `restaurant_id = user_id` on a column pun; wrong rows leak or blow the FK add. | `V155:24-25,32-33` |
+| MIG-10 | MED | **✅** — Flyway `validate-on-migrate:false` + `baseline-on-migrate:true` → applied migrations can be edited undetected; pointing at a non-empty schema silently mis-baselines. | `application.yml:44,47` |
+| MIG-11 | MED | **⏳ data decision** — Promo-usage / saved-addresses / personalized coupons stay on the primary id after fragmentation → per-customer promo limits reset, secondary-restaurant customers lose addresses/coupons. | `V57:65,74-78`; `V101`; `V12` |
+| MIG-12 | MED | **⏳ populated-data rehearsal** — Whole-table `orders` rewrites inside single deploy transactions → long locks on the hottest table, untested at scale. | `V159:9-14`; `V102`; `V150:88-89` |
+| MIG-13 | MED | **🔴 open (push-subscription lookup still unscoped)** — Leftover unscoped `findByPhone` for SUPER_ADMIN callers + V150 duplicate phones → `IncorrectResultSizeDataAccessException`. | `CustomerRepository.java:20`; `CustomerService.java:315-318` |
 
 ### 2.3 Architecture / ops / resilience (OPS)
 
 | ID | Sev | Finding | Evidence |
 |---|---|---|---|
-| OPS-1 | BLOCKER | **Single-node app in SaaS clothes.** In-memory `SimpleBroker` (WS broadcasts only reach the same JVM), per-instance rate-limit buckets, per-instance SMS token, and ~30 `@Scheduled` jobs with **no distributed lock**. Two instances → split real-time + double SMS/salary/revenue. | `WebSocketConfig.java:43`; no ShedLock |
-| OPS-2 | BLOCKER | No brute-force protection on the auth surface: `@RateLimited` is on `AnalyticsController` only; staff login, **waiter PIN** (public, 12 h token), and password reset are unthrottled; `isAccountNonLocked()` is hardcoded to never lock. | `AuthController.java:40-45`; `WaiterController.java:52-58`; `User.java:114-116` |
-| OPS-3 | HIGH | **Observability ABSENT.** No Micrometer/Prometheus, no tracing, no request/correlation IDs, no structured logging, no error tracking. Blind to 500s / p99 / individual failing requests. | grep-empty; `application.yml:95,117-118` |
-| OPS-4 | HIGH | No circuit breakers (no resilience4j); Telegram long-poll has no timeout/bulkhead → a slow-but-up provider blocks callers for the full read timeout. | `pom.xml`; `TelegramBotService` |
-| OPS-5 | HIGH | No edge rate limiting — nginx configs have no `limit_req`/`limit_conn`. | `nginx-proxy/*.conf` |
-| OPS-6 | MED | No graceful shutdown (`server.shutdown` unset → immediate); `Dockerfile` shell-wraps the JVM so SIGTERM isn't forwarded as PID 1 → deploys drop in-flight requests. | `application.yml`; `Dockerfile:25` |
-| OPS-7 | MED | Healthcheck is decorative: no liveness/readiness split; Docker `restart: unless-stopped` does nothing on an unhealthy (not exited) container; Redis blip flips whole app DOWN. | `docker-compose.yml:126-131`; `application.yml:91-98` |
-| OPS-8 | MED | Expected auth failures throw bare `RuntimeException` → hit the catch-all → **HTTP 500** instead of 4xx; clients can't distinguish bad input from server break. | `ConsumerAuthService.java:252,256,263` |
-| OPS-9 | MED | ~30 `@Scheduled` jobs, no ShedLock — correctness now depends on the single-node constraint. | grep-empty (shedlock) |
-| OPS-10 | MED | Transaction hazards: `TelegramCampaignExecutor` self-invokes `@Transactional` helpers (proxy bypassed → no rollback boundary); `RevenueRecordingService` `@Async`+`@Retryable` touches a detached `Order`'s lazy graph. | `TelegramCampaignExecutor.java:52,233`; `RevenueRecordingService.java:36-63` |
+| OPS-1 | BLOCKER | **✅ decided: single-node + ShedLock (multi-node prereqs documented)** — **Single-node app in SaaS clothes.** In-memory `SimpleBroker` (WS broadcasts only reach the same JVM), per-instance rate-limit buckets, per-instance SMS token, and ~30 `@Scheduled` jobs with **no distributed lock**. Two instances → split real-time + double SMS/salary/revenue. | `WebSocketConfig.java:43`; no ShedLock |
+| OPS-2 | BLOCKER | **✅** — No brute-force protection on the auth surface: `@RateLimited` is on `AnalyticsController` only; staff login, **waiter PIN** (public, 12 h token), and password reset are unthrottled; `isAccountNonLocked()` is hardcoded to never lock. | `AuthController.java:40-45`; `WaiterController.java:52-58`; `User.java:114-116` |
+| OPS-3 | HIGH | **✅ code half · ⏳ shipper/DSN/alerts** — **Observability ABSENT.** No Micrometer/Prometheus, no tracing, no request/correlation IDs, no structured logging, no error tracking. Blind to 500s / p99 / individual failing requests. | grep-empty; `application.yml:95,117-118` |
+| OPS-4 | HIGH | **🔴 open (no circuit breakers; bounded async pool is the only backstop)** — No circuit breakers (no resilience4j); Telegram long-poll has no timeout/bulkhead → a slow-but-up provider blocks callers for the full read timeout. | `pom.xml`; `TelegramBotService` |
+| OPS-5 | HIGH | **✅** — No edge rate limiting — nginx configs have no `limit_req`/`limit_conn`. | `nginx-proxy/*.conf` |
+| OPS-6 | MED | **✅** — No graceful shutdown (`server.shutdown` unset → immediate); `Dockerfile` shell-wraps the JVM so SIGTERM isn't forwarded as PID 1 → deploys drop in-flight requests. | `application.yml`; `Dockerfile:25` |
+| OPS-7 | MED | **✅** — Healthcheck is decorative: no liveness/readiness split; Docker `restart: unless-stopped` does nothing on an unhealthy (not exited) container; Redis blip flips whole app DOWN. | `docker-compose.yml:126-131`; `application.yml:91-98` |
+| OPS-8 | MED | **✅ (auth, then payment CRUD + courier 2026-07-11)** — Expected auth failures throw bare `RuntimeException` → hit the catch-all → **HTTP 500** instead of 4xx; clients can't distinguish bad input from server break. | `ConsumerAuthService.java:252,256,263` |
+| OPS-9 | MED | **✅** — ~30 `@Scheduled` jobs, no ShedLock — correctness now depends on the single-node constraint. | grep-empty (shedlock) |
+| OPS-10 | MED | **✅ (Telegram executor extracted; revenue recorder contract fixed 2026-07-11 — items initialised before the async handoff)** — Transaction hazards: `TelegramCampaignExecutor` self-invokes `@Transactional` helpers (proxy bypassed → no rollback boundary); `RevenueRecordingService` `@Async`+`@Retryable` touches a detached `Order`'s lazy graph. | `TelegramCampaignExecutor.java:52,233`; `RevenueRecordingService.java:36-63` |
 
 ### 2.4 Performance / scale / memory (PERF)
 
-> `MEMORY_OPTIMIZATION_PLAN.md` was committed once and **never implemented** — the running config is
-> byte-for-byte the "before" state it documents. Of ~15 recommendations, one shipped (Spring caching).
+> Audit-time: `MEMORY_OPTIMIZATION_PLAN.md` was committed once and never implemented. **Now: its
+> load-bearing items are shipped** (container-aware JVM, batch fetching, OSIV off, pool sizing + leak
+> detection); the plan document itself is historical.
 
 | ID | Sev | Finding | Evidence |
 |---|---|---|---|
-| PERF-1 | BLOCKER | `open-in-view: true` + `enable_lazy_load_no_trans: true` + 10-connection pool → a handful of concurrent lazy-touching requests exhaust the pool and stall everything. | `application.yml:39-40,23` |
-| PERF-2 | BLOCKER | Analytics loads the entire date-range of orders into a `List` and aggregates in Java, with an N+1 on `order.getItems()`; a "yearly revenue" call on a busy tenant OOMs the 512 MB heap. DB-side aggregate exists, unused. | `FinancialAnalyticsService.java:424-437,222-231,349-368`; cf. `OrderRepository.java:146` |
-| PERF-3 | BLOCKER | JVM heap fixed at `-Xmx512m`, no container awareness, no `MaxRAMPercentage`, no `HeapDumpOnOutOfMemoryError`; compose sets no memory limit. | `Dockerfile:23`; `docker-compose.yml:79-120` |
-| PERF-4 | HIGH | SMS statistics loads every log row in the window and counts in Java; DB aggregates (`countByStatusSince`, …) exist and are unused. | `SmsLogService.java:118-152`; `SmsLogRepository.java:36-50` |
-| PERF-5 | HIGH | No `hibernate.default_batch_fetch_size` / `jdbc.batch_size` — the plan's "single highest-impact" change; associations without an explicit fetch join N+1 per parent. | `application.yml` (absent) |
-| PERF-6 | HIGH | Frontend ships one **1.85 MB** monolithic bundle: 76 static page imports, 79 routes, **zero** `React.lazy`; `vite.config.js` has no `manualChunks`. | `frontend/src/App.jsx`; `frontend/vite.config.js` |
-| PERF-7 | HIGH | Rate-limit buckets accumulate one permanent entry per username; `cleanupExpiredBuckets()` is a no-op stub, never scheduled → slow heap leak. | `RateLimitConfig.java:22,25,108-113` |
-| PERF-8 | HIGH | `calculateOrderMetrics` loads all of today's orders to log 3 counts; real outputs are all `// TODO`. Hourly. | `OrderBackgroundJobs.java:137-169` |
-| PERF-9 | MED | Unbounded, un-fetched list finders reachable from controllers/services (courier READY = cross-tenant scan; customer order history; SMS log by customer/campaign/date-range). | `CourierOrderService.java:38`; `OrderService.java:320`; `SmsLogController.java:41-75` |
-| PERF-10 | MED | Scheduler pool size 4 for 6 sub-minute jobs; async caller-runs policy pushes overflow onto HTTP request threads. | `AsyncConfig.java:46,60-72` |
-| PERF-11 | MED | No Hibernate L2 cache; stable reference data re-read from Postgres every request (Redis is right there). | `pom.xml` (absent) |
-| PERF-12 | MED | `deleteOldLogs` materializes all expired rows before `deleteAll` instead of a bulk `DELETE … WHERE`. | `SmsLogService.java:158-161` |
+| PERF-1 | BLOCKER | **✅** — `open-in-view: true` + `enable_lazy_load_no_trans: true` + 10-connection pool → a handful of concurrent lazy-touching requests exhaust the pool and stall everything. | `application.yml:39-40,23` |
+| PERF-2 | BLOCKER | **✅** — Analytics loads the entire date-range of orders into a `List` and aggregates in Java, with an N+1 on `order.getItems()`; a "yearly revenue" call on a busy tenant OOMs the 512 MB heap. DB-side aggregate exists, unused. | `FinancialAnalyticsService.java:424-437,222-231,349-368`; cf. `OrderRepository.java:146` |
+| PERF-3 | BLOCKER | **✅** — JVM heap fixed at `-Xmx512m`, no container awareness, no `MaxRAMPercentage`, no `HeapDumpOnOutOfMemoryError`; compose sets no memory limit. | `Dockerfile:23`; `docker-compose.yml:79-120` |
+| PERF-4 | HIGH | **✅** — SMS statistics loads every log row in the window and counts in Java; DB aggregates (`countByStatusSince`, …) exist and are unused. | `SmsLogService.java:118-152`; `SmsLogRepository.java:36-50` |
+| PERF-5 | HIGH | **✅** — No `hibernate.default_batch_fetch_size` / `jdbc.batch_size` — the plan's "single highest-impact" change; associations without an explicit fetch join N+1 per parent. | `application.yml` (absent) |
+| PERF-6 | HIGH | **✅** — Frontend ships one **1.85 MB** monolithic bundle: 76 static page imports, 79 routes, **zero** `React.lazy`; `vite.config.js` has no `manualChunks`. | `frontend/src/App.jsx`; `frontend/vite.config.js` |
+| PERF-7 | HIGH | **✅ (eviction scheduled, node-local allowlisted)** — Rate-limit buckets accumulate one permanent entry per username; `cleanupExpiredBuckets()` is a no-op stub, never scheduled → slow heap leak. | `RateLimitConfig.java:22,25,108-113` |
+| PERF-8 | HIGH | **✅ (COUNT queries; the SMS/gateway TODOs are FUNC-9)** — `calculateOrderMetrics` loads all of today's orders to log 3 counts; real outputs are all `// TODO`. Hourly. | `OrderBackgroundJobs.java:137-169` |
+| PERF-9 | MED | **✅ capped** — Unbounded, un-fetched list finders reachable from controllers/services (courier READY = cross-tenant scan; customer order history; SMS log by customer/campaign/date-range). | `CourierOrderService.java:38`; `OrderService.java:320`; `SmsLogController.java:41-75` |
+| PERF-10 | MED | **✅ pool 8** — Scheduler pool size 4 for 6 sub-minute jobs; async caller-runs policy pushes overflow onto HTTP request threads. | `AsyncConfig.java:46,60-72` |
+| PERF-11 | MED | **🔴 open (optional; Redis request-cache exists)** — No Hibernate L2 cache; stable reference data re-read from Postgres every request (Redis is right there). | `pom.xml` (absent) |
+| PERF-12 | MED | **✅** — `deleteOldLogs` materializes all expired rows before `deleteAll` instead of a bulk `DELETE … WHERE`. | `SmsLogService.java:158-161` |
 
 ### 2.5 Test suite (TEST)
 
-> 1943 backend `@Test` + 37 Vitest + 2 Playwright. **Nothing disabled** (0 `@Disabled`/`@Ignore`/`.skip`)
-> — honest bookkeeping. But padded with unit/slice tests that never touch security, real HTTP, or the
-> real DB, so the highest-risk surfaces are untested while CI (if it existed) would glow green.
+> Audit-time: 1943 backend `@Test` + 37 Vitest + 2 Playwright, padded with slices that never touched
+> security or the real DB. **Now (2026-07-11): 2028 backend tests** including real-filter-chain
+> enforcement, OSIV-off payload pins, H2-pinned aggregate SQL, event-flow pins — and CI runs the
+> migration chain on real Postgres on every push.
 
 | ID | Sev | Finding | Evidence |
 |---|---|---|---|
-| TEST-1 | CRIT | No test exercises the Spring Security filter chain / method security (`0` `@WithMockUser`/`springSecurity()`); all 65 controller tests are standalone MockMvc. RBAC has **zero behavioral coverage** — a typo'd role passes every test. | grep-empty; `POSOrderControllerTest.java:64-67` |
-| TEST-2 | CRIT | RBAC is "tested" by reflection on annotation presence (`isAnnotationPresent`) — catches deletion, not enforcement; the test's own docstring admits it. | `RbacGateAnnotationTest.java:13-18,37` |
-| TEST-3 | CRIT | Production schema 100% untested: Flyway disabled in test, schema from H2 `create-drop`; entity-vs-schema drift + PG-only DDL are invisible until deploy. | `application-test.yml:10,19-20` |
-| TEST-4 | HIGH | Only 2 `@SpringBootTest` (both smoke); the one HTTP test has 3 assertions and covers no RBAC role, no tenant isolation over HTTP, no 402. | `HttpSmokeTest.java`; `ApplicationContextSmokeTest.java` |
-| TEST-5 | HIGH | All 17 `*IntegrationTest` files are `@DataJpaTest` repository slices — no service/web/security layer. The label oversells. | `OrderLifecycleIntegrationTest.java:39` |
-| TEST-6 | HIGH | Subscription 402 logic is well unit-tested but its registration/position in the prod filter chain is unverified. | `SubscriptionEnforcementFilterTest.java:84-97` |
-| TEST-7 | MED | Frontend ~93% untested (7 unit files, all subscription-focused; 1 e2e that stubs the entire backend and forges auth). No test for login/cart/checkout/POS. | `frontend/src/**/__tests__`; `frontend/e2e/plan-gating.spec.js` |
-| TEST-8 | MED | 89 files run Mockito `LENIENT`; many "tests" assert request→service delegation + JSON shape only; 6 are `verify`-only. | `CategoryControllerTest.java:88-90` |
-| TEST-9 | LOW | 79 files use `LocalDateTime.now()` with no injected `Clock` → period-edge/midnight flakiness latent. | (broad) |
+| TEST-1 | CRIT | **✅ (`EnforcementChainTest` drives the real chain)** — No test exercises the Spring Security filter chain / method security (`0` `@WithMockUser`/`springSecurity()`); all 65 controller tests are standalone MockMvc. RBAC has **zero behavioral coverage** — a typo'd role passes every test. | grep-empty; `POSOrderControllerTest.java:64-67` |
+| TEST-2 | CRIT | **✅ (behavioral coverage added; annotation test remains as a tripwire)** — RBAC is "tested" by reflection on annotation presence (`isAnnotationPresent`) — catches deletion, not enforcement; the test's own docstring admits it. | `RbacGateAnnotationTest.java:13-18,37` |
+| TEST-3 | CRIT | **✅ (CI migration job on real PG)** — Production schema 100% untested: Flyway disabled in test, schema from H2 `create-drop`; entity-vs-schema drift + PG-only DDL are invisible until deploy. | `application-test.yml:10,19-20` |
+| TEST-4 | HIGH | **✅ (real-chain + OSIV payload + event-flow @SpringBootTests added)** — Only 2 `@SpringBootTest` (both smoke); the one HTTP test has 3 assertions and covers no RBAC role, no tenant isolation over HTTP, no 402. | `HttpSmokeTest.java`; `ApplicationContextSmokeTest.java` |
+| TEST-5 | HIGH | **✅ superseded (real service/web/security tests exist alongside the slices)** — All 17 `*IntegrationTest` files are `@DataJpaTest` repository slices — no service/web/security layer. The label oversells. | `OrderLifecycleIntegrationTest.java:39` |
+| TEST-6 | HIGH | **✅** — Subscription 402 logic is well unit-tested but its registration/position in the prod filter chain is unverified. | `SubscriptionEnforcementFilterTest.java:84-97` |
+| TEST-7 | MED | **🔴 open (a few files added; core flows still untested)** — Frontend ~93% untested (7 unit files, all subscription-focused; 1 e2e that stubs the entire backend and forges auth). No test for login/cart/checkout/POS. | `frontend/src/**/__tests__`; `frontend/e2e/plan-gating.spec.js` |
+| TEST-8 | MED | **🔴 open (style debt)** — 89 files run Mockito `LENIENT`; many "tests" assert request→service delegation + JSON shape only; 6 are `verify`-only. | `CategoryControllerTest.java:88-90` |
+| TEST-9 | LOW | **🔴 open (latent)** — 79 files use `LocalDateTime.now()` with no injected `Clock` → period-edge/midnight flakiness latent. | (broad) |
 
 ### 2.6 Functional completeness (FUNC)
 
 | ID | Sev | Finding | Evidence |
 |---|---|---|---|
-| FUNC-1 | BLOCKER | Forgot-password is a dead flow — token generated + saved, `// TODO: Send email`, only logged. Button, API, and translations all exist and lie. Nobody can reset a password. | `AuthService.java:140` |
-| FUNC-2 | BLOCKER | i18n raw-key leak on the **Login screen** (`common.placeholders.email/password` render literally) + ~93 keys absent from `en.json`, called with no default — every language. | `Login.jsx:54,64`; `en.json` (no `common.placeholders`/`common.buttons`/`poSuggestions`) |
-| FUNC-3 | HIGH | `PaymentGatewayService` is a full mock Stripe with **zero callers** — `verifyPaymentStatus()` always returns `"succeeded"`. Looks real, is fake, would approve every payment if ever wired. | `PaymentGatewayService.java:95,246,342,359` |
-| FUNC-4 | HIGH | Payme wallet top-up is a non-functional skeleton — only `PerformTransaction`; `Check`/`Create`/`Cancel` return `-32601`. Payme's protocol needs Check+Create first, so it can never complete a payment; no amount-match check. (Click path is real.) | `WalletTopUpWebhookController.java:228-275,104` |
-| FUNC-5 | HIGH | `AdminOrderController` status filter returns pending regardless of the requested status; `rejectOrder` says "refund initiated" but calls no refund and never notifies the customer; `REJECTED` status is never used. | `AdminOrderController.java:46-52,102-145` |
-| FUNC-6 | HIGH | ru/uz are ~95% key-complete but whole sub-trees are English-only — the multi-screen POS payment flow (ru) and inventory-valuation reports (both). Cashiers run POS payment in English. | `frontend/src/i18n/locales/` |
-| FUNC-7 | MED | Dead waiter-event cluster: `publishOrderReady/ItemAdded/ItemRemoved/TableStatusChanged` have 0 callers → void-item performance KPI is dead code. | `OrderEventPublisher.java:68,133,159,183` |
-| FUNC-8 | MED | External courier integration is a total stub — `assignCourier` returns a random UUID; status/tracking only log. | `LocalCourierAdapter.java:16` |
-| FUNC-9 | MED | Order scheduler jobs are stubs: `verifyPendingPayments` cancels after 15 min without checking any gateway; `calculateOrderMetrics`/`cleanupOldData` are logs + TODOs. | `OrderBackgroundJobs.java:102-185` |
-| FUNC-10 | MED | Shift inventory variance detection never computes variance (`variance = null`) → loss/theft feature records data but flags nothing. | `ShiftInventoryService.java:89` |
-| FUNC-11 | MED | SMS `SEGMENT` campaigns send to nobody; delayed automation rules "not yet implemented, sending immediately". | `SmsCampaignService.java:323`; `SmsAutomationService.java:157` |
-| FUNC-12 | MED | Hardcoded, untranslatable customer components (0 `t()`): OrderStatus/OrderTracking pages (English), ReceiptTemplateSettings (Uzbek), KitchenTicket (English). | `pages/customer/*`, `ReceiptTemplateSettings.jsx`, `pos/components/KitchenTicket.jsx` |
-| FUNC-13 | MED | Overtime pay loads every tenant's shifts for the week into memory then filters (`restaurant = null`). | `OvertimeRuleService.java:95` |
+| FUNC-1 | BLOCKER | **✅** — Forgot-password is a dead flow — token generated + saved, `// TODO: Send email`, only logged. Button, API, and translations all exist and lie. Nobody can reset a password. | `AuthService.java:140` |
+| FUNC-2 | BLOCKER | **✅** — i18n raw-key leak on the **Login screen** (`common.placeholders.email/password` render literally) + ~93 keys absent from `en.json`, called with no default — every language. | `Login.jsx:54,64`; `en.json` (no `common.placeholders`/`common.buttons`/`poSuggestions`) |
+| FUNC-3 | HIGH | **✅ deleted** — `PaymentGatewayService` is a full mock Stripe with **zero callers** — `verifyPaymentStatus()` always returns `"succeeded"`. Looks real, is fake, would approve every payment if ever wired. | `PaymentGatewayService.java:95,246,342,359` |
+| FUNC-4 | HIGH | **⏳ H (payments contract)** — Payme wallet top-up is a non-functional skeleton — only `PerformTransaction`; `Check`/`Create`/`Cancel` return `-32601`. Payme's protocol needs Check+Create first, so it can never complete a payment; no amount-match check. (Click path is real.) | `WalletTopUpWebhookController.java:228-275,104` |
+| FUNC-5 | HIGH | **🔴 open (status filter still returns pending; reject still stub)** — `AdminOrderController` status filter returns pending regardless of the requested status; `rejectOrder` says "refund initiated" but calls no refund and never notifies the customer; `REJECTED` status is never used. | `AdminOrderController.java:46-52,102-145` |
+| FUNC-6 | HIGH | **✅** — ru/uz are ~95% key-complete but whole sub-trees are English-only — the multi-screen POS payment flow (ru) and inventory-valuation reports (both). Cashiers run POS payment in English. | `frontend/src/i18n/locales/` |
+| FUNC-7 | MED | **✅ deleted** — Dead waiter-event cluster: `publishOrderReady/ItemAdded/ItemRemoved/TableStatusChanged` have 0 callers → void-item performance KPI is dead code. | `OrderEventPublisher.java:68,133,159,183` |
+| FUNC-8 | MED | **⏳ product (needs a real courier provider)** — External courier integration is a total stub — `assignCourier` returns a random UUID; status/tracking only log. | `LocalCourierAdapter.java:16` |
+| FUNC-9 | MED | **🔴 partially open (metrics counts done; SMS + gateway checks gated)** — Order scheduler jobs are stubs: `verifyPendingPayments` cancels after 15 min without checking any gateway; `calculateOrderMetrics`/`cleanupOldData` are logs + TODOs. | `OrderBackgroundJobs.java:102-185` |
+| FUNC-10 | MED | **⏳ product (needs a physical-count flow)** — Shift inventory variance detection never computes variance (`variance = null`) → loss/theft feature records data but flags nothing. | `ShiftInventoryService.java:89` |
+| FUNC-11 | MED | **⏳ product (RFM segments now exist server-side to wire to)** — SMS `SEGMENT` campaigns send to nobody; delayed automation rules "not yet implemented, sending immediately". | `SmsCampaignService.java:323`; `SmsAutomationService.java:157` |
+| FUNC-12 | MED | **✅** — Hardcoded, untranslatable customer components (0 `t()`): OrderStatus/OrderTracking pages (English), ReceiptTemplateSettings (Uzbek), KitchenTicket (English). | `pages/customer/*`, `ReceiptTemplateSettings.jsx`, `pos/components/KitchenTicket.jsx` |
+| FUNC-13 | MED | **✅ deleted** — Overtime pay loads every tenant's shifts for the week into memory then filters (`restaurant = null`). | `OvertimeRuleService.java:95` |
 | FUNC-14 | LOW | Subscription billing charges nothing **by design** (Noop provider, prices 0) — monetization is Phase B, gated on an acquiring contract. Not a bug. | `NoopPaymentProvider.java:23`; `SubscriptionPlan.java:51` |
 | FUNC-15 | MED | ~~Order-completion loyalty accrual and thank-you/first-order SMS never fire~~ **Wired, dark**: the chain now publishes behind `ORDER_COMPLETED_EVENTS_ENABLED` (default off — enabling grants bonuses, a product call). Fires once per order via `OrderCompletionEvents` (settled ∧ fully paid ∧ has customer). `OrderRefundedEvent` remains unpublished (refund reversal still dormant). | `OrderCompletionEvents.java`; `MarketingEventPublisher.java:35` |
 
@@ -458,6 +470,8 @@ Phases A–D are the **launch gate** — none of the rest matters until they're 
 before real users or any growth. G is correctness/polish. H is product/business.
 
 ### Phase A — Config lockdown & fail-open elimination · ~3–4 days · **do first**
+
+> **Status: ✅ landed** (incl. the WS-origin allowlist follow-up, 2026-07-11).
 
 Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 0.
 
@@ -489,6 +503,8 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
 
 ### Phase B — Auth abuse protection · ~2–3 days · **before real traffic**
 
+> **Status: ✅ landed.**
+
 - **B1 — Rate-limit the auth surface.** Closes OPS-2 (part).
   - Apply `@RateLimited` (or a filter) to staff login, waiter PIN verify, password reset, OTP request/verify, public review + order-tracking. Key by **IP + identifier**, not just username (fix the shared-`anonymous`-bucket flaw in `RateLimitAspect.java:62-68`).
   - *Accept:* N failed logins/PINs from one IP in a minute → 429.
@@ -506,6 +522,8 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
   - *Accept:* a flood is throttled at the edge before reaching the app.
 
 ### Phase C — Data & migration safety · ~4–6 days · **before touching a populated prod DB**
+
+> **Status: ◐ landed for fresh DBs** (chain green on real PG in CI; jsonb + reassign + Flyway hardening done). **Open: C1 on populated data + the C2/V153 decision** — the last go-live gate items.
 
 - **C1 — Rehearse the migration chain on real-shaped data.** Closes MIG-3 (part), MIG-5, MIG-12.
   - Restore a Postgres copy of prod-shaped data (or a realistic seed with multi-restaurant customers + duplicate phones), run `flyway migrate` V1→V159, and record failures/lock durations. This is the single most important pre-launch data task.
@@ -528,6 +546,8 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
 
 ### Phase D — CI & enforcement testing · ~4–6 days · **gates everything after; run parallel to A–C**
 
+> **Status: ✅ landed.**
+
 - **D1 — Stand up CI.** Closes MIG-3 (part), and the "no gate" problem behind the whole audit.
   - GitHub Actions: `mvn test`, `vite build`, frontend lint/tests, on every PR. Nothing merges red.
   - *Accept:* a PR that breaks a test is blocked.
@@ -542,6 +562,8 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
   - *Accept:* covered by the D3 harness.
 
 ### Phase E — Scale decision & resilience · ~1–2 weeks · **before multi-instance or growth**
+
+> **Status: ◐ landed** — E0 (single-node + ShedLock), E1, E2 (OSIV off + local load test), E3, E4 done. **Open: the resilience4j half of E5 (OPS-4)**; the Telegram-executor and revenue-recorder transaction hazards of OPS-10 are fixed.
 
 - **E0 — Decide the scale story (blocking decision).** Frames OPS-1, OPS-9.
   - **Option 1 — stay single-node (fastest):** add **ShedLock** (Redis/JDBC) to all `@Scheduled` jobs so crons are safe even if two instances ever run; document the single-node constraint prominently; make the healthcheck actually act (OPS-7). Acceptable for a bounded launch.
@@ -565,6 +587,8 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
 
 ### Phase F — Observability · ~3–5 days · **before real users**
 
+> **Status: ◐ code half landed** (F1, F2, F3 switchable JSON, F4 dormant Sentry + liveness probes). **Open: the infra half** — shipper, DSN, alert rules, frontend Sentry.
+
 - **F1 — Metrics.** Closes OPS-3 (part).
   - Add Micrometer + `micrometer-registry-prometheus`; expose `/actuator/prometheus` (authorized); dashboards for request rate, error rate, p99, pool usage, JVM heap.
   - *Accept:* "500s in the last hour" and "p99 latency" are answerable.
@@ -579,6 +603,8 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
   - *Accept:* an unhandled 500 raises an alert with a stack trace and request id.
 
 ### Phase G — Frontend & functional cleanup · ~1 week
+
+> **Status: ◐ landed** — G1–G4 done; G5 partially (FUNC-3/7/13 deleted; FUNC-8–11 still stubs behind live UI); **G6 (FUNC-5) open**.
 
 - **G1 — i18n key leak.** Closes FUNC-2.
   - Add the missing `common.placeholders.*`, `common.buttons.*`, `poSuggestions.*` (+ the other ~93) to `en.json`; add a CI check that fails on a missing key referenced with no default.
@@ -601,6 +627,8 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
 
 ### Phase H — Monetization (product Phase B) · deferred, gated on an acquiring contract
 
+> **Status: deferred by design.**
+
 - Real `BillingPaymentProvider` (Click/Payme recurring or Stripe/Paddle), complete the Payme protocol (FUNC-4), `BillingWebhookController`, the recurring-charge job, invoices, and self-serve `SubscriptionController` + billing UI. Set real prices. **Explicitly out of scope until the business signs a payment-acquiring contract** (per the standing "prices 0 / skip payment services" constraint).
 
 ---
@@ -610,23 +638,23 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
 Do **not** put real customer traffic or a populated production database in front of this until every box
 is checked:
 
-- [ ] `application-prod.yml` exists; OTP dev-mode **off**, DEBUG off, Swagger off (A1)
-- [ ] Committed secrets purged + **rotated**; JWT secret externalized and required (A2)
-- [ ] CORS is an allowlist, not `*` (A3); consumer token TTL sane (A4)
-- [ ] Courier webhook signed (A5); OTP/PII no longer logged (A6)
-- [ ] Postgres/Redis not host-published; Redis password set (A7)
-- [ ] Graceful shutdown + non-root + SIGTERM-forwarding container (A8)
-- [ ] Login/PIN/reset rate-limited + account lockout (B1, B2)
-- [ ] Forgot-password works or is visibly disabled (B3)
-- [ ] Migration chain **rehearsed on real-shaped Postgres data**; V153 has a signed-off recovery plan (C1, C2)
-- [ ] Loyalty jsonb mapping fixed and verified on real Postgres (C3)
-- [ ] CI runs the suite + a Testcontainers Postgres migration job on every PR (D1, D2)
-- [ ] At least one end-to-end test proves RBAC/tenant/subscription **enforce** over real HTTP (D3)
-- [ ] Scale story decided; if single-node, ShedLock on crons + documented constraint (E0)
-- [ ] JVM is container-aware with heap-dump-on-OOM (E1)
-- [ ] Metrics + request IDs + error alerting live (F1, F2, F4)
-- [ ] No user-facing control invokes a stub that fakes success (G5, esp. FUNC-3)
-- [ ] Login screen (and app) shows no raw i18n keys (G1)
+- [x] `application-prod.yml` exists; OTP dev-mode **off**, DEBUG off, Swagger off (A1)
+- [x] Committed secrets purged; JWT secret externalized and required (A2) — **rotation itself still on ops**
+- [x] CORS is an allowlist, not `*` (A3, incl. WS origins since 2026-07-11); consumer token TTL sane (A4)
+- [x] Courier webhook signed (A5); OTP/PII no longer logged (A6)
+- [x] Postgres/Redis not host-published; Redis password set (A7)
+- [x] Graceful shutdown + non-root + SIGTERM-forwarding container (A8)
+- [x] Login/PIN/reset rate-limited + account lockout (B1, B2)
+- [x] Forgot-password works or is visibly disabled (B3)
+- [ ] Migration chain **rehearsed on real-shaped Postgres data**; V153 has a signed-off recovery plan (C1, C2) — **the remaining gate item** (fresh-DB chain is green in CI)
+- [x] Loyalty jsonb mapping fixed and verified on real Postgres (C3)
+- [x] CI runs the suite + a real-Postgres migration job on every push/PR (D1, D2)
+- [x] At least one end-to-end test proves RBAC/tenant/subscription **enforce** over real HTTP (D3)
+- [x] Scale story decided; single-node, ShedLock on all crons + documented constraint + guard test (E0)
+- [x] JVM is container-aware with heap-dump-on-OOM (E1)
+- [ ] Metrics + request IDs ✅ (F1, F2); **error alerting needs the Sentry DSN + alert rules (infra)** (F4)
+- [ ] No user-facing control invokes a stub that fakes success — FUNC-3 deleted ✅; **SMS segment/delay, external-courier dispatch, shift variance, admin status filter still live over stubs** (FUNC-5, 8–11)
+- [x] Login screen (and app) shows no raw i18n keys (G1)
 
 **Rough critical path to that gate:** A (3–4 d) + B (2–3 d) + C (4–6 d) + D (4–6 d), with E1/F1–F2
 folded in ≈ **3–4 focused weeks** for one engineer, less with two working A/B and C/D in parallel. E
