@@ -578,7 +578,6 @@ public class WaiterOrderService {
                     "Process payment before closing the order.");
         }
 
-        OrderStatus statusBeforeClose = order.getStatus();
         order.setStatus(OrderStatus.COMPLETED);
 
         // Update table status to cleaning
@@ -599,10 +598,10 @@ public class WaiterOrderService {
                 .ifPresent(commission -> log.info("Commission calculated for order {}: {} ({}%)",
                         order.getOrderNumber(), commission.getCommissionAmount(), commission.getCommissionPercent()));
 
-        // Loyalty/marketing completion chain (audit FUNC-15). closeOrder requires full payment, so
-        // prior paidness is true — re-closing an already-settled order is not a new qualifying edge.
+        // Loyalty/marketing completion chain (audit FUNC-15): durable fire-once marker — a re-close
+        // of an already-COMPLETED order is a no-op here.
         if (orderCompletionEvents != null) {
-            orderCompletionEvents.publishIfQualified(updatedOrder, statusBeforeClose, true);
+            orderCompletionEvents.publishIfQualified(updatedOrder);
         }
 
         log.info("Closed order {} by waiter {}", order.getOrderNumber(), waiter.getName());

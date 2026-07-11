@@ -213,7 +213,6 @@ public class CourierOrderService {
             throw new RuntimeException("Order is not out for delivery");
         }
 
-        OrderStatus statusBeforeDelivery = order.getStatus();
         order.setStatus(OrderStatus.DELIVERED);
         order.getDeliveryInfo().setDeliveryTime(OffsetDateTime.now(ZoneOffset.UTC));
 
@@ -230,7 +229,7 @@ public class CourierOrderService {
         // Loyalty/marketing completion chain (audit FUNC-15): fires now if the delivery was already
         // paid (prepaid); an unpaid COD order fires later, when PaymentService records full payment.
         if (orderCompletionEvents != null) {
-            orderCompletionEvents.publishIfQualified(savedOrder, statusBeforeDelivery, savedOrder.isFullyPaid());
+            orderCompletionEvents.publishIfQualified(savedOrder);
         }
 
         // Credit courier wallet for delivery

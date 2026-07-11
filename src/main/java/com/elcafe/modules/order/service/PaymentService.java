@@ -151,6 +151,13 @@ public class PaymentService {
         }
 
         log.info("Created payment: {} for order: {}", saved.getId(), orderId);
+
+        // Loyalty/marketing completion chain (audit FUNC-15): a COMPLETED payment recorded through
+        // this admin CRUD can be the moment an already-settled order becomes fully paid — without
+        // this call, the customer would never earn points for it (no other site runs again).
+        if (orderCompletionEvents != null) {
+            orderCompletionEvents.publishIfQualified(order);
+        }
         return toResponse(saved);
     }
 
@@ -191,6 +198,13 @@ public class PaymentService {
 
         Payment updated = paymentRepository.save(payment);
         log.info("Updated payment: {} for order: {}", updated.getId(), orderId);
+
+        // Loyalty/marketing completion chain (audit FUNC-15): flipping a payment to COMPLETED here
+        // (the de-facto reconciliation path for PENDING online payments) can complete the paidness
+        // predicate on an already-settled order — the gate's marker keeps this idempotent.
+        if (orderCompletionEvents != null) {
+            orderCompletionEvents.publishIfQualified(updated.getOrder());
+        }
         return toResponse(updated);
     }
 
@@ -368,11 +382,6 @@ public class PaymentService {
                     PaymentFailureReason.DATABASE_ERROR, e);
         }
 
-        // State BEFORE this payment lands — the completion gate publishes only on the
-        // not-qualified -> qualified edge (audit FUNC-15).
-        OrderStatus statusBeforePayment = order.getStatus();
-        boolean fullyPaidBeforePayment = order.isFullyPaid();
-
         order.addPayment(savedPayment);
 
         // Update order tip if this payment includes tip
@@ -393,9 +402,10 @@ public class PaymentService {
             // Record revenue when order is fully paid (non-critical - logged but doesn't rollback)
             recordRevenueNonCritical(order, orderId);
 
-            // Loyalty/marketing completion chain (audit FUNC-15): the paid-side qualifying edge.
+            // Loyalty/marketing completion chain (audit FUNC-15): the paid-side qualifying edge
+            // (durable fire-once marker — a tip/refund + re-payment cycle cannot re-fire it).
             if (orderCompletionEvents != null) {
-                orderCompletionEvents.publishIfQualified(order, statusBeforePayment, fullyPaidBeforePayment);
+                orderCompletionEvents.publishIfQualified(order);
             }
         }
 

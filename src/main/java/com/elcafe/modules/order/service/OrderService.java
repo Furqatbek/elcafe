@@ -174,10 +174,10 @@ public class OrderService {
             }
         }
 
-        // Loyalty/marketing completion chain (audit FUNC-15): fires once, the first time the order
-        // is settled AND fully paid. Payments are untouched here, so current paidness == prior.
+        // Loyalty/marketing completion chain (audit FUNC-15): fires once per order ever — the gate
+        // carries a durable published-at marker, so this is safe to call after any transition.
         if (orderCompletionEvents != null) {
-            orderCompletionEvents.publishIfQualified(order, currentStatus, order.isFullyPaid());
+            orderCompletionEvents.publishIfQualified(order);
         }
 
         // Release tables when dine-in order is completed, delivered, or cancelled

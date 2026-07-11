@@ -11,20 +11,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.OffsetDateTime;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Pins the fire-once qualification of {@link OrderCompletionEvents} (audit FUNC-15): publish exactly
- * when an order FIRST satisfies settled+paid+has-customer, never on replays of an already-qualified
- * state, never when disabled, and never let a failure escape into the order flow.
+ * Pins the durable fire-once gate of {@link OrderCompletionEvents} (audit FUNC-15): publish exactly
+ * when an order qualifies (settled + fully paid + customer) AND has never fired before — the
+ * {@code completionEventPublishedAt} marker, stamped in the same transaction as the publish, is the
+ * only replay authority, so de-qualify/re-qualify cycles (tip after full payment, refund +
+ * re-collection) can never fire twice, from any call site, in any order.
  */
 @ExtendWith(MockitoExtension.class)
 class OrderCompletionEventsTest {
@@ -40,6 +44,7 @@ class OrderCompletionEventsTest {
     void setUp() {
         enabledGate = new OrderCompletionEvents(publisher, orderRepository, true);
         lenient().when(customer.getId()).thenReturn(9L);
+        lenient().when(order.getCompletionEventPublishedAt()).thenReturn(null);
         lenient().when(order.getCustomer()).thenReturn(customer);
         lenient().when(order.getStatus()).thenReturn(OrderStatus.COMPLETED);
         lenient().when(order.isFullyPaid()).thenReturn(true);
@@ -51,69 +56,78 @@ class OrderCompletionEventsTest {
     @DisplayName("disabled gate never publishes, even for a fully qualified order")
     void disabledNeverPublishes() {
         OrderCompletionEvents gate = new OrderCompletionEvents(publisher, orderRepository, false);
-        gate.publishIfQualified(order, OrderStatus.PICKED_UP, true);
+        gate.publishIfQualified(order);
         verifyNoInteractions(publisher);
     }
 
     @Test
-    @DisplayName("first qualifying edge publishes with isFirstOrder from the settled-order count")
-    void qualifyingEdgePublishes() {
-        enabledGate.publishIfQualified(order, OrderStatus.PICKED_UP, true);
+    @DisplayName("first qualifying call publishes, stamps the marker, and saves it in the same tx")
+    void qualifyingCallPublishesAndStampsMarker() {
+        enabledGate.publishIfQualified(order);
+        verify(order).setCompletionEventPublishedAt(any(OffsetDateTime.class));
+        verify(orderRepository).save(order);
         verify(publisher).publishOrderCompleted(order, customer, true);
+    }
+
+    @Test
+    @DisplayName("marker already set → no publish, ever (the tip/refund re-qualification defense)")
+    void markerSuppressesReplayForever() {
+        when(order.getCompletionEventPublishedAt()).thenReturn(OffsetDateTime.now());
+        enabledGate.publishIfQualified(order);
+        verifyNoInteractions(publisher);
+        verify(order, never()).setCompletionEventPublishedAt(any());
+        verify(orderRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("second settled order for the customer publishes with isFirstOrder=false")
     void repeatCustomerNotFirstOrder() {
         when(orderRepository.countByCustomer_IdAndStatusIn(anyLong(), anyCollection())).thenReturn(2L);
-        enabledGate.publishIfQualified(order, OrderStatus.PICKED_UP, true);
+        enabledGate.publishIfQualified(order);
         verify(publisher).publishOrderCompleted(order, customer, false);
     }
 
     @Test
-    @DisplayName("no customer → no event (walk-in POS orders; listeners dereference the customer)")
+    @DisplayName("no customer → no event, no marker (walk-in POS orders)")
     void noCustomerNoEvent() {
         when(order.getCustomer()).thenReturn(null);
-        enabledGate.publishIfQualified(order, OrderStatus.PICKED_UP, true);
+        enabledGate.publishIfQualified(order);
         verifyNoInteractions(publisher);
+        verify(order, never()).setCompletionEventPublishedAt(any());
     }
 
     @Test
-    @DisplayName("settled but unpaid → no event (loyalty accrues on money actually received)")
-    void unpaidNoEvent() {
+    @DisplayName("settled but unpaid → no event yet; the marker stays clear so full payment can fire it")
+    void unpaidNoEventYet() {
         when(order.isFullyPaid()).thenReturn(false);
-        enabledGate.publishIfQualified(order, OrderStatus.PICKED_UP, false);
+        enabledGate.publishIfQualified(order);
         verifyNoInteractions(publisher);
+        verify(order, never()).setCompletionEventPublishedAt(any());
     }
 
     @Test
     @DisplayName("paid but not settled → no event yet (fires later, from the settling site)")
-    void notSettledNoEvent() {
+    void notSettledNoEventYet() {
         when(order.getStatus()).thenReturn(OrderStatus.PREPARING);
-        enabledGate.publishIfQualified(order, OrderStatus.ACCEPTED, true);
+        enabledGate.publishIfQualified(order);
         verifyNoInteractions(publisher);
+        verify(order, never()).setCompletionEventPublishedAt(any());
     }
 
     @Test
-    @DisplayName("already qualified before the mutation (DELIVERED+paid → COMPLETED) → no second event")
-    void alreadyQualifiedNoReplay() {
-        enabledGate.publishIfQualified(order, OrderStatus.DELIVERED, true);
-        verifyNoInteractions(publisher);
-    }
-
-    @Test
-    @DisplayName("newly created order (null previousStatus) counts as a qualifying edge")
-    void newlyCreatedQualifies() {
-        enabledGate.publishIfQualified(order, null, false);
-        verify(publisher).publishOrderCompleted(eq(order), eq(customer), any(Boolean.class));
-    }
-
-    @Test
-    @DisplayName("paid-side edge: was settled but unpaid, payment completes → publishes")
-    void paymentCompletionEdgePublishes() {
+    @DisplayName("DELIVERED counts as settled (courier/payment flows)")
+    void deliveredIsSettled() {
         when(order.getStatus()).thenReturn(OrderStatus.DELIVERED);
-        enabledGate.publishIfQualified(order, OrderStatus.DELIVERED, false);
+        enabledGate.publishIfQualified(order);
         verify(publisher).publishOrderCompleted(order, customer, true);
+    }
+
+    @Test
+    @DisplayName("marker-save failure means no publish — the next qualifying mutation retries")
+    void saveFailureMeansNoPublish() {
+        doThrow(new RuntimeException("optimistic lock")).when(orderRepository).save(order);
+        enabledGate.publishIfQualified(order);
+        verifyNoInteractions(publisher);
     }
 
     @Test
@@ -121,7 +135,7 @@ class OrderCompletionEventsTest {
     void publisherFailureSwallowed() {
         doThrow(new RuntimeException("boom")).when(publisher)
                 .publishOrderCompleted(any(), any(), any(Boolean.class));
-        enabledGate.publishIfQualified(order, OrderStatus.PICKED_UP, true);
+        enabledGate.publishIfQualified(order);
         // no exception = pass
     }
 }

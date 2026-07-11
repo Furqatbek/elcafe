@@ -250,9 +250,9 @@ public class POSOrderService {
                 }
 
                 // Loyalty/marketing completion chain (audit FUNC-15): POS auto-paid orders are born
-                // settled+paid; null previousStatus = newly created, so this is the qualifying edge.
+                // settled+paid, so this is their qualifying moment (durable fire-once marker).
                 if (orderCompletionEvents != null) {
-                    orderCompletionEvents.publishIfQualified(savedOrder, null, false);
+                    orderCompletionEvents.publishIfQualified(savedOrder);
                 }
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid payment method '{}', skipping auto-payment", request.getPaymentMethod());

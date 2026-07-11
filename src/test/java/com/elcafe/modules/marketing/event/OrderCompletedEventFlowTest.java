@@ -8,7 +8,9 @@ import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.enums.PaymentMethod;
 import com.elcafe.modules.order.enums.PaymentStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
+import com.elcafe.modules.order.dto.UpdatePaymentRequest;
 import com.elcafe.modules.order.service.OrderService;
+import com.elcafe.modules.order.service.PaymentService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,6 +25,8 @@ import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.test.context.event.RecordApplicationEvents;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,6 +52,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class OrderCompletedEventFlowTest {
 
     @Autowired private OrderService orderService;
+    @Autowired private PaymentService paymentService;
     @Autowired private OrderRepository orderRepository;
     @Autowired private RestaurantRepository restaurantRepository;
     @Autowired private CustomerRepository customerRepository;
@@ -149,13 +154,44 @@ class OrderCompletedEventFlowTest {
     }
 
     @Test
-    @DisplayName("paid DELIVERED order re-transitioned to COMPLETED → no second event")
-    void alreadySettledReTransitionPublishesNothing(ApplicationEvents events) {
+    @DisplayName("order whose event already fired (marker set) re-transitions → no second event")
+    void firedOrderReTransitionPublishesNothing(ApplicationEvents events) {
         Customer c = customer("+998900010004", "occ-qr-4");
         Order o = order("OCC-5", OrderStatus.DELIVERED, c, true);
+        // Simulate the event having fired at the true qualifying moment (as PaymentService would).
+        o.setCompletionEventPublishedAt(OffsetDateTime.now(ZoneOffset.UTC));
+        orderRepository.save(o);
 
         orderService.updateOrderStatus(o.getId(), OrderStatus.COMPLETED, null, "TEST");
 
         assertThat(completedEvents(events)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("settled unpaid order becomes paid via the admin payment CRUD → fires once there, "
+            + "and the later status transition cannot fire it again")
+    void adminPaymentReconciliationFiresOnceAcrossSites(ApplicationEvents events) {
+        Customer c = customer("+998900010005", "occ-qr-5");
+        // COD-style: delivered but unpaid, with a PENDING gateway payment awaiting reconciliation.
+        Order o = order("OCC-6", OrderStatus.DELIVERED, c, false);
+        Payment pending = Payment.builder()
+                .method(PaymentMethod.CARD).status(PaymentStatus.PENDING)
+                .amount(new BigDecimal("50")).tipAmount(BigDecimal.ZERO)
+                .refundedAmount(BigDecimal.ZERO)
+                .build();
+        o.addPayment(pending);
+        o = orderRepository.save(o);
+        Long paymentId = o.getPayments().get(0).getId();
+
+        // Admin reconciles the payment — the previously-missed qualifying moment (review finding).
+        UpdatePaymentRequest reconcile = new UpdatePaymentRequest();
+        reconcile.setStatus(PaymentStatus.COMPLETED);
+        paymentService.updatePayment(o.getId(), paymentId, reconcile);
+
+        assertThat(completedEvents(events)).hasSize(1);
+
+        // The later PATCH to COMPLETED must not fire a second event (durable marker).
+        orderService.updateOrderStatus(o.getId(), OrderStatus.COMPLETED, null, "TEST");
+        assertThat(completedEvents(events)).hasSize(1);
     }
 }

@@ -7,6 +7,7 @@ import com.elcafe.modules.financial.service.RevenueService;
 import com.elcafe.modules.order.dto.pos.PaymentRequestDTO;
 import com.elcafe.modules.order.dto.pos.PaymentResponseDTO;
 import com.elcafe.modules.order.dto.pos.RefundRequestDTO;
+import com.elcafe.modules.marketing.event.OrderCompletionEvents;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.entity.Payment;
@@ -73,6 +74,9 @@ class PaymentServiceTest {
 
     @Mock
     private POSTableService posTableService;
+
+    @Mock
+    private OrderCompletionEvents orderCompletionEvents;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -316,6 +320,8 @@ class PaymentServiceTest {
 
             verify(posTableService).releaseTablesForOrder(any(Order.class));
             verify(revenueRecordingService).recordRevenueWithRetry(any(Order.class));
+            // Full payment is the paid-side qualifying moment for the completion chain (FUNC-15).
+            verify(orderCompletionEvents).publishIfQualified(any(Order.class));
             assertThat(response.isOrderFullyPaid()).isTrue();
         }
 

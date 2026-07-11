@@ -51,6 +51,10 @@ class OrderCompletedEventDefaultOffTest {
     @Test
     @DisplayName("default config: a fully qualifying completion publishes no OrderCompletedEvent")
     void defaultOffPublishesNothing(ApplicationEvents events) {
+        // This pins the SHIPPED default; an exported env var would legitimately override it.
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                System.getenv("ORDER_COMPLETED_EVENTS_ENABLED") == null,
+                "ambient ORDER_COMPLETED_EVENTS_ENABLED overrides the shipped default");
         Restaurant restaurant = restaurantRepository.save(
                 Restaurant.builder().name("Dark Cafe").address("1 Dark St").active(true).build());
         Customer customer = new Customer();

@@ -16,6 +16,7 @@ import com.elcafe.modules.order.dto.pos.CreatePOSOrderRequest;
 import com.elcafe.modules.order.dto.pos.POSOrderResponse;
 import com.elcafe.modules.order.dto.pos.POSProductAvailabilityDTO;
 import com.elcafe.modules.order.entity.DeliveryInfo;
+import com.elcafe.modules.marketing.event.OrderCompletionEvents;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -112,6 +113,9 @@ class POSOrderServiceTest {
     private POSTableService posTableService;
     @Mock
     private com.elcafe.modules.financial.service.RevenueService revenueService;
+
+    @Mock
+    private OrderCompletionEvents orderCompletionEvents;
     @Mock
     private com.elcafe.modules.menu.service.PackagingService packagingService;
     @Mock
@@ -233,6 +237,22 @@ class POSOrderServiceTest {
                 .total(BigDecimal.valueOf(16500))
                 .discount(BigDecimal.ZERO)
                 .build();
+    }
+
+    @Test
+    void createOrder_autoPay_marksCompletedAndPublishesCompletionEvent() {
+        stubCommonCreateOrderDeps();
+        CreatePOSOrderRequest request = buildDineInRequest();
+        request.setPaymentMethod("CASH");
+
+        var result = posOrderService.createOrder(request);
+
+        org.junit.jupiter.api.Assertions.assertEquals(OrderStatus.COMPLETED, result.getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals(
+                com.elcafe.modules.order.enums.PaymentStatus.COMPLETED, result.getPaymentStatus());
+        verify(revenueService).recordOrderRevenue(any(Order.class));
+        // Born settled+paid: the auto-pay branch is a qualifying moment for the completion chain.
+        verify(orderCompletionEvents).publishIfQualified(any(Order.class));
     }
 
     private void stubCommonCreateOrderDeps() {

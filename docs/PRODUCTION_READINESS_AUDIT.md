@@ -64,6 +64,24 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **FUNC-15 hardened after adversarial review: durable fire-once marker; payment-CRUD gap closed.**
+  A 15-agent adversarial review of the wiring confirmed the pre-state-snapshot design was not
+  fire-once under real flows: (1) qualification is not monotonic — a tip raises the grand total
+  after full payment (POST /pos/orders/{id}/tip) and refunds un-pay settled orders, so the next
+  payment looked like a fresh qualifying edge → duplicate events (double SMS; milestone corruption
+  for tenants whose loyalty config never wrote the ledger row the replay guard keys on); (2) the
+  admin payment CRUD (create/updatePayment — the de-facto reconciliation path for PENDING online
+  payments) could make an already-settled order fully paid with NO instrumented site left to fire →
+  the customer permanently never earned points; (3) the gate handed an UNINITIALISED lazy customer
+  proxy across threads (getId() does not initialise!) — the same bug class as the admin-broadcast
+  fix, re-introduced. All three fixed: the order now carries a `completion_event_published_at`
+  marker (V161) stamped in the same transaction as the publish — marker and AFTER_COMMIT event
+  stand or fall together, so no de-qualify/re-qualify cycle can ever re-fire, and the gate became
+  safe to call from anywhere (both payment CRUD methods are now wired); the gate explicitly
+  `Hibernate.initialize`s the customer before it crosses threads. Call sites simplified (no more
+  pre-state plumbing). New coverage: marker semantics pinned in the gate unit tests, a cross-site
+  flow test (admin reconciliation fires once; the later status PATCH cannot re-fire), per-site
+  gate-call pins in all six services' unit tests, and the previously-untested POS auto-pay branch.
 - **FUNC-15 wired, dark: loyalty accrual + completion SMS are now one env flip away.** The dormant
   order-completed chain (loyalty points, milestone visits, first-order bonus, thank-you/first-order
   SMS) is connected behind `ORDER_COMPLETED_EVENTS_ENABLED` (default OFF — pinned by

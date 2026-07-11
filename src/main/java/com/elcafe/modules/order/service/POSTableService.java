@@ -43,8 +43,6 @@ public class POSTableService {
                     "Process payment before closing the order.");
         }
 
-        OrderStatus statusBeforeClose = order.getStatus();
-
         // Update order status to DELIVERED/COMPLETED if not already
         if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.CANCELLED) {
             order.setStatus(OrderStatus.DELIVERED);
@@ -56,11 +54,10 @@ public class POSTableService {
 
         Order saved = orderRepository.save(order);
 
-        // Loyalty/marketing completion chain (audit FUNC-15): normally the qualifying edge fired when
-        // PaymentService recorded full payment (which sets DELIVERED); this covers a paid order that
-        // somehow reaches table close still unsettled. Payments are untouched here.
+        // Loyalty/marketing completion chain (audit FUNC-15): normally the qualifying moment fired
+        // when PaymentService recorded full payment; the gate's marker makes this call a no-op then.
         if (orderCompletionEvents != null) {
-            orderCompletionEvents.publishIfQualified(saved, statusBeforeClose, saved.isFullyPaid());
+            orderCompletionEvents.publishIfQualified(saved);
         }
 
         return saved;

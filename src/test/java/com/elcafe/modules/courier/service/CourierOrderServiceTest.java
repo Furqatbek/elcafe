@@ -40,6 +40,9 @@ class CourierOrderServiceTest {
     @Mock private NotificationService notificationService;
     @Mock private KitchenOrderService kitchenOrderService;
     @Mock private CourierWalletService courierWalletService;
+    @Mock
+    private com.elcafe.modules.marketing.event.OrderCompletionEvents orderCompletionEvents;
+
     @InjectMocks private CourierOrderService courierOrderService;
 
     private User user;
@@ -150,5 +153,7 @@ class CourierOrderServiceTest {
         assertThat(result.getStatus()).isEqualTo(OrderStatus.DELIVERED);
         assertThat(result.getDeliveryInfo().getDeliveryTime()).isNotNull();
         verify(courierWalletService).creditDeliveryFee(eq(1L), any());
+        // Delivery is a settling moment: the completion gate must be consulted (fires iff paid).
+        verify(orderCompletionEvents).publishIfQualified(any(Order.class));
     }
 }

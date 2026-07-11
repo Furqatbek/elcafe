@@ -84,6 +84,9 @@ class WaiterOrderServiceTest {
     @Mock
     private com.elcafe.modules.waiter.event.OrderEventPublisher orderEventPublisher;
 
+    @Mock
+    private com.elcafe.modules.marketing.event.OrderCompletionEvents orderCompletionEvents;
+
     @InjectMocks
     private WaiterOrderService waiterOrderService;
 
@@ -634,6 +637,8 @@ class WaiterOrderServiceTest {
             Order result = waiterOrderService.closeOrder(1L, waiter.getId());
 
             assertEquals(OrderStatus.COMPLETED, result.getStatus());
+            // Waiter close is a settling moment: the completion gate must be consulted.
+            verify(orderCompletionEvents).publishIfQualified(result);
         }
 
         @Test

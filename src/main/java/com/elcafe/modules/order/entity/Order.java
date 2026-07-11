@@ -227,6 +227,17 @@ public class Order {
     @Column(name = "completed_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime completedAt;
 
+    /**
+     * Fire-once marker for the loyalty/marketing order-completed event (audit FUNC-15): stamped by
+     * {@code OrderCompletionEvents} in the same transaction as the publish, so the event can never
+     * fire twice for one order — even when qualification oscillates (a tip raising the grand total
+     * after full payment, refunds, admin payment corrections). Internal bookkeeping, never part of
+     * any API payload.
+     */
+    @JsonIgnore
+    @Column(name = "completion_event_published_at")
+    private OffsetDateTime completionEventPublishedAt;
+
     @Column(name = "cancelled_at", columnDefinition = "TIMESTAMP WITH TIME ZONE")
     private OffsetDateTime cancelledAt;
 

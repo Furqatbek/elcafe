@@ -47,6 +47,9 @@ class POSTableServiceTest {
     @Mock
     private RestaurantTableRepository restaurantTableRepository;
 
+    @Mock
+    private com.elcafe.modules.marketing.event.OrderCompletionEvents orderCompletionEvents;
+
     @InjectMocks
     private POSTableService posTableService;
 
@@ -105,6 +108,8 @@ class POSTableServiceTest {
             assertEquals(TableStatus.AVAILABLE, table1.getStatus());
             verify(restaurantTableRepository).save(table1);
             verify(orderRepository).save(order);
+            // Table close is a settling moment: the completion gate must be consulted.
+            verify(orderCompletionEvents).publishIfQualified(result);
         }
 
         @Test
