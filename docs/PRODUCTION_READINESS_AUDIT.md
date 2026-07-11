@@ -174,7 +174,11 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
   `requestId`/`tenantId` on request-scoped lines, and `/health/liveness`+`/health/readiness` held
   200 while the aggregate `/health` reported 503 — the exact blip scenario, no restart loop.
   Remaining F3/F4 is genuinely infra: a shipper reading the stdout JSON, a real DSN + alert rules,
-  frontend Sentry.
+  frontend Sentry. Postscript: introducing `logback-spring.xml` turned the long-latent broken file
+  appender default (absolute `/app/logs`, not creatable on CI runners) from a silent status warning
+  into a FATAL boot error — CI was red for five pushes until the default became relative
+  (identical path inside the container, `target/test-logs` under test). A cold-runner-only frontend
+  mock leak (PlatformConsole) was fixed in the same commit; branch CI is green again end-to-end.
 - **Boot smoke on migrated PostgreSQL — the app runs, and the OSIV-off payloads survive real HTTP.**
   First-ever full boot against the real V1..V160-migrated Postgres 16 schema: `ddl-auto: validate`
   passed, i.e. the entity mappings match the migrated schema exactly. Prod-shaped flags (tenant + WS
