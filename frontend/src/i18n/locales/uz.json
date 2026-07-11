@@ -5289,7 +5289,10 @@
     "password": "Parol",
     "newPassword": "Yangi parol (saqlash uchun bo'sh qoldiring)",
     "confirmDeactivate": "Ushbu foydalanuvchini o'chirishni tasdiqlaysizmi?",
-    "saveFailed": "Xatolik"
+    "saveFailed": "Xatolik",
+    "restaurant": "Restoran",
+    "platformAccount": "— Platforma (restoransiz)",
+    "restaurantHint": "Bu foydalanuvchi qaysi restoranni boshqaradi. Platforma hisoblari restoranga kirish huquqiga ega emas."
   },
   "kitchenStations": {
     "title": "Oshxona stantsiyalari",

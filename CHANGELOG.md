@@ -26,6 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `CONSUMER_OTP_DEVELOPMENT_MODE` are now actually passed to the backend container (previously
   documented in the env template but silently dropped); `DB_PASSWORD` is required — the insecure
   `elcafe_secret` default is gone.
+- **Fixed: creating a restaurant with a minimal body (name + address) returned HTTP 500** — the
+  create mapper's explicit nulls overrode the entity's `accepting_orders`/`active` defaults and hit
+  the NOT NULL constraint. Never surfaced before because the admin UI always sends the toggles and
+  the demo restaurant was migration-seeded. Found live by the fresh-DB launch rehearsal; both flags
+  now default to `true` on create.
+- **Restaurant admin provisioning (closes the last SQL-only onboarding step):** a SUPER_ADMIN can
+  now pass an explicit `restaurantId` when creating or updating a system user — validated against
+  existing restaurants, denied for tenant admins (who stay bound to their own restaurant). The
+  System Users page shows a restaurant selector + column to the SUPER_ADMIN only. Previously,
+  SUPER_ADMIN-created users were always unbound (`restaurant_id NULL`) and attaching each
+  restaurant's first admin required manual SQL.
 
 ### Production hardening — 2026-07-09 → 2026-07-11
 

@@ -65,7 +65,17 @@ already satisfied E2's pool-behavior criterion.
   Also: `docs/LAUNCH.md` (minimal launch checklist), `.env.docker.example` rewritten around the six
   required vars, compose now actually passes `ADMIN_EMAIL`/`ADMIN_PASSWORD`/`COURIER_WEBHOOK_SECRET`/
   SMTP vars to the backend (previously documented but silently dropped), and `DB_PASSWORD` is
-  required (the `elcafe_secret` default is gone).
+  required (the `elcafe_secret` default is gone). Follow-up the same day: the tenant-provisioning
+  gap this exposed (every SUPER_ADMIN-created user was unbound, `restaurant_id NULL`, and no API
+  could bind one — each restaurant's first admin needed manual SQL) is closed: system-user
+  create/update accept an explicit `restaurantId` for SUPER_ADMIN callers only (validated to exist;
+  tenant admins are denied on a foreign id, and the edit form echoing the current binding stays a
+  no-op), with the restaurant selector/column in the System Users page gated to SUPER_ADMIN. The
+  live rehearsal of that flow (bootstrap login → create restaurant → create bound admin → tenant
+  login/scoping/rebind-denial) also caught a day-one 500: a minimal `POST /restaurants` body hit
+  the `accepting_orders` NOT NULL constraint (mapper nulls overrode the entity defaults; the admin
+  UI always sends the toggles so it never surfaced) — both flags now default TRUE on create,
+  pinned by `RestaurantMapperTest`.
 - **A — config lockdown:** `application-prod.yml` + a `prod`-profile fail-fast validator (OTP dev-mode off,
   DEBUG off, Swagger off, `include-message` never, wildcard-CORS-with-credentials rejected); `.env.docker`
   untracked + `.env.docker.example`; the committed JWT default blacklisted; CORS allowlist; consumer token

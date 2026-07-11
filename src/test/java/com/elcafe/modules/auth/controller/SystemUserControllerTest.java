@@ -1,10 +1,12 @@
 package com.elcafe.modules.auth.controller;
 
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.repository.UserRepository;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,7 @@ class SystemUserControllerTest {
     @Mock UserRepository userRepository;
     @Mock PasswordEncoder passwordEncoder;
     @Mock RestaurantAuthorizationService authz;
+    @Mock RestaurantRepository restaurantRepository;
     @InjectMocks SystemUserController controller;
 
     @Test
@@ -49,7 +52,7 @@ class SystemUserControllerTest {
         when(userRepository.findById(42L)).thenReturn(Optional.of(platform));
         when(authz.isAdmin()).thenReturn(false); // tenant admin, not SUPER_ADMIN
 
-        var req = new SystemUserController.UpdateRequest(null, null, null, "newpass", null, null);
+        var req = new SystemUserController.UpdateRequest(null, null, null, "newpass", null, null, null);
 
         assertThrows(AccessDeniedException.class, () -> controller.update(42L, req));
         verify(userRepository, never()).save(any());
@@ -99,7 +102,7 @@ class SystemUserControllerTest {
         when(passwordEncoder.encode(any())).thenReturn("hashed");
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        var req = new SystemUserController.UpdateRequest(null, null, null, "newpass", null, null);
+        var req = new SystemUserController.UpdateRequest(null, null, null, "newpass", null, null, null);
         controller.update(5L, req);
 
         ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
@@ -118,11 +121,110 @@ class SystemUserControllerTest {
             return u;
         });
 
-        var req = new SystemUserController.CreateRequest("m@t.co", "pw", "M", "G", null, UserRole.MANAGER);
+        var req = new SystemUserController.CreateRequest("m@t.co", "pw", "M", "G", null, UserRole.MANAGER, null);
         controller.create(req);
 
         ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(cap.capture());
         assertEquals(5L, cap.getValue().getRestaurantId());
+    }
+
+    // --- explicit restaurant binding (how a restaurant's FIRST admin is attached, docs/LAUNCH.md) ---
+
+    @Test
+    @DisplayName("create — SUPER_ADMIN may bind the new user to any existing restaurant")
+    void create_superAdminBindsExplicitRestaurant() {
+        when(authz.isAdmin()).thenReturn(true);
+        when(restaurantRepository.existsById(3L)).thenReturn(true);
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+        when(userRepository.save(any())).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(99L);
+            return u;
+        });
+
+        var req = new SystemUserController.CreateRequest("a@t.co", "pw", "A", "D", null, UserRole.ADMIN, 3L);
+        controller.create(req);
+
+        ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(cap.capture());
+        assertEquals(3L, cap.getValue().getRestaurantId());
+    }
+
+    @Test
+    @DisplayName("create — SUPER_ADMIN binding to a nonexistent restaurant is a 400, nothing saved")
+    void create_superAdminUnknownRestaurantRejected() {
+        when(authz.isAdmin()).thenReturn(true);
+        when(restaurantRepository.existsById(77L)).thenReturn(false);
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+
+        var req = new SystemUserController.CreateRequest("a@t.co", "pw", "A", "D", null, UserRole.ADMIN, 77L);
+
+        assertThrows(BadRequestException.class, () -> controller.create(req));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create — a tenant admin supplying another restaurant's id is denied, not rewritten")
+    void create_tenantAdminForeignRestaurantDenied() {
+        when(authz.isAdmin()).thenReturn(false);
+        when(authz.currentTenantScopeStrict()).thenReturn(5L);
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(passwordEncoder.encode(any())).thenReturn("hashed");
+
+        var req = new SystemUserController.CreateRequest("m@t.co", "pw", "M", "G", null, UserRole.MANAGER, 7L);
+
+        assertThrows(AccessDeniedException.class, () -> controller.create(req));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("update — SUPER_ADMIN rebinds a platform (null-restaurant) admin to a restaurant")
+    void update_superAdminRebindsUser() {
+        User unbound = User.builder().id(42L).email("a@t.co").role(UserRole.ADMIN)
+                .restaurantId(null).active(true).tokenVersion(0).build();
+        when(userRepository.findById(42L)).thenReturn(Optional.of(unbound));
+        when(authz.isAdmin()).thenReturn(true);
+        when(restaurantRepository.existsById(3L)).thenReturn(true);
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var req = new SystemUserController.UpdateRequest(null, null, null, null, null, null, 3L);
+        controller.update(42L, req);
+
+        ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(cap.capture());
+        assertEquals(3L, cap.getValue().getRestaurantId());
+    }
+
+    @Test
+    @DisplayName("update — the edit form echoing the target's current restaurant back is a no-op, not a 403")
+    void update_sameRestaurantEchoAllowedForTenantAdmin() {
+        User staff = User.builder().id(5L).email("op@t.co").role(UserRole.OPERATOR)
+                .restaurantId(9L).active(true).tokenVersion(0).build();
+        when(userRepository.findById(5L)).thenReturn(Optional.of(staff));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var req = new SystemUserController.UpdateRequest("New", null, null, null, null, null, 9L);
+        controller.update(5L, req);
+
+        ArgumentCaptor<User> cap = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(cap.capture());
+        assertEquals(9L, cap.getValue().getRestaurantId());
+        assertEquals("New", cap.getValue().getFirstName());
+    }
+
+    @Test
+    @DisplayName("update — a tenant admin cannot move a user to another restaurant")
+    void update_tenantAdminRebindDenied() {
+        User staff = User.builder().id(5L).email("op@t.co").role(UserRole.OPERATOR)
+                .restaurantId(9L).active(true).tokenVersion(0).build();
+        when(userRepository.findById(5L)).thenReturn(Optional.of(staff));
+        when(authz.isAdmin()).thenReturn(false);
+
+        var req = new SystemUserController.UpdateRequest(null, null, null, null, null, null, 3L);
+
+        assertThrows(AccessDeniedException.class, () -> controller.update(5L, req));
+        verify(userRepository, never()).save(any());
     }
 }

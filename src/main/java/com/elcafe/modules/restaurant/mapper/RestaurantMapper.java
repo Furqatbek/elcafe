@@ -85,8 +85,12 @@ public class RestaurantMapper {
                 .phone(request.getPhone())
                 .email(request.getEmail())
                 .website(request.getWebsite())
-                .active(request.getActive())
-                .acceptingOrders(request.getAcceptingOrders())
+                // Both columns are NOT NULL: an explicit .xxx(null) overrides the entity's
+                // @Builder.Default, so a minimal create body (name + address only) must fall back
+                // to TRUE here or the INSERT dies on the constraint. (Caught by the fresh-DB
+                // launch rehearsal — the admin UI always sends the toggles, curl/API clients don't.)
+                .active(request.getActive() != null ? request.getActive() : Boolean.TRUE)
+                .acceptingOrders(request.getAcceptingOrders() != null ? request.getAcceptingOrders() : Boolean.TRUE)
                 .minimumOrderAmount(request.getMinimumOrderAmount())
                 .deliveryFee(request.getDeliveryFee())
                 .estimatedDeliveryTimeMinutes(request.getEstimatedDeliveryTimeMinutes())

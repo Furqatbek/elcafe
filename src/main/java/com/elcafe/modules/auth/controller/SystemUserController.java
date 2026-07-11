@@ -1,9 +1,11 @@
 package com.elcafe.modules.auth.controller;
 
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.auth.repository.UserRepository;
+import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.utils.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -32,6 +34,7 @@ public class SystemUserController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RestaurantAuthorizationService restaurantAuthorizationService;
+    private final RestaurantRepository restaurantRepository;
 
     private static final Set<UserRole> SYSTEM_ROLES = Set.of(
             UserRole.ADMIN, UserRole.OWNER, UserRole.MANAGER, UserRole.OPERATOR);
@@ -50,15 +53,7 @@ public class SystemUserController {
                 .filter(u -> SYSTEM_ROLES.contains(u.getRole()))
                 .toList();
 
-        List<Map<String, Object>> result = users.stream().map(u -> Map.<String, Object>of(
-                "id", u.getId(),
-                "email", u.getEmail() != null ? u.getEmail() : "",
-                "firstName", u.getFirstName() != null ? u.getFirstName() : "",
-                "lastName", u.getLastName() != null ? u.getLastName() : "",
-                "phone", u.getPhone() != null ? u.getPhone() : "",
-                "role", u.getRole().name(),
-                "active", u.getActive()
-        )).toList();
+        List<Map<String, Object>> result = users.stream().map(this::toMap).toList();
 
         return ResponseEntity.ok(ApiResponse.success("System users retrieved", result));
     }
@@ -81,11 +76,7 @@ public class SystemUserController {
                 .role(req.role)
                 .active(true)
                 .emailVerified(true)
-                // Bind the new system user to the creator's restaurant ALWAYS (not just under enforce):
-                // getAll() lists with the strict scope, so a mode-aware null binding here would orphan
-                // every user a tenant admin creates in shadow (invisible + unmanageable). null only for
-                // a SUPER_ADMIN creator (a platform account).
-                .restaurantId(restaurantAuthorizationService.currentTenantScopeStrict())
+                .restaurantId(resolveCreateBinding(req.restaurantId))
                 .build();
 
         User saved = userRepository.save(user);
@@ -108,6 +99,17 @@ public class SystemUserController {
         if (req.phone != null) user.setPhone(req.phone);
         if (req.role != null && SYSTEM_ROLES.contains(req.role)) user.setRole(req.role);
         if (req.active != null) user.setActive(req.active);
+        // Rebinding a user to another restaurant is a platform-operator action (this is how each
+        // restaurant's FIRST admin gets attached — see docs/LAUNCH.md). An identical value is a
+        // no-op so the edit form may echo the current binding back; null means "not provided"
+        // (partial-update convention), so a binding can be changed but never removed here.
+        if (req.restaurantId != null && !req.restaurantId.equals(user.getRestaurantId())) {
+            if (!restaurantAuthorizationService.isAdmin()) {
+                throw new AccessDeniedException("Only the platform operator can move a user between restaurants");
+            }
+            requireRestaurantExists(req.restaurantId);
+            user.setRestaurantId(req.restaurantId);
+        }
         if (req.password != null && !req.password.isBlank()) {
             user.setPassword(passwordEncoder.encode(req.password));
         }
@@ -162,16 +164,44 @@ public class SystemUserController {
         restaurantAuthorizationService.validateRestaurantAccess(user.getRestaurantId());
     }
 
+    /**
+     * Resolve which restaurant the new user is bound to. A tenant admin always creates within their
+     * own restaurant (a mismatching explicit id is rejected, not silently rewritten). A SUPER_ADMIN
+     * may bind the user to any existing restaurant — this is how each restaurant's FIRST admin is
+     * attached (docs/LAUNCH.md); with no id the account is a platform (null-restaurant) one.
+     */
+    private Long resolveCreateBinding(Long requestedRestaurantId) {
+        if (restaurantAuthorizationService.isAdmin()) {
+            if (requestedRestaurantId != null) {
+                requireRestaurantExists(requestedRestaurantId);
+            }
+            return requestedRestaurantId;
+        }
+        Long own = restaurantAuthorizationService.currentTenantScopeStrict();
+        if (requestedRestaurantId != null && !requestedRestaurantId.equals(own)) {
+            throw new AccessDeniedException("Cannot create a user for another restaurant");
+        }
+        return own;
+    }
+
+    private void requireRestaurantExists(Long restaurantId) {
+        if (!restaurantRepository.existsById(restaurantId)) {
+            throw new BadRequestException("Restaurant not found: " + restaurantId);
+        }
+    }
+
     private Map<String, Object> toMap(User u) {
-        return Map.of(
-                "id", u.getId(),
-                "email", u.getEmail(),
-                "firstName", u.getFirstName() != null ? u.getFirstName() : "",
-                "lastName", u.getLastName() != null ? u.getLastName() : "",
-                "phone", u.getPhone() != null ? u.getPhone() : "",
-                "role", u.getRole().name(),
-                "active", u.getActive()
-        );
+        // LinkedHashMap, not Map.of: restaurantId is legitimately null for platform accounts.
+        Map<String, Object> map = new java.util.LinkedHashMap<>();
+        map.put("id", u.getId());
+        map.put("email", u.getEmail() != null ? u.getEmail() : "");
+        map.put("firstName", u.getFirstName() != null ? u.getFirstName() : "");
+        map.put("lastName", u.getLastName() != null ? u.getLastName() : "");
+        map.put("phone", u.getPhone() != null ? u.getPhone() : "");
+        map.put("role", u.getRole().name());
+        map.put("active", u.getActive());
+        map.put("restaurantId", u.getRestaurantId());
+        return map;
     }
 
     public record CreateRequest(
@@ -180,7 +210,8 @@ public class SystemUserController {
             @NotBlank String firstName,
             @NotBlank String lastName,
             String phone,
-            @NotNull UserRole role
+            @NotNull UserRole role,
+            Long restaurantId
     ) {}
 
     public record UpdateRequest(
@@ -189,6 +220,7 @@ public class SystemUserController {
             String phone,
             String password,
             UserRole role,
-            Boolean active
+            Boolean active,
+            Long restaurantId
     ) {}
 }

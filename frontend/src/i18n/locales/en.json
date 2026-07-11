@@ -5289,7 +5289,10 @@
     "password": "Password",
     "newPassword": "New Password (leave empty to keep)",
     "confirmDeactivate": "Deactivate this user?",
-    "saveFailed": "Failed"
+    "saveFailed": "Failed",
+    "restaurant": "Restaurant",
+    "platformAccount": "— Platform (no restaurant)",
+    "restaurantHint": "Which restaurant this user manages. Platform accounts have no restaurant access."
   },
   "kitchenStations": {
     "title": "Kitchen Stations",

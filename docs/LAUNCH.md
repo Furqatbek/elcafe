@@ -35,7 +35,9 @@ Log in at `https://<your-domain>` with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 1. Change the admin password in the admin panel.
 2. Remove `ADMIN_PASSWORD` from `.env.docker`.
-3. Create your restaurant and staff accounts.
+3. Create your restaurant, then its admin: **System Users → Add User**, role `ADMIN`, and pick the
+   restaurant in the selector (visible to you as SUPER_ADMIN). That admin manages their own staff
+   from then on.
 
 ## Day 2
 

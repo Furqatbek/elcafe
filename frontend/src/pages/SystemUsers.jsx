@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { systemUserAPI } from '../services/api';
+import { restaurantAPI, systemUserAPI } from '../services/api';
+import { useAuthStore } from '../store/authStore';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -22,14 +23,32 @@ const ROLES = ['ADMIN', 'OWNER', 'MANAGER', 'OPERATOR'];
 
 export default function SystemUsers() {
   const { t } = useTranslation();
+  const currentUser = useAuthStore((state) => state.user);
+  // Only the platform operator may pick which restaurant a user belongs to (the backend enforces
+  // this too); tenant admins always create within their own restaurant.
+  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const [users, setUsers] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState({
-    email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true,
+    email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true, restaurantId: '',
   });
 
   useEffect(() => { loadUsers(); }, []);
+
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    restaurantAPI.getAll()
+      .then((res) => setRestaurants(res.data?.data?.content || res.data?.data || []))
+      .catch((e) => console.error(e));
+  }, [isSuperAdmin]);
+
+  const restaurantName = (id) => {
+    if (id == null) return '—';
+    const r = restaurants.find((x) => x.id === id);
+    return r ? r.name : `#${id}`;
+  };
 
   const loadUsers = async () => {
     try {
@@ -40,24 +59,29 @@ export default function SystemUsers() {
 
   const openCreate = () => {
     setEditingUser(null);
-    setForm({ email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true });
+    setForm({ email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true, restaurantId: '' });
     setDialogOpen(true);
   };
 
   const openEdit = (user) => {
     setEditingUser(user);
-    setForm({ ...user, password: '' });
+    setForm({ ...user, password: '', restaurantId: user.restaurantId ?? '' });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     try {
+      const data = { ...form };
+      // Empty selection means "platform account" on create and "leave unchanged" on edit; the
+      // backend treats an absent restaurantId exactly that way, so drop the key instead of
+      // sending an empty string.
+      if (data.restaurantId === '' || data.restaurantId == null) delete data.restaurantId;
+      else data.restaurantId = Number(data.restaurantId);
       if (editingUser) {
-        const data = { ...form };
         if (!data.password) delete data.password;
         await systemUserAPI.update(editingUser.id, data);
       } else {
-        await systemUserAPI.create(form);
+        await systemUserAPI.create(data);
       }
       setDialogOpen(false);
       loadUsers();
@@ -111,13 +135,14 @@ export default function SystemUsers() {
                 <TableHead>{t('systemUsers.email', 'Email')}</TableHead>
                 <TableHead>{t('systemUsers.phone', 'Phone')}</TableHead>
                 <TableHead className="text-center">{t('systemUsers.role', 'Role')}</TableHead>
+                {isSuperAdmin && <TableHead>{t('systemUsers.restaurant', 'Restaurant')}</TableHead>}
                 <TableHead className="text-center">{t('systemUsers.status', 'Status')}</TableHead>
                 <TableHead className="text-right">{t('systemUsers.actions', 'Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t('systemUsers.noUsers', 'No system users')}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">{t('systemUsers.noUsers', 'No system users')}</TableCell></TableRow>
               ) : (
                 users.map(u => (
                   <TableRow key={u.id}>
@@ -127,6 +152,7 @@ export default function SystemUsers() {
                     <TableCell className="text-center">
                       <Badge variant={roleColor(u.role)}>{u.role}</Badge>
                     </TableCell>
+                    {isSuperAdmin && <TableCell>{restaurantName(u.restaurantId)}</TableCell>}
                     <TableCell className="text-center">
                       <Badge variant={u.active ? 'default' : 'secondary'}>
                         {u.active ? t('systemUsers.active', 'Active') : t('systemUsers.inactive', 'Inactive')}
@@ -193,6 +219,30 @@ export default function SystemUsers() {
                 </Select>
               </div>
             </div>
+            {isSuperAdmin && (
+              <div className="space-y-2">
+                <Label>{t('systemUsers.restaurant', 'Restaurant')}</Label>
+                <Select
+                  value={form.restaurantId === '' ? 'none' : String(form.restaurantId)}
+                  onValueChange={v => setForm({ ...form, restaurantId: v === 'none' ? '' : v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {/* On edit of a bound user "none" is omitted: the API's partial-update contract
+                        can rebind but never unbind, so offering it would be a silent no-op. */}
+                    {(!editingUser || editingUser.restaurantId == null) && (
+                      <SelectItem value="none">{t('systemUsers.platformAccount', '— Platform (no restaurant)')}</SelectItem>
+                    )}
+                    {restaurants.map(r => (
+                      <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t('systemUsers.restaurantHint', 'Which restaurant this user manages. Platform accounts have no restaurant access.')}
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
