@@ -64,6 +64,18 @@ DSN + alert rules — and the subscription enforcement product flip) and monetiz
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **Hardening tail: idempotent waiter close, milestone replay guard, typed payment/courier errors.**
+  `WaiterOrderService.closeOrder` had no terminal-status guard — a double-tap or client retry on an
+  already-closed order replayed the close side effects (duplicate ORDER_CLOSED event row + OrderPaid
+  broadcast; commission was already per-order-deduped). Re-close is now an idempotent no-op and
+  closing a cancelled order is a 400 (pinned in `CloseOrderTests`). `MilestoneRedemption.recordVisit`
+  blindly incremented on every call — the same order can no longer count as two visits
+  (`MilestoneServiceTest`), completing the third defense layer behind the publish marker and the
+  loyalty listener's ledger check. The admin payment CRUD and the courier service threw bare
+  `RuntimeException` (HTTP 500) for not-found/wrong-state cases — now typed
+  `ResourceNotFoundException`/`BadRequestException`/`ConflictException` (404/400/409). Also verified
+  `SuspensionGate.test.jsx` does NOT have the PlatformConsole cold-runner mock hazard (its mocks are
+  synchronous-only) — no change needed there.
 - **FUNC-15 hardened after adversarial review: durable fire-once marker; payment-CRUD gap closed.**
   A 15-agent adversarial review of the wiring confirmed the pre-state-snapshot design was not
   fire-once under real flows: (1) qualification is not monotonic — a tip raises the grand total
