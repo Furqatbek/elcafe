@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-elcafe}
       POSTGRES_USER: ${DB_USER:-elcafe}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-elcafe_secret}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set (see .env.docker.example)}
       TZ: Asia/Tashkent
       PGTZ: Asia/Tashkent
     volumes:
@@ -44,7 +44,7 @@ services:
       POSTGRES_HOST: db
       POSTGRES_DB: ${DB_NAME:-elcafe}
       POSTGRES_USER: ${DB_USER:-elcafe}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-elcafe_secret}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set (see .env.docker.example)}
       POSTGRES_EXTRA_OPTS: "-Z6 --quote-all-identifiers"
       SCHEDULE: "@daily"
       BACKUP_KEEP_DAYS: 7
@@ -97,7 +97,7 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${DB_NAME:-elcafe}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-elcafe}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-elcafe_secret}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set (see .env.docker.example)}
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set (see .env.docker.example)}
@@ -109,6 +109,24 @@ services:
       # No wildcard default. In the prod profile a blank/`*` origin with credentials is rejected at
       # startup (ProductionConfigValidator); set CORS_ORIGINS to an explicit comma-separated origin list.
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # First-boot platform operator (docs/LAUNCH.md): when the users table is empty and both are
+      # set, the app creates a SUPER_ADMIN account. Inert afterwards — remove ADMIN_PASSWORD from
+      # the environment once you have logged in and changed the password.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # Courier delivery-status callbacks authenticate with this shared secret (X-Webhook-Secret).
+      # The endpoint fails closed (rejects all callbacks) while unset.
+      COURIER_WEBHOOK_SECRET: ${COURIER_WEBHOOK_SECRET:-}
+      # Password-reset email (optional). Without SPRING_MAIL_HOST the mail sender is not configured
+      # and forgot-password logs a warning instead of sending.
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_RESET_PASSWORD_URL: ${MAIL_RESET_PASSWORD_URL:-}
+      # MUST stay false in production (dev mode accepts ANY OTP). The prod profile also forces this.
+      CONSUMER_OTP_DEVELOPMENT_MODE: ${CONSUMER_OTP_DEVELOPMENT_MODE:-false}
       # Tenant isolation mode: off | shadow | enforce (Phase 0 §3.3/§3.4). Now ENFORCE — isolation is
       # active after the Phase 0 hardening + shadow soak (see docs/TENANT_ENFORCE_FLIP_RUNBOOK.md).
       # Rollback is a one-liner: set this to shadow.

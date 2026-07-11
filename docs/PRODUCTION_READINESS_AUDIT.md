@@ -12,10 +12,14 @@
 > investigators and the load-bearing claims were re-verified against the code by hand.
 >
 > **Update 2026-07-11 — the verdict above is the 2026-07-09 point-in-time record.** The roadmap has
-> since been executed through phases A–G (see §0): the go-live gate items are closed except the
-> populated-data migration rehearsal + V153 decision, and every finding in §2 now carries a status
-> marker (✅ fixed · ⏳ gated on ops/product/infra · 🔴 still open). Current one-line verdict:
-> **production-ready for a bounded single-node launch once the ops-gated items in §0 are done.**
+> since been executed through phases A–G (see §0): the go-live gate items are closed, and every
+> finding in §2 now carries a status marker (✅ fixed · ⏳ gated on ops/product/infra · ⚪ N/A/won't-do
+> · 🔴 still open). The former last gate item — the populated-data migration rehearsal + V153
+> decision — is **N/A by ops decision**: deployments always start from a clean, empty database
+> (fresh-DB chain is green in CI), so the populated-data backfill risks cannot occur. Demo seed data
+> was removed from the migrations and the operator account now bootstraps from `ADMIN_EMAIL`/
+> `ADMIN_PASSWORD` on first boot. Current one-line verdict: **production-ready for a bounded
+> single-node launch once the ops-gated items in §0 are done.**
 
 ## How to read this
 
@@ -37,13 +41,31 @@ multi-instance) · **MEDIUM** · **LOW**.
 Phases **A–D of §3 are landed** (commits `f77f085`, `67a6be7`, `cd419c3`, `af9c5fd`, `018de15`), and
 **E–G are now essentially landed too**: scale topology decided + ShedLock'd (E0), analytics on DB
 aggregates (E3), `open-in-view` off (E2) and boot-smoked against migrated Postgres. The launch gate is
-met; what remains is decision- or infra-gated work (populated-data migration rehearsal + the V153
-decision, the infra half of F3–F4 — log shipper, Sentry DSN + alert rules — the subscription- and
-loyalty-activation product flips, and first-deploy checks: external courier client, prod-infra load
-test) and monetization (H). A local load test (18,400 requests at 2× pool concurrency, zero errors)
+met; what remains is decision- or infra-gated work (the infra half of F3–F4 — log shipper, Sentry
+DSN + alert rules — the subscription- and loyalty-activation product flips, and first-deploy checks:
+external courier client, prod-infra load test) and monetization (H). The populated-data rehearsal +
+V153 decision were retired as N/A on 2026-07-11: the ops model is **always deploy onto a clean,
+empty database**, so no backfill ever sees populated data. A local load test (18,400 requests at 2× pool concurrency, zero errors)
 already satisfied E2's pool-behavior criterion.
 
 **Done**
+- **Launch prep (2026-07-11): demo seed data removed + first-boot admin bootstrap.** Ops decision
+  recorded: deployments always start from a clean, empty database. Accordingly the demo seeds were
+  emptied in place (files kept as no-ops so the chain stays intact): V2 (demo admin/operator users,
+  the "Jangirovs" restaurant + hours), V63/V64 (brand-hardcoded SMS/Telegram templates, automation
+  rules, bot commands promising nonexistent promo codes), V78 (QR code for restaurant 1 — would have
+  violated its FK on a clean DB once V2 stopped seeding). Kept as functional reference data: V27
+  loyalty tiers + global config (null-checked everywhere), V73 generic placeholder templates, V156/
+  V157 subscription plan catalog, and the V33/V53/V82/V138/V150 backfills (no-ops on empty). The
+  operator account is now created by `AdminBootstrapInitializer` from `ADMIN_EMAIL`/`ADMIN_PASSWORD`
+  only while `users` is empty (SUPER_ADMIN, idempotent, loud warning if vars are missing). Rehearsed:
+  V1..V161 on a fresh Postgres 16 → 0 rows in every business table, boot created the admin, login
+  returned SUPER_ADMIN tokens. Note: editing applied migrations changes their checksums — irrelevant
+  for fresh DBs, but any *pre-existing* database would need `flyway repair` (N/A under this policy).
+  Also: `docs/LAUNCH.md` (minimal launch checklist), `.env.docker.example` rewritten around the six
+  required vars, compose now actually passes `ADMIN_EMAIL`/`ADMIN_PASSWORD`/`COURIER_WEBHOOK_SECRET`/
+  SMTP vars to the backend (previously documented but silently dropped), and `DB_PASSWORD` is
+  required (the `elcafe_secret` default is gone).
 - **A — config lockdown:** `application-prod.yml` + a `prod`-profile fail-fast validator (OTP dev-mode off,
   DEBUG off, Swagger off, `include-message` never, wildcard-CORS-with-credentials rejected); `.env.docker`
   untracked + `.env.docker.example`; the committed JWT default blacklisted; CORS allowlist; consumer token
@@ -319,12 +341,13 @@ already satisfied E2's pool-behavior criterion.
   enough (CFG-2). Generate a fresh `JWT_SECRET` (`openssl rand -hex 32`) and DB password in your secret store.
 - **Set** `CORS_ORIGINS`, `REDIS_PASSWORD`, `COURIER_WEBHOOK_SECRET`, and SMTP config in the prod env (the
   app now fails closed without them).
-- **First deploy after C:** if the prod schema drifted while `validate-on-migrate` was off, the deploy fails
-  with a checksum error — audit the diff, then `flyway repair`. And decide the **V153 question**: if prod has
-  not yet applied it and holds real loyalty balances, snapshot `customer_loyalty` before deploying.
+- ~~First deploy after C (checksum drift + V153 snapshot)~~ **retired 2026-07-11**: deployments
+  always target a fresh, empty database, so there is no pre-existing schema to drift and no loyalty
+  balances for V153 to zero. (If that policy ever changes, this item comes back: `flyway repair`
+  for the edited-seed checksums + a `customer_loyalty` snapshot before V153.)
 
 **Remaining before real users / growth** (each is gated — needs a decision, a running-app smoke, or infra)
-- **C (full):** rehearse the backfills on a copy of real *populated* prod data (the fresh-DB rehearsal is done).
+- ~~C (full): populated-data backfill rehearsal~~ **N/A by ops decision (2026-07-11)** — always-fresh deploys; the fresh-DB rehearsal is done and green in CI.
 - ~~E0 — scale topology~~ **decided & done** (single-node + ShedLock; see Done above and
   `docs/DEPLOYMENT_TOPOLOGY.md`). The multi-node track (external STOMP relay, Redis-backed
   rate-limits/lockouts) stays deferred until a second replica is actually needed.
@@ -349,7 +372,7 @@ already satisfied E2's pool-behavior criterion.
 |---|---|---|
 | Code authorization (RBAC/tenant/WS) | 🟢 Solid | Enforce mode live for tenant + WS auth; transaction-scoped Hibernate tenant filter; proven end-to-end by `EnforcementChainTest`. |
 | Runtime config / secrets / deploy | 🟢 Locked down | Prod profile + fail-fast validator; secrets untracked/blacklisted; non-root, graceful shutdown. Rotation of the historically-leaked secrets is still an ops task. |
-| Data / migrations | 🟡 Rehearsed on fresh, not populated | V1..V161 green on real PG 16 in CI on every push; populated-data rehearsal + the V153 loyalty-zeroing decision remain before touching a real prod DB. |
+| Data / migrations | 🟢 Fresh-DB only (ops decision) | V1..V161 green on real PG 16 in CI on every push; demo seeds removed (2026-07-11). Populated-data risks (MIG-1/2/4/5/9/12) are N/A — deployments always start from an empty database. |
 | Architecture / scale | 🟢 Single-node by decision | All 30 shared-state crons ShedLock'd (guard test enforces it); topology + multi-node prerequisites in `DEPLOYMENT_TOPOLOGY.md`. |
 | Observability / ops | 🟡 Code done, infra pending | Metrics, request+tenant IDs, JSON-log switch, dormant Sentry, liveness/readiness probes. Needs a log shipper, a DSN, and alert rules to be *operated*. |
 | Performance / memory | 🟢 Hardened | Container-aware JVM; `open-in-view` off; analytics on DB aggregates; in-memory pagination killed; 18.4k-request local load test: 0 errors, pool drains. |
@@ -384,18 +407,18 @@ already satisfied E2's pool-behavior criterion.
 
 | ID | Sev | Finding | Evidence |
 |---|---|---|---|
-| MIG-1 | CRIT | **⏳ decision + snapshot before prod deploy** — V153 zeroes **every** loyalty balance platform-wide — `UPDATE customer_loyalty SET current_balance=0, lifetime_earned=0, lifetime_spent=0, tier_id=NULL` with **no WHERE clause**, no snapshot, no undo. Includes wallet-funded (real-money) credit. | `V153__loyalty_per_restaurant.sql:40` |
-| MIG-2 | CRIT | **⏳ populated-data rehearsal** — V150 fragments multi-restaurant customers into shadow rows and drops the id-mapping (`TEMP TABLE … ON COMMIT DROP`) → irreversible, no audit trail; a wrong "primary = most orders" guess is silent corruption stamped HIGH-confidence. | `V150:60-65,88-113`; `V154:17-20` |
+| MIG-1 | CRIT | **⚪ N/A by ops decision (2026-07-11: always-fresh deploys — V153 runs on an empty table; revisit only if a populated DB must ever be migrated)** — V153 zeroes **every** loyalty balance platform-wide — `UPDATE customer_loyalty SET current_balance=0, lifetime_earned=0, lifetime_spent=0, tier_id=NULL` with **no WHERE clause**, no snapshot, no undo. Includes wallet-funded (real-money) credit. | `V153__loyalty_per_restaurant.sql:40` |
+| MIG-2 | CRIT | **⚪ N/A by ops decision (always-fresh deploys; backfill never sees populated rows)** — V150 fragments multi-restaurant customers into shadow rows and drops the id-mapping (`TEMP TABLE … ON COMMIT DROP`) → irreversible, no audit trail; a wrong "primary = most orders" guess is silent corruption stamped HIGH-confidence. | `V150:60-65,88-113`; `V154:17-20` |
 | MIG-3 | CRIT | **✅ (CI runs V1..V161 on real PG 16)** — The entire 159-migration chain has **never executed anywhere but a future prod DB**: tests disable Flyway + use H2, there is no CI, no Testcontainers. | `application-test.yml:19-20`; no `.github/workflows` |
-| MIG-4 | HIGH | **⏳ populated-data rehearsal** — "Oldest restaurant" fallback silently donates orphan customers'/waiters' PII to tenant #1. | `V150:118-120`; `V148:48-50` |
-| MIG-5 | HIGH | **⏳ populated-data rehearsal** — New composite uniques hard-abort the migration mid-deploy if any restaurant has duplicate phones/emails (common with imports). First test against real data = mid-prod-deploy. | `V150:131-132`; `V153:43-46`; `V159:14` |
+| MIG-4 | HIGH | **⚪ N/A by ops decision (always-fresh deploys)** — "Oldest restaurant" fallback silently donates orphan customers'/waiters' PII to tenant #1. | `V150:118-120`; `V148:48-50` |
+| MIG-5 | HIGH | **⚪ N/A by ops decision (always-fresh deploys; uniques created on empty tables)** — New composite uniques hard-abort the migration mid-deploy if any restaurant has duplicate phones/emails (common with imports). First test against real data = mid-prod-deploy. | `V150:131-132`; `V153:43-46`; `V159:14` |
 | MIG-6 | HIGH | **✅** — Loyalty jsonb columns mapped via `@Convert`+`columnDefinition="jsonb"` but **no `@JdbcTypeCode`** → Hibernate 6.5 binds VARCHAR, Postgres rejects vs jsonb (42804); the loyalty listener swallows the exception → post-migration nobody earns points and only the error log knows. `SmsCampaign` does it right. | `BonusTransaction.java:65-67`; `WalletTopUp.java:78-80`; `LoyaltyOrderEventListener.java:39-46`; cf. `SmsCampaign.java:52` |
 | MIG-7 | HIGH | **⏳ ops process** — LOW-confidence tenant assignments have only a passive admin list — nothing forces reconciliation. Under `enforce`, mis-assigned rows are invisible to their real owner and visible to the wrong tenant, indefinitely. | `TenantReviewController.java`; `application.yml:155` |
 | MIG-8 | HIGH | **✅** — The reassign tool updates only `customers.restaurant_id`, leaving loyalty/wallet/notifications on the old tenant → next loyalty touch INSERTs and hits the `customer_id UNIQUE` → 500. | `TenantReviewService.java:44-51`; `V27:39` |
-| MIG-9 | MED | **⏳ populated-data rehearsal** — V155 backfills `restaurant_id = user_id` on a column pun; wrong rows leak or blow the FK add. | `V155:24-25,32-33` |
+| MIG-9 | MED | **⚪ N/A by ops decision (always-fresh deploys)** — V155 backfills `restaurant_id = user_id` on a column pun; wrong rows leak or blow the FK add. | `V155:24-25,32-33` |
 | MIG-10 | MED | **✅** — Flyway `validate-on-migrate:false` + `baseline-on-migrate:true` → applied migrations can be edited undetected; pointing at a non-empty schema silently mis-baselines. | `application.yml:44,47` |
 | MIG-11 | MED | **⏳ data decision** — Promo-usage / saved-addresses / personalized coupons stay on the primary id after fragmentation → per-customer promo limits reset, secondary-restaurant customers lose addresses/coupons. | `V57:65,74-78`; `V101`; `V12` |
-| MIG-12 | MED | **⏳ populated-data rehearsal** — Whole-table `orders` rewrites inside single deploy transactions → long locks on the hottest table, untested at scale. | `V159:9-14`; `V102`; `V150:88-89` |
+| MIG-12 | MED | **⚪ N/A by ops decision (always-fresh deploys; rewrites run on empty tables)** — Whole-table `orders` rewrites inside single deploy transactions → long locks on the hottest table, untested at scale. | `V159:9-14`; `V102`; `V150:88-89` |
 | MIG-13 | MED | **✅ (2026-07-11: resolves the customer from the token's id — CustomerPrincipal — instead of the unscoped phone lookup)** — Leftover unscoped `findByPhone` for SUPER_ADMIN callers + V150 duplicate phones → `IncorrectResultSizeDataAccessException`. | `CustomerRepository.java:20`; `CustomerService.java:315-318` |
 
 ### 2.3 Architecture / ops / resilience (OPS)
@@ -547,7 +570,7 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
 
 ### Phase C — Data & migration safety · ~4–6 days · **before touching a populated prod DB**
 
-> **Status: ◐ landed for fresh DBs** (chain green on real PG in CI; jsonb + reassign + Flyway hardening done). **Open: C1 on populated data + the C2/V153 decision** — the last go-live gate items.
+> **Status: ✅ closed** (chain green on real PG in CI; jsonb + reassign + Flyway hardening done; demo seeds removed 2026-07-11). C1-on-populated-data and the C2/V153 decision were retired as **N/A by ops decision** — deployments always start from an empty database.
 
 - **C1 — Rehearse the migration chain on real-shaped data.** Closes MIG-3 (part), MIG-5, MIG-12.
   - Restore a Postgres copy of prod-shaped data (or a realistic seed with multi-restaurant customers + duplicate phones), run `flyway migrate` V1→V159, and record failures/lock durations. This is the single most important pre-launch data task.
@@ -670,7 +693,7 @@ is checked:
 - [x] Graceful shutdown + non-root + SIGTERM-forwarding container (A8)
 - [x] Login/PIN/reset rate-limited + account lockout (B1, B2)
 - [x] Forgot-password works or is visibly disabled (B3)
-- [ ] Migration chain **rehearsed on real-shaped Postgres data**; V153 has a signed-off recovery plan (C1, C2) — **the remaining gate item** (fresh-DB chain is green in CI)
+- [x] Migration chain rehearsed — **resolved by ops decision (2026-07-11)**: deployments always start from a clean, empty database (fresh-DB chain green in CI; demo seeds removed), so the populated-data rehearsal and V153 recovery plan are N/A
 - [x] Loyalty jsonb mapping fixed and verified on real Postgres (C3)
 - [x] CI runs the suite + a real-Postgres migration job on every push/PR (D1, D2)
 - [x] At least one end-to-end test proves RBAC/tenant/subscription **enforce** over real HTTP (D3)

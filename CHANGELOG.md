@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Launch prep — 2026-07-11
+
+- **Demo seed data removed from migrations** (ops decision: deployments always start from a clean,
+  empty database). V2 no longer creates the demo admin/operator/restaurant, V63/V64 no longer seed
+  brand-hardcoded SMS/Telegram templates and bot commands, V78 no longer inserts the demo QR code.
+  The files remain as documented no-ops; a fresh database now contains zero business rows (only the
+  subscription plan catalog, loyalty tier defaults and generic placeholder templates). Note: the
+  in-place edits change Flyway checksums — a pre-existing database would need `flyway repair`,
+  which is N/A under the always-fresh policy.
+- **First-boot admin bootstrap:** `AdminBootstrapInitializer` creates the SUPER_ADMIN operator
+  account from `ADMIN_EMAIL` / `ADMIN_PASSWORD` only while the users table is empty; idempotent,
+  loud warning when unset. Rehearsed end-to-end on a fresh Postgres 16 (migrate → boot → login).
+- **`docs/LAUNCH.md`:** minimal how-to-launch checklist (configure → start → verify → after first
+  login). `.env.docker.example` rewritten around the six required variables; `PRODUCTION_SETUP.md`
+  remains the full reference.
+- **docker-compose:** `ADMIN_EMAIL`/`ADMIN_PASSWORD`, `COURIER_WEBHOOK_SECRET`, SMTP vars and
+  `CONSUMER_OTP_DEVELOPMENT_MODE` are now actually passed to the backend container (previously
+  documented in the env template but silently dropped); `DB_PASSWORD` is required — the insecure
+  `elcafe_secret` default is gone.
+
 ### Production hardening — 2026-07-09 → 2026-07-11
 
 The production-readiness audit (`docs/PRODUCTION_READINESS_AUDIT.md`) was executed through phases

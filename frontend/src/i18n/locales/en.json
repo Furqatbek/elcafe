@@ -25,7 +25,7 @@
     "createAccount": "Create Account",
     "enterCredentials": "Enter your credentials to access your account",
     "fillDetails": "Fill in your details to create an account",
-    "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
+    "demoCredentials": ""
   },
   "nav": {
     "platform": "Platform",
@@ -2043,7 +2043,7 @@
     }
   },
   "login": {
-    "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
+    "demoCredentials": ""
   },
   "inventory": {
     "title": "Inventory Management",

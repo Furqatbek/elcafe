@@ -25,7 +25,7 @@
     "createAccount": "Создать аккаунт",
     "enterCredentials": "Введите свои данные для входа",
     "fillDetails": "Заполните данные для создания аккаунта",
-    "demoCredentials": "Демо: admin@qahvoon.uz / Admin123!"
+    "demoCredentials": ""
   },
   "nav": {
     "platform": "Платформа",
@@ -2043,7 +2043,7 @@
     }
   },
   "login": {
-    "demoCredentials": "Демо: admin@qahvoon.uz / Admin123!"
+    "demoCredentials": ""
   },
   "inventory": {
     "title": "Управление запасами",

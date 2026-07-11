@@ -1,22 +1,12 @@
--- Insert default admin user (password: $lL%UJxdnR$9G^$E)
-INSERT INTO users (email, password, first_name, last_name, role, active, email_verified)
-VALUES ('admin@jangirovs.uz', '$2b$10$tk6LZVsLMogk1MKi0zAkFeYto7dM0SBmljIkA.Lc6BO8wJGLzefqG', 'Admin', 'User', 'ADMIN', TRUE, TRUE);
-
--- Insert default operator user (password: F8fLj8bi1yGBWqpB)
-INSERT INTO users (email, password, first_name, last_name, role, active, email_verified)
-VALUES ('operator@jangirovs.uz', '$2b$10$ROuAr99Uk52NYdO5J/JyCe0C/8axTGDCvROewQgFICjVG3s8tDpLq', 'Operator', 'User', 'OPERATOR', TRUE, TRUE);
-
--- Insert sample restaurant
-INSERT INTO restaurants (name, description, address, city, state, zip_code, country, phone, email, active, accepting_orders, delivery_fee, estimated_delivery_time_minutes)
-VALUES ('Jangirovs', 'Best coffee and food in town', 'Hazorasp, Chitlik koprik', 'Xorazm', 'UZB', '10001', 'UZB', '+998770049909', 'info@jangirovs.uz', TRUE, TRUE, 5.00, 30);
-
--- Insert business hours for the sample restaurant
-INSERT INTO business_hours (restaurant_id, day_of_week, open_time, close_time, closed)
-VALUES
-    (1, 'MONDAY', '09:00:00', '22:00:00', FALSE),
-    (1, 'TUESDAY', '09:00:00', '22:00:00', FALSE),
-    (1, 'WEDNESDAY', '09:00:00', '22:00:00', FALSE),
-    (1, 'THURSDAY', '09:00:00', '22:00:00', FALSE),
-    (1, 'FRIDAY', '09:00:00', '23:00:00', FALSE),
-    (1, 'SATURDAY', '10:00:00', '23:00:00', FALSE),
-    (1, 'SUNDAY', '10:00:00', '21:00:00', FALSE);
+-- V2: originally seeded demo data (admin/operator users, the "Jangirovs" sample restaurant and its
+-- business hours). Deliberately emptied for production: deployments always start from a clean, empty
+-- database, and no fake/demo rows may ship. The file itself must remain (never renumber or delete a
+-- migration) so the version chain stays intact.
+--
+-- The platform operator account is no longer seeded here. It is created at first boot by
+-- AdminBootstrapInitializer from the ADMIN_EMAIL / ADMIN_PASSWORD environment variables, only when
+-- the users table is empty (see docs/LAUNCH.md).
+--
+-- Later migrations that referenced these seed rows (V31 delete of business hours, V51 restaurant
+-- backfill, V128 rebrand, V147 SUPER_ADMIN promotion) are pure UPDATE/DELETE statements and no-op
+-- harmlessly on an empty database.

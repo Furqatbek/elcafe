@@ -2,6 +2,9 @@
 
 This guide explains how to deploy ElCafe with Docker Compose behind NGINX reverse proxy.
 
+> **Just launching?** The short checklist is [`docs/LAUNCH.md`](docs/LAUNCH.md) — this document is the
+> full reference behind it.
+
 ## Architecture
 
 ```
@@ -71,7 +74,7 @@ cd elcafe
 
 ```bash
 # Copy environment template
-cp .env.docker .env.docker
+cp .env.docker.example .env.docker
 
 # Edit environment variables
 nano .env.docker
@@ -79,9 +82,14 @@ nano .env.docker
 
 **Required settings in .env.docker:**
 ```env
-DB_PASSWORD=your_secure_database_password
-JWT_SECRET=your_super_secret_jwt_key_here  # Generate: openssl rand -hex 32
+DB_PASSWORD=your_secure_database_password    # Generate: openssl rand -base64 24
+REDIS_PASSWORD=your_secure_redis_password    # Generate: openssl rand -base64 24
+JWT_SECRET=your_super_secret_jwt_key_here    # Generate: openssl rand -hex 32
 CORS_ORIGINS=https://lacasa.uz,https://www.lacasa.uz
+# First boot only — creates the SUPER_ADMIN account while the users table is empty (migrations
+# seed no users). Change the password after first login, then remove ADMIN_PASSWORD.
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=a_strong_one_time_password
 ```
 
 > **`JWT_SECRET` is required** — the app fails to start without it (no insecure default) and rejects a
@@ -514,6 +522,7 @@ cat /backups/elcafe/backup_YYYYMMDD_HHMMSS.sql | docker-compose exec -T db psql 
 | `DB_PASSWORD` | - | Database password (required) |
 | `JWT_SECRET` | - | JWT signing key (required) |
 | `REDIS_PASSWORD` | - | Redis password (required) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | - | First-boot SUPER_ADMIN bootstrap (empty users table only) |
 | `SPRING_PROFILES_ACTIVE` | prod | Spring profile |
 | `CORS_ORIGINS` | localhost | Allowed origins (HTTP + WebSocket) |
 | `TENANT_ENFORCEMENT_MODE` | enforce | Tenant isolation: off/shadow/enforce |

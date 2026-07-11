@@ -1,26 +1,4 @@
--- Add TAKEAWAY QR code for self-service ordering on print receipts
--- This QR code allows customers to scan and order online for takeaway
-
-INSERT INTO qr_codes (
-    restaurant_id,
-    code,
-    short_url,
-    name,
-    description,
-    qr_type,
-    is_active,
-    scan_count,
-    created_at,
-    updated_at
-) VALUES (
-    1,
-    'TAKEAWAY',
-    'https://jangirovs.uz/order/menu/1/TAKEAWAY',
-    'Olib ketish buyurtmasi',
-    'QR code for takeaway orders - printed on receipts',
-    'TAKEAWAY',
-    true,
-    0,
-    NOW(),
-    NOW()
-) ON CONFLICT (code) DO NOTHING;
+-- V78: originally inserted a TAKEAWAY QR code for the seeded demo restaurant (id 1). Deliberately
+-- emptied for production: the demo restaurant is no longer seeded (see V2), so this INSERT would
+-- violate the qr_codes.restaurant_id foreign key on a clean database. QR codes are created per
+-- restaurant through the admin UI. The file remains as a no-op to keep the version chain intact.

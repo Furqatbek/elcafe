@@ -115,18 +115,7 @@ CREATE INDEX idx_sms_logs_status ON sms_logs(status);
 CREATE INDEX idx_sms_logs_created ON sms_logs(created_at);
 CREATE INDEX idx_sms_logs_type ON sms_logs(message_type);
 
--- Insert default SMS templates
-INSERT INTO sms_templates (name, content, type, description) VALUES
-('Welcome Message', 'Assalomu alaykum {name}! Jangirovs''ga xush kelibsiz. Birinchi buyurtmangizda 10% chegirma oling. Promo kod: WELCOME10', 'WELCOME', 'Sent to new customers after registration'),
-('Birthday Greeting', 'Tug''ilgan kuningiz bilan {name}! Jangirovs sizga 20% chegirma taqdim etadi. Promo kod: BDAY{year}. Amal qilish muddati: bugun!', 'BIRTHDAY', 'Sent on customer birthday'),
-('Inactive Customer', '{name}, sizni sog''indik! Jangirovs''da yangi taomlar kutmoqda. 15% chegirma: COMEBACK15', 'REMINDER', 'Sent to customers inactive for 30+ days'),
-('Order Confirmation', '{name}, buyurtmangiz #{order_number} qabul qilindi. Taxminiy vaqt: {estimated_time} daqiqa.', 'ORDER_STATUS', 'Sent when order is confirmed'),
-('Order Ready', '{name}, buyurtmangiz #{order_number} tayyor! Yetkazib berish yo''lda.', 'ORDER_STATUS', 'Sent when order is ready'),
-('Referral Reward', 'Tabriklaymiz {name}! Do''stingiz birinchi buyurtma berdi. {amount} bonus ball hisobingizga qo''shildi!', 'REFERRAL', 'Sent when referral is completed'),
-('Promotion', '{name}, maxsus taklif! {promo_text}. Promo kod: {promo_code}. Amal qilish: {expiry_date} gacha.', 'PROMOTION', 'General promotion template');
-
--- Insert default automation rules
-INSERT INTO sms_automation_rules (name, description, trigger_type, template_id, delay_minutes, conditions) VALUES
-('Welcome SMS', 'Send welcome message to new customers', 'WELCOME', (SELECT id FROM sms_templates WHERE type = 'WELCOME' LIMIT 1), 0, '{}'),
-('Birthday SMS', 'Send birthday greeting on customer birthday', 'BIRTHDAY', (SELECT id FROM sms_templates WHERE type = 'BIRTHDAY' LIMIT 1), 0, '{}'),
-('Win-back Campaign', 'Send message to customers inactive for 30 days', 'INACTIVE_CUSTOMER', (SELECT id FROM sms_templates WHERE type = 'REMINDER' LIMIT 1), 0, '{"days_inactive": 30}');
+-- Default SMS templates and automation rules were originally seeded here. Removed for production:
+-- they embedded demo branding and promised promo codes (WELCOME10, BDAY{year}, COMEBACK15) that do
+-- not exist as real promotions. Deployments start from a clean database; restaurants create their
+-- own templates and rules through the admin UI.

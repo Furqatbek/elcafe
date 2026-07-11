@@ -25,7 +25,7 @@
     "createAccount": "Akkount yaratish",
     "enterCredentials": "Kirishingiz uchun ma'lumotlaringizni kiriting",
     "fillDetails": "Akkount yaratish uchun ma'lumotlarni to'ldiring",
-    "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
+    "demoCredentials": ""
   },
   "nav": {
     "platform": "Platforma",
@@ -2043,7 +2043,7 @@
     }
   },
   "login": {
-    "demoCredentials": "Demo: admin@qahvoon.uz / Admin123!"
+    "demoCredentials": ""
   },
   "inventory": {
     "title": "Inventar boshqaruvi",

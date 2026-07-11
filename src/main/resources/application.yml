@@ -221,6 +221,12 @@ springdoc:
   show-actuator: true
 
 app:
+  bootstrap:
+    # First-boot platform operator (AdminBootstrapInitializer, docs/LAUNCH.md): when the users table
+    # is empty and both variables are set, a SUPER_ADMIN account is created. Inert on every boot
+    # after that — remove ADMIN_PASSWORD from the environment once the account exists.
+    admin-email: ${ADMIN_EMAIL:}
+    admin-password: ${ADMIN_PASSWORD:}
   security:
     jwt:
       # SECURITY: no default — JWT_SECRET MUST be provided via env (>= 32 bytes). The app refuses to

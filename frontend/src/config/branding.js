@@ -27,10 +27,12 @@ const branding = {
   apiUrl: env('VITE_BRAND_API_URL', 'https://www.qahvoon.uz'),
   websiteUrl: env('VITE_BRAND_WEBSITE_URL', 'https://www.qahvoon.uz'),
 
-  // ===== DEMO CREDENTIALS (for login page hint) =====
+  // ===== DEMO CREDENTIALS (optional login-page hint; empty = no hint) =====
+  // No defaults: the platform seeds no demo account (the operator is bootstrapped from
+  // ADMIN_EMAIL/ADMIN_PASSWORD on first boot). Set the VITE_ vars only for a throwaway demo stand.
   demo: {
-    email: env('VITE_BRAND_DEMO_EMAIL', 'admin@qahvoon.uz'),
-    password: env('VITE_BRAND_DEMO_PASSWORD', 'Admin123!'),
+    email: env('VITE_BRAND_DEMO_EMAIL', ''),
+    password: env('VITE_BRAND_DEMO_PASSWORD', ''),
   },
 
   // ===== VISUAL BRANDING =====
@@ -67,7 +69,7 @@ const branding = {
 // ===== DERIVED VALUES (auto-generated from above) =====
 branding.fullName = `${branding.name} - ${branding.tagline}`;
 branding.copyright = `© ${branding.legal.copyrightYear} ${branding.legal.companyName}`;
-branding.demoCredentials = `Demo: ${branding.demo.email} / ${branding.demo.password}`;
+branding.demoCredentials = branding.demo.email ? `Demo: ${branding.demo.email} / ${branding.demo.password}` : '';
 
 // Page titles
 branding.titles = {

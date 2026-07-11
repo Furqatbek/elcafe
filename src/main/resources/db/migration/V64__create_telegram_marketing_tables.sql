@@ -158,25 +158,7 @@ CREATE INDEX idx_telegram_logs_status ON telegram_logs(status);
 CREATE INDEX idx_telegram_logs_created ON telegram_logs(created_at);
 CREATE INDEX idx_telegram_logs_type ON telegram_logs(message_type);
 
--- Insert default Telegram templates
-INSERT INTO telegram_templates (name, content, type, description, has_buttons, buttons_config) VALUES
-('Welcome Message', '👋 Assalomu alaykum {name}!\n\nJangirovs botiga xush kelibsiz! 🍽️\n\nBu yerda siz:\n✅ Menuni ko''rishingiz\n✅ Buyurtma berishingiz\n✅ Aksiyalar haqida bilib turishingiz mumkin', 'WELCOME', 'Sent when user starts the bot', true, '[{"text": "📋 Menuni ko''rish", "callback_data": "menu"}, {"text": "🛒 Buyurtma berish", "url": "https://jangirovs.uz/order"}]'),
-('Birthday Greeting', '🎂 Tug''ilgan kuningiz bilan {name}!\n\nJangirovs sizga 20% chegirma taqdim etadi! 🎁\n\nPromo kod: BDAY{year}\nAmal qilish muddati: bugun!', 'BIRTHDAY', 'Sent on subscriber birthday', true, '[{"text": "🛒 Buyurtma berish", "url": "https://jangirovs.uz/order"}]'),
-('Inactive User', '👋 {name}, sizni sog''indik!\n\nJangirovs''da yangi taomlar kutmoqda! 🍕🍔\n\n15% chegirma: COMEBACK15', 'REMINDER', 'Sent to inactive users', true, '[{"text": "📋 Yangi menuni ko''rish", "callback_data": "menu"}]'),
-('Order Status', '📦 {name}, buyurtmangiz #{order_number}\n\nHolati: {status}\n{message}', 'ORDER_STATUS', 'Order status notifications', false, null),
-('Referral Reward', '🎉 Tabriklaymiz {name}!\n\nDo''stingiz birinchi buyurtma berdi.\n{amount} bonus ball hisobingizga qo''shildi! 💰', 'REFERRAL', 'Sent when referral completes', false, null),
-('Promotion', '🔥 {name}, maxsus taklif!\n\n{promo_text}\n\nPromo kod: {promo_code}\nAmal qilish: {expiry_date} gacha', 'PROMOTION', 'General promotion template', true, '[{"text": "🛒 Hoziroq buyurtma bering", "url": "https://jangirovs.uz/order"}]');
-
--- Insert default automation rules
-INSERT INTO telegram_automation_rules (name, description, trigger_type, template_id, delay_minutes, conditions) VALUES
-('Welcome Message', 'Send welcome message to new subscribers', 'BOT_START', (SELECT id FROM telegram_templates WHERE type = 'WELCOME' LIMIT 1), 0, '{}'),
-('Birthday Message', 'Send birthday greeting', 'BIRTHDAY', (SELECT id FROM telegram_templates WHERE type = 'BIRTHDAY' LIMIT 1), 0, '{}'),
-('Win-back Campaign', 'Send message to inactive subscribers', 'INACTIVE_USER', (SELECT id FROM telegram_templates WHERE type = 'REMINDER' LIMIT 1), 0, '{"days_inactive": 14}');
-
--- Insert default bot commands
-INSERT INTO telegram_bot_commands (command, description, custom_response) VALUES
-('/start', 'Start the bot', NULL),
-('/menu', 'View the menu', '📋 Bizning menuni ko''ring: https://jangirovs.uz/menu'),
-('/order', 'Place an order', '🛒 Buyurtma berish: https://jangirovs.uz/order'),
-('/help', 'Get help', '❓ Yordam kerakmi?\n\n📞 Telefon: +998770049909\n📍 Manzil: Hazorasp, Xorazm\n⏰ Ish vaqti: 09:00 - 23:00'),
-('/promo', 'View current promotions', '🔥 Joriy aksiyalarni saytimizda ko''ring: https://jangirovs.uz/promotions');
+-- Default Telegram templates, automation rules and bot commands were originally seeded here.
+-- Removed for production: they hardcoded demo branding, jangirovs.uz URLs, a demo phone number and
+-- promo codes that do not exist as real promotions. Deployments start from a clean database;
+-- restaurants configure their own bot content through the admin UI.
