@@ -84,6 +84,9 @@ financial-alert:
   enabled: false
 
 logging:
+  file:
+    # Keep test logs inside the build dir; also guarantees the file appender is startable on CI.
+    name: target/test-logs/elcafe-test.log
   level:
     root: WARN
     com.elcafe: INFO

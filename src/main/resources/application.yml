@@ -173,7 +173,11 @@ logging:
     org.hibernate.type.descriptor.sql: OFF
     org.hibernate.orm.jdbc.bind: OFF
   file:
-    name: ${LOG_FILE_PATH:/app/logs/elcafe.log}
+    # Relative default: resolves to /app/logs/elcafe.log in the container (WORKDIR /app — identical
+    # to the old absolute default) and to ./logs elsewhere. An absolute /app path is not creatable
+    # on CI runners/dev boxes, and with a user-supplied logback-spring.xml a broken file appender is
+    # a FATAL boot error (Boot's old programmatic config merely logged it).
+    name: ${LOG_FILE_PATH:logs/elcafe.log}
   logback:
     rollingpolicy:
       max-file-size: 10MB

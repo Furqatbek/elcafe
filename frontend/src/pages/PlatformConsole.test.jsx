@@ -4,17 +4,25 @@ import { MemoryRouter } from 'react-router-dom';
 import PlatformConsole from './PlatformConsole';
 import { platformAPI, billingAPI } from '../services/api';
 
-vi.mock('../services/api', () => ({
-  platformAPI: {
-    listTenants: vi.fn(),
-    changePlan: vi.fn(),
-    extend: vi.fn(),
-    suspend: vi.fn(),
-    reactivate: vi.fn(),
-    cancel: vi.fn(),
-  },
-  billingAPI: { getPlans: vi.fn() },
-}));
+// Every mock gets a benign never-resolving default implementation: vi.restoreAllMocks() (afterEach,
+// needed for the window.confirm spies) restores factory fns to this default rather than to
+// undefined. Without it, an async continuation leaking past a test boundary — the post-action
+// load() refresh on a cold, slow runner — called a restored mock, got undefined, and crashed
+// ".then" as an unhandled error pinned on whichever test ran next (flaky-red CI, green warm local).
+vi.mock('../services/api', () => {
+  const pending = () => vi.fn(() => new Promise(() => {}));
+  return {
+    platformAPI: {
+      listTenants: pending(),
+      changePlan: pending(),
+      extend: pending(),
+      suspend: pending(),
+      reactivate: pending(),
+      cancel: pending(),
+    },
+    billingAPI: { getPlans: pending() },
+  };
+});
 
 vi.mock('../hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 
