@@ -272,6 +272,15 @@
             <version>${sentry.version}</version>
         </dependency>
 
+        <!-- Circuit breakers on the outbound HTTP clients (audit OPS-4): when a provider is down or
+             hanging, repeated failures open the breaker and callers fail fast instead of each eating
+             the full connect/read timeout (geocoding sits on synchronous order/address paths). -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -161,6 +161,27 @@ sentry:
   in-app-includes: com.elcafe
   environment: ${SENTRY_ENVIRONMENT:production}
 
+# Circuit breakers on the outbound HTTP clients (audit OPS-4). When a provider is down or hanging,
+# repeated failures OPEN the breaker and further calls fail fast (fallbacks fire only on the open
+# state) instead of each eating the full connect/read timeout. Geocoding matters most: it sits on
+# synchronous request paths. Half-open probes recover automatically.
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+    instances:
+      geocoding:
+        base-config: default
+      sms:
+        base-config: default
+      instagram:
+        base-config: default
+
 logging:
   # Console format is switchable to JSON for log aggregation via LOG_FORMAT=json (audit F3) — see
   # logback-spring.xml. The patterns below drive the plain (default) format and the rolling file.

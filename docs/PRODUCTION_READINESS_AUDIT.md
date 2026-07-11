@@ -72,6 +72,17 @@ already satisfied E2's pool-behavior criterion.
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **OPS-4 closed: circuit breakers on every outbound HTTP client.** resilience4j breakers
+  (`geocoding`, `sms`, `instagram`; shared config: 10-call window, 50% threshold, 30s open, auto
+  half-open probes) on all RestTemplate clients — geocoding matters most, sitting on synchronous
+  order/address request paths where a hanging provider previously cost every caller the full 10s
+  timeout. Fallbacks are typed to `CallNotPermittedException`, so they fire ONLY when the breaker is
+  open and each client keeps its original failure contract (geocoding/SMS: the RuntimeException
+  callers already handle, now instant; Instagram: boolean not-delivered). Wiring pinned end-to-end
+  through the AOP proxy by `CircuitBreakerWiringTest` (forced-open ⇒ fast fallback, not-permitted
+  counter increments). Telegram stays isolated on its own executor (documented). With this, PERF-11
+  (L2 cache) and TEST-8/9 are recorded as deliberate won't-do/accepted-debt in the register — the
+  code-side findings are now all ✅/⏳/⚪; no reds remain.
 - **Register reds worked down: FUNC-5, MIG-13, CFG-10, and the async COGS gap.** The admin
   by-status filter now filters (it returned pending orders for every requested status; the unfiltered
   view is bounded to the newest 500 instead of materialising the tenant's whole history), and the
@@ -394,7 +405,7 @@ already satisfied E2's pool-behavior criterion.
 | OPS-1 | BLOCKER | **✅ decided: single-node + ShedLock (multi-node prereqs documented)** — **Single-node app in SaaS clothes.** In-memory `SimpleBroker` (WS broadcasts only reach the same JVM), per-instance rate-limit buckets, per-instance SMS token, and ~30 `@Scheduled` jobs with **no distributed lock**. Two instances → split real-time + double SMS/salary/revenue. | `WebSocketConfig.java:43`; no ShedLock |
 | OPS-2 | BLOCKER | **✅** — No brute-force protection on the auth surface: `@RateLimited` is on `AnalyticsController` only; staff login, **waiter PIN** (public, 12 h token), and password reset are unthrottled; `isAccountNonLocked()` is hardcoded to never lock. | `AuthController.java:40-45`; `WaiterController.java:52-58`; `User.java:114-116` |
 | OPS-3 | HIGH | **✅ code half · ⏳ shipper/DSN/alerts** — **Observability ABSENT.** No Micrometer/Prometheus, no tracing, no request/correlation IDs, no structured logging, no error tracking. Blind to 500s / p99 / individual failing requests. | grep-empty; `application.yml:95,117-118` |
-| OPS-4 | HIGH | **🔴 open, partially mitigated (all outbound RestTemplates — SMS/geocoding/Instagram — carry connect+read timeouts; no breakers/bulkheads; Telegram long-poll runs on its own executor)** — No circuit breakers (no resilience4j); Telegram long-poll has no timeout/bulkhead → a slow-but-up provider blocks callers for the full read timeout. | `pom.xml`; `TelegramBotService` |
+| OPS-4 | HIGH | **✅ (2026-07-11: resilience4j circuit breakers on all three outbound clients — fail-fast fallbacks fire only on the open state, preserving each client's failure contract; wiring pinned by `CircuitBreakerWiringTest`. Telegram long-poll runs isolated on its own executor)** — No circuit breakers (no resilience4j); Telegram long-poll has no timeout/bulkhead → a slow-but-up provider blocks callers for the full read timeout. | `pom.xml`; `TelegramBotService` |
 | OPS-5 | HIGH | **✅** — No edge rate limiting — nginx configs have no `limit_req`/`limit_conn`. | `nginx-proxy/*.conf` |
 | OPS-6 | MED | **✅** — No graceful shutdown (`server.shutdown` unset → immediate); `Dockerfile` shell-wraps the JVM so SIGTERM isn't forwarded as PID 1 → deploys drop in-flight requests. | `application.yml`; `Dockerfile:25` |
 | OPS-7 | MED | **✅** — Healthcheck is decorative: no liveness/readiness split; Docker `restart: unless-stopped` does nothing on an unhealthy (not exited) container; Redis blip flips whole app DOWN. | `docker-compose.yml:126-131`; `application.yml:91-98` |
@@ -420,7 +431,7 @@ already satisfied E2's pool-behavior criterion.
 | PERF-8 | HIGH | **✅ (COUNT queries; the SMS/gateway TODOs are FUNC-9)** — `calculateOrderMetrics` loads all of today's orders to log 3 counts; real outputs are all `// TODO`. Hourly. | `OrderBackgroundJobs.java:137-169` |
 | PERF-9 | MED | **✅ capped** — Unbounded, un-fetched list finders reachable from controllers/services (courier READY = cross-tenant scan; customer order history; SMS log by customer/campaign/date-range). | `CourierOrderService.java:38`; `OrderService.java:320`; `SmsLogController.java:41-75` |
 | PERF-10 | MED | **✅ pool 8** — Scheduler pool size 4 for 6 sub-minute jobs; async caller-runs policy pushes overflow onto HTTP request threads. | `AsyncConfig.java:46,60-72` |
-| PERF-11 | MED | **🔴 open (optional; Redis request-cache exists)** — No Hibernate L2 cache; stable reference data re-read from Postgres every request (Redis is right there). | `pom.xml` (absent) |
+| PERF-11 | MED | **⚪ won't-do for now (deliberate): L2 cache adds cross-node invalidation risk for reference data that is already Redis-request-cached and cheap to read; revisit only if Postgres read load becomes measurable** — No Hibernate L2 cache; stable reference data re-read from Postgres every request (Redis is right there). | `pom.xml` (absent) |
 | PERF-12 | MED | **✅** — `deleteOldLogs` materializes all expired rows before `deleteAll` instead of a bulk `DELETE … WHERE`. | `SmsLogService.java:158-161` |
 
 ### 2.5 Test suite (TEST)
@@ -439,8 +450,8 @@ already satisfied E2's pool-behavior criterion.
 | TEST-5 | HIGH | **✅ superseded (real service/web/security tests exist alongside the slices)** — All 17 `*IntegrationTest` files are `@DataJpaTest` repository slices — no service/web/security layer. The label oversells. | `OrderLifecycleIntegrationTest.java:39` |
 | TEST-6 | HIGH | **✅** — Subscription 402 logic is well unit-tested but its registration/position in the prod filter chain is unverified. | `SubscriptionEnforcementFilterTest.java:84-97` |
 | TEST-7 | MED | **🔴 open (a few files added; core flows still untested)** — Frontend ~93% untested (7 unit files, all subscription-focused; 1 e2e that stubs the entire backend and forges auth). No test for login/cart/checkout/POS. | `frontend/src/**/__tests__`; `frontend/e2e/plan-gating.spec.js` |
-| TEST-8 | MED | **🔴 open (style debt)** — 89 files run Mockito `LENIENT`; many "tests" assert request→service delegation + JSON shape only; 6 are `verify`-only. | `CategoryControllerTest.java:88-90` |
-| TEST-9 | LOW | **🔴 open (latent)** — 79 files use `LocalDateTime.now()` with no injected `Clock` → period-edge/midnight flakiness latent. | (broad) |
+| TEST-8 | MED | **⚪ accepted debt (89-file mechanical churn with no behavioral gain; new tests use strict stubs)** — 89 files run Mockito `LENIENT`; many "tests" assert request→service delegation + JSON shape only; 6 are `verify`-only. | `CategoryControllerTest.java:88-90` |
+| TEST-9 | LOW | **⚪ accepted debt (inject a Clock opportunistically when touching affected code; no observed flakes in CI)** — 79 files use `LocalDateTime.now()` with no injected `Clock` → period-edge/midnight flakiness latent. | (broad) |
 
 ### 2.6 Functional completeness (FUNC)
 
@@ -576,7 +587,7 @@ Highest leverage in the whole plan: mostly mechanical, neutralizes most of Tier 
 
 ### Phase E — Scale decision & resilience · ~1–2 weeks · **before multi-instance or growth**
 
-> **Status: ◐ landed** — E0 (single-node + ShedLock), E1, E2 (OSIV off + local load test), E3, E4 done. **Open: the resilience4j half of E5 (OPS-4)**; the Telegram-executor and revenue-recorder transaction hazards of OPS-10 are fixed.
+> **Status: ✅ landed** — E0 (single-node + ShedLock), E1, E2 (OSIV off + local load test), E3, E4, and E5: circuit breakers on all outbound clients (2026-07-11) plus the Telegram-executor and revenue-recorder transaction fixes.
 
 - **E0 — Decide the scale story (blocking decision).** Frames OPS-1, OPS-9.
   - **Option 1 — stay single-node (fastest):** add **ShedLock** (Redis/JDBC) to all `@Scheduled` jobs so crons are safe even if two instances ever run; document the single-node constraint prominently; make the healthcheck actually act (OPS-7). Acceptable for a bounded launch.

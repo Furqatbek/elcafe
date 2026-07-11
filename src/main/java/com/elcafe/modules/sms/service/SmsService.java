@@ -3,6 +3,8 @@ package com.elcafe.modules.sms.service;
 import com.elcafe.modules.sms.config.SmsProperties;
 import com.elcafe.modules.sms.dto.*;
 import lombok.extern.slf4j.Slf4j;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -167,6 +169,7 @@ public class SmsService {
      * Send a single SMS
      * Endpoint: POST /message/sms/send
      */
+    @CircuitBreaker(name = "sms", fallbackMethod = "smsCircuitOpen")
     public SendSmsResponse sendSms(SendSmsRequest request) {
         if (!smsProperties.getEnabled()) {
             log.info("SMS sending is disabled. Would send: {}", request);
@@ -200,6 +203,7 @@ public class SmsService {
      * Send batch SMS
      * Endpoint: POST /message/sms/send-batch
      */
+    @CircuitBreaker(name = "sms", fallbackMethod = "batchSmsCircuitOpen")
     public SendSmsResponse sendBatchSms(SendBatchSmsRequest request) {
         if (!smsProperties.getEnabled()) {
             log.info("SMS sending is disabled. Would send batch of {} messages", request.getMessages().size());
@@ -233,6 +237,7 @@ public class SmsService {
      * Send global SMS to multiple recipients
      * Endpoint: POST /message/sms/send-global
      */
+    @CircuitBreaker(name = "sms", fallbackMethod = "globalSmsCircuitOpen")
     public SendSmsResponse sendGlobalSms(SendGlobalSmsRequest request) {
         if (!smsProperties.getEnabled()) {
             log.info("SMS sending is disabled. Would send global SMS to: {}", request.getPhoneNumber());
@@ -460,5 +465,23 @@ public class SmsService {
                         .messageText("Mock response - SMS sending is disabled")
                         .build())
                 .build();
+    }
+
+    // Fire ONLY when the breaker is OPEN (see GeocodingService for the pattern rationale): the send
+    // fails fast with the same RuntimeException contract callers already handle (SmsLog -> FAILED),
+    // instead of stacking provider timeouts on the campaign/automation executors.
+    @SuppressWarnings("unused")
+    private SendSmsResponse smsCircuitOpen(SendSmsRequest request, CallNotPermittedException e) {
+        throw new RuntimeException("SMS provider temporarily unavailable (circuit open)");
+    }
+
+    @SuppressWarnings("unused")
+    private SendSmsResponse batchSmsCircuitOpen(SendBatchSmsRequest request, CallNotPermittedException e) {
+        throw new RuntimeException("SMS provider temporarily unavailable (circuit open)");
+    }
+
+    @SuppressWarnings("unused")
+    private SendSmsResponse globalSmsCircuitOpen(SendGlobalSmsRequest request, CallNotPermittedException e) {
+        throw new RuntimeException("SMS provider temporarily unavailable (circuit open)");
     }
 }

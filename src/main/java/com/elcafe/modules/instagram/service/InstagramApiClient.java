@@ -2,6 +2,8 @@ package com.elcafe.modules.instagram.service;
 
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
 import lombok.extern.slf4j.Slf4j;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,7 @@ public class InstagramApiClient {
      * @param text      message text
      * @return true on success
      */
+    @CircuitBreaker(name = "instagram", fallbackMethod = "sendMessageCircuitOpen")
     public boolean sendMessage(InstagramBotConfig config, String recipientIgsid, String text) {
         Map<String, Object> body = Map.of(
                 "recipient", Map.of("id", recipientIgsid),
@@ -59,6 +62,7 @@ public class InstagramApiClient {
      *
      * @param quickReplies list of {title, payload} maps (max 13, title max 20 chars)
      */
+    @CircuitBreaker(name = "instagram", fallbackMethod = "sendQuickRepliesCircuitOpen")
     public boolean sendMessageWithQuickReplies(InstagramBotConfig config, String recipientIgsid,
                                                String text, List<Map<String, String>> quickReplies) {
         List<Map<String, Object>> qr = quickReplies.stream()
@@ -87,6 +91,7 @@ public class InstagramApiClient {
      * @param replyText   reply message
      * @return true on success
      */
+    @CircuitBreaker(name = "instagram", fallbackMethod = "replyToCommentCircuitOpen")
     public boolean replyToComment(InstagramBotConfig config, String commentId, String replyText) {
         String url = GRAPH_BASE + "/" + commentId + "/replies?access_token=" + config.getAccessToken();
         Map<String, Object> body = Map.of("message", replyText);
@@ -127,5 +132,29 @@ public class InstagramApiClient {
         HttpHeaders h = new HttpHeaders();
         h.setContentType(MediaType.APPLICATION_JSON);
         return h;
+    }
+
+    // Open-circuit fallbacks (fire only on CallNotPermittedException): match the boolean
+    // failure contract — callers already treat false as "message not delivered".
+    @SuppressWarnings("unused")
+    private boolean sendMessageCircuitOpen(InstagramBotConfig config, String recipientIgsid,
+                                           String text, CallNotPermittedException e) {
+        log.warn("Instagram circuit open, dropping DM to {}", recipientIgsid);
+        return false;
+    }
+
+    @SuppressWarnings("unused")
+    private boolean sendQuickRepliesCircuitOpen(InstagramBotConfig config, String recipientIgsid,
+                                                String text, java.util.List<java.util.Map<String, String>> quickReplies,
+                                                CallNotPermittedException e) {
+        log.warn("Instagram circuit open, dropping quick-reply DM to {}", recipientIgsid);
+        return false;
+    }
+
+    @SuppressWarnings("unused")
+    private boolean replyToCommentCircuitOpen(InstagramBotConfig config, String commentId,
+                                              String replyText, CallNotPermittedException e) {
+        log.warn("Instagram circuit open, dropping comment reply to {}", commentId);
+        return false;
     }
 }

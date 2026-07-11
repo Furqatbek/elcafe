@@ -2,6 +2,8 @@ package com.elcafe.modules.customer.service;
 
 import com.elcafe.modules.customer.dto.GeocodingResponse;
 import lombok.extern.slf4j.Slf4j;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class GeocodingService {
     /**
      * Reverse geocode coordinates to get address details
      */
+    @CircuitBreaker(name = "geocoding", fallbackMethod = "reverseGeocodeCircuitOpen")
     public GeocodingResponse reverseGeocode(Double latitude, Double longitude) {
         log.debug("Reverse geocoding coordinates: {}, {}", latitude, longitude);
 
@@ -72,6 +75,7 @@ public class GeocodingService {
     /**
      * Search for locations by query string
      */
+    @CircuitBreaker(name = "geocoding", fallbackMethod = "searchLocationsCircuitOpen")
     public List<GeocodingResponse> searchLocations(String query, Integer limit) {
         log.debug("Searching locations for query: {}", query);
 
@@ -108,5 +112,20 @@ public class GeocodingService {
             log.error("Location search failed: {}", e.getMessage());
             throw new RuntimeException("Failed to search locations", e);
         }
+    }
+
+    // Fallbacks typed to CallNotPermittedException: they fire ONLY when the breaker is OPEN (repeated
+    // provider failures), so callers fail fast instead of each waiting out the 10s timeouts. Ordinary
+    // exceptions keep their original contract and still count toward the breaker.
+    @SuppressWarnings("unused")
+    private GeocodingResponse reverseGeocodeCircuitOpen(Double latitude, Double longitude,
+                                                        CallNotPermittedException e) {
+        throw new RuntimeException("Geocoding temporarily unavailable (circuit open)");
+    }
+
+    @SuppressWarnings("unused")
+    private List<GeocodingResponse> searchLocationsCircuitOpen(String query, Integer limit,
+                                                               CallNotPermittedException e) {
+        throw new RuntimeException("Geocoding temporarily unavailable (circuit open)");
     }
 }
