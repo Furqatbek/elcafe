@@ -29,6 +29,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +46,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class OrderService {
+
+    /** Upper bound for the admin by-status listing (audit PERF-9 convention: newest first, capped). */
+    private static final int ADMIN_STATUS_LIST_CAP = 500;
 
     private final OrderRepository orderRepository;
     private final InventoryService inventoryService;
@@ -340,6 +344,18 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<Order> getPendingOrders() {
         return OrderJsonHydration.forJson(orderRepository.findByStatusOrderByCreatedAtAsc(OrderStatus.NEW));
+    }
+
+    /**
+     * Admin listing by exact status (audit FUNC-5: the filter previously returned pending orders for
+     * every requested status). Newest {@value #ADMIN_STATUS_LIST_CAP} — same unbounded-finder cap
+     * convention as PERF-9; tenant scoping comes from the transaction-scoped Hibernate filter
+     * (SUPER_ADMIN stays unscoped, consistent with the other admin reads).
+     */
+    @Transactional(readOnly = true)
+    public List<Order> getOrdersByStatus(OrderStatus status) {
+        return OrderJsonHydration.forJson(orderRepository.findByStatus(status,
+                PageRequest.of(0, ADMIN_STATUS_LIST_CAP, Sort.by(Sort.Direction.DESC, "createdAt"))));
     }
 
     /**

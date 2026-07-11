@@ -88,6 +88,31 @@ class AdminOrderControllerTest {
     }
 
     @Test
+    @DisplayName("GET /?status=COMPLETED — filters by the REQUESTED status (FUNC-5: used to return pending)")
+    void getAllOrders_statusFilter_usesRequestedStatus() throws Exception {
+        when(orderService.getOrdersByStatus(OrderStatus.COMPLETED))
+                .thenReturn(java.util.List.of(createOrder(2L, OrderStatus.COMPLETED)));
+
+        mockMvc.perform(get("/api/v1/admin/orders").param("status", "COMPLETED"))
+                .andExpect(status().isOk());
+
+        org.mockito.Mockito.verify(orderService).getOrdersByStatus(OrderStatus.COMPLETED);
+        org.mockito.Mockito.verify(orderService, org.mockito.Mockito.never()).getPendingOrders();
+    }
+
+    @Test
+    @DisplayName("GET /?status=NEW — keeps the dedicated pending view")
+    void getAllOrders_newStatus_usesPendingView() throws Exception {
+        when(orderService.getPendingOrders()).thenReturn(java.util.List.of(createOrder(1L, OrderStatus.NEW)));
+
+        mockMvc.perform(get("/api/v1/admin/orders").param("status", "NEW"))
+                .andExpect(status().isOk());
+
+        org.mockito.Mockito.verify(orderService).getPendingOrders();
+        org.mockito.Mockito.verify(orderService, org.mockito.Mockito.never()).getOrdersByStatus(any());
+    }
+
+    @Test
     @DisplayName("PATCH /{orderId}/status — update status")
     void updateStatus_returns200() throws Exception {
         when(orderService.updateOrderStatus(anyLong(), any(), anyString(), anyString()))

@@ -3,6 +3,7 @@ package com.elcafe.modules.push.controller;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.customer.entity.Customer;
+import com.elcafe.security.CustomerPrincipal;
 import com.elcafe.modules.customer.service.CustomerService;
 import com.elcafe.modules.push.dto.PushNotificationRequest;
 import com.elcafe.modules.push.dto.PushSubscriptionRequest;
@@ -64,10 +65,13 @@ public class PushSubscriptionController {
             @Valid @RequestBody PushSubscriptionRequest request) {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String phone = auth.getName();
 
-        Customer customer = customerService.findByPhone(phone)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+        // The consumer token carries the authoritative customer id (CustomerPrincipal) — use it.
+        // The previous phone lookup was unscoped (audit MIG-13): the same phone can exist as
+        // customer rows in several restaurants after V150, and the single-result lookup threw
+        // IncorrectResultSizeDataAccessException (HTTP 500) for exactly those consumers.
+        CustomerPrincipal principal = (CustomerPrincipal) auth.getPrincipal();
+        Customer customer = customerService.getCustomerById(principal.getId());
 
         PushSubscription subscription = webPushService.subscribeCustomer(customer, request);
 

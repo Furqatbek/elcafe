@@ -43,15 +43,17 @@ public class AdminOrderController {
         log.info("Admin fetching orders. Status filter: {}", status);
 
         List<Order> orders;
-        if (status != null) {
-            if (status == OrderStatus.NEW) {
-                orders = orderService.getPendingOrders();
-            } else {
-                // TODO: Add repository method for filtering by status
-                orders = orderService.getPendingOrders();
-            }
+        if (status == OrderStatus.NEW) {
+            // Kept as the dedicated pending view (oldest first, uncapped) that admin UIs poll.
+            orders = orderService.getPendingOrders();
+        } else if (status != null) {
+            // Audit FUNC-5: this branch used to ignore the requested status and return pending.
+            orders = orderService.getOrdersByStatus(status);
         } else {
-            orders = orderService.getAllOrders(org.springframework.data.domain.Pageable.unpaged()).getContent();
+            // Bounded: the previous unpaged fetch materialised the tenant's entire order history.
+            orders = orderService.getAllOrders(org.springframework.data.domain.PageRequest.of(
+                    0, 500, org.springframework.data.domain.Sort.by(
+                            org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))).getContent();
         }
 
         return ResponseEntity.ok(ApiResponse.success("Orders retrieved successfully", orders));
@@ -120,10 +122,10 @@ public class AdminOrderController {
                 currentUser.getEmail()
         );
 
-        // TODO: Send WebSocket event to customer
-        // TODO: Send SMS notification to customer
-
-        return ResponseEntity.ok(ApiResponse.success("Order rejected and refund initiated", order));
+        // Customer notification fires inside updateOrderStatus (shouldNotifyCustomer covers
+        // CANCELLED). No refund is initiated here — no automated refund path exists (audit FUNC-5;
+        // the old message claimed one). SMS on rejection stays a product decision (FUNC-9).
+        return ResponseEntity.ok(ApiResponse.success("Order rejected", order));
     }
 
     @PostMapping("/{orderId}/cancel")

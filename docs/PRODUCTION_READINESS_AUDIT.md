@@ -72,6 +72,19 @@ already satisfied E2's pool-behavior criterion.
   (FUNC-3); **FUNC-6** — ru/uz brought to full key parity with en (597 keys, incl. the whole POS
   payment/split/tables flow cashiers use); **FUNC-12** — the four hardcoded components (customer
   OrderTracking/OrderStatus, KitchenTicket, ReceiptTemplateSettings) internationalised.
+- **Register reds worked down: FUNC-5, MIG-13, CFG-10, and the async COGS gap.** The admin
+  by-status filter now filters (it returned pending orders for every requested status; the unfiltered
+  view is bounded to the newest 500 instead of materialising the tenant's whole history), and the
+  reject response stopped claiming a refund that no code path performs. The consumer push
+  subscription resolves the customer from the token's authoritative id instead of the unscoped
+  phone lookup that 500'd for any consumer whose phone exists in two tenants (MIG-13). Re-verifying
+  the register against code also caught two live defects: the WebSocket STOMP origins still
+  hardcoded `*` (CFG-10 had survived the A3 lockdown — both endpoints now reuse the CORS allowlist)
+  and the async revenue recorder iterating `order.getItems()` on a detached entity — COGS journal
+  entries were silently failing for every payment-completed order under OSIV-off (items are now
+  initialised in-session before the handoff; the recorder documents its contract). OPS-4 verified
+  partially mitigated: every outbound RestTemplate already carries connect/read timeouts; breakers
+  remain open. Pins: `AdminOrderControllerTest` (+2), `PushSubscriptionControllerTest` (new).
 - **Hardening tail: idempotent waiter close, milestone replay guard, typed payment/courier errors.**
   `WaiterOrderService.closeOrder` had no terminal-status guard — a double-tap or client retry on an
   already-closed order replayed the close side effects (duplicate ORDER_CLOSED event row + OrderPaid
@@ -372,7 +385,7 @@ already satisfied E2's pool-behavior criterion.
 | MIG-10 | MED | **✅** — Flyway `validate-on-migrate:false` + `baseline-on-migrate:true` → applied migrations can be edited undetected; pointing at a non-empty schema silently mis-baselines. | `application.yml:44,47` |
 | MIG-11 | MED | **⏳ data decision** — Promo-usage / saved-addresses / personalized coupons stay on the primary id after fragmentation → per-customer promo limits reset, secondary-restaurant customers lose addresses/coupons. | `V57:65,74-78`; `V101`; `V12` |
 | MIG-12 | MED | **⏳ populated-data rehearsal** — Whole-table `orders` rewrites inside single deploy transactions → long locks on the hottest table, untested at scale. | `V159:9-14`; `V102`; `V150:88-89` |
-| MIG-13 | MED | **🔴 open (push-subscription lookup still unscoped)** — Leftover unscoped `findByPhone` for SUPER_ADMIN callers + V150 duplicate phones → `IncorrectResultSizeDataAccessException`. | `CustomerRepository.java:20`; `CustomerService.java:315-318` |
+| MIG-13 | MED | **✅ (2026-07-11: resolves the customer from the token's id — CustomerPrincipal — instead of the unscoped phone lookup)** — Leftover unscoped `findByPhone` for SUPER_ADMIN callers + V150 duplicate phones → `IncorrectResultSizeDataAccessException`. | `CustomerRepository.java:20`; `CustomerService.java:315-318` |
 
 ### 2.3 Architecture / ops / resilience (OPS)
 
@@ -381,7 +394,7 @@ already satisfied E2's pool-behavior criterion.
 | OPS-1 | BLOCKER | **✅ decided: single-node + ShedLock (multi-node prereqs documented)** — **Single-node app in SaaS clothes.** In-memory `SimpleBroker` (WS broadcasts only reach the same JVM), per-instance rate-limit buckets, per-instance SMS token, and ~30 `@Scheduled` jobs with **no distributed lock**. Two instances → split real-time + double SMS/salary/revenue. | `WebSocketConfig.java:43`; no ShedLock |
 | OPS-2 | BLOCKER | **✅** — No brute-force protection on the auth surface: `@RateLimited` is on `AnalyticsController` only; staff login, **waiter PIN** (public, 12 h token), and password reset are unthrottled; `isAccountNonLocked()` is hardcoded to never lock. | `AuthController.java:40-45`; `WaiterController.java:52-58`; `User.java:114-116` |
 | OPS-3 | HIGH | **✅ code half · ⏳ shipper/DSN/alerts** — **Observability ABSENT.** No Micrometer/Prometheus, no tracing, no request/correlation IDs, no structured logging, no error tracking. Blind to 500s / p99 / individual failing requests. | grep-empty; `application.yml:95,117-118` |
-| OPS-4 | HIGH | **🔴 open (no circuit breakers; bounded async pool is the only backstop)** — No circuit breakers (no resilience4j); Telegram long-poll has no timeout/bulkhead → a slow-but-up provider blocks callers for the full read timeout. | `pom.xml`; `TelegramBotService` |
+| OPS-4 | HIGH | **🔴 open, partially mitigated (all outbound RestTemplates — SMS/geocoding/Instagram — carry connect+read timeouts; no breakers/bulkheads; Telegram long-poll runs on its own executor)** — No circuit breakers (no resilience4j); Telegram long-poll has no timeout/bulkhead → a slow-but-up provider blocks callers for the full read timeout. | `pom.xml`; `TelegramBotService` |
 | OPS-5 | HIGH | **✅** — No edge rate limiting — nginx configs have no `limit_req`/`limit_conn`. | `nginx-proxy/*.conf` |
 | OPS-6 | MED | **✅** — No graceful shutdown (`server.shutdown` unset → immediate); `Dockerfile` shell-wraps the JVM so SIGTERM isn't forwarded as PID 1 → deploys drop in-flight requests. | `application.yml`; `Dockerfile:25` |
 | OPS-7 | MED | **✅** — Healthcheck is decorative: no liveness/readiness split; Docker `restart: unless-stopped` does nothing on an unhealthy (not exited) container; Redis blip flips whole app DOWN. | `docker-compose.yml:126-131`; `application.yml:91-98` |
@@ -437,7 +450,7 @@ already satisfied E2's pool-behavior criterion.
 | FUNC-2 | BLOCKER | **✅** — i18n raw-key leak on the **Login screen** (`common.placeholders.email/password` render literally) + ~93 keys absent from `en.json`, called with no default — every language. | `Login.jsx:54,64`; `en.json` (no `common.placeholders`/`common.buttons`/`poSuggestions`) |
 | FUNC-3 | HIGH | **✅ deleted** — `PaymentGatewayService` is a full mock Stripe with **zero callers** — `verifyPaymentStatus()` always returns `"succeeded"`. Looks real, is fake, would approve every payment if ever wired. | `PaymentGatewayService.java:95,246,342,359` |
 | FUNC-4 | HIGH | **⏳ H (payments contract)** — Payme wallet top-up is a non-functional skeleton — only `PerformTransaction`; `Check`/`Create`/`Cancel` return `-32601`. Payme's protocol needs Check+Create first, so it can never complete a payment; no amount-match check. (Click path is real.) | `WalletTopUpWebhookController.java:228-275,104` |
-| FUNC-5 | HIGH | **🔴 open (status filter still returns pending; reject still stub)** — `AdminOrderController` status filter returns pending regardless of the requested status; `rejectOrder` says "refund initiated" but calls no refund and never notifies the customer; `REJECTED` status is never used. | `AdminOrderController.java:46-52,102-145` |
+| FUNC-5 | HIGH | **◐ fixed (2026-07-11: real by-status filter, capped 500; honest "Order rejected" message — customer notify fires via updateOrderStatus). REJECTED status stays unused (only reachable from PLACED; a semantics change is a product call); automated refunds need a payment path (H)** — `AdminOrderController` status filter returns pending regardless of the requested status; `rejectOrder` says "refund initiated" but calls no refund and never notifies the customer; `REJECTED` status is never used. | `AdminOrderController.java:46-52,102-145` |
 | FUNC-6 | HIGH | **✅** — ru/uz are ~95% key-complete but whole sub-trees are English-only — the multi-screen POS payment flow (ru) and inventory-valuation reports (both). Cashiers run POS payment in English. | `frontend/src/i18n/locales/` |
 | FUNC-7 | MED | **✅ deleted** — Dead waiter-event cluster: `publishOrderReady/ItemAdded/ItemRemoved/TableStatusChanged` have 0 callers → void-item performance KPI is dead code. | `OrderEventPublisher.java:68,133,159,183` |
 | FUNC-8 | MED | **⏳ product (needs a real courier provider)** — External courier integration is a total stub — `assignCourier` returns a random UUID; status/tracking only log. | `LocalCourierAdapter.java:16` |
@@ -653,7 +666,7 @@ is checked:
 - [x] Scale story decided; single-node, ShedLock on all crons + documented constraint + guard test (E0)
 - [x] JVM is container-aware with heap-dump-on-OOM (E1)
 - [ ] Metrics + request IDs ✅ (F1, F2); **error alerting needs the Sentry DSN + alert rules (infra)** (F4)
-- [ ] No user-facing control invokes a stub that fakes success — FUNC-3 deleted ✅; **SMS segment/delay, external-courier dispatch, shift variance, admin status filter still live over stubs** (FUNC-5, 8–11)
+- [ ] No user-facing control invokes a stub that fakes success — FUNC-3 deleted ✅, FUNC-5 filter/reject fixed ✅; **SMS segment/delay, external-courier dispatch, shift variance still live over stubs** (FUNC-8–11)
 - [x] Login screen (and app) shows no raw i18n keys (G1)
 
 **Rough critical path to that gate:** A (3–4 d) + B (2–3 d) + C (4–6 d) + D (4–6 d), with E1/F1–F2
