@@ -443,6 +443,14 @@ public class PaymentService {
      */
     private void recordRevenueNonCritical(Order order, Long orderId) {
         try {
+            // The recorder runs on an @Async thread with the DETACHED entity (deliberately: it must
+            // see this transaction's in-memory payment even before commit). Everything it reads has
+            // to be initialised here, in-session: payments already are (addPayment/isFullyPaid), but
+            // COGS iterates order.getItems() — uninitialised, that threw LazyInitializationException
+            // on the async thread and the COGS journal entry was silently skipped for every
+            // payment-completed order once open-in-view went off.
+            org.hibernate.Hibernate.initialize(order.getItems());
+
             // Use async revenue recording with retry and alerting
             revenueRecordingService.recordRevenueWithRetry(order);
             log.info("Revenue recording initiated for order {}", orderId);

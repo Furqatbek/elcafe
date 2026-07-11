@@ -17,6 +17,9 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    @org.springframework.beans.factory.annotation.Value("${app.security.cors.allowed-origins:*}")
+    private String allowedOrigins;
+
     private final StompAuthChannelInterceptor stompAuthChannelInterceptor;
 
     /**
@@ -57,12 +60,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
      */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Same allowlist as the HTTP CORS policy (CFG-10): the hardcoded "*" survived the A3 CORS
+        // lockdown. The base-profile default stays "*" for local dev; prod sets CORS_ORIGINS to an
+        // explicit list, and STOMP auth (enforce) independently requires a Bearer token on CONNECT.
+        String[] origins = allowedOrigins.split(",");
         registry.addEndpoint("/ws-waiter")
-                .setAllowedOriginPatterns("*") // Configure based on your CORS policy
+                .setAllowedOriginPatterns(origins)
                 .withSockJS(); // Enable SockJS fallback options
 
         // Print agent endpoint - no SockJS needed as agent is a dedicated application
         registry.addEndpoint("/ws-print-agent")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOriginPatterns(origins);
     }
 }

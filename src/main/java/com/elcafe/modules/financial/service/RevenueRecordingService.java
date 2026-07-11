@@ -31,6 +31,11 @@ public class RevenueRecordingService {
      * Record revenue for an order with retry support.
      * This method is async to not block the main payment flow.
      *
+     * <p>CONTRACT: runs on an @Async thread with a DETACHED entity and no session (open-in-view is
+     * off), so the caller must pass an order whose lazily-read state is already initialised —
+     * payments (picked apart by {@code pickRevenueDestinationAccount}) and items (iterated by the
+     * COGS recorder). See {@code PaymentService#recordRevenueNonCritical}.
+     *
      * @param order The order to record revenue for
      */
     @Async
