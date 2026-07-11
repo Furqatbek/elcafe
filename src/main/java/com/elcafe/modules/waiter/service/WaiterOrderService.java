@@ -572,6 +572,18 @@ public class WaiterOrderService {
         Waiter waiter = waiterRepository.findById(waiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Waiter not found with id: " + waiterId));
 
+        // Idempotent re-close: a double-tap or client retry on an already-closed order must not
+        // replay the close side effects (duplicate ORDER_CLOSED event row + OrderPaid broadcast;
+        // commission and the completion event carry their own per-order guards, this makes the
+        // endpoint itself safe).
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            log.info("Order {} is already closed; close is a no-op", order.getOrderNumber());
+            return order;
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BadRequestException("Cannot close a cancelled order");
+        }
+
         // Verify order has been paid before closing
         if (!order.isFullyPaid()) {
             throw new BadRequestException("Cannot close order — payment has not been recorded. " +

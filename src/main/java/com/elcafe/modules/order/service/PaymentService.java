@@ -1,5 +1,7 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ConflictException;
+import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
@@ -66,7 +68,7 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentById(Long orderId, Long paymentId) {
         Payment payment = paymentRepository.findByIdAndOrderId(paymentId, orderId)
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId + " for order: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId + " for order: " + orderId));
         restaurantAuthorizationService.checkAccess(payment.getOrder().getRestaurant().getId()); // §3.3: tenant guard
         return toResponse(payment);
     }
@@ -116,11 +118,11 @@ public class PaymentService {
     @Transactional
     public PaymentResponse createPayment(Long orderId, CreatePaymentRequest request) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order", "id", orderId));
 
         // Check if payment already exists for this order (for single-payment flows)
         if (!paymentRepository.findByOrderId(orderId).isEmpty()) {
-            throw new RuntimeException("Payment already exists for order: " + orderId);
+            throw new ConflictException("Payment already exists for order: " + orderId);
         }
 
         Payment payment = Payment.builder()
@@ -145,7 +147,7 @@ public class PaymentService {
         } catch (DataIntegrityViolationException e) {
             // Handle race condition: transaction ID uniqueness enforced by DB constraint
             if (e.getMessage() != null && e.getMessage().contains("transaction_id")) {
-                throw new RuntimeException("Payment with transaction ID '" + request.getTransactionId() + "' already exists");
+                throw new ConflictException("Payment with transaction ID '" + request.getTransactionId() + "' already exists");
             }
             throw e;
         }
@@ -164,7 +166,7 @@ public class PaymentService {
     @Transactional
     public PaymentResponse updatePayment(Long orderId, Long paymentId, UpdatePaymentRequest request) {
         Payment payment = paymentRepository.findByIdAndOrderId(paymentId, orderId)
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId + " for order: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId + " for order: " + orderId));
 
         if (request.getMethod() != null) payment.setMethod(request.getMethod());
 
@@ -188,7 +190,7 @@ public class PaymentService {
             String currentTransactionId = payment.getTransactionId();
             if ((currentTransactionId == null || !currentTransactionId.equals(request.getTransactionId())) &&
                 paymentRepository.existsByTransactionId(request.getTransactionId())) {
-                throw new RuntimeException("Payment with transaction ID '" + request.getTransactionId() + "' already exists");
+                throw new ConflictException("Payment with transaction ID '" + request.getTransactionId() + "' already exists");
             }
             payment.setTransactionId(request.getTransactionId());
         }
@@ -218,7 +220,7 @@ public class PaymentService {
     @Transactional
     public void deletePayment(Long orderId, Long paymentId, String deletedBy) {
         Payment payment = paymentRepository.findByIdAndOrderId(paymentId, orderId)
-                .orElseThrow(() -> new RuntimeException("Payment not found with id: " + paymentId + " for order: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId + " for order: " + orderId));
 
         if (payment.isDeleted()) {
             throw new RuntimeException("Payment has already been deleted");

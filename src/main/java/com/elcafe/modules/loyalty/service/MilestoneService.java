@@ -195,6 +195,16 @@ public class MilestoneService {
                 continue;
             }
 
+            // Replay guard: the same order must never count as two visits (defense behind the
+            // publish marker and the listener's ledger check). lastVisitOrder is a lazy proxy —
+            // the id read does not initialise it.
+            if (redemption.getLastVisitOrder() != null && order.getId() != null
+                    && order.getId().equals(redemption.getLastVisitOrder().getId())) {
+                log.debug("Order {} already counted for milestone '{}', skipping duplicate visit",
+                        order.getId(), milestone.getName());
+                continue;
+            }
+
             boolean milestoneReached = redemption.recordVisit(order, milestone.getRequiredVisits());
 
             redemption = redemptionRepository.save(redemption);

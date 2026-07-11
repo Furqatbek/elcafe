@@ -625,6 +625,24 @@ class WaiterOrderServiceTest {
         }
 
         @Test
+        void closeOrder_alreadyCompleted_isIdempotentNoOp() {
+            Order order = createOrder(1L, OrderStatus.COMPLETED);
+            makeOrderPaid(order);
+
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+            when(waiterRepository.findById(waiter.getId())).thenReturn(Optional.of(waiter));
+
+            Order result = waiterOrderService.closeOrder(1L, waiter.getId());
+
+            // Re-closing must not replay side effects: no save, no ORDER_CLOSED event, no OrderPaid
+            // broadcast, no commission recalculation, no completion-event gate call.
+            assertEquals(OrderStatus.COMPLETED, result.getStatus());
+            verify(orderRepository, never()).save(any(Order.class));
+            verifyNoInteractions(orderEventService, orderEventPublisher,
+                    waiterCommissionService, orderCompletionEvents);
+        }
+
+        @Test
         void closeOrder_success_setsCompleted() {
             Order order = createOrder(1L, OrderStatus.PREPARING);
             makeOrderPaid(order);

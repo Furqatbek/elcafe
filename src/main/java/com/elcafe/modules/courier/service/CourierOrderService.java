@@ -1,5 +1,7 @@
 package com.elcafe.modules.courier.service;
 
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.courier.entity.CourierProfile;
 import com.elcafe.modules.courier.repository.CourierProfileRepository;
 import com.elcafe.modules.kitchen.service.KitchenOrderService;
@@ -68,19 +70,19 @@ public class CourierOrderService {
     @Transactional
     public Order acceptOrder(Long orderId, Long courierId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         CourierProfile courier = courierProfileRepository.findById(courierId)
-                .orElseThrow(() -> new RuntimeException("Courier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found"));
 
         // Check if order is in correct status
         if (order.getStatus() != OrderStatus.READY) {
-            throw new RuntimeException("Order is not ready for pickup");
+            throw new BadRequestException("Order is not ready for pickup");
         }
 
         // Check if courier is already assigned
         if (order.getDeliveryInfo().getCourierId() != null) {
-            throw new RuntimeException("Order already has a courier assigned");
+            throw new BadRequestException("Order already has a courier assigned");
         }
 
         // Assign courier
@@ -111,10 +113,10 @@ public class CourierOrderService {
      */
     public void declineOrder(Long orderId, Long courierId, String reason) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         CourierProfile courier = courierProfileRepository.findById(courierId)
-                .orElseThrow(() -> new RuntimeException("Courier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found"));
 
         // Notify about decline
         notificationService.notifyCourierDeclined(order, courier.getUser().getFirstName(), reason);
@@ -128,10 +130,10 @@ public class CourierOrderService {
     @Transactional
     public Order assignCourier(Long orderId, Long courierId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         CourierProfile courier = courierProfileRepository.findById(courierId)
-                .orElseThrow(() -> new RuntimeException("Courier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found"));
 
         order.setStatus(OrderStatus.COURIER_ASSIGNED);
         order.getDeliveryInfo().setCourierId(courier.getId());
@@ -161,15 +163,15 @@ public class CourierOrderService {
     @Transactional
     public Order startDelivery(Long orderId, Long courierId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         // Verify courier
         if (!courierId.equals(order.getDeliveryInfo().getCourierId())) {
-            throw new RuntimeException("This order is not assigned to you");
+            throw new BadRequestException("This order is not assigned to you");
         }
 
         if (order.getStatus() != OrderStatus.COURIER_ASSIGNED) {
-            throw new RuntimeException("Order is not in correct status");
+            throw new BadRequestException("Order is not in correct status");
         }
 
         order.setStatus(OrderStatus.ON_DELIVERY);
@@ -202,15 +204,15 @@ public class CourierOrderService {
     @Transactional
     public Order completeDelivery(Long orderId, Long courierId, String notes) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         // Verify courier
         if (!courierId.equals(order.getDeliveryInfo().getCourierId())) {
-            throw new RuntimeException("This order is not assigned to you");
+            throw new BadRequestException("This order is not assigned to you");
         }
 
         if (order.getStatus() != OrderStatus.ON_DELIVERY) {
-            throw new RuntimeException("Order is not out for delivery");
+            throw new BadRequestException("Order is not out for delivery");
         }
 
         order.setStatus(OrderStatus.DELIVERED);
