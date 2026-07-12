@@ -5551,5 +5551,31 @@
       "title": "Live preview",
       "note": "Showing with sample data"
     }
+  },
+  "errors": {
+    "title": "Error",
+    "requestIdSuffix": " (Error ID: {{id}})",
+    "NETWORK_ERROR": "Can't reach the server. Check your internet connection and try again.",
+    "TIMEOUT": "The request took too long. Please try again.",
+    "CANCELED": "Request canceled.",
+    "UNAUTHENTICATED": "Please sign in to continue.",
+    "TOKEN_EXPIRED": "Your session has expired. Please sign in again.",
+    "INVALID_CREDENTIALS": "Incorrect email or password.",
+    "ACCOUNT_LOCKED": "Too many failed attempts. The account is temporarily locked — try again later.",
+    "FORBIDDEN": "You don't have permission to do this.",
+    "TENANT_ACCESS_DENIED": "This belongs to another restaurant — you don't have access to it.",
+    "SUBSCRIPTION_INACTIVE": "This restaurant's access is suspended. Please contact support.",
+    "NOT_FOUND": "Not found. It may have been deleted.",
+    "CONFLICT": "This conflicts with existing data. Refresh the page and try again.",
+    "CONCURRENT_MODIFICATION": "Someone else changed this at the same time. Refresh and try again.",
+    "RATE_LIMITED": "Too many requests. Please wait a moment and try again.",
+    "VALIDATION_ERROR": "Please check the highlighted fields.",
+    "BAD_REQUEST": "Invalid request.",
+    "FILE_TOO_LARGE": "The file is too large.",
+    "UNSUPPORTED_MEDIA_TYPE": "This file type is not supported.",
+    "METHOD_NOT_ALLOWED": "This action isn't available.",
+    "PAYMENT_FAILED": "Payment failed. Please try again or use a different method.",
+    "ANALYTICS_FAILED": "Couldn't build this report right now. Please try again.",
+    "INTERNAL": "Something went wrong on our side. Please try again."
   }
 }

@@ -5551,5 +5551,31 @@
       "title": "Jonli ko'rinish",
       "note": "Namuna ma'lumotlar bilan ko'rsatilmoqda"
     }
+  },
+  "errors": {
+    "title": "Xatolik",
+    "requestIdSuffix": " (Xatolik kodi: {{id}})",
+    "NETWORK_ERROR": "Server bilan aloqa yo'q. Internet ulanishini tekshirib, qayta urinib ko'ring.",
+    "TIMEOUT": "So'rov juda uzoq davom etdi. Qayta urinib ko'ring.",
+    "CANCELED": "So'rov bekor qilindi.",
+    "UNAUTHENTICATED": "Davom etish uchun tizimga kiring.",
+    "TOKEN_EXPIRED": "Sessiya muddati tugadi. Qaytadan kiring.",
+    "INVALID_CREDENTIALS": "Email yoki parol noto'g'ri.",
+    "ACCOUNT_LOCKED": "Juda ko'p muvaffaqiyatsiz urinish. Hisob vaqtincha bloklandi — keyinroq urinib ko'ring.",
+    "FORBIDDEN": "Bu amal uchun sizda ruxsat yo'q.",
+    "TENANT_ACCESS_DENIED": "Bu boshqa restoranga tegishli — sizda ruxsat yo'q.",
+    "SUBSCRIPTION_INACTIVE": "Bu restoran faoliyati to'xtatilgan. Qo'llab-quvvatlash xizmatiga murojaat qiling.",
+    "NOT_FOUND": "Topilmadi. Ehtimol, o'chirilgan.",
+    "CONFLICT": "Mavjud ma'lumotlar bilan zid keladi. Sahifani yangilab, qayta urinib ko'ring.",
+    "CONCURRENT_MODIFICATION": "Kimdir bu ma'lumotni siz bilan bir vaqtda o'zgartirdi. Yangilab, qayta urining.",
+    "RATE_LIMITED": "Juda ko'p so'rov. Biroz kutib, qayta urinib ko'ring.",
+    "VALIDATION_ERROR": "Belgilangan maydonlarni tekshiring.",
+    "BAD_REQUEST": "Noto'g'ri so'rov.",
+    "FILE_TOO_LARGE": "Fayl juda katta.",
+    "UNSUPPORTED_MEDIA_TYPE": "Bu fayl turi qo'llab-quvvatlanmaydi.",
+    "METHOD_NOT_ALLOWED": "Bu amal mavjud emas.",
+    "PAYMENT_FAILED": "To'lov amalga oshmadi. Qayta yoki boshqa usulda urinib ko'ring.",
+    "ANALYTICS_FAILED": "Hozircha bu hisobotni tuzib bo'lmadi. Qayta urinib ko'ring.",
+    "INTERNAL": "Bizning tomonda xatolik yuz berdi. Qayta urinib ko'ring."
   }
 }

@@ -170,11 +170,9 @@ public class TenantEnforcementFilter extends OncePerRequestFilter {
         log.warn("[tenant-enforce] BLOCKED user={} tenant={} attempted restaurantId={} on {} {}",
                 violation.email(), violation.callerTenant(), violation.offendingId(),
                 request.getMethod(), request.getRequestURI());
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        response.setContentType("application/json");
-        response.getWriter().write(
-                "{\"error\":\"TENANT_ACCESS_DENIED\","
-                        + "\"message\":\"You do not have access to this restaurant's data.\"}");
+        com.elcafe.exception.ApiErrorWriter.write(response, HttpServletResponse.SC_FORBIDDEN,
+                com.elcafe.exception.ErrorCode.TENANT_ACCESS_DENIED,
+                "You do not have access to this restaurant's data.");
     }
 
     private record Violation(String email, Long callerTenant, Long offendingId) {

@@ -43,6 +43,8 @@ public class SecurityConfig {
     private final TenantEnforcementFilter tenantEnforcementFilter;
     private final SubscriptionEnforcementFilter subscriptionEnforcementFilter;
     private final UserDetailsService userDetailsService;
+    private final com.elcafe.security.RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final com.elcafe.security.RestAccessDeniedHandler restAccessDeniedHandler;
 
     @Value("${app.security.cors.allowed-origins}")
     private String allowedOrigins;
@@ -117,6 +119,13 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+                // EH-0.4: JSON envelope from the security boundary. Without these, unauthenticated
+                // requests got the framework default (empty-body 403) instead of a 401 the client
+                // can act on, and filter-layer denials had no body at all.
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
+                        .accessDeniedHandler(restAccessDeniedHandler)
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

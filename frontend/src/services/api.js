@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toAppError } from '../lib/errors';
 import { useSubscriptionStore } from '../store/subscriptionStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
@@ -145,6 +146,20 @@ api.interceptors.response.use(
       useSubscriptionStore.getState().setSuspended(true);
     }
 
+    return Promise.reject(error);
+  }
+);
+
+// EH-0.5: every rejection that leaves the api layer carries a normalized form at `error.app`
+// (code / status / localized-ready message / requestId / retriable / fieldErrors). Pages use
+// notifyError(e) / getAppError(e) from lib/errors instead of poking e.response.data. Registered
+// after the refresh interceptor so it sees the FINAL rejection, refresh flow included.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error && typeof error === 'object' && !error.app) {
+      error.app = toAppError(error);
+    }
     return Promise.reject(error);
   }
 );

@@ -39,15 +39,24 @@ logged/observable server-side.
 
 ## Phase EH-0 — Contract & plumbing (foundation; unblocks everything else)
 
+> **Status: ✅ landed 2026-07-12** (with EH-1.1 + EH-1.2 pulled forward — same file, day-one
+> bridges). Backend: ErrorCode enum, envelope `error`+`requestId`, handler re-base + 13 new
+> framework handlers + IllegalArgument/IllegalState bridges, filters and security boundary on the
+> same envelope (unauthenticated requests were an EMPTY-BODY 403 before; now 401 with
+> UNAUTHENTICATED/TOKEN_EXPIRED so the client knows refresh-vs-login). Frontend: lib/errors.js
+> (toAppError/errorMessage/notifyError), api.js attaches `error.app` to every rejection, errors.*
+> dictionary in en/ru/uz. Pinned by GlobalExceptionHandlerContractTest,
+> RestAuthenticationEntryPointTest, lib/errors.test.js.
+
 | # | Task | Where | Acceptance |
 |---|---|---|---|
-| EH-0.1 | Create `ErrorCode` enum (VALIDATION_ERROR, UNAUTHENTICATED, TOKEN_EXPIRED, ACCOUNT_LOCKED, FORBIDDEN, TENANT_ACCESS_DENIED, SUBSCRIPTION_INACTIVE, NOT_FOUND, CONFLICT, RATE_LIMITED, FILE_TOO_LARGE, PAYMENT_FAILED, INTERNAL, …) and add `error` + `requestId` (from MDC) to `ApiResponse` error factory | `exception/`, `utils/ApiResponse` | every error response carries a code + requestId; existing `message` field untouched (backward compatible) |
-| EH-0.2 | Re-base `GlobalExceptionHandler` on the contract: each existing handler emits its code; catch-all logs full stack, returns fixed generic message + requestId | `GlobalExceptionHandler` | unit test per handler asserts status+code+no-internals |
-| EH-0.3 | Same envelope from **manual response writers**: `TenantEnforcementFilter` (`{error,message}` today), `SubscriptionEnforcementFilter`, rate-limit filter — sweep `grep -rn "getWriter()\|sendError"` | filters | filter-written bodies parse as the standard envelope |
-| EH-0.4 | Custom `AuthenticationEntryPoint` (401: distinguish `UNAUTHENTICATED` vs `TOKEN_EXPIRED` so the client knows refresh-vs-login) and `AccessDeniedHandler` (403 FORBIDDEN), both JSON envelope | `SecurityConfig` + `security/` | curl without/with-bad token gets the envelope, not Spring's default |
-| EH-0.5 | Frontend `lib/errors.js`: response-interceptor `normalizeError` → `AppError {code, status, message, requestId, retriable, fieldErrors}`; maps network failure / timeout / offline / canceled | `services/api.js`, `lib/errors.js` | unit tests: each raw axios error shape → correct AppError |
-| EH-0.6 | Error i18n dictionary: `errors.<CODE>` in en/ru/uz + `errorMessage(appError)` (code→localized; unknown 4xx→backend message; 5xx→generic + requestId) | `i18n/locales/*` | dictionary covers every ErrorCode; missing-key test |
-| EH-0.7 | `notifyError(err)` — one toast helper on the existing radix toast (title, localized text, requestId footer for 5xx) | `hooks/useToast`, `lib/errors.js` | used by EH-2/EH-3; snapshot test |
+| EH-0.1 ✅ | Create `ErrorCode` enum (VALIDATION_ERROR, UNAUTHENTICATED, TOKEN_EXPIRED, ACCOUNT_LOCKED, FORBIDDEN, TENANT_ACCESS_DENIED, SUBSCRIPTION_INACTIVE, NOT_FOUND, CONFLICT, RATE_LIMITED, FILE_TOO_LARGE, PAYMENT_FAILED, INTERNAL, …) and add `error` + `requestId` (from MDC) to `ApiResponse` error factory | `exception/`, `utils/ApiResponse` | every error response carries a code + requestId; existing `message` field untouched (backward compatible) |
+| EH-0.2 ✅ | Re-base `GlobalExceptionHandler` on the contract: each existing handler emits its code; catch-all logs full stack, returns fixed generic message + requestId | `GlobalExceptionHandler` | unit test per handler asserts status+code+no-internals |
+| EH-0.3 ✅ | Same envelope from **manual response writers**: `TenantEnforcementFilter` (`{error,message}` today), `SubscriptionEnforcementFilter`, rate-limit filter — sweep `grep -rn "getWriter()\|sendError"` | filters | filter-written bodies parse as the standard envelope |
+| EH-0.4 ✅ | Custom `AuthenticationEntryPoint` (401: distinguish `UNAUTHENTICATED` vs `TOKEN_EXPIRED` so the client knows refresh-vs-login) and `AccessDeniedHandler` (403 FORBIDDEN), both JSON envelope | `SecurityConfig` + `security/` | curl without/with-bad token gets the envelope, not Spring's default |
+| EH-0.5 ✅ | Frontend `lib/errors.js`: response-interceptor `normalizeError` → `AppError {code, status, message, requestId, retriable, fieldErrors}`; maps network failure / timeout / offline / canceled | `services/api.js`, `lib/errors.js` | unit tests: each raw axios error shape → correct AppError |
+| EH-0.6 ✅ | Error i18n dictionary: `errors.<CODE>` in en/ru/uz + `errorMessage(appError)` (code→localized; unknown 4xx→backend message; 5xx→generic + requestId) | `i18n/locales/*` | dictionary covers every ErrorCode; missing-key test |
+| EH-0.7 ✅ | `notifyError(err)` — one toast helper on the existing radix toast (title, localized text, requestId footer for 5xx) | `hooks/useToast`, `lib/errors.js` | used by EH-2/EH-3; snapshot test |
 
 **Exit:** both sides speak one contract; nothing user-visible changed yet except 401/403/tenant/rate-limit bodies became consistent.
 
@@ -55,8 +64,8 @@ logged/observable server-side.
 
 | # | Task | Where | Acceptance |
 |---|---|---|---|
-| EH-1.1 | Add framework handlers: `MethodArgumentTypeMismatch`, `MissingServletRequestParameter`, `HttpMessageNotReadable` (malformed JSON), `ConstraintViolation` (@RequestParam validation), `NoHandlerFound`/`NoResourceFound` →404, `HttpRequestMethodNotSupported`→405, `HttpMediaTypeNotSupported`→415, `MaxUploadSizeExceeded`/`Multipart`→413 FILE_TOO_LARGE, `DataIntegrityViolation`→409 (sanitized), async request timeout | `GlobalExceptionHandler` | MockMvc test per case: status+code+envelope |
-| EH-1.2 | **Day-one bridge**: handlers for `IllegalArgumentException`→400 (message allowed — they're human-written) and `IllegalStateException`→500-generic, so the 212 raw throws stop mis-presenting **before** the sweep finishes | `GlobalExceptionHandler` | "Email already in use" (SystemUsers) returns 400, not 500 |
+| EH-1.1 ✅ | Add framework handlers: `MethodArgumentTypeMismatch`, `MissingServletRequestParameter`, `HttpMessageNotReadable` (malformed JSON), `ConstraintViolation` (@RequestParam validation), `NoHandlerFound`/`NoResourceFound` →404, `HttpRequestMethodNotSupported`→405, `HttpMediaTypeNotSupported`→415, `MaxUploadSizeExceeded`/`Multipart`→413 FILE_TOO_LARGE, `DataIntegrityViolation`→409 (sanitized), async request timeout | `GlobalExceptionHandler` | MockMvc test per case: status+code+envelope |
+| EH-1.2 ✅ | **Day-one bridge**: handlers for `IllegalArgumentException`→400 (message allowed — they're human-written) and `IllegalStateException`→500-generic, so the 212 raw throws stop mis-presenting **before** the sweep finishes | `GlobalExceptionHandler` | "Email already in use" (SystemUsers) returns 400, not 500 |
 | EH-1.3 | Raw-throw sweep — replace user-reachable `RuntimeException`(85)/`IllegalArgument`(76)/`IllegalState`(51) with typed exceptions, module-batched: ① auth/users ② orders/payments ③ POS/waiter/kitchen ④ loyalty/marketing ⑤ financial/inventory ⑥ courier/settings/print ⑦ telegram/instagram/misc | all `modules/*` | per batch: grep count reaches 0 for controllers+services of that module; suite green |
 | EH-1.4 | Message hygiene audit: every exception message safe to show verbatim (no SQL, no class names, no other-tenant ids/emails/phones); fix violators | all `modules/*` | reviewed checklist per module in the PR description |
 | EH-1.5 | Non-HTTP surfaces: `AsyncUncaughtExceptionHandler` (log+Sentry), scheduler `ErrorHandler` for `@Scheduled`, verify event-listener guards, STOMP `@MessageExceptionHandler` + `StompSubProtocolErrorHandler` so WS errors reach clients as typed frames, not silence | `config/`, `websocket/` | kill-switch test: throwing job/listener/WS handler logs once, never kills the scheduler/session silently |

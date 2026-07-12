@@ -165,6 +165,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     }
                 }
             }
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // EH-0.4: tell RestAuthenticationEntryPoint this 401 is an expiry, so the client knows
+            // to run the refresh flow instead of bouncing straight to login.
+            request.setAttribute(RestAuthenticationEntryPoint.TOKEN_EXPIRED_ATTR, Boolean.TRUE);
+            logger.debug("JWT expired: " + e.getMessage());
         } catch (Exception e) {
             logger.error("Cannot set user authentication: " + e.getMessage(), e);
         }

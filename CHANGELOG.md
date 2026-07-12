@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Error handling — 2026-07-12 (EH-0, docs/ERROR_HANDLING_PLAN.md)
+
+- **One error envelope with machine-readable codes.** Every API error now carries a stable
+  `error` code (`ErrorCode` enum) plus a `requestId`, including bodies written by filters (tenant
+  403, subscription 402) and — new — the security boundary: unauthenticated requests previously got
+  Spring's default **empty-body 403**; they now get a 401 envelope distinguishing
+  `UNAUTHENTICATED` from `TOKEN_EXPIRED` so clients know refresh-vs-login.
+- **13 new framework handlers** (malformed JSON, type mismatch, missing param, unknown route→404,
+  405, 415, upload-too-large→413, `DataIntegrityViolation`→sanitized 409, async timeout…) plus
+  day-one bridges: `IllegalArgumentException`→400 with its human message (e.g. "Email already in
+  use" was a 500 before), `IllegalStateException`→500-generic. 5xx responses never echo exception
+  internals — fixed generic message + requestId only.
+- **Frontend error pipeline** (`lib/errors.js`): every axios rejection is normalized to
+  `{code, status, message, requestId, retriable, fieldErrors}` and attached as `error.app`;
+  `errorMessage()` renders from a new `errors.*` i18n dictionary (en/ru/uz — auth/tenant/network
+  codes always localized, specific 4xx keep the backend detail, 5xx always generic + error id);
+  `notifyError()` is the standard toast. Pages migrate to it in EH-3.
+
 ### Launch prep — 2026-07-11
 
 - **Demo seed data removed from migrations** (ops decision: deployments always start from a clean,

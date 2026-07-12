@@ -126,11 +126,9 @@ public class SubscriptionEnforcementFilter extends OncePerRequestFilter {
             throws IOException {
         log.warn("[subscription-enforce] BLOCKED {} {} for suspended tenant={} caller={}",
                 request.getMethod(), request.getRequestURI(), blocked.tenant(), blocked.caller());
-        response.setStatus(HttpServletResponse.SC_PAYMENT_REQUIRED); // 402
-        response.setContentType("application/json");
-        response.getWriter().write(
-                "{\"error\":\"SUBSCRIPTION_INACTIVE\",\"status\":\"SUSPENDED\","
-                        + "\"message\":\"This restaurant's access has been suspended. Please contact support.\"}");
+        com.elcafe.exception.ApiErrorWriter.write(response, HttpServletResponse.SC_PAYMENT_REQUIRED,
+                com.elcafe.exception.ErrorCode.SUBSCRIPTION_INACTIVE,
+                "This restaurant's access has been suspended. Please contact support.");
     }
 
     /** A request that would be (shadow) or was (enforce) blocked: the suspended tenant + the caller. */
