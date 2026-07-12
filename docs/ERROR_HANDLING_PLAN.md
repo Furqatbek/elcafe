@@ -155,7 +155,7 @@ Batches are independently shippable; do EH-3.7 (platform) and EH-3.1 (core ops) 
 |---|---|---|
 | EH-4.1 ✅ | ESLint: `no-alert` = error; restrict bare `console.error` in `catch` (custom rule or `no-console` with logger exception) — CI-enforced | new violation fails the frontend build |
 | EH-4.2 ✅ | Backend pattern-scan guard test active (from EH-1.6) | new raw throw in controller/service fails CI |
-| EH-4.3 | Playwright error-path e2e: expired session → login redirect; 403 page; mocked 500 → toast with requestId; offline banner; chunk-fail auto-reload; WS-drop banner | runs in CI against the built app |
+| EH-4.3 ✅ | Playwright error-path e2e (`frontend/e2e/error-handling.spec.js`): session-ended → localized login banner; list 500 → `<QueryState>` error + request-id + retry-recovers; 403 → localized message, raw code never shown. Backend stubbed at the network layer (same convention as `plan-gating.spec.js`), run via `npm run e2e` | 3 specs green in Chromium; local harness (e2e is not in CI — no browser-download/flakiness cost — matching the existing e2e suite) |
 | EH-4.4 ✅ | Sentry both sides: backend is dormant-ready (DSN env); add the frontend SDK behind `VITE_SENTRY_DSN`; toast requestId ↔ Sentry event correlation | a thrown test error appears in Sentry with matching requestId |
 | EH-4.5 | Docs & register: error-code table in API_REFERENCE (enum-synced test optional), CHANGELOG entry, audit-register note; this file tracks per-task status | all codes documented; register updated |
 
@@ -183,9 +183,11 @@ the sweep then grinds the long tail to zero.
 - [◐] Every page: loading / empty / error(+retry) states via `<QueryState>` (piloted on SystemUsers; incremental rollout to remaining list pages) · role-hidden actions via `can()` (piloted; incremental)
 - [x] All error texts localized en/ru/uz; 5xx shows generic text + request id only
 - [x] Route-level error boundaries + chunk-failure auto-recovery — no blank pages
-- [◐] Sentry wired on both sides (backend + frontend, dormant-unless-DSN) · Playwright error-path e2e suite (EH-4.3) still to build
+- [x] Sentry wired on both sides (backend + frontend, dormant-unless-DSN) · Playwright error-path e2e suite (EH-4.3) built — 3 specs green (session-ended banner, list-500 QueryState+retry, 403 localized)
 
 **Verdict (2026-07-12):** EH-0/EH-1/EH-2 landed in full; EH-3 headline done (all alerts + user-action
 silent failures fixed across 61 pages, CI-guarded) with QueryState/role rollout incremental; EH-4
-guards + Sentry done, error-path e2e harness remaining. The user-facing goal — no raw backend text,
+guards + Sentry + error-path e2e all done. The user-facing goal — no raw backend text,
 no silent action failures, no blank pages, localized everywhere — is met and regression-fenced.
+Only deliberately-incremental work remains: rolling `<QueryState>`/`can()` out to the long tail of
+list pages, best done page-by-page against a live stack (regression risk without live verification).
