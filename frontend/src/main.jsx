@@ -6,6 +6,7 @@ import './index.css'
 import i18n from 'i18next'
 import { ready as i18nReady } from './i18n/config'
 import branding from './config/branding'
+import { initSentry, captureError } from './lib/sentry'
 
 // i18n is awaited (i18nReady) before render, so the singleton resolves real strings here; English
 // defaults cover the degenerate pre-init case.
@@ -29,6 +30,7 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error('[ErrorBoundary] App crashed:', error, info?.componentStack);
+    captureError(error); // EH-4.4: report the crash to Sentry when a DSN is configured
   }
 
   handleReload() {
@@ -57,6 +59,8 @@ class ErrorBoundary extends React.Component {
 }
 
 // Wait for i18n (active language + en fallback) before the first render so nothing flashes raw keys.
+initSentry();
+
 i18nReady.finally(() => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>

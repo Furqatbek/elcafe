@@ -4,6 +4,7 @@
 // Pre-init (degenerate case) t() returns undefined and we fall back to the English defaults.
 import i18n from 'i18next';
 import { toast } from '../hooks/useToast';
+import { captureError } from './sentry';
 
 /**
  * EH-0.5/0.6/0.7 (docs/ERROR_HANDLING_PLAN.md): the single pipeline from any failed request to a
@@ -121,6 +122,11 @@ export function errorMessage(errOrApp) {
 export function notifyError(error, { title } = {}) {
   const app = getAppError(error);
   if (app.silent) return app;
+  // EH-4.4: server faults (and network failures) go to Sentry with the requestId tag; expected
+  // 4xx client errors are not reported. No-op unless a DSN is configured.
+  if (app.status >= 500 || app.code === 'INTERNAL' || app.code === 'NETWORK_ERROR') {
+    captureError(app.raw || error, app.requestId);
+  }
   toast({
     title: title || i18n.t('errors.title', { defaultValue: 'Error' }),
     description: errorMessage(app),

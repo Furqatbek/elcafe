@@ -153,10 +153,10 @@ Batches are independently shippable; do EH-3.7 (platform) and EH-3.1 (core ops) 
 
 | # | Task | Acceptance |
 |---|---|---|
-| EH-4.1 | ESLint: `no-alert` = error; restrict bare `console.error` in `catch` (custom rule or `no-console` with logger exception) — CI-enforced | new violation fails the frontend build |
-| EH-4.2 | Backend pattern-scan guard test active (from EH-1.6) | new raw throw in controller/service fails CI |
+| EH-4.1 ✅ | ESLint: `no-alert` = error; restrict bare `console.error` in `catch` (custom rule or `no-console` with logger exception) — CI-enforced | new violation fails the frontend build |
+| EH-4.2 ✅ | Backend pattern-scan guard test active (from EH-1.6) | new raw throw in controller/service fails CI |
 | EH-4.3 | Playwright error-path e2e: expired session → login redirect; 403 page; mocked 500 → toast with requestId; offline banner; chunk-fail auto-reload; WS-drop banner | runs in CI against the built app |
-| EH-4.4 | Sentry both sides: backend is dormant-ready (DSN env); add the frontend SDK behind `VITE_SENTRY_DSN`; toast requestId ↔ Sentry event correlation | a thrown test error appears in Sentry with matching requestId |
+| EH-4.4 ✅ | Sentry both sides: backend is dormant-ready (DSN env); add the frontend SDK behind `VITE_SENTRY_DSN`; toast requestId ↔ Sentry event correlation | a thrown test error appears in Sentry with matching requestId |
 | EH-4.5 | Docs & register: error-code table in API_REFERENCE (enum-synced test optional), CHANGELOG entry, audit-register note; this file tracks per-task status | all codes documented; register updated |
 
 ---

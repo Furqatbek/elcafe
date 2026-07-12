@@ -187,6 +187,9 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: /api/v1
+        # EH-4.4: optional frontend error tracking. Empty = dormant (SDK never loaded).
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        VITE_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
     container_name: elcafe-frontend
     restart: unless-stopped
     environment:
