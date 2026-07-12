@@ -143,7 +143,8 @@ services:
       SELFSERVICE_BASE_URL: ${SELFSERVICE_BASE_URL:-https://qahvoon.uz/order}
       FILE_BASE_URL: ${FILE_BASE_URL:-https://qahvoon.uz/uploads}
       # Console log format: json = one JSON object per line for log aggregation; unset/plain = the
-      # human-readable default (see logback-spring.xml). The rolling file in ./logs stays plain either way.
+      # human-readable default (see logback-spring.xml). The rolling file (in the `logs` volume)
+      # stays plain either way.
       LOG_FORMAT: ${LOG_FORMAT:-}
       # Error tracking (Sentry, audit F4). DORMANT unless a DSN is set — with it, unhandled server
       # errors are reported with stack trace + requestId/tenantId context.
@@ -161,7 +162,14 @@ services:
       - elcafe-network
     volumes:
       - uploads:/app/uploads
-      - ./logs:/app/logs
+      # Named volume, NOT a ./logs host bind mount: the app runs as non-root (uid 1000) and a
+      # first-time bind mount is created owned by root, so the container can't open its log file
+      # ("logs/elcafe.log Permission denied") — on a clean Linux deploy and on Docker Desktop alike.
+      # A named volume is initialised from the image's /app/logs (chowned to uid 1000 in the
+      # Dockerfile), so it is writable. Read logs with `docker compose logs -f backend` (the console
+      # stream is the primary channel); the rolling file + heap dumps live in this volume, retrievable
+      # via `docker compose cp backend:/app/logs ./logs` if needed.
+      - logs:/app/logs
     healthcheck:
       # Liveness, not the aggregate /actuator/health: a Redis/SMTP dependency blip must degrade the
       # health report, not restart-loop the app container (audit F4). Readiness lives at
@@ -247,4 +255,6 @@ volumes:
   redis_data:
     driver: local
   uploads:
+    driver: local
+  logs:
     driver: local

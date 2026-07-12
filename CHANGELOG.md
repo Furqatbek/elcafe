@@ -31,6 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the NOT NULL constraint. Never surfaced before because the admin UI always sends the toggles and
   the demo restaurant was migration-seeded. Found live by the fresh-DB launch rehearsal; both flags
   now default to `true` on create.
+- **Fixed: backend container crashed on startup with `logs/elcafe.log Permission denied`.** The app
+  runs as non-root (uid 1000) but `/app/logs` was a `./logs` host bind mount, which Docker creates
+  owned by root on first `up` — so the container couldn't open its log file. Hit a clean Linux
+  deploy and Docker Desktop (Windows) alike. Now a named `logs` volume (initialised from the
+  image's uid-1000-owned `/app/logs`), writable without any host-side chown. Read logs via
+  `docker compose logs -f backend`; the file/heap-dumps live in the volume.
+- **Local dev: don't publish db/redis host ports.** `docker-compose.local.yml` `!reset`s the 5432/
+  6379 (and redundant 443) publishes so the local stack coexists with a locally installed
+  PostgreSQL/Redis (a common Windows "port forbidden" failure). Prod (base compose alone) keeps
+  them. Backend 8080 stays for Swagger/direct API.
 - **Local dev launcher + README run commands corrected.** Added `run-local.sh` (zero-setup local:
   supplies throwaway `dev` DB/Redis passwords, then runs the dev-override stack) — needed because
   making `DB_PASSWORD`/`REDIS_PASSWORD` required in the base compose also made the local override
