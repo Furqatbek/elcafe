@@ -27,6 +27,13 @@ services:
   # (The !reset tag needs Docker Compose 2.24+; any recent Docker Desktop has it.)
   db:
     ports: !reset []
+    # Named volume instead of the base's ./data/postgres host bind mount. Postgres only applies
+    # POSTGRES_PASSWORD when its data dir is EMPTY, so a stale ./data/postgres left by an earlier run
+    # (a different password) causes "password authentication failed for user elcafe". A fresh named
+    # volume initialises cleanly with the current DB_PASSWORD, and `docker compose ... down -v` resets
+    # it — matching the always-empty-DB dev workflow. (Prod keeps the ./data/postgres bind mount.)
+    volumes:
+      - pgdata_local:/var/lib/postgresql/data
   redis:
     ports: !reset []
 
@@ -37,3 +44,9 @@ services:
       - "80:80"
     volumes:
       - ./nginx-proxy/nginx-local.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  # Local Postgres data lives here (see the db override above), so it's isolated from prod's
+  # ./data/postgres and disposable via `docker compose ... down -v`.
+  pgdata_local:
+    driver: local

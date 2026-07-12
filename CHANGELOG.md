@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   6379 (and redundant 443) publishes so the local stack coexists with a locally installed
   PostgreSQL/Redis (a common Windows "port forbidden" failure). Prod (base compose alone) keeps
   them. Backend 8080 stays for Swagger/direct API.
+- **Local dev: Postgres data on a named volume.** Local `db` now uses a `pgdata_local` named volume
+  instead of the base's `./data/postgres` bind mount. Postgres only applies `POSTGRES_PASSWORD` on
+  an empty data dir, so a stale `./data/postgres` from an earlier run caused `password
+  authentication failed for user "elcafe"`; a fresh named volume initialises with the current
+  password and resets via `down -v`. Prod keeps the host bind mount.
 - **Local dev launcher + README run commands corrected.** Added `run-local.sh` (zero-setup local:
   supplies throwaway `dev` DB/Redis passwords, then runs the dev-override stack) — needed because
   making `DB_PASSWORD`/`REDIS_PASSWORD` required in the base compose also made the local override
