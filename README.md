@@ -147,16 +147,28 @@ git clone <repository-url>
 cd elcafe
 ```
 
-2. Build and start the full stack (db, redis, backend, frontend, nginx) with dev overrides:
-```bash
-./run-local.sh
-```
-This uses `docker-compose.local.yml` (dev profile, dev-only JWT secret, HTTP-only nginx) and
-supplies throwaway `dev` DB/Redis passwords, so no `.env` is needed. Equivalent to:
-```bash
-DB_PASSWORD=dev REDIS_PASSWORD=dev \
-  docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
-```
+2. Build and start the full stack (db, redis, backend, frontend, nginx) with dev overrides.
+
+   macOS/Linux:
+   ```bash
+   ./run-local.sh
+   ```
+   Windows (PowerShell):
+   ```powershell
+   ./run-local.ps1
+   ```
+   These use `docker-compose.local.yml` (dev profile, dev-only JWT secret, HTTP-only nginx) and
+   supply throwaway `dev` DB/Redis passwords, so no `.env` is needed. Equivalent to:
+   ```bash
+   # bash
+   DB_PASSWORD=dev REDIS_PASSWORD=dev \
+     docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+   ```
+   ```powershell
+   # PowerShell
+   $env:DB_PASSWORD="dev"; $env:REDIS_PASSWORD="dev"
+   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+   ```
 
 3. Wait for all services to start (approximately 2-3 minutes)
 
@@ -207,10 +219,15 @@ Once the application is running, access the interactive API documentation:
 The database ships empty — there are no seeded accounts. On first boot with an empty users table,
 the app creates a single `SUPER_ADMIN` from the `ADMIN_EMAIL` / `ADMIN_PASSWORD` environment
 variables (see [`docs/LAUNCH.md`](docs/LAUNCH.md)). Log in with those, change the password, then
-remove `ADMIN_PASSWORD`. For local dev, set them in your shell before `./run-local.sh`:
+remove `ADMIN_PASSWORD`. For local dev, set them in your shell before the launcher:
 
 ```bash
+# bash
 ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='ChangeMe123!' ./run-local.sh
+```
+```powershell
+# PowerShell
+$env:ADMIN_EMAIL="you@example.com"; $env:ADMIN_PASSWORD="ChangeMe123!"; ./run-local.ps1
 ```
 
 ## 🔐 Authentication Flow
