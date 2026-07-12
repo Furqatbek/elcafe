@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { notifyError } from '../lib/errors';
+import { useApiCall } from '../hooks/useApiCall';
+import QueryState from '../components/QueryState';
 import { useTranslation } from 'react-i18next';
 import { restaurantAPI, systemUserAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -30,7 +32,6 @@ export default function SystemUsers() {
   // this too); tenant admins always create within their own restaurant. Routed through the central
   // can() helper (EH-2.8) so role rules live in one place.
   const isSuperAdmin = can(currentUser, 'systemUser.bindRestaurant');
-  const [users, setUsers] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -38,7 +39,11 @@ export default function SystemUsers() {
     email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true, restaurantId: '',
   });
 
-  useEffect(() => { loadUsers(); }, []);
+  // EH-2.4/EH-3: the list load now owns loading/error/empty via useApiCall + <QueryState>, so a
+  // failed fetch shows an error + retry instead of a silently empty table.
+  const { data, loading, error, refetch: loadUsers } =
+    useApiCall(() => systemUserAPI.getAll().then((res) => res.data.data || []), []);
+  const users = data || [];
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -51,13 +56,6 @@ export default function SystemUsers() {
     if (id == null) return '—';
     const r = restaurants.find((x) => x.id === id);
     return r ? r.name : `#${id}`;
-  };
-
-  const loadUsers = async () => {
-    try {
-      const res = await systemUserAPI.getAll();
-      setUsers(res.data.data || []);
-    } catch (e) { console.error(e); }
   };
 
   const openCreate = () => {
@@ -134,6 +132,13 @@ export default function SystemUsers() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <QueryState
+            loading={loading}
+            error={error}
+            onRetry={loadUsers}
+            empty={!loading && !error && users.length === 0}
+            emptyMessage={t('systemUsers.noUsers', 'No system users')}
+          >
           <Table>
             <TableHeader>
               <TableRow>
@@ -147,10 +152,7 @@ export default function SystemUsers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.length === 0 ? (
-                <TableRow><TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">{t('systemUsers.noUsers', 'No system users')}</TableCell></TableRow>
-              ) : (
-                users.map(u => (
+              {users.map(u => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
                     <TableCell>{u.email}</TableCell>
@@ -175,10 +177,10 @@ export default function SystemUsers() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
+                ))}
             </TableBody>
           </Table>
+          </QueryState>
         </CardContent>
       </Card>
 

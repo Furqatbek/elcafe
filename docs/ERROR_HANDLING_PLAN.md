@@ -122,6 +122,14 @@ logged/observable server-side.
 > user-facing silent `catch → console.error` blocks to `notifyError`, adopt `<QueryState>` for
 > loading/empty/error on list fetches, and apply `can()` role-hiding — plus the deferred EH-2.5 WS
 > banner and EH-2.6 field errors. Build + 69 frontend tests green after the alert sweep.
+>
+> **Update:** 70 user-action silent catches (delete/toggle/save/approve…) now `notifyError` —
+> a failed action shows a toast instead of doing nothing (background loads left silent to avoid
+> mount-time toast-spam; brace-span classifier picked handlers by name). `<QueryState>` +
+> `useApiCall` adopted on the SystemUsers list as the reference pattern (failed load → error +
+> retry, not a silent empty table); rollout to the remaining single-list pages is incremental
+> (complex paginated/multi-source pages keep their existing loading state — QueryState is applied
+> only where it fits cleanly, to avoid regressions).
 
 
 Per batch, the same five moves: `alert()`→`notifyError` · silent `catch`→error state or toast ·
