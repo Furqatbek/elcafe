@@ -25,7 +25,7 @@ export default function Login() {
     try { reason = sessionStorage.getItem('auth_logout_reason'); } catch (_) { /* private mode */ }
     if (reason) {
       setNotice(t('errors.SESSION_ENDED', 'Your session has ended. Please sign in again.'));
-      try { sessionStorage.removeItem('auth_logout_reason'); } catch (_) {}
+      try { sessionStorage.removeItem('auth_logout_reason'); } catch (_) { /* sessionStorage unavailable */ }
     }
   }, [t]);
 

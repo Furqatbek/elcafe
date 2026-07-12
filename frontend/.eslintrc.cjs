@@ -16,5 +16,13 @@ module.exports = {
     'react/prop-types': 'off',
     'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     'react-hooks/exhaustive-deps': 'warn',
+    // EH-4.1 (docs/ERROR_HANDLING_PLAN.md): the 245 alert() popups were replaced by the toast
+    // pipeline (notifyError / notifySuccess / notifyWarning from lib/errors). Keep them gone.
+    // Scoped to alert/prompt (not confirm — the delete-confirmation dialogs are a separate,
+    // tracked cleanup); a new alert() fails lint.
+    'no-restricted-globals': ['error',
+      { name: 'alert', message: 'Use notifyError / notifySuccess / notifyWarning from lib/errors instead of alert().' },
+      { name: 'prompt', message: 'Use a proper input dialog instead of prompt().' },
+    ],
   },
 }

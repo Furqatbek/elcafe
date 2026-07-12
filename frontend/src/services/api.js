@@ -134,7 +134,7 @@ api.interceptors.response.use(
         // (a hard redirect would kill any toast), then send them to login.
         const isCustomerApp = window.location.pathname.startsWith('/order');
         if (!isCustomerApp) {
-          try { sessionStorage.setItem('auth_logout_reason', 'SESSION_ENDED'); } catch (_) {}
+          try { sessionStorage.setItem('auth_logout_reason', 'SESSION_ENDED'); } catch (_) { /* sessionStorage unavailable */ }
           if (!window.location.pathname.endsWith('/login')) {
             window.location.href = '/admin/login';
           }

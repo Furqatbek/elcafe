@@ -131,7 +131,7 @@ export function notifyError(error, { title } = {}) {
 }
 
 /**
- * Success toast — the non-blocking replacement for `alert('Saved')`-style confirmations
+ * Success toast — the non-blocking replacement for blocking success popups
  * (EH-3, docs/ERROR_HANDLING_PLAN.md). `message` is already-resolved text (usually a t(...) call).
  */
 export function notifySuccess(message, { title } = {}) {
@@ -139,8 +139,8 @@ export function notifySuccess(message, { title } = {}) {
 }
 
 /**
- * Warning/validation toast — the non-blocking replacement for `alert('Please fill…')`-style
- * client-side validation messages. Destructive styling, but takes a plain message (not an error).
+ * Warning/validation toast — the non-blocking replacement for blocking client-side validation
+ * popups. Destructive styling, but takes a plain message (not an error).
  */
 export function notifyWarning(message, { title } = {}) {
   toast({ title, description: message, variant: 'destructive', duration: 5000 });

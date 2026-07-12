@@ -77,3 +77,10 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      # EH-4.1: the 245 alert() popups are gone (toast pipeline in lib/errors) — keep them out.
+      - name: Guard against alert() regressions
+        run: |
+          if grep -rn "\balert(" src --include="*.jsx" --include="*.js" | grep -v "\.test\." ; then
+            echo "::error::alert() found — use notifyError/notifySuccess/notifyWarning from lib/errors"
+            exit 1
+          fi
