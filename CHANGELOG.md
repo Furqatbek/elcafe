@@ -31,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the NOT NULL constraint. Never surfaced before because the admin UI always sends the toggles and
   the demo restaurant was migration-seeded. Found live by the fresh-DB launch rehearsal; both flags
   now default to `true` on create.
+- **Fixed: admin app loaded to a blank white page** (`Cannot read properties of undefined (reading
+  'createContext')` in `maps-vendor`). The Vite `manualChunks` split React into `react-vendor` but
+  put libraries that call `React.createContext` at module-init — `react-leaflet` (maps-vendor),
+  `react-i18next` (i18n-vendor), `@radix-ui`/`lucide-react` (ui-vendor) — into other chunks that
+  could evaluate before React's chunk initialised. Removed the hand-rolled `manualChunks`; Vite's
+  automatic chunking orders by the real import graph. The build succeeded either way, so CI didn't
+  catch it — verified the fix by loading the built app in a headless browser (login page renders,
+  no console error).
 - **Fixed: backend container crashed on startup with `logs/elcafe.log Permission denied`.** The app
   runs as non-root (uid 1000) but `/app/logs` was a `./logs` host bind mount, which Docker creates
   owned by root on first `up` — so the container couldn't open its log file. Hit a clean Linux

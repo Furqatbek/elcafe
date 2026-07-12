@@ -21,20 +21,13 @@ export default defineConfig({
         main: path.resolve(__dirname, 'index.html'),
         order: path.resolve(__dirname, 'order.html'),
       },
-      output: {
-        // Split the big shared vendors into their own long-lived, separately-cached chunks so the
-        // initial download isn't one monolith and a page-only dep (leaflet) loads with its page.
-        manualChunks(id) {
-          if (!id.includes('node_modules')) return undefined;
-          if (id.includes('react-router') || id.includes('/react-dom/') || /\/react\//.test(id)) return 'react-vendor';
-          if (id.includes('@radix-ui') || id.includes('lucide-react')) return 'ui-vendor';
-          if (id.includes('i18next')) return 'i18n-vendor';
-          if (id.includes('leaflet')) return 'maps-vendor';
-          if (id.includes('@stomp') || id.includes('sockjs')) return 'realtime-vendor';
-          if (id.includes('date-fns')) return 'date-vendor';
-          return 'vendor';
-        },
-      },
+      // No hand-rolled manualChunks. The previous split forced React into its own `react-vendor`
+      // chunk while libraries that call `React.createContext` at module-init — react-leaflet
+      // (maps-vendor), react-i18next (i18n-vendor), @radix-ui/lucide-react (ui-vendor) — landed in
+      // OTHER chunks. Those chunks could evaluate before React's chunk initialised across the
+      // boundary, so `React` was undefined → "Cannot read properties of undefined (reading
+      // 'createContext')" and a blank white page. Vite/Rollup's automatic chunking orders chunks by
+      // the real import graph and keeps React ahead of its dependents, so it does not have this bug.
     },
   },
   server: {
