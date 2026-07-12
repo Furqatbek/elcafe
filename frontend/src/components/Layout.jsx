@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import RouteErrorBoundary from './RouteErrorBoundary';
+import WsConnectionBanner from './WsConnectionBanner';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { Button } from './ui/button';
@@ -495,6 +496,7 @@ export default function Layout() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
         <PlanExpiryBanner />
+        <WsConnectionBanner />
         <div className="p-8">
           {/* EH-2.2: per-route boundary — a crash in one page renders an in-shell card here while
               the sidebar/header stay alive; resetKey clears it on navigation. */}

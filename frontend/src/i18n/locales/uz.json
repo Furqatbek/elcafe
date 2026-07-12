@@ -5584,5 +5584,8 @@
     "appCrashBody": "Kutilmagan xatolik yuz berdi. Iltimos, sahifani yangilang.",
     "pageCrashTitle": "Sahifani ko‘rsatishda muammo",
     "pageCrashBody": "Bu sahifani ko‘rsatishda xatolik yuz berdi. Qayta urinib ko‘ring yoki ortga qaytib qayta oching."
+  },
+  "ws": {
+    "disconnected": "Jonli yangilanishlar to‘xtatildi — qayta ulanmoqda. Maʼlumot eski bo‘lsa, sahifani yangilang."
   }
 }

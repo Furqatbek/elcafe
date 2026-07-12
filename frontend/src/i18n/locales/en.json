@@ -5584,5 +5584,8 @@
     "appCrashBody": "An unexpected error occurred. Please reload the page.",
     "pageCrashTitle": "This page ran into a problem",
     "pageCrashBody": "Something went wrong while displaying this page. Try again, or go back and reopen it."
+  },
+  "ws": {
+    "disconnected": "Live updates paused — reconnecting. Refresh if data looks stale."
   }
 }

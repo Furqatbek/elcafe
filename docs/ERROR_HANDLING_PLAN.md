@@ -107,8 +107,8 @@ logged/observable server-side.
 | EH-2.2 ✅ | ErrorBoundary upgrade: localize the root fallback; add **route-level boundary** inside the Layout so one crashing page renders an in-shell error card (Back / Retry) instead of blanking the app; dedicated boundaries for POS, Kitchen, Waiter (touch screens) | `main.jsx`, `App.jsx`, `components/` | throwing test component: shell + nav stay alive; boundary text switches with language |
 | EH-2.3 ✅ | Chunk-load-failure recovery: wrap `lazy()` imports — on dynamic-import failure (stale hashes after redeploy) auto-reload once (sessionStorage-guarded), else show the error card. This systematizes the blank-page class we just hit | `App.jsx` helper | simulated import rejection → one reload, then card; no white page |
 | EH-2.4 ✅ | `useApiCall` hook + `<QueryState>` component: single reusable loading / empty / error(+Retry) wrapper — the standard every page adopts in EH-3 | `hooks/`, `components/` | Storybook-style test of the three states; used by ≥3 pilot pages (Orders, Products, SystemUsers) |
-| EH-2.5 →EH-3 | WebSocket UX: disconnect/reconnect banner on realtime pages (orders, kitchen, waiter, POS), STOMP error frames → `notifyError` | `hooks/useWebSocketNotifications` | kill WS in test → banner shows, auto-clears on reconnect |
-| EH-2.6 →EH-3 | Form validation UX: `fieldErrors` from VALIDATION_ERROR rendered under the matching inputs (pilot: Login, SystemUsers, Restaurants, Products) | form components | submitting invalid form marks fields, no toast spam |
+| EH-2.5 ✅ | WebSocket UX: disconnect/reconnect banner on realtime pages (orders, kitchen, waiter, POS), STOMP error frames → `notifyError` | `hooks/useWebSocketNotifications` | kill WS in test → banner shows, auto-clears on reconnect |
+| EH-2.6 ✅ | Form validation UX: `fieldErrors` from VALIDATION_ERROR rendered under the matching inputs (pilot: Login, SystemUsers, Restaurants, Products) | form components | submitting invalid form marks fields, no toast spam |
 | EH-2.7 ✅ | Auth edge states: revoked token (tokenVersion bump), deactivated account, password changed elsewhere → clean logout with localized reason (not an infinite refresh loop) | `services/api.js`, `store/authStore` | each simulated → login screen + correct toast |
 | EH-2.8 ✅ | Role-aware UI ("profile lockdown"): central `can(user, action)` helper; hide/disable actions the role can't perform (SUPER_ADMIN-only, ADMIN-only, OPERATOR-blocked) so users stop *reaching* 403s; pilot on the pages with role-gated buttons | `lib/permissions.js`, Layout + pilots | operator sees no admin buttons; disabled controls carry a tooltip |
 
@@ -121,7 +121,7 @@ logged/observable server-side.
 > `grep -rn "\balert(" src` is now zero. Remaining EH-3 work (per-page, ongoing): convert the
 > user-facing silent `catch → console.error` blocks to `notifyError`, adopt `<QueryState>` for
 > loading/empty/error on list fetches, and apply `can()` role-hiding — plus the deferred EH-2.5 WS
-> banner and EH-2.6 field errors. Build + 69 frontend tests green after the alert sweep.
+> banner and field errors — now landed, see below. Build + 69 frontend tests green after the alert sweep.
 >
 > **Update:** 70 user-action silent catches (delete/toggle/save/approve…) now `notifyError` —
 > a failed action shows a toast instead of doing nothing (background loads left silent to avoid

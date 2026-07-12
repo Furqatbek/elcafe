@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { notifyError } from '../lib/errors';
 import { useApiCall } from '../hooks/useApiCall';
+import { useFieldErrors } from '../hooks/useFieldErrors';
 import QueryState from '../components/QueryState';
+import FieldError from '../components/FieldError';
 import { useTranslation } from 'react-i18next';
 import { restaurantAPI, systemUserAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -44,6 +46,7 @@ export default function SystemUsers() {
   const { data, loading, error, refetch: loadUsers } =
     useApiCall(() => systemUserAPI.getAll().then((res) => res.data.data || []), []);
   const users = data || [];
+  const { setFromError, clear: clearFieldErrors, get: fieldError } = useFieldErrors();
 
   useEffect(() => {
     if (!isSuperAdmin) return;
@@ -60,12 +63,14 @@ export default function SystemUsers() {
 
   const openCreate = () => {
     setEditingUser(null);
+    clearFieldErrors();
     setForm({ email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true, restaurantId: '' });
     setDialogOpen(true);
   };
 
   const openEdit = (user) => {
     setEditingUser(user);
+    clearFieldErrors();
     setForm({ ...user, password: '', restaurantId: user.restaurantId ?? '' });
     setDialogOpen(true);
   };
@@ -88,6 +93,8 @@ export default function SystemUsers() {
       loadUsers();
     } catch (e) {
       console.error(e);
+      // EH-2.6: mark the offending fields inline; still toast (generic if no field detail).
+      setFromError(e);
       notifyError(e);
     }
   };
@@ -196,21 +203,25 @@ export default function SystemUsers() {
               <div className="space-y-2">
                 <Label>{t('systemUsers.firstName', 'First Name')} *</Label>
                 <Input value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} />
+                <FieldError message={fieldError('firstName')} />
               </div>
               <div className="space-y-2">
                 <Label>{t('systemUsers.lastName', 'Last Name')} *</Label>
                 <Input value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} />
+                <FieldError message={fieldError('lastName')} />
               </div>
             </div>
             {!editingUser && (
               <div className="space-y-2">
                 <Label>{t('systemUsers.email', 'Email')} *</Label>
                 <Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+                <FieldError message={fieldError('email')} />
               </div>
             )}
             <div className="space-y-2">
               <Label>{editingUser ? t('systemUsers.newPassword', 'New Password (leave empty to keep)') : t('systemUsers.password', 'Password')} *</Label>
               <PasswordInput value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+              <FieldError message={fieldError('password')} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
