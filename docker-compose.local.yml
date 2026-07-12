@@ -38,9 +38,11 @@ services:
     ports: !reset []
 
   nginx-proxy:
-    # !reset so local publishes ONLY 80 (the base also publishes 443, which the local HTTP-only
-    # nginx never listens on — without the reset it would leak through and could clash on the host).
-    ports: !reset
+    # !override (NOT !reset) so local publishes exactly 80: it REPLACES the base list [80, 443] with
+    # this one. !reset would empty the list and ignore the replacement, leaving port 80 unpublished
+    # so the app is unreachable on the host. The base's 443 is dropped because local nginx is
+    # HTTP-only.
+    ports: !override
       - "80:80"
     volumes:
       - ./nginx-proxy/nginx-local.conf:/etc/nginx/conf.d/default.conf:ro
