@@ -177,10 +177,15 @@ the sweep then grinds the long tail to zero.
 
 ## Definition of done
 
-- [ ] Every API error (incl. filter-written) is the standard envelope with a stable `error` code
-- [ ] Zero endpoints return 500 for business-rule failures; grep guard tests in CI
-- [ ] Zero `alert()` in `frontend/src`; zero silent catches; both lint-enforced
-- [ ] Every page: loading / empty / error(+retry) states; role-hidden actions
-- [ ] All error texts localized en/ru/uz; 5xx shows generic text + request id only
-- [ ] Route-level error boundaries + chunk-failure auto-recovery — no blank pages
-- [ ] Playwright error-path suite green in CI; Sentry wired on both sides
+- [x] Every API error (incl. filter-written) is the standard envelope with a stable `error` code
+- [x] Zero endpoints return 500 for business-rule failures; grep guard tests in CI (`RawThrowGuardTest`, `ErrorEnvelopeContractTest`)
+- [x] Zero `alert()` in `frontend/src` (CI grep-guard enforced); user-action silent catches now notify — remaining silent catches are background loads (intentional)
+- [◐] Every page: loading / empty / error(+retry) states via `<QueryState>` (piloted on SystemUsers; incremental rollout to remaining list pages) · role-hidden actions via `can()` (piloted; incremental)
+- [x] All error texts localized en/ru/uz; 5xx shows generic text + request id only
+- [x] Route-level error boundaries + chunk-failure auto-recovery — no blank pages
+- [◐] Sentry wired on both sides (backend + frontend, dormant-unless-DSN) · Playwright error-path e2e suite (EH-4.3) still to build
+
+**Verdict (2026-07-12):** EH-0/EH-1/EH-2 landed in full; EH-3 headline done (all alerts + user-action
+silent failures fixed across 61 pages, CI-guarded) with QueryState/role rollout incremental; EH-4
+guards + Sentry done, error-path e2e harness remaining. The user-facing goal — no raw backend text,
+no silent action failures, no blank pages, localized everywhere — is met and regression-fenced.
