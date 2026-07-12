@@ -1,5 +1,7 @@
 package com.elcafe.modules.notification.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.notification.dto.FinancialAlertSubscriptionRequest;
 import com.elcafe.modules.notification.dto.FinancialAlertSubscriptionResponse;
@@ -69,7 +71,7 @@ public class FinancialAlertController {
         }
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-            .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         FinancialAlertSubscription subscription = FinancialAlertSubscription.builder()
             .restaurant(restaurant)
@@ -98,7 +100,7 @@ public class FinancialAlertController {
             @Valid @RequestBody FinancialAlertSubscriptionRequest request) {
 
         FinancialAlertSubscription subscription = subscriptionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Subscription not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Subscription not found"));
 
         // Validate user has access to the restaurant this subscription belongs to
         restaurantAuthorizationService.validateRestaurantAccess(subscription.getRestaurant().getId());
@@ -144,7 +146,7 @@ public class FinancialAlertController {
     @PostMapping("/{id}/toggle")
     public ResponseEntity<FinancialAlertSubscriptionResponse> toggleSubscription(@PathVariable Long id) {
         FinancialAlertSubscription subscription = subscriptionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Subscription not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Subscription not found"));
 
         // Validate user has access to the restaurant this subscription belongs to
         restaurantAuthorizationService.validateRestaurantAccess(subscription.getRestaurant().getId());

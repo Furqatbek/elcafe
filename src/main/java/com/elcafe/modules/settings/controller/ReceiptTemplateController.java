@@ -1,5 +1,7 @@
 package com.elcafe.modules.settings.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.settings.entity.ReceiptTemplate;
@@ -44,7 +46,7 @@ public class ReceiptTemplateController {
         restaurantAuthorizationService.checkAccess(restaurantId);
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         ReceiptTemplate template = receiptTemplateRepository.findByRestaurantId(restaurantId)
                 .orElse(ReceiptTemplate.builder().restaurant(restaurant).build());

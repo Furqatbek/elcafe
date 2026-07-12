@@ -1,5 +1,6 @@
 package com.elcafe.modules.kitchen.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
@@ -475,7 +476,7 @@ public class KitchenOrderService {
     private void validateRestaurantAccess(KitchenOrder kitchenOrder, UserPrincipal currentUser) {
         Order order = kitchenOrder.getOrder();
         if (order == null || order.getRestaurant() == null) {
-            throw new IllegalStateException("Order or restaurant not found for kitchen order");
+            throw new ResourceNotFoundException("Order or restaurant not found for kitchen order");
         }
 
         Long orderRestaurantId = order.getRestaurant().getId();

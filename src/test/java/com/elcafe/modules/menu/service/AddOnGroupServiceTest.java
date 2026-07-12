@@ -1,5 +1,9 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ConflictException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.AddOnGroupResponse;
 import com.elcafe.modules.menu.dto.CreateAddOnGroupRequest;
@@ -130,7 +134,7 @@ class AddOnGroupServiceTest {
         when(addOnGroupRepository.existsByRestaurantIdAndName(1L, "Extras")).thenReturn(true);
 
         assertThatThrownBy(() -> addOnGroupService.createAddOnGroup(request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("already exists");
     }
 
@@ -145,7 +149,7 @@ class AddOnGroupServiceTest {
         when(addOnGroupRepository.existsByRestaurantIdAndName(anyLong(), anyString())).thenReturn(false);
 
         assertThatThrownBy(() -> addOnGroupService.createAddOnGroup(request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Minimum selection");
     }
 

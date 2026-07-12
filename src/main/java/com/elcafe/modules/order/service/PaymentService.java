@@ -1,5 +1,6 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.common.audit.entity.AuditAction;
@@ -77,7 +78,7 @@ public class PaymentService {
     public PaymentResponse getPaymentByOrderId(Long orderId) {
         List<Payment> payments = paymentRepository.findByOrderId(orderId);
         if (payments.isEmpty()) {
-            throw new RuntimeException("Payment not found for order: " + orderId);
+            throw new ResourceNotFoundException("Payment not found for order: " + orderId);
         }
         // Return the first/primary payment (for backward compatibility)
         restaurantAuthorizationService.checkAccess(payments.get(0).getOrder().getRestaurant().getId()); // §3.3: tenant guard
@@ -99,7 +100,7 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public PaymentResponse getPaymentByTransactionId(String transactionId) {
         Payment payment = paymentRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new RuntimeException("Payment not found with transaction ID: " + transactionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Payment not found with transaction ID: " + transactionId));
         restaurantAuthorizationService.checkAccess(payment.getOrder().getRestaurant().getId()); // §3.3: tenant guard
         return toResponse(payment);
     }
@@ -223,7 +224,7 @@ public class PaymentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Payment not found with id: " + paymentId + " for order: " + orderId));
 
         if (payment.isDeleted()) {
-            throw new RuntimeException("Payment has already been deleted");
+            throw new ConflictException("Payment has already been deleted");
         }
 
         Order order = payment.getOrder();
@@ -479,7 +480,7 @@ public class PaymentService {
     @Transactional(readOnly = true)
     public PaymentResponseDTO getPOSPaymentSummary(Long orderId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
 
         List<Payment> payments = paymentRepository.findByOrderId(orderId);
         List<PaymentResponseDTO.PaymentSummary> paymentSummaries = payments.stream()
@@ -536,21 +537,21 @@ public class PaymentService {
                 break;
             case PARTIAL:
                 if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new IllegalArgumentException("Refund amount must be specified for partial refunds");
+                    throw new BadRequestException("Refund amount must be specified for partial refunds");
                 }
                 if (request.getAmount().compareTo(order.getTotalPaid()) > 0) {
-                    throw new IllegalArgumentException("Refund amount cannot exceed total paid");
+                    throw new BadRequestException("Refund amount cannot exceed total paid");
                 }
                 refundAmount = request.getAmount();
                 break;
             case ITEMS:
                 if (request.getItemIds() == null || request.getItemIds().isEmpty()) {
-                    throw new IllegalArgumentException("Item IDs must be specified for item refunds");
+                    throw new BadRequestException("Item IDs must be specified for item refunds");
                 }
                 refundAmount = calculateItemsRefundAmount(order, request.getItemIds());
                 break;
             default:
-                throw new IllegalArgumentException("Invalid refund type");
+                throw new BadRequestException("Invalid refund type");
         }
 
         // Apply refund to payments (starting with most recent)
@@ -666,10 +667,10 @@ public class PaymentService {
         log.info("Adding tip {} to order {}", tipAmount, orderId);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
 
         if (tipAmount == null || tipAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Tip amount must be greater than 0");
+            throw new BadRequestException("Tip amount must be greater than 0");
         }
 
         // Update order tip

@@ -1,5 +1,9 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.pos.shift.entity.ShiftSchedule;
@@ -50,26 +54,26 @@ public class ShiftScheduleService {
                                          LocalDate date, LocalTime startTime, LocalTime endTime,
                                          String role, String notes, Long createdById) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         User employee = null;
         Waiter waiter = null;
         if ("waiter".equalsIgnoreCase(employeeType)) {
             waiter = waiterRepository.findById(subjectId)
-                    .orElseThrow(() -> new RuntimeException("Waiter not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Waiter not found"));
             for (ShiftSchedule s : scheduleRepository.findActiveByWaiterAndDate(subjectId, date)) {
                 if (s.overlaps(startTime, endTime)) {
-                    throw new IllegalStateException(String.format(
+                    throw new ConflictException(String.format(
                             "Conflict: waiter already scheduled %s-%s on %s",
                             s.getStartTime(), s.getEndTime(), date));
                 }
             }
         } else {
             employee = userRepository.findById(subjectId)
-                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
             for (ShiftSchedule s : scheduleRepository.findActiveByEmployeeAndDate(subjectId, date)) {
                 if (s.overlaps(startTime, endTime)) {
-                    throw new IllegalStateException(String.format(
+                    throw new ConflictException(String.format(
                             "Conflict: employee already scheduled %s-%s on %s",
                             s.getStartTime(), s.getEndTime(), date));
                 }
@@ -107,7 +111,7 @@ public class ShiftScheduleService {
                                          LocalTime startTime, LocalTime endTime,
                                          String role, String notes) {
         ShiftSchedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
 
         // Conflict check uses the candidate values that will land on the
         // row after the patch, so a same-row no-op edit doesn't trip.
@@ -121,7 +125,7 @@ public class ShiftScheduleService {
         for (ShiftSchedule s : sameDay) {
             if (s.getId().equals(scheduleId)) continue;
             if (s.overlaps(newStart, newEnd)) {
-                throw new IllegalStateException(String.format(
+                throw new ConflictException(String.format(
                         "Conflict: already scheduled %s-%s on %s",
                         s.getStartTime(), s.getEndTime(), newDate));
             }
@@ -147,13 +151,13 @@ public class ShiftScheduleService {
                                   LocalTime startTime, LocalTime endTime,
                                   String role, String notes, Long createdById) {
         if (subjects == null || subjects.isEmpty()) {
-            throw new IllegalArgumentException("At least one employee is required");
+            throw new BadRequestException("At least one employee is required");
         }
         if (weekdays == null || weekdays.isEmpty()) {
-            throw new IllegalArgumentException("At least one weekday is required");
+            throw new BadRequestException("At least one weekday is required");
         }
         if (fromDate == null || toDate == null || toDate.isBefore(fromDate)) {
-            throw new IllegalArgumentException("Invalid date range");
+            throw new BadRequestException("Invalid date range");
         }
         java.util.Set<Integer> wantedDays = new java.util.HashSet<>(weekdays);
 
@@ -185,7 +189,7 @@ public class ShiftScheduleService {
     @Transactional
     public void cancelSchedule(Long scheduleId) {
         ShiftSchedule schedule = scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new RuntimeException("Schedule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule not found"));
         schedule.setStatus(ShiftSchedule.Status.CANCELLED);
         scheduleRepository.save(schedule);
         log.info("Cancelled shift schedule {}", scheduleId);

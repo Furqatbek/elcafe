@@ -1,5 +1,7 @@
 package com.elcafe.modules.auth.service;
 
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.dto.CreateOperatorRequest;
 import com.elcafe.modules.auth.dto.OperatorDTO;
@@ -63,7 +65,7 @@ public class OperatorService {
     public OperatorDTO createOperator(CreateOperatorRequest request) {
         // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email already exists: " + request.getEmail());
+            throw new ConflictException("Email already exists: " + request.getEmail());
         }
 
         User user = User.builder()
@@ -93,7 +95,7 @@ public class OperatorService {
                 .orElseThrow(() -> new ResourceNotFoundException("Operator not found with id: " + id));
 
         if (user.getRole() != UserRole.OPERATOR) {
-            throw new IllegalArgumentException("User with id " + id + " is not an operator");
+            throw new BadRequestException("User with id " + id + " is not an operator");
         }
         // §3.3: prevent cross-tenant account takeover (e.g. password reset) via a guessed id.
         restaurantAuthorizationService.checkAccess(user.getRestaurantId());
@@ -101,7 +103,7 @@ public class OperatorService {
         // Check if email is being updated and if it already exists
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new IllegalArgumentException("Email already exists: " + request.getEmail());
+                throw new ConflictException("Email already exists: " + request.getEmail());
             }
             user.setEmail(request.getEmail());
         }
@@ -139,7 +141,7 @@ public class OperatorService {
                 .orElseThrow(() -> new ResourceNotFoundException("Operator not found with id: " + id));
 
         if (user.getRole() != UserRole.OPERATOR) {
-            throw new IllegalArgumentException("User with id " + id + " is not an operator");
+            throw new BadRequestException("User with id " + id + " is not an operator");
         }
         // §3.3: prevent cross-tenant deletion via a guessed id.
         restaurantAuthorizationService.checkAccess(user.getRestaurantId());

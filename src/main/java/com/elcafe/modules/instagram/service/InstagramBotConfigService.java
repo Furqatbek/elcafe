@@ -1,5 +1,7 @@
 package com.elcafe.modules.instagram.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.instagram.dto.InstagramBotConfigRequest;
 import com.elcafe.modules.instagram.dto.InstagramBotConfigResponse;
 import com.elcafe.modules.instagram.entity.InstagramBotConfig;
@@ -126,7 +128,7 @@ public class InstagramBotConfigService {
 
     private InstagramBotConfig findOrThrow(Long id) {
         return configRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Instagram config not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Instagram config not found: " + id));
     }
 
     private static String blank2null(String s) {

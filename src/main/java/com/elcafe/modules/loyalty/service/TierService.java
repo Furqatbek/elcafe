@@ -1,5 +1,6 @@
 package com.elcafe.modules.loyalty.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.loyalty.dto.TierRequest;
 import com.elcafe.modules.loyalty.entity.CustomerLoyalty;
@@ -151,7 +152,7 @@ public class TierService {
                 .orElseThrow(() -> new ResourceNotFoundException("CustomerTier", "id", id));
         long assigned = countCustomersOnTier(id);
         if (assigned > 0) {
-            throw new IllegalStateException(
+            throw new BadRequestException(
                     "Cannot delete tier '" + tier.getName() + "' — " + assigned + " customer(s) are currently on it. Reassign them first.");
         }
         customerTierRepository.delete(tier);

@@ -1,5 +1,8 @@
 package com.elcafe.modules.auth.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.ConflictException;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.auth.entity.User;
@@ -61,10 +64,10 @@ public class SystemUserController {
     @PostMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> create(@Valid @RequestBody CreateRequest req) {
         if (!SYSTEM_ROLES.contains(req.role)) {
-            throw new IllegalArgumentException("Invalid role. Must be one of: " + SYSTEM_ROLES);
+            throw new BadRequestException("Invalid role. Must be one of: " + SYSTEM_ROLES);
         }
         if (userRepository.existsByEmail(req.email)) {
-            throw new IllegalArgumentException("Email already in use");
+            throw new ConflictException("Email already in use");
         }
 
         User user = User.builder()
@@ -89,7 +92,7 @@ public class SystemUserController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> update(@PathVariable Long id, @RequestBody UpdateRequest req) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         // Prevent cross-tenant account takeover (e.g. password reset) via a guessed id,
         // including platform/legacy (null-restaurant) accounts — see requireAccess.
         requireAccess(user);
@@ -129,7 +132,7 @@ public class SystemUserController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deactivate(@PathVariable Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         // Prevent cross-tenant deactivation via a guessed id (incl. null-restaurant accounts).
         requireAccess(user);
         user.setActive(false);

@@ -1,5 +1,8 @@
 package com.elcafe.modules.courier.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.courier.entity.CourierProfile;
 import com.elcafe.modules.courier.entity.CourierWallet;
 import com.elcafe.modules.courier.entity.CourierWalletTransaction;
@@ -40,7 +43,7 @@ public class CourierWalletService {
     @Transactional
     public void creditDeliveryFee(Long courierId, Order order) {
         CourierProfile courier = courierProfileRepository.findById(courierId)
-                .orElseThrow(() -> new RuntimeException("Courier not found: " + courierId));
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found: " + courierId));
 
         // Get or create wallet
         CourierWallet wallet = walletRepository.findByCourierProfileId(courierId)
@@ -109,7 +112,7 @@ public class CourierWalletService {
     @Transactional
     public void addFine(Long courierId, BigDecimal amount, String description) {
         CourierProfile courier = courierProfileRepository.findById(courierId)
-                .orElseThrow(() -> new RuntimeException("Courier not found: " + courierId));
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found: " + courierId));
 
         CourierWallet wallet = walletRepository.findByCourierProfileId(courierId)
                 .orElseGet(() -> createWallet(courier));
@@ -144,13 +147,13 @@ public class CourierWalletService {
     @Transactional
     public void processWithdrawal(Long courierId, BigDecimal amount, String reference) {
         CourierProfile courier = courierProfileRepository.findById(courierId)
-                .orElseThrow(() -> new RuntimeException("Courier not found: " + courierId));
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found: " + courierId));
 
         CourierWallet wallet = walletRepository.findByCourierProfileId(courierId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found for courier: " + courierId));
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found for courier: " + courierId));
 
         if (wallet.getBalance().compareTo(amount) < 0) {
-            throw new RuntimeException("Insufficient balance for withdrawal");
+            throw new BadRequestException("Insufficient balance for withdrawal");
         }
 
         BigDecimal balanceBefore = wallet.getBalance();
@@ -183,7 +186,7 @@ public class CourierWalletService {
     private void addTransaction(Long courierId, Long orderId, WalletTransactionType type,
                                 BigDecimal amount, String description, String createdBy) {
         CourierProfile courier = courierProfileRepository.findById(courierId)
-                .orElseThrow(() -> new RuntimeException("Courier not found: " + courierId));
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found: " + courierId));
 
         CourierWallet wallet = walletRepository.findByCourierProfileId(courierId)
                 .orElseGet(() -> createWallet(courier));
@@ -233,6 +236,6 @@ public class CourierWalletService {
      */
     public CourierWallet getWallet(Long courierId) {
         return walletRepository.findByCourierProfileId(courierId)
-                .orElseThrow(() -> new RuntimeException("Wallet not found for courier: " + courierId));
+                .orElseThrow(() -> new ResourceNotFoundException("Wallet not found for courier: " + courierId));
     }
 }

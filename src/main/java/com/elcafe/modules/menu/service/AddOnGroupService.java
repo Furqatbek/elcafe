@@ -1,5 +1,7 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.AddOnGroupResponse;
 import com.elcafe.modules.menu.dto.AddOnResponse;
@@ -64,12 +66,12 @@ public class AddOnGroupService {
 
         // Check for duplicate name
         if (addOnGroupRepository.existsByRestaurantIdAndName(request.getRestaurantId(), request.getName())) {
-            throw new IllegalArgumentException("AddOnGroup with name '" + request.getName() + "' already exists for this restaurant");
+            throw new ConflictException("AddOnGroup with name '" + request.getName() + "' already exists for this restaurant");
         }
 
         // Validate selection constraints
         if (request.getMinSelection() > request.getMaxSelection()) {
-            throw new IllegalArgumentException("Minimum selection cannot be greater than maximum selection");
+            throw new BadRequestException("Minimum selection cannot be greater than maximum selection");
         }
 
         AddOnGroup addOnGroup = AddOnGroup.builder()
@@ -99,7 +101,7 @@ public class AddOnGroupService {
         // Check for duplicate name if name is being changed
         if (request.getName() != null && !request.getName().equals(addOnGroup.getName())) {
             if (addOnGroupRepository.existsByRestaurantIdAndName(restaurantId, request.getName())) {
-                throw new IllegalArgumentException("AddOnGroup with name '" + request.getName() + "' already exists for this restaurant");
+                throw new ConflictException("AddOnGroup with name '" + request.getName() + "' already exists for this restaurant");
             }
             addOnGroup.setName(request.getName());
         }
@@ -117,7 +119,7 @@ public class AddOnGroupService {
         Integer newMaxSelection = request.getMaxSelection() != null ? request.getMaxSelection() : addOnGroup.getMaxSelection();
 
         if (newMinSelection > newMaxSelection) {
-            throw new IllegalArgumentException("Minimum selection cannot be greater than maximum selection");
+            throw new BadRequestException("Minimum selection cannot be greater than maximum selection");
         }
 
         if (request.getMinSelection() != null) {

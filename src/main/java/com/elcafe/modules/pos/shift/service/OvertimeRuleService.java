@@ -1,5 +1,7 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.pos.shift.entity.EmployeeShift;
 import com.elcafe.modules.pos.shift.entity.ShiftRules;
 import com.elcafe.modules.pos.shift.repository.ShiftRulesRepository;
@@ -28,7 +30,7 @@ public class OvertimeRuleService {
     public ShiftRules getOrCreateRules(Long restaurantId) {
         return rulesRepository.findByRestaurantId(restaurantId).orElseGet(() -> {
             Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                    .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
             ShiftRules rules = ShiftRules.builder().restaurant(restaurant).build();
             return rulesRepository.save(rules);
         });

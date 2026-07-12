@@ -1,5 +1,8 @@
 package com.elcafe.modules.selfservice.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.entity.RestaurantTable;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -63,17 +66,17 @@ public class QRCodeService {
     @Transactional
     public QRCode createQRCode(CreateQRCodeRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         RestaurantTable table = null;
         if (request.getTableId() != null) {
             table = tableRepository.findById(request.getTableId())
-                    .orElseThrow(() -> new RuntimeException("Table not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Table not found"));
 
             // Check if table already has an active QR code
             Optional<QRCode> existing = qrCodeRepository.findByTableIdAndIsActiveTrue(request.getTableId());
             if (existing.isPresent()) {
-                throw new RuntimeException("Table already has an active QR code assigned");
+                throw new ConflictException("Table already has an active QR code assigned");
             }
         }
 
@@ -100,7 +103,7 @@ public class QRCodeService {
     @Transactional
     public List<QRCode> generateForAllTables(Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         List<RestaurantTable> tables = tableRepository.findByRestaurantId(restaurantId);
 
@@ -165,7 +168,7 @@ public class QRCodeService {
     @Transactional
     public QRCode toggleActive(Long id) {
         QRCode qrCode = qrCodeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("QR code not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("QR code not found"));
         qrCode.setIsActive(!qrCode.getIsActive());
         return qrCodeRepository.save(qrCode);
     }
@@ -184,7 +187,7 @@ public class QRCodeService {
     public String generateQRCodeImage(String code, int width, int height) {
         try {
             QRCode qrCode = qrCodeRepository.findByCode(code)
-                    .orElseThrow(() -> new RuntimeException("QR code not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("QR code not found"));
 
             String url = qrCode.getShortUrl();
 

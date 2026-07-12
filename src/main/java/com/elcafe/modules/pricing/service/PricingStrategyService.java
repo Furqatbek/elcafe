@@ -1,5 +1,7 @@
 package com.elcafe.modules.pricing.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductIngredient;
@@ -78,7 +80,7 @@ public class PricingStrategyService {
      */
     public ProductProfitabilityDTO getProductProfitability(Long productId, LocalDate startDate, LocalDate endDate) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
 
         Long restaurantId = product.getCategory().getRestaurant().getId();
 

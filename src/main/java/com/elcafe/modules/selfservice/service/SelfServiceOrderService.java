@@ -1,5 +1,7 @@
 package com.elcafe.modules.selfservice.service;
 
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.enums.RegistrationSource;
 import com.elcafe.modules.customer.repository.CustomerRepository;
@@ -128,7 +130,7 @@ public class SelfServiceOrderService {
         SelfServiceSettings settings = settingsRepository.findByRestaurantId(qr.getRestaurant().getId())
                 .orElse(null);
         if (settings == null || !settings.getEnabled()) {
-            throw new RuntimeException("Self-service ordering is not enabled for this restaurant");
+            throw new BadRequestException("Self-service ordering is not enabled for this restaurant");
         }
 
         // Record the scan
@@ -155,16 +157,16 @@ public class SelfServiceOrderService {
     @Transactional
     public SelfServiceSession startTakeawaySession(Long restaurantId, String deviceInfo, String ipAddress) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         // Check if self-service is enabled and takeaway is allowed
         SelfServiceSettings settings = settingsRepository.findByRestaurantId(restaurantId)
                 .orElse(null);
         if (settings == null || !settings.getEnabled()) {
-            throw new RuntimeException("Self-service ordering is not enabled for this restaurant");
+            throw new BadRequestException("Self-service ordering is not enabled for this restaurant");
         }
         if (!Boolean.TRUE.equals(settings.getAllowTakeaway())) {
-            throw new RuntimeException("Takeaway orders are not enabled for this restaurant");
+            throw new BadRequestException("Takeaway orders are not enabled for this restaurant");
         }
 
         // Create new session without table (takeaway)
@@ -264,11 +266,11 @@ public class SelfServiceOrderService {
             for (AddToCartRequest.ModifierRequest modReq : request.getModifiers()) {
                 LinkedItem linkedItem = linkedItemMap.get(modReq.getLinkedItemId());
                 if (linkedItem == null) {
-                    throw new RuntimeException("Modifier not found: " + modReq.getLinkedItemId());
+                    throw new ResourceNotFoundException("Modifier not found: " + modReq.getLinkedItemId());
                 }
 
                 if (linkedItem.getLinkedProduct() == null) {
-                    throw new RuntimeException("Modifier product not found for linked item: " + linkedItem.getId());
+                    throw new ResourceNotFoundException("Modifier product not found for linked item: " + linkedItem.getId());
                 }
 
                 SelfServiceCartModifier modifier = SelfServiceCartModifier.builder()
@@ -349,7 +351,7 @@ public class SelfServiceOrderService {
         SelfServiceSession session = getValidSession(sessionToken);
 
         SelfServiceCartItem item = cartItemRepository.findById(cartItemId)
-                .orElseThrow(() -> new RuntimeException("Cart item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
 
         if (!item.getSession().getId().equals(session.getId())) {
             log.warn("Cart item {} does not belong to session {}", cartItemId, session.getId());
@@ -758,7 +760,7 @@ public class SelfServiceOrderService {
     @Transactional(readOnly = true)
     public SelfServiceOrder getOrderStatus(Long orderId) {
         return selfServiceOrderRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
     }
 
     /**
@@ -776,7 +778,7 @@ public class SelfServiceOrderService {
     @Transactional
     public SelfServiceSettings saveSettings(Long restaurantId, SelfServiceSettings settings) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         SelfServiceSettings existing = settingsRepository.findByRestaurantId(restaurantId)
                 .orElse(new SelfServiceSettings());
@@ -861,16 +863,16 @@ public class SelfServiceOrderService {
     @Transactional(readOnly = true)
     public SelfServiceOrder getOrderStatusWithSessionValidation(String sessionToken, Long orderId) {
         SelfServiceSession session = sessionRepository.findBySessionTokenAndIsActiveTrue(sessionToken)
-                .orElseThrow(() -> new RuntimeException("Session not found or expired"));
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found or expired"));
 
         SelfServiceOrder order = selfServiceOrderRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         // Validate that the order belongs to this session
         if (order.getSession() == null || !order.getSession().getId().equals(session.getId())) {
             log.warn("IDOR attempt: Session {} tried to access order {} belonging to session {}",
                     session.getId(), orderId, order.getSession() != null ? order.getSession().getId() : "null");
-            throw new RuntimeException("Order not found"); // Don't reveal that order exists
+            throw new ResourceNotFoundException("Order not found"); // Don't reveal that order exists
         }
 
         return order;

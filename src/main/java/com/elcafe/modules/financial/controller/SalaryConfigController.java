@@ -1,5 +1,7 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
@@ -48,16 +50,16 @@ public class SalaryConfigController {
     public ResponseEntity<ApiResponse<SalaryConfig>> create(@RequestBody CreateSalaryConfigRequest request) {
         restaurantAuthorizationService.checkAccess(request.restaurantId);
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         User employee = null;
         Waiter waiter = null;
         if ("waiter".equals(request.employeeType)) {
             waiter = waiterRepository.findById(request.employeeId)
-                    .orElseThrow(() -> new RuntimeException("Waiter not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Waiter not found"));
         } else {
             employee = userRepository.findById(request.employeeId)
-                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         }
 
         SalaryConfig.PayFrequency frequency = request.payFrequency != null
@@ -117,7 +119,7 @@ public class SalaryConfigController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<SalaryConfig>> update(@PathVariable Long id, @RequestBody UpdateSalaryConfigRequest request) {
         SalaryConfig config = salaryConfigRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Salary config not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Salary config not found"));
 
         if (request.payFrequency != null) config.setPayFrequency(request.payFrequency);
         if (request.baseAmount != null) config.setBaseAmount(request.baseAmount);
@@ -145,7 +147,7 @@ public class SalaryConfigController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         SalaryConfig config = salaryConfigRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Salary config not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Salary config not found"));
         config.setActive(false);
         salaryConfigRepository.save(config);
         return ResponseEntity.ok(ApiResponse.success("Salary config deactivated", null));
@@ -154,7 +156,7 @@ public class SalaryConfigController {
     @PostMapping("/{id}/pay-now")
     public ResponseEntity<ApiResponse<Void>> payNow(@PathVariable Long id) {
         SalaryConfig config = salaryConfigRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Salary config not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Salary config not found"));
         try {
             salaryAutoPayService.processPayment(config, LocalDate.now());
         } catch (IllegalStateException e) {

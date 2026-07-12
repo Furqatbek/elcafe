@@ -1,5 +1,8 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.ConflictException;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.entity.IngredientCategory;
 import com.elcafe.modules.inventory.repository.IngredientCategoryRepository;
@@ -40,10 +43,10 @@ public class IngredientCategoryController {
             @RequestBody CreateCategoryRequest request) {
         restaurantAuthorizationService.checkAccess(request.restaurantId);
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         if (categoryRepository.existsByRestaurantIdAndName(request.restaurantId, request.name)) {
-            throw new IllegalArgumentException("Category '" + request.name + "' already exists");
+            throw new ConflictException("Category '" + request.name + "' already exists");
         }
 
         IngredientCategory category = IngredientCategory.builder()
@@ -63,7 +66,7 @@ public class IngredientCategoryController {
             @PathVariable Long id,
             @RequestBody CreateCategoryRequest request) {
         IngredientCategory category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
         category.setName(request.name);
         if (request.sortOrder != null) category.setSortOrder(request.sortOrder);
         category = categoryRepository.save(category);

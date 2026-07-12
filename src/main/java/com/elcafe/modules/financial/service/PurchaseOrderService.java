@@ -1,5 +1,8 @@
 package com.elcafe.modules.financial.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.entity.PurchaseOrder;
 import com.elcafe.modules.financial.entity.PurchaseOrderItem;
@@ -74,11 +77,11 @@ public class PurchaseOrderService {
         log.info("Approving purchase order: {}", poId);
 
         PurchaseOrder po = purchaseOrderRepository.findById(poId)
-                .orElseThrow(() -> new RuntimeException("Purchase order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase order not found"));
 
         if (po.getStatus() != PurchaseOrder.Status.DRAFT &&
             po.getStatus() != PurchaseOrder.Status.PENDING_APPROVAL) {
-            throw new RuntimeException("Only draft or pending orders can be approved");
+            throw new BadRequestException("Only draft or pending orders can be approved");
         }
 
         po.setStatus(PurchaseOrder.Status.APPROVED);
@@ -94,11 +97,11 @@ public class PurchaseOrderService {
         log.info("Receiving purchase order: {}", poId);
 
         PurchaseOrder po = purchaseOrderRepository.findById(poId)
-                .orElseThrow(() -> new RuntimeException("Purchase order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase order not found"));
 
         if (po.getStatus() != PurchaseOrder.Status.APPROVED &&
             po.getStatus() != PurchaseOrder.Status.ORDERED) {
-            throw new RuntimeException("Only approved/ordered POs can be received");
+            throw new BadRequestException("Only approved/ordered POs can be received");
         }
 
         po.setActualDeliveryDate(actualDeliveryDate);
@@ -110,7 +113,7 @@ public class PurchaseOrderService {
         // Update received quantities and add to inventory
         for (ReceivedItem receivedItem : receivedItems) {
             PurchaseOrderItem item = purchaseOrderItemRepository.findById(receivedItem.getItemId())
-                    .orElseThrow(() -> new RuntimeException("Purchase order item not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Purchase order item not found"));
 
             item.setReceivedQuantity(
                     (item.getReceivedQuantity() != null ? item.getReceivedQuantity() : BigDecimal.ZERO)
@@ -206,13 +209,13 @@ public class PurchaseOrderService {
         log.info("Recording payment for purchase order: {}", poId);
 
         PurchaseOrder po = purchaseOrderRepository.findById(poId)
-                .orElseThrow(() -> new RuntimeException("Purchase order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase order not found"));
 
         BigDecimal currentPaid = po.getPaidAmount() != null ? po.getPaidAmount() : BigDecimal.ZERO;
         BigDecimal newPaidAmount = currentPaid.add(amount);
 
         if (newPaidAmount.compareTo(po.getTotalAmount()) > 0) {
-            throw new RuntimeException("Payment amount exceeds total amount due");
+            throw new BadRequestException("Payment amount exceeds total amount due");
         }
 
         po.setPaidAmount(newPaidAmount);
@@ -242,7 +245,7 @@ public class PurchaseOrderService {
 
     public PurchaseOrder getPurchaseOrderById(Long id) {
         return purchaseOrderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Purchase order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Purchase order not found"));
     }
 
     public List<PurchaseOrder> getUnpaidOrders(Long restaurantId) {

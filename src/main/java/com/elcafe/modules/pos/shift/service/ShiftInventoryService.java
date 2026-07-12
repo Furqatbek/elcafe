@@ -1,5 +1,7 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.pos.shift.entity.EmployeeShift;
@@ -32,7 +34,7 @@ public class ShiftInventoryService {
     @Transactional
     public List<ShiftInventorySnapshot> recordStartSnapshot(Long shiftId, Long restaurantId) {
         EmployeeShift shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new RuntimeException("Shift not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         List<Ingredient> ingredients = ingredientRepository.findByRestaurant_IdAndActiveTrue(restaurantId);
         List<ShiftInventorySnapshot> snapshots = new ArrayList<>();
@@ -61,7 +63,7 @@ public class ShiftInventoryService {
     @Transactional
     public List<ShiftInventorySnapshot> recordEndSnapshot(Long shiftId, Long restaurantId) {
         EmployeeShift shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new RuntimeException("Shift not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         // Get start snapshots for comparison
         List<ShiftInventorySnapshot> startSnapshots = snapshotRepository

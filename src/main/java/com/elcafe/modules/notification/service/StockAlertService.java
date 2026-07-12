@@ -1,5 +1,7 @@
 package com.elcafe.modules.notification.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryBatch;
 import com.elcafe.modules.inventory.repository.InventoryBatchRepository;
@@ -155,7 +157,7 @@ public class StockAlertService {
     @Transactional
     public void triggerAlertForRestaurant(Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new RuntimeException("Restaurant not found: " + restaurantId));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found: " + restaurantId));
 
         // Temporarily bypass cooldown for manual trigger
         List<StockAlertSubscription> subscriptions =
@@ -360,7 +362,7 @@ public class StockAlertService {
     @Transactional
     public void triggerExpiryAlertForRestaurant(Long restaurantId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new RuntimeException("Restaurant not found: " + restaurantId));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found: " + restaurantId));
 
         checkRestaurantBatchExpiry(restaurant);
         log.info("Manual expiry alert triggered for restaurant: {}", restaurant.getName());

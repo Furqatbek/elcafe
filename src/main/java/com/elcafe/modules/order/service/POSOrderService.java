@@ -1,5 +1,8 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.inventory.entity.Ingredient;
@@ -117,7 +120,7 @@ public class POSOrderService {
 
         // Validate restaurant
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + request.getRestaurantId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with ID: " + request.getRestaurantId()));
 
         // Find or create customer (optional for dine-in)
         Customer customer = findOrCreateCustomer(request.getCustomerInfo(), request.getOrderType(), restaurant.getId());
@@ -164,7 +167,7 @@ public class POSOrderService {
         // Handle delivery-specific info
         if (request.getOrderType() == CreatePOSOrderRequest.OrderType.DELIVERY) {
             if (request.getDeliveryInfo() == null) {
-                throw new IllegalArgumentException("Delivery information is required for delivery orders");
+                throw new BadRequestException("Delivery information is required for delivery orders");
             }
             DeliveryInfo deliveryInfo = createDeliveryInfo(request.getDeliveryInfo(), order);
             order.setDeliveryInfo(deliveryInfo);
@@ -203,7 +206,7 @@ public class POSOrderService {
                         item.getProductId(), item.getQuantity());
                 allMissing.addAll(missing);
             }
-            throw new IllegalStateException("Insufficient inventory: " + String.join("; ", allMissing));
+            throw new BadRequestException("Insufficient inventory: " + String.join("; ", allMissing));
         }
 
         // Deduct ingredients from inventory
@@ -370,7 +373,7 @@ public class POSOrderService {
 
         if (Boolean.TRUE.equals(itemRequest.getIsBundle()) && itemRequest.getBundleId() != null) {
             Bundle bundle = bundleRepository.findById(itemRequest.getBundleId())
-                    .orElseThrow(() -> new IllegalArgumentException("Bundle not found with ID: " + itemRequest.getBundleId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Bundle not found with ID: " + itemRequest.getBundleId()));
 
             // Bundle items don't have a productId - set to null to avoid confusing bundles with products
             orderItem.setProductId(null);
@@ -382,7 +385,7 @@ public class POSOrderService {
             log.info("Added bundle to order: {} - {}", bundle.getId(), bundle.getName());
         } else {
             Product product = productRepository.findById(itemRequest.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + itemRequest.getProductId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + itemRequest.getProductId()));
 
             orderItem.setProductId(product.getId());
             orderItem.setProductName(product.getName());
@@ -426,7 +429,7 @@ public class POSOrderService {
     @Transactional(readOnly = true)
     public POSProductAvailabilityDTO getProductAvailability(Long productId, Long restaurantId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + productId));
 
         List<ProductIngredient> productIngredients =
                 productIngredientRepository.findByProductIdWithIngredients(productId);
@@ -606,7 +609,7 @@ public class POSOrderService {
     @Transactional(readOnly = true)
     public POSKitchenStatusDTO getKitchenStatus(Long orderId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         KitchenOrder kitchenOrder = kitchenOrderRepository.findByOrderId(orderId)
                 .orElse(null);
@@ -658,7 +661,7 @@ public class POSOrderService {
     @Transactional(readOnly = true)
     public POSOrderResponse getOrderById(Long orderId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         return mapToResponse(order, getOrderTypeString(order));
     }
@@ -671,12 +674,12 @@ public class POSOrderService {
     @Transactional
     public POSOrderResponse attachCustomer(Long orderId, com.elcafe.modules.order.dto.pos.AttachCustomerRequest request) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         if (order.getStatus() == OrderStatus.DELIVERED
                 || order.getStatus() == OrderStatus.COMPLETED
                 || order.getStatus() == OrderStatus.CANCELLED) {
-            throw new IllegalStateException("Cannot attach customer to a settled order (status=" + order.getStatus() + ")");
+            throw new BadRequestException("Cannot attach customer to a settled order (status=" + order.getStatus() + ")");
         }
 
         Long restaurantId = order.getRestaurant() != null ? order.getRestaurant().getId() : null;
@@ -691,15 +694,15 @@ public class POSOrderService {
     private Customer resolveCustomer(com.elcafe.modules.order.dto.pos.AttachCustomerRequest request, Long restaurantId) {
         if (request.getCustomerId() != null) {
             return customerRepository.findById(request.getCustomerId())
-                    .orElseThrow(() -> new IllegalArgumentException("Customer not found with ID: " + request.getCustomerId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found with ID: " + request.getCustomerId()));
         }
         if (request.getQrCode() != null && !request.getQrCode().isBlank()) {
             return customerRepository.findByQrCode(request.getQrCode())
-                    .orElseThrow(() -> new IllegalArgumentException("Customer not found for QR code: " + request.getQrCode()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found for QR code: " + request.getQrCode()));
         }
         // V150: phone is per-restaurant — scope to the order's restaurant.
         return customerRepository.findByPhoneAndRestaurantId(request.getPhone(), restaurantId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer not found for phone: " + request.getPhone()));
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found for phone: " + request.getPhone()));
     }
 
     private String resolveStrategy(com.elcafe.modules.order.dto.pos.AttachCustomerRequest request) {
@@ -789,7 +792,7 @@ public class POSOrderService {
 
         // Validate restaurant
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found with ID: " + restaurantId));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with ID: " + restaurantId));
 
         // Create order
         Order order = new Order();

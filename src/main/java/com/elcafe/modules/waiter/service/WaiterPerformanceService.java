@@ -1,5 +1,7 @@
 package com.elcafe.modules.waiter.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -66,13 +68,13 @@ public class WaiterPerformanceService {
     @Transactional
     public WaiterKPIConfig saveKPIConfig(Long restaurantId, WaiterKPIConfigRequest request) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         WaiterKPIConfig config;
 
         if (request.getId() != null) {
             config = kpiConfigRepository.findById(request.getId())
-                    .orElseThrow(() -> new RuntimeException("KPI config not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("KPI config not found"));
         } else {
             config = new WaiterKPIConfig();
             config.setRestaurant(restaurant);
@@ -81,7 +83,7 @@ public class WaiterPerformanceService {
         // Set waiter if specified
         if (request.getWaiterId() != null) {
             Waiter waiter = waiterRepository.findById(request.getWaiterId())
-                    .orElseThrow(() -> new RuntimeException("Waiter not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Waiter not found"));
             config.setWaiter(waiter);
         }
 
@@ -444,9 +446,9 @@ public class WaiterPerformanceService {
         return performanceRepository.findByWaiterIdAndPerformanceDate(waiterId, date)
                 .orElseGet(() -> {
                     Waiter waiter = waiterRepository.findById(waiterId)
-                            .orElseThrow(() -> new RuntimeException("Waiter not found"));
+                            .orElseThrow(() -> new ResourceNotFoundException("Waiter not found"));
                     Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                            .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
                     WaiterPerformance performance = WaiterPerformance.builder()
                             .waiter(waiter)

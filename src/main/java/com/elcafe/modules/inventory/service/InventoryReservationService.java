@@ -1,5 +1,7 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryReservation;
 import com.elcafe.modules.inventory.entity.InventoryReservation.ReservationStatus;
@@ -106,7 +108,7 @@ public class InventoryReservationService {
     @Transactional(readOnly = true)
     public BigDecimal getAvailableStock(Long ingredientId) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new IllegalArgumentException("Ingredient not found: " + ingredientId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + ingredientId));
 
         BigDecimal reservedQuantity = reservationRepository.getTotalReservedQuantity(
                 ingredientId, LocalDateTime.now());

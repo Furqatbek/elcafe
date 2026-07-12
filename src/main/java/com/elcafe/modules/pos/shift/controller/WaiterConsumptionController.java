@@ -1,5 +1,7 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.pos.shift.entity.EmployeeConsumption;
@@ -90,7 +92,7 @@ public class WaiterConsumptionController {
             throw new AccessDeniedException("No authenticated waiter identity on this request");
         }
         Waiter waiter = waiterRepository.findById(waiterId)
-                .orElseThrow(() -> new IllegalArgumentException("Waiter not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Waiter not found"));
         List<ConsumptionLimitService.QuotaStatus> statuses =
                 consumptionLimitService.quotaStatusFor(restaurantId, null, waiter);
         return ResponseEntity.ok(ApiResponse.success("Quota retrieved", statuses));

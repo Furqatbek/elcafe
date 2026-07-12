@@ -1,5 +1,9 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.modules.financial.service.RevenueRecordingService;
@@ -527,7 +531,7 @@ class PaymentServiceTest {
                     .build();
 
             assertThatThrownBy(() -> paymentService.processPOSRefund(1L, request))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("cannot exceed total paid");
         }
     }
@@ -610,7 +614,7 @@ class PaymentServiceTest {
             stubOrderFound();
 
             assertThatThrownBy(() -> paymentService.addTip(1L, null))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("greater than 0");
         }
 
@@ -620,7 +624,7 @@ class PaymentServiceTest {
             stubOrderFound();
 
             assertThatThrownBy(() -> paymentService.addTip(1L, BigDecimal.ZERO))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("greater than 0");
         }
 
@@ -630,7 +634,7 @@ class PaymentServiceTest {
             stubOrderFound();
 
             assertThatThrownBy(() -> paymentService.addTip(1L, new BigDecimal("-5000")))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("greater than 0");
         }
     }
@@ -684,7 +688,7 @@ class PaymentServiceTest {
             when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> paymentService.getPOSPaymentSummary(99L))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Order not found");
         }
     }

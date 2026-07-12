@@ -1,5 +1,6 @@
 package com.elcafe.modules.loyalty.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.loyalty.entity.BonusTransaction;
 import com.elcafe.modules.loyalty.entity.CustomerLoyalty;
 import com.elcafe.modules.loyalty.repository.BonusTransactionRepository;
@@ -68,7 +69,7 @@ public class BonusService {
             customerLoyalty.deductBonus(amount.abs());
             newBalance = customerLoyalty.getCurrentBalance();
         } else {
-            throw new IllegalArgumentException("Unknown transaction type: " + type);
+            throw new BadRequestException("Unknown transaction type: " + type);
         }
 
         // Create and save the transaction record

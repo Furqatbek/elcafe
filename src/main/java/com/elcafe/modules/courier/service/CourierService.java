@@ -1,5 +1,6 @@
 package com.elcafe.modules.courier.service;
 
+import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
@@ -77,7 +78,7 @@ public class CourierService {
     public CourierDTO createCourier(CreateCourierRequest request) {
         // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email already exists: " + request.getEmail());
+            throw new ConflictException("Email already exists: " + request.getEmail());
         }
 
         // Create User entity with COURIER role
@@ -138,7 +139,7 @@ public class CourierService {
         // Update User fields
         if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new IllegalArgumentException("Email already exists: " + request.getEmail());
+                throw new ConflictException("Email already exists: " + request.getEmail());
             }
             user.setEmail(request.getEmail());
         }

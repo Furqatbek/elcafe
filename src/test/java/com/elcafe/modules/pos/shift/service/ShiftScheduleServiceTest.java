@@ -1,5 +1,7 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.ConflictException;
+
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.pos.shift.entity.ShiftSchedule;
@@ -76,7 +78,7 @@ class ShiftScheduleServiceTest {
         assertThatThrownBy(() -> service.createSchedule(
                 1L, "user", 10L, LocalDate.of(2026, 5, 5),
                 LocalTime.of(12, 0), LocalTime.of(20, 0), null, null, null))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Conflict");
     }
 

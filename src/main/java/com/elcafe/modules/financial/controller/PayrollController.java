@@ -1,5 +1,7 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
@@ -177,16 +179,16 @@ public class PayrollController {
 
     private PayrollEntry mapToEntity(PayrollEntryRequest req) {
         Restaurant restaurant = restaurantRepository.findById(req.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         User employee = null;
         Waiter waiter = null;
         if ("waiter".equals(req.getEmployeeType())) {
             waiter = waiterRepository.findById(req.getEmployeeId())
-                    .orElseThrow(() -> new RuntimeException("Waiter not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Waiter not found"));
         } else {
             employee = userRepository.findById(req.getEmployeeId())
-                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         }
 
         return PayrollEntry.builder()

@@ -1,5 +1,7 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ConflictException;
+
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.AddOnResponse;
 import com.elcafe.modules.menu.dto.CreateAddOnRequest;
@@ -126,7 +128,7 @@ class AddOnServiceTest {
         when(addOnRepository.existsByAddOnGroupIdAndName(1L, "Cheese")).thenReturn(true);
 
         assertThatThrownBy(() -> addOnService.createAddOn(request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("already exists");
     }
 

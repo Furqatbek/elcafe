@@ -62,14 +62,27 @@ logged/observable server-side.
 
 ## Phase EH-1 — Backend: no exception without a correct status/code
 
+> **Status: ✅ landed 2026-07-12.** The sweep turned out ~2.4× bigger than the statement-level
+> estimate: 212 statement throws **plus 294 `orElseThrow(() -> new …)` lambdas**. Retyped 457
+> sites (164 statement + 290 lambda + 3 outliers) to ResourceNotFound/Conflict/BadRequest by
+> message shape; 50 intentional keeps remain (SMS/geocoding provider+circuit contracts, entity
+> invariants, boot validators, cause-wrapping internal faults) — all correctly 500-generic and
+> never user-facing. Hygiene: user-facing 4xx messages carry only caller-supplied or same-tenant
+> data; wraps that embed `e.getMessage()` are 500-generic so never rendered. Non-HTTP: async
+> uncaught handler + scheduler ErrorHandler (AsyncConfig), STOMP ERROR frames via
+> StompErrorHandler (auth text preserved, everything else genericized). Guards:
+> `RawThrowGuardTest` (controllers raw-throw-free; services no message-only RuntimeException,
+> 4-file infra allowlist) + `ErrorEnvelopeContractTest` (envelope through real MVC plumbing,
+> 5xx leak check). 27 test assertions retyped to match.
+
 | # | Task | Where | Acceptance |
 |---|---|---|---|
 | EH-1.1 ✅ | Add framework handlers: `MethodArgumentTypeMismatch`, `MissingServletRequestParameter`, `HttpMessageNotReadable` (malformed JSON), `ConstraintViolation` (@RequestParam validation), `NoHandlerFound`/`NoResourceFound` →404, `HttpRequestMethodNotSupported`→405, `HttpMediaTypeNotSupported`→415, `MaxUploadSizeExceeded`/`Multipart`→413 FILE_TOO_LARGE, `DataIntegrityViolation`→409 (sanitized), async request timeout | `GlobalExceptionHandler` | MockMvc test per case: status+code+envelope |
 | EH-1.2 ✅ | **Day-one bridge**: handlers for `IllegalArgumentException`→400 (message allowed — they're human-written) and `IllegalStateException`→500-generic, so the 212 raw throws stop mis-presenting **before** the sweep finishes | `GlobalExceptionHandler` | "Email already in use" (SystemUsers) returns 400, not 500 |
-| EH-1.3 | Raw-throw sweep — replace user-reachable `RuntimeException`(85)/`IllegalArgument`(76)/`IllegalState`(51) with typed exceptions, module-batched: ① auth/users ② orders/payments ③ POS/waiter/kitchen ④ loyalty/marketing ⑤ financial/inventory ⑥ courier/settings/print ⑦ telegram/instagram/misc | all `modules/*` | per batch: grep count reaches 0 for controllers+services of that module; suite green |
-| EH-1.4 | Message hygiene audit: every exception message safe to show verbatim (no SQL, no class names, no other-tenant ids/emails/phones); fix violators | all `modules/*` | reviewed checklist per module in the PR description |
-| EH-1.5 | Non-HTTP surfaces: `AsyncUncaughtExceptionHandler` (log+Sentry), scheduler `ErrorHandler` for `@Scheduled`, verify event-listener guards, STOMP `@MessageExceptionHandler` + `StompSubProtocolErrorHandler` so WS errors reach clients as typed frames, not silence | `config/`, `websocket/` | kill-switch test: throwing job/listener/WS handler logs once, never kills the scheduler/session silently |
-| EH-1.6 | Guard tests (regression-proof): contract MockMvc test per failure class asserting envelope + no stack in body; pattern-scan unit test (same style as `SchedulerLockGuardTest`) **banning new** `throw new RuntimeException|IllegalArgumentException` in `controller`/`service` packages | `src/test` | CI fails when someone reintroduces a raw throw |
+| EH-1.3 ✅ | Raw-throw sweep — replace user-reachable `RuntimeException`(85)/`IllegalArgument`(76)/`IllegalState`(51) with typed exceptions, module-batched: ① auth/users ② orders/payments ③ POS/waiter/kitchen ④ loyalty/marketing ⑤ financial/inventory ⑥ courier/settings/print ⑦ telegram/instagram/misc | all `modules/*` | per batch: grep count reaches 0 for controllers+services of that module; suite green |
+| EH-1.4 ✅ | Message hygiene audit: every exception message safe to show verbatim (no SQL, no class names, no other-tenant ids/emails/phones); fix violators | all `modules/*` | reviewed checklist per module in the PR description |
+| EH-1.5 ✅ | Non-HTTP surfaces: `AsyncUncaughtExceptionHandler` (log+Sentry), scheduler `ErrorHandler` for `@Scheduled`, verify event-listener guards, STOMP `@MessageExceptionHandler` + `StompSubProtocolErrorHandler` so WS errors reach clients as typed frames, not silence | `config/`, `websocket/` | kill-switch test: throwing job/listener/WS handler logs once, never kills the scheduler/session silently |
+| EH-1.6 ✅ | Guard tests (regression-proof): contract MockMvc test per failure class asserting envelope + no stack in body; pattern-scan unit test (same style as `SchedulerLockGuardTest`) **banning new** `throw new RuntimeException|IllegalArgumentException` in `controller`/`service` packages | `src/test` | CI fails when someone reintroduces a raw throw |
 
 ## Phase EH-2 — Frontend: one pipeline from failure to user
 

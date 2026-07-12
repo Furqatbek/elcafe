@@ -1,5 +1,7 @@
 package com.elcafe.modules.settings.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
 import com.elcafe.modules.settings.entity.PrinterSettings;
@@ -45,7 +47,7 @@ public class PrinterSettingsController {
         log.info("Getting printer: {}", id);
 
         PrinterSettings printer = printerSettingsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Printer settings not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Printer settings not found"));
 
         return ResponseEntity.ok(ApiResponse.success("Printer retrieved successfully", printer));
     }
@@ -58,7 +60,7 @@ public class PrinterSettingsController {
         restaurantAuthorizationService.checkAccess(printerSettings.getRestaurant().getId());
 
         Restaurant restaurant = restaurantRepository.findById(printerSettings.getRestaurant().getId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         printerSettings.setRestaurant(restaurant);
         PrinterSettings savedPrinter = printerSettingsRepository.save(printerSettings);
@@ -75,7 +77,7 @@ public class PrinterSettingsController {
         log.info("Updating printer: {}", id);
 
         PrinterSettings existingPrinter = printerSettingsRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Printer settings not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Printer settings not found"));
 
         existingPrinter.setPrinterType(printerSettings.getPrinterType());
         existingPrinter.setPrinterName(printerSettings.getPrinterName());

@@ -1,5 +1,8 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.dto.ExpenseRequest;
 import com.elcafe.modules.financial.dto.ExpenseResponse;
@@ -88,7 +91,7 @@ public class ExpenseController {
 
     private ExpenseResponse performCreate(ExpenseRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         Account account = null;
         if (request.getAccountId() != null) {
@@ -119,7 +122,7 @@ public class ExpenseController {
                 activeShift = employeeShiftRepository.findById(request.getEmployeeShiftId())
                         .filter(s -> s.getRestaurant() != null
                                 && s.getRestaurant().getId().equals(restaurant.getId()))
-                        .orElseThrow(() -> new IllegalArgumentException(
+                        .orElseThrow(() -> new ResourceNotFoundException(
                                 "employeeShiftId not found or belongs to another restaurant"));
             } else {
                 java.util.List<com.elcafe.modules.pos.shift.entity.EmployeeShift> openShifts =
@@ -127,10 +130,10 @@ public class ExpenseController {
                 if (openShifts.size() == 1) {
                     activeShift = openShifts.get(0);
                 } else if (openShifts.isEmpty()) {
-                    throw new IllegalStateException(
+                    throw new BadRequestException(
                             "Cannot mark expense as paid from shift drawer: no shift is currently open at this restaurant.");
                 } else {
-                    throw new IllegalStateException(
+                    throw new BadRequestException(
                             "Cannot mark expense as paid from shift drawer: multiple shifts are open ("
                                     + openShifts.size() + ") — pass employeeShiftId to disambiguate.");
                 }

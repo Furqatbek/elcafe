@@ -1,5 +1,7 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.inventory.dto.BatchRequest;
 import com.elcafe.modules.inventory.dto.BatchResponse;
@@ -43,7 +45,7 @@ public class InventoryBatchController {
             @Valid @RequestBody BatchRequest request) {
         // Validate restaurant access via ingredient - prevents IDOR
         Ingredient ingredient = ingredientRepository.findById(request.getIngredientId())
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());
 
         log.info("Creating batch for ingredient: {}", request.getIngredientId());
@@ -64,7 +66,7 @@ public class InventoryBatchController {
             @PathVariable Long ingredientId) {
         // Validate restaurant access via ingredient - prevents IDOR
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());
 
         log.info("Getting batches for ingredient: {}", ingredientId);
@@ -126,7 +128,7 @@ public class InventoryBatchController {
             @RequestBody Map<String, String> request) {
         // Validate restaurant access via batch's ingredient - prevents IDOR
         InventoryBatch existingBatch = batchRepository.findById(batchId)
-                .orElseThrow(() -> new RuntimeException("Batch not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Batch not found"));
         restaurantAuthorizationService.validateRestaurantAccess(
                 existingBatch.getIngredient().getRestaurant().getId());
 
@@ -154,7 +156,7 @@ public class InventoryBatchController {
             @AuthenticationPrincipal UserPrincipal currentUser) {
         // Validate restaurant access via batch's ingredient - prevents IDOR
         InventoryBatch existingBatch = batchRepository.findById(batchId)
-                .orElseThrow(() -> new RuntimeException("Batch not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Batch not found"));
         restaurantAuthorizationService.validateRestaurantAccess(
                 existingBatch.getIngredient().getRestaurant().getId());
 

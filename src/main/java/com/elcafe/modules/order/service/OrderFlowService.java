@@ -1,5 +1,8 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.kitchen.entity.KitchenOrder;
 import com.elcafe.modules.kitchen.service.KitchenOrderService;
 import com.elcafe.modules.notification.service.NotificationService;
@@ -32,10 +35,10 @@ public class OrderFlowService {
     @Transactional
     public Order acceptOrder(Long orderId, String acceptedBy) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         if (order.getStatus() != OrderStatus.NEW) {
-            throw new RuntimeException("Order cannot be accepted in current status: " + order.getStatus());
+            throw new BadRequestException("Order cannot be accepted in current status: " + order.getStatus());
         }
 
         // Update order status

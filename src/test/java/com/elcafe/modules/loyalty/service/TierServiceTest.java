@@ -1,5 +1,7 @@
 package com.elcafe.modules.loyalty.service;
 
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.loyalty.entity.CustomerLoyalty;
 import com.elcafe.modules.loyalty.entity.CustomerTier;
 import com.elcafe.modules.loyalty.entity.TierHistory;
@@ -42,7 +44,7 @@ class TierServiceTest {
         when(customerLoyaltyRepository.countByTierId(2L)).thenReturn(3L);
 
         assertThatThrownBy(() -> tierService.deleteTier(2L))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("3");
 
         verify(customerTierRepository, never()).delete(tier);

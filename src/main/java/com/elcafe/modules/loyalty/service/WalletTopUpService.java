@@ -1,5 +1,7 @@
 package com.elcafe.modules.loyalty.service;
 
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
@@ -68,12 +70,12 @@ public class WalletTopUpService {
                 .orElseThrow(() -> new ResourceNotFoundException("Customer", "id", customerId));
 
         if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Top-up amount must be positive");
+            throw new BadRequestException("Top-up amount must be positive");
         }
 
         WalletTopUpPaymentProvider providerImpl = providers.get(request.getProvider());
         if (providerImpl == null) {
-            throw new IllegalArgumentException("Unsupported top-up provider: " + request.getProvider());
+            throw new BadRequestException("Unsupported top-up provider: " + request.getProvider());
         }
 
         WalletTopUp topUp = WalletTopUp.builder()
@@ -147,7 +149,7 @@ public class WalletTopUpService {
             return topUp;
         }
         if (topUp.getStatus().isTerminal()) {
-            throw new IllegalStateException(
+            throw new ConflictException(
                     "Cannot complete top-up " + topUp.getId() + " in terminal state " + topUp.getStatus());
         }
 
@@ -196,7 +198,7 @@ public class WalletTopUpService {
     public WalletTopUp cancelByCustomer(Long topUpId, Long customerId) {
         WalletTopUp topUp = getOwnedBy(topUpId, customerId);
         if (topUp.getStatus() != WalletTopUp.Status.PENDING) {
-            throw new IllegalStateException(
+            throw new ConflictException(
                     "Only PENDING top-ups can be cancelled (was " + topUp.getStatus() + ")");
         }
         topUp.setStatus(WalletTopUp.Status.CANCELLED);

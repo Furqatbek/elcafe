@@ -1,5 +1,7 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ConflictException;
+import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.inventory.dto.SupplierRequest;
 import com.elcafe.modules.inventory.dto.SupplierResponse;
 import com.elcafe.modules.inventory.entity.Supplier;
@@ -38,19 +40,19 @@ public class SupplierService {
 
     public SupplierResponse getById(Long id) {
         Supplier supplier = supplierRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Supplier not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + id));
         return SupplierResponse.fromEntity(supplier);
     }
 
     @Transactional
     public SupplierResponse create(SupplierRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found: " + request.getRestaurantId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found: " + request.getRestaurantId()));
 
         // Check for duplicate code
         if (request.getCode() != null && !request.getCode().isEmpty()) {
             if (supplierRepository.existsByRestaurantIdAndCode(request.getRestaurantId(), request.getCode())) {
-                throw new RuntimeException("Supplier with code '" + request.getCode() + "' already exists");
+                throw new ConflictException("Supplier with code '" + request.getCode() + "' already exists");
             }
         }
 
@@ -78,13 +80,13 @@ public class SupplierService {
     @Transactional
     public SupplierResponse update(Long id, SupplierRequest request) {
         Supplier supplier = supplierRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Supplier not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + id));
 
         // Check for duplicate code if code is being changed
         if (request.getCode() != null && !request.getCode().isEmpty()) {
             if (supplierRepository.existsByRestaurantIdAndCodeAndIdNot(
                     supplier.getRestaurant().getId(), request.getCode(), id)) {
-                throw new RuntimeException("Supplier with code '" + request.getCode() + "' already exists");
+                throw new ConflictException("Supplier with code '" + request.getCode() + "' already exists");
             }
         }
 
@@ -113,7 +115,7 @@ public class SupplierService {
     @Transactional
     public void delete(Long id) {
         Supplier supplier = supplierRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Supplier not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + id));
 
         // Soft delete - just set inactive
         supplier.setActive(false);
@@ -124,7 +126,7 @@ public class SupplierService {
     @Transactional
     public void hardDelete(Long id) {
         if (!supplierRepository.existsById(id)) {
-            throw new RuntimeException("Supplier not found: " + id);
+            throw new ResourceNotFoundException("Supplier not found: " + id);
         }
         supplierRepository.deleteById(id);
         log.info("Deleted supplier: {}", id);
@@ -133,7 +135,7 @@ public class SupplierService {
     @Transactional
     public SupplierResponse toggleActive(Long id) {
         Supplier supplier = supplierRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Supplier not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found: " + id));
 
         supplier.setActive(!supplier.getActive());
         supplier = supplierRepository.save(supplier);

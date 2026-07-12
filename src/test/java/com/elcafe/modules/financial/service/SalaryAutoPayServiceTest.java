@@ -1,5 +1,9 @@
 package com.elcafe.modules.financial.service;
 
+import com.elcafe.exception.ConflictException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.financial.entity.PayrollEntry;
 import com.elcafe.modules.financial.entity.SalaryConfig;
@@ -134,7 +138,7 @@ class SalaryAutoPayServiceTest {
             cfg.setLastPaidDate(LocalDate.of(2026, 3, 14));
 
             assertThatThrownBy(() -> service.processPayment(cfg, LocalDate.of(2026, 3, 15)))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(ConflictException.class)
                     .hasMessageContaining("already paid");
             verify(payrollService, never()).createPayrollEntry(any());
         }
@@ -197,7 +201,7 @@ class SalaryAutoPayServiceTest {
                     .thenReturn(List.of());
 
             assertThatThrownBy(() -> service.processPayment(cfg, today))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("Nothing to pay");
 
             verify(payrollService, never()).createPayrollEntry(any());

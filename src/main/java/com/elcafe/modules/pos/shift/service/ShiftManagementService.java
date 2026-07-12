@@ -1,5 +1,9 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.pos.cashdrawer.entity.CashDrawer;
@@ -59,7 +63,7 @@ public class ShiftManagementService {
     public EmployeeShift clockIn(Long restaurantId, ClockInRequest request) {
         // Validate restaurant
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         // Auto-detect user from security context if not provided
         if (request.getEmployeeId() == null && request.getWaiterId() == null) {
@@ -74,10 +78,10 @@ public class ShiftManagementService {
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findById(request.getEmployeeId())
-                .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
             Optional<EmployeeShift> activeShift = shiftRepository.findActiveShiftByEmployee(request.getEmployeeId());
             if (activeShift.isPresent()) {
-                throw new IllegalStateException("Employee already has an active shift");
+                throw new ConflictException("Employee already has an active shift");
             }
         }
 
@@ -88,13 +92,13 @@ public class ShiftManagementService {
             if (waiter != null) {
                 Optional<EmployeeShift> activeWaiterShift = shiftRepository.findActiveShiftByWaiter(waiter.getId());
                 if (activeWaiterShift.isPresent()) {
-                    throw new IllegalStateException("Waiter already has an active shift");
+                    throw new ConflictException("Waiter already has an active shift");
                 }
             }
         }
 
         if (employee == null && waiter == null) {
-            throw new IllegalArgumentException("Either employeeId or waiterId is required");
+            throw new BadRequestException("Either employeeId or waiterId is required");
         }
 
         // Get cash drawer if specified
@@ -184,10 +188,10 @@ public class ShiftManagementService {
     @Transactional
     public EmployeeShift clockOut(Long shiftId, ClockOutRequest request) {
         EmployeeShift shift = shiftRepository.findById(shiftId)
-            .orElseThrow(() -> new IllegalArgumentException("Shift not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         if (shift.getStatus() != ShiftStatus.ACTIVE && shift.getStatus() != ShiftStatus.ON_BREAK) {
-            throw new IllegalStateException("Shift is not active");
+            throw new BadRequestException("Shift is not active");
         }
 
         // End any active break
@@ -273,16 +277,16 @@ public class ShiftManagementService {
     @Transactional
     public ShiftBreak startBreak(Long shiftId, BreakType breakType) {
         EmployeeShift shift = shiftRepository.findById(shiftId)
-            .orElseThrow(() -> new IllegalArgumentException("Shift not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         if (shift.getStatus() != ShiftStatus.ACTIVE) {
-            throw new IllegalStateException("Can only start break on active shift");
+            throw new BadRequestException("Can only start break on active shift");
         }
 
         // Check for existing active break
         Optional<ShiftBreak> activeBreak = breakRepository.findActiveBreak(shiftId);
         if (activeBreak.isPresent()) {
-            throw new IllegalStateException("Break already in progress");
+            throw new ConflictException("Break already in progress");
         }
 
         ShiftBreak shiftBreak = ShiftBreak.builder()
@@ -304,10 +308,10 @@ public class ShiftManagementService {
     @Transactional
     public ShiftBreak endBreak(Long shiftId) {
         EmployeeShift shift = shiftRepository.findById(shiftId)
-            .orElseThrow(() -> new IllegalArgumentException("Shift not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         ShiftBreak activeBreak = breakRepository.findActiveBreak(shiftId)
-            .orElseThrow(() -> new IllegalStateException("No active break found"));
+            .orElseThrow(() -> new BadRequestException("No active break found"));
 
         activeBreak.setBreakEnd(OffsetDateTime.now());
         shift.setStatus(ShiftStatus.ACTIVE);
@@ -374,7 +378,7 @@ public class ShiftManagementService {
     @Transactional
     public EmployeeShift approveShift(Long shiftId, Long managerId, String notes) {
         EmployeeShift shift = shiftRepository.findById(shiftId)
-            .orElseThrow(() -> new IllegalArgumentException("Shift not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         if (shift.getStatus() == ShiftStatus.APPROVED) {
             return shift;
@@ -480,7 +484,7 @@ public class ShiftManagementService {
 
     public void resendShiftToTelegram(Long shiftId) {
         EmployeeShift shift = shiftRepository.findById(shiftId)
-                .orElseThrow(() -> new IllegalArgumentException("Shift not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         String shiftName = shift.getEmployee() != null
                 ? shift.getEmployee().getFullName()

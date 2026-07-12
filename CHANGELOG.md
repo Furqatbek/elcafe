@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Error handling — 2026-07-12 (EH-0, docs/ERROR_HANDLING_PLAN.md)
+### Error handling — 2026-07-12 (EH-0 + EH-1, docs/ERROR_HANDLING_PLAN.md)
+
+- **Raw-throw sweep (EH-1.3):** retyped 457 raw `RuntimeException`/`IllegalArgumentException`/
+  `IllegalStateException` throws — including 290 `orElseThrow` lambdas the original audit
+  under-counted — to typed exceptions: "X not found" → 404, "already exists/occupied/paid" → 409,
+  business-state/validation → 400. Every "Order not found"-class error that used to render as a
+  generic 500 now returns its real status and message. 50 intentional keeps (provider/circuit
+  contracts, entity invariants, boot validators, internal fault wraps) stay 500-generic.
+- **Non-HTTP surfaces (EH-1.5):** uncaught `@Async` exceptions get one structured ERROR log
+  (previously undefined behaviour); `@Scheduled` error handler pinned (a throwing job logs once,
+  schedule survives); STOMP failures reach clients as a readable ERROR frame (auth text preserved,
+  handler internals genericized) instead of a silent connection drop.
+- **Regression fences (EH-1.6):** `RawThrowGuardTest` fails CI on any new raw throw in a
+  controller or message-only `RuntimeException` in a service; `ErrorEnvelopeContractTest` pins the
+  envelope (code/message/no-internals) through the real MVC exception plumbing.
 
 - **One error envelope with machine-readable codes.** Every API error now carries a stable
   `error` code (`ErrorCode` enum) plus a `requestId`, including bodies written by filters (tenant

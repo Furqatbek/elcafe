@@ -1,5 +1,9 @@
 package com.elcafe.modules.financial.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.repository.AccountRepository;
@@ -53,7 +57,7 @@ public class ExpenseService {
         log.info("Approving expense: {}", expenseId);
 
         Expense expense = expenseRepository.findById(expenseId)
-                .orElseThrow(() -> new RuntimeException("Expense not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
 
         expense.setApprovedBy(approvedBy);
         expense.setApprovedAt(java.time.LocalDateTime.now());
@@ -66,7 +70,7 @@ public class ExpenseService {
         log.info("Recording payment for expense: {}", expenseId);
 
         Expense expense = expenseRepository.findById(expenseId)
-                .orElseThrow(() -> new RuntimeException("Expense not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
 
         expense.setPaymentDate(paymentDate);
         expense.setPaymentStatus(Expense.PaymentStatus.PAID);
@@ -91,14 +95,14 @@ public class ExpenseService {
         log.info("Soft deleting expense: {} by user: {}", id, deletedBy);
 
         Expense expense = expenseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Expense not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
 
         if (expense.isDeleted()) {
-            throw new RuntimeException("Expense has already been deleted");
+            throw new ConflictException("Expense has already been deleted");
         }
 
         if (expense.getPaymentStatus() == Expense.PaymentStatus.PAID) {
-            throw new RuntimeException("Cannot delete paid expense - use void/reverse instead");
+            throw new BadRequestException("Cannot delete paid expense - use void/reverse instead");
         }
 
         // Use soft delete instead of hard delete for audit compliance
@@ -109,7 +113,7 @@ public class ExpenseService {
 
     public Expense getExpenseById(Long id) {
         return expenseRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Expense not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
     }
 
     public List<Expense> getExpensesByRestaurant(Long restaurantId) {

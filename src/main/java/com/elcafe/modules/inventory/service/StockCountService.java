@@ -1,5 +1,8 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.inventory.dto.StockCountRequest;
 import com.elcafe.modules.inventory.dto.VarianceReportResponse;
 import com.elcafe.modules.inventory.entity.*;
@@ -40,7 +43,7 @@ public class StockCountService {
         log.info("Creating stock count for restaurant: {}", request.getRestaurantId());
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         String countNumber = generateCountNumber(request.getRestaurantId());
 
@@ -95,10 +98,10 @@ public class StockCountService {
     @Transactional
     public StockCount startStockCount(Long stockCountId, String countedBy) {
         StockCount stockCount = stockCountRepository.findById(stockCountId)
-                .orElseThrow(() -> new RuntimeException("Stock count not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Stock count not found"));
 
         if (stockCount.getStatus() != StockCount.Status.DRAFT) {
-            throw new RuntimeException("Only draft stock counts can be started");
+            throw new BadRequestException("Only draft stock counts can be started");
         }
 
         stockCount.setStatus(StockCount.Status.IN_PROGRESS);
@@ -115,11 +118,11 @@ public class StockCountService {
     @Transactional
     public StockCountItem recordCount(StockCountRequest.RecordCountRequest request) {
         StockCountItem item = stockCountItemRepository.findById(request.getItemId())
-                .orElseThrow(() -> new RuntimeException("Stock count item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Stock count item not found"));
 
         StockCount stockCount = item.getStockCount();
         if (stockCount.getStatus() != StockCount.Status.IN_PROGRESS) {
-            throw new RuntimeException("Can only record counts for in-progress stock counts");
+            throw new BadRequestException("Can only record counts for in-progress stock counts");
         }
 
         item.recordCount(request.getCountedQuantity(), request.getCountedBy(), request.getNotes());
@@ -142,7 +145,7 @@ public class StockCountService {
     @Transactional
     public StockCountItem setVarianceReason(StockCountRequest.VarianceReasonRequest request) {
         StockCountItem item = stockCountItemRepository.findById(request.getItemId())
-                .orElseThrow(() -> new RuntimeException("Stock count item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Stock count item not found"));
 
         item.setVarianceReason(request.getVarianceReason());
         if (request.getNotes() != null) {
@@ -159,14 +162,14 @@ public class StockCountService {
     @Transactional
     public StockCount submitForReview(Long stockCountId, String reviewedBy) {
         StockCount stockCount = stockCountRepository.findById(stockCountId)
-                .orElseThrow(() -> new RuntimeException("Stock count not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Stock count not found"));
 
         if (stockCount.getStatus() != StockCount.Status.IN_PROGRESS) {
-            throw new RuntimeException("Only in-progress stock counts can be submitted for review");
+            throw new BadRequestException("Only in-progress stock counts can be submitted for review");
         }
 
         if (!stockCount.isFullyCounted()) {
-            throw new RuntimeException("All items must be counted before submitting for review");
+            throw new BadRequestException("All items must be counted before submitting for review");
         }
 
         stockCount.setStatus(StockCount.Status.PENDING_REVIEW);
@@ -183,10 +186,10 @@ public class StockCountService {
     @Transactional
     public StockCount approveStockCount(Long stockCountId, StockCountRequest.ApproveRequest request) {
         StockCount stockCount = stockCountRepository.findById(stockCountId)
-                .orElseThrow(() -> new RuntimeException("Stock count not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Stock count not found"));
 
         if (stockCount.getStatus() != StockCount.Status.PENDING_REVIEW) {
-            throw new RuntimeException("Only pending review stock counts can be approved");
+            throw new BadRequestException("Only pending review stock counts can be approved");
         }
 
         stockCount.setStatus(StockCount.Status.APPROVED);
@@ -228,10 +231,10 @@ public class StockCountService {
     @Transactional
     public StockCount cancelStockCount(Long stockCountId, String reason, String cancelledBy) {
         StockCount stockCount = stockCountRepository.findById(stockCountId)
-                .orElseThrow(() -> new RuntimeException("Stock count not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Stock count not found"));
 
         if (stockCount.getStatus() == StockCount.Status.APPROVED) {
-            throw new RuntimeException("Approved stock counts cannot be cancelled");
+            throw new BadRequestException("Approved stock counts cannot be cancelled");
         }
 
         stockCount.setStatus(StockCount.Status.CANCELLED);
@@ -247,7 +250,7 @@ public class StockCountService {
     @Transactional(readOnly = true)
     public StockCount getStockCountById(Long id) {
         return stockCountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Stock count not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Stock count not found"));
     }
 
     /**

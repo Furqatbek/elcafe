@@ -1,5 +1,7 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.inventory.dto.WasteRecordRequest;
 import com.elcafe.modules.inventory.dto.WasteReportResponse;
 import com.elcafe.modules.inventory.entity.Ingredient;
@@ -44,15 +46,15 @@ public class WasteService {
                 request.getIngredientId(), request.getRestaurantId());
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         Ingredient ingredient = ingredientRepository.findById(request.getIngredientId())
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
 
         InventoryBatch batch = null;
         if (request.getBatchId() != null) {
             batch = batchRepository.findById(request.getBatchId())
-                    .orElseThrow(() -> new RuntimeException("Batch not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Batch not found"));
         }
 
         // Determine unit cost using priority: provided > batch > ingredient effective cost (WAC)
@@ -152,7 +154,7 @@ public class WasteService {
     @Transactional(readOnly = true)
     public WasteRecord getWasteRecordById(Long id) {
         return wasteRecordRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Waste record not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Waste record not found"));
     }
 
     /**
@@ -161,7 +163,7 @@ public class WasteService {
     @Transactional
     public void deleteWasteRecord(Long id) {
         WasteRecord record = wasteRecordRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Waste record not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Waste record not found"));
 
         // Optionally restore inventory (commented out - might not always be desired)
         // inventoryService.addStock(record.getIngredient().getId(), record.getQuantity(),

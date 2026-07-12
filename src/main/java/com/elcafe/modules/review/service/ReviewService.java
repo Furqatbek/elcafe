@@ -1,5 +1,8 @@
 package com.elcafe.modules.review.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.ownerbot.service.OwnerNotificationService;
 import com.elcafe.modules.restaurant.entity.Restaurant;
 import com.elcafe.modules.restaurant.repository.RestaurantRepository;
@@ -33,12 +36,12 @@ public class ReviewService {
         // Check duplicate if orderId provided
         if (request.getOrderId() != null) {
             reviewRepository.findByOrderId(request.getOrderId()).ifPresent(existing -> {
-                throw new IllegalStateException("This order has already been reviewed");
+                throw new ConflictException("This order has already been reviewed");
             });
         }
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         Review review = Review.builder()
                 .orderId(request.getOrderId())
@@ -108,7 +111,7 @@ public class ReviewService {
     @Transactional
     public Review replyToReview(Long reviewId, String reply, String repliedBy) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
         review.setReply(reply);
         review.setRepliedAt(LocalDateTime.now());
         review.setRepliedBy(repliedBy);
@@ -118,7 +121,7 @@ public class ReviewService {
     @Transactional
     public Review hideReview(Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
         review.setStatus(Review.Status.HIDDEN);
         return reviewRepository.save(review);
     }
@@ -126,7 +129,7 @@ public class ReviewService {
     @Transactional
     public Review publishReview(Long reviewId) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new RuntimeException("Review not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
         review.setStatus(Review.Status.PUBLISHED);
         return reviewRepository.save(review);
     }

@@ -1,5 +1,8 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,14 +32,14 @@ public class POSOrderFeeService {
         log.info("Applying service fee to order {}: percent={}", orderId, serviceFeePercent);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         // Validate service fee percent
         if (serviceFeePercent == null || serviceFeePercent.compareTo(BigDecimal.ZERO) < 0) {
             serviceFeePercent = BigDecimal.ZERO;
         }
         if (serviceFeePercent.compareTo(BigDecimal.valueOf(100)) > 0) {
-            throw new IllegalArgumentException("Service fee percent cannot exceed 100%");
+            throw new BadRequestException("Service fee percent cannot exceed 100%");
         }
 
         order.setServiceFeePercent(serviceFeePercent);
@@ -65,7 +68,7 @@ public class POSOrderFeeService {
         log.info("Applying service fee amount to order {}: amount={}", orderId, serviceFeeAmount);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         // Validate service fee amount
         if (serviceFeeAmount == null || serviceFeeAmount.compareTo(BigDecimal.ZERO) < 0) {
@@ -98,7 +101,7 @@ public class POSOrderFeeService {
         log.info("Applying entry fee to order {}: amount={}", orderId, entryFeeAmount);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         // Validate entry fee amount
         if (entryFeeAmount == null || entryFeeAmount.compareTo(BigDecimal.ZERO) < 0) {

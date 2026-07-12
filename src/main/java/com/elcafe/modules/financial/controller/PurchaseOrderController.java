@@ -1,5 +1,7 @@
 package com.elcafe.modules.financial.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.financial.dto.*;
 import com.elcafe.modules.financial.entity.Expense;
@@ -51,7 +53,7 @@ public class PurchaseOrderController {
         restaurantAuthorizationService.checkAccess(request.getRestaurantId());
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         Supplier supplier = null;
         String supplierName = request.getSupplierName();
@@ -65,7 +67,7 @@ public class PurchaseOrderController {
 
         if (request.getSupplierId() != null) {
             supplier = supplierRepository.findById(request.getSupplierId())
-                    .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + request.getSupplierId()));
             // Auto-populate from supplier entity if not provided
             if (supplierName == null || supplierName.isBlank()) {
                 supplierName = supplier.getName();

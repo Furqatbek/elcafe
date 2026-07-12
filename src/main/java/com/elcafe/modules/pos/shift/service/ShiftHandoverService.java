@@ -1,5 +1,8 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -32,7 +35,7 @@ public class ShiftHandoverService {
     @Transactional(readOnly = true)
     public ShiftHandoverDTO prepareHandover(Long outgoingShiftId) {
         EmployeeShift outgoing = shiftRepository.findById(outgoingShiftId)
-                .orElseThrow(() -> new RuntimeException("Shift not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         Long restaurantId = outgoing.getRestaurant().getId();
 
@@ -80,10 +83,10 @@ public class ShiftHandoverService {
     @Transactional
     public ShiftHandoverDTO completeHandover(Long outgoingShiftId, BigDecimal countedCash, String notes) {
         EmployeeShift outgoing = shiftRepository.findById(outgoingShiftId)
-                .orElseThrow(() -> new RuntimeException("Shift not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Shift not found"));
 
         if (outgoing.getStatus() != ShiftStatus.ACTIVE && outgoing.getStatus() != ShiftStatus.ON_BREAK) {
-            throw new IllegalStateException("Shift is not active, cannot hand over");
+            throw new BadRequestException("Shift is not active, cannot hand over");
         }
 
         BigDecimal expectedCash = calculateExpectedCash(outgoing);

@@ -1,5 +1,7 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ConflictException;
+import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.*;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.entity.ProductVariant;
@@ -40,7 +42,7 @@ public class ProductVariantService {
     @Transactional(readOnly = true)
     public ProductVariantResponse getVariantById(Long productId, Long variantId) {
         ProductVariant variant = productVariantRepository.findByIdAndProductId(variantId, productId)
-                .orElseThrow(() -> new RuntimeException("Product variant not found with id: " + variantId + " for product: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product variant not found with id: " + variantId + " for product: " + productId));
         return toResponse(variant);
     }
 
@@ -62,10 +64,10 @@ public class ProductVariantService {
     @Transactional
     public ProductVariantResponse createVariant(Long productId, CreateProductVariantRequest request) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
         if (productVariantRepository.existsByProductIdAndName(productId, request.getName())) {
-            throw new RuntimeException("Variant with name '" + request.getName() + "' already exists for this product");
+            throw new ConflictException("Variant with name '" + request.getName() + "' already exists for this product");
         }
 
         ProductVariant variant = ProductVariant.builder()
@@ -85,12 +87,12 @@ public class ProductVariantService {
     @Transactional
     public ProductVariantResponse updateVariant(Long productId, Long variantId, UpdateProductVariantRequest request) {
         ProductVariant variant = productVariantRepository.findByIdAndProductId(variantId, productId)
-                .orElseThrow(() -> new RuntimeException("Product variant not found with id: " + variantId + " for product: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product variant not found with id: " + variantId + " for product: " + productId));
 
         if (request.getName() != null) {
             if (!variant.getName().equals(request.getName()) &&
                 productVariantRepository.existsByProductIdAndName(productId, request.getName())) {
-                throw new RuntimeException("Variant with name '" + request.getName() + "' already exists for this product");
+                throw new ConflictException("Variant with name '" + request.getName() + "' already exists for this product");
             }
             variant.setName(request.getName());
         }
@@ -107,7 +109,7 @@ public class ProductVariantService {
     @Transactional
     public void deleteVariant(Long productId, Long variantId) {
         ProductVariant variant = productVariantRepository.findByIdAndProductId(variantId, productId)
-                .orElseThrow(() -> new RuntimeException("Product variant not found with id: " + variantId + " for product: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product variant not found with id: " + variantId + " for product: " + productId));
 
         productVariantRepository.delete(variant);
         log.info("Deleted product variant: {} for product: {}", variant.getName(), productId);
@@ -115,7 +117,7 @@ public class ProductVariantService {
 
     private void verifyProductExists(Long productId) {
         if (!productRepository.existsById(productId)) {
-            throw new RuntimeException("Product not found with id: " + productId);
+            throw new ResourceNotFoundException("Product not found with id: " + productId);
         }
     }
 

@@ -1,5 +1,6 @@
 package com.elcafe.service;
 
+import com.elcafe.exception.BadRequestException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,7 @@ public class FileUploadService {
      */
     public String uploadFile(MultipartFile file, String subfolder) {
         if (file.isEmpty()) {
-            throw new RuntimeException("File is empty");
+            throw new BadRequestException("File is empty");
         }
 
         try {

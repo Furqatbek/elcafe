@@ -1,5 +1,6 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.pos.shift.entity.EmployeeShift;
 import com.elcafe.modules.pos.shift.repository.EmployeeShiftRepository;
 import com.elcafe.security.JwtUtil;
@@ -34,7 +35,7 @@ public class ShiftEnforcementService {
 
         EmployeeShift shift = getActiveShiftForCurrentUser();
         if (shift == null) {
-            throw new IllegalStateException("No active shift. Please clock in before performing this operation.");
+            throw new BadRequestException("No active shift. Please clock in before performing this operation.");
         }
     }
 

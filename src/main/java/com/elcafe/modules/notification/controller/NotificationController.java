@@ -1,5 +1,8 @@
 package com.elcafe.modules.notification.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.common.tenant.TenantContext;
 import com.elcafe.modules.notification.entity.Notification;
 import com.elcafe.modules.notification.enums.UserRole;
@@ -162,7 +165,7 @@ public class NotificationController {
         log.info("Marking notification {} as read", id);
 
         Notification notification = notificationRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Notification not found with id: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id: " + id));
         assertConsumerOwnership(notification, consumer);
 
         notification.markAsRead();
@@ -211,7 +214,7 @@ public class NotificationController {
         log.info("Archiving notification {}", id);
 
         Notification notification = notificationRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Notification not found with id: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id: " + id));
         assertConsumerOwnership(notification, consumer);
 
         notification.markAsArchived();
@@ -234,7 +237,7 @@ public class NotificationController {
         log.info("Deleting notification {}", id);
 
         Notification notification = notificationRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Notification not found with id: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id: " + id));
         assertConsumerOwnership(notification, consumer);
 
         notificationRepository.delete(notification);
@@ -258,7 +261,7 @@ public class NotificationController {
 
     private void requireRole(UserRole role) {
         if (role == null) {
-            throw new IllegalArgumentException("role is required");
+            throw new BadRequestException("role is required");
         }
     }
 }

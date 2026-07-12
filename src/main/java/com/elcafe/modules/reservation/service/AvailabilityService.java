@@ -1,5 +1,7 @@
 package com.elcafe.modules.reservation.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.financial.service.ShiftTimeService;
 import com.elcafe.modules.reservation.dto.AvailabilityResponse;
 import com.elcafe.modules.reservation.entity.Reservation;
@@ -292,7 +294,7 @@ public class AvailabilityService {
         return settingsRepository.findByRestaurantId(restaurantId)
                 .orElseGet(() -> {
                     Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+                            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
                     return createDefaultSettings(restaurant);
                 });
     }

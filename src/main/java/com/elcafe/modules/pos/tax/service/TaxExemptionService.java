@@ -1,5 +1,8 @@
 package com.elcafe.modules.pos.tax.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.customer.entity.Customer;
@@ -46,10 +49,10 @@ public class TaxExemptionService {
     @Transactional
     public TaxExemptionType createExemptionType(Long restaurantId, CreateTaxExemptionTypeRequest request) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         if (exemptionTypeRepository.existsByRestaurantIdAndName(restaurantId, request.getName())) {
-            throw new IllegalArgumentException("Exemption type with this name already exists");
+            throw new ConflictException("Exemption type with this name already exists");
         }
 
         TaxExemptionType type = TaxExemptionType.builder()
@@ -78,12 +81,12 @@ public class TaxExemptionService {
     @Transactional
     public Customer setCustomerTaxExempt(Long customerId, SetCustomerTaxExemptRequest request) {
         Customer customer = customerRepository.findById(customerId)
-            .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
         TaxExemptionType exemptionType = null;
         if (request.getExemptionTypeId() != null) {
             exemptionType = exemptionTypeRepository.findById(request.getExemptionTypeId())
-                .orElseThrow(() -> new IllegalArgumentException("Exemption type not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Exemption type not found"));
         }
 
         customer.setIsTaxExempt(true);
@@ -101,7 +104,7 @@ public class TaxExemptionService {
     @Transactional
     public Customer removeCustomerTaxExempt(Long customerId) {
         Customer customer = customerRepository.findById(customerId)
-            .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
         customer.setIsTaxExempt(false);
         customer.setTaxExemptionTypeId(null);
@@ -119,15 +122,15 @@ public class TaxExemptionService {
     public TaxExemptionResult applyOrderTaxExemption(Long orderId, ApplyTaxExemptionRequest request,
                                                       Long operatorId) {
         Order order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         User operator = userRepository.findById(operatorId)
-            .orElseThrow(() -> new IllegalArgumentException("Operator not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Operator not found"));
 
         TaxExemptionType exemptionType = null;
         if (request.getExemptionTypeId() != null) {
             exemptionType = exemptionTypeRepository.findById(request.getExemptionTypeId())
-                .orElseThrow(() -> new IllegalArgumentException("Exemption type not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Exemption type not found"));
         }
 
         // Calculate tax being exempted
@@ -182,7 +185,7 @@ public class TaxExemptionService {
     @Transactional
     public Order removeOrderTaxExemption(Long orderId, BigDecimal taxRate) {
         Order order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         // Recalculate tax
         BigDecimal taxableAmount = order.getSubtotal().subtract(order.getDiscount());
@@ -214,7 +217,7 @@ public class TaxExemptionService {
      */
     public TaxExemptCheckResult checkCustomerExemption(Long customerId) {
         Customer customer = customerRepository.findById(customerId)
-            .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
         boolean isExempt = Boolean.TRUE.equals(customer.getIsTaxExempt());
         boolean isExpired = false;

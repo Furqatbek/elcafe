@@ -1,5 +1,8 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
 import com.elcafe.modules.menu.entity.Product;
@@ -51,14 +54,14 @@ public class ConsumerOrderService {
     public OrderResponse placeOrder(CreateOrderRequest request) {
         // 1. Validate restaurant
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         if (!restaurant.getActive()) {
-            throw new RuntimeException("Restaurant is not active");
+            throw new BadRequestException("Restaurant is not active");
         }
 
         if (!restaurant.getAcceptingOrders()) {
-            throw new RuntimeException("Restaurant is not accepting orders");
+            throw new BadRequestException("Restaurant is not accepting orders");
         }
 
         // 2. Find or create customer (optional)
@@ -81,10 +84,10 @@ public class ConsumerOrderService {
         BigDecimal subtotal = BigDecimal.ZERO;
         for (CreateOrderRequest.OrderItemRequest itemRequest : request.getItems()) {
             Product product = productRepository.findById(itemRequest.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found: " + itemRequest.getProductId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + itemRequest.getProductId()));
 
             if (!product.getInStock()) {
-                throw new RuntimeException("Product not available: " + product.getName());
+                throw new BadRequestException("Product not available: " + product.getName());
             }
 
             OrderItem orderItem = OrderItem.builder()
@@ -213,7 +216,7 @@ public class ConsumerOrderService {
     @Transactional(readOnly = true)
     public OrderResponse getOrderByNumber(String orderNumber, Long requesterCustomerId) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderNumber));
         assertOwnedBy(order, requesterCustomerId);
 
         // Force initialization of lazy relationships
@@ -232,7 +235,7 @@ public class ConsumerOrderService {
     @Transactional
     public OrderResponse cancelOrder(String orderNumber, String reason, Long requesterCustomerId) {
         Order order = orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderNumber));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderNumber));
         assertOwnedBy(order, requesterCustomerId);
 
         // Only allow cancellation if order is not being prepared yet
@@ -240,7 +243,7 @@ public class ConsumerOrderService {
                 order.getStatus() == OrderStatus.READY ||
                 order.getStatus() == OrderStatus.ON_DELIVERY ||
                 order.getStatus() == OrderStatus.DELIVERED) {
-            throw new RuntimeException("Cannot cancel order in current status: " + order.getStatus());
+            throw new BadRequestException("Cannot cancel order in current status: " + order.getStatus());
         }
 
         order.setStatus(OrderStatus.CANCELLED);

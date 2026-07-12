@@ -1,5 +1,8 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.menu.dto.*;
 import com.elcafe.modules.menu.entity.Ingredient;
 import com.elcafe.modules.menu.repository.IngredientRepository;
@@ -28,7 +31,7 @@ public class IngredientService {
     @Transactional(readOnly = true)
     public IngredientDTO getIngredientById(Long id) {
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
         return toDTO(ingredient);
     }
 
@@ -48,7 +51,7 @@ public class IngredientService {
     @Transactional
     public IngredientDTO createIngredient(CreateIngredientRequest request) {
         if (ingredientRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Ingredient with name '" + request.getName() + "' already exists");
+            throw new ConflictException("Ingredient with name '" + request.getName() + "' already exists");
         }
 
         Ingredient ingredient = Ingredient.builder()
@@ -71,7 +74,7 @@ public class IngredientService {
     @Transactional
     public IngredientDTO updateIngredient(Long id, UpdateIngredientRequest request) {
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         if (request.getName() != null) ingredient.setName(request.getName());
         if (request.getDescription() != null) ingredient.setDescription(request.getDescription());
@@ -91,7 +94,7 @@ public class IngredientService {
     @Transactional
     public void deleteIngredient(Long id) {
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         ingredientRepository.delete(ingredient);
         log.info("Deleted ingredient: {}", ingredient.getName());

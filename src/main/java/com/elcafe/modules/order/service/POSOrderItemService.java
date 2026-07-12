@@ -1,5 +1,8 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
@@ -38,18 +41,18 @@ public class POSOrderItemService {
         log.info("Adding item to order: {} product: {}", orderId, request.getProductId());
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         validateOrderCanBeModified(order);
 
         Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new IllegalArgumentException("Product not found with ID: " + request.getProductId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with ID: " + request.getProductId()));
 
         // Check inventory availability
         List<String> missingIngredients = inventoryService.getMissingIngredients(
                 request.getProductId(), request.getQuantity());
         if (!missingIngredients.isEmpty()) {
-            throw new IllegalStateException("Insufficient inventory: " + String.join("; ", missingIngredients));
+            throw new BadRequestException("Insufficient inventory: " + String.join("; ", missingIngredients));
         }
 
         OrderItem newItem = createOrderItem(order, product, request);
@@ -71,14 +74,14 @@ public class POSOrderItemService {
         log.info("Removing item {} from order: {}", itemId, orderId);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         validateOrderCanBeModified(order);
 
         OrderItem itemToRemove = order.getItems().stream()
                 .filter(item -> item.getId().equals(itemId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Item not found with ID: " + itemId));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with ID: " + itemId));
 
         order.getItems().remove(itemToRemove);
 
@@ -102,14 +105,14 @@ public class POSOrderItemService {
         }
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         validateOrderCanBeModified(order);
 
         OrderItem item = order.getItems().stream()
                 .filter(i -> i.getId().equals(itemId))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Item not found with ID: " + itemId));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found with ID: " + itemId));
 
         int quantityDiff = newQuantity - item.getQuantity();
 
@@ -117,7 +120,7 @@ public class POSOrderItemService {
             List<String> missingIngredients = inventoryService.getMissingIngredients(
                     item.getProductId(), quantityDiff);
             if (!missingIngredients.isEmpty()) {
-                throw new IllegalStateException("Insufficient inventory: " + String.join("; ", missingIngredients));
+                throw new BadRequestException("Insufficient inventory: " + String.join("; ", missingIngredients));
             }
         }
 
@@ -200,7 +203,7 @@ public class POSOrderItemService {
      */
     private void validateOrderCanBeModified(Order order) {
         if (!canModifyOrder(order)) {
-            throw new IllegalStateException("Order cannot be modified in status: " + order.getStatus());
+            throw new BadRequestException("Order cannot be modified in status: " + order.getStatus());
         }
     }
 

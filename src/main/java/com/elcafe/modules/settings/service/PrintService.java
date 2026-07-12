@@ -1,5 +1,7 @@
 package com.elcafe.modules.settings.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.kitchen.entity.KitchenStation;
 import com.elcafe.modules.kitchen.repository.KitchenStationRepository;
 import com.elcafe.modules.menu.entity.Category;
@@ -737,7 +739,7 @@ public class PrintService {
     public boolean testPrinter(Long printerSettingsId) {
         try {
             PrinterSettings settings = printerSettingsRepository.findById(printerSettingsId)
-                    .orElseThrow(() -> new RuntimeException("Printer settings not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Printer settings not found"));
 
             if ("NETWORK".equalsIgnoreCase(settings.getConnectionType())) {
                 return testNetworkPrinter(settings);

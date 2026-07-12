@@ -1,5 +1,9 @@
 package com.elcafe.modules.loyalty.service;
 
+import com.elcafe.exception.ConflictException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
@@ -100,7 +104,7 @@ class WalletTopUpServiceTest {
                 .build();
 
         assertThatThrownBy(() -> service.create(7L, req))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("PAYME");
     }
 
@@ -155,7 +159,7 @@ class WalletTopUpServiceTest {
         when(walletTopUpRepository.findById(101L)).thenReturn(Optional.of(failed));
 
         assertThatThrownBy(() -> service.complete(101L, WalletTopUp.Provider.CLICK, "tx", null))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("FAILED");
     }
 
@@ -179,7 +183,7 @@ class WalletTopUpServiceTest {
         when(walletTopUpRepository.findById(101L)).thenReturn(Optional.of(completed));
 
         assertThatThrownBy(() -> service.cancelByCustomer(101L, 7L))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("PENDING");
     }
 

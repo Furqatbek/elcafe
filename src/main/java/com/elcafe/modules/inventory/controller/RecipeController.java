@@ -1,5 +1,8 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.ConflictException;
 import com.elcafe.utils.ApiResponse;
 import com.elcafe.modules.inventory.dto.RecipeRequest;
 import com.elcafe.modules.inventory.dto.RecipeResponse;
@@ -68,10 +71,10 @@ public class RecipeController {
         log.info("Creating recipe: product={}, ingredient={}", request.getProductId(), request.getIngredientId());
 
         Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found with id: " + request.getProductId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + request.getProductId()));
 
         Ingredient ingredient = ingredientRepository.findById(request.getIngredientId())
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + request.getIngredientId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + request.getIngredientId()));
 
         ProductIngredient recipe = ProductIngredient.builder()
                 .product(product)
@@ -99,7 +102,7 @@ public class RecipeController {
 
         // Use query that eagerly fetches product and ingredient to avoid LazyInitializationException
         ProductIngredient recipe = productIngredientRepository.findByIdWithProductAndIngredient(id)
-                .orElseThrow(() -> new RuntimeException("Recipe not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found with id: " + id));
 
         // Check if ingredient is being changed
         if (request.getIngredientId() != null &&
@@ -107,13 +110,13 @@ public class RecipeController {
 
             // Verify new ingredient exists
             Ingredient newIngredient = ingredientRepository.findById(request.getIngredientId())
-                    .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + request.getIngredientId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + request.getIngredientId()));
 
             // Check that the new product-ingredient combination doesn't already exist
             var existingRecipe = productIngredientRepository.findByProductIdAndIngredientId(
                     recipe.getProduct().getId(), request.getIngredientId());
             if (existingRecipe.isPresent()) {
-                throw new RuntimeException("This ingredient is already linked to this product");
+                throw new ConflictException("This ingredient is already linked to this product");
             }
 
             recipe.setIngredient(newIngredient);
@@ -139,7 +142,7 @@ public class RecipeController {
 
         // Use query that eagerly fetches product to avoid LazyInitializationException
         ProductIngredient recipe = productIngredientRepository.findByIdWithProductAndIngredient(id)
-                .orElseThrow(() -> new RuntimeException("Recipe not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Recipe not found with id: " + id));
 
         Long productId = recipe.getProduct().getId();
         productIngredientRepository.deleteById(id);

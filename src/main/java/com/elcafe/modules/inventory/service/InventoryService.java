@@ -1,5 +1,8 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
@@ -54,7 +57,7 @@ public class InventoryService {
 
         for (Map.Entry<Long, BigDecimal> entry : requiredIngredients.entrySet()) {
             Ingredient ingredient = ingredientRepository.findById(entry.getKey())
-                    .orElseThrow(() -> new RuntimeException("Ingredient not found: " + entry.getKey()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + entry.getKey()));
 
             if (!ingredient.hasStock(entry.getValue())) {
                 log.warn("Insufficient stock for ingredient: {} (required: {}, available: {})",
@@ -111,11 +114,11 @@ public class InventoryService {
             BigDecimal quantityRequired = entry.getValue();
 
             Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                    .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + ingredientId));
 
             // Check if enough stock is available
             if (!ingredient.hasStock(quantityRequired)) {
-                throw new RuntimeException(String.format(
+                throw new BadRequestException(String.format(
                         "Insufficient stock for ingredient: %s (required: %s, available: %s)",
                         ingredient.getName(), quantityRequired, ingredient.getCurrentStock()
                 ));
@@ -279,7 +282,7 @@ public class InventoryService {
     public void addStock(Long ingredientId, BigDecimal quantity, BigDecimal costPerUnit,
                          String notes, String performedBy) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + ingredientId));
 
         BigDecimal balanceBefore = ingredient.getCurrentStock();
         ingredient.addStock(quantity);
@@ -320,7 +323,7 @@ public class InventoryService {
     @Transactional
     public void adjustStock(Long ingredientId, BigDecimal newQuantity, String reason, String performedBy) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + ingredientId));
 
         BigDecimal balanceBefore = ingredient.getCurrentStock();
         BigDecimal difference = newQuantity.subtract(balanceBefore);

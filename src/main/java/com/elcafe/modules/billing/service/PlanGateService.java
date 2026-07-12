@@ -1,5 +1,7 @@
 package com.elcafe.modules.billing.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
@@ -210,7 +212,7 @@ public class PlanGateService {
     @Transactional
     public BillingStatusDto setPlan(SetPlanRequest request, UserPrincipal actor) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new IllegalArgumentException(
+                .orElseThrow(() -> new ResourceNotFoundException(
                         "Restaurant not found: " + request.getRestaurantId()));
         SubscriptionPlan plan = planRepository.findByCode(request.getPlanCode())
                 .orElseThrow(() -> new IllegalArgumentException(

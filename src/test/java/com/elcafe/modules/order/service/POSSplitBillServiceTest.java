@@ -1,5 +1,9 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.order.dto.pos.SplitBillDTO;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
@@ -77,7 +81,7 @@ class POSSplitBillServiceTest {
                 ))
                 .build();
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> splitBillService.splitBill(1L, request));
     }
 
@@ -109,7 +113,7 @@ class POSSplitBillServiceTest {
                 .numPeople(1)
                 .build();
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(BadRequestException.class,
                 () -> splitBillService.splitBill(1L, request));
     }
 
@@ -147,7 +151,7 @@ class POSSplitBillServiceTest {
                 ))
                 .build();
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(BadRequestException.class,
                 () -> splitBillService.splitBill(1L, request));
     }
 
@@ -163,7 +167,7 @@ class POSSplitBillServiceTest {
                 .numPeople(2)
                 .build();
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> splitBillService.splitBill(99L, request));
     }
 }

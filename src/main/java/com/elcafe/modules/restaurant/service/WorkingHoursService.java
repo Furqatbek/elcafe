@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
@@ -120,7 +121,7 @@ public class WorkingHoursService {
 
         // Validate time range
         if (request.getStartTime().isAfter(request.getEndTime()) || request.getStartTime().equals(request.getEndTime())) {
-            throw new IllegalArgumentException("Start time must be before end time");
+            throw new BadRequestException("Start time must be before end time");
         }
 
         WorkingHours workingHours = workingHoursMapper.toEntity(request);
@@ -142,7 +143,7 @@ public class WorkingHoursService {
 
         // Validate time range
         if (request.getStartTime().isAfter(request.getEndTime()) || request.getStartTime().equals(request.getEndTime())) {
-            throw new IllegalArgumentException("Start time must be before end time");
+            throw new BadRequestException("Start time must be before end time");
         }
 
         workingHoursMapper.updateEntity(workingHours, request);

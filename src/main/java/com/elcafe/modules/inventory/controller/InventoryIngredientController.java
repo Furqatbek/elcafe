@@ -1,5 +1,7 @@
 package com.elcafe.modules.inventory.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.security.UserPrincipal;
 import com.elcafe.utils.ApiResponse;
@@ -76,7 +78,7 @@ public class InventoryIngredientController {
         log.info("Fetching ingredient: {}", id);
 
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());
@@ -123,12 +125,12 @@ public class InventoryIngredientController {
         log.info("Creating ingredient: {}", request.getName());
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + request.getRestaurantId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " + request.getRestaurantId()));
 
         Supplier supplier = null;
         if (request.getSupplierId() != null) {
             supplier = supplierRepository.findById(request.getSupplierId())
-                    .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + request.getSupplierId()));
         }
 
         com.elcafe.modules.inventory.entity.IngredientCategory category = null;
@@ -228,7 +230,7 @@ public class InventoryIngredientController {
         log.info("Updating ingredient: {}", id);
 
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());
@@ -236,7 +238,7 @@ public class InventoryIngredientController {
         Supplier supplier = null;
         if (request.getSupplierId() != null) {
             supplier = supplierRepository.findById(request.getSupplierId())
-                    .orElseThrow(() -> new RuntimeException("Supplier not found with id: " + request.getSupplierId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Supplier not found with id: " + request.getSupplierId()));
         }
 
         if (request.getCategoryId() != null) {
@@ -273,7 +275,7 @@ public class InventoryIngredientController {
         log.info("Deleting ingredient: {}", id);
 
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());
@@ -291,7 +293,7 @@ public class InventoryIngredientController {
         log.info("Adding stock to ingredient: {}", id);
 
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());
@@ -308,7 +310,7 @@ public class InventoryIngredientController {
 
         // Reload ingredient after stock update
         ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         return ResponseEntity.ok(ApiResponse.success("Stock added successfully", mapToResponse(ingredient)));
     }
@@ -328,7 +330,7 @@ public class InventoryIngredientController {
                 id, currentUser.getEmail(), currentUser.getRole());
 
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());
@@ -345,7 +347,7 @@ public class InventoryIngredientController {
 
         // Reload ingredient after stock update
         ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         return ResponseEntity.ok(ApiResponse.success("Stock adjusted successfully", mapToResponse(ingredient)));
     }
@@ -356,7 +358,7 @@ public class InventoryIngredientController {
         log.info("Fetching transactions for ingredient: {}", id);
 
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());
@@ -376,7 +378,7 @@ public class InventoryIngredientController {
         log.info("Reconciling stock for ingredient: {}", id);
 
         Ingredient ingredient = ingredientRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found with id: " + id));
 
         // Validate restaurant access - prevents IDOR
         restaurantAuthorizationService.validateRestaurantAccess(ingredient.getRestaurant().getId());

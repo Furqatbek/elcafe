@@ -1,5 +1,7 @@
 package com.elcafe.modules.promotion.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.order.dto.CouponSalesRow;
 import com.elcafe.modules.order.dto.DiscountOrderRow;
 import com.elcafe.modules.order.entity.Order;
@@ -139,7 +141,7 @@ public class PromotionAnalyticsService {
         log.info("Getting performance for promotion {}", promotionId);
 
         Promotion promotion = promotionRepository.findById(promotionId)
-                .orElseThrow(() -> new IllegalArgumentException("Promotion not found: " + promotionId));
+                .orElseThrow(() -> new ResourceNotFoundException("Promotion not found: " + promotionId));
 
         // Get all usage records
         List<PromotionUsage> usages = promotionUsageRepository.findByPromotion_Id(promotionId);

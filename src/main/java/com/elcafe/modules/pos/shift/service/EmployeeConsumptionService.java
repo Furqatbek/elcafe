@@ -1,5 +1,8 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.financial.entity.Expense;
@@ -55,15 +58,15 @@ public class EmployeeConsumptionService {
     public EmployeeConsumption recordConsumption(Long restaurantId, Long productId, int quantity,
                                                   Long waiterId, Long employeeId, String notes) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
         Waiter waiter = waiterId != null ? waiterRepository.findById(waiterId).orElse(null) : null;
         User employee = employeeId != null ? userRepository.findById(employeeId).orElse(null) : null;
 
         if (waiter == null && employee == null) {
-            throw new IllegalArgumentException("Either waiterId or employeeId is required");
+            throw new BadRequestException("Either waiterId or employeeId is required");
         }
 
         // Pre-flight: refuse the consumption if any required recipe ingredient
@@ -72,7 +75,7 @@ public class EmployeeConsumptionService {
         // a silently-half-applied deduction.
         List<String> missing = inventoryService.getMissingIngredients(productId, quantity);
         if (!missing.isEmpty()) {
-            throw new IllegalStateException("Insufficient inventory: " + String.join("; ", missing));
+            throw new BadRequestException("Insufficient inventory: " + String.join("; ", missing));
         }
 
         // Find active shift

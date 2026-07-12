@@ -1,5 +1,9 @@
 package com.elcafe.modules.pos.giftcard.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.customer.repository.CustomerRepository;
@@ -133,7 +137,7 @@ class GiftCardServiceTest {
         when(giftCardTypeRepository.findByIdAndRestaurantId(99L, 1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> giftCardService.issueGiftCard(1L, request, 1L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Gift card type not found");
     }
 
@@ -152,7 +156,7 @@ class GiftCardServiceTest {
         when(giftCardRepository.findByCardNumberOrBarcode(1L, "INVALID")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> giftCardService.checkBalance(1L, "INVALID"))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Gift card not found");
     }
 
@@ -199,7 +203,7 @@ class GiftCardServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(operator));
 
         assertThatThrownBy(() -> giftCardService.redeemGiftCard(1L, request, null, null, 1L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("not valid");
     }
 

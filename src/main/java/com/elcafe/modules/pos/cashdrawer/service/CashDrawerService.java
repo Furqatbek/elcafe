@@ -1,5 +1,8 @@
 package com.elcafe.modules.pos.cashdrawer.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.order.entity.Order;
@@ -46,10 +49,10 @@ public class CashDrawerService {
     @Transactional
     public CashDrawer createCashDrawer(Long restaurantId, CreateCashDrawerRequest request) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         if (cashDrawerRepository.existsByRestaurantIdAndDrawerName(restaurantId, request.getDrawerName())) {
-            throw new IllegalArgumentException("Cash drawer with this name already exists");
+            throw new ConflictException("Cash drawer with this name already exists");
         }
 
         CashDrawer drawer = CashDrawer.builder()
@@ -79,10 +82,10 @@ public class CashDrawerService {
     @Transactional
     public CashDrawerOperation openDrawer(Long drawerId, Long operatorId, Long shiftId, String reason) {
         CashDrawer drawer = cashDrawerRepository.findById(drawerId)
-            .orElseThrow(() -> new IllegalArgumentException("Cash drawer not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Cash drawer not found"));
 
         User operator = userRepository.findById(operatorId)
-            .orElseThrow(() -> new IllegalArgumentException("Operator not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Operator not found"));
 
         EmployeeShift shift = shiftId != null ?
             shiftRepository.findById(shiftId).orElse(null) : null;
@@ -167,10 +170,10 @@ public class CashDrawerService {
     public DrawerCloseResult closeDrawer(Long drawerId, Long operatorId, Long shiftId,
                                           BigDecimal countedAmount) {
         CashDrawer drawer = cashDrawerRepository.findById(drawerId)
-            .orElseThrow(() -> new IllegalArgumentException("Cash drawer not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Cash drawer not found"));
 
         User operator = userRepository.findById(operatorId)
-            .orElseThrow(() -> new IllegalArgumentException("Operator not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Operator not found"));
 
         EmployeeShift shift = shiftId != null ?
             shiftRepository.findById(shiftId).orElse(null) : null;
@@ -225,7 +228,7 @@ public class CashDrawerService {
      */
     public BigDecimal calculateExpectedCash(Long drawerId, Long shiftId) {
         CashDrawer drawer = cashDrawerRepository.findById(drawerId)
-            .orElseThrow(() -> new IllegalArgumentException("Cash drawer not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Cash drawer not found"));
 
         BigDecimal startingFloat = drawer.getExpectedFloat();
         BigDecimal netMovement = shiftId != null ?
@@ -239,7 +242,7 @@ public class CashDrawerService {
      */
     public DrawerStatusResponse getDrawerStatus(Long drawerId, Long shiftId) {
         CashDrawer drawer = cashDrawerRepository.findById(drawerId)
-            .orElseThrow(() -> new IllegalArgumentException("Cash drawer not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Cash drawer not found"));
 
         BigDecimal expectedCash = calculateExpectedCash(drawerId, shiftId);
         List<CashDrawerOperation> recentOps = operationRepository
@@ -261,10 +264,10 @@ public class CashDrawerService {
                                                  BigDecimal amount, Long operatorId, Long shiftId,
                                                  Order order, Payment payment, String reason) {
         CashDrawer drawer = cashDrawerRepository.findById(drawerId)
-            .orElseThrow(() -> new IllegalArgumentException("Cash drawer not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Cash drawer not found"));
 
         User operator = userRepository.findById(operatorId)
-            .orElseThrow(() -> new IllegalArgumentException("Operator not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Operator not found"));
 
         EmployeeShift shift = shiftId != null ?
             shiftRepository.findById(shiftId).orElse(null) : null;

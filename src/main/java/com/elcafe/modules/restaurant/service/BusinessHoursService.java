@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.service;
 
+import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.restaurant.dto.BusinessHoursResponse;
 import com.elcafe.modules.restaurant.dto.CreateBusinessHoursRequest;
@@ -63,7 +64,7 @@ public class BusinessHoursService {
         // Check if business hours already exist for this day
         businessHoursRepository.findByRestaurant_IdAndDayOfWeek(request.getRestaurantId(), request.getDayOfWeek())
                 .ifPresent(existing -> {
-                    throw new IllegalArgumentException(
+                    throw new ConflictException(
                             String.format("Business hours already exist for %s on %s",
                                     restaurant.getName(), request.getDayOfWeek())
                     );
@@ -99,7 +100,7 @@ public class BusinessHoursService {
             businessHoursRepository.findByRestaurant_IdAndDayOfWeek(restaurantId, request.getDayOfWeek())
                     .ifPresent(existing -> {
                         if (!existing.getId().equals(id)) {
-                            throw new IllegalArgumentException(
+                            throw new ConflictException(
                                     String.format("Business hours already exist for this restaurant on %s",
                                             request.getDayOfWeek())
                             );

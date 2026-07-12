@@ -1,5 +1,6 @@
 package com.elcafe.modules.loyalty.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.loyalty.dto.CustomerMilestoneProgressResponse;
@@ -264,7 +265,7 @@ public class MilestoneService {
                 .orElseThrow(() -> new ResourceNotFoundException("Milestone progress", "milestoneId", milestoneId));
 
         if (!redemption.getRewardPending()) {
-            throw new IllegalStateException("No pending reward to redeem for this milestone");
+            throw new BadRequestException("No pending reward to redeem for this milestone");
         }
 
         LoyaltyMilestone milestone = redemption.getMilestone();

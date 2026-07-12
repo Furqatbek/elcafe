@@ -1,5 +1,9 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.inventory.service.InventoryService;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.ProductRepository;
@@ -101,44 +105,44 @@ class POSOrderItemServiceTest {
         }
 
         @Test
-        @DisplayName("2. order not found - throws IllegalArgumentException")
+        @DisplayName("2. order not found - throws a typed exception")
         void addItem_orderNotFound_throws() {
             when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(ResourceNotFoundException.class,
                     () -> posOrderItemService.addItemToOrder(99L, buildRequest(1L, 1)));
             verify(orderRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("3. product not found - throws IllegalArgumentException")
+        @DisplayName("3. product not found - throws a typed exception")
         void addItem_productNotFound_throws() {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(ResourceNotFoundException.class,
                     () -> posOrderItemService.addItemToOrder(1L, buildRequest(99L, 1)));
             verify(orderRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("4. completed order - throws IllegalStateException")
+        @DisplayName("4. completed order - throws a typed exception")
         void addItem_completedOrder_throws() {
             order.setStatus(OrderStatus.COMPLETED);
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-            assertThrows(IllegalStateException.class,
+            assertThrows(BadRequestException.class,
                     () -> posOrderItemService.addItemToOrder(1L, buildRequest(1L, 1)));
             verify(orderRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("5. delivered order - throws IllegalStateException")
+        @DisplayName("5. delivered order - throws a typed exception")
         void addItem_deliveredOrder_throws() {
             order.setStatus(OrderStatus.DELIVERED);
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-            assertThrows(IllegalStateException.class,
+            assertThrows(BadRequestException.class,
                     () -> posOrderItemService.addItemToOrder(1L, buildRequest(1L, 1)));
             verify(orderRepository, never()).save(any());
         }
@@ -159,14 +163,14 @@ class POSOrderItemServiceTest {
         }
 
         @Test
-        @DisplayName("7. insufficient inventory - throws IllegalStateException")
+        @DisplayName("7. insufficient inventory - throws a typed exception")
         void addItem_insufficientInventory_throws() {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(inventoryService.getMissingIngredients(anyLong(), anyInt()))
                     .thenReturn(List.of("Sugar (need: 500 g, have: 100 g)"));
 
-            assertThrows(IllegalStateException.class,
+            assertThrows(BadRequestException.class,
                     () -> posOrderItemService.addItemToOrder(1L, buildRequest(1L, 1)));
             verify(orderRepository, never()).save(any());
         }
@@ -235,32 +239,32 @@ class POSOrderItemServiceTest {
         }
 
         @Test
-        @DisplayName("10. order not found - throws IllegalArgumentException")
+        @DisplayName("10. order not found - throws a typed exception")
         void removeItem_orderNotFound_throws() {
             when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(ResourceNotFoundException.class,
                     () -> posOrderItemService.removeItemFromOrder(99L, 10L));
             verify(orderRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("11. item not found - throws IllegalArgumentException")
+        @DisplayName("11. item not found - throws a typed exception")
         void removeItem_itemNotFound_throws() {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(ResourceNotFoundException.class,
                     () -> posOrderItemService.removeItemFromOrder(1L, 999L));
             verify(orderRepository, never()).save(any());
         }
 
         @Test
-        @DisplayName("12. completed order - throws IllegalStateException")
+        @DisplayName("12. completed order - throws a typed exception")
         void removeItem_completedOrder_throws() {
             order.setStatus(OrderStatus.COMPLETED);
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-            assertThrows(IllegalStateException.class,
+            assertThrows(BadRequestException.class,
                     () -> posOrderItemService.removeItemFromOrder(1L, 10L));
             verify(orderRepository, never()).save(any());
         }
@@ -308,11 +312,11 @@ class POSOrderItemServiceTest {
         }
 
         @Test
-        @DisplayName("15. item not found - throws IllegalArgumentException")
+        @DisplayName("15. item not found - throws a typed exception")
         void updateQuantity_itemNotFound_throws() {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-            assertThrows(IllegalArgumentException.class,
+            assertThrows(ResourceNotFoundException.class,
                     () -> posOrderItemService.updateItemQuantity(1L, 999L, 3));
             verify(orderRepository, never()).save(any());
         }

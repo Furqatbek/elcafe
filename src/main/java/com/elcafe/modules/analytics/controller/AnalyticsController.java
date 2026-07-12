@@ -1,5 +1,6 @@
 package com.elcafe.modules.analytics.controller;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.common.ratelimit.RateLimited;
 import com.elcafe.common.ratelimit.RateLimited.RateLimitType;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
@@ -315,7 +316,7 @@ public class AnalyticsController {
      */
     private void validateDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Start date cannot be after end date");
+            throw new BadRequestException("Start date cannot be after end date");
         }
     }
 }

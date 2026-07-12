@@ -1,5 +1,7 @@
 package com.elcafe.modules.notification.controller;
 
+import com.elcafe.exception.ConflictException;
+import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.notification.dto.StockAlertSubscriptionRequest;
 import com.elcafe.modules.notification.dto.StockAlertSubscriptionResponse;
@@ -65,7 +67,7 @@ public class StockAlertController {
     @Operation(summary = "Get subscription by ID", description = "Get a specific stock alert subscription")
     public ResponseEntity<ApiResponse<StockAlertSubscriptionResponse>> getSubscription(@PathVariable Long id) {
         StockAlertSubscription subscription = subscriptionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Subscription not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Subscription not found: " + id));
 
         return ResponseEntity.ok(ApiResponse.success(
             "Subscription retrieved successfully",
@@ -82,11 +84,11 @@ public class StockAlertController {
         // Check if subscription already exists
         if (subscriptionRepository.existsByRestaurantIdAndTelegramChatId(
                 request.getRestaurantId(), request.getTelegramChatId())) {
-            throw new RuntimeException("Subscription already exists for this restaurant and chat ID");
+            throw new ConflictException("Subscription already exists for this restaurant and chat ID");
         }
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-            .orElseThrow(() -> new RuntimeException("Restaurant not found: " + request.getRestaurantId()));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found: " + request.getRestaurantId()));
 
         StockAlertSubscription subscription = StockAlertSubscription.builder()
             .restaurant(restaurant)
@@ -114,7 +116,7 @@ public class StockAlertController {
             @Valid @RequestBody StockAlertSubscriptionRequest request) {
 
         StockAlertSubscription subscription = subscriptionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Subscription not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Subscription not found: " + id));
 
         subscription.setSubscriberName(request.getSubscriberName());
         subscription.setAlertOnLowStock(request.getAlertOnLowStock());
@@ -134,7 +136,7 @@ public class StockAlertController {
             @PathVariable Long id) {
 
         StockAlertSubscription subscription = subscriptionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Subscription not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Subscription not found: " + id));
 
         subscription.setActive(!subscription.getActive());
         subscription = subscriptionRepository.save(subscription);
@@ -152,7 +154,7 @@ public class StockAlertController {
     @Operation(summary = "Delete subscription", description = "Delete a stock alert subscription")
     public ResponseEntity<ApiResponse<Void>> deleteSubscription(@PathVariable Long id) {
         if (!subscriptionRepository.existsById(id)) {
-            throw new RuntimeException("Subscription not found: " + id);
+            throw new ResourceNotFoundException("Subscription not found: " + id);
         }
 
         subscriptionRepository.deleteById(id);

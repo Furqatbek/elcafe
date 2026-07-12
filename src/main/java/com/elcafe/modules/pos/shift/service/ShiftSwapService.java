@@ -1,5 +1,8 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.pos.shift.entity.ShiftSchedule;
@@ -31,9 +34,9 @@ public class ShiftSwapService {
                                            Long targetEmployeeId, Long scheduleId,
                                            LocalDate shiftDate, String reason) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
         User requesting = userRepository.findById(requestingEmployeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
         User target = targetEmployeeId != null
                 ? userRepository.findById(targetEmployeeId).orElse(null) : null;
         ShiftSchedule schedule = scheduleId != null
@@ -58,10 +61,10 @@ public class ShiftSwapService {
     @Transactional
     public ShiftSwapRequest acceptRequest(Long requestId) {
         ShiftSwapRequest request = swapRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Swap request not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Swap request not found"));
 
         if (request.getStatus() != ShiftSwapRequest.Status.PENDING) {
-            throw new IllegalStateException("Request is not pending");
+            throw new BadRequestException("Request is not pending");
         }
 
         request.setStatus(ShiftSwapRequest.Status.ACCEPTED);
@@ -72,7 +75,7 @@ public class ShiftSwapService {
     @Transactional
     public ShiftSwapRequest rejectRequest(Long requestId) {
         ShiftSwapRequest request = swapRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Swap request not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Swap request not found"));
 
         request.setStatus(ShiftSwapRequest.Status.REJECTED);
         log.info("Shift swap rejected: {}", requestId);
@@ -82,10 +85,10 @@ public class ShiftSwapService {
     @Transactional
     public ShiftSwapRequest approveRequest(Long requestId, Long managerId) {
         ShiftSwapRequest request = swapRepository.findById(requestId)
-                .orElseThrow(() -> new RuntimeException("Swap request not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Swap request not found"));
 
         if (request.getStatus() != ShiftSwapRequest.Status.ACCEPTED) {
-            throw new IllegalStateException("Request must be accepted before approval");
+            throw new BadRequestException("Request must be accepted before approval");
         }
 
         User manager = userRepository.findById(managerId).orElse(null);

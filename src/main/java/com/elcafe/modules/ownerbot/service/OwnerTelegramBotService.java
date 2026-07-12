@@ -1,5 +1,7 @@
 package com.elcafe.modules.ownerbot.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.inventory.entity.Ingredient;
@@ -199,9 +201,9 @@ public class OwnerTelegramBotService {
     @Transactional
     public String generateVerificationCode(Long userId, Long restaurantId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         String code = generateRandomCode();
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(10);

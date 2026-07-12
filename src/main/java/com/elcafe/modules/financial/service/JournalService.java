@@ -1,5 +1,8 @@
 package com.elcafe.modules.financial.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.entity.JournalEntry;
 import com.elcafe.modules.financial.entity.Transaction;
@@ -40,15 +43,15 @@ public class JournalService {
         log.info("Creating journal entry for restaurant: {}, amount: {}", restaurantId, amount);
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         // Use pessimistic locking to prevent race conditions when updating account balances
         // This ensures that concurrent journal entries don't read stale balance values
         Account debitAccount = accountRepository.findByIdWithLock(debitAccountId)
-                .orElseThrow(() -> new RuntimeException("Debit account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Debit account not found"));
 
         Account creditAccount = accountRepository.findByIdWithLock(creditAccountId)
-                .orElseThrow(() -> new RuntimeException("Credit account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Credit account not found"));
 
         // Generate entry number
         String entryNumber = generateEntryNumber(restaurantId);
@@ -128,14 +131,14 @@ public class JournalService {
         log.info("Posting journal entry: {}", journalEntryId);
 
         JournalEntry journalEntry = journalEntryRepository.findById(journalEntryId)
-                .orElseThrow(() -> new RuntimeException("Journal entry not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Journal entry not found"));
 
         if (journalEntry.getStatus() != JournalEntry.Status.DRAFT) {
-            throw new RuntimeException("Only draft entries can be posted");
+            throw new BadRequestException("Only draft entries can be posted");
         }
 
         if (!journalEntry.isBalanced()) {
-            throw new RuntimeException("Journal entry is not balanced - cannot post");
+            throw new BadRequestException("Journal entry is not balanced - cannot post");
         }
 
         journalEntry.setStatus(JournalEntry.Status.POSTED);
@@ -153,10 +156,10 @@ public class JournalService {
         log.info("Reversing journal entry: {}", journalEntryId);
 
         JournalEntry originalEntry = journalEntryRepository.findById(journalEntryId)
-                .orElseThrow(() -> new RuntimeException("Journal entry not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Journal entry not found"));
 
         if (originalEntry.getStatus() != JournalEntry.Status.POSTED) {
-            throw new RuntimeException("Only posted entries can be reversed");
+            throw new BadRequestException("Only posted entries can be reversed");
         }
 
         // Create reversing entry with opposite debits and credits
@@ -186,7 +189,7 @@ public class JournalService {
         for (Transaction originalTx : originalTransactions) {
             // Use pessimistic locking to prevent race conditions when updating account balances
             Account account = accountRepository.findByIdWithLock(originalTx.getAccount().getId())
-                    .orElseThrow(() -> new RuntimeException("Account not found: " + originalTx.getAccount().getId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Account not found: " + originalTx.getAccount().getId()));
             BigDecimal balanceBefore = account.getBalance();
 
             // Reverse the transaction type

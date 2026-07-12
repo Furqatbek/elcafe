@@ -1,5 +1,7 @@
 package com.elcafe.modules.courier.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.courier.dto.CourierLocationResponse;
 import com.elcafe.modules.courier.dto.CourierLocationUpdateRequest;
 import com.elcafe.modules.courier.entity.CourierProfile;
@@ -32,7 +34,7 @@ public class CourierLocationService {
     @Transactional
     public CourierLocationResponse updateLocation(Long courierId, CourierLocationUpdateRequest request) {
         CourierProfile courier = courierProfileRepository.findById(courierId)
-                .orElseThrow(() -> new RuntimeException("Courier not found with ID: " + courierId));
+                .orElseThrow(() -> new ResourceNotFoundException("Courier not found with ID: " + courierId));
 
         CourierLocation location = CourierLocation.builder()
                 .courier(courier)
@@ -63,7 +65,7 @@ public class CourierLocationService {
     public CourierLocationResponse getLatestLocation(Long courierId) {
         return courierLocationRepository.findFirstByCourierIdOrderByTimestampDesc(courierId)
                 .map(this::mapToResponse)
-                .orElseThrow(() -> new RuntimeException("No location found for courier: " + courierId));
+                .orElseThrow(() -> new ResourceNotFoundException("No location found for courier: " + courierId));
     }
 
     /**

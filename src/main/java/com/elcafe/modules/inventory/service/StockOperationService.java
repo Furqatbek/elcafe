@@ -1,5 +1,7 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.InventoryBatch;
 import com.elcafe.modules.inventory.entity.InventoryTransaction;
@@ -58,7 +60,7 @@ public class StockOperationService {
                                          String notes, String performedBy) {
         return executeWithRetry(() -> {
             Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                    .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + ingredientId));
 
             BigDecimal balanceBefore = ingredient.getCurrentStock();
             ingredient.addStock(quantity);
@@ -108,7 +110,7 @@ public class StockOperationService {
                                             String notes, String performedBy) {
         return executeWithRetry(() -> {
             Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                    .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + ingredientId));
 
             BigDecimal balanceBefore = ingredient.getCurrentStock();
 
@@ -155,7 +157,7 @@ public class StockOperationService {
                                                  String notes, String performedBy) {
         return executeWithRetry(() -> {
             Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                    .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + ingredientId));
 
             BigDecimal balanceBefore = ingredient.getCurrentStock();
             ingredient.forceDeductStock(quantity);
@@ -191,7 +193,7 @@ public class StockOperationService {
     @Transactional(readOnly = true)
     public StockReconciliationResult reconcileStock(Long ingredientId) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found: " + ingredientId));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + ingredientId));
 
         // Only reconcile if expiry tracking is enabled (batches are used)
         if (!ingredient.getTrackExpiry()) {

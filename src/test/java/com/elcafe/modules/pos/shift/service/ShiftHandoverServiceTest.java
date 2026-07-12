@@ -1,5 +1,7 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -129,7 +131,7 @@ class ShiftHandoverServiceTest {
         when(shiftRepository.findById(100L)).thenReturn(Optional.of(activeShift));
 
         assertThatThrownBy(() -> service.completeHandover(100L, BigDecimal.ZERO, null))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("not active");
     }
 }

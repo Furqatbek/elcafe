@@ -1,5 +1,7 @@
 package com.elcafe.modules.billing.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.modules.auth.enums.UserRole;
 import com.elcafe.modules.billing.dto.BillingStatusDto;
@@ -155,7 +157,7 @@ class PlatformAdminServiceTest {
     void extendPlan_unknownRestaurant() {
         when(restaurantRepository.findById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> service.extendPlan(99L, 10, actor))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

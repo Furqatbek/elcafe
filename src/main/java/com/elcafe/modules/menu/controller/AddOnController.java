@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.menu.dto.AddOnResponse;
 import com.elcafe.modules.menu.dto.CreateAddOnRequest;
 import com.elcafe.modules.menu.dto.UpdateAddOnRequest;
@@ -67,7 +68,7 @@ public class AddOnController {
 
         // Ensure the addOnGroupId in the path matches the one in the request
         if (!addOnGroupId.equals(request.getAddOnGroupId())) {
-            throw new IllegalArgumentException("AddOnGroup ID in path does not match request body");
+            throw new BadRequestException("AddOnGroup ID in path does not match request body");
         }
 
         AddOnResponse addOn = addOnService.createAddOn(request);

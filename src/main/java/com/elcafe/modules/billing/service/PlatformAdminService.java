@@ -1,5 +1,7 @@
 package com.elcafe.modules.billing.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.modules.billing.dto.BillingStatusDto;
@@ -84,7 +86,7 @@ public class PlatformAdminService {
     @Transactional
     public BillingStatusDto extendPlan(Long restaurantId, int days, UserPrincipal actor) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found: " + restaurantId));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found: " + restaurantId));
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime previous = restaurant.getPlanExpiresAt();
         LocalDateTime base = previous != null && previous.isAfter(now) ? previous : now;
@@ -115,7 +117,7 @@ public class PlatformAdminService {
     @Transactional
     public TenantSummaryDto setActive(Long restaurantId, boolean active, UserPrincipal actor) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found: " + restaurantId));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found: " + restaurantId));
         boolean previous = Boolean.TRUE.equals(restaurant.getActive());
 
         restaurant.setActive(active);
@@ -149,7 +151,7 @@ public class PlatformAdminService {
     @Transactional
     public TenantSummaryDto cancel(Long restaurantId, UserPrincipal actor) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found: " + restaurantId));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found: " + restaurantId));
 
         restaurant.setActive(false);
         restaurant.setSubscriptionStatus(SubscriptionStatus.CANCELLED);

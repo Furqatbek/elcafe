@@ -1,5 +1,7 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.Payment;
 import com.elcafe.modules.order.enums.OrderStatus;
@@ -131,14 +133,14 @@ class POSTableServiceTest {
         }
 
         @Test
-        @DisplayName("unpaid order throws IllegalStateException")
+        @DisplayName("unpaid order throws a typed exception")
         void unpaidOrder_throws() {
             order.setStatus(OrderStatus.PREPARING);
             // No payments added, so isFullyPaid() is false
 
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-            IllegalStateException ex = assertThrows(IllegalStateException.class,
+            BadRequestException ex = assertThrows(BadRequestException.class,
                     () -> posTableService.closeOrderAndReleaseTable(1L));
 
             assertTrue(ex.getMessage().contains("payment has not been recorded"));
@@ -225,13 +227,13 @@ class POSTableServiceTest {
         }
 
         @Test
-        @DisplayName("closed (DELIVERED) order throws IllegalArgumentException")
+        @DisplayName("closed (DELIVERED) order throws a typed exception")
         void closedOrder_throws() {
             order.setStatus(OrderStatus.DELIVERED);
 
             when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            BadRequestException ex = assertThrows(BadRequestException.class,
                     () -> posTableService.changeTable(1L, 20L));
 
             assertTrue(ex.getMessage().contains("closed or cancelled"));

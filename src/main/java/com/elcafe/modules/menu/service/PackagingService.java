@@ -1,5 +1,7 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.repository.InventoryIngredientRepository;
 import com.elcafe.modules.menu.dto.CreatePackagingRuleRequest;
@@ -129,11 +131,11 @@ public class PackagingService {
     @Transactional
     public PackagingRule createRule(CreatePackagingRuleRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
         Product product = productRepository.findById(request.getProductId())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         Ingredient ingredient = ingredientRepository.findById(request.getPackagingIngredientId())
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
 
         PackagingRule rule = PackagingRule.builder()
                 .restaurant(restaurant)
@@ -154,11 +156,11 @@ public class PackagingService {
     @Transactional
     public PackagingRule updateRule(Long ruleId, CreatePackagingRuleRequest request) {
         PackagingRule rule = packagingRuleRepository.findById(ruleId)
-                .orElseThrow(() -> new RuntimeException("Packaging rule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Packaging rule not found"));
 
         if (request.getPackagingIngredientId() != null) {
             Ingredient ingredient = ingredientRepository.findById(request.getPackagingIngredientId())
-                    .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
             rule.setPackagingIngredient(ingredient);
         }
         if (request.getOrderTypes() != null) rule.setOrderTypes(request.getOrderTypes());
@@ -178,7 +180,7 @@ public class PackagingService {
     @Transactional
     public PackagingRule toggleRule(Long ruleId) {
         PackagingRule rule = packagingRuleRepository.findById(ruleId)
-                .orElseThrow(() -> new RuntimeException("Packaging rule not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Packaging rule not found"));
         rule.setActive(!rule.getActive());
         return packagingRuleRepository.save(rule);
     }

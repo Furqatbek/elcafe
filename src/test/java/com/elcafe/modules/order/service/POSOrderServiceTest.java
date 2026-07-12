@@ -1,5 +1,9 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.bundle.entity.Bundle;
 import com.elcafe.modules.bundle.repository.BundleRepository;
 import com.elcafe.modules.customer.entity.Customer;
@@ -478,13 +482,13 @@ class POSOrderServiceTest {
         }
 
         @Test
-        @DisplayName("8. restaurant not found - throws IllegalArgumentException")
+        @DisplayName("8. restaurant not found - throws a typed exception")
         void createOrder_restaurantNotFound_throws() {
             CreatePOSOrderRequest request = buildDineInRequest();
             request.setRestaurantId(99L);
             when(restaurantRepository.findById(99L)).thenReturn(Optional.empty());
 
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                     () -> posOrderService.createOrder(request));
 
             assertTrue(ex.getMessage().contains("Restaurant not found"));
@@ -492,7 +496,7 @@ class POSOrderServiceTest {
         }
 
         @Test
-        @DisplayName("9. insufficient inventory - throws IllegalStateException")
+        @DisplayName("9. insufficient inventory - throws a typed exception")
         void createOrder_insufficientInventory_throws() {
             CreatePOSOrderRequest request = buildDineInRequest();
             when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
@@ -508,7 +512,7 @@ class POSOrderServiceTest {
             when(inventoryService.getMissingIngredients(anyLong(), any(Integer.class)))
                     .thenReturn(List.of("Milk (need: 500 ml, have: 100 ml)"));
 
-            IllegalStateException ex = assertThrows(IllegalStateException.class,
+            BadRequestException ex = assertThrows(BadRequestException.class,
                     () -> posOrderService.createOrder(request));
 
             assertTrue(ex.getMessage().contains("Insufficient inventory"));
@@ -724,11 +728,11 @@ class POSOrderServiceTest {
         }
 
         @Test
-        @DisplayName("16. order not found - throws IllegalArgumentException")
+        @DisplayName("16. order not found - throws a typed exception")
         void getOrderById_notFound_throws() {
             when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class,
                     () -> posOrderService.getOrderById(99L));
 
             assertTrue(ex.getMessage().contains("Order not found"));
@@ -939,7 +943,7 @@ class POSOrderServiceTest {
                 order.setId(3L);
                 when(orderRepository.findById(3L)).thenReturn(Optional.of(order));
 
-                IllegalStateException ex = assertThrows(IllegalStateException.class,
+                BadRequestException ex = assertThrows(BadRequestException.class,
                         () -> posOrderService.attachCustomer(3L,
                                 com.elcafe.modules.order.dto.pos.AttachCustomerRequest.builder()
                                         .customerId(99L).build()));
@@ -953,7 +957,7 @@ class POSOrderServiceTest {
         void rejectsMissingOrder() {
             when(orderRepository.findById(404L)).thenReturn(Optional.empty());
 
-            assertThrows(IllegalArgumentException.class, () ->
+            assertThrows(ResourceNotFoundException.class, () ->
                     posOrderService.attachCustomer(404L,
                             com.elcafe.modules.order.dto.pos.AttachCustomerRequest.builder()
                                     .qrCode("CST-NOPE").build()));

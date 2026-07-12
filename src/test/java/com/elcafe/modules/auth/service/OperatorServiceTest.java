@@ -1,5 +1,7 @@
 package com.elcafe.modules.auth.service;
 
+import com.elcafe.exception.ConflictException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.dto.CreateOperatorRequest;
 import com.elcafe.modules.auth.dto.OperatorDTO;
@@ -115,7 +117,7 @@ class OperatorServiceTest {
         when(userRepository.existsByEmail("op@test.com")).thenReturn(true);
 
         assertThatThrownBy(() -> operatorService.createOperator(request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Email already exists");
     }
 

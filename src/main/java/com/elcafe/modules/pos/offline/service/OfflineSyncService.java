@@ -1,5 +1,7 @@
 package com.elcafe.modules.pos.offline.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.service.POSOrderService;
 import com.elcafe.modules.pos.offline.dto.*;
@@ -47,7 +49,7 @@ public class OfflineSyncService {
     @Transactional
     public POSDevice registerDevice(Long restaurantId, DeviceRegistrationRequest request) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         // Check if device already exists
         Optional<POSDevice> existing = posDeviceRepository.findByRestaurantIdAndDeviceId(
@@ -94,7 +96,7 @@ public class OfflineSyncService {
     @Transactional
     public OfflineOrder queueOfflineOrder(Long restaurantId, OfflineOrderRequest request) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         // Check for duplicate
         Optional<OfflineOrder> existing = offlineOrderRepository

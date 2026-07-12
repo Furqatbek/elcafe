@@ -1,5 +1,9 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -65,7 +69,7 @@ class POSOrderDiscountServiceTest {
     @DisplayName("Apply discount — order not found throws")
     void applyDiscount_orderNotFound_throws() {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> discountService.applyDiscount(99L, new ApplyDiscountRequest()));
     }
 
@@ -75,7 +79,7 @@ class POSOrderDiscountServiceTest {
         order.setStatus(OrderStatus.COMPLETED);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(BadRequestException.class,
                 () -> discountService.applyDiscount(1L, new ApplyDiscountRequest()));
     }
 
@@ -85,7 +89,7 @@ class POSOrderDiscountServiceTest {
         order.setStatus(OrderStatus.DELIVERED);
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(BadRequestException.class,
                 () -> discountService.applyDiscount(1L, new ApplyDiscountRequest()));
     }
 
@@ -107,7 +111,7 @@ class POSOrderDiscountServiceTest {
     @DisplayName("Remove discount — order not found throws")
     void removeDiscount_orderNotFound_throws() {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> discountService.removeDiscount(99L));
     }
 
@@ -143,7 +147,7 @@ class POSOrderDiscountServiceTest {
     @DisplayName("Happy hour preview — order not found throws")
     void happyHourPreview_orderNotFound_throws() {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> discountService.calculateHappyHourDiscountPreview(99L));
     }
 }

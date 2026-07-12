@@ -1,5 +1,7 @@
 package com.elcafe.modules.pos.tax.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.customer.entity.Customer;
@@ -147,7 +149,7 @@ class TaxExemptionServiceTest {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> taxExemptionService.applyOrderTaxExemption(99L, new ApplyTaxExemptionRequest(), 1L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Order not found");
     }
 
@@ -161,7 +163,7 @@ class TaxExemptionServiceTest {
         when(exemptionTypeRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> taxExemptionService.applyOrderTaxExemption(1L, request, 1L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Exemption type not found");
     }
 

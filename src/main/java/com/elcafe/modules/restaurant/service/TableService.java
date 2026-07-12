@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.service;
 
+import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.order.entity.Order;
@@ -45,7 +46,7 @@ public class TableService {
         // Check if table number already exists for this restaurant
         tableRepository.findByRestaurant_IdAndTableNumber(request.getRestaurantId(), request.getTableNumber())
                 .ifPresent(t -> {
-                    throw new IllegalArgumentException("Table number " + request.getTableNumber() + " already exists");
+                    throw new ConflictException("Table number " + request.getTableNumber() + " already exists");
                 });
 
         RestaurantTable table = tableMapper.toEntity(request);
@@ -68,7 +69,7 @@ public class TableService {
         if (request.getTableNumber() != null && !request.getTableNumber().equals(table.getTableNumber())) {
             tableRepository.findByRestaurant_IdAndTableNumber(table.getRestaurant().getId(), request.getTableNumber())
                     .ifPresent(t -> {
-                        throw new IllegalArgumentException("Table number " + request.getTableNumber() + " already exists");
+                        throw new ConflictException("Table number " + request.getTableNumber() + " already exists");
                     });
         }
 
@@ -173,7 +174,7 @@ public class TableService {
             String tableNumber = prefix + (start + i);
             tableRepository.findByRestaurant_IdAndTableNumber(request.getRestaurantId(), tableNumber)
                     .ifPresent(t -> {
-                        throw new IllegalArgumentException("Table number " + tableNumber + " already exists");
+                        throw new ConflictException("Table number " + tableNumber + " already exists");
                     });
             RestaurantTable table = RestaurantTable.builder()
                     .restaurant(restaurant)

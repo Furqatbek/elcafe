@@ -1,5 +1,6 @@
 package com.elcafe.modules.restaurant.controller;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.restaurant.dto.BusinessHoursResponse;
 import com.elcafe.modules.restaurant.dto.CreateBusinessHoursRequest;
@@ -60,7 +61,7 @@ public class BusinessHoursController {
 
         // Ensure the restaurantId in the path matches the request
         if (!restaurantId.equals(request.getRestaurantId())) {
-            throw new IllegalArgumentException("Restaurant ID in path does not match request body");
+            throw new BadRequestException("Restaurant ID in path does not match request body");
         }
 
         BusinessHoursResponse response = businessHoursService.create(request);

@@ -1,5 +1,7 @@
 package com.elcafe.modules.order.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderSource;
@@ -58,7 +60,7 @@ public class OrderController {
         if (order.getRestaurant() == null || order.getRestaurant().getId() == null) {
             // Get the first available active restaurant as default
             Restaurant restaurant = restaurantRepository.findAnyActiveRestaurant()
-                    .orElseThrow(() -> new IllegalStateException("No active restaurant found in the system"));
+                    .orElseThrow(() -> new ResourceNotFoundException("No active restaurant found in the system"));
             order.setRestaurant(restaurant);
         }
         // §3.3: the order's (possibly defaulted) restaurant must be one the caller owns.

@@ -1,5 +1,7 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.inventory.dto.AddInputRequest;
 import com.elcafe.modules.inventory.dto.CompleteBatchRequest;
 import com.elcafe.modules.inventory.dto.CreateProductionBatchRequest;
@@ -245,7 +247,7 @@ class ProductionBatchServiceTest {
                     .ingredientId(1L).actualQuantity(new BigDecimal("1")).build();
 
             assertThatThrownBy(() -> service.addInput(100L, request))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("DRAFT or IN_PROGRESS");
         }
     }
@@ -272,7 +274,7 @@ class ProductionBatchServiceTest {
             when(batchRepository.findById(100L)).thenReturn(Optional.of(batch));
 
             assertThatThrownBy(() -> service.startBatch(100L))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("DRAFT");
         }
     }
@@ -335,7 +337,7 @@ class ProductionBatchServiceTest {
                     .outputQuantity(new BigDecimal("10")).build();
 
             assertThatThrownBy(() -> service.completeBatch(100L, request))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("no inputs");
         }
 
@@ -348,7 +350,7 @@ class ProductionBatchServiceTest {
                     .outputQuantity(new BigDecimal("10")).build();
 
             assertThatThrownBy(() -> service.completeBatch(100L, request))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(BadRequestException.class);
         }
     }
 
@@ -398,7 +400,7 @@ class ProductionBatchServiceTest {
             when(batchRepository.findById(100L)).thenReturn(Optional.of(batch));
 
             assertThatThrownBy(() -> service.consumeFromBatch(100L, new BigDecimal("1"), 1L, 1L))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("not available");
         }
     }
@@ -557,7 +559,7 @@ class ProductionBatchServiceTest {
             when(batchRepository.findById(100L)).thenReturn(Optional.of(batch));
 
             assertThatThrownBy(() -> service.deleteBatch(100L))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(BadRequestException.class)
                     .hasMessageContaining("DRAFT");
         }
     }

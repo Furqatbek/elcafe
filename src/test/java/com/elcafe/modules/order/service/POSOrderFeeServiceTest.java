@@ -1,5 +1,9 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -73,7 +77,7 @@ class POSOrderFeeServiceTest {
     @DisplayName("Apply >100% service fee — throws")
     void applyServiceFee_over100_throws() {
         when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(BadRequestException.class,
                 () -> feeService.applyServiceFee(1L, BigDecimal.valueOf(101)));
     }
 
@@ -127,7 +131,7 @@ class POSOrderFeeServiceTest {
     @DisplayName("Order not found — throws")
     void applyEntryFee_orderNotFound_throws() {
         when(orderRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(ResourceNotFoundException.class,
                 () -> feeService.applyEntryFee(99L, BigDecimal.valueOf(5000)));
     }
 }

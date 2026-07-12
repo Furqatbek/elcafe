@@ -1,5 +1,7 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.menu.dto.*;
 import com.elcafe.modules.menu.entity.*;
 import com.elcafe.modules.menu.repository.*;
@@ -34,7 +36,7 @@ public class MenuCollectionService {
     @Transactional(readOnly = true)
     public MenuCollectionDTO getMenuCollectionById(Long id) {
         MenuCollection collection = menuCollectionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu collection not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Menu collection not found with id: " + id));
         return toDTO(collection);
     }
 
@@ -49,7 +51,7 @@ public class MenuCollectionService {
     @Transactional
     public MenuCollectionDTO createMenuCollection(CreateMenuCollectionRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         MenuCollection collection = MenuCollection.builder()
                 .restaurant(restaurant)
@@ -75,7 +77,7 @@ public class MenuCollectionService {
     @Transactional
     public MenuCollectionDTO updateMenuCollection(Long id, UpdateMenuCollectionRequest request) {
         MenuCollection collection = menuCollectionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu collection not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Menu collection not found with id: " + id));
 
         collection.setName(request.getName());
         collection.setDescription(request.getDescription());
@@ -99,13 +101,13 @@ public class MenuCollectionService {
     @Transactional
     public void addProductsToCollection(Long collectionId, List<Long> productIds) {
         MenuCollection collection = menuCollectionRepository.findById(collectionId)
-                .orElseThrow(() -> new RuntimeException("Menu collection not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Menu collection not found"));
 
         int sortOrder = 0;
         for (Long productId : productIds) {
             if (!menuCollectionItemRepository.existsByMenuCollectionIdAndProductId(collectionId, productId)) {
                 Product product = productRepository.findById(productId)
-                        .orElseThrow(() -> new RuntimeException("Product not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
                 MenuCollectionItem item = MenuCollectionItem.builder()
                         .menuCollection(collection)
@@ -123,7 +125,7 @@ public class MenuCollectionService {
     @Transactional
     public void deleteMenuCollection(Long id) {
         MenuCollection collection = menuCollectionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Menu collection not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Menu collection not found"));
 
         menuCollectionRepository.delete(collection);
         log.info("Deleted menu collection: {}", collection.getName());

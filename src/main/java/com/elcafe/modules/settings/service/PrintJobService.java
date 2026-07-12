@@ -1,5 +1,8 @@
 package com.elcafe.modules.settings.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.kitchen.entity.KitchenStation;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
@@ -170,10 +173,10 @@ public class PrintJobService {
     @Transactional
     public PrintJob retryDlqJob(Long jobId) {
         PrintJob job = printJobRepository.findById(jobId)
-                .orElseThrow(() -> new IllegalArgumentException("Print job not found: " + jobId));
+                .orElseThrow(() -> new ResourceNotFoundException("Print job not found: " + jobId));
 
         if (!job.isInDlq()) {
-            throw new IllegalStateException("Job is not in dead-letter queue");
+            throw new BadRequestException("Job is not in dead-letter queue");
         }
 
         // Reset and retry
@@ -212,7 +215,7 @@ public class PrintJobService {
     @Transactional
     public PrintJob createReprintJob(Long originalJobId) {
         PrintJob originalJob = printJobRepository.findById(originalJobId)
-                .orElseThrow(() -> new IllegalArgumentException("Print job not found: " + originalJobId));
+                .orElseThrow(() -> new ResourceNotFoundException("Print job not found: " + originalJobId));
 
         PrintJob reprintJob = PrintJob.builder()
                 .restaurant(originalJob.getRestaurant())

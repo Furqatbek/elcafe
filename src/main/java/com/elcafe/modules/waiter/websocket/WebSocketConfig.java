@@ -64,6 +64,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // lockdown. The base-profile default stays "*" for local dev; prod sets CORS_ORIGINS to an
         // explicit list, and STOMP auth (enforce) independently requires a Bearer token on CONNECT.
         String[] origins = allowedOrigins.split(",");
+        // EH-1.5: failed CONNECTs (bad/expired token under enforce) and broken frames come back as
+        // a readable ERROR frame instead of a silent connection drop.
+        registry.setErrorHandler(new StompErrorHandler());
         registry.addEndpoint("/ws-waiter")
                 .setAllowedOriginPatterns(origins)
                 .withSockJS(); // Enable SockJS fallback options

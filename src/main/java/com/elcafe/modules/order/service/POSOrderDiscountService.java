@@ -1,5 +1,8 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -39,7 +42,7 @@ public class POSOrderDiscountService {
         log.info("Applying discount to order {}: type={}", orderId, request.getDiscountType());
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         validateOrderCanBeModified(order);
 
@@ -62,7 +65,7 @@ public class POSOrderDiscountService {
         log.info("Removing discount from order {}", orderId);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         validateOrderCanBeModified(order);
 
@@ -84,7 +87,7 @@ public class POSOrderDiscountService {
         log.info("Validating coupon {} for order {}", couponCode, orderId);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         // Build validation request from order
         ValidateCouponRequest validateRequest = ValidateCouponRequest.builder()
@@ -113,7 +116,7 @@ public class POSOrderDiscountService {
         log.info("Calculating happy hour discount preview for order {}", orderId);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         return happyHourService.calculateHappyHourDiscount(order);
     }
@@ -123,7 +126,7 @@ public class POSOrderDiscountService {
      */
     private void validateOrderCanBeModified(Order order) {
         if (!canModifyOrder(order)) {
-            throw new IllegalStateException("Order cannot be modified in status: " + order.getStatus());
+            throw new BadRequestException("Order cannot be modified in status: " + order.getStatus());
         }
     }
 

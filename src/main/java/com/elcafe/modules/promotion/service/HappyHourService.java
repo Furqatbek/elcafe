@@ -1,5 +1,6 @@
 package com.elcafe.modules.promotion.service;
 
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.menu.entity.Category;
 import com.elcafe.modules.menu.entity.Product;
 import com.elcafe.modules.menu.repository.CategoryRepository;
@@ -81,7 +82,7 @@ public class HappyHourService {
 
         // Check for duplicate name
         if (happyHourRepository.existsByRestaurantIdAndNameIgnoreCase(restaurantId, request.getName())) {
-            throw new IllegalArgumentException("Happy hour with this name already exists");
+            throw new ConflictException("Happy hour with this name already exists");
         }
 
         HappyHour happyHour = HappyHour.builder()
@@ -145,7 +146,7 @@ public class HappyHourService {
         // Check for duplicate name (excluding current)
         if (happyHourRepository.existsByRestaurantIdAndNameIgnoreCaseAndIdNot(
                 happyHour.getRestaurant().getId(), request.getName(), id)) {
-            throw new IllegalArgumentException("Happy hour with this name already exists");
+            throw new ConflictException("Happy hour with this name already exists");
         }
 
         happyHour.setName(request.getName());

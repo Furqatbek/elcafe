@@ -1,5 +1,9 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.menu.dto.*;
 import com.elcafe.modules.menu.entity.*;
 import com.elcafe.modules.menu.enums.LinkType;
@@ -38,17 +42,17 @@ public class LinkedItemService {
     @Transactional
     public LinkedItemDTO addLinkedItem(Long productId, AddLinkedItemRequest request) {
         if (productId.equals(request.getLinkedProductId())) {
-            throw new RuntimeException("Cannot link product to itself");
+            throw new BadRequestException("Cannot link product to itself");
         }
 
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
         Product linkedProduct = productRepository.findById(request.getLinkedProductId())
-                .orElseThrow(() -> new RuntimeException("Linked product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Linked product not found"));
 
         if (linkedItemRepository.existsByProductIdAndLinkedProductId(productId, request.getLinkedProductId())) {
-            throw new RuntimeException("Products are already linked");
+            throw new ConflictException("Products are already linked");
         }
 
         LinkedItem linkedItem = LinkedItem.builder()
@@ -66,7 +70,7 @@ public class LinkedItemService {
     @Transactional
     public void deleteLinkedItem(Long id) {
         LinkedItem linkedItem = linkedItemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Linked item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Linked item not found"));
 
         linkedItemRepository.delete(linkedItem);
         log.info("Deleted linked item: {}", id);

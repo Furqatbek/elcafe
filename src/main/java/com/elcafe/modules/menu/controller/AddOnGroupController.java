@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.controller;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.menu.dto.AddOnGroupResponse;
 import com.elcafe.modules.menu.dto.CreateAddOnGroupRequest;
@@ -72,7 +73,7 @@ public class AddOnGroupController {
 
         // Ensure the restaurantId in the path matches the one in the request
         if (!restaurantId.equals(request.getRestaurantId())) {
-            throw new IllegalArgumentException("Restaurant ID in path does not match request body");
+            throw new BadRequestException("Restaurant ID in path does not match request body");
         }
 
         AddOnGroupResponse addOnGroup = addOnGroupService.createAddOnGroup(request);

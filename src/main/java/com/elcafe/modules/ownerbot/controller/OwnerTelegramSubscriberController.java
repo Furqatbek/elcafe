@@ -1,5 +1,7 @@
 package com.elcafe.modules.ownerbot.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.ownerbot.entity.OwnerNotificationSettings;
 import com.elcafe.modules.ownerbot.entity.OwnerTelegramSubscriber;
@@ -56,7 +58,7 @@ public class OwnerTelegramSubscriberController {
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATOR')")
     public ResponseEntity<ApiResponse<SubscriberDetail>> getById(@PathVariable Long id) {
         OwnerTelegramSubscriber s = subscriberRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Subscriber not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Subscriber not found"));
         return ResponseEntity.ok(ApiResponse.success("Subscriber", SubscriberDetail.from(s)));
     }
 
@@ -67,7 +69,7 @@ public class OwnerTelegramSubscriberController {
             @PathVariable Long id,
             @RequestBody UpdateRequest req) {
         OwnerTelegramSubscriber s = subscriberRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Subscriber not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Subscriber not found"));
 
         // Subscriber-level toggles. null = leave unchanged.
         if (req.isActive() != null) s.setIsActive(req.isActive());
@@ -95,7 +97,7 @@ public class OwnerTelegramSubscriberController {
     @Transactional
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
         OwnerTelegramSubscriber s = subscriberRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Subscriber not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Subscriber not found"));
         // Drop notification log rows first — they reference the
         // subscriber and are otherwise orphaned.
         logRepository.deleteBySubscriberId(s.getId());

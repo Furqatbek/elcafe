@@ -1,5 +1,7 @@
 package com.elcafe.modules.pos.cashdrawer.service;
 
+import com.elcafe.exception.ConflictException;
+
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.pos.cashdrawer.dto.*;
@@ -92,7 +94,7 @@ class CashDrawerServiceTest {
         when(cashDrawerRepository.existsByRestaurantIdAndDrawerName(1L, "Main Drawer")).thenReturn(true);
 
         assertThatThrownBy(() -> cashDrawerService.createCashDrawer(1L, request))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("already exists");
     }
 

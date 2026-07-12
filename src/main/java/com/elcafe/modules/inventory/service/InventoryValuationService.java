@@ -1,5 +1,8 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.inventory.entity.*;
 import com.elcafe.modules.inventory.enums.ValuationMethod;
 import com.elcafe.modules.inventory.repository.*;
@@ -70,7 +73,7 @@ public class InventoryValuationService {
         ValuationSettings settings = ValuationSettings.builder()
                 .restaurant(ingredientRepository.findById(restaurantId)
                         .map(Ingredient::getRestaurant)
-                        .orElseThrow(() -> new RuntimeException("Restaurant not found")))
+                        .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found")))
                 .valuationMethod(method)
                 .effectiveFrom(LocalDate.now())
                 .isActive(true)
@@ -114,7 +117,7 @@ public class InventoryValuationService {
         log.debug("WAC consumption: {} units from ingredient {}", quantity, ingredientId);
 
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
 
         BigDecimal wac = ingredient.getEffectiveCost();
         LocalDate today = LocalDate.now();
@@ -141,7 +144,7 @@ public class InventoryValuationService {
                           "{} valid. Requested: {}.",
                         ingredient.getName(), ingredientId, expiredStock, availableNonExpiredStock, quantity);
 
-                throw new IllegalStateException(
+                throw new BadRequestException(
                         String.format("Cannot consume %s units of %s: only %s non-expired units available.",
                                 quantity, ingredient.getName(), availableNonExpiredStock));
             }
@@ -220,7 +223,7 @@ public class InventoryValuationService {
     @Transactional
     public ConsumptionResult consumeWithValuation(Long ingredientId, BigDecimal quantity, Long orderId) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
 
         ValuationMethod method = getValuationMethod(ingredient.getRestaurant().getId());
 
@@ -272,7 +275,7 @@ public class InventoryValuationService {
     @Transactional(readOnly = true)
     public BigDecimal calculateIngredientValue(Long ingredientId, ValuationMethod method) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
 
         return switch (method) {
             case FIFO -> calculateFIFOValue(ingredientId);
@@ -323,7 +326,7 @@ public class InventoryValuationService {
     @Transactional
     public BigDecimal recalculateWAC(Long ingredientId) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
 
         List<InventoryBatch> batches = batchRepository.findActiveBatchesFEFO(ingredientId);
 
@@ -380,7 +383,7 @@ public class InventoryValuationService {
     private ConsumptionResult consumeFromBatches(List<InventoryBatch> batches, Long ingredientId,
                                                   BigDecimal quantity, Long orderId, ValuationMethod method) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
 
         LocalDate today = LocalDate.now();
 
@@ -405,7 +408,7 @@ public class InventoryValuationService {
                           "{} valid. Requested: {}. Consider writing off expired batches.",
                         ingredient.getName(), ingredientId, expiredStock, availableNonExpiredStock, quantity);
 
-                throw new IllegalStateException(
+                throw new BadRequestException(
                         String.format("Cannot consume %s units of %s: only %s non-expired units available. " +
                                       "%s units are expired and blocked from consumption.",
                                 quantity, ingredient.getName(), availableNonExpiredStock, expiredStock));

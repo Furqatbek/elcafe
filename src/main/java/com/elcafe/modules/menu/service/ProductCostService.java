@@ -1,5 +1,7 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.ProductIngredient;
 import com.elcafe.modules.inventory.repository.InventoryProductIngredientRepository;
@@ -51,7 +53,7 @@ public class ProductCostService {
     @Transactional
     public BigDecimal recalculateProductCost(Long productId) {
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found: " + productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
 
         BigDecimal newCostPrice;
 

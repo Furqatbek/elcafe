@@ -1,5 +1,7 @@
 package com.elcafe.modules.courier.service;
 
+import com.elcafe.exception.ConflictException;
+
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.enums.UserRole;
@@ -113,7 +115,7 @@ class CourierServiceTest {
         CreateCourierRequest req = new CreateCourierRequest(); req.setEmail("courier@test.com");
         when(userRepository.existsByEmail("courier@test.com")).thenReturn(true);
         assertThatThrownBy(() -> courierService.createCourier(req))
-                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Email already exists");
+                .isInstanceOf(ConflictException.class).hasMessageContaining("Email already exists");
     }
 
     @Test @DisplayName("updateCourier — updates selectively")

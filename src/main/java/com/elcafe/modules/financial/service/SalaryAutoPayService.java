@@ -1,5 +1,7 @@
 package com.elcafe.modules.financial.service;
 
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.financial.entity.PayrollEntry;
 import com.elcafe.modules.financial.entity.SalaryConfig;
 import com.elcafe.modules.financial.entity.SalaryConfig.PayFrequency;
@@ -183,7 +185,7 @@ public class SalaryAutoPayService {
         Period period = computePeriod(freq, config, paymentDate);
 
         if (alreadyPaidForPeriod(config, period)) {
-            throw new IllegalStateException(
+            throw new ConflictException(
                     "Salary already paid for this period (last paid: " + config.getLastPaidDate() + ")");
         }
 
@@ -194,7 +196,7 @@ public class SalaryAutoPayService {
                 // doing nothing and disabling the button — they explicitly
                 // asked to pay and the result was no PayrollEntry, which
                 // looks like the system swallowed the action.
-                throw new IllegalStateException(
+                throw new BadRequestException(
                         "Nothing to pay for " + period.start + " — " + period.end
                                 + ": no clocked shifts in this period.");
             }

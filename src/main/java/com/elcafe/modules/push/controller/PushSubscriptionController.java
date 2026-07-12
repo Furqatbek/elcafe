@@ -1,5 +1,7 @@
 package com.elcafe.modules.push.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.customer.entity.Customer;
@@ -97,7 +99,7 @@ public class PushSubscriptionController {
         String username = auth.getName();
 
         User user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         PushSubscription subscription = webPushService.subscribeUser(user, request);
 

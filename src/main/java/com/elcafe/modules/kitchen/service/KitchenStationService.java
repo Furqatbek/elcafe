@@ -1,5 +1,6 @@
 package com.elcafe.modules.kitchen.service;
 
+import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.kitchen.dto.CreateKitchenStationRequest;
 import com.elcafe.modules.kitchen.dto.KitchenStationDTO;
@@ -63,7 +64,7 @@ public class KitchenStationService {
 
         // Check for duplicate name in same restaurant
         if (kitchenStationRepository.existsByNameAndRestaurant_Id(request.getName(), request.getRestaurantId())) {
-            throw new IllegalArgumentException("Kitchen station with name '" + request.getName() + "' already exists in this restaurant");
+            throw new ConflictException("Kitchen station with name '" + request.getName() + "' already exists in this restaurant");
         }
 
         // Get printer if specified
@@ -98,7 +99,7 @@ public class KitchenStationService {
 
         // Check for duplicate name in same restaurant (excluding current station)
         if (kitchenStationRepository.existsByNameAndRestaurant_IdAndIdNot(request.getName(), station.getRestaurant().getId(), id)) {
-            throw new IllegalArgumentException("Kitchen station with name '" + request.getName() + "' already exists in this restaurant");
+            throw new ConflictException("Kitchen station with name '" + request.getName() + "' already exists in this restaurant");
         }
 
         // Update fields

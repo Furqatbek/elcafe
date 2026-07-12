@@ -1,5 +1,8 @@
 package com.elcafe.modules.selfservice.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.bundle.entity.Bundle;
 import com.elcafe.modules.bundle.repository.BundleRepository;
 import com.elcafe.modules.menu.entity.Category;
@@ -80,7 +83,7 @@ public class SelfServiceController {
         // Handle special "takeaway" code for direct takeaway session
         if ("takeaway".equalsIgnoreCase(code)) {
             if (restaurantId == null) {
-                throw new IllegalArgumentException("Restaurant ID is required for takeaway orders");
+                throw new BadRequestException("Restaurant ID is required for takeaway orders");
             }
             session = orderService.startTakeawaySession(restaurantId, deviceInfo, ipAddress);
             response.put("orderType", "TAKEAWAY");
@@ -134,7 +137,7 @@ public class SelfServiceController {
             @RequestHeader("X-Session-Token") String sessionToken) {
 
         SelfServiceSession session = orderService.getSession(sessionToken)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
 
         Map<String, Object> response = new HashMap<>();
         response.put("sessionToken", session.getSessionToken());
@@ -160,7 +163,7 @@ public class SelfServiceController {
             @PathVariable Long restaurantId) {
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         SelfServiceSettings settings = orderService.getSettings(restaurantId);
 
@@ -256,7 +259,7 @@ public class SelfServiceController {
             @PathVariable Long productId) {
 
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
         Map<String, Object> response = new HashMap<>();
         response.put("id", product.getId());

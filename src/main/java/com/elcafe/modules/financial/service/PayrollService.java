@@ -1,5 +1,9 @@
 package com.elcafe.modules.financial.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.entity.PayrollEntry;
 import com.elcafe.modules.financial.repository.AccountRepository;
@@ -78,10 +82,10 @@ public class PayrollService {
         log.info("Approving payroll entry: {}", payrollId);
 
         PayrollEntry payroll = payrollRepository.findById(payrollId)
-                .orElseThrow(() -> new RuntimeException("Payroll entry not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payroll entry not found"));
 
         if (payroll.getStatus() != PayrollEntry.PaymentStatus.PENDING) {
-            throw new RuntimeException("Only pending payroll entries can be approved");
+            throw new BadRequestException("Only pending payroll entries can be approved");
         }
 
         payroll.setStatus(PayrollEntry.PaymentStatus.APPROVED);
@@ -98,10 +102,10 @@ public class PayrollService {
         log.info("Processing payment for payroll entry: {}", payrollId);
 
         PayrollEntry payroll = payrollRepository.findById(payrollId)
-                .orElseThrow(() -> new RuntimeException("Payroll entry not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payroll entry not found"));
 
         if (payroll.getStatus() != PayrollEntry.PaymentStatus.APPROVED) {
-            throw new RuntimeException("Only approved payroll entries can be paid");
+            throw new BadRequestException("Only approved payroll entries can be paid");
         }
 
         payroll.setPaymentDate(paymentDate);
@@ -130,14 +134,14 @@ public class PayrollService {
         log.info("Soft deleting payroll entry: {} by user: {}", id, deletedBy);
 
         PayrollEntry payroll = payrollRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payroll entry not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payroll entry not found"));
 
         if (payroll.isDeleted()) {
-            throw new RuntimeException("Payroll entry has already been deleted");
+            throw new ConflictException("Payroll entry has already been deleted");
         }
 
         if (payroll.getStatus() == PayrollEntry.PaymentStatus.PAID) {
-            throw new RuntimeException("Cannot delete paid payroll entry - use void/reverse instead");
+            throw new BadRequestException("Cannot delete paid payroll entry - use void/reverse instead");
         }
 
         // Use soft delete instead of hard delete for audit compliance
@@ -148,7 +152,7 @@ public class PayrollService {
 
     public PayrollEntry getPayrollEntryById(Long id) {
         return payrollRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payroll entry not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payroll entry not found"));
     }
 
     public List<PayrollEntry> getPayrollEntriesByRestaurant(Long restaurantId) {
@@ -164,13 +168,13 @@ public class PayrollService {
                                            String notes) {
         log.info("Updating payroll entry: {}", id);
         PayrollEntry payroll = payrollRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payroll entry not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Payroll entry not found"));
 
         if (payroll.getStatus() == PayrollEntry.PaymentStatus.PAID) {
-            throw new RuntimeException("Cannot edit a paid payroll entry");
+            throw new BadRequestException("Cannot edit a paid payroll entry");
         }
         if (payroll.getStatus() == PayrollEntry.PaymentStatus.CANCELLED) {
-            throw new RuntimeException("Cannot edit a cancelled payroll entry");
+            throw new BadRequestException("Cannot edit a cancelled payroll entry");
         }
 
         if (hoursWorked != null) payroll.setHoursWorked(hoursWorked);

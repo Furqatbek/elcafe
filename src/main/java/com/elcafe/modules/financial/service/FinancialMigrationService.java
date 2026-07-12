@@ -1,5 +1,7 @@
 package com.elcafe.modules.financial.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.entity.Expense;
 import com.elcafe.modules.financial.repository.AccountRepository;
@@ -61,7 +63,7 @@ public class FinancialMigrationService {
         log.info("Starting financial data sync for restaurant: {}", restaurantId);
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found: " + restaurantId));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found: " + restaurantId));
 
         MigrationResult.MigrationResultBuilder result = MigrationResult.builder()
                 .restaurantId(restaurantId)

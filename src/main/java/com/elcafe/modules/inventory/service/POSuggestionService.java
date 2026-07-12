@@ -1,5 +1,8 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.financial.entity.PurchaseOrder;
 import com.elcafe.modules.financial.entity.PurchaseOrderItem;
 import com.elcafe.modules.financial.repository.PurchaseOrderItemRepository;
@@ -99,10 +102,10 @@ public class POSuggestionService {
         log.info("Generating PO for supplier: {} in restaurant: {}", request.getSupplierId(), request.getRestaurantId());
 
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         Supplier supplier = supplierRepository.findById(request.getSupplierId())
-                .orElseThrow(() -> new RuntimeException("Supplier not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Supplier not found"));
 
         // Get ingredients to include
         List<Ingredient> ingredients;
@@ -121,7 +124,7 @@ public class POSuggestionService {
         }
 
         if (ingredients.isEmpty()) {
-            throw new RuntimeException("No ingredients to order");
+            throw new BadRequestException("No ingredients to order");
         }
 
         // Build PO

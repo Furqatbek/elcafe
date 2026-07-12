@@ -1,5 +1,9 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.enums.OrderStatus;
 import com.elcafe.modules.order.repository.OrderRepository;
@@ -35,11 +39,11 @@ public class POSTableService {
         log.info("Closing order and releasing table for order: {}", orderId);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         // Verify order has been paid before closing
         if (!order.isFullyPaid() && order.getStatus() != OrderStatus.CANCELLED) {
-            throw new IllegalStateException("Cannot close order — payment has not been recorded. " +
+            throw new BadRequestException("Cannot close order — payment has not been recorded. " +
                     "Process payment before closing the order.");
         }
 
@@ -71,16 +75,16 @@ public class POSTableService {
         log.info("Changing table for order {}: newTableId={}", orderId, newTableId);
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         // Validate order is not closed
         if (order.getStatus() == OrderStatus.DELIVERED || order.getStatus() == OrderStatus.CANCELLED) {
-            throw new IllegalArgumentException("Cannot change table for a closed or cancelled order");
+            throw new BadRequestException("Cannot change table for a closed or cancelled order");
         }
 
         // Find the new table
         RestaurantTable newTable = restaurantTableRepository.findById(newTableId)
-                .orElseThrow(() -> new IllegalArgumentException("Table not found with ID: " + newTableId));
+                .orElseThrow(() -> new ResourceNotFoundException("Table not found with ID: " + newTableId));
 
         // Check if new table is available or the same as current
         Long currentTableId = order.getDiningTable() != null ? order.getDiningTable().getId() : null;
@@ -90,7 +94,7 @@ public class POSTableService {
         }
 
         if (newTable.getStatus() == RestaurantTable.TableStatus.OCCUPIED) {
-            throw new IllegalArgumentException("Table " + newTable.getTableNumber() + " is already occupied");
+            throw new ConflictException("Table " + newTable.getTableNumber() + " is already occupied");
         }
 
         // Release all current tables except the new one

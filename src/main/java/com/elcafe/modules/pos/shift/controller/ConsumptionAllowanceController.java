@@ -1,5 +1,8 @@
 package com.elcafe.modules.pos.shift.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.common.security.service.RestaurantAuthorizationService;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
@@ -66,7 +69,7 @@ public class ConsumptionAllowanceController {
             @RequestBody UpsertRequest request) {
         restaurantAuthorizationService.checkAccess(restaurantId);
         ConsumptionAllowance existing = allowanceRepository.findById(allowanceId)
-                .orElseThrow(() -> new IllegalArgumentException("Allowance not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Allowance not found"));
         return ResponseEntity.ok(ApiResponse.success(
                 "Consumption allowance updated",
                 allowanceRepository.save(build(restaurantId, existing, request))));
@@ -97,7 +100,7 @@ public class ConsumptionAllowanceController {
             @RequestParam(required = false) Long waiterId) {
         restaurantAuthorizationService.checkAccess(restaurantId);
         Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         User employee = employeeId != null ? userRepository.findById(employeeId).orElse(null) : null;
         Waiter waiter = waiterId != null ? waiterRepository.findById(waiterId).orElse(null) : null;
         ConsumptionLimitService.Decision d =
@@ -115,19 +118,19 @@ public class ConsumptionAllowanceController {
                                        ConsumptionAllowance existing,
                                        UpsertRequest req) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         Category category = req.categoryId() != null
                 ? categoryRepository.findById(req.categoryId())
-                    .orElseThrow(() -> new IllegalArgumentException("Category not found"))
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found"))
                 : null;
         User employee = req.employeeId() != null
                 ? userRepository.findById(req.employeeId())
-                    .orElseThrow(() -> new IllegalArgumentException("Employee not found"))
+                    .orElseThrow(() -> new ResourceNotFoundException("Employee not found"))
                 : null;
         Waiter waiter = req.waiterId() != null
                 ? waiterRepository.findById(req.waiterId())
-                    .orElseThrow(() -> new IllegalArgumentException("Waiter not found"))
+                    .orElseThrow(() -> new ResourceNotFoundException("Waiter not found"))
                 : null;
 
         String role = req.role() != null ? req.role().trim() : null;
@@ -137,11 +140,11 @@ public class ConsumptionAllowanceController {
         if (waiter != null) subjects++;
         if (role != null) subjects++;
         if (subjects > 1) {
-            throw new IllegalArgumentException(
+            throw new BadRequestException(
                     "Allowance can target at most one of employee, waiter, or role");
         }
         if (req.limitCount() == null && req.limitAmount() == null) {
-            throw new IllegalArgumentException("At least one of limitCount or limitAmount must be set");
+            throw new BadRequestException("At least one of limitCount or limitAmount must be set");
         }
 
         ConsumptionAllowance a = existing != null ? existing : new ConsumptionAllowance();

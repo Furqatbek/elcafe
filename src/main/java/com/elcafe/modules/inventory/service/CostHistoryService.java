@@ -1,5 +1,7 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.modules.inventory.entity.Ingredient;
 import com.elcafe.modules.inventory.entity.IngredientCostHistory;
 import com.elcafe.modules.inventory.entity.InventoryBatch;
@@ -58,7 +60,7 @@ public class CostHistoryService {
                                                    CostChangeReason reason, String createdBy,
                                                    InventoryBatch batch, Long purchaseOrderId, String notes) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
 
         BigDecimal previousCost = ingredient.getCostPerUnit() != null
                 ? ingredient.getCostPerUnit()
@@ -185,7 +187,7 @@ public class CostHistoryService {
     @Transactional(readOnly = true)
     public CostVariance calculateCostVariance(Long ingredientId, LocalDateTime startDate, LocalDateTime endDate) {
         Ingredient ingredient = ingredientRepository.findById(ingredientId)
-                .orElseThrow(() -> new RuntimeException("Ingredient not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found"));
 
         BigDecimal currentCost = ingredient.getCostPerUnit() != null
                 ? ingredient.getCostPerUnit()

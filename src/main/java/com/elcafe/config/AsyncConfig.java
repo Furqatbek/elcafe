@@ -3,7 +3,9 @@ package com.elcafe.config;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
@@ -18,7 +20,7 @@ import java.util.concurrent.RejectedExecutionHandler;
 @Configuration
 @EnableAsync
 @EnableScheduling
-public class AsyncConfig implements SchedulingConfigurer {
+public class AsyncConfig implements SchedulingConfigurer, AsyncConfigurer {
 
     @Bean(name = "taskExecutor")
     public Executor taskExecutor() {
@@ -46,6 +48,9 @@ public class AsyncConfig implements SchedulingConfigurer {
         // starve the minute jobs (PERF-10). 8 keeps sub-minute jobs on time under batch overlap.
         scheduler.setPoolSize(8);
         scheduler.setThreadNamePrefix("scheduler-");
+        // EH-1.5: a throwing @Scheduled job must log once and leave the schedule alive — pinned
+        // here explicitly instead of relying on the framework default staying that way.
+        scheduler.setErrorHandler(t -> log.error("Scheduled task failed: ", t));
         scheduler.setWaitForTasksToCompleteOnShutdown(true);
         scheduler.setAwaitTerminationSeconds(30);
         return scheduler;
@@ -54,6 +59,25 @@ public class AsyncConfig implements SchedulingConfigurer {
     @Override
     public void configureTasks(ScheduledTaskRegistrar taskRegistrar) {
         taskRegistrar.setTaskScheduler(taskScheduler());
+    }
+
+    /** Keep @Async on the same pool it always used (bean-name convention picked it up before). */
+    @Override
+    public Executor getAsyncExecutor() {
+        return taskExecutor();
+    }
+
+    /**
+     * EH-1.5: a void @Async method that throws otherwise vanishes without a trace (the default
+     * handler only logs at ERROR if one is configured — with none, behaviour is
+     * implementation-dependent). One loud, structured log line per failure; Sentry picks it up
+     * via the logback integration when a DSN is configured.
+     */
+    @Override
+    public AsyncUncaughtExceptionHandler getAsyncUncaughtExceptionHandler() {
+        return (ex, method, params) ->
+                log.error("Uncaught exception in @Async {}.{}: ",
+                        method.getDeclaringClass().getSimpleName(), method.getName(), ex);
     }
 
     /**

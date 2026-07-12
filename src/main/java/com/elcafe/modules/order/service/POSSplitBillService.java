@@ -1,5 +1,8 @@
 package com.elcafe.modules.order.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.order.dto.pos.SplitBillDTO;
 import com.elcafe.modules.order.entity.Order;
 import com.elcafe.modules.order.entity.OrderItem;
@@ -34,7 +37,7 @@ public class POSSplitBillService {
         log.info("Splitting bill for order: {} mode: {}", orderId, request.getMode());
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Order not found with ID: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with ID: " + orderId));
 
         return switch (request.getMode()) {
             case ITEMS -> splitByItems(order, request.getItemSplits());
@@ -57,7 +60,7 @@ public class POSSplitBillService {
                 OrderItem item = order.getItems().stream()
                         .filter(i -> i.getId().equals(itemId))
                         .findFirst()
-                        .orElseThrow(() -> new IllegalArgumentException("Item not found: " + itemId));
+                        .orElseThrow(() -> new ResourceNotFoundException("Item not found: " + itemId));
 
                 splitItems.add(SplitBillDTO.SplitItemInfo.builder()
                         .itemId(item.getId())
@@ -91,7 +94,7 @@ public class POSSplitBillService {
      */
     private SplitBillDTO.SplitBillResponse splitEvenly(Order order, Integer numPeople) {
         if (numPeople == null || numPeople < 2) {
-            throw new IllegalArgumentException("Number of people must be at least 2");
+            throw new BadRequestException("Number of people must be at least 2");
         }
 
         BigDecimal amountPerPerson = order.getTotal().divide(
@@ -135,7 +138,7 @@ public class POSSplitBillService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (totalSplitAmount.compareTo(order.getTotal()) != 0) {
-            throw new IllegalArgumentException("Split amounts (" + totalSplitAmount +
+            throw new BadRequestException("Split amounts (" + totalSplitAmount +
                     ") do not match order total (" + order.getTotal() + ")");
         }
 

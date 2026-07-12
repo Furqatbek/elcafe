@@ -1,5 +1,8 @@
 package com.elcafe.modules.inventory.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.inventory.dto.*;
 import com.elcafe.modules.inventory.entity.*;
 import com.elcafe.modules.inventory.enums.TransactionType;
@@ -46,12 +49,12 @@ public class ProductionBatchService {
     @Transactional
     public ProductionBatch createBatch(CreateProductionBatchRequest request) {
         Restaurant restaurant = restaurantRepository.findById(request.getRestaurantId())
-                .orElseThrow(() -> new RuntimeException("Restaurant not found: " + request.getRestaurantId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found: " + request.getRestaurantId()));
 
         Product product = null;
         if (request.getProductId() != null) {
             product = productRepository.findById(request.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Product not found: " + request.getProductId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + request.getProductId()));
         }
 
         String batchNumber = generateBatchNumber();
@@ -90,7 +93,7 @@ public class ProductionBatchService {
         validateBatchModifiable(batch);
 
         Ingredient ingredient = ingredientRepository.findById(request.getIngredientId())
-                .orElseThrow(() -> new RuntimeException("Ingredient not found: " + request.getIngredientId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + request.getIngredientId()));
 
         BigDecimal costPerUnit = ingredient.getEffectiveCost();
         String unit = request.getUnit() != null ? request.getUnit() : ingredient.getUnit();
@@ -122,14 +125,14 @@ public class ProductionBatchService {
         validateBatchModifiable(batch);
 
         ProductionBatchInput input = productionBatchInputRepository.findById(inputId)
-                .orElseThrow(() -> new RuntimeException("Production batch input not found: " + inputId));
+                .orElseThrow(() -> new ResourceNotFoundException("Production batch input not found: " + inputId));
 
         if (!input.getProductionBatch().getId().equals(batchId)) {
-            throw new IllegalArgumentException("Input " + inputId + " does not belong to batch " + batchId);
+            throw new BadRequestException("Input " + inputId + " does not belong to batch " + batchId);
         }
 
         Ingredient ingredient = ingredientRepository.findById(request.getIngredientId())
-                .orElseThrow(() -> new RuntimeException("Ingredient not found: " + request.getIngredientId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + request.getIngredientId()));
 
         BigDecimal costPerUnit = ingredient.getEffectiveCost();
         String unit = request.getUnit() != null ? request.getUnit() : ingredient.getUnit();
@@ -157,7 +160,7 @@ public class ProductionBatchService {
         ProductionBatch batch = getBatchOrThrow(batchId);
 
         if (batch.getStatus() != ProductionBatch.Status.DRAFT) {
-            throw new IllegalStateException("Can only start a DRAFT batch, current status: " + batch.getStatus());
+            throw new BadRequestException("Can only start a DRAFT batch, current status: " + batch.getStatus());
         }
 
         batch.setStatus(ProductionBatch.Status.IN_PROGRESS);
@@ -185,13 +188,13 @@ public class ProductionBatchService {
 
         if (batch.getStatus() != ProductionBatch.Status.DRAFT
                 && batch.getStatus() != ProductionBatch.Status.IN_PROGRESS) {
-            throw new IllegalStateException(
+            throw new BadRequestException(
                     "Can only complete a DRAFT or IN_PROGRESS batch, current status: " + batch.getStatus());
         }
 
         List<ProductionBatchInput> inputs = productionBatchInputRepository.findByProductionBatchId(batchId);
         if (inputs.isEmpty()) {
-            throw new IllegalStateException("Cannot complete batch with no inputs");
+            throw new BadRequestException("Cannot complete batch with no inputs");
         }
 
         BigDecimal totalInputCost = BigDecimal.ZERO;
@@ -277,7 +280,7 @@ public class ProductionBatchService {
         ProductionBatch batch = getBatchOrThrow(batchId);
 
         if (!batch.isAvailable()) {
-            throw new IllegalStateException("Batch " + batch.getBatchNumber() + " is not available for consumption");
+            throw new BadRequestException("Batch " + batch.getBatchNumber() + " is not available for consumption");
         }
 
         BigDecimal cost = batch.consume(quantity);
@@ -324,7 +327,7 @@ public class ProductionBatchService {
 
         ProductionBatch batch = findAvailableBatch(productId);
         if (batch == null) {
-            throw new RuntimeException("No available production batch for product: " + productId);
+            throw new BadRequestException("No available production batch for product: " + productId);
         }
 
         return consumeFromBatch(batch.getId(), quantity, orderId, orderItemId);
@@ -407,7 +410,7 @@ public class ProductionBatchService {
         validateBatchModifiable(batch);
 
         if (batch.getProduct() == null) {
-            throw new IllegalStateException("Batch has no linked product — cannot load recipe");
+            throw new BadRequestException("Batch has no linked product — cannot load recipe");
         }
 
         // Clear existing inputs
@@ -432,7 +435,7 @@ public class ProductionBatchService {
     public void deleteBatch(Long batchId) {
         ProductionBatch batch = getBatchOrThrow(batchId);
         if (batch.getStatus() != ProductionBatch.Status.DRAFT) {
-            throw new IllegalStateException("Can only delete DRAFT batches, current status: " + batch.getStatus());
+            throw new BadRequestException("Can only delete DRAFT batches, current status: " + batch.getStatus());
         }
         productionBatchRepository.delete(batch);
         log.info("Deleted draft batch {}", batch.getBatchNumber());
@@ -452,13 +455,13 @@ public class ProductionBatchService {
 
     private ProductionBatch getBatchOrThrow(Long batchId) {
         return productionBatchRepository.findById(batchId)
-                .orElseThrow(() -> new RuntimeException("Production batch not found: " + batchId));
+                .orElseThrow(() -> new ResourceNotFoundException("Production batch not found: " + batchId));
     }
 
     private void validateBatchModifiable(ProductionBatch batch) {
         if (batch.getStatus() != ProductionBatch.Status.DRAFT
                 && batch.getStatus() != ProductionBatch.Status.IN_PROGRESS) {
-            throw new IllegalStateException(
+            throw new BadRequestException(
                     "Batch can only be modified in DRAFT or IN_PROGRESS status, current: " + batch.getStatus());
         }
     }

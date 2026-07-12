@@ -1,5 +1,9 @@
 package com.elcafe.modules.pos.shift.service;
 
+import com.elcafe.exception.ConflictException;
+
+import com.elcafe.exception.BadRequestException;
+
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.pos.cashdrawer.repository.CashDrawerRepository;
@@ -113,7 +117,7 @@ class ShiftManagementServiceTest {
         when(shiftRepository.findActiveShiftByEmployee(1L)).thenReturn(Optional.of(shift));
 
         assertThatThrownBy(() -> shiftManagementService.clockIn(1L, request))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("already has an active shift");
     }
 
@@ -136,7 +140,7 @@ class ShiftManagementServiceTest {
         when(shiftRepository.findById(1L)).thenReturn(Optional.of(shift));
 
         assertThatThrownBy(() -> shiftManagementService.clockOut(1L, request))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("not active");
     }
 

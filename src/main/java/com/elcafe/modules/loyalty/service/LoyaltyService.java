@@ -1,5 +1,6 @@
 package com.elcafe.modules.loyalty.service;
 
+import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
@@ -172,7 +173,7 @@ public class LoyaltyService {
         LoyaltyConfig config = getActiveConfig(order.getRestaurant().getId());
 
         if (config == null || !config.getEnabled()) {
-            throw new IllegalStateException("Loyalty system not enabled");
+            throw new BadRequestException("Loyalty system not enabled");
         }
 
         // Calculate maximum allowed bonus usage
@@ -192,7 +193,7 @@ public class LoyaltyService {
 
         // Check sufficient balance
         if (!loyalty.hasSufficientBalance(actualBonusAmount)) {
-            throw new IllegalStateException("Insufficient bonus balance");
+            throw new BadRequestException("Insufficient bonus balance");
         }
 
         // Record the transaction

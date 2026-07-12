@@ -1,5 +1,9 @@
 package com.elcafe.modules.financial.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.financial.entity.Account;
 import com.elcafe.modules.financial.repository.AccountRepository;
 import com.elcafe.modules.restaurant.entity.Restaurant;
@@ -35,7 +39,7 @@ public class AccountService {
         log.info("Updating account: {}", id);
 
         Account existingAccount = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
 
         // Only allow updating certain fields, not balance or system status
         existingAccount.setName(updatedAccount.getName());
@@ -62,14 +66,14 @@ public class AccountService {
         log.info("Soft deleting account: {} by user: {}", id, deletedBy);
 
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
 
         if (account.isDeleted()) {
-            throw new RuntimeException("Account has already been deleted");
+            throw new ConflictException("Account has already been deleted");
         }
 
         if (account.getSystemAccount()) {
-            throw new RuntimeException("Cannot delete system account");
+            throw new BadRequestException("Cannot delete system account");
         }
 
         // Use soft delete instead of hard delete for audit compliance
@@ -80,7 +84,7 @@ public class AccountService {
 
     public Account getAccountById(Long id) {
         return accountRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Account not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
     }
 
     public List<Account> getAccountsByRestaurant(Long restaurantId) {
@@ -97,7 +101,7 @@ public class AccountService {
 
     public Account getAccountByCode(Long restaurantId, String code) {
         return accountRepository.findByRestaurant_IdAndCode(restaurantId, code)
-                .orElseThrow(() -> new RuntimeException("Account not found with code: " + code));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with code: " + code));
     }
 
     /**
@@ -114,7 +118,7 @@ public class AccountService {
         }
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + restaurantId));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " + restaurantId));
 
         // Create default asset accounts
         createDefaultAccount(restaurant, "1000", "Cash", Account.AccountType.ASSET,
@@ -182,7 +186,7 @@ public class AccountService {
         log.info("Adding missing accounts for restaurant: {}", restaurantId);
 
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-                .orElseThrow(() -> new RuntimeException("Restaurant not found with id: " + restaurantId));
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found with id: " + restaurantId));
 
         int added = 0;
 

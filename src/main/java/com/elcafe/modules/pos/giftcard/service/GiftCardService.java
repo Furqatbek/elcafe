@@ -1,5 +1,9 @@
 package com.elcafe.modules.pos.giftcard.service;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.modules.auth.entity.User;
 import com.elcafe.modules.auth.repository.UserRepository;
 import com.elcafe.modules.customer.entity.Customer;
@@ -52,10 +56,10 @@ public class GiftCardService {
     @Transactional
     public GiftCardType createGiftCardType(Long restaurantId, CreateGiftCardTypeRequest request) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         if (giftCardTypeRepository.existsByRestaurantIdAndName(restaurantId, request.getName())) {
-            throw new IllegalArgumentException("Gift card type with this name already exists");
+            throw new ConflictException("Gift card type with this name already exists");
         }
 
         GiftCardType type = GiftCardType.builder()
@@ -87,27 +91,27 @@ public class GiftCardService {
     @Transactional
     public GiftCard issueGiftCard(Long restaurantId, IssueGiftCardRequest request, Long operatorId) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         User operator = userRepository.findById(operatorId)
-            .orElseThrow(() -> new IllegalArgumentException("Operator not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Operator not found"));
 
         // Validate amount
         GiftCardType type = null;
         if (request.getGiftCardTypeId() != null) {
             type = giftCardTypeRepository.findByIdAndRestaurantId(request.getGiftCardTypeId(), restaurantId)
-                .orElseThrow(() -> new IllegalArgumentException("Gift card type not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Gift card type not found"));
 
             if (!type.getIsCustomAmountAllowed()) {
                 if (type.getFixedAmounts() == null || !type.getFixedAmounts().contains(request.getAmount())) {
-                    throw new IllegalArgumentException("Amount must be one of the fixed amounts");
+                    throw new BadRequestException("Amount must be one of the fixed amounts");
                 }
             } else {
                 if (type.getMinAmount() != null && request.getAmount().compareTo(type.getMinAmount()) < 0) {
-                    throw new IllegalArgumentException("Amount below minimum");
+                    throw new BadRequestException("Amount below minimum");
                 }
                 if (type.getMaxAmount() != null && request.getAmount().compareTo(type.getMaxAmount()) > 0) {
-                    throw new IllegalArgumentException("Amount above maximum");
+                    throw new BadRequestException("Amount above maximum");
                 }
             }
         }
@@ -117,7 +121,7 @@ public class GiftCardService {
             request.getCardNumber() : generateCardNumber();
 
         if (giftCardRepository.existsByRestaurantIdAndCardNumber(restaurantId, cardNumber)) {
-            throw new IllegalArgumentException("Card number already exists");
+            throw new ConflictException("Card number already exists");
         }
 
         // Calculate expiration
@@ -196,11 +200,11 @@ public class GiftCardService {
 
         // Validate PIN if required
         if (card.getPin() != null && !card.getPin().equals(request.getPin())) {
-            throw new IllegalArgumentException("Invalid PIN");
+            throw new BadRequestException("Invalid PIN");
         }
 
         if (!card.isValid()) {
-            throw new IllegalArgumentException("Gift card is not valid for redemption");
+            throw new BadRequestException("Gift card is not valid for redemption");
         }
 
         BigDecimal amountToRedeem = request.getAmount();
@@ -253,11 +257,11 @@ public class GiftCardService {
         User operator = userRepository.findById(operatorId).orElse(null);
 
         if (card.getGiftCardType() != null && !card.getGiftCardType().getIsRechargeable()) {
-            throw new IllegalArgumentException("This gift card type is not rechargeable");
+            throw new BadRequestException("This gift card type is not rechargeable");
         }
 
         if (card.getStatus() == GiftCardStatus.EXPIRED || card.getStatus() == GiftCardStatus.CANCELLED) {
-            throw new IllegalArgumentException("Cannot reload expired or cancelled gift card");
+            throw new BadRequestException("Cannot reload expired or cancelled gift card");
         }
 
         BigDecimal balanceBefore = card.getCurrentBalance();
@@ -369,7 +373,7 @@ public class GiftCardService {
 
     private GiftCard findCard(Long restaurantId, String cardNumberOrBarcode) {
         return giftCardRepository.findByCardNumberOrBarcode(restaurantId, cardNumberOrBarcode)
-            .orElseThrow(() -> new IllegalArgumentException("Gift card not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Gift card not found"));
     }
 
     private String generateCardNumber() {

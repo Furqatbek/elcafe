@@ -1,5 +1,6 @@
 package com.elcafe.modules.menu.service;
 
+import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.menu.dto.AddOnResponse;
 import com.elcafe.modules.menu.dto.CreateAddOnRequest;
@@ -74,7 +75,7 @@ public class AddOnService {
 
         // Check for duplicate name within the same group
         if (addOnRepository.existsByAddOnGroupIdAndName(request.getAddOnGroupId(), request.getName())) {
-            throw new IllegalArgumentException("AddOn with name '" + request.getName() + "' already exists in this group");
+            throw new ConflictException("AddOn with name '" + request.getName() + "' already exists in this group");
         }
 
         AddOn addOn = AddOn.builder()
@@ -103,7 +104,7 @@ public class AddOnService {
         // Check for duplicate name if name is being changed
         if (request.getName() != null && !request.getName().equals(addOn.getName())) {
             if (addOnRepository.existsByAddOnGroupIdAndName(addOnGroupId, request.getName())) {
-                throw new IllegalArgumentException("AddOn with name '" + request.getName() + "' already exists in this group");
+                throw new ConflictException("AddOn with name '" + request.getName() + "' already exists in this group");
             }
             addOn.setName(request.getName());
         }

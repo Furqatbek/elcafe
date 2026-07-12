@@ -1,5 +1,7 @@
 package com.elcafe.modules.order.controller;
 
+import com.elcafe.exception.ResourceNotFoundException;
+
 import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
 import com.elcafe.common.security.exception.SecurityPolicyViolationException;
@@ -319,7 +321,7 @@ public class POSOrderController {
 
         // Get order for security check
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
 
         // Tenant ownership: the role check authorizes the ACTION, not the target. Without this a staff
         // member of one tenant could refund another tenant's order by enumerating orderId. Financial
@@ -387,7 +389,7 @@ public class POSOrderController {
 
         // Get order for security check
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found: " + orderId));
 
         // Tenant ownership (see processRefund) — block cross-tenant void by orderId enumeration.
         restaurantAuthorizationService.validateRestaurantAccess(order.getRestaurant().getId());

@@ -1,5 +1,7 @@
 package com.elcafe.modules.courier.service;
 
+import com.elcafe.exception.BadRequestException;
+import com.elcafe.exception.ConflictException;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.courier.dto.CourierTariffResponse;
 import com.elcafe.modules.courier.dto.CreateCourierTariffRequest;
@@ -87,7 +89,7 @@ public class CourierTariffService {
 
         // Validate name uniqueness
         if (courierTariffRepository.existsByNameIgnoreCase(request.getName())) {
-            throw new IllegalArgumentException("Tariff with name '" + request.getName() + "' already exists");
+            throw new ConflictException("Tariff with name '" + request.getName() + "' already exists");
         }
 
         // Validate amounts
@@ -126,7 +128,7 @@ public class CourierTariffService {
         // Validate name uniqueness if name is being updated
         if (request.getName() != null && !request.getName().equals(tariff.getName())) {
             if (courierTariffRepository.existsByNameIgnoreCaseAndIdNot(request.getName(), id)) {
-                throw new IllegalArgumentException("Tariff with name '" + request.getName() + "' already exists");
+                throw new ConflictException("Tariff with name '" + request.getName() + "' already exists");
             }
             tariff.setName(request.getName());
         }
@@ -206,7 +208,7 @@ public class CourierTariffService {
         if (fixed.compareTo(BigDecimal.ZERO) == 0
             && perOrder.compareTo(BigDecimal.ZERO) == 0
             && perKm.compareTo(BigDecimal.ZERO) == 0) {
-            throw new IllegalArgumentException("At least one amount (fixed, per order, or per kilometer) must be greater than zero");
+            throw new BadRequestException("At least one amount (fixed, per order, or per kilometer) must be greater than zero");
         }
     }
 
