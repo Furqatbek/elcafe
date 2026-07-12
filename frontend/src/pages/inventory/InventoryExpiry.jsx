@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { inventoryBatchAPI } from '../../services/api';
 import { useInventory } from '../../context/InventoryContext';
@@ -148,7 +149,7 @@ export default function InventoryExpiry() {
       loadIngredients();
     } catch (error) {
       console.error('Failed to save batch:', error);
-      alert('Failed to save batch');
+      notifyWarning('Failed to save batch');
     }
   };
 
@@ -169,7 +170,7 @@ export default function InventoryExpiry() {
       loadIngredients();
     } catch (error) {
       console.error('Failed to write off batch:', error);
-      alert('Failed to write off batch');
+      notifyWarning('Failed to write off batch');
     }
   };
 

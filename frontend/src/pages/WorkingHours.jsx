@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { notifySuccess, notifyWarning } from '../lib/errors';
 import { restaurantAPI } from '../services/api';
 import { useTranslation } from 'react-i18next';
 import { Clock, Save, Plus, Trash2, Calendar } from 'lucide-react';
@@ -83,7 +84,7 @@ const WorkingHours = () => {
 
   const handleSave = async () => {
     if (!selectedRestaurant) {
-      alert(t('workingHours.messages.selectRestaurant', 'Please select a restaurant'));
+      notifyWarning(t('workingHours.messages.selectRestaurant', 'Please select a restaurant'));
       return;
     }
 
@@ -91,10 +92,10 @@ const WorkingHours = () => {
       setSaving(true);
       const hoursArray = Object.values(workingHours);
       await restaurantAPI.updateBusinessHours(selectedRestaurant, hoursArray);
-      alert(t('workingHours.messages.saveSuccess', 'Business hours saved successfully'));
+      notifySuccess(t('workingHours.messages.saveSuccess', 'Business hours saved successfully'));
     } catch (error) {
       console.error('Failed to save business hours:', error);
-      alert(t('workingHours.messages.saveError', 'Failed to save business hours'));
+      notifyWarning(t('workingHours.messages.saveError', 'Failed to save business hours'));
     } finally {
       setSaving(false);
     }

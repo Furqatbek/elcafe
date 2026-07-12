@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { loyaltyAPI, restaurantAPI, customerAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -150,12 +151,11 @@ export default function LoyaltySettings() {
         enabled: !!config.enabled,
       };
       await loyaltyAPI.upsertConfig(payload);
-      alert(t('loyalty.messages.configSaved', 'Loyalty config saved'));
+      notifySuccess(t('loyalty.messages.configSaved', 'Loyalty config saved'));
       loadConfig();
     } catch (error) {
       console.error('Failed to save loyalty config:', error);
-      alert(t('loyalty.messages.configSaveError', 'Failed to save loyalty config') +
-        ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setConfigSaving(false);
     }
@@ -209,7 +209,7 @@ export default function LoyaltySettings() {
         icon: tierForm.icon,
       };
       if (!payload.name) {
-        alert(t('loyalty.messages.tierNameRequired', 'Tier name is required'));
+        notifyWarning(t('loyalty.messages.tierNameRequired', 'Tier name is required'));
         return;
       }
       if (editingTierId) {
@@ -222,8 +222,7 @@ export default function LoyaltySettings() {
       loadTiers();
     } catch (error) {
       console.error('Failed to save tier:', error);
-      alert(t('loyalty.messages.tierSaveError', 'Failed to save tier') +
-        ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -235,8 +234,7 @@ export default function LoyaltySettings() {
       loadTiers();
     } catch (error) {
       console.error('Failed to delete tier:', error);
-      alert(error.response?.data?.message || error.message ||
-        t('loyalty.messages.tierDeleteError', 'Failed to delete tier'));
+      notifyError(error);
     }
   };
 

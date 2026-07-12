@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import { ChevronLeft, Plus, Trash2, CreditCard, AlertTriangle, X } from 'lucide-react';
@@ -88,7 +89,7 @@ const CartScreen = () => {
   const handleProceedToDetails = () => {
     // Block proceeding if there are unavailable or insufficient items
     if (hasBlockingWarnings) {
-      alert(t('pos.cart.cannotProceed', 'Please remove or adjust unavailable items before proceeding.'));
+      notifyWarning(t('pos.cart.cannotProceed', 'Please remove or adjust unavailable items before proceeding.'));
       return;
     }
     // Navigate to order details screen based on type

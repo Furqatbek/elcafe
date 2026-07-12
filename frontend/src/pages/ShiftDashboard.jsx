@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { shiftAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -142,10 +143,10 @@ export default function ShiftDashboard() {
   const handleResendTelegram = async (shiftId) => {
     try {
       await shiftAPI.resendTelegram(selectedRestaurant, shiftId);
-      alert(t('shift.dashboard.telegramSent', 'Shift report sent to Telegram'));
+      notifySuccess(t('shift.dashboard.telegramSent', 'Shift report sent to Telegram'));
     } catch (e) {
       console.error('Failed to resend:', e);
-      alert('Failed to send');
+      notifyWarning('Failed to send');
     }
   };
 

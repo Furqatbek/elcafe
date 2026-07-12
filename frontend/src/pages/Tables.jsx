@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { tablesAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { getCurrentRestaurantId } from '../utils/restaurant';
@@ -118,17 +119,17 @@ const Tables = () => {
     e.preventDefault();
     try {
       if (!formData.tableNumber || !formData.capacity) {
-        alert(t('tables.messages.fillRequiredFields'));
+        notifyWarning(t('tables.messages.fillRequiredFields'));
         return;
       }
 
       setLoading(true);
       if (editingTable) {
         await tablesAPI.update(editingTable.id, formData);
-        alert(t('tables.messages.updateSuccess'));
+        notifySuccess(t('tables.messages.updateSuccess'));
       } else {
         await tablesAPI.create({ ...formData, restaurantId: selectedRestaurant });
-        alert(t('tables.messages.createSuccess'));
+        notifySuccess(t('tables.messages.createSuccess'));
       }
       setShowModal(false);
       resetForm();
@@ -136,7 +137,7 @@ const Tables = () => {
       loadStats();
     } catch (error) {
       console.error('Failed to save table:', error);
-      alert(t('tables.messages.saveError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -161,12 +162,12 @@ const Tables = () => {
 
     try {
       await tablesAPI.delete(id);
-      alert(t('tables.messages.deleteSuccess'));
+      notifySuccess(t('tables.messages.deleteSuccess'));
       loadTables();
       loadStats();
     } catch (error) {
       console.error('Failed to delete table:', error);
-      alert(t('tables.messages.deleteError'));
+      notifyWarning(t('tables.messages.deleteError'));
     }
   };
 
@@ -182,12 +183,11 @@ const Tables = () => {
       setSelectedTables([]);
       loadTables();
       loadStats();
-      alert(t('tables.messages.bulkDeleteSuccess',
+      notifySuccess(t('tables.messages.bulkDeleteSuccess',
           { defaultValue: 'Deleted {{count}} tables', count: deleted }));
     } catch (error) {
       console.error('Failed to bulk delete tables:', error);
-      alert(error.response?.data?.message
-          || t('tables.messages.bulkDeleteError', 'Failed to delete tables'));
+      notifyError(error);
     }
   };
 
@@ -207,12 +207,11 @@ const Tables = () => {
       setBulkCreateData({ prefix: '', startNumber: 1, count: 10, capacity: 4, section: '', notes: '', active: true });
       loadTables();
       loadStats();
-      alert(t('tables.messages.bulkCreateSuccess',
+      notifySuccess(t('tables.messages.bulkCreateSuccess',
           { defaultValue: 'Created {{count}} tables', count: bulkCreateData.count }));
     } catch (error) {
       console.error('Failed to bulk create tables:', error);
-      alert(error.response?.data?.message
-          || t('tables.messages.bulkCreateError', 'Failed to create tables'));
+      notifyError(error);
     }
   };
 
@@ -223,7 +222,7 @@ const Tables = () => {
       loadStats();
     } catch (error) {
       console.error('Failed to update status:', error);
-      alert(t('tables.messages.statusError'));
+      notifyWarning(t('tables.messages.statusError'));
     }
   };
 
@@ -252,7 +251,7 @@ const Tables = () => {
 
   const handleMergeTables = async () => {
     if (selectedTables.length < 2) {
-      alert(t('tables.messages.selectAtLeast2Tables', 'Please select at least 2 tables to merge'));
+      notifyWarning(t('tables.messages.selectAtLeast2Tables', 'Please select at least 2 tables to merge'));
       return;
     }
 
@@ -262,13 +261,13 @@ const Tables = () => {
     try {
       setLoading(true);
       await tablesAPI.merge({ mainTableId, tableIdsToMerge });
-      alert(t('tables.messages.mergeSuccess', 'Tables merged successfully'));
+      notifySuccess(t('tables.messages.mergeSuccess', 'Tables merged successfully'));
       setSelectedTables([]);
       loadTables();
       loadStats();
     } catch (error) {
       console.error('Failed to merge tables:', error);
-      alert(t('tables.messages.mergeError', 'Failed to merge tables') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -280,13 +279,13 @@ const Tables = () => {
     try {
       setLoading(true);
       await tablesAPI.unmerge(tableId);
-      alert(t('tables.messages.unmergeSuccess', 'Tables unmerged successfully'));
+      notifySuccess(t('tables.messages.unmergeSuccess', 'Tables unmerged successfully'));
       setSelectedTables([]);
       loadTables();
       loadStats();
     } catch (error) {
       console.error('Failed to unmerge tables:', error);
-      alert(t('tables.messages.unmergeError', 'Failed to unmerge tables'));
+      notifyWarning(t('tables.messages.unmergeError', 'Failed to unmerge tables'));
     } finally {
       setLoading(false);
     }

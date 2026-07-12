@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { Search, Plus, Download, Edit, Trash2, X, Eye, EyeOff, Shuffle } from 'lucide-react';
 import { operatorAPI } from '../services/api';
@@ -160,7 +161,7 @@ export default function Operators() {
       setOperatorToDelete(null);
     } catch (error) {
       console.error('Error deleting operator:', error);
-      alert(t('operators.deleteError'));
+      notifyWarning(t('operators.deleteError'));
     }
   };
 
@@ -213,9 +214,9 @@ export default function Operators() {
     } catch (error) {
       console.error('Error saving operator:', error);
       if (error.response?.data?.message) {
-        alert(error.response.data.message);
+        notifyError(error);
       } else {
-        alert(t('operators.saveError'));
+        notifyWarning(t('operators.saveError'));
       }
     }
   };

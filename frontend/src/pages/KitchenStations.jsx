@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { kitchenStationAPI, printerAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Printer, ChefHat } from 'lucide-react';
@@ -97,7 +98,7 @@ const KitchenStations = () => {
   const handleSave = async () => {
     try {
       if (!formData.name) {
-        alert(t('kitchenStations.messages.fillRequiredFields', 'Please fill in all required fields'));
+        notifyWarning(t('kitchenStations.messages.fillRequiredFields', 'Please fill in all required fields'));
         return;
       }
 
@@ -110,10 +111,10 @@ const KitchenStations = () => {
 
       if (editingStation) {
         await kitchenStationAPI.updateStation(editingStation.id, payload);
-        alert(t('kitchenStations.messages.updateSuccess', 'Kitchen station updated successfully'));
+        notifySuccess(t('kitchenStations.messages.updateSuccess', 'Kitchen station updated successfully'));
       } else {
         await kitchenStationAPI.createStation(payload);
-        alert(t('kitchenStations.messages.createSuccess', 'Kitchen station created successfully'));
+        notifySuccess(t('kitchenStations.messages.createSuccess', 'Kitchen station created successfully'));
       }
 
       setShowModal(false);
@@ -122,7 +123,7 @@ const KitchenStations = () => {
       loadStations(selectedRestaurant);
     } catch (error) {
       console.error('Failed to save kitchen station:', error);
-      alert(t('kitchenStations.messages.saveError', 'Failed to save kitchen station') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -150,11 +151,11 @@ const KitchenStations = () => {
     try {
       setLoading(true);
       await kitchenStationAPI.deleteStation(id);
-      alert(t('kitchenStations.messages.deleteSuccess', 'Kitchen station deleted successfully'));
+      notifySuccess(t('kitchenStations.messages.deleteSuccess', 'Kitchen station deleted successfully'));
       loadStations(selectedRestaurant);
     } catch (error) {
       console.error('Failed to delete kitchen station:', error);
-      alert(t('kitchenStations.messages.deleteError', 'Failed to delete kitchen station'));
+      notifyWarning(t('kitchenStations.messages.deleteError', 'Failed to delete kitchen station'));
     } finally {
       setLoading(false);
     }
@@ -166,7 +167,7 @@ const KitchenStations = () => {
       loadStations(selectedRestaurant);
     } catch (error) {
       console.error('Failed to toggle kitchen station:', error);
-      alert(t('kitchenStations.messages.toggleError', 'Failed to toggle kitchen station'));
+      notifyWarning(t('kitchenStations.messages.toggleError', 'Failed to toggle kitchen station'));
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { bundleAPI, restaurantAPI, menuAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -137,7 +138,7 @@ export default function Bundles() {
     e.preventDefault();
     try {
       if (!formData.name || !formData.bundlePrice) {
-        alert(t('bundles.messages.fillRequired'));
+        notifyWarning(t('bundles.messages.fillRequired'));
         return;
       }
 
@@ -154,7 +155,7 @@ export default function Bundles() {
       loadBundles();
     } catch (error) {
       console.error('Failed to create bundle:', error);
-      alert(t('bundles.messages.createError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -177,7 +178,7 @@ export default function Bundles() {
       loadBundles();
     } catch (error) {
       console.error('Failed to update bundle:', error);
-      alert(t('bundles.messages.updateError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -192,7 +193,7 @@ export default function Bundles() {
       loadBundles();
     } catch (error) {
       console.error('Failed to delete bundle:', error);
-      alert(t('bundles.messages.deleteError'));
+      notifyWarning(t('bundles.messages.deleteError'));
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess } from '../lib/errors';
 import { poSuggestionAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -62,11 +63,11 @@ const POSuggestions = () => {
         restaurantId: selectedRestaurant,
         supplierId: suggestion.supplierId
       });
-      alert(t('poSuggestions.messages.poCreated'));
+      notifySuccess(t('poSuggestions.messages.poCreated'));
       loadSuggestions(selectedRestaurant);
     } catch (error) {
       console.error('Failed to generate PO:', error);
-      alert(t('poSuggestions.messages.poCreateError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setGenerating(null);
     }
@@ -78,11 +79,11 @@ const POSuggestions = () => {
     try {
       setGenerating('all');
       await poSuggestionAPI.generateAll(selectedRestaurant);
-      alert(t('poSuggestions.messages.allPOsCreated'));
+      notifySuccess(t('poSuggestions.messages.allPOsCreated'));
       loadSuggestions(selectedRestaurant);
     } catch (error) {
       console.error('Failed to generate all POs:', error);
-      alert(t('poSuggestions.messages.poCreateError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setGenerating(null);
     }

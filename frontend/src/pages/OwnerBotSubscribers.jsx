@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { telegramAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -69,7 +70,7 @@ export default function OwnerBotSubscribers() {
       await telegramAPI.updateOwnerSubscriber(sub.id, { isActive: !sub.isActive });
       load();
     } catch (e) {
-      alert(e.response?.data?.message || t('ownerBotSubscribers.updateFailed', 'Update failed'));
+      notifyError(e);
     }
   };
 
@@ -82,7 +83,7 @@ export default function OwnerBotSubscribers() {
       setEditingDetail(null);
       load();
     } catch (e) {
-      alert(e.response?.data?.message || t('ownerBotSubscribers.updateFailed', 'Update failed'));
+      notifyError(e);
     }
   };
 
@@ -96,7 +97,7 @@ export default function OwnerBotSubscribers() {
       await telegramAPI.deleteOwnerSubscriber(sub.id);
       load();
     } catch (e) {
-      alert(e.response?.data?.message || t('ownerBotSubscribers.deleteFailed', 'Delete failed'));
+      notifyError(e);
     }
   };
 

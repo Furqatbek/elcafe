@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { promotionAPI, restaurantAPI, menuAPI } from '../services/api';
@@ -173,7 +174,7 @@ export default function Promotions() {
     e.preventDefault();
     try {
       if (!formData.name || formData.discountValue <= 0) {
-        alert(t('promotions.messages.fillRequired'));
+        notifyWarning(t('promotions.messages.fillRequired'));
         return;
       }
 
@@ -190,7 +191,7 @@ export default function Promotions() {
       loadPromotions();
     } catch (error) {
       console.error('Failed to create promotion:', error);
-      alert(t('promotions.messages.createError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -213,7 +214,7 @@ export default function Promotions() {
       loadPromotions();
     } catch (error) {
       console.error('Failed to update promotion:', error);
-      alert(t('promotions.messages.updateError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -228,7 +229,7 @@ export default function Promotions() {
       loadPromotions();
     } catch (error) {
       console.error('Failed to delete promotion:', error);
-      alert(t('promotions.messages.deleteError'));
+      notifyWarning(t('promotions.messages.deleteError'));
     }
   };
 

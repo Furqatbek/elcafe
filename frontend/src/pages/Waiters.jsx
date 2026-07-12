@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { Search, Plus, Edit, X, Eye, EyeOff, Key, Power, PowerOff } from 'lucide-react';
 import { waiterAPI } from '../services/api';
@@ -236,7 +237,7 @@ export default function Waiters() {
       loadWaiters();
     } catch (error) {
       console.error('Error saving waiter:', error);
-      alert(t('pages.waiters.errors.saveFailed', 'Error saving waiter') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -257,10 +258,7 @@ export default function Waiters() {
       loadWaiters();
     } catch (error) {
       console.error('Error disabling waiter:', error);
-      alert(
-        t('pages.waiters.errors.disableFailed', 'Error disabling waiter') +
-          ': ' + (error.response?.data?.message || error.message)
-      );
+      notifyError(error);
     }
   };
 
@@ -270,10 +268,7 @@ export default function Waiters() {
       loadWaiters();
     } catch (error) {
       console.error('Error enabling waiter:', error);
-      alert(
-        t('pages.waiters.errors.enableFailed', 'Error enabling waiter') +
-          ': ' + (error.response?.data?.message || error.message)
-      );
+      notifyError(error);
     }
   };
 

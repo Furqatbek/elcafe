@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { restaurantAPI } from '../services/api';
@@ -82,7 +83,7 @@ export default function Restaurants() {
       loadRestaurants();
     } catch (error) {
       console.error('Failed to save restaurant:', error);
-      alert(error.response?.data?.message || 'Failed to save');
+      notifyError(error);
     }
   };
 
@@ -93,7 +94,7 @@ export default function Restaurants() {
       loadRestaurants();
     } catch (error) {
       console.error('Failed to delete:', error);
-      alert(error.response?.data?.message || 'Failed to delete');
+      notifyError(error);
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { financialAPI, inventoryAPI, restaurantAPI, supplierAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { getCurrentRestaurantId } from '../utils/restaurant';
@@ -261,7 +262,7 @@ const PurchaseOrders = () => {
 
   const handleAddItem = () => {
     if (!itemForm.itemName || !itemForm.quantity || !itemForm.unitPrice) {
-      alert(t('finance.common.fillRequiredFields'));
+      notifyWarning(t('finance.common.fillRequiredFields'));
       return;
     }
 
@@ -300,7 +301,7 @@ const PurchaseOrders = () => {
   const handleSave = async () => {
     try {
       if (formData.items.length === 0) {
-        alert(t('finance.purchaseOrders.messages.addAtLeastOneItem', 'Please add at least one item'));
+        notifyWarning(t('finance.purchaseOrders.messages.addAtLeastOneItem', 'Please add at least one item'));
         return;
       }
 
@@ -316,13 +317,13 @@ const PurchaseOrders = () => {
         paymentMethod: 'CASH',
       };
       await financialAPI.createPurchaseOrder(submitData);
-      alert(t('finance.purchaseOrders.messages.createSuccess'));
+      notifySuccess(t('finance.purchaseOrders.messages.createSuccess'));
       setShowModal(false);
       resetForm();
       loadPurchaseOrders(selectedRestaurant);
     } catch (error) {
       console.error('Failed to create purchase order:', error);
-      alert(t('finance.purchaseOrders.messages.createError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -331,11 +332,11 @@ const PurchaseOrders = () => {
   const handleApprove = async (id) => {
     try {
       await financialAPI.approvePurchaseOrder(id, user?.username || 'ADMIN');
-      alert(t('finance.purchaseOrders.messages.approveSuccess'));
+      notifySuccess(t('finance.purchaseOrders.messages.approveSuccess'));
       loadPurchaseOrders(selectedRestaurant);
     } catch (error) {
       console.error('Failed to approve purchase order:', error);
-      alert(t('finance.purchaseOrders.messages.approveError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -348,13 +349,13 @@ const PurchaseOrders = () => {
       };
 
       await financialAPI.receivePurchaseOrder(selectedPO.id, receiveData);
-      alert(t('finance.purchaseOrders.messages.receiveSuccess'));
+      notifySuccess(t('finance.purchaseOrders.messages.receiveSuccess'));
       setShowReceiveModal(false);
       setSelectedPO(null);
       loadPurchaseOrders(selectedRestaurant);
     } catch (error) {
       console.error('Failed to receive purchase order:', error);
-      alert(t('finance.purchaseOrders.messages.receiveError'));
+      notifyWarning(t('finance.purchaseOrders.messages.receiveError'));
     } finally {
       setLoading(false);
     }
@@ -364,13 +365,13 @@ const PurchaseOrders = () => {
     try {
       setLoading(true);
       await financialAPI.recordPOPayment(selectedPO.id, paymentForm);
-      alert(t('finance.purchaseOrders.messages.paymentSuccess'));
+      notifySuccess(t('finance.purchaseOrders.messages.paymentSuccess'));
       setShowPaymentModal(false);
       setSelectedPO(null);
       loadPurchaseOrders(selectedRestaurant);
     } catch (error) {
       console.error('Failed to record payment:', error);
-      alert(t('finance.purchaseOrders.messages.paymentError'));
+      notifyWarning(t('finance.purchaseOrders.messages.paymentError'));
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifySuccess, notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { valuationAPI } from '../../services/api';
 import { useInventory } from '../../context/InventoryContext';
@@ -172,10 +173,10 @@ export default function InventoryValuation() {
       });
       setCurrentMethod(selectedMethod);
       loadInventoryValue(selectedMethod);
-      alert(t('inventory.valuation.methodChanged'));
+      notifySuccess(t('inventory.valuation.methodChanged'));
     } catch (error) {
       console.error('Failed to save valuation method:', error);
-      alert(t('inventory.valuation.errors.saveFailed'));
+      notifyWarning(t('inventory.valuation.errors.saveFailed'));
     } finally {
       setSaving(false);
     }

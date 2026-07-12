@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { getCurrentRestaurantId } from '../utils/restaurant';
@@ -132,19 +133,19 @@ const Expenses = () => {
   const handleSave = async () => {
     try {
       if (!formData.description || !formData.amount) {
-        alert(t('finance.common.fillRequiredFields'));
+        notifyWarning(t('finance.common.fillRequiredFields'));
         return;
       }
 
       setLoading(true);
       await financialAPI.createExpense(formData);
-      alert(t('finance.expenses.messages.createSuccess'));
+      notifySuccess(t('finance.expenses.messages.createSuccess'));
       setShowModal(false);
       resetForm();
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to create expense:', error);
-      alert(t('finance.expenses.messages.createError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -153,11 +154,11 @@ const Expenses = () => {
   const handleApprove = async (id) => {
     try {
       await financialAPI.approveExpense(id, user?.username || 'ADMIN');
-      alert(t('finance.expenses.messages.approveSuccess'));
+      notifySuccess(t('finance.expenses.messages.approveSuccess'));
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to approve expense:', error);
-      alert(t('finance.expenses.messages.approveError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -167,13 +168,13 @@ const Expenses = () => {
       const paymentDate = new Date().toISOString().split('T')[0];
       const recordedBy = user?.username || 'ADMIN';
       await financialAPI.recordExpensePayment(selectedExpense.id, paymentDate, recordedBy);
-      alert(t('finance.expenses.messages.paymentSuccess'));
+      notifySuccess(t('finance.expenses.messages.paymentSuccess'));
       setShowPaymentModal(false);
       setSelectedExpense(null);
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to record payment:', error);
-      alert(t('finance.expenses.messages.paymentError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -186,11 +187,11 @@ const Expenses = () => {
 
     try {
       await financialAPI.deleteExpense(id);
-      alert(t('finance.expenses.messages.deleteSuccess'));
+      notifySuccess(t('finance.expenses.messages.deleteSuccess'));
       loadExpenses(selectedRestaurant);
     } catch (error) {
       console.error('Failed to delete expense:', error);
-      alert(t('finance.expenses.messages.deleteError') + ': ' + (error.response?.data?.message || t('finance.expenses.messages.cannotDeletePaid')));
+      notifyError(error);
     }
   };
 

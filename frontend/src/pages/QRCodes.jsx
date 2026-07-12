@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { qrCodeAPI, restaurantAPI, tablesAPI } from '../services/api';
 import {
@@ -124,11 +125,11 @@ export default function QRCodes() {
   const handleGenerateAll = async () => {
     try {
       const response = await qrCodeAPI.generateForAllTables(selectedRestaurant);
-      alert(t('qrCodes.generatedSuccess', { count: response.data.generated }));
+      notifySuccess(t('qrCodes.generatedSuccess', { count: response.data.generated }));
       loadQRCodes();
       loadStats();
     } catch (error) {
-      alert(t('qrCodes.generateError'));
+      notifyWarning(t('qrCodes.generateError'));
     }
   };
 
@@ -137,7 +138,7 @@ export default function QRCodes() {
       await qrCodeAPI.toggle(id);
       loadQRCodes();
     } catch (error) {
-      alert(t('qrCodes.toggleError'));
+      notifyWarning(t('qrCodes.toggleError'));
     }
   };
 
@@ -148,7 +149,7 @@ export default function QRCodes() {
       loadQRCodes();
       loadStats();
     } catch (error) {
-      alert(t('qrCodes.deleteError'));
+      notifyWarning(t('qrCodes.deleteError'));
     }
   };
 
@@ -174,10 +175,10 @@ export default function QRCodes() {
   const handleSaveSettings = async () => {
     try {
       await qrCodeAPI.saveSettings(selectedRestaurant, settings);
-      alert(t('qrCodes.settingsSaved'));
+      notifySuccess(t('qrCodes.settingsSaved'));
       setShowSettings(false);
     } catch (error) {
-      alert(t('qrCodes.settingsError'));
+      notifyWarning(t('qrCodes.settingsError'));
     }
   };
 
@@ -200,13 +201,13 @@ export default function QRCodes() {
         name: createForm.name || (createForm.tableId ? `Table ${tables.find(t => t.id === Number(createForm.tableId))?.tableNumber}` : 'Takeaway QR'),
         qrType: createForm.qrType,
       });
-      alert(t('qrCodes.createSuccess', 'QR code created successfully'));
+      notifySuccess(t('qrCodes.createSuccess', 'QR code created successfully'));
       setShowCreateModal(false);
       setCreateForm({ tableId: '', name: '', qrType: 'TABLE' });
       loadQRCodes();
       loadStats();
     } catch (error) {
-      alert(t('qrCodes.createError', 'Failed to create QR code'));
+      notifyWarning(t('qrCodes.createError', 'Failed to create QR code'));
     } finally {
       setCreating(false);
     }
@@ -215,7 +216,7 @@ export default function QRCodes() {
   // Bulk print all QR codes as PDF
   const handleBulkPrint = async () => {
     if (qrCodes.length === 0) {
-      alert(t('qrCodes.noQRToPrint', 'No QR codes to print'));
+      notifyWarning(t('qrCodes.noQRToPrint', 'No QR codes to print'));
       return;
     }
 
@@ -295,7 +296,7 @@ export default function QRCodes() {
       printWindow.document.close();
     } catch (error) {
       console.error('Failed to print QR codes:', error);
-      alert(t('qrCodes.printError', 'Failed to print QR codes'));
+      notifyWarning(t('qrCodes.printError', 'Failed to print QR codes'));
     } finally {
       setPrinting(false);
     }

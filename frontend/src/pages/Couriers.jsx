@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { Search, Plus, Download, Edit, Trash2, X, Eye, EyeOff, Wallet, CheckCircle, XCircle, Shuffle } from 'lucide-react';
 import { courierAPI } from '../services/api';
@@ -189,7 +190,7 @@ export default function Couriers() {
       setShowWalletModal(true);
     } catch (error) {
       console.error('Error loading wallet:', error);
-      alert(t('couriers.walletError'));
+      notifyWarning(t('couriers.walletError'));
     }
   };
 
@@ -208,7 +209,7 @@ export default function Couriers() {
       setCourierToDelete(null);
     } catch (error) {
       console.error('Error deleting courier:', error);
-      alert(t('couriers.deleteError'));
+      notifyWarning(t('couriers.deleteError'));
     }
   };
 
@@ -260,9 +261,9 @@ export default function Couriers() {
     } catch (error) {
       console.error('Error saving courier:', error);
       if (error.response?.data?.message) {
-        alert(error.response.data.message);
+        notifyError(error);
       } else {
-        alert(t('couriers.saveError'));
+        notifyWarning(t('couriers.saveError'));
       }
     }
   };

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { customerAPI } from '../services/api';
 import { Button } from '../components/ui/button';
@@ -291,10 +292,10 @@ export default function CustomerSegments() {
       });
       setFormErrors({});
       loadCustomers();
-      alert(t('messages.createSuccess'));
+      notifySuccess(t('messages.createSuccess'));
     } catch (error) {
       console.error('Failed to create customer:', error);
-      alert(t('messages.error'));
+      notifyWarning(t('messages.error'));
     } finally {
       setSubmitting(false);
     }

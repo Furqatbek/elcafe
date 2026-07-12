@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { instagramAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -163,7 +164,7 @@ export default function InstagramMarketing() {
       setSubscribers(prev => prev.map(s => s.id === subscriber.id ? response.data : s));
     } catch (error) {
       console.error(`Failed to ${action} subscriber:`, error);
-      alert(t('instagram.errors.blockAction'));
+      notifyWarning(t('instagram.errors.blockAction'));
     }
   };
 
@@ -177,12 +178,12 @@ export default function InstagramMarketing() {
     setSendingDm(true);
     try {
       await instagramAPI.sendDm(dmTarget.id, dmText.trim());
-      alert(t('instagram.dm.sent'));
+      notifySuccess(t('instagram.dm.sent'));
       setDmTarget(null);
       setDmText('');
     } catch (error) {
       console.error('Failed to send DM:', error);
-      alert(t('instagram.errors.sendDm'));
+      notifyWarning(t('instagram.errors.sendDm'));
     } finally {
       setSendingDm(false);
     }
@@ -202,7 +203,7 @@ export default function InstagramMarketing() {
       setBroadcastResult(response.data.sent);
     } catch (error) {
       console.error('Broadcast failed:', error);
-      alert(t('instagram.errors.broadcast'));
+      notifyWarning(t('instagram.errors.broadcast'));
     } finally {
       setBroadcasting(false);
     }
@@ -252,15 +253,15 @@ export default function InstagramMarketing() {
 
       if (configId) {
         await instagramAPI.updateConfig(configId, data);
-        alert(t('instagram.settings.configUpdated'));
+        notifySuccess(t('instagram.settings.configUpdated'));
       } else {
         await instagramAPI.createConfig(data);
-        alert(t('instagram.settings.configCreated'));
+        notifySuccess(t('instagram.settings.configCreated'));
       }
       loadConfig();
     } catch (error) {
       console.error('Failed to save Instagram config:', error);
-      alert(t('instagram.errors.saveConfig'));
+      notifyWarning(t('instagram.errors.saveConfig'));
     } finally {
       setSavingConfig(false);
     }
@@ -271,11 +272,11 @@ export default function InstagramMarketing() {
     if (!window.confirm(t('instagram.settings.confirmClearCredentials'))) return;
     try {
       await instagramAPI.clearCredentials(configId);
-      alert(t('instagram.settings.credentialsCleared'));
+      notifySuccess(t('instagram.settings.credentialsCleared'));
       loadConfig();
     } catch (error) {
       console.error('Failed to clear credentials:', error);
-      alert(t('instagram.errors.clearCredentials'));
+      notifyWarning(t('instagram.errors.clearCredentials'));
     }
   };
 

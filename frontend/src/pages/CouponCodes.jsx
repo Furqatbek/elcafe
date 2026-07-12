@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams, Link } from 'react-router-dom';
 import { promotionAPI, restaurantAPI } from '../services/api';
@@ -152,7 +153,7 @@ export default function CouponCodes() {
     e.preventDefault();
     try {
       if (!formData.code || !formData.promotionId) {
-        alert(t('coupons.messages.fillRequired'));
+        notifyWarning(t('coupons.messages.fillRequired'));
         return;
       }
 
@@ -169,7 +170,7 @@ export default function CouponCodes() {
       loadCoupons();
     } catch (error) {
       console.error('Failed to create coupon:', error);
-      alert(t('coupons.messages.createError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -179,7 +180,7 @@ export default function CouponCodes() {
     e.preventDefault();
     try {
       if (!generateData.promotionId || generateData.count < 1) {
-        alert(t('coupons.messages.fillRequired'));
+        notifyWarning(t('coupons.messages.fillRequired'));
         return;
       }
 
@@ -192,13 +193,13 @@ export default function CouponCodes() {
 
       const response = await promotionAPI.generateCoupons(payload);
       const generated = response.data.data || response.data;
-      alert(t('coupons.messages.generateSuccess', { count: generated.length }));
+      notifySuccess(t('coupons.messages.generateSuccess', { count: generated.length }));
       setGenerateModalOpen(false);
       resetGenerateForm();
       loadCoupons();
     } catch (error) {
       console.error('Failed to generate coupons:', error);
-      alert(t('coupons.messages.generateError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -213,7 +214,7 @@ export default function CouponCodes() {
       loadCoupons();
     } catch (error) {
       console.error('Failed to delete coupon:', error);
-      alert(t('coupons.messages.deleteError'));
+      notifyWarning(t('coupons.messages.deleteError'));
     }
   };
 
@@ -228,7 +229,7 @@ export default function CouponCodes() {
 
   const copyToClipboard = (code) => {
     navigator.clipboard.writeText(code);
-    alert(t('coupons.messages.copied'));
+    notifySuccess(t('coupons.messages.copied'));
   };
 
   const exportCoupons = () => {

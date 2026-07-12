@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { happyHourAPI, restaurantAPI, menuAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -142,7 +143,7 @@ export default function HappyHours() {
     e.preventDefault();
     try {
       if (!formData.name || formData.discountPercent <= 0 || formData.schedules.length === 0) {
-        alert(t('happyHour.messages.fillRequired'));
+        notifyWarning(t('happyHour.messages.fillRequired'));
         return;
       }
 
@@ -153,7 +154,7 @@ export default function HappyHours() {
       loadHappyHours();
     } catch (error) {
       console.error('Failed to create happy hour:', error);
-      alert(t('happyHour.messages.createError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -170,7 +171,7 @@ export default function HappyHours() {
       loadHappyHours();
     } catch (error) {
       console.error('Failed to update happy hour:', error);
-      alert(t('happyHour.messages.updateError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -185,7 +186,7 @@ export default function HappyHours() {
       loadHappyHours();
     } catch (error) {
       console.error('Failed to delete happy hour:', error);
-      alert(t('happyHour.messages.deleteError'));
+      notifyWarning(t('happyHour.messages.deleteError'));
     }
   };
 

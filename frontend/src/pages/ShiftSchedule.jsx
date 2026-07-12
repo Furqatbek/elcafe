@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { restaurantAPI, operatorAPI, waiterAPI } from '../services/api';
 import { Card, CardContent } from '../components/ui/card';
@@ -146,7 +147,7 @@ export default function ShiftSchedule() {
       loadSchedule();
     } catch (e) {
       console.error('Failed to create schedule:', e);
-      alert(e.message || 'Failed — possible conflict');
+      notifyError(e);
     }
   };
 
@@ -172,14 +173,14 @@ export default function ShiftSchedule() {
         notes: editForm.notes,
       });
       if (res?.success === false) {
-        alert(res.message || 'Update failed');
+        notifyWarning(res.message || 'Update failed');
         return;
       }
       setEditOpen(false);
       loadSchedule();
     } catch (e) {
       console.error('Failed to update schedule:', e);
-      alert(e.message || 'Failed');
+      notifyError(e);
     }
   };
 
@@ -233,19 +234,19 @@ export default function ShiftSchedule() {
         role: bulkForm.role || null,
       });
       if (res?.success === false) {
-        alert(res.message || 'Bulk create failed');
+        notifyWarning(res.message || 'Bulk create failed');
         return;
       }
       const created = res?.data?.created ?? 0;
       const skipped = res?.data?.skipped ?? 0;
-      alert(t('shift.schedule.bulkResult',
+      notifySuccess(t('shift.schedule.bulkResult',
         'Created {{created}} shifts, skipped {{skipped}} conflicts',
         { created, skipped }));
       setBulkOpen(false);
       loadSchedule();
     } catch (e) {
       console.error('Failed to bulk-create:', e);
-      alert(e.message || 'Failed');
+      notifyError(e);
     }
   };
 

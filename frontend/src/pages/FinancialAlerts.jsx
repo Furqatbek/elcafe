@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { financialAlertAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -122,7 +123,7 @@ const FinancialAlerts = () => {
   const handleSaveSubscription = async () => {
     try {
       if (!formData.telegramChatId) {
-        alert(t('finance.financialAlerts.errors.chatIdRequired', 'Telegram Chat ID is required'));
+        notifyWarning(t('finance.financialAlerts.errors.chatIdRequired', 'Telegram Chat ID is required'));
         return;
       }
 
@@ -148,7 +149,7 @@ const FinancialAlerts = () => {
       loadSubscriptions();
     } catch (error) {
       console.error('Failed to save subscription:', error);
-      alert(t('finance.financialAlerts.errors.saveFailed', 'Failed to save subscription'));
+      notifyWarning(t('finance.financialAlerts.errors.saveFailed', 'Failed to save subscription'));
     } finally {
       setLoading(false);
     }
@@ -179,10 +180,10 @@ const FinancialAlerts = () => {
   const handleTriggerReport = async () => {
     try {
       await financialAlertAPI.trigger(selectedRestaurant);
-      alert(t('finance.financialAlerts.reportTriggered', 'Daily financial report sent successfully!'));
+      notifySuccess(t('finance.financialAlerts.reportTriggered', 'Daily financial report sent successfully!'));
     } catch (error) {
       console.error('Failed to trigger report:', error);
-      alert(t('finance.financialAlerts.errors.triggerFailed', 'Failed to trigger report'));
+      notifyWarning(t('finance.financialAlerts.errors.triggerFailed', 'Failed to trigger report'));
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import {
   Trophy,
@@ -192,7 +193,7 @@ export default function WaiterPerformance() {
       loadKPIConfigs();
     } catch (error) {
       console.error('Failed to save KPI config:', error);
-      alert('Failed to save KPI configuration');
+      notifyWarning('Failed to save KPI configuration');
     }
   };
 
@@ -238,7 +239,7 @@ export default function WaiterPerformance() {
       await loadLeaderboard();
     } catch (error) {
       console.error('Failed to record complaint:', error);
-      alert(t('waiterPerformance.failedToRecordComplaint', 'Failed to record complaint'));
+      notifyWarning(t('waiterPerformance.failedToRecordComplaint', 'Failed to record complaint'));
     } finally {
       setRecordingFeedback(false);
     }
@@ -253,7 +254,7 @@ export default function WaiterPerformance() {
       await loadLeaderboard();
     } catch (error) {
       console.error('Failed to record compliment:', error);
-      alert(t('waiterPerformance.failedToRecordCompliment', 'Failed to record compliment'));
+      notifyWarning(t('waiterPerformance.failedToRecordCompliment', 'Failed to record compliment'));
     } finally {
       setRecordingFeedback(false);
     }

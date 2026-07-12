@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { menuCollectionAPI, restaurantAPI, menuAPI } from '../services/api';
 import { formatDate } from '../utils/dateUtils';
@@ -122,7 +123,7 @@ export default function MenuCollections() {
       loadCollections();
     } catch (error) {
       console.error('Failed to create collection:', error);
-      alert(t('menuCollections.createFailed'));
+      notifyWarning(t('menuCollections.createFailed'));
     }
   };
 
@@ -134,7 +135,7 @@ export default function MenuCollections() {
       loadCollections();
     } catch (error) {
       console.error('Failed to delete collection:', error);
-      alert(t('menuCollections.deleteFailed'));
+      notifyWarning(t('menuCollections.deleteFailed'));
     }
   };
 
@@ -160,7 +161,7 @@ export default function MenuCollections() {
       loadCollections();
     } catch (error) {
       console.error('Failed to add products:', error);
-      alert(t('menuCollections.addProductsFailed'));
+      notifyWarning(t('menuCollections.addProductsFailed'));
     }
   };
 

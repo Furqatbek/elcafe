@@ -39,7 +39,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   codes always localized, specific 4xx keep the backend detail, 5xx always generic + error id);
   `notifyError()` is the standard toast. Pages migrate to it in EH-3.
 
-### Frontend error pipeline — 2026-07-12 (EH-2, docs/ERROR_HANDLING_PLAN.md)
+### Frontend error pipeline — 2026-07-12 (EH-2 + EH-3 alert sweep, docs/ERROR_HANDLING_PLAN.md)
+
+- **All 245 `alert()` popups replaced with the toast pipeline (EH-3).** The jarring native alerts
+  that dumped raw backend text at users are gone across all 61 pages: catch-block errors now go
+  through `notifyError` (localized by error code, request id on 5xx), client-side validation
+  through `notifyWarning`, and success confirmations through `notifySuccess`. `grep "\balert("`
+  over `src` is zero.
+
 
 - **No more blank pages from a crash or a stale deploy.** `lazyWithRetry` wraps every route import
   so a failed chunk load (old asset hashes after a redeploy) auto-reloads once instead of showing

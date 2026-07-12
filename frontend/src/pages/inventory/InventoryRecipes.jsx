@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { inventoryAPI, menuAPI } from '../../services/api';
 import { useInventory } from '../../context/InventoryContext';
@@ -145,7 +146,7 @@ export default function InventoryRecipes() {
       }
     } catch (error) {
       console.error('Failed to save recipe:', error);
-      alert(t('inventory.recipes.errors.saveFailed', 'Failed to save recipe'));
+      notifyWarning(t('inventory.recipes.errors.saveFailed', 'Failed to save recipe'));
     }
   };
 
@@ -159,7 +160,7 @@ export default function InventoryRecipes() {
       }
     } catch (error) {
       console.error('Failed to delete recipe:', error);
-      alert(t('inventory.recipes.errors.deleteFailed', 'Failed to delete recipe'));
+      notifyWarning(t('inventory.recipes.errors.deleteFailed', 'Failed to delete recipe'));
     }
   };
 

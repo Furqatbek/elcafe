@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { milestoneAPI, restaurantAPI, menuAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -134,7 +135,7 @@ export default function LoyaltyMilestones() {
     e.preventDefault();
     try {
       if (!formData.name || !formData.requiredVisits) {
-        alert(t('milestones.messages.fillRequired'));
+        notifyWarning(t('milestones.messages.fillRequired'));
         return;
       }
       setLoading(true);
@@ -144,7 +145,7 @@ export default function LoyaltyMilestones() {
       loadMilestones();
     } catch (error) {
       console.error('Failed to create milestone:', error);
-      alert(t('milestones.messages.createError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -161,7 +162,7 @@ export default function LoyaltyMilestones() {
       loadMilestones();
     } catch (error) {
       console.error('Failed to update milestone:', error);
-      alert(t('milestones.messages.updateError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -176,7 +177,7 @@ export default function LoyaltyMilestones() {
       loadMilestones();
     } catch (error) {
       console.error('Failed to delete milestone:', error);
-      alert(t('milestones.messages.deleteError'));
+      notifyWarning(t('milestones.messages.deleteError'));
     }
   };
 

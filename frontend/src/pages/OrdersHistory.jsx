@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { orderAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
@@ -324,7 +325,7 @@ export default function OrdersHistory() {
       loadOrders();
     } catch (error) {
       console.error('Failed to revert order:', error);
-      alert(error.response?.data?.message || t('ordersHistory.revertError', 'Failed to revert order'));
+      notifyError(error);
     } finally {
       setReverting(false);
     }

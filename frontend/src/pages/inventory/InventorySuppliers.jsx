@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { supplierAPI } from '../../services/api';
 import { useInventory } from '../../context/InventoryContext';
@@ -110,7 +111,7 @@ export default function InventorySuppliers() {
       loadSuppliers();
     } catch (error) {
       console.error('Failed to save supplier:', error);
-      alert(t('inventory.suppliers.errors.saveFailed', 'Failed to save supplier'));
+      notifyWarning(t('inventory.suppliers.errors.saveFailed', 'Failed to save supplier'));
     }
   };
 

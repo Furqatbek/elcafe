@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { printerAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Plus, Edit, Trash2, Printer, CheckCircle, XCircle } from 'lucide-react';
@@ -91,17 +92,17 @@ const PrinterSettings = () => {
   const handleSave = async () => {
     try {
       if (!formData.printerName) {
-        alert(t('printers.messages.fillRequiredFields'));
+        notifyWarning(t('printers.messages.fillRequiredFields'));
         return;
       }
 
       setLoading(true);
       if (editingPrinter) {
         await printerAPI.updatePrinter(editingPrinter.id, formData);
-        alert(t('printers.messages.updateSuccess'));
+        notifySuccess(t('printers.messages.updateSuccess'));
       } else {
         await printerAPI.createPrinter(formData);
-        alert(t('printers.messages.createSuccess'));
+        notifySuccess(t('printers.messages.createSuccess'));
       }
 
       setShowModal(false);
@@ -110,7 +111,7 @@ const PrinterSettings = () => {
       loadPrinters(selectedRestaurant);
     } catch (error) {
       console.error('Failed to save printer:', error);
-      alert(t('printers.messages.saveError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -142,11 +143,11 @@ const PrinterSettings = () => {
     try {
       setLoading(true);
       await printerAPI.deletePrinter(id);
-      alert(t('printers.messages.deleteSuccess'));
+      notifySuccess(t('printers.messages.deleteSuccess'));
       loadPrinters(selectedRestaurant);
     } catch (error) {
       console.error('Failed to delete printer:', error);
-      alert(t('printers.messages.deleteError'));
+      notifyWarning(t('printers.messages.deleteError'));
     } finally {
       setLoading(false);
     }
@@ -159,13 +160,13 @@ const PrinterSettings = () => {
       const success = response.data.data;
 
       if (success) {
-        alert(t('printers.messages.testSuccess'));
+        notifySuccess(t('printers.messages.testSuccess'));
       } else {
-        alert(t('printers.messages.testFailed'));
+        notifyWarning(t('printers.messages.testFailed'));
       }
     } catch (error) {
       console.error('Failed to test printer:', error);
-      alert(t('printers.messages.testError'));
+      notifyWarning(t('printers.messages.testError'));
     } finally {
       setTestingPrinter(null);
     }

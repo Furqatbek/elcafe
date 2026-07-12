@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { notifyError, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import api, { restaurantAPI, menuAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -124,7 +125,7 @@ export default function ConsumptionAllowances() {
         active: form.active,
       };
       if (payload.limitCount == null && payload.limitAmount == null) {
-        alert(t('allowances.errors.noCap', 'Set an item cap, a money cap, or both.'));
+        notifyWarning(t('allowances.errors.noCap', 'Set an item cap, a money cap, or both.'));
         return;
       }
       if (form.id) {
@@ -136,7 +137,7 @@ export default function ConsumptionAllowances() {
       loadAllowances();
     } catch (e) {
       console.error(e);
-      alert(e.response?.data?.message || 'Failed');
+      notifyError(e);
     }
   };
 
@@ -147,7 +148,7 @@ export default function ConsumptionAllowances() {
       loadAllowances();
     } catch (e) {
       console.error(e);
-      alert(e.response?.data?.message || 'Failed');
+      notifyError(e);
     }
   };
 

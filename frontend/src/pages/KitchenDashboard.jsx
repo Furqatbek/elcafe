@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { kitchenAPI, restaurantAPI } from '../services/api';
 import { formatTime } from '../utils/dateUtils';
@@ -123,7 +124,7 @@ export default function KitchenDashboard() {
 
   const confirmStartPreparation = async () => {
     if (!chefName.trim()) {
-      alert(t('kitchen.errors.chefNameRequired'));
+      notifyWarning(t('kitchen.errors.chefNameRequired'));
       return;
     }
 
@@ -134,7 +135,7 @@ export default function KitchenDashboard() {
       loadOrders();
     } catch (error) {
       console.error('Failed to start preparation:', error);
-      alert(t('kitchen.errors.startFailed'));
+      notifyWarning(t('kitchen.errors.startFailed'));
     }
   };
 
@@ -146,7 +147,7 @@ export default function KitchenDashboard() {
       loadOrders();
     } catch (error) {
       console.error('Failed to mark as ready:', error);
-      alert(t('kitchen.errors.readyFailed'));
+      notifyWarning(t('kitchen.errors.readyFailed'));
     }
   };
 
@@ -156,7 +157,7 @@ export default function KitchenDashboard() {
       loadOrders();
     } catch (error) {
       console.error('Failed to mark as picked up:', error);
-      alert(t('kitchen.errors.pickupFailed'));
+      notifyWarning(t('kitchen.errors.pickupFailed'));
     }
   };
 
@@ -173,7 +174,7 @@ export default function KitchenDashboard() {
       loadOrders();
     } catch (error) {
       console.error('Failed to update priority:', error);
-      alert(t('kitchen.errors.priorityFailed'));
+      notifyWarning(t('kitchen.errors.priorityFailed'));
     }
   };
 

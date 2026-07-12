@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { restaurantAPI, systemUserAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -89,7 +90,7 @@ export default function SystemUsers() {
       loadUsers();
     } catch (e) {
       console.error(e);
-      alert(e.response?.data?.message || t('systemUsers.saveFailed', 'Failed'));
+      notifyError(e);
     }
   };
 

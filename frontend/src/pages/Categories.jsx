@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { menuAPI, restaurantAPI, uploadAPI, kitchenStationAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -146,7 +147,7 @@ export default function Categories() {
       loadCategories();
     } catch (error) {
       console.error('Failed to create category:', error);
-      alert(t('menu.messages.createCategoryError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -172,7 +173,7 @@ export default function Categories() {
       loadCategories();
     } catch (error) {
       console.error('Failed to update category:', error);
-      alert(t('menu.messages.updateCategoryError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -184,7 +185,7 @@ export default function Categories() {
       loadCategories();
     } catch (error) {
       console.error('Failed to delete category:', error);
-      alert(t('menu.messages.deleteCategoryError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 

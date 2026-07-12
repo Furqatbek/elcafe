@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { notifyError, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { reservationAPI, tablesAPI } from '../services/api';
 import { useCurrentRestaurantId } from '../utils/restaurant';
@@ -276,7 +277,7 @@ export default function Reservations() {
   const handleCreateReservation = async (e) => {
     e.preventDefault();
     if (!createForm.customerName || !createForm.customerPhone) {
-      alert('Please fill in required fields');
+      notifyWarning('Please fill in required fields');
       return;
     }
     setCreating(true);
@@ -306,7 +307,7 @@ export default function Reservations() {
       setSelectedDate(parseISO(createForm.reservationDate));
     } catch (error) {
       console.error('Failed to create reservation:', error);
-      alert(error.response?.data?.message || 'Failed to create reservation');
+      notifyError(error);
     } finally {
       setCreating(false);
     }
@@ -345,7 +346,7 @@ export default function Reservations() {
       setShowSettingsModal(false);
     } catch (error) {
       console.error('Failed to save settings:', error);
-      alert(error.response?.data?.message || 'Failed to save settings');
+      notifyError(error);
     } finally {
       setSavingSettings(false);
     }

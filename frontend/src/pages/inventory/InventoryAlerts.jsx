@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifySuccess, notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { stockAlertAPI } from '../../services/api';
 import { formatDateTime } from '../../utils/dateUtils';
@@ -119,7 +120,7 @@ export default function InventoryAlerts() {
       loadSubscriptions();
     } catch (error) {
       console.error('Failed to save subscription:', error);
-      alert(t('inventory.stockAlerts.errors.saveFailed', 'Failed to save subscription'));
+      notifyWarning(t('inventory.stockAlerts.errors.saveFailed', 'Failed to save subscription'));
     }
   };
 
@@ -146,11 +147,11 @@ export default function InventoryAlerts() {
   const handleTriggerAlerts = async () => {
     try {
       await stockAlertAPI.trigger(selectedRestaurant);
-      alert(t('inventory.stockAlerts.alertTriggered', 'Stock alert sent successfully!'));
+      notifySuccess(t('inventory.stockAlerts.alertTriggered', 'Stock alert sent successfully!'));
       loadAlertSummary();
     } catch (error) {
       console.error('Failed to trigger alerts:', error);
-      alert('Failed to trigger alerts');
+      notifyWarning('Failed to trigger alerts');
     }
   };
 

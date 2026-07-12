@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyError, notifySuccess } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { menuAPI, restaurantAPI, uploadAPI, productVariantAPI, packagingRuleAPI, inventoryAPI, recipesAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -84,10 +85,10 @@ export default function Products() {
       const updated = res.data?.data ?? 0;
       // Refresh the product list so the new costPrice shows up in the table.
       await loadProducts();
-      alert(t('pages.products.recalcDone', { defaultValue: 'Recalculated. Updated {{count}} products.', count: updated }));
+      notifySuccess(t('pages.products.recalcDone', { defaultValue: 'Recalculated. Updated {{count}} products.', count: updated }));
     } catch (e) {
       console.error('Recalculate costs failed:', e);
-      alert(e.response?.data?.message || t('pages.products.recalcFailed', 'Recalculation failed'));
+      notifyError(e);
     } finally {
       setRecalcRunning(false);
     }
@@ -242,7 +243,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to create product:', error);
-      alert(t('menu.messages.createProductError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -317,7 +318,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to update product:', error);
-      alert(t('menu.messages.updateProductError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -336,7 +337,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to delete product:', error);
-      alert(t('menu.messages.deleteProductError') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -346,7 +347,7 @@ export default function Products() {
       loadProducts();
     } catch (error) {
       console.error('Failed to toggle product status:', error);
-      alert(t('menu.messages.toggleStatusError', 'Failed to toggle status') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -394,7 +395,7 @@ export default function Products() {
       await loadVariants(selectedProductForVariants.id);
     } catch (error) {
       console.error('Failed to create variant:', error);
-      alert(t('pages.products.errors.createVariantFailed', 'Failed to create variant') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -428,7 +429,7 @@ export default function Products() {
       await loadVariants(selectedProductForVariants.id);
     } catch (error) {
       console.error('Failed to update variant:', error);
-      alert(t('pages.products.errors.updateVariantFailed', 'Failed to update variant') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 
@@ -447,7 +448,7 @@ export default function Products() {
       await loadVariants(selectedProductForVariants.id);
     } catch (error) {
       console.error('Failed to delete variant:', error);
-      alert(t('pages.products.errors.deleteVariantFailed', 'Failed to delete variant') + ': ' + (error.response?.data?.message || error.message));
+      notifyError(error);
     }
   };
 

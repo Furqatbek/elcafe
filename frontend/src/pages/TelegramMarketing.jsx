@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { telegramAPI, restaurantAPI } from '../services/api';
 import PasswordInput from '../components/PasswordInput';
@@ -152,7 +153,7 @@ export default function TelegramMarketing() {
       setSubscriberPage(page);
     } catch (error) {
       console.error('Failed to load subscribers:', error);
-      alert(t('telegram.errors.loadSubscribers'));
+      notifyWarning(t('telegram.errors.loadSubscribers'));
     } finally {
       setLoading(false);
     }
@@ -176,7 +177,7 @@ export default function TelegramMarketing() {
       setCampaignPage(page);
     } catch (error) {
       console.error('Failed to load campaigns:', error);
-      alert(t('telegram.errors.loadCampaigns'));
+      notifyWarning(t('telegram.errors.loadCampaigns'));
     } finally {
       setLoading(false);
     }
@@ -191,7 +192,7 @@ export default function TelegramMarketing() {
       setTemplatePage(page);
     } catch (error) {
       console.error('Failed to load templates:', error);
-      alert(t('telegram.errors.loadTemplates'));
+      notifyWarning(t('telegram.errors.loadTemplates'));
     } finally {
       setLoading(false);
     }
@@ -246,15 +247,15 @@ export default function TelegramMarketing() {
 
       if (editingCustomerBotId) {
         await telegramAPI.updateCustomerBotConfig(editingCustomerBotId, data);
-        alert(t('telegram.settings.customerBotUpdated'));
+        notifySuccess(t('telegram.settings.customerBotUpdated'));
       } else {
         await telegramAPI.createCustomerBotConfig(data);
-        alert(t('telegram.settings.customerBotCreated'));
+        notifySuccess(t('telegram.settings.customerBotCreated'));
       }
       loadBotConfigs();
     } catch (error) {
       console.error('Failed to save customer bot config:', error);
-      alert(t('telegram.errors.saveBotConfig'));
+      notifyWarning(t('telegram.errors.saveBotConfig'));
     } finally {
       setSavingConfig(false);
     }
@@ -268,15 +269,15 @@ export default function TelegramMarketing() {
 
       if (editingOwnerBotId) {
         await telegramAPI.updateOwnerBotConfig(editingOwnerBotId, data);
-        alert(t('telegram.settings.ownerBotUpdated'));
+        notifySuccess(t('telegram.settings.ownerBotUpdated'));
       } else {
         await telegramAPI.createOwnerBotConfig(data);
-        alert(t('telegram.settings.ownerBotCreated'));
+        notifySuccess(t('telegram.settings.ownerBotCreated'));
       }
       loadBotConfigs();
     } catch (error) {
       console.error('Failed to save owner bot config:', error);
-      alert(t('telegram.errors.saveBotConfig'));
+      notifyWarning(t('telegram.errors.saveBotConfig'));
     } finally {
       setSavingConfig(false);
     }
@@ -286,22 +287,22 @@ export default function TelegramMarketing() {
   const handleBlockSubscriber = async (id) => {
     try {
       await telegramAPI.blockSubscriber(id);
-      alert(t('telegram.subscribers.blocked'));
+      notifySuccess(t('telegram.subscribers.blocked'));
       loadSubscribers(subscriberPage);
     } catch (error) {
       console.error('Failed to block subscriber:', error);
-      alert(t('telegram.errors.blockSubscriber'));
+      notifyWarning(t('telegram.errors.blockSubscriber'));
     }
   };
 
   const handleUnblockSubscriber = async (id) => {
     try {
       await telegramAPI.unblockSubscriber(id);
-      alert(t('telegram.subscribers.unblocked'));
+      notifySuccess(t('telegram.subscribers.unblocked'));
       loadSubscribers(subscriberPage);
     } catch (error) {
       console.error('Failed to unblock subscriber:', error);
-      alert(t('telegram.errors.unblockSubscriber'));
+      notifyWarning(t('telegram.errors.unblockSubscriber'));
     }
   };
 
@@ -339,39 +340,39 @@ export default function TelegramMarketing() {
 
       if (editingCampaign) {
         await telegramAPI.updateCampaign(editingCampaign.id, data);
-        alert(t('telegram.campaigns.updated'));
+        notifySuccess(t('telegram.campaigns.updated'));
       } else {
         await telegramAPI.createCampaign(data);
-        alert(t('telegram.campaigns.created'));
+        notifySuccess(t('telegram.campaigns.created'));
       }
 
       setCampaignModalOpen(false);
       loadCampaigns(campaignPage);
     } catch (error) {
       console.error('Failed to save campaign:', error);
-      alert(t('telegram.errors.saveCampaign'));
+      notifyWarning(t('telegram.errors.saveCampaign'));
     }
   };
 
   const handleSendCampaign = async (id) => {
     try {
       await telegramAPI.sendCampaign(id);
-      alert(t('telegram.campaigns.sending'));
+      notifySuccess(t('telegram.campaigns.sending'));
       loadCampaigns(campaignPage);
     } catch (error) {
       console.error('Failed to send campaign:', error);
-      alert(t('telegram.errors.sendCampaign'));
+      notifyWarning(t('telegram.errors.sendCampaign'));
     }
   };
 
   const handleCancelCampaign = async (id) => {
     try {
       await telegramAPI.cancelCampaign(id);
-      alert(t('telegram.campaigns.cancelled'));
+      notifySuccess(t('telegram.campaigns.cancelled'));
       loadCampaigns(campaignPage);
     } catch (error) {
       console.error('Failed to cancel campaign:', error);
-      alert(t('telegram.errors.cancelCampaign'));
+      notifyWarning(t('telegram.errors.cancelCampaign'));
     }
   };
 
@@ -379,11 +380,11 @@ export default function TelegramMarketing() {
     if (!window.confirm(t('telegram.campaigns.confirmDelete'))) return;
     try {
       await telegramAPI.deleteCampaign(id);
-      alert(t('telegram.campaigns.deleted'));
+      notifySuccess(t('telegram.campaigns.deleted'));
       loadCampaigns(campaignPage);
     } catch (error) {
       console.error('Failed to delete campaign:', error);
-      alert(t('telegram.errors.deleteCampaign'));
+      notifyWarning(t('telegram.errors.deleteCampaign'));
     }
   };
 
@@ -416,28 +417,28 @@ export default function TelegramMarketing() {
     try {
       if (editingTemplate) {
         await telegramAPI.updateTemplate(editingTemplate.id, templateForm);
-        alert(t('telegram.templates.updated'));
+        notifySuccess(t('telegram.templates.updated'));
       } else {
         await telegramAPI.createTemplate(templateForm);
-        alert(t('telegram.templates.created'));
+        notifySuccess(t('telegram.templates.created'));
       }
 
       setTemplateModalOpen(false);
       loadTemplates(templatePage);
     } catch (error) {
       console.error('Failed to save template:', error);
-      alert(t('telegram.errors.saveTemplate'));
+      notifyWarning(t('telegram.errors.saveTemplate'));
     }
   };
 
   const handleToggleTemplate = async (id) => {
     try {
       await telegramAPI.toggleTemplate(id);
-      alert(t('telegram.templates.toggled'));
+      notifySuccess(t('telegram.templates.toggled'));
       loadTemplates(templatePage);
     } catch (error) {
       console.error('Failed to toggle template:', error);
-      alert(t('telegram.errors.toggleTemplate'));
+      notifyWarning(t('telegram.errors.toggleTemplate'));
     }
   };
 
@@ -445,11 +446,11 @@ export default function TelegramMarketing() {
     if (!window.confirm(t('telegram.templates.confirmDelete'))) return;
     try {
       await telegramAPI.deleteTemplate(id);
-      alert(t('telegram.templates.deleted'));
+      notifySuccess(t('telegram.templates.deleted'));
       loadTemplates(templatePage);
     } catch (error) {
       console.error('Failed to delete template:', error);
-      alert(t('telegram.errors.deleteTemplate'));
+      notifyWarning(t('telegram.errors.deleteTemplate'));
     }
   };
 
@@ -917,8 +918,8 @@ export default function TelegramMarketing() {
                         setEditingCustomerBotId(null);
                         setCustomerBotForm({ botToken: '', botUsername: '', webhookUrl: '', isActive: true, welcomeMessage: '' });
                         loadBotConfigs();
-                        alert(t('telegram.settings.botStopped', 'Bot stopped and configuration cleared'));
-                      } catch (e) { console.error(e); alert('Failed to stop bot'); }
+                        notifySuccess(t('telegram.settings.botStopped', 'Bot stopped and configuration cleared'));
+                      } catch (e) { console.error(e); notifyWarning('Failed to stop bot'); }
                     }}
                     className="w-full"
                   >
@@ -1001,8 +1002,8 @@ export default function TelegramMarketing() {
                         setEditingOwnerBotId(null);
                         setOwnerBotForm({ botToken: '', botUsername: '', welcomeMessage: '', isActive: true, autoVerifyOwners: false });
                         loadBotConfigs();
-                        alert(t('telegram.settings.botStopped', 'Bot stopped and configuration cleared'));
-                      } catch (e) { console.error(e); alert('Failed to stop bot'); }
+                        notifySuccess(t('telegram.settings.botStopped', 'Bot stopped and configuration cleared'));
+                      } catch (e) { console.error(e); notifyWarning('Failed to stop bot'); }
                     }}
                     className="w-full"
                   >
@@ -1037,14 +1038,14 @@ export default function TelegramMarketing() {
                   <Button onClick={async () => {
                     const restaurantSelect = document.getElementById('connectRestaurant');
                     const restaurantId = restaurantSelect?.value;
-                    if (!restaurantId) { alert(t('telegram.settings.selectRestaurant', 'Select a restaurant first')); return; }
+                    if (!restaurantId) { notifyWarning(t('telegram.settings.selectRestaurant', 'Select a restaurant first')); return; }
                     const user = JSON.parse(localStorage.getItem('user'));
-                    if (!user?.id) { alert('User not found'); return; }
+                    if (!user?.id) { notifyWarning('User not found'); return; }
                     try {
                       const res = await telegramAPI.generateOwnerBotCode(user.id, restaurantId);
                       const code = res.data?.data || res.data;
-                      alert(t('telegram.settings.codeGenerated', 'Your verification code:') + '\n\n' + code + '\n\n' + t('telegram.settings.sendCodeToBot', 'Send this code to the owner bot in Telegram'));
-                    } catch (e) { console.error(e); alert(e.response?.data?.message || 'Failed to generate code'); }
+                      notifySuccess(t('telegram.settings.codeGenerated', 'Your verification code:') + '\n\n' + code + '\n\n' + t('telegram.settings.sendCodeToBot', 'Send this code to the owner bot in Telegram'));
+                    } catch (e) { console.error(e); notifyError(e); }
                   }}>
                     {t('telegram.settings.generateCode', 'Generate Code')}
                   </Button>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { inventoryAPI } from '../../services/api';
 import { formatDateTime } from '../../utils/dateUtils';
@@ -246,7 +247,7 @@ export default function InventoryIngredients() {
       loadIngredients();
     } catch (error) {
       console.error('Failed to save ingredient:', error);
-      alert(t('inventory.errors.saveFailed'));
+      notifyWarning(t('inventory.errors.saveFailed'));
     }
   };
 
@@ -258,7 +259,7 @@ export default function InventoryIngredients() {
       loadIngredients();
     } catch (error) {
       console.error('Failed to delete ingredient:', error);
-      alert(t('inventory.errors.deleteFailed'));
+      notifyWarning(t('inventory.errors.deleteFailed'));
     }
   };
 
@@ -296,7 +297,7 @@ export default function InventoryIngredients() {
       loadIngredients();
     } catch (error) {
       console.error('Failed to update stock:', error);
-      alert('Failed to update stock');
+      notifyWarning('Failed to update stock');
     }
   };
 
@@ -308,7 +309,7 @@ export default function InventoryIngredients() {
       setTransactionModalOpen(true);
     } catch (error) {
       console.error('Failed to load transactions:', error);
-      alert('Failed to load transactions');
+      notifyWarning('Failed to load transactions');
     }
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { restaurantAPI, menuAPI } from '../services/api';
 import api from '../services/api';
@@ -127,7 +128,7 @@ export default function EmployeeConsumption() {
       loadConsumptions();
     } catch (e) {
       console.error(e);
-      alert(e.response?.data?.message || 'Failed');
+      notifyError(e);
     }
   };
 

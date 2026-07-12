@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifySuccess, notifyWarning } from '../lib/errors';
 import { financialAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { TrendingUp, TrendingDown, PieChart, BarChart3, Calendar, AlertCircle, RefreshCw, Settings, Building2 } from 'lucide-react';
@@ -119,7 +120,7 @@ const FinancialReports = () => {
       await loadReports(selectedRestaurant);
     } catch (error) {
       console.error('Failed to initialize accounts:', error);
-      alert(t('finance.reports.initializationFailed', 'Failed to initialize Chart of Accounts'));
+      notifyWarning(t('finance.reports.initializationFailed', 'Failed to initialize Chart of Accounts'));
     } finally {
       setInitializingAccounts(false);
     }
@@ -578,10 +579,10 @@ const FinancialReports = () => {
     try {
       await financialAPI.initializeAccounts(selectedRestaurant);
       await loadReports(selectedRestaurant);
-      alert(t('finance.reports.reinitializeSuccess', 'Chart of Accounts re-initialized successfully'));
+      notifySuccess(t('finance.reports.reinitializeSuccess', 'Chart of Accounts re-initialized successfully'));
     } catch (error) {
       console.error('Failed to re-initialize accounts:', error);
-      alert(t('finance.reports.initializationFailed', 'Failed to initialize Chart of Accounts'));
+      notifyWarning(t('finance.reports.initializationFailed', 'Failed to initialize Chart of Accounts'));
     } finally {
       setInitializingAccounts(false);
     }

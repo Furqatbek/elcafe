@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { financialAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -128,7 +129,7 @@ export default function Payroll() {
       });
       loadSalaryConfigs();
       loadPayrolls();
-    } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
+    } catch (e) { console.error('Failed:', e); notifyError(e); }
   };
 
   const handleEditSalary = (sc) => {
@@ -163,7 +164,7 @@ export default function Payroll() {
       await financialAPI.paySalaryNow(id);
       loadSalaryConfigs();
       loadPayrolls();
-    } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
+    } catch (e) { console.error('Failed:', e); notifyError(e); }
   };
 
   // Pay-now is disabled once a config has already been paid for the
@@ -221,7 +222,7 @@ export default function Payroll() {
         bonus: '', tips: '', commission: '', taxDeduction: '', otherDeductions: '', notes: '',
       });
       loadPayrolls();
-    } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
+    } catch (e) { console.error('Failed:', e); notifyError(e); }
   };
 
   const handleEditPayroll = (p) => {
@@ -258,7 +259,7 @@ export default function Payroll() {
       await financialAPI.payPayroll(selectedPayroll.id, payForm.paymentDate, payForm.paymentMethod, payForm.transactionRef || null);
       setPayOpen(false);
       loadPayrolls();
-    } catch (e) { console.error('Failed:', e); alert(e.response?.data?.message || 'Failed'); }
+    } catch (e) { console.error('Failed:', e); notifyError(e); }
   };
 
   const handleDelete = async (id) => {

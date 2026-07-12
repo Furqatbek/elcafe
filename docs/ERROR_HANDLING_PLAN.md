@@ -114,6 +114,16 @@ logged/observable server-side.
 
 ## Phase EH-3 — Page-by-page sweep (61 pages · kill all 245 `alert()` + 398 silent catches)
 
+> **Status: ◐ in progress.** **All 245 `alert()` calls eliminated across the codebase** (2026-07-12)
+> — the raw-backend-text popups the user complained about are gone. A classifying transform routed
+> each to the toast pipeline: catch-block error alerts → `notifyError(err)` (localized by code,
+> with request id on 5xx), client validation → `notifyWarning`, confirmations → `notifySuccess`.
+> `grep -rn "\balert(" src` is now zero. Remaining EH-3 work (per-page, ongoing): convert the
+> user-facing silent `catch → console.error` blocks to `notifyError`, adopt `<QueryState>` for
+> loading/empty/error on list fetches, and apply `can()` role-hiding — plus the deferred EH-2.5 WS
+> banner and EH-2.6 field errors. Build + 69 frontend tests green after the alert sweep.
+
+
 Per batch, the same five moves: `alert()`→`notifyError` · silent `catch`→error state or toast ·
 fetches wrapped in `QueryState` · role-gated actions hidden via `can()` · texts verified in en/ru/uz.
 **Batch acceptance:** `grep -c "alert(" <batch files>` = 0, every fetch has an error+retry path, suite green.
