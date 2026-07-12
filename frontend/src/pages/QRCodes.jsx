@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { notifySuccess, notifyWarning } from '../lib/errors';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { qrCodeAPI, restaurantAPI, tablesAPI } from '../services/api';
 import {
@@ -161,6 +161,7 @@ export default function QRCodes() {
       setQrImage(response.data.image);
     } catch (error) {
       console.error('Failed to load QR image:', error);
+      notifyError(error);
     }
   };
 

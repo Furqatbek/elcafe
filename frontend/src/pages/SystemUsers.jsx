@@ -99,7 +99,10 @@ export default function SystemUsers() {
     try {
       await systemUserAPI.delete(id);
       loadUsers();
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      notifyError(e);
+    }
   };
 
   const roleColor = (role) => {

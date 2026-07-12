@@ -155,7 +155,10 @@ export default function Payroll() {
     try {
       await financialAPI.deleteSalaryConfig(id);
       loadSalaryConfigs();
-    } catch (e) { console.error('Failed:', e); }
+    } catch (e) {
+      console.error('Failed:', e);
+      notifyError(e);
+    }
   };
 
   const handlePayNow = async (id) => {
@@ -250,7 +253,10 @@ export default function Payroll() {
     try {
       await financialAPI.approvePayroll(id, 'Admin');
       loadPayrolls();
-    } catch (e) { console.error('Failed:', e); }
+    } catch (e) {
+      console.error('Failed:', e);
+      notifyError(e);
+    }
   };
 
   const handlePay = async () => {
@@ -267,7 +273,10 @@ export default function Payroll() {
     try {
       await financialAPI.deletePayroll(id);
       loadPayrolls();
-    } catch (e) { console.error('Failed:', e); }
+    } catch (e) {
+      console.error('Failed:', e);
+      notifyError(e);
+    }
   };
 
   const fmt = (n) => n != null ? Number(n).toLocaleString() : '—';

@@ -270,6 +270,7 @@ export default function LoyaltySettings() {
       setCustomerTx(txPage?.content || []);
     } catch (error) {
       console.error('Failed to load customer loyalty:', error);
+      notifyError(error);
     } finally {
       setCustomerLoading(false);
     }

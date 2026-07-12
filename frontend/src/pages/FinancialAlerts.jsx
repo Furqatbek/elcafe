@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { notifySuccess, notifyWarning } from '../lib/errors';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { financialAlertAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -161,6 +161,7 @@ const FinancialAlerts = () => {
       loadSubscriptions();
     } catch (error) {
       console.error('Failed to toggle subscription:', error);
+      notifyError(error);
     }
   };
 
@@ -174,6 +175,7 @@ const FinancialAlerts = () => {
       loadSubscriptions();
     } catch (error) {
       console.error('Failed to delete subscription:', error);
+      notifyError(error);
     }
   };
 

@@ -62,7 +62,10 @@ export default function OwnerBotSubscribers() {
       const res = await telegramAPI.getOwnerSubscriber(id);
       setEditingDetail(res.data?.data);
       setEditing(id);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      notifyError(e);
+    }
   };
 
   const handleToggleActive = async (sub) => {

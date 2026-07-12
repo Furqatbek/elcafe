@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyError } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { stockCountAPI } from '../../services/api';
 import { useInventory } from '../../context/InventoryContext';
@@ -163,6 +164,7 @@ export default function InventoryStockCounts() {
       loadStockCounts();
     } catch (error) {
       console.error('Failed to create stock count:', error);
+      notifyError(error);
     }
   };
 
@@ -172,6 +174,7 @@ export default function InventoryStockCounts() {
       loadStockCounts();
     } catch (error) {
       console.error('Failed to start stock count:', error);
+      notifyError(error);
     }
   };
 
@@ -182,6 +185,7 @@ export default function InventoryStockCounts() {
       setStockCountDetailModalOpen(true);
     } catch (error) {
       console.error('Failed to load stock count details:', error);
+      notifyError(error);
     }
   };
 
@@ -200,6 +204,7 @@ export default function InventoryStockCounts() {
       loadStockCounts();
     } catch (error) {
       console.error('Failed to record count:', error);
+      notifyError(error);
     }
   };
 
@@ -211,6 +216,7 @@ export default function InventoryStockCounts() {
       loadStockCounts();
     } catch (error) {
       console.error('Failed to submit for review:', error);
+      notifyError(error);
     }
   };
 
@@ -236,6 +242,7 @@ export default function InventoryStockCounts() {
       }
     } catch (error) {
       console.error('Failed to approve stock count:', error);
+      notifyError(error);
     } finally {
       setApproving(false);
     }
@@ -256,6 +263,7 @@ export default function InventoryStockCounts() {
       loadStockCounts();
     } catch (error) {
       console.error('Failed to cancel stock count:', error);
+      notifyError(error);
     } finally {
       setCancelling(false);
     }
@@ -283,6 +291,7 @@ export default function InventoryStockCounts() {
       }
     } catch (error) {
       console.error('Failed to set variance reason:', error);
+      notifyError(error);
     }
   };
 

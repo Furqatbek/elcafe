@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { notifyWarning } from '../../lib/errors';
+import { notifyError, notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { inventoryAPI } from '../../services/api';
 import { formatDateTime } from '../../utils/dateUtils';
@@ -116,6 +116,7 @@ export default function InventoryIngredients() {
       loadCategories();
     } catch (e) {
       console.error('Failed to create category:', e);
+      notifyError(e);
     }
   };
 
@@ -126,6 +127,7 @@ export default function InventoryIngredients() {
       if (filterCategoryId === id) setFilterCategoryId(null);
     } catch (e) {
       console.error('Failed to delete category:', e);
+      notifyError(e);
     }
   };
 

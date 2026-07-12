@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { notifyWarning } from '../../lib/errors';
+import { notifyError, notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { inventoryBatchAPI } from '../../services/api';
 import { useInventory } from '../../context/InventoryContext';
@@ -182,6 +182,7 @@ export default function InventoryExpiry() {
       loadExpiredBatches();
     } catch (error) {
       console.error('Failed to mark expired batches:', error);
+      notifyError(error);
     }
   };
 

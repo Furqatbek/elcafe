@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { notifyWarning } from '../../lib/errors';
+import { notifyError, notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { supplierAPI } from '../../services/api';
 import { useInventory } from '../../context/InventoryContext';
@@ -123,6 +123,7 @@ export default function InventorySuppliers() {
       loadSuppliers();
     } catch (error) {
       console.error('Failed to delete supplier:', error);
+      notifyError(error);
     }
   };
 
@@ -132,6 +133,7 @@ export default function InventorySuppliers() {
       loadSuppliers();
     } catch (error) {
       console.error('Failed to toggle supplier:', error);
+      notifyError(error);
     }
   };
 

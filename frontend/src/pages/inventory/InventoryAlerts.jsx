@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { notifySuccess, notifyWarning } from '../../lib/errors';
+import { notifyError, notifySuccess, notifyWarning } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { stockAlertAPI } from '../../services/api';
 import { formatDateTime } from '../../utils/dateUtils';
@@ -130,6 +130,7 @@ export default function InventoryAlerts() {
       loadSubscriptions();
     } catch (error) {
       console.error('Failed to toggle subscription:', error);
+      notifyError(error);
     }
   };
 
@@ -141,6 +142,7 @@ export default function InventoryAlerts() {
       loadSubscriptions();
     } catch (error) {
       console.error('Failed to delete subscription:', error);
+      notifyError(error);
     }
   };
 

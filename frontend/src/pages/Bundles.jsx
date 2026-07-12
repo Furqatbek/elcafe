@@ -203,6 +203,7 @@ export default function Bundles() {
       loadBundles();
     } catch (error) {
       console.error('Failed to toggle bundle:', error);
+      notifyError(error);
     }
   };
 

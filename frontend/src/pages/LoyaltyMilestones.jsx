@@ -187,6 +187,7 @@ export default function LoyaltyMilestones() {
       loadMilestones();
     } catch (error) {
       console.error('Failed to toggle milestone:', error);
+      notifyError(error);
     }
   };
 

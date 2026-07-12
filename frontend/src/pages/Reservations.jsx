@@ -219,6 +219,7 @@ export default function Reservations() {
       loadReservations();
     } catch (error) {
       console.error('Failed to confirm reservation:', error);
+      notifyError(error);
     }
   };
 
@@ -230,6 +231,7 @@ export default function Reservations() {
       setShowDetailsModal(false);
     } catch (error) {
       console.error('Failed to cancel reservation:', error);
+      notifyError(error);
     }
   };
 
@@ -240,6 +242,7 @@ export default function Reservations() {
       setShowDetailsModal(false);
     } catch (error) {
       console.error('Failed to check in:', error);
+      notifyError(error);
     }
   };
 
@@ -250,6 +253,7 @@ export default function Reservations() {
       setShowDetailsModal(false);
     } catch (error) {
       console.error('Failed to complete reservation:', error);
+      notifyError(error);
     }
   };
 
@@ -261,6 +265,7 @@ export default function Reservations() {
       setShowDetailsModal(false);
     } catch (error) {
       console.error('Failed to mark no-show:', error);
+      notifyError(error);
     }
   };
 
@@ -271,6 +276,7 @@ export default function Reservations() {
       setShowAssignTableModal(false);
     } catch (error) {
       console.error('Failed to assign table:', error);
+      notifyError(error);
     }
   };
 

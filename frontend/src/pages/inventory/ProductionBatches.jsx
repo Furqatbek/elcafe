@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { useInventory } from '../../context/InventoryContext';
 import InventoryLayout from './InventoryLayout';
@@ -143,6 +144,7 @@ export default function ProductionBatches() {
       loadBatches();
     } catch (error) {
       console.error('Failed to create batch:', error);
+      notifyError(error);
     }
   };
 
@@ -153,6 +155,7 @@ export default function ProductionBatches() {
       if (selectedBatch?.id === batchId) loadBatchDetail(batchId);
     } catch (error) {
       console.error('Failed to start batch:', error);
+      notifyError(error);
     }
   };
 
@@ -170,6 +173,7 @@ export default function ProductionBatches() {
       loadBatchDetail(selectedBatch.id);
     } catch (error) {
       console.error('Failed to complete batch:', error);
+      notifyError(error);
     }
   };
 
@@ -186,6 +190,7 @@ export default function ProductionBatches() {
       loadBatchDetail(selectedBatch.id);
     } catch (error) {
       console.error('Failed to record waste:', error);
+      notifyError(error);
     }
   };
 
@@ -203,6 +208,7 @@ export default function ProductionBatches() {
       loadBatchDetail(selectedBatch.id);
     } catch (error) {
       console.error('Failed to add input:', error);
+      notifyError(error);
     }
   };
 
@@ -213,6 +219,7 @@ export default function ProductionBatches() {
       loadBatchDetail(selectedBatch.id);
     } catch (error) {
       console.error('Failed to reload recipe:', error);
+      notifyError(error);
     }
   };
 
@@ -226,6 +233,7 @@ export default function ProductionBatches() {
       }
     } catch (error) {
       console.error('Failed to delete batch:', error);
+      notifyError(error);
     }
   };
 

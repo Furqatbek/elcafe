@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { notifyWarning } from '../lib/errors';
+import { notifyError, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import {
   Trophy,
@@ -204,6 +204,7 @@ export default function WaiterPerformance() {
       loadKPIConfigs();
     } catch (error) {
       console.error('Failed to delete KPI config:', error);
+      notifyError(error);
     }
   };
 

@@ -224,6 +224,7 @@ export default function CouponCodes() {
       loadCoupons();
     } catch (error) {
       console.error('Failed to toggle coupon:', error);
+      notifyError(error);
     }
   };
 

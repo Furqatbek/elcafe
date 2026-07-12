@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { notifyError } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { wasteAPI } from '../../services/api';
 import { useInventory } from '../../context/InventoryContext';
@@ -108,6 +109,7 @@ export default function InventoryWaste() {
       loadIngredients();
     } catch (error) {
       console.error('Failed to record waste:', error);
+      notifyError(error);
     }
   };
 
@@ -117,6 +119,7 @@ export default function InventoryWaste() {
       loadWasteRecords();
     } catch (error) {
       console.error('Failed to delete waste record:', error);
+      notifyError(error);
     }
   };
 

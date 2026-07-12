@@ -196,6 +196,7 @@ export default function HappyHours() {
       loadHappyHours();
     } catch (error) {
       console.error('Failed to toggle happy hour:', error);
+      notifyError(error);
     }
   };
 

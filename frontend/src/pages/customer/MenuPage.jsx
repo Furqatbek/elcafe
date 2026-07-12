@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError } from '../../lib/errors';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { selfServiceAPI } from '../../services/api';
@@ -181,6 +182,7 @@ export default function MenuPage() {
       setShowProductModal(true);
     } catch (err) {
       console.error('Failed to load product details:', err);
+      notifyError(err);
     }
   };
 

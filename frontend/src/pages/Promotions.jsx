@@ -239,6 +239,7 @@ export default function Promotions() {
       loadPromotions();
     } catch (error) {
       console.error('Failed to toggle promotion:', error);
+      notifyError(error);
     }
   };
 

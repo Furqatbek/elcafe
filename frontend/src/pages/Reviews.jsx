@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { reviewAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -109,6 +110,7 @@ export default function Reviews() {
       loadReviews();
     } catch (err) {
       console.error('Failed to reply:', err);
+      notifyError(err);
     }
   };
 
@@ -118,6 +120,7 @@ export default function Reviews() {
       loadReviews();
     } catch (err) {
       console.error('Failed to hide review:', err);
+      notifyError(err);
     }
   };
 
@@ -127,6 +130,7 @@ export default function Reviews() {
       loadReviews();
     } catch (err) {
       console.error('Failed to publish review:', err);
+      notifyError(err);
     }
   };
 

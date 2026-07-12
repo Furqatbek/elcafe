@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyError } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { referralAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -227,6 +228,7 @@ export default function ReferralProgram() {
       loadStats();
     } catch (error) {
       console.error('Error saving settings:', error);
+      notifyError(error);
     } finally {
       setLoading(false);
     }
@@ -240,6 +242,7 @@ export default function ReferralProgram() {
       loadStats();
     } catch (error) {
       console.error('Error toggling program:', error);
+      notifyError(error);
     } finally {
       setLoading(false);
     }

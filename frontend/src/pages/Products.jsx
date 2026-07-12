@@ -467,8 +467,9 @@ export default function Products() {
         setInventoryIngredients(ingRes.data.data || []);
         setPackagingCategories(catRes.data.data || []);
       } catch (e) {
-        console.error('Failed to load ingredients:', e);
-      }
+      console.error('Failed to load ingredients:', e);
+      notifyError(e);
+    }
     }
   };
 
@@ -499,6 +500,7 @@ export default function Products() {
       await loadPackagingRules(selectedProductForPackaging.id);
     } catch (error) {
       console.error('Failed to create packaging rule:', error);
+      notifyError(error);
     }
   };
 
@@ -508,6 +510,7 @@ export default function Products() {
       if (selectedProductForPackaging) await loadPackagingRules(selectedProductForPackaging.id);
     } catch (error) {
       console.error('Failed to delete packaging rule:', error);
+      notifyError(error);
     }
   };
 
@@ -517,6 +520,7 @@ export default function Products() {
       if (selectedProductForPackaging) await loadPackagingRules(selectedProductForPackaging.id);
     } catch (error) {
       console.error('Failed to toggle packaging rule:', error);
+      notifyError(error);
     }
   };
 

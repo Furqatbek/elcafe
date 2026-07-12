@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { notifyError } from '../../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/utils';
 import {
@@ -246,7 +247,10 @@ const PaymentScreen = () => {
 
           if (allPaid) {
             // All splits paid - close order and release table (best-effort; backend already auto-closes)
-            try { await posAPI.closeOrder(currentOrder.id); } catch (e) { console.warn('closeOrder failed (order may already be closed):', e); }
+            try { await posAPI.closeOrder(currentOrder.id); } catch (e) {
+      console.warn('closeOrder failed (order may already be closed):', e);
+      notifyError(e);
+    }
             setPaymentStatus('COMPLETED');
             printOrderReceipt(response.data.data?.orderNumber || currentOrder.orderNumber);
             clearSplitBill();
@@ -265,8 +269,9 @@ const PaymentScreen = () => {
             try {
               await fetchFloorPlan(restaurantId);
             } catch (e) {
-              console.error('Failed to refresh floor plan:', e);
-            }
+      console.error('Failed to refresh floor plan:', e);
+      notifyError(e);
+    }
           }
           return;
         }
@@ -282,14 +287,20 @@ const PaymentScreen = () => {
           const newTotalPaid = totalPaid + paymentData.amount;
           if (newTotalPaid >= grandTotal - 0.01) {
             // Order fully paid - close order and release table (best-effort; backend already auto-closes)
-            try { await posAPI.closeOrder(currentOrder.id); } catch (e) { console.warn('closeOrder failed (order may already be closed):', e); }
+            try { await posAPI.closeOrder(currentOrder.id); } catch (e) {
+      console.warn('closeOrder failed (order may already be closed):', e);
+      notifyError(e);
+    }
             setPaymentStatus('COMPLETED');
             printOrderReceipt(response.data.data?.orderNumber || currentOrder.orderNumber);
             completeOrder();
           }
         } else {
           // Single payment - close order and release table (best-effort; backend already auto-closes)
-          try { await posAPI.closeOrder(currentOrder.id); } catch (e) { console.warn('closeOrder failed (order may already be closed):', e); }
+          try { await posAPI.closeOrder(currentOrder.id); } catch (e) {
+      console.warn('closeOrder failed (order may already be closed):', e);
+      notifyError(e);
+    }
           setPaymentStatus('COMPLETED');
           const orderNum = response.data.data?.orderNumber;
           printOrderReceipt(orderNum);
@@ -301,8 +312,9 @@ const PaymentScreen = () => {
           try {
             await fetchFloorPlan(restaurantId);
           } catch (e) {
-            console.error('Failed to refresh floor plan:', e);
-          }
+      console.error('Failed to refresh floor plan:', e);
+      notifyError(e);
+    }
         }
       } else {
         // Create new order with payment
@@ -360,8 +372,9 @@ const PaymentScreen = () => {
           try {
             await fetchFloorPlan(restaurantId);
           } catch (e) {
-            console.error('Failed to refresh floor plan:', e);
-          }
+      console.error('Failed to refresh floor plan:', e);
+      notifyError(e);
+    }
         }
 
         setPaymentStatus('COMPLETED');
@@ -380,11 +393,17 @@ const PaymentScreen = () => {
         // Order was already fully paid (e.g. previous payment succeeded but UI didn't update)
         // Treat as success: close the order and complete
         console.warn('Order already fully paid - completing order flow');
-        try { await posAPI.closeOrder(currentOrder.id); } catch (e) { console.warn('closeOrder failed:', e); }
+        try { await posAPI.closeOrder(currentOrder.id); } catch (e) {
+      console.warn('closeOrder failed:', e);
+      notifyError(e);
+    }
         setPaymentStatus('COMPLETED');
         completeOrder();
         if (currentOrder.type === 'DINE_IN') {
-          try { await fetchFloorPlan(restaurantId); } catch (e) { console.error('Failed to refresh floor plan:', e); }
+          try { await fetchFloorPlan(restaurantId); } catch (e) {
+      console.error('Failed to refresh floor plan:', e);
+      notifyError(e);
+    }
         }
       } else {
         console.error('Payment failed:', error);
@@ -463,8 +482,9 @@ const PaymentScreen = () => {
           try {
             await posAPI.applyServiceFee(orderId, percent);
           } catch (error) {
-            console.error('Failed to save service fee to backend:', error);
-          }
+      console.error('Failed to save service fee to backend:', error);
+      notifyError(error);
+    }
         }
       }
     } else {
@@ -496,8 +516,9 @@ const PaymentScreen = () => {
             try {
               await posAPI.applyServiceFee(orderId, calculatedPercent);
             } catch (e) {
-              console.error('Fallback also failed:', e);
-            }
+      console.error('Fallback also failed:', e);
+      notifyError(e);
+    }
           }
         }
       }
@@ -516,8 +537,9 @@ const PaymentScreen = () => {
       try {
         await posAPI.applyServiceFee(orderId, 0);
       } catch (error) {
-        console.error('Failed to remove service fee from backend:', error);
-      }
+      console.error('Failed to remove service fee from backend:', error);
+      notifyError(error);
+    }
     }
   };
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { notifySuccess, notifyWarning } from '../lib/errors';
+import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { shiftAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -110,6 +110,7 @@ export default function ShiftDashboard() {
       loadShifts();
     } catch (e) {
       console.error('Failed to clock out:', e);
+      notifyError(e);
     }
   };
 
@@ -119,6 +120,7 @@ export default function ShiftDashboard() {
       loadShifts();
     } catch (e) {
       console.error('Failed to start break:', e);
+      notifyError(e);
     }
   };
 
@@ -128,6 +130,7 @@ export default function ShiftDashboard() {
       loadShifts();
     } catch (e) {
       console.error('Failed to end break:', e);
+      notifyError(e);
     }
   };
 
@@ -137,6 +140,7 @@ export default function ShiftDashboard() {
       loadShifts();
     } catch (e) {
       console.error('Failed to approve shift:', e);
+      notifyError(e);
     }
   };
 
