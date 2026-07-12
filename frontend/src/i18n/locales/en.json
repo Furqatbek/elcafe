@@ -528,7 +528,9 @@
       "edit": "Edit",
       "recordPayment": "Record payment",
       "viewHistory": "View history"
-    }
+    },
+    "retry": "Try again",
+    "reload": "Reload"
   },
   "shift": {
     "dashboard": {
@@ -5576,6 +5578,11 @@
     "METHOD_NOT_ALLOWED": "This action isn't available.",
     "PAYMENT_FAILED": "Payment failed. Please try again or use a different method.",
     "ANALYTICS_FAILED": "Couldn't build this report right now. Please try again.",
-    "INTERNAL": "Something went wrong on our side. Please try again."
+    "INTERNAL": "Something went wrong on our side. Please try again.",
+    "SESSION_ENDED": "Your session has ended. Please sign in again.",
+    "appCrashTitle": "Something went wrong",
+    "appCrashBody": "An unexpected error occurred. Please reload the page.",
+    "pageCrashTitle": "This page ran into a problem",
+    "pageCrashBody": "Something went wrong while displaying this page. Try again, or go back and reopen it."
   }
 }

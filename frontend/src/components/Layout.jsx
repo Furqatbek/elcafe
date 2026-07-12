@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import RouteErrorBoundary from './RouteErrorBoundary';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { Button } from './ui/button';
@@ -495,11 +496,15 @@ export default function Layout() {
       <main className="flex-1 overflow-auto">
         <PlanExpiryBanner />
         <div className="p-8">
-          {(() => {
-            // Fallback guard for direct-URL access to a module the plan doesn't include.
-            const code = featureForPath(location.pathname);
-            return code && !hasFeature(code) ? <PlanRequired /> : <Outlet />;
-          })()}
+          {/* EH-2.2: per-route boundary — a crash in one page renders an in-shell card here while
+              the sidebar/header stay alive; resetKey clears it on navigation. */}
+          <RouteErrorBoundary resetKey={location.pathname}>
+            {(() => {
+              // Fallback guard for direct-URL access to a module the plan doesn't include.
+              const code = featureForPath(location.pathname);
+              return code && !hasFeature(code) ? <PlanRequired /> : <Outlet />;
+            })()}
+          </RouteErrorBoundary>
         </div>
       </main>
 

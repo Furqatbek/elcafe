@@ -128,10 +128,16 @@ api.interceptors.response.use(
         localStorage.removeItem('refresh_token_expiry');
         localStorage.removeItem('token_set_time');
 
-        // Only redirect to login if we're on the admin app (not customer/order pages)
+        // EH-2.1/2.7: the session has ended (expired, or revoked — a tokenVersion bump from a
+        // password change / deactivation makes both tokens fail). localStorage is already cleared
+        // above; stash a reason so the login screen can tell the user why they're back here
+        // (a hard redirect would kill any toast), then send them to login.
         const isCustomerApp = window.location.pathname.startsWith('/order');
         if (!isCustomerApp) {
-          window.location.href = '/admin/login';
+          try { sessionStorage.setItem('auth_logout_reason', 'SESSION_ENDED'); } catch (_) {}
+          if (!window.location.pathname.endsWith('/login')) {
+            window.location.href = '/admin/login';
+          }
         }
         return Promise.reject(refreshError);
       } finally {

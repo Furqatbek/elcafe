@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { restaurantAPI, systemUserAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { can } from '../lib/permissions';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -25,8 +26,9 @@ export default function SystemUsers() {
   const { t } = useTranslation();
   const currentUser = useAuthStore((state) => state.user);
   // Only the platform operator may pick which restaurant a user belongs to (the backend enforces
-  // this too); tenant admins always create within their own restaurant.
-  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
+  // this too); tenant admins always create within their own restaurant. Routed through the central
+  // can() helper (EH-2.8) so role rules live in one place.
+  const isSuperAdmin = can(currentUser, 'systemUser.bindRestaurant');
   const [users, setUsers] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);

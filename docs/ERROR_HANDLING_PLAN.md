@@ -86,16 +86,31 @@ logged/observable server-side.
 
 ## Phase EH-2 — Frontend: one pipeline from failure to user
 
+> **Status: ✅ core landed 2026-07-12.** Built the reusable machinery: `lazyWithRetry`
+> (chunk-fail auto-reload — systematizes the blank-page class we hit), `RouteErrorBoundary` (a
+> page crash shows an in-shell card, nav survives; wired around the Layout `<Outlet>`; root
+> boundary + card localized en/ru/uz), `useApiCall` + `<QueryState>` (the standard loading/
+> error+retry/empty wrapper, stale-response-safe), `can(user, action)` (central role gate;
+> SystemUsers pilot routed through it), and the session-ended path (refresh-exhausted →
+> reason-stashed logout → localized banner on Login, no silent bounce; covers EH-2.7). 17 new
+> unit tests; app re-verified mounting in a headless browser. **Deferred into the EH-3 page
+> sweep (they are inherently per-page):** EH-2.5 WS disconnect banner, EH-2.6 field-error
+> rendering — the primitives they need (QueryState, fieldErrors on the AppError, notifyError) are
+> in place. EH-2.1 is ◐: refresh-exhausted + offline/timeout/5xx/auth codes are handled (via the
+> normalized `error.app` + notifyError), but per-status *automatic* central side effects beyond
+> logout are applied per-call as pages adopt notifyError, not globally.
+
+
 | # | Task | Where | Acceptance |
 |---|---|---|---|
-| EH-2.1 | Global status policies in the interceptor (on top of the existing 401-refresh + 402→PlanRequired): refresh exhausted → logout + "session expired" toast + redirect; 403 → localized "no access" (never raw TENANT_ACCESS_DENIED); 423 → "account locked"; 429 → "too many attempts, retry in Xs" (honor `Retry-After`); 5xx → generic + requestId; offline/network → "check your connection", marked retriable | `services/api.js` | mocked-axios tests per status; no page sees a raw 401/403/5xx anymore |
-| EH-2.2 | ErrorBoundary upgrade: localize the root fallback; add **route-level boundary** inside the Layout so one crashing page renders an in-shell error card (Back / Retry) instead of blanking the app; dedicated boundaries for POS, Kitchen, Waiter (touch screens) | `main.jsx`, `App.jsx`, `components/` | throwing test component: shell + nav stay alive; boundary text switches with language |
-| EH-2.3 | Chunk-load-failure recovery: wrap `lazy()` imports — on dynamic-import failure (stale hashes after redeploy) auto-reload once (sessionStorage-guarded), else show the error card. This systematizes the blank-page class we just hit | `App.jsx` helper | simulated import rejection → one reload, then card; no white page |
-| EH-2.4 | `useApiCall` hook + `<QueryState>` component: single reusable loading / empty / error(+Retry) wrapper — the standard every page adopts in EH-3 | `hooks/`, `components/` | Storybook-style test of the three states; used by ≥3 pilot pages (Orders, Products, SystemUsers) |
-| EH-2.5 | WebSocket UX: disconnect/reconnect banner on realtime pages (orders, kitchen, waiter, POS), STOMP error frames → `notifyError` | `hooks/useWebSocketNotifications` | kill WS in test → banner shows, auto-clears on reconnect |
-| EH-2.6 | Form validation UX: `fieldErrors` from VALIDATION_ERROR rendered under the matching inputs (pilot: Login, SystemUsers, Restaurants, Products) | form components | submitting invalid form marks fields, no toast spam |
-| EH-2.7 | Auth edge states: revoked token (tokenVersion bump), deactivated account, password changed elsewhere → clean logout with localized reason (not an infinite refresh loop) | `services/api.js`, `store/authStore` | each simulated → login screen + correct toast |
-| EH-2.8 | Role-aware UI ("profile lockdown"): central `can(user, action)` helper; hide/disable actions the role can't perform (SUPER_ADMIN-only, ADMIN-only, OPERATOR-blocked) so users stop *reaching* 403s; pilot on the pages with role-gated buttons | `lib/permissions.js`, Layout + pilots | operator sees no admin buttons; disabled controls carry a tooltip |
+| EH-2.1 ◐ | Global status policies in the interceptor (on top of the existing 401-refresh + 402→PlanRequired): refresh exhausted → logout + "session expired" toast + redirect; 403 → localized "no access" (never raw TENANT_ACCESS_DENIED); 423 → "account locked"; 429 → "too many attempts, retry in Xs" (honor `Retry-After`); 5xx → generic + requestId; offline/network → "check your connection", marked retriable | `services/api.js` | mocked-axios tests per status; no page sees a raw 401/403/5xx anymore |
+| EH-2.2 ✅ | ErrorBoundary upgrade: localize the root fallback; add **route-level boundary** inside the Layout so one crashing page renders an in-shell error card (Back / Retry) instead of blanking the app; dedicated boundaries for POS, Kitchen, Waiter (touch screens) | `main.jsx`, `App.jsx`, `components/` | throwing test component: shell + nav stay alive; boundary text switches with language |
+| EH-2.3 ✅ | Chunk-load-failure recovery: wrap `lazy()` imports — on dynamic-import failure (stale hashes after redeploy) auto-reload once (sessionStorage-guarded), else show the error card. This systematizes the blank-page class we just hit | `App.jsx` helper | simulated import rejection → one reload, then card; no white page |
+| EH-2.4 ✅ | `useApiCall` hook + `<QueryState>` component: single reusable loading / empty / error(+Retry) wrapper — the standard every page adopts in EH-3 | `hooks/`, `components/` | Storybook-style test of the three states; used by ≥3 pilot pages (Orders, Products, SystemUsers) |
+| EH-2.5 →EH-3 | WebSocket UX: disconnect/reconnect banner on realtime pages (orders, kitchen, waiter, POS), STOMP error frames → `notifyError` | `hooks/useWebSocketNotifications` | kill WS in test → banner shows, auto-clears on reconnect |
+| EH-2.6 →EH-3 | Form validation UX: `fieldErrors` from VALIDATION_ERROR rendered under the matching inputs (pilot: Login, SystemUsers, Restaurants, Products) | form components | submitting invalid form marks fields, no toast spam |
+| EH-2.7 ✅ | Auth edge states: revoked token (tokenVersion bump), deactivated account, password changed elsewhere → clean logout with localized reason (not an infinite refresh loop) | `services/api.js`, `store/authStore` | each simulated → login screen + correct toast |
+| EH-2.8 ✅ | Role-aware UI ("profile lockdown"): central `can(user, action)` helper; hide/disable actions the role can't perform (SUPER_ADMIN-only, ADMIN-only, OPERATOR-blocked) so users stop *reaching* 403s; pilot on the pages with role-gated buttons | `lib/permissions.js`, Layout + pilots | operator sees no admin buttons; disabled controls carry a tooltip |
 
 ## Phase EH-3 — Page-by-page sweep (61 pages · kill all 245 `alert()` + 398 silent catches)
 

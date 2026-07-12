@@ -1290,7 +1290,9 @@
     "unlimited": "Cheksiz",
     "update": "Yangilash",
     "view": "Ko'rish",
-    "yes": "Ha"
+    "yes": "Ha",
+    "retry": "Qayta urinish",
+    "reload": "Yangilash"
   },
   "shift": {
     "dashboard": {
@@ -5576,6 +5578,11 @@
     "METHOD_NOT_ALLOWED": "Bu amal mavjud emas.",
     "PAYMENT_FAILED": "To'lov amalga oshmadi. Qayta yoki boshqa usulda urinib ko'ring.",
     "ANALYTICS_FAILED": "Hozircha bu hisobotni tuzib bo'lmadi. Qayta urinib ko'ring.",
-    "INTERNAL": "Bizning tomonda xatolik yuz berdi. Qayta urinib ko'ring."
+    "INTERNAL": "Bizning tomonda xatolik yuz berdi. Qayta urinib ko'ring.",
+    "SESSION_ENDED": "Sessiya tugadi. Iltimos, qaytadan kiring.",
+    "appCrashTitle": "Nimadir xato ketdi",
+    "appCrashBody": "Kutilmagan xatolik yuz berdi. Iltimos, sahifani yangilang.",
+    "pageCrashTitle": "Sahifani ko‘rsatishda muammo",
+    "pageCrashBody": "Bu sahifani ko‘rsatishda xatolik yuz berdi. Qayta urinib ko‘ring yoki ortga qaytib qayta oching."
   }
 }

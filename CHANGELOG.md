@@ -39,6 +39,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   codes always localized, specific 4xx keep the backend detail, 5xx always generic + error id);
   `notifyError()` is the standard toast. Pages migrate to it in EH-3.
 
+### Frontend error pipeline — 2026-07-12 (EH-2, docs/ERROR_HANDLING_PLAN.md)
+
+- **No more blank pages from a crash or a stale deploy.** `lazyWithRetry` wraps every route import
+  so a failed chunk load (old asset hashes after a redeploy) auto-reloads once instead of showing
+  a blank Suspense; a `RouteErrorBoundary` around the page outlet turns a render crash into an
+  in-shell card (Try again / Back) with the sidebar still alive, instead of the root boundary
+  blanking the whole app. Root + route fallbacks localized (en/ru/uz).
+- **Reusable fetch primitives:** `useApiCall` (owns loading/error/data, normalizes errors, drops
+  stale overlapping responses) + `<QueryState>` (one loading / error+retry / empty wrapper) — the
+  standard the 61-page sweep (EH-3) adopts to kill the 398 silent catches.
+- **Session-ended handling:** when token refresh is exhausted (expiry, or a revoked token after a
+  password change / deactivation) the app now logs out and lands on Login with a localized "your
+  session has ended" banner instead of a silent bounce.
+- **Role-aware UI:** central `can(user, action)` helper mirrors the backend authorization so the
+  UI can hide actions a role can't perform (piloted on System Users) — users stop clicking through
+  to 403s.
+
 ### Launch prep — 2026-07-11
 
 - **Demo seed data removed from migrations** (ops decision: deployments always start from a clean,

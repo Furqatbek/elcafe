@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/authStore';
@@ -15,7 +15,19 @@ export default function Login() {
   const login = useAuthStore((state) => state.login);
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // EH-2.1/2.7: if the api layer sent us here because the session ended (expiry, or a revoked
+  // token after a password change / deactivation), tell the user why rather than a silent bounce.
+  useEffect(() => {
+    let reason;
+    try { reason = sessionStorage.getItem('auth_logout_reason'); } catch (_) { /* private mode */ }
+    if (reason) {
+      setNotice(t('errors.SESSION_ENDED', 'Your session has ended. Please sign in again.'));
+      try { sessionStorage.removeItem('auth_logout_reason'); } catch (_) {}
+    }
+  }, [t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -67,6 +79,11 @@ export default function Login() {
                 required
               />
             </div>
+            {notice && !error && (
+              <div className="text-sm text-amber-700 bg-amber-50 p-3 rounded-md">
+                {notice}
+              </div>
+            )}
             {error && (
               <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
                 {error}
