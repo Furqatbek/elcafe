@@ -139,7 +139,7 @@ A complete production-ready backend system for restaurant management and deliver
 
 ## 🚀 Quick Start
 
-### Option 1: Run with Docker Compose (Recommended)
+### Option 1: Local dev with Docker Compose (Recommended)
 
 1. Clone the repository:
 ```bash
@@ -147,33 +147,53 @@ git clone <repository-url>
 cd elcafe
 ```
 
-2. Build and start all services:
+2. Build and start the full stack (db, redis, backend, frontend, nginx) with dev overrides:
 ```bash
-docker-compose up --build
+./run-local.sh
+```
+This uses `docker-compose.local.yml` (dev profile, dev-only JWT secret, HTTP-only nginx) and
+supplies throwaway `dev` DB/Redis passwords, so no `.env` is needed. Equivalent to:
+```bash
+DB_PASSWORD=dev REDIS_PASSWORD=dev \
+  docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 ```
 
 3. Wait for all services to start (approximately 2-3 minutes)
 
 4. Access the application:
+- App: http://localhost
 - API: http://localhost:8080
 - Swagger UI: http://localhost:8080/swagger-ui.html
 - API Docs: http://localhost:8080/api-docs
 
-### Option 2: Run Locally
+### Option 2: Backend on host, datastores in Docker
 
-1. Start PostgreSQL and Redis:
+1. Start just PostgreSQL and Redis (the service is named `db`, not `postgres`):
 ```bash
-docker-compose up postgres redis
+DB_PASSWORD=dev REDIS_PASSWORD=dev docker compose up db redis
 ```
 
-2. Build the application:
+2. Run the backend (needs a JWT secret and the datasource pointing at the containers):
 ```bash
-./mvnw clean package
+export JWT_SECRET=local-dev-only-secret-not-for-production-0123456789abcdef
+export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/elcafe
+export SPRING_DATASOURCE_USERNAME=elcafe SPRING_DATASOURCE_PASSWORD=dev
+export SPRING_DATA_REDIS_PASSWORD=dev
+mvn spring-boot:run
 ```
 
-3. Run the application:
+3. Run the frontend dev server (Vite, on http://localhost:5173):
 ```bash
-java -jar target/restaurant-delivery-service-1.0.0.jar
+cd frontend && npm install && npm run dev
+```
+
+### Production
+
+Production runs `docker-compose.yml` alone with real secrets from `.env.docker`. See
+[`docs/LAUNCH.md`](docs/LAUNCH.md) for the full checklist, or:
+```bash
+cp .env.docker.example .env.docker   # fill in the required values
+./deploy-docker.sh
 ```
 
 ## 📚 API Documentation
@@ -182,19 +202,23 @@ Once the application is running, access the interactive API documentation:
 
 **Swagger UI**: http://localhost:8080/swagger-ui.html
 
-### Default Credentials
+### First login
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@elcafe.com | Admin123! |
-| Operator | operator@elcafe.com | Operator123! |
+The database ships empty — there are no seeded accounts. On first boot with an empty users table,
+the app creates a single `SUPER_ADMIN` from the `ADMIN_EMAIL` / `ADMIN_PASSWORD` environment
+variables (see [`docs/LAUNCH.md`](docs/LAUNCH.md)). Log in with those, change the password, then
+remove `ADMIN_PASSWORD`. For local dev, set them in your shell before `./run-local.sh`:
+
+```bash
+ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='ChangeMe123!' ./run-local.sh
+```
 
 ## 🔐 Authentication Flow
 
 1. **Login** - POST `/api/v1/auth/login`
 ```json
 {
-  "email": "admin@elcafe.com",
+  "email": "you@example.com",
   "password": "Admin123!"
 }
 ```
@@ -209,7 +233,7 @@ Once the application is running, access the interactive API documentation:
     "tokenType": "Bearer",
     "user": {
       "id": 1,
-      "email": "admin@elcafe.com",
+      "email": "you@example.com",
       "role": "ADMIN"
     }
   }

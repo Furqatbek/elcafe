@@ -31,6 +31,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the NOT NULL constraint. Never surfaced before because the admin UI always sends the toggles and
   the demo restaurant was migration-seeded. Found live by the fresh-DB launch rehearsal; both flags
   now default to `true` on create.
+- **Local dev launcher + README run commands corrected.** Added `run-local.sh` (zero-setup local:
+  supplies throwaway `dev` DB/Redis passwords, then runs the dev-override stack) — needed because
+  making `DB_PASSWORD`/`REDIS_PASSWORD` required in the base compose also made the local override
+  require them (compose interpolates those from the shell/`.env`, not from a service's environment
+  block, so the override can't self-supply them). Fixed the stale README run section (`db` not
+  `postgres`, `mvn` not the nonexistent `./mvnw`, prod points at `.env.docker`/`deploy-docker.sh`)
+  and replaced the "Default Credentials" table (the removed seed admin) with the bootstrap-admin
+  first-login flow.
 - **Restaurant admin provisioning (closes the last SQL-only onboarding step):** a SUPER_ADMIN can
   now pass an explicit `restaurantId` when creating or updating a system user — validated against
   existing restaurants, denied for tenant admins (who stay bound to their own restaurant). The
