@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { errorMessage } from '../lib/errors';
 import { shiftAPI, orderAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { getCurrentRestaurantId } from '../utils/restaurant';
@@ -34,6 +35,8 @@ export default function OrdersByShift() {
   const [selectedRestaurant, setSelectedRestaurant] = useState(getCurrentRestaurantId() || 1);
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(false);
+  // EH-3: a failed shifts load shows an error + retry instead of the "no shifts found" empty state.
+  const [loadError, setLoadError] = useState(null);
   const [expandedShift, setExpandedShift] = useState(null);
   const [shiftOrders, setShiftOrders] = useState({});
   const [ordersLoading, setOrdersLoading] = useState(null);
@@ -71,12 +74,14 @@ export default function OrdersByShift() {
   const loadShifts = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const res = await shiftAPI.getByDateRange(selectedRestaurant, dateRange.startDate, dateRange.endDate);
       const data = res.data || [];
       setShifts(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error('Failed to load shifts:', e);
       setShifts([]);
+      setLoadError(e);
     } finally {
       setLoading(false);
     }
@@ -196,6 +201,16 @@ export default function OrdersByShift() {
       <div className="space-y-3">
         {loading ? (
           <div className="text-center py-8 text-gray-500">{t('finance.common.loading', 'Loading...')}</div>
+        ) : loadError ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500 mb-3">{errorMessage(loadError)}</p>
+            <button
+              onClick={loadShifts}
+              className="px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50"
+            >
+              {t('common.retry', 'Try again')}
+            </button>
+          </div>
         ) : filteredShifts.length === 0 ? (
           <div className="text-center py-8 text-gray-500">{t('ordersByShift.noShifts', 'No shifts found for the selected period')}</div>
         ) : (

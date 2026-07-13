@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { errorMessage } from '../lib/errors';
 import { menuAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -31,6 +32,8 @@ export default function Menu() {
   const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(true);
+  // EH-3: a failed menu load shows an error + retry instead of the generic "no data" empty card.
+  const [loadError, setLoadError] = useState(null);
   const [viewMode, setViewMode] = useState('accordion'); // 'accordion' or 'grid'
 
   useEffect(() => {
@@ -60,11 +63,13 @@ export default function Menu() {
     if (!selectedRestaurant) return;
 
     setLoading(true);
+    setLoadError(null);
     try {
       const response = await menuAPI.getPublicMenu(selectedRestaurant);
       setMenu(response.data.data);
     } catch (error) {
       console.error('Failed to load menu:', error);
+      setLoadError(error);
     } finally {
       setLoading(false);
     }
@@ -172,7 +177,16 @@ export default function Menu() {
       </div>
 
       {/* Menu Content */}
-      {!menu?.categories || menu.categories.length === 0 ? (
+      {loadError ? (
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground mb-4">{errorMessage(loadError)}</p>
+            <Button variant="outline" onClick={loadMenu}>
+              {t('common.retry', 'Try again')}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : !menu?.categories || menu.categories.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
