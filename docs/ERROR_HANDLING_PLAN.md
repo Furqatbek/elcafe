@@ -135,10 +135,12 @@ logged/observable server-side.
 > an inline error + Try-again, with the empty/list/pagination branches guarded on `!loadError` so a
 > failed fetch never masquerades as "no data". Done so far: **SystemUsers, Restaurants, LinkedItems**
 > (shape a, page-render tests pin error→retry→recover + empty); **Operators, POSuggestions,
-> OwnerBotSubscribers, OrdersByShift, Menu** (shape b). A `<QueryState>` fix landed alongside: the
-> retry button now swallows `refetch`'s promise so a still-failing backend can't leak an unhandled
-> rejection. Remaining single-list pages continue incrementally; genuinely multi-source pages (e.g.
-> WorkingHours, whose load intentionally falls back to an editable default) are left as-is by design.
+> OwnerBotSubscribers, OrdersByShift, Menu, InventoryAnalytics, Customers** (shape b). A `<QueryState>`
+> fix landed alongside: the retry button now swallows `refetch`'s promise so a still-failing backend
+> can't leak an unhandled rejection. Remaining single-list pages continue incrementally. Left as-is by
+> design (surfacing a full error would regress the UX): **WorkingHours** (load falls back to an
+> editable default schedule) and **ShiftDashboard** (a 30s-polling live board — a transient poll blip
+> should keep the last-known-good view and self-heal on the next tick, not blank the screen).
 
 
 Per batch, the same five moves: `alert()`→`notifyError` · silent `catch`→error state or toast ·
@@ -189,7 +191,7 @@ the sweep then grinds the long tail to zero.
 - [x] Every API error (incl. filter-written) is the standard envelope with a stable `error` code
 - [x] Zero endpoints return 500 for business-rule failures; grep guard tests in CI (`RawThrowGuardTest`, `ErrorEnvelopeContractTest`)
 - [x] Zero `alert()` in `frontend/src` (CI grep-guard enforced); user-action silent catches now notify — remaining silent catches are background loads (intentional)
-- [◐] Every page: loading / empty / error(+retry) states — landed on SystemUsers, Restaurants, LinkedItems (`<QueryState>`) and Operators, POSuggestions, OwnerBotSubscribers, OrdersByShift, Menu (inline loadError); incremental rollout to the remaining list pages continues · role-hidden actions via `can()` (piloted; incremental)
+- [◐] Every page: loading / empty / error(+retry) states — landed on SystemUsers, Restaurants, LinkedItems (`<QueryState>`) and Operators, POSuggestions, OwnerBotSubscribers, OrdersByShift, Menu, InventoryAnalytics, Customers (inline loadError); incremental rollout to the remaining list pages continues · role-hidden actions via `can()` (piloted; incremental)
 - [x] All error texts localized en/ru/uz; 5xx shows generic text + request id only
 - [x] Route-level error boundaries + chunk-failure auto-recovery — no blank pages
 - [x] Sentry wired on both sides (backend + frontend, dormant-unless-DSN) · Playwright error-path e2e suite (EH-4.3) built — 3 specs green (session-ended banner, list-500 QueryState+retry, 403 localized)
