@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { notifyError, notifySuccess, notifyWarning } from '../lib/errors';
+import { notifyError, notifySuccess, notifyWarning, errorMessage } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { customerAPI } from '../services/api';
 import { Button } from '../components/ui/button';
@@ -38,6 +38,8 @@ export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  // EH-3: a failed customers load shows an error + retry instead of a silent empty table.
+  const [loadError, setLoadError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -99,12 +101,14 @@ export default function Customers() {
 
   const loadCustomers = async () => {
     try {
+      setLoadError(null);
       const response = await customerAPI.getAll({ page: 0, size: 1000, sort: 'createdAt,desc' });
       const data = response.data.data.content || [];
       setCustomers(data);
       setFilteredCustomers(data);
     } catch (error) {
       console.error('Failed to load customers:', error);
+      setLoadError(error);
     } finally {
       setLoading(false);
     }
@@ -554,7 +558,16 @@ export default function Customers() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredCustomers.length === 0 ? (
+              {loadError ? (
+                <tr>
+                  <td colSpan={12} className="px-4 py-8 text-center">
+                    <p className="text-gray-500 mb-3">{errorMessage(loadError)}</p>
+                    <Button variant="outline" size="sm" onClick={loadCustomers}>
+                      {t('common.retry', 'Try again')}
+                    </Button>
+                  </td>
+                </tr>
+              ) : filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan={12} className="px-4 py-8 text-center text-gray-500">
                     {t('common.noData')}
