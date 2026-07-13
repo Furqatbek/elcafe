@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { notifyError, notifySuccess } from '../lib/errors';
+import { notifyError, notifySuccess, errorMessage } from '../lib/errors';
 import { poSuggestionAPI, restaurantAPI } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,8 @@ const POSuggestions = () => {
   const [restaurants, setRestaurants] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(1);
   const [loading, setLoading] = useState(false);
+  // EH-3: a failed suggestions load shows an error + retry instead of the "all stocked" empty state.
+  const [loadError, setLoadError] = useState(null);
   const [generating, setGenerating] = useState(null);
 
   useEffect(() => {
@@ -47,10 +49,12 @@ const POSuggestions = () => {
   const loadSuggestions = async (restaurantId) => {
     try {
       setLoading(true);
+      setLoadError(null);
       const response = await poSuggestionAPI.getSuggestions(restaurantId);
       setSuggestions(response.data.data || []);
     } catch (error) {
       console.error('Failed to load suggestions:', error);
+      setLoadError(error);
     } finally {
       setLoading(false);
     }
@@ -183,8 +187,22 @@ const POSuggestions = () => {
         </div>
       )}
 
+      {/* Error State */}
+      {!loading && loadError && (
+        <div className="text-center py-12 bg-white rounded-lg shadow">
+          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-600 mb-4 max-w-md mx-auto">{errorMessage(loadError)}</p>
+          <button
+            onClick={() => loadSuggestions(selectedRestaurant)}
+            className="px-4 py-2 rounded-lg border text-sm font-medium hover:bg-gray-50"
+          >
+            {t('common.retry', 'Try again')}
+          </button>
+        </div>
+      )}
+
       {/* Empty State */}
-      {!loading && suggestions.length === 0 && (
+      {!loading && !loadError && suggestions.length === 0 && (
         <div className="text-center py-12 bg-white rounded-lg shadow">
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-700">{t('poSuggestions.noSuggestions')}</h3>
@@ -193,7 +211,7 @@ const POSuggestions = () => {
       )}
 
       {/* Suggestions List */}
-      {!loading && suggestions.length > 0 && (
+      {!loading && !loadError && suggestions.length > 0 && (
         <div className="space-y-4">
           {suggestions.map((suggestion) => (
             <div key={suggestion.supplierId} className="bg-white rounded-lg shadow overflow-hidden">

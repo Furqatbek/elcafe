@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { notifyError } from '../lib/errors';
+import { notifyError, errorMessage } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { telegramAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -32,6 +32,8 @@ export default function OwnerBotSubscribers() {
   const [selectedRestaurant, setSelectedRestaurant] = useState('all');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
+  // EH-3: a failed subscribers load shows an error + retry instead of the "no subscribers" empty row.
+  const [loadError, setLoadError] = useState(null);
   const [editing, setEditing] = useState(null);
   const [editingDetail, setEditingDetail] = useState(null);
 
@@ -44,12 +46,14 @@ export default function OwnerBotSubscribers() {
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const params = selectedRestaurant !== 'all' ? { restaurantId: selectedRestaurant } : {};
       const res = await telegramAPI.listOwnerSubscribers(params);
       setRows(res.data?.data || []);
     } catch (e) {
       console.error('Failed to load subscribers:', e);
+      setLoadError(e);
     } finally {
       setLoading(false);
     }
@@ -160,7 +164,16 @@ export default function OwnerBotSubscribers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.length === 0 ? (
+              {loadError ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8">
+                    <p className="text-muted-foreground mb-3">{errorMessage(loadError)}</p>
+                    <Button variant="outline" size="sm" onClick={load}>
+                      {t('common.retry', 'Try again')}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     {t('ownerBotSubscribers.empty',

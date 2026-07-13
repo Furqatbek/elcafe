@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { notifyError, notifyWarning } from '../lib/errors';
+import { notifyError, notifyWarning, errorMessage } from '../lib/errors';
 import { useTranslation } from 'react-i18next';
 import { Search, Plus, Download, Edit, Trash2, X, Eye, EyeOff, Shuffle } from 'lucide-react';
 import { operatorAPI } from '../services/api';
@@ -11,6 +11,8 @@ export default function Operators() {
   const [operators, setOperators] = useState([]);
   const [filteredOperators, setFilteredOperators] = useState([]);
   const [loading, setLoading] = useState(true);
+  // EH-3: a failed page load surfaces an error + retry in the table instead of a silent empty grid.
+  const [loadError, setLoadError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
@@ -46,6 +48,7 @@ export default function Operators() {
   const loadOperators = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const response = await operatorAPI.getAll({
         page: currentPage,
         size: pageSize,
@@ -60,6 +63,7 @@ export default function Operators() {
       setTotalPages(pageData.totalPages || 0);
     } catch (error) {
       console.error('Error loading operators:', error);
+      setLoadError(error);
     } finally {
       setLoading(false);
     }
@@ -373,6 +377,18 @@ export default function Operators() {
                     {t('operators.loading')}
                   </td>
                 </tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-12 text-center">
+                    <p className="text-gray-500 mb-3">{errorMessage(loadError)}</p>
+                    <button
+                      onClick={() => loadOperators()}
+                      className="px-4 py-2 rounded-md border text-sm font-medium hover:bg-gray-50"
+                    >
+                      {t('common.retry', 'Try again')}
+                    </button>
+                  </td>
+                </tr>
               ) : filteredOperators.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
@@ -439,7 +455,7 @@ export default function Operators() {
         </div>
 
         {/* Pagination */}
-        {!loading && totalPages > 0 && (
+        {!loading && !loadError && totalPages > 0 && (
           <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between">
             <div className="text-sm text-gray-700">
               {t('operators.showing')} {currentPage * pageSize + 1} {t('operators.to')}{' '}
