@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { errorMessage } from '../lib/errors';
 import { analyticsAPI } from '../services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -17,6 +18,8 @@ import {
 export default function InventoryAnalytics() {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
+  // EH-3: a failed analytics load shows an error + retry instead of misleading all-zero metrics.
+  const [loadError, setLoadError] = useState(null);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -32,6 +35,7 @@ export default function InventoryAnalytics() {
 
   const loadAnalytics = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const params = {
         startDate: dateRange.startDate,
@@ -45,6 +49,7 @@ export default function InventoryAnalytics() {
       });
     } catch (error) {
       console.error('Failed to load inventory analytics:', error);
+      setLoadError(error);
     } finally {
       setLoading(false);
     }
@@ -126,6 +131,17 @@ export default function InventoryAnalytics() {
         </CardContent>
       </Card>
 
+      {loadError ? (
+        <Card>
+          <CardContent className="pt-6 text-center">
+            <p className="text-muted-foreground mb-4">{errorMessage(loadError)}</p>
+            <Button variant="outline" onClick={loadAnalytics}>
+              {t('common.retry', 'Try again')}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+      <>
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -353,6 +369,8 @@ export default function InventoryAnalytics() {
           </div>
         </CardContent>
       </Card>
+      </>
+      )}
 
       {/* Recommendations */}
       <Card className="border-blue-200 bg-blue-50/30">
