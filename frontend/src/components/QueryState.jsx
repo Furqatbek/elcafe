@@ -35,7 +35,10 @@ export default function QueryState({
         <p className="text-muted-foreground max-w-md">{errorMessage(error)}</p>
         {onRetry && (
           <button
-            onClick={() => onRetry()}
+            // onRetry is often useApiCall's refetch, which rejects on failure so awaiting callers can
+            // chain; here the outcome is already reflected in `error`, so swallow the retry's promise
+            // rather than leak an unhandled rejection when the backend is still down.
+            onClick={() => { Promise.resolve(onRetry()).catch(() => {}); }}
             className="px-4 py-2 rounded-md border text-sm font-medium hover:bg-accent"
           >
             {t('common.retry', 'Try again')}

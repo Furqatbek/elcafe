@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { notifyError } from '../lib/errors';
+import { useApiCall } from '../hooks/useApiCall';
+import QueryState from '../components/QueryState';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { restaurantAPI } from '../services/api';
@@ -20,8 +22,6 @@ import { MapPin, Phone, Mail, Star, Clock, Plus, Edit, Trash2 } from 'lucide-rea
 export default function Restaurants() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [restaurants, setRestaurants] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRestaurant, setEditingRestaurant] = useState(null);
   const [formData, setFormData] = useState({
@@ -29,20 +29,14 @@ export default function Restaurants() {
     phone: '', email: '', deliveryFee: '', estimatedDeliveryTimeMinutes: '30',
   });
 
-  useEffect(() => {
-    loadRestaurants();
-  }, []);
-
-  const loadRestaurants = async () => {
-    try {
-      const response = await restaurantAPI.getAll({ page: 0, size: 20, sort: 'name,asc' });
-      setRestaurants(response.data.data?.content || response.data.data || []);
-    } catch (error) {
-      console.error('Failed to load restaurants:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // EH-3: the list load owns loading/error/empty via useApiCall + <QueryState>, so a failed fetch
+  // shows an error + retry instead of a misleading "no restaurants" empty grid.
+  const { data, loading, error, refetch: loadRestaurants } = useApiCall(
+    () => restaurantAPI.getAll({ page: 0, size: 20, sort: 'name,asc' })
+      .then((res) => res.data.data?.content || res.data.data || []),
+    [],
+  );
+  const restaurants = data || [];
 
   const handleCreate = () => {
     setEditingRestaurant(null);
@@ -80,7 +74,7 @@ export default function Restaurants() {
         await restaurantAPI.create(data);
       }
       setModalOpen(false);
-      loadRestaurants();
+      loadRestaurants().catch(() => {}); // error surfaces via <QueryState>; don't leak a rejection
     } catch (error) {
       console.error('Failed to save restaurant:', error);
       notifyError(error);
@@ -91,16 +85,12 @@ export default function Restaurants() {
     if (!window.confirm(t('restaurants.confirmDelete', 'Are you sure you want to delete this restaurant?'))) return;
     try {
       await restaurantAPI.delete(id);
-      loadRestaurants();
+      loadRestaurants().catch(() => {}); // error surfaces via <QueryState>; don't leak a rejection
     } catch (error) {
       console.error('Failed to delete:', error);
       notifyError(error);
     }
   };
-
-  if (loading) {
-    return <div className="p-8">{t('common.loading')}</div>;
-  }
 
   return (
     <div className="space-y-6">
@@ -117,16 +107,15 @@ export default function Restaurants() {
         </Button>
       </div>
 
+      <QueryState
+        loading={loading}
+        error={error}
+        onRetry={loadRestaurants}
+        empty={restaurants.length === 0}
+        emptyMessage={t('common.noData')}
+      >
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {restaurants.length === 0 ? (
-          <Card className="col-span-full">
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">
-                {t('common.noData')}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
+        {
           restaurants.map((restaurant) => (
             <Card key={restaurant.id} className="hover:shadow-lg transition-shadow">
               {restaurant.bannerUrl && (
@@ -227,8 +216,9 @@ export default function Restaurants() {
               </CardContent>
             </Card>
           ))
-        )}
+        }
       </div>
+      </QueryState>
 
       {/* Create/Edit Dialog */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>

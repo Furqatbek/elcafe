@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { linkedItemAPI } from '../services/api';
+import { useApiCall } from '../hooks/useApiCall';
+import QueryState from '../components/QueryState';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -25,29 +27,24 @@ export default function LinkedItems() {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [linkedItems, setLinkedItems] = useState([]);
   const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
+
+  // EH-3: the linked-items load owns loading/error/empty via useApiCall + <QueryState>, so a failed
+  // fetch shows an error + retry instead of the "no linked items" empty state that hid the failure.
+  const { data, loading, error, refetch: loadLinkedItems } = useApiCall(
+    () => (productId
+      ? linkedItemAPI.getLinkedItems(productId).then((res) => res.data.data || [])
+      : Promise.resolve([])),
+    [productId],
+  );
+  const linkedItems = data || [];
 
   useEffect(() => {
     if (productId) {
-      loadLinkedItems();
       loadProductDetails();
     }
   }, [productId]);
-
-  const loadLinkedItems = async () => {
-    setLoading(true);
-    try {
-      const response = await linkedItemAPI.getLinkedItems(productId);
-      setLinkedItems(response.data.data || []);
-    } catch (error) {
-      console.error('Failed to load linked items:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadProductDetails = async () => {
     try {
@@ -101,10 +98,6 @@ export default function LinkedItems() {
 
   const linkTypes = [...new Set(linkedItems.map(item => item.linkType))];
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -142,6 +135,14 @@ export default function LinkedItems() {
         </Card>
       )}
 
+      <QueryState
+        loading={loading}
+        error={error}
+        onRetry={loadLinkedItems}
+        empty={linkedItems.length === 0}
+        emptyMessage={t('linkedItems.noItems', 'No linked items found for this product')}
+      >
+      <div className="space-y-6">
       {/* Filter */}
       <div className="flex gap-4 items-center">
         <label className="text-sm font-medium">Filter by type:</label>
@@ -207,7 +208,7 @@ export default function LinkedItems() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-center text-muted-foreground">
-              No linked items found for this product
+              {t('linkedItems.noneMatchFilter', 'No linked items match this filter')}
             </p>
           </CardContent>
         </Card>
@@ -277,6 +278,8 @@ export default function LinkedItems() {
           ))}
         </div>
       )}
+      </div>
+      </QueryState>
     </div>
   );
 }
