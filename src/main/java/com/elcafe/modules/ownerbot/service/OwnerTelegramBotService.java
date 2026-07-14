@@ -906,87 +906,143 @@ public class OwnerTelegramBotService {
                 String clockOut = shift.getClockOut() != null
                         ? shift.getClockOut().atZoneSameInstant(zone).format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) : "...";
 
-                // Aggregate by payment method
-                Map<String, java.math.BigDecimal> revenueByMethod = new java.util.LinkedHashMap<>();
-                Map<String, Map<String, int[]>> itemsByMethod = new java.util.LinkedHashMap<>();
-                java.math.BigDecimal totalRevenue = java.math.BigDecimal.ZERO;
-                int totalOrderCount = 0;
+                // Per-sale detail: every order listed separately with time,
+                // payment type, item lines (qty × unit price) and order total.
+                // Orders sorted chronologically; method totals kept as a
+                // closing summary.
+                orders = new ArrayList<>(orders);
+                orders.sort(java.util.Comparator.comparing(
+                        com.elcafe.modules.order.entity.Order::getCreatedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
 
+                Map<String, java.math.BigDecimal> revenueByMethod = new java.util.LinkedHashMap<>();
+                java.math.BigDecimal totalRevenue = java.math.BigDecimal.ZERO;
+                java.time.format.DateTimeFormatter timeFmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+
+                List<String> orderBlocks = new ArrayList<>();
+                int orderIdx = 0;
                 for (var order : orders) {
-                    String method = "Другое";
-                    if (order.getPayment() != null && order.getPayment().getMethod() != null) {
-                        method = switch (order.getPayment().getMethod().name()) {
-                            case "CASH" -> "Наличные";
-                            case "CARD" -> "Карта";
-                            case "MOBILE_PAYMENT" -> "Мобильный";
-                            default -> order.getPayment().getMethod().name();
-                        };
-                    } else if (order.getPayments() != null && !order.getPayments().isEmpty()
-                            && order.getPayments().get(0).getMethod() != null) {
-                        method = switch (order.getPayments().get(0).getMethod().name()) {
-                            case "CASH" -> "Наличные";
-                            case "CARD" -> "Карта";
-                            case "MOBILE_PAYMENT" -> "Мобильный";
-                            default -> order.getPayments().get(0).getMethod().name();
-                        };
-                    }
+                    String method = resolvePaymentMethodLabel(order);
+                    String emoji = paymentEmoji(method);
 
                     java.math.BigDecimal orderTotal = order.getTotal() != null ? order.getTotal() : java.math.BigDecimal.ZERO;
                     revenueByMethod.merge(method, orderTotal, java.math.BigDecimal::add);
                     totalRevenue = totalRevenue.add(orderTotal);
-                    totalOrderCount++;
+                    orderIdx++;
 
-                    Map<String, int[]> methodItems = itemsByMethod.computeIfAbsent(method, k -> new java.util.LinkedHashMap<>());
+                    String time = order.getCreatedAt() != null
+                            ? order.getCreatedAt().atZoneSameInstant(zone).format(timeFmt) : "--:--";
+
+                    StringBuilder block = new StringBuilder();
+                    block.append(String.format("\n<b>#%d</b> 🕐 %s | %s %s | <b>%,.2f</b>\n",
+                            orderIdx, time, emoji, method, orderTotal));
                     for (var item : order.getItems()) {
                         if (item.isDeleted() || Boolean.TRUE.equals(item.getIsPackagingItem())) continue;
-                        String key = item.getProductName() + (item.getVariantName() != null ? " (" + item.getVariantName() + ")" : "");
-                        int[] data = methodItems.computeIfAbsent(key, k -> new int[]{0, 0});
-                        data[0] += item.getQuantity();
-                        data[1] += item.getTotalPrice() != null ? item.getTotalPrice().intValue() : 0;
+                        String name = htmlEscape(item.getProductName()
+                                + (item.getVariantName() != null ? " (" + item.getVariantName() + ")" : ""));
+                        java.math.BigDecimal unit = item.getUnitPrice() != null ? item.getUnitPrice() : java.math.BigDecimal.ZERO;
+                        java.math.BigDecimal line = item.getTotalPrice() != null ? item.getTotalPrice() : java.math.BigDecimal.ZERO;
+                        block.append(String.format("  • %s × %d @ %,.0f = %,.0f\n",
+                                name, item.getQuantity(), unit, line));
                     }
+                    orderBlocks.add(block.toString());
                 }
 
                 StringBuilder sb = new StringBuilder();
                 sb.append(String.format("🧾 <b>Продажи за смену</b>\n\n👤 %s\n⏰ %s — %s\n📦 Заказов: %d\n",
-                        waiterName, clockIn, clockOut, totalOrderCount));
+                        htmlEscape(waiterName), clockIn, clockOut, orderIdx));
 
-                if (itemsByMethod.isEmpty()) {
+                if (orderBlocks.isEmpty()) {
                     sb.append("\nНет проданных товаров");
                 } else {
-                    for (var methodEntry : itemsByMethod.entrySet()) {
-                        String method = methodEntry.getKey();
-                        String emoji = method.equals("Наличные") ? "💵" : method.equals("Карта") ? "💳" : "💰";
-                        java.math.BigDecimal methodTotal = revenueByMethod.getOrDefault(method, java.math.BigDecimal.ZERO);
-
-                        sb.append(String.format("\n%s <b>%s: %,.2f</b>\n", emoji, method, methodTotal));
-                        int i = 1;
-                        for (var itemEntry : methodEntry.getValue().entrySet()) {
-                            sb.append(String.format("  %d. %s × %d = %,d\n", i++, itemEntry.getKey(), itemEntry.getValue()[0], itemEntry.getValue()[1]));
+                    // Telegram caps messages at 4096 chars — flush on order
+                    // boundaries so a busy shift arrives as several messages
+                    // instead of one truncated one.
+                    for (String block : orderBlocks) {
+                        if (sb.length() > 0 && sb.length() + block.length() > 3500) {
+                            sendReply(chatId, sb.toString());
+                            sb = new StringBuilder();
                         }
+                        sb.append(block);
                     }
-                    sb.append(String.format("\n💰 <b>Общий итого: %,.2f</b>", totalRevenue));
+
+                    StringBuilder summary = new StringBuilder("\n———————");
+                    for (var e : revenueByMethod.entrySet()) {
+                        summary.append(String.format("\n%s %s: %,.2f", paymentEmoji(e.getKey()), e.getKey(), e.getValue()));
+                    }
+                    summary.append(String.format("\n💰 <b>Общий итого: %,.2f</b>", totalRevenue));
+                    if (sb.length() + summary.length() > 3800) {
+                        sendReply(chatId, sb.toString());
+                        sb = new StringBuilder();
+                    }
+                    sb.append(summary);
                 }
 
                 // Employee consumption section
                 var consumptions = consumptionRepository.findByEmployeeShift_IdOrderByConsumedAtDesc(shiftId);
                 if (!consumptions.isEmpty()) {
+                    if (sb.length() > 3000) {
+                        sendReply(chatId, sb.toString());
+                        sb = new StringBuilder();
+                    }
                     java.math.BigDecimal consumptionTotal = java.math.BigDecimal.ZERO;
                     sb.append("\n\n🍽 <b>Потребление сотрудника:</b>\n");
                     for (var c : consumptions) {
                         java.math.BigDecimal price = c.getProduct() != null && c.getProduct().getPrice() != null
                                 ? c.getProduct().getPrice().multiply(java.math.BigDecimal.valueOf(c.getQuantity()))
                                 : c.getTotalCost();
-                        sb.append(String.format("  • %s × %d = %,.2f\n", c.getProductName(), c.getQuantity(), price));
+                        sb.append(String.format("  • %s × %d = %,.2f\n", htmlEscape(c.getProductName()), c.getQuantity(), price));
                         consumptionTotal = consumptionTotal.add(price);
                     }
                     sb.append(String.format("  <b>Итого потребление: %,.2f</b>", consumptionTotal));
                 }
 
-                sendReply(chatId, sb.toString());
+                if (sb.length() > 0) {
+                    sendReply(chatId, sb.toString());
+                }
             } catch (Exception e) {
                 log.error("Failed to load shift sales: {}", e.getMessage());
                 sendReply(chatId, "❌ Ошибка: " + e.getMessage());
             }
+        }
+
+        /**
+         * Human label for the order's payment method. Falls back through the
+         * single payment link, then the split-payments list, then "Другое".
+         */
+        private String resolvePaymentMethodLabel(com.elcafe.modules.order.entity.Order order) {
+            String raw = null;
+            if (order.getPayment() != null && order.getPayment().getMethod() != null) {
+                raw = order.getPayment().getMethod().name();
+            } else if (order.getPayments() != null && !order.getPayments().isEmpty()
+                    && order.getPayments().get(0).getMethod() != null) {
+                raw = order.getPayments().get(0).getMethod().name();
+            }
+            if (raw == null) return "Другое";
+            return switch (raw) {
+                case "CASH" -> "Наличные";
+                case "CARD" -> "Карта";
+                case "MOBILE_PAYMENT" -> "Мобильный";
+                default -> raw;
+            };
+        }
+
+        private String paymentEmoji(String methodLabel) {
+            return switch (methodLabel) {
+                case "Наличные" -> "💵";
+                case "Карта" -> "💳";
+                case "Мобильный" -> "📱";
+                default -> "💰";
+            };
+        }
+
+        /**
+         * Escape user-entered names for Telegram HTML parse mode. An
+         * unescaped &lt; or &amp; in a product/waiter name makes Telegram
+         * reject the whole message, and sendReply only logs the failure.
+         */
+        private String htmlEscape(String s) {
+            return s == null ? "" : s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
         }
 
         private void updateLastInteraction(Long chatId) {
