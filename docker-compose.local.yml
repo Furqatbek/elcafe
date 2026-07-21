@@ -18,6 +18,11 @@ services:
       # Local QR code URL - override production default
       SELFSERVICE_BASE_URL: http://localhost/order
       FILE_BASE_URL: http://localhost/uploads
+      # Local-dev convenience ONLY: keep the Hibernate session open through response rendering so
+      # lazy associations load on demand (Spring's default). Production runs without this file and
+      # the CI test profile sets open-in-view=false, so genuine lazy-loading bugs still surface in
+      # tests — this just stops local browsing from tripping over them while they're being fixed.
+      SPRING_JPA_OPEN_IN_VIEW: "true"
 
   # Don't publish the datastore ports on the host in local dev — they collide with a locally
   # installed PostgreSQL/Redis. On Windows that surfaces as a bind failure ("An attempt was made to
