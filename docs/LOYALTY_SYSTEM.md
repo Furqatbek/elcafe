@@ -129,20 +129,20 @@ The ElCafe Loyalty & Bonus Points System is a comprehensive customer retention s
 ┌─────────────────────┐       ┌──────────────────┐
 │ TierHistory         │──────▶│ CustomerLoyalty  │
 │                     │   N:1 │                  │
-│ - previousTier      │       └──────────────────┘
-│ - newTier           │
+│ - fromTier          │       └──────────────────┘
+│ - toTier            │
 │ - reason            │
 └─────────────────────┘
 
-┌─────────────────────┐
-│ LoyaltyConfig       │
-│                     │
-│ - bonusPercentage   │
-│ - maxBonusUsage     │
-│ - firstOrderBonus   │
-│ - birthdayBonus     │
-│ - pointsExpireDays  │
-└─────────────────────┘
+┌─────────────────────────────┐
+│ LoyaltyConfig               │
+│                             │
+│ - bonusRateValue            │
+│ - maxBonusPaymentPercentage │
+│ - firstOrderBonusAmount     │
+│ - birthdayBonusAmount       │
+│ - bonusExpiryDays           │
+└─────────────────────────────┘
 
 ┌─────────────────────┐       ┌──────────────────┐
 │ LoyaltyPromotion    │──────▶│ Restaurant       │
@@ -167,13 +167,15 @@ Defines VIP tier levels with their benefits.
 | min_total_spend | DECIMAL(10,2) | Minimum lifetime spend |
 | min_order_count | INTEGER | Minimum order count |
 | bonus_multiplier | DECIMAL(3,2) | Bonus point multiplier (1.0-2.0) |
-| benefits | JSONB | Additional tier benefits |
+| benefits_description | TEXT | Human-readable tier benefits |
+| color | VARCHAR(20) | Display color (hex) |
+| icon | VARCHAR(50) | Display icon name |
 
-**Default Tiers:**
+**Default Tiers** (all spend thresholds in UZS):
 - **New** (Level 1): 0 spend, 1.0x multiplier
-- **Regular** (Level 2): $500 spend, 1.2x multiplier
-- **Gold** (Level 3): $2000 spend, 1.5x multiplier
-- **VIP** (Level 4): $5000 spend, 2.0x multiplier
+- **Regular** (Level 2): 1,000 UZS spend, 1.2x multiplier
+- **Gold** (Level 3): 5,000 UZS spend, 1.5x multiplier
+- **VIP** (Level 4): 15,000 UZS spend, 2.0x multiplier
 
 #### `loyalty_config`
 Global loyalty system configuration.
@@ -182,14 +184,16 @@ Global loyalty system configuration.
 |--------|------|-------------|
 | id | BIGSERIAL | Primary key |
 | restaurant_id | BIGINT | FK to restaurants (NULL = global) |
-| bonus_percentage | DECIMAL(5,2) | Base % of order as bonus (default 5%) |
-| max_bonus_usage_percent | DECIMAL(5,2) | Max % of order payable with bonus (50%) |
-| first_order_bonus | DECIMAL(10,2) | New customer bonus (300) |
-| birthday_bonus | DECIMAL(10,2) | Birthday bonus (500) |
-| reactivation_bonus | DECIMAL(10,2) | Inactive customer bonus (200) |
-| reactivation_days | INTEGER | Days inactive before eligible (90) |
-| points_expire_days | INTEGER | Bonus expiration (365, NULL = never) |
-| min_order_for_bonus | DECIMAL(10,2) | Min order to earn bonus |
+| bonus_rate_type | VARCHAR(20) | PERCENTAGE or FIXED_AMOUNT (default PERCENTAGE) |
+| bonus_rate_value | DECIMAL(10,2) | Base rate; % of order when PERCENTAGE (default 5.0) |
+| max_bonus_payment_percentage | INTEGER | Max % of order payable with bonus (default 50) |
+| min_order_amount_for_bonus | DECIMAL(10,2) | Min order to earn bonus (default 0) |
+| birthday_bonus_amount | DECIMAL(10,2) | Birthday bonus amount |
+| first_order_bonus_amount | DECIMAL(10,2) | New customer bonus amount |
+| reactivation_bonus_amount | DECIMAL(10,2) | Inactive customer bonus amount |
+| reactivation_days_threshold | INTEGER | Days inactive before eligible (default 30) |
+| bonus_expiry_days | INTEGER | Bonus expiration in days (NULL = never) |
+| enabled | BOOLEAN | Whether loyalty is enabled (default true) |
 
 #### `customer_loyalty`
 Tracks individual customer loyalty accounts.
@@ -243,10 +247,10 @@ Records of customer tier changes.
 |--------|------|-------------|
 | id | BIGSERIAL | Primary key |
 | customer_loyalty_id | BIGINT | FK to customer_loyalty |
-| previous_tier_id | BIGINT | FK to customer_tiers |
-| new_tier_id | BIGINT | FK to customer_tiers |
-| reason | VARCHAR(100) | MILESTONE_REACHED, MANUAL_ADJUSTMENT |
-| changed_at | TIMESTAMP | When tier changed |
+| from_tier_id | BIGINT | FK to customer_tiers (previous tier) |
+| to_tier_id | BIGINT | FK to customer_tiers (new tier) |
+| reason | TEXT | MILESTONE_REACHED, MANUAL_ADJUSTMENT |
+| created_at | TIMESTAMP | When tier changed |
 
 #### `loyalty_promotions`
 Time-limited promotional campaigns.
@@ -271,17 +275,21 @@ Time-limited promotional campaigns.
 
 The system uses a default global configuration that applies to all restaurants. Configuration is stored in the `loyalty_config` table.
 
-**Default Settings:**
+**Default Settings** (`GET /api/v1/loyalty/config` serializes the `LoyaltyConfig` entity, so the JSON keys are the entity field names):
 ```json
 {
-  "bonusPercentage": 5.0,
-  "maxBonusUsagePercent": 50.0,
-  "firstOrderBonus": 300.0,
-  "birthdayBonus": 500.0,
-  "reactivationBonus": 200.0,
-  "reactivationDays": 90,
-  "pointsExpireDays": 365,
-  "minOrderForBonus": 0.0
+  "id": 1,
+  "restaurant": null,
+  "bonusRateType": "PERCENTAGE",
+  "bonusRateValue": 5.0,
+  "maxBonusPaymentPercentage": 50,
+  "minOrderAmountForBonus": 0.00,
+  "birthdayBonusAmount": 500.00,
+  "firstOrderBonusAmount": 300.00,
+  "reactivationBonusAmount": 200.00,
+  "reactivationDaysThreshold": 30,
+  "bonusExpiryDays": null,
+  "enabled": true
 }
 ```
 
@@ -291,9 +299,9 @@ Each restaurant can override the global configuration by creating a restaurant-s
 
 ```sql
 INSERT INTO loyalty_config (
-  restaurant_id, bonus_percentage, max_bonus_usage_percent
+  restaurant_id, bonus_rate_value, max_bonus_payment_percentage
 ) VALUES (
-  1, 7.0, 60.0
+  1, 7.0, 60
 );
 ```
 
@@ -319,21 +327,21 @@ spring:
 
 The system includes 4 default tiers with automatic upgrades:
 
-| Tier | Min Spend | Min Orders | Multiplier | Benefits |
-|------|-----------|------------|------------|----------|
-| **New** | $0 | 0 | 1.0x | Base bonus rate |
-| **Regular** | $500 | 5 | 1.2x | +20% bonus points |
-| **Gold** | $2,000 | 20 | 1.5x | +50% bonus points |
-| **VIP** | $5,000 | 50 | 2.0x | +100% bonus points (double) |
+| Tier | Min Spend (UZS) | Min Orders | Multiplier | Benefits |
+|------|-----------------|------------|------------|----------|
+| **New** | 0 | 0 | 1.0x | Base bonus rate |
+| **Regular** | 1,000 | 5 | 1.2x | +20% bonus points |
+| **Gold** | 5,000 | 20 | 1.5x | +50% bonus points |
+| **VIP** | 15,000 | 50 | 2.0x | +100% bonus points (double) |
 
 ### Automatic Tier Upgrades
 
 Tier upgrades happen automatically after each order:
 
 ```java
-// Example: Customer spends $2,100 total with 22 orders
+// Example: Customer spends 5,200 UZS total with 22 orders
 // Current tier: Regular (1.2x)
-// Eligible for: Gold (requires $2000 and 20 orders)
+// Eligible for: Gold (requires 5,000 UZS and 20 orders)
 // System automatically upgrades to Gold tier
 ```
 
@@ -346,17 +354,7 @@ Tier upgrades happen automatically after each order:
 
 ### Tier Benefits
 
-Beyond bonus multipliers, tiers can include additional benefits stored in the `benefits` JSONB field:
-
-```json
-{
-  "priority_support": true,
-  "free_delivery": true,
-  "exclusive_menu_items": ["truffle-special", "caviar-appetizer"],
-  "reservation_priority": 1,
-  "complimentary_drinks": 2
-}
-```
+Beyond bonus multipliers, each tier carries a human-readable `benefits_description` (TEXT) plus a `color` and `icon` for display. These are not structured/queryable fields — the description is free text shown in the UI. For example, the seeded VIP tier uses `benefits_description = "2x bonus multiplier, exclusive offers, personal manager"`, `color = "#8B5CF6"`, `icon = "gem"`.
 
 ---
 
@@ -388,7 +386,7 @@ public void processOrderCompletion(Order order) {
 
     // 3. Calculate base bonus (5% of order total)
     BigDecimal baseBonus = order.getTotal()
-        .multiply(config.getBonusPercentage())
+        .multiply(config.getBonusRateValue())
         .divide(BigDecimal.valueOf(100));
 
     // 4. Apply tier multiplier (e.g., 1.5x for Gold)
@@ -468,12 +466,12 @@ public void useBonusForPayment(Long customerId, Long orderId, BigDecimal bonusTo
 
     // 3. Validate bonus amount
     BigDecimal maxAllowed = order.getTotal()
-        .multiply(config.getMaxBonusUsagePercent())
+        .multiply(BigDecimal.valueOf(config.getMaxBonusPaymentPercentage()))
         .divide(BigDecimal.valueOf(100));
 
     if (bonusToUse.compareTo(maxAllowed) > 0) {
         throw new IllegalArgumentException(
-            "Cannot use more than " + config.getMaxBonusUsagePercent() + "% of order"
+            "Cannot use more than " + config.getMaxBonusPaymentPercentage() + "% of order"
         );
     }
 
@@ -630,7 +628,7 @@ private void grantFirstOrderBonus(CustomerLoyalty loyalty) {
     bonusService.recordTransaction(
         loyalty,
         TransactionType.FIRST_ORDER_BONUS,
-        config.getFirstOrderBonus(),
+        config.getFirstOrderBonusAmount(),
         null,
         "Welcome bonus for first order!",
         "first-order-" + loyalty.getCustomerId(),
@@ -646,7 +644,7 @@ private void grantFirstOrderBonus(CustomerLoyalty loyalty) {
 **Amount**: $5.00 (500 points)
 **Trigger**: Manual grant via API endpoint
 **Frequency**: Once per year
-**Note**: Automatic detection disabled (Customer entity missing birthdate field)
+**Note**: Manual grant only. `Customer.birthDate` (LocalDate) exists on the entity, but no scheduled job is wired to detect birthdays and grant the bonus automatically — so it must be triggered via the API endpoint.
 
 ```java
 // API Endpoint
@@ -669,7 +667,7 @@ public void grantBirthdayBonus(Long customerId) {
     bonusService.recordTransaction(
         loyalty,
         TransactionType.BIRTHDAY_BONUS,
-        config.getBirthdayBonus(),
+        config.getBirthdayBonusAmount(),
         null,
         "Happy Birthday! Bonus from ElCafe",
         "birthday-" + customerId + "-" + currentYear,
@@ -705,7 +703,7 @@ public void grantReactivationBonus(Long customerId) {
 
     // Check if inactive
     LocalDateTime threshold = LocalDateTime.now()
-        .minusDays(config.getReactivationDays());
+        .minusDays(config.getReactivationDaysThreshold());
 
     if (loyalty.getLastOrderDate() == null ||
         loyalty.getLastOrderDate().isAfter(threshold)) {
@@ -717,7 +715,7 @@ public void grantReactivationBonus(Long customerId) {
     bonusService.recordTransaction(
         loyalty,
         TransactionType.REACTIVATION_BONUS,
-        config.getReactivationBonus(),
+        config.getReactivationBonusAmount(),
         null,
         "Welcome back! We missed you",
         "reactivation-" + customerId + "-" + System.currentTimeMillis(),
@@ -732,7 +730,7 @@ public void grantReactivationBonus(Long customerId) {
 public void runReactivationCampaign() {
     LoyaltyConfig config = getConfig(null);
     LocalDateTime threshold = LocalDateTime.now()
-        .minusDays(config.getReactivationDays());
+        .minusDays(config.getReactivationDaysThreshold());
 
     List<CustomerLoyalty> inactiveCustomers =
         loyaltyRepository.findInactiveCustomers(threshold);
@@ -1206,8 +1204,8 @@ loyaltyRepository.save(loyalty);
 - Cannot grant birthday bonus
 
 **Root Cause:**
-- Customer entity missing `birthdate` field
-- Automatic birthday detection disabled
+- Birthday bonuses are manual-only by design — there is no automated birthday-detection job
+- `Customer.birthDate` (LocalDate) exists, so the missing capability is the scheduled job, not the field
 
 **Workaround:**
 ```java
@@ -1223,7 +1221,7 @@ POST /api/v1/loyalty/customers/42/birthday-bonus
 ```
 
 **Long-term Solution:**
-Add `birthdate` field to Customer entity and enable automatic query.
+`Customer.birthDate` already exists — wire a scheduled job that queries customers whose birthday is today and grants the bonus automatically (reusing the once-per-year idempotency guard).
 
 ### Issue: Tier Not Upgrading
 
@@ -1342,7 +1340,7 @@ Map<String, Object> metadata = Map.of(); // No context for debugging
 ### Planned Features
 
 1. **Automatic Birthday Detection**
-   - Add `birthdate` to Customer entity
+   - `Customer.birthDate` already exists — no schema change needed
    - Enable scheduled job to grant bonuses automatically
    - Send birthday emails/SMS
 
@@ -1593,7 +1591,9 @@ Migration **V146** adds the `wallet_top_ups` table:
 | metadata                  | JSONB         | Provider-supplied details (clickTransId, paymeTransactionId, etc.)    |
 | completed_at              | TIMESTAMPTZ   | Set when status transitions to COMPLETED                              |
 
-A `BonusTransaction.TransactionType.TOP_UP` value was added; it credits the wallet just like `EARNED` but with no `order_id` link and a `topup-{id}` idempotency key.
+A `BonusTransaction.TransactionType.TOP_UP` value was added; it is intended to credit the wallet just like `EARNED` but with no `order_id` link and a `topup-{id}` idempotency key.
+
+> **Known limitation**: `TOP_UP` exists in the `BonusTransaction` enum, but the V27 `bonus_transactions.check_transaction_type` CHECK constraint was never amended to include it (the allowed set is still `EARNED, SPENT, REFUNDED, EXPIRED, ADJUSTMENT, BIRTHDAY_BONUS, FIRST_ORDER_BONUS, REACTIVATION_BONUS, PROMOTION_BONUS, ADMIN_ADJUSTMENT`). On PostgreSQL a real top-up therefore violates the CHECK constraint and the insert is rejected — the wallet credit path only works where the constraint is absent (e.g. some H2 test configurations). A follow-up migration must add `TOP_UP` (and `REFERRAL_BONUS`, likewise missing) to the constraint before top-ups can settle in production.
 
 ### Lifecycle
 

@@ -112,7 +112,9 @@ absolute under `/home/user/elcafe`.
   `src/main/java/com/elcafe/modules/restaurant/entity/Restaurant.java`
   — no existing plan/subscription fields.
 - Migrations under `src/main/resources/db/migration/`. Highest is
-  `V140__drop_po_inventory_expense_double_count.sql`. Next is **V141**.
+  `V161__add_order_completion_event_marker.sql`. Subscription plans landed at
+  **`V156__add_subscription_plans.sql`** (with **`V157__seed_plan_features.sql`** seeding the
+  per-plan feature codes). `V141__widen_variance_percentage_column.sql` is unrelated.
 - `UserPrincipal` at `src/main/java/com/elcafe/security/UserPrincipal.java`
   carries `Long restaurantId` (line 26). `@CurrentUser` annotation at
   `src/main/java/com/elcafe/security/CurrentUser.java` injects it.
@@ -124,9 +126,13 @@ absolute under `/home/user/elcafe`.
   exactly the contract `PlanGateService.requireFeature(...)` needs.
 - Roles: `UserRole` enum at
   `src/main/java/com/elcafe/modules/auth/enums/UserRole.java` —
-  `ADMIN, OWNER, MANAGER, OPERATOR, WAITER, SUPERVISOR,
-  HEAD_WAITER, KITCHEN_STAFF, COURIER, CASHIER, CUSTOMER`. No
-  SUPERADMIN — ADMIN is the system role.
+  `SUPER_ADMIN, ADMIN, OWNER, MANAGER, OPERATOR, WAITER, SUPERVISOR,
+  HEAD_WAITER, KITCHEN_STAFF, COURIER, CASHIER, CUSTOMER` (plus legacy
+  `RESTAURANT`, `KITCHEN`). `SUPER_ADMIN` (introduced in `V147`) is the
+  cross-tenant platform role, used for cross-tenant gating —
+  `PlatformAdminController` (`hasRole('SUPER_ADMIN')`) and
+  `SubscriptionEnforcementFilter`; tenant-scoped `ADMIN` is the
+  per-restaurant system role.
 - Authorization style: `@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")`
   on controller methods. New `SubscriptionController` admin endpoint
   uses `@PreAuthorize("hasRole('ADMIN')")`.
@@ -226,12 +232,18 @@ history pending user adjustment).
 | **Finance** | Purchase Orders, Expenses, Reports, Pricing, Alerts, Payroll |
 | **Settings** | System Users, Printers, Receipt Template, Kitchen Stations, Telegram Subscribers |
 
-Feature-code granularity: gate at the **sub-item level**, not
-top-level — e.g. `kitchen.dashboard`, `kitchen.inventory`,
-`kitchen.production` are independent feature codes. This way a
-"Kitchen" top-level can stay visible in the sidebar even if only
-its core sub-items are unlocked. The top-level menu entry is
-shown iff at least one of its sub-items is unlocked.
+Feature-code granularity (as shipped): the gate uses **coarse,
+one-code-per-paid-module** codes in `modules/billing/PlanFeatures.java` —
+e.g. a single `kitchen` code covers the Kitchen display and a single
+`inventory` code covers all the inventory screens — with only the
+higher-tier sub-items split into their own codes (`kitchen.production`
+and `inventory.po_suggestions` are Pro-only). The frontend mirrors these
+in `src/config/planFeatures.js`. (A finer, per-sub-item vocabulary —
+`kitchen.dashboard`, `kitchen.inventory`, … — exists in
+`service/PlanFeature.java`, but **no interceptor or service consumes it**;
+it is not the gate.) This way a "Kitchen" top-level can stay visible in
+the sidebar even if only its core sub-items are unlocked. The top-level
+menu entry is shown iff at least one of its sub-items is unlocked.
 
 ## Mini-phase breakdown
 
@@ -258,7 +270,8 @@ A1 (schema) ────┤                         ┌─ A5 (banner + read-onl
 **Depends on:** nothing. **Blocks:** A2, A3.
 **Module-to-tier mapping required?** No (seed empty feature_codes).
 
-- Flyway `V141__add_subscription_plans.sql` per the SQL block
+- Flyway `V156__add_subscription_plans.sql` (feature seeding split into
+  `V157__seed_plan_features.sql`) per the SQL block
   below: `subscription_plan` table, restaurant FK columns,
   backfill to Start, set NOT NULL.
 - `SubscriptionPlan` entity + repository.
@@ -275,9 +288,9 @@ existing test suite passes.
 **Depends on:** A1. **Blocks:** A4, A5, A6, A7.
 **Module-to-tier mapping required?** No.
 
-- `PlanFeature` constants file (the typed surface over feature
-  codes — populated from the module catalogue but no gates are
-  applied yet).
+- `PlanFeatures` feature-code vocabulary (`modules/billing/PlanFeatures.java`
+  — the coarse per-module codes the gate actually consumes; a finer
+  `service/PlanFeature.java` also exists but is not wired to any gate).
 - `PlanGateService` with `requireFeature`, `hasFeature`,
   `getCurrentPlan`, Caffeine cache, expiry logic.
 - `PaymentProvider` interface + `NoopPaymentProvider` stub.
@@ -392,7 +405,7 @@ implements a paid module, then:
   when zero sub-items are visible.
 - Create `PlanRequired` page at `/plan-required` with locale
   copy.
-- Update seed data in V141 (or a follow-up V142) with the
+- Update seed data in `V157__seed_plan_features.sql` with the
   finalized `feature_codes` for each plan.
 - Write integration tests: for each gated controller endpoint,
   assert 403 for a Start-tier user and 200 for a Pro-tier user.
@@ -411,9 +424,10 @@ live" moment and must be deployed backend+frontend in lockstep.
 
 ## Phase A — implementation outline
 
-### Database (Flyway V141)
+### Database (Flyway V156/V157)
 
-`V141__add_subscription_plans.sql`:
+`V156__add_subscription_plans.sql` (the feature seed shipped separately as
+`V157__seed_plan_features.sql`):
 
 ```sql
 CREATE TABLE subscription_plan (
@@ -454,7 +468,7 @@ ALTER TABLE restaurants ALTER COLUMN plan_id SET NOT NULL;
 
 Also add a new `AuditAction` enum value `PLAN_CHANGED`. If
 `AuditAction` is stored as a string in the audit_log table, no
-migration is needed; if it's a Postgres enum, V141 adds the
+migration is needed; if it's a Postgres enum, V156 adds the
 value.
 
 ### Backend
@@ -465,7 +479,8 @@ New module: `com.elcafe.modules.billing`.
 |---|---|
 | `entity/SubscriptionPlan.java` | JPA entity; `featureCodes` mapped from JSONB to `Set<String>` via Hibernate `@Type` |
 | `repository/SubscriptionPlanRepository.java` | `findByCode(String)`, `findAllByIsActiveTrueOrderBySortOrder()` |
-| `service/PlanFeature.java` | Constants for feature codes (`KITCHEN_DASHBOARD = "kitchen.dashboard"`, …) — typed surface over the JSONB strings |
+| `PlanFeatures.java` (module root) | **The gate's feature-code vocabulary** — coarse one-code-per-paid-module strings (`kitchen`, `inventory`, `marketing`, … with `kitchen.production` / `inventory.po_suggestions` split out for Pro), matched by the frontend `src/config/planFeatures.js` and consumed by `PlanFeatureGuardInterceptor` |
+| `service/PlanFeature.java` | Finer per-sub-item constants (`KITCHEN_DASHBOARD = "kitchen.dashboard"`, …) — **exists but is NOT consumed by the interceptor/gate**; a typed reference only |
 | `service/PlanGateService.java` | `requireFeature(featureCode)` (uses `UserPrincipal.getRestaurantId()` from `SecurityContext`), `requireFeature(restaurantId, featureCode)`, `hasFeature(restaurantId, featureCode)`, `getCurrentPlan(restaurantId)` |
 | `service/PaymentProvider.java` | Interface: `initiatePayment`, `verifyWebhook`, `getStatus`. Provider-agnostic. |
 | `service/NoopPaymentProvider.java` | Stub for Phase A. Throws "not implemented" on initiate. |
@@ -487,8 +502,8 @@ New module: `com.elcafe.modules.billing`.
   `requireWriteAccess()` check at the controller layer for any
   state-changing endpoint, independent of feature gating.
 - `requireFeature` throws `ForbiddenException` with a structured
-  message (`"plan.feature_required:kitchen.dashboard"`) so the
-  frontend can render an upgrade CTA instead of a generic 403.
+  message (`"plan.feature_required:kitchen"` — a coarse `PlanFeatures`
+  code) so the frontend can render an upgrade CTA instead of a generic 403.
 
 Reused services:
 
@@ -545,7 +560,7 @@ courier,production,…}/service/` and produce the exact list.
 
 ### Migration / cutover
 
-- V141 backfill: every existing restaurant → Start,
+- V156 backfill: every existing restaurant → Start,
   `plan_expires_at = NULL`, `is_trial = FALSE`.
 - Deploy backend + frontend together — UI-hide and backend-gate
   must ship in lockstep.
@@ -586,10 +601,14 @@ courier,production,…}/service/` and produce the exact list.
 
 Backend (all paths under `/home/user/elcafe/`):
 
-- New: `src/main/resources/db/migration/V141__add_subscription_plans.sql`
+- New: `src/main/resources/db/migration/V156__add_subscription_plans.sql`
+  + `src/main/resources/db/migration/V157__seed_plan_features.sql`
 - New: `src/main/java/com/elcafe/modules/billing/entity/SubscriptionPlan.java`
 - New: `src/main/java/com/elcafe/modules/billing/repository/SubscriptionPlanRepository.java`
+- New: `src/main/java/com/elcafe/modules/billing/PlanFeatures.java`
+  — the gate's coarse feature-code vocabulary (the file the interceptor consumes)
 - New: `src/main/java/com/elcafe/modules/billing/service/PlanFeature.java`
+  — finer per-sub-item constants; exists but NOT consumed by the gate
 - New: `src/main/java/com/elcafe/modules/billing/service/PlanGateService.java`
 - New: `src/main/java/com/elcafe/modules/billing/service/PaymentProvider.java`
 - New: `src/main/java/com/elcafe/modules/billing/service/NoopPaymentProvider.java`
@@ -627,7 +646,7 @@ Frontend (all paths under `/home/user/elcafe/frontend/`):
 End-to-end checks for Phase A. Run against a local Postgres +
 backend + frontend dev stack:
 
-1. **Migration safety**: run V141 on a copy of production-like
+1. **Migration safety**: run V156/V157 on a copy of production-like
    data. Confirm every existing restaurant has `plan_id`
    pointing at the Start row and `plan_expires_at IS NULL`.
    Confirm no foreign-key violations.

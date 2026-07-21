@@ -5,8 +5,9 @@ hard-enforced data isolation. Subscription status gates access to the platform.
 
 **Status (living — updated as phases land):**
 
-- **Phase 0** (security + tenancy hardening) — ✅ landed. Tenant enforcement ships in `shadow` mode;
-  not yet flipped to `enforce` (see `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`).
+- **Phase 0** (security + tenancy hardening) — ✅ landed. Tenant enforcement defaults to `enforce`
+  (`application.yml`: `${TENANT_ENFORCEMENT_MODE:enforce}`); see `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`
+  for the shadow→enforce staging-soak procedure.
 - **Phase 1** (subscription tier system) — ✅ complete: schema (V156/V157), plan gating, read-only mode,
   expiry notifier, 14-day trial, admin plan management, en/ru/uz, tests.
 - **Phase 2** (access gate) — ✅ complete, dark-launched (`app.subscription.enforcement.mode=off`): a
@@ -35,7 +36,7 @@ resolved now) — read it as the motivation for this re-architecture, not the cu
 ## 1. Current-state truth (evidence)
 
 > **Historical baseline — captured the app _before_ Phase 0/1/2.** Most rows below are now resolved
-> (self-registration hole closed, tokens finite/revocable, tenancy enforced in shadow, JWT secret
+> (self-registration hole closed, tokens finite/revocable, tenancy enforced (default `enforce`), JWT secret
 > required, waiters/customers tenant-bound, the subscription/plan model built). Kept as the reason this
 > was a re-architecture, not a feature. See the Status block at the top for what's current.
 
@@ -91,9 +92,9 @@ Nothing downstream is trustworthy without this.
 > `TenantInsertGuard`; all 75 business entities + `AuditLog` scoped, `User` excluded) · §3.5 ✅
 > (finite + revocable + secret hardened) · §3.6 ✅ (waiter tenant-bound + per-restaurant identity,
 > V151/V152) · §3.7 ✅ (customers per-restaurant + loyalty, V150/V153/V155). **Phase 0 is
-> code-complete and green; the one step left for the whole phase is operational — flip
-> `app.security.tenant-enforcement.mode` from `shadow` to `enforce` after a staging soak (and set
-> `JWT_SECRET`), per `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`. The null-tenant-principal bypass (a
+> code-complete and green; `app.security.tenant-enforcement.mode` defaults to `enforce`
+> (`${TENANT_ENFORCEMENT_MODE:enforce}`) — set `JWT_SECRET` and run a staging soak per
+> `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md` before relying on it in prod. The null-tenant-principal bypass (a
 > non-`SUPER_ADMIN` user with `restaurant_id IS NULL`, which previously bound a null tenant the §3.4
 > filter left *unscoped*) is now closed by a **deny-all sentinel**: `TenantEnforcementFilter` binds
 > `TenantContext.NO_ACCESS` (a restaurant id matching no row) for a tenant-scoped caller with no
@@ -106,7 +107,7 @@ Nothing downstream is trustworthy without this.
 > under a SUPER_ADMIN creator.)** §3.1/§3.2 kill the catastrophic *self-mint-ADMIN* vector and confine ADMIN to a
 > single tenant (only SUPER_ADMIN is cross-tenant). §3.3 adds `TenantContext` +
 > `TenantEnforcementFilter` (`app.security.tenant-enforcement.mode` = shadow|enforce|off,
-> default **shadow**) plus a mode-aware `RestaurantAuthorizationService.checkAccess(...)` for
+> default **enforce**) plus a mode-aware `RestaurantAuthorizationService.checkAccess(...)` for
 > the controller retrofit. Retrofitted so far: **financial module** — `AccountController`
 > (4 filter-missed endpoints; `/sync-all` → SUPER_ADMIN), `PayrollController` (3 GETs +
 > create), `SalaryConfigController` (GET + create) — and `TableController` create. The hole
@@ -199,7 +200,7 @@ Nothing downstream is trustworthy without this.
   while their writes require `ADMIN/OPERATOR/WAITER`; now guarded to match. Enforce residuals
   (native/bulk queries, `getReferenceById`, `REQUIRES_NEW`) remain tracked in the flip runbook.
 
-### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ READ + WRITE CLOSED (enforce not yet flipped)
+### 3.4 Defense in depth: Hibernate tenant filter (recommended) — ◐ READ + WRITE CLOSED (default `enforce`)
 
 > **Correction + completion (this branch).** The original §3.4 claim that the `@Filter` closes the
 > surrogate-`/{id}` IDOR ("`findById(foreignId)` returns nothing") was **false**: Hibernate filters
@@ -323,38 +324,58 @@ Chose **(A) Customers belong to one restaurant.**
 
 ## 4. Phase 1 — Tenant & subscription data model
 
-New module `com.elcafe.modules.subscription`. Migrations start at **`V156`** — Phase 0 consumed
+New module `com.elcafe.modules.billing`. Migrations start at **`V156`** — Phase 0 consumed
 V147–V155 (V147/V148 tenant backfill, V149 user `token_version`, V150 customers per-restaurant,
 V151 waiter identity, V152 waiter `token_version`, V153 loyalty per-restaurant, V154 tenant-assignment
 review, V155 notification tenant scope).
 
 ### 4.1 Entities (new)
+
+> **Build status — only `SubscriptionPlan` shipped.** Of the entities below, only
+> **`SubscriptionPlan`** was actually implemented (as `modules/billing/entity/SubscriptionPlan.java`,
+> alongside the enum `SubscriptionStatus`). **`BillingAccount`, `RestaurantSubscription`,
+> `SubscriptionInvoice`, and `BillingEvent` were NOT built** — they are deferred with the Phase 3
+> billing engine (blocked on an acquiring contract; prices stay 0). Treat the four below as plan, not
+> shipped code. (The subscription *status* that did ship lives on `Restaurant.subscription_status`, not
+> in a `RestaurantSubscription` table.)
+
 - `entity/BillingAccount.java` → table `billing_accounts` (owner user, company/billing name,
-  billing email, external customer id at provider, currency, status).
+  billing email, external customer id at provider, currency, status). — ⏸ **NOT built** (deferred, Phase 3).
 - `entity/SubscriptionPlan.java` → `subscription_plans` (code, name, price, `BillingCycle`,
-  trial days, feature/limit JSON, active).
+  trial days, feature/limit JSON, active). — ✅ **built** (the actual table is `subscription_plan` with
+  `monthly_price`/`feature_codes`/`sort_order`/`is_active`; see `docs/subscription-tiers-plan.md`).
 - `entity/RestaurantSubscription.java` → `restaurant_subscriptions`
   (`restaurant_id` FK, `billing_account_id` FK, `plan_id` FK, `SubscriptionStatus`,
-  `current_period_start/end`, `trial_end`, `cancel_at`, provider subscription id).
+  `current_period_start/end`, `trial_end`, `cancel_at`, provider subscription id). — ⏸ **NOT built** (deferred, Phase 3).
 - `entity/SubscriptionInvoice.java` → `subscription_invoices`
   (subscription FK, number, period, amount, `InvoiceStatus`, due date, paid_at,
-  provider invoice id, link to a `financial.JournalEntry`).
+  provider invoice id, link to a `financial.JournalEntry`). — ⏸ **NOT built** (deferred, Phase 3).
 - `entity/BillingEvent.java` → `billing_events` (append-only audit: created/renewed/
-  payment_succeeded/payment_failed/suspended/cancelled, payload JSON, idempotency key).
+  payment_succeeded/payment_failed/suspended/cancelled, payload JSON, idempotency key). — ⏸ **NOT built** (deferred, Phase 3).
 
 ### 4.2 Enums
-- `enums/SubscriptionStatus.java`: `TRIALING, ACTIVE, PAST_DUE, SUSPENDED, CANCELLED, EXPIRED`.
+- `enums/SubscriptionStatus.java`: `TRIAL, ACTIVE, PAST_DUE, SUSPENDED, CANCELLED, EXPIRED`.
 - `enums/BillingCycle.java`: `MONTHLY, QUARTERLY, ANNUAL`.
 - `enums/InvoiceStatus.java`: `DRAFT, OPEN, PAID, UNCOLLECTIBLE, VOID`.
 
 ### 4.3 Migrations
+
+> **Superseded — this list did NOT ship as written.** What actually landed:
+> `V156__add_subscription_plans.sql` and `V157__seed_plan_features.sql` (the `subscription_plan` schema
+> + per-plan feature seed, and the plan columns added to `restaurants`), plus
+> `V158__add_subscription_status.sql` (adds `Restaurant.subscription_status`). `V159`/`V160`/`V161` are
+> **unrelated** to subscriptions — `V159__add_order_tracking_token.sql`,
+> `V160__create_shedlock_table.sql`, `V161__add_order_completion_event_marker.sql`. No
+> `billing_accounts`, `restaurant_subscriptions`, `subscription_invoices`, `billing_events`, or
+> subscription-backfill migration exists. The list below is the original (unrealized) plan.
+
 - `V156__create_billing_accounts.sql`
 - `V157__create_subscription_plans.sql` (+ seed default plans)
 - `V158__create_restaurant_subscriptions.sql`
 - `V159__create_subscription_invoices.sql`
 - `V160__create_billing_events.sql`
 - `V161__backfill_subscriptions_for_existing_restaurants.sql` — every existing restaurant
-  gets a `BillingAccount` + a subscription (grandfathered `ACTIVE` or `TRIALING`) so the new
+  gets a `BillingAccount` + a subscription (grandfathered `ACTIVE` or `TRIAL`) so the new
   gate doesn't lock out current users on deploy. **Critical for a no-downtime rollout.**
 
 ### 4.4 Repositories
@@ -369,9 +390,10 @@ review, V155 notification tenant scope).
   `SecurityConfig.securityFilterChain` after `JwtAuthenticationFilter`/`TenantResolutionFilter`.
   Logic: resolve tenant from `TenantContext`; load subscription status (Redis cache, short
   TTL, keyed by `restaurant_id`); if `SUSPENDED/EXPIRED/CANCELLED` (and grace window passed) →
-  write `402` with `{ "error": "SUBSCRIPTION_INACTIVE", "status": ... }`. `SUPER_ADMIN` and an
+  write `402` with the standard `ApiResponse.error` envelope (`success`/`message`/`error`/`timestamp`),
+  `error` = `SUBSCRIPTION_INACTIVE` (no `status` field). `SUPER_ADMIN` and an
   allowlist (login, refresh, billing, logout, health) always pass.
-- **`modules/subscription/service/SubscriptionAccessService.java`** — `isEntitled(restaurantId)`,
+- **`modules/billing/service/SubscriptionAccessService.java`** — `isEntitled(restaurantId)`,
   status lookup, Redis cache + invalidation on status change.
 - **Grace policy** — define what `PAST_DUE` can still do. Recommended: full read access +
   login + billing pages; block write/POS only after `SUSPENDED`. Don't strand a café
@@ -400,21 +422,21 @@ review, V155 notification tenant scope).
 
 ## 6. Phase 3 — Billing engine + provider + webhooks
 
-- **`modules/subscription/service/BillingService.java`** — create subscription, start trial,
+- **`modules/billing/service/BillingService.java`** — create subscription, start trial,
   upgrade/downgrade (with proration), cancel; on payment success/failure flip status and emit
   `BillingEvent`; write revenue to `financial.JournalEntry` (AR ↔ platform revenue).
-- **`modules/subscription/job/SubscriptionBillingJob.java`** — `@Scheduled` daily (pattern:
+- **`modules/billing/job/SubscriptionBillingJob.java`** — `@Scheduled` daily (pattern:
   `financial/service/SalaryAutoPayService`): find renewals due → create invoice → charge via
   provider → on success extend period; on failure → `PAST_DUE` → dunning → `SUSPENDED`. Expire
   ended trials.
-- **`modules/subscription/provider/BillingPaymentProvider.java`** (interface) +
+- **`modules/billing/provider/BillingPaymentProvider.java`** (interface) +
   `StripeBillingProvider` / `ClickRecurringProvider` impl. Mirror the abstraction in
   `loyalty/service/topup/WalletTopUpPaymentProvider.java`.
-- **`modules/subscription/controller/BillingWebhookController.java`** — public endpoint (add to
+- **`modules/billing/controller/BillingWebhookController.java`** — public endpoint (add to
   `SecurityConfig` allowlist, sibling of `/api/v1/webhook/wallet/**`). Verify provider
   signature; reuse `order/service/IdempotencyService` (+ `idempotency_keys` table, `V90`) for
   replay-safety. Update subscription/invoice/status; invalidate the Redis entitlement cache.
-- **`modules/subscription/controller/SubscriptionController.java`** — tenant-facing:
+- **`modules/billing/controller/SubscriptionController.java`** — tenant-facing:
   current subscription, available plans, subscribe/change/cancel, invoice history,
   hosted-checkout/portal link.
 - **Config** — provider keys/secrets in `application.yml` via env (no committed defaults).
@@ -459,7 +481,7 @@ review, V155 notification tenant scope).
 
 ## 8. Phase 5 — Platform operations (super-admin)
 
-- **Backend** `modules/subscription/controller/admin/PlatformAdminController.java`
+- **Backend** `modules/billing/controller/admin/PlatformAdminController.java`
   (`@PreAuthorize("hasRole('SUPER_ADMIN')")`): list tenants + subscription status, suspend/
   reactivate, comp/extend trial, view invoices, MRR/churn metrics.
 - **Frontend** `frontend/src/pages/admin/PlatformConsole.jsx` + route gated to `SUPER_ADMIN`.
@@ -498,8 +520,8 @@ review, V155 notification tenant scope).
   (`subscription.enforcement.enabled`) — ship enforcement OFF, verify data, then flip ON.
 - **Observability.** Metrics/alerts for failed charges, suspensions, webhook failures; audit
   via existing `audit_logs` (`V86`).
-- **Docs/runbooks.** Update `DEPLOYMENT.md`/`PRODUCTION_SETUP.md` with new env vars (provider
-  keys, JWT secret now required, enforcement flag).
+- **Docs/runbooks.** Update `.env.docker.example` / `PRODUCTION_SETUP.md` / `DOCKER_DEPLOYMENT.md`
+  with new env vars (provider keys, JWT secret now required, enforcement flag).
 - **Other clients.** `print-agent` (WebSocket) and the (empty) `elcafe-customer-mobile-app`
   must tolerate 402s / be exempt as appropriate.
 
