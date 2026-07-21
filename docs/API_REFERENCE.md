@@ -75,9 +75,13 @@ Authorization: Bearer {access_token}
 
 ### Admin/Operator Authentication
 
-#### Register New User
+#### Register New User (Super-Admin)
+
+Public self-registration is closed. Creating a user requires an authenticated `SUPER_ADMIN`.
+
 ```http
 POST /api/v1/auth/register
+Authorization: Bearer {super_admin_token}
 Content-Type: application/json
 
 {
@@ -697,13 +701,10 @@ GET /api/v1/consumer/orders/{orderNumber}
 
 #### Cancel Order (Public)
 ```http
-POST /api/v1/consumer/orders/{orderNumber}/cancel
-Content-Type: application/json
-
-{
-  "reason": "Changed my mind"
-}
+POST /api/v1/consumer/orders/{orderNumber}/cancel?reason=Changed%20my%20mind
 ```
+
+`reason` is an optional **query parameter** (not a JSON body).
 
 **Note**: Orders can only be cancelled within 5 minutes of placement.
 
@@ -753,7 +754,6 @@ Content-Type: application/json
 **Effects**:
 - Status: PLACED → REJECTED
 - Sets `rejectedAt` timestamp
-- Initiates automatic refund if payment completed
 - Broadcasts WebSocket event
 - Sends SMS notification to customer
 
@@ -806,19 +806,19 @@ Authorization: Bearer {token}
 
 ### Customers
 
-#### Get All Customers (Admin/Operator)
+#### Get All Customers (Admin/Manager)
 ```http
 GET /api/v1/customers?page=0&size=20
 Authorization: Bearer {token}
 ```
 
-#### Get Customer (Admin/Operator)
+#### Get Customer (Admin/Manager)
 ```http
 GET /api/v1/customers/{id}
 Authorization: Bearer {token}
 ```
 
-#### Get Customer Order History (Admin/Operator)
+#### Get Customer Order History (Admin/Manager)
 ```http
 GET /api/v1/customers/{id}/orders
 Authorization: Bearer {token}
@@ -826,26 +826,34 @@ Authorization: Bearer {token}
 
 ### Customer Activity (RFM Analysis)
 
-#### Get Customer Activity (Public)
+Gated to `ADMIN`, `OWNER`, `MANAGER`, `OPERATOR`. These endpoints return a **raw JSON array** (`List`), not the standard `ApiResponse` envelope.
+
+#### Get Customer Activity (Admin/Owner/Manager/Operator)
 ```http
 GET /api/v1/customers/activity?page=0&size=20
+Authorization: Bearer {token}
 ```
 
-#### Filter Customers (Public)
+#### Filter Customers (Admin/Owner/Manager/Operator)
 ```http
 GET /api/v1/customers/activity/filter?rfmSegment=CHAMPION&minTotalSpent=100000
+Authorization: Bearer {token}
 ```
 
 ### Customer Addresses
 
-#### Get Customer Addresses (Public)
+Require authentication (`isAuthenticated()`). A consumer may only access **their own** addresses — the authenticated customer id must match the path `{customerId}`.
+
+#### Get Customer Addresses (Authenticated)
 ```http
 GET /api/v1/customers/{customerId}/addresses
+Authorization: Bearer {token}
 ```
 
-#### Create Address (Public)
+#### Create Address (Authenticated)
 ```http
 POST /api/v1/customers/{customerId}/addresses
+Authorization: Bearer {token}
 Content-Type: application/json
 
 {
@@ -859,9 +867,10 @@ Content-Type: application/json
 }
 ```
 
-#### Set Default Address (Public)
+#### Set Default Address (Authenticated)
 ```http
 PUT /api/v1/customers/{customerId}/addresses/{addressId}/default
+Authorization: Bearer {token}
 ```
 
 ---
@@ -922,12 +931,9 @@ Authorization: Bearer {token}
 ```http
 POST /api/v1/kitchen/orders/{id}/ready
 Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "notes": "Order is ready for pickup"
-}
 ```
+
+Takes no request body.
 
 **Effects**:
 - Status: PREPARING → READY
@@ -940,12 +946,9 @@ Content-Type: application/json
 ```http
 POST /api/v1/kitchen/orders/{id}/picked-up
 Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "notes": "Picked up by courier"
-}
 ```
+
+Takes no request body.
 
 **Effects**:
 - Status: READY → PICKED_UP
@@ -954,9 +957,11 @@ Content-Type: application/json
 
 #### Update Priority (Admin/Operator)
 ```http
-PATCH /api/v1/kitchen/orders/{id}/priority?priority=10
+PATCH /api/v1/kitchen/orders/{id}/priority?priority=URGENT
 Authorization: Bearer {token}
 ```
+
+`priority` is a `KitchenPriority` enum name — one of `LOW`, `NORMAL`, `HIGH`, `URGENT` (not an integer).
 
 ---
 
@@ -1121,9 +1126,10 @@ Content-Type: application/json
 - `customerId` is **optional** - can be added later when customer is identified
 - `items` are **optional** - can be included in create request or added later
 - The `X-Waiter-Id` header is **required** for all waiter order operations
+- Waiter order numbers use the `W%d%03d` format (e.g. `W651234567`); only consumer orders use the `ORD-...` format
 
 **Table Status Changes:**
-- When order is created: Table status changes from `FREE` → `OCCUPIED`
+- When order is created: Table status changes from `AVAILABLE` → `OCCUPIED`
 - When order is closed: Table status changes from `OCCUPIED` → `CLEANING`
 
 **Response**: 201 Created
@@ -1133,7 +1139,7 @@ Content-Type: application/json
   "message": "Order created successfully",
   "data": {
     "id": 123,
-    "orderNumber": "ORD-1733412345678-A1B2C3D4",
+    "orderNumber": "W651234567",
     "status": "NEW",
     "table": {
       "id": 1,
@@ -1209,7 +1215,7 @@ X-Waiter-Id: {waiterId}
 ```
 
 **Effects:**
-- Order status changes to `ACCEPTED`
+- Order status changes to `PREPARING`
 - Order is sent to kitchen queue
 - Table status remains `OCCUPIED`
 
@@ -1228,7 +1234,7 @@ X-Waiter-Id: {waiterId}
 ```
 
 **Effects:**
-- Table status changes to `BILL_REQUESTED`
+- Table status changes to `RESERVED`
 
 #### Close Order (Waiter/Supervisor)
 ```http
@@ -1492,19 +1498,19 @@ Authorization: Bearer {token}
 
 ### Financial Analytics
 
-#### Daily Revenue (Admin/Operator)
+#### Daily Revenue (Admin Only)
 ```http
 GET /api/v1/analytics/financial/daily-revenue?startDate=2025-12-01&endDate=2025-12-05&restaurantId=1
 Authorization: Bearer {token}
 ```
 
-#### Sales by Category (Admin/Operator)
+#### Sales by Category (Admin Only)
 ```http
 GET /api/v1/analytics/financial/sales-by-category?startDate=2025-12-01&endDate=2025-12-05&restaurantId=1
 Authorization: Bearer {token}
 ```
 
-#### COGS Analytics (Admin/Operator)
+#### COGS Analytics (Admin Only)
 ```http
 GET /api/v1/analytics/financial/cogs?startDate=2025-12-01&endDate=2025-12-05&restaurantId=1
 Authorization: Bearer {token}
@@ -1516,7 +1522,7 @@ GET /api/v1/analytics/financial/profitability?startDate=2025-12-01&endDate=2025-
 Authorization: Bearer {token}
 ```
 
-#### Contribution Margins (Admin/Operator)
+#### Contribution Margins (Admin Only)
 ```http
 GET /api/v1/analytics/financial/contribution-margins?startDate=2025-12-01&endDate=2025-12-05&restaurantId=1
 Authorization: Bearer {token}
@@ -1548,7 +1554,7 @@ GET /api/v1/analytics/operational/order-timing?startDate=2025-12-01&endDate=2025
 Authorization: Bearer {token}
 ```
 
-#### Kitchen Analytics (Admin/Operator/Kitchen Staff)
+#### Kitchen Analytics (Admin/Operator)
 ```http
 GET /api/v1/analytics/operational/kitchen?startDate=2025-12-01&endDate=2025-12-05&restaurantId=1
 Authorization: Bearer {token}
@@ -1556,19 +1562,19 @@ Authorization: Bearer {token}
 
 ### Customer Analytics
 
-#### Customer Retention (Admin/Operator)
+#### Customer Retention (Admin Only)
 ```http
 GET /api/v1/analytics/customer/retention?startDate=2025-12-01&endDate=2025-12-05&restaurantId=1
 Authorization: Bearer {token}
 ```
 
-#### Customer LTV (Admin/Operator)
+#### Customer LTV (Admin Only)
 ```http
 GET /api/v1/analytics/customer/ltv?restaurantId=1
 Authorization: Bearer {token}
 ```
 
-#### Customer Satisfaction (Admin/Operator)
+#### Customer Satisfaction (Admin Only)
 ```http
 GET /api/v1/analytics/customer/satisfaction?startDate=2025-12-01&endDate=2025-12-05
 Authorization: Bearer {token}
@@ -1588,31 +1594,29 @@ Authorization: Bearer {token}
 
 ### SMS Gateway Integration (Eskiz.uz)
 
-#### Login to SMS Broker (Admin/Operator)
+All SMS endpoints are restricted to `SUPER_ADMIN`. The module sends through a single shared platform Eskiz account and its tables are not tenant-scoped, so it is not exposed to per-restaurant admins/operators.
+
+#### Login to SMS Broker (Super-Admin)
 ```http
 POST /api/v1/sms/auth/login
 Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "email": "your-email@example.com",
-  "password": "your-password"
-}
 ```
 
-#### Send SMS (Admin/Operator)
+Takes **no request body** — the broker credentials come from server configuration.
+
+#### Send SMS (Super-Admin)
 ```http
 POST /api/v1/sms/send
 Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "phoneNumber": "+998901234567",
+  "mobilePhone": "+998901234567",
   "message": "Your order ORD-123 is ready for pickup!"
 }
 ```
 
-#### Get Message Status (Admin/Operator)
+#### Get Message Status (Super-Admin)
 ```http
 GET /api/v1/sms/message/{id}/status
 Authorization: Bearer {token}
@@ -1631,16 +1635,11 @@ Content-Type: multipart/form-data
 file: [binary data]
 ```
 
-**Response**:
+**Response**: `ApiResponse<String>` — `data` is the uploaded file URL as a plain string.
 ```json
 {
   "success": true,
-  "data": {
-    "url": "https://storage.example.com/uploads/product-123.jpg",
-    "fileName": "product-123.jpg",
-    "fileSize": 245678,
-    "contentType": "image/jpeg"
-  }
+  "data": "https://storage.example.com/uploads/product-123.jpg"
 }
 ```
 
@@ -1654,21 +1653,28 @@ Authorization: Bearer {token}
 
 ## Error Responses
 
-All error responses follow this format:
+All responses use one `ApiResponse` envelope: `{success, message, data, errors, error, requestId, timestamp}`, serialized with `@JsonInclude(NON_NULL)` (null fields are omitted).
+
+On error:
+- `success` is `false`
+- `error` is a stable machine-readable code (e.g. `NOT_FOUND`, `VALIDATION_ERROR`, `INTERNAL`) — clients branch on this, never on `message` text
+- `requestId` is the request correlation id (matches server logs)
+- `errors`, when present, is a **map of field name → message string** (not an array of `{field, message}` objects)
 
 ```json
 {
   "success": false,
-  "message": "Error description",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Email is required"
-    }
-  ],
+  "message": "Validation failed",
+  "error": "VALIDATION_ERROR",
+  "errors": {
+    "email": "Email is required"
+  },
+  "requestId": "b1e7c0a2-7f3e-4c2a-9a1b-0d2f4e6a8c10",
   "timestamp": "2025-12-05T15:30:00Z"
 }
 ```
+
+A `500` returns `message` `"An unexpected error occurred"` with `error` `"INTERNAL"` (internal details are never leaked; use `requestId` to correlate with logs).
 
 ### HTTP Status Codes
 

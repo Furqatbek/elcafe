@@ -87,13 +87,13 @@ Development: http://localhost:8080/api/v1
 
 ---
 
-## 1️⃣ Consumer Order API (Public)
+## 1️⃣ Consumer Order API (Authenticated — consumer JWT)
 
 ### 1.1 Place Order
 
 **Endpoint:** `POST /consumer/orders`
 
-**Authentication:** None (Public API)
+**Authentication:** Required — consumer JWT (obtained via OTP login). The order is placed within the authenticated customer's restaurant context.
 
 **Description:** Place a new food order from website or mobile app.
 
@@ -220,9 +220,15 @@ Development: http://localhost:8080/api/v1
 
 **Endpoint:** `GET /consumer/orders/{orderNumber}`
 
-**Authentication:** None (Public API)
+**Authentication:** Required — consumer JWT, and **ownership-gated** (a customer may only read their own orders). This is **not** a public endpoint.
 
-**Description:** Track order status and get real-time updates.
+**Description:** Track order status for the authenticated customer.
+
+> **Public (token-gated) tracking:** unauthenticated clients track via
+> `GET /api/v1/public/orders/{orderNumber}/status?token=<opaqueTrackingToken>`
+> (and `GET /api/v1/public/orders/{orderNumber}/eta?token=...`). Access is authorized by an
+> unguessable per-order token issued when the order is placed — not by the order number, which is
+> enumerable. There is no public `GET /consumer/orders/{orderNumber}`.
 
 **Path Parameters:**
 - `orderNumber` - The order number (e.g., ORD-A7B3C4D5)
@@ -253,7 +259,7 @@ Development: http://localhost:8080/api/v1
 
 **Endpoint:** `POST /consumer/orders/{orderNumber}/cancel`
 
-**Authentication:** None (Public API)
+**Authentication:** Required — consumer JWT, and **ownership-gated** (a customer may only cancel their own orders).
 
 **Description:** Cancel an order (only if not yet preparing).
 
@@ -279,11 +285,40 @@ Development: http://localhost:8080/api/v1
 
 ---
 
+### 1.4 Validate Coupon
+
+**Endpoint:** `POST /consumer/orders/validate-coupon`
+
+**Authentication:** Required — consumer JWT.
+
+**Description:** Validate a coupon code before checkout.
+
+**Query Parameters:**
+- `restaurantId` (required) - Restaurant the coupon applies to
+- `couponCode` (required) - Coupon code to validate
+- `orderTotal` (optional) - Current order total, for min-spend / discount checks
+- `customerId` (optional) - Customer ID, for per-customer usage limits
+
+**Request Example:**
+```
+POST /consumer/orders/validate-coupon?restaurantId=1&couponCode=WELCOME10&orderTotal=50000
+```
+
+**Response:** `200 OK` — `ApiResponse<ValidateCouponResponse>` describing validity and the computed discount.
+
+---
+
 ## 2️⃣ Kitchen Order API
 
 **Base Path:** `/kitchen/orders`
 
-**Authentication:** Required (ADMIN, OPERATOR, KITCHEN_STAFF roles)
+**Authentication:** Required. Roles are **per-endpoint** (there is no single blanket role for the module):
+- `GET /active` — ADMIN, OPERATOR, KITCHEN_STAFF
+- `GET /ready` — ADMIN, OPERATOR, KITCHEN_STAFF, COURIER
+- `POST /{id}/start` — ADMIN, KITCHEN_STAFF
+- `POST /{id}/ready` — ADMIN, KITCHEN_STAFF
+- `POST /{id}/picked-up` — ADMIN, KITCHEN_STAFF, COURIER
+- `PATCH /{id}/priority` — ADMIN, OPERATOR
 
 ---
 
@@ -797,7 +832,7 @@ Delivery: 123 Main Street, Tashkent
 Courier: Ali Karimov
 Phone: +998909876543
 Estimated delivery: 11:40 AM
-Track: elcafe.com/track/ORD-A7B3C4D5
+Track: elcafe.com/order/track/ORD-A7B3C4D5?token=<trackingToken>
 ```
 
 **Order Delivered (to Customer):**
@@ -822,16 +857,20 @@ Authorization: Bearer <token>
 
 ### Public Endpoints (No Auth Required)
 
-- `POST /consumer/orders` - Place order
-- `GET /consumer/orders/{orderNumber}` - Track order
-- `POST /consumer/orders/{orderNumber}/cancel` - Cancel order
+- `GET /api/v1/public/orders/{orderNumber}/status?token=...` - Token-gated public order tracking
+- `GET /api/v1/public/orders/{orderNumber}/eta?token=...` - Token-gated public ETA
+- `GET /menu/public/{restaurantId}` - Public menu
+
+> The consumer order endpoints — `POST /consumer/orders`, `GET /consumer/orders/{orderNumber}`,
+> `POST /consumer/orders/{orderNumber}/cancel` — are **authenticated** (consumer JWT); track and
+> cancel are additionally ownership-gated. They are **not** public.
 
 ### Role-Based Access Control
 
 | Endpoint | Required Roles |
 |----------|---------------|
-| Kitchen Orders | ADMIN, OPERATOR, KITCHEN_STAFF |
-| Courier Orders (view) | COURIER, ADMIN, OPERATOR |
+| Kitchen Orders | Per-endpoint (see Kitchen Order API): start / mark-ready = ADMIN, KITCHEN_STAFF; picked-up = ADMIN, KITCHEN_STAFF, COURIER; GET /active = ADMIN, OPERATOR, KITCHEN_STAFF; GET /ready = ADMIN, OPERATOR, KITCHEN_STAFF, COURIER |
+| Courier Orders (available, my-orders) | COURIER only |
 | Courier Assignment | ADMIN, OPERATOR |
 | Update Priority | ADMIN, OPERATOR |
 

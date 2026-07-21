@@ -227,7 +227,7 @@ Get all active orders for a specific waiter.
 
 **Endpoint:** `GET /waiter/orders/waiter/{waiterId}/ongoing`
 
-**Description:** Returns all orders with status NEW, PREPARING, READY, or DELIVERING, sorted by creation date (newest first).
+**Description:** Returns all orders with status NEW, PREPARING, READY, or ON_DELIVERY, sorted by creation date (newest first).
 
 **Response:** `200 OK`
 ```json
@@ -441,7 +441,7 @@ Get statistics about tables.
 
 ### Order Lifecycle
 ```
-NEW → PREPARING → READY → DELIVERING → COMPLETED
+NEW → PREPARING → READY → ON_DELIVERY → COMPLETED
                            ↓
                       CANCELLED
 ```
@@ -450,7 +450,7 @@ NEW → PREPARING → READY → DELIVERING → COMPLETED
 - **NEW**: Order created, waiting to be submitted
 - **PREPARING**: Order submitted to kitchen, being prepared
 - **READY**: Order ready for pickup/delivery
-- **DELIVERING**: Order is being delivered (for delivery orders)
+- **ON_DELIVERY**: Order is being delivered (for delivery orders)
 - **COMPLETED**: Order successfully completed
 - **CANCELLED**: Order cancelled
 
@@ -480,14 +480,18 @@ NEW → PREPARING → READY → DELIVERING → COMPLETED
 
 ## Error Responses
 
+All errors use the shared `ApiResponse` envelope: `{success, message, data, errors, error, requestId, timestamp}` with `@JsonInclude(NON_NULL)` (null fields are omitted). `error` is a stable, machine-readable code (e.g. `VALIDATION_ERROR`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `INTERNAL`) that clients branch on instead of the `message` text; `requestId` correlates the response with server logs. When present, `errors` is a **map of field name → message string** (values are strings, not arrays).
+
 ### 400 Bad Request
 ```json
 {
   "success": false,
-  "message": "Validation error message",
+  "message": "Validation failed",
+  "error": "VALIDATION_ERROR",
   "errors": {
-    "field": ["Error details"]
-  }
+    "field": "Error details"
+  },
+  "requestId": "b1e7c0a2-..."
 }
 ```
 
@@ -495,7 +499,9 @@ NEW → PREPARING → READY → DELIVERING → COMPLETED
 ```json
 {
   "success": false,
-  "message": "Unauthorized access"
+  "message": "Unauthorized access",
+  "error": "UNAUTHENTICATED",
+  "requestId": "b1e7c0a2-..."
 }
 ```
 
@@ -503,7 +509,9 @@ NEW → PREPARING → READY → DELIVERING → COMPLETED
 ```json
 {
   "success": false,
-  "message": "Access denied"
+  "message": "Access denied",
+  "error": "FORBIDDEN",
+  "requestId": "b1e7c0a2-..."
 }
 ```
 
@@ -511,23 +519,29 @@ NEW → PREPARING → READY → DELIVERING → COMPLETED
 ```json
 {
   "success": false,
-  "message": "Resource not found"
+  "message": "Resource not found",
+  "error": "NOT_FOUND",
+  "requestId": "b1e7c0a2-..."
 }
 ```
 
 ### 500 Internal Server Error
+Always returns the fixed generic message with `error` `INTERNAL` — internal details are never leaked; use `requestId` to correlate with logs.
 ```json
 {
   "success": false,
-  "message": "Internal server error"
+  "message": "An unexpected error occurred",
+  "error": "INTERNAL",
+  "requestId": "b1e7c0a2-..."
 }
 ```
 
 ---
 
 ## Rate Limiting
-- Currently no rate limiting implemented
-- Recommended: Implement rate limiting for production
+- Rate limiting **is** implemented. The sensitive auth flows — admin/operator login, consumer OTP request (`/consumer/auth/login`), OTP verify (`/consumer/auth/verify`), and waiter PIN authentication (`/waiters/auth`) — are annotated `@RateLimited`.
+- When a limit is exceeded, a dedicated handler returns **429 Too Many Requests** with `error` code `RATE_LIMITED`.
+- Expensive analytics endpoints are additionally rate-limited.
 
 ## Pagination
 - Default page size: 20 items
@@ -535,5 +549,5 @@ NEW → PREPARING → READY → DELIVERING → COMPLETED
 
 ## Notes
 - All timestamps are in ISO 8601 format
-- All monetary values are in decimal format with 2 decimal places
+- Monetary values are **not** uniformly 2-decimal: consumer and menu amounts are **integer UZS** (e.g. `15000`), whereas the waiter-order examples in this document use a 2-decimal format. Refer to each endpoint's response shape.
 - Order numbers follow format: W{timestamp}{random} (e.g., W651234567)

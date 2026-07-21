@@ -35,8 +35,8 @@ Complete Postman collection for the Restaurant Delivery Control Service API.
 ## 📚 Collection Structure
 
 ### 1. Authentication
-- **Register** - Create new user account
-- **Login** - Authenticate and get tokens (auto-saves tokens)
+- **Login** - Authenticate as the bootstrap `SUPER_ADMIN` and get tokens (auto-saves tokens). This is the entry path.
+- **Register** - Create a new user account. **Requires** an authenticated `SUPER_ADMIN` (`POST /api/v1/auth/register` is no longer open self-registration).
 - **Refresh Token** - Get new access token
 - **Forgot Password** - Request password reset
 - **Reset Password** - Reset password with token
@@ -103,14 +103,15 @@ If needed, you can manually set the token:
 2. Find `access_token` variable
 3. Paste your token in the **Current Value** column
 
-## 🎯 Default Credentials
+## 🎯 Bootstrap Admin
 
-The application comes with seeded users:
+No users are seeded. On first boot **against an empty database**, if both `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables are set, the platform creates a **single `SUPER_ADMIN`** account from them. It is inert on every subsequent boot (remove `ADMIN_PASSWORD` from the environment once the account exists). There are **no** `admin@elcafe.com` / `operator@elcafe.com` accounts.
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | admin@elcafe.com | Admin123! |
-| Operator | operator@elcafe.com | Operator123! |
+| SUPER_ADMIN | value of `ADMIN_EMAIL` | value of `ADMIN_PASSWORD` |
+
+Log in with these credentials to get a token, then create any further users via the (SUPER_ADMIN-only) **Register** endpoint.
 
 ## 📝 Environment Variables
 
@@ -223,7 +224,7 @@ Some requests include pre-request scripts for dynamic data:
 
 ### 403 Forbidden
 - Insufficient permissions
-- Admin-only endpoints require admin@elcafe.com
+- Admin-only endpoints require an admin (or `SUPER_ADMIN`) account
 - Login with correct user role
 
 ### 404 Not Found

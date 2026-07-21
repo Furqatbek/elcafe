@@ -45,12 +45,14 @@ The El Cafe platform provides a comprehensive API for food ordering, kitchen man
 
 ## 🔌 API Endpoints Overview
 
-### Consumer API (Public - No Auth)
+### Consumer API (Authenticated — consumer JWT)
+
+All three require a consumer JWT (from OTP login); track & cancel are additionally **ownership-gated** (a customer may only access their own orders). For unauthenticated order tracking use the token-gated public endpoint (`GET /api/v1/public/orders/{orderNumber}/status?token=...`).
 
 ```http
-POST   /api/v1/consumer/orders                    # Place new order
-GET    /api/v1/consumer/orders/{orderNumber}      # Track order
-POST   /api/v1/consumer/orders/{orderNumber}/cancel # Cancel order
+POST   /api/v1/consumer/orders                      # Place new order (auth)
+GET    /api/v1/consumer/orders/{orderNumber}        # Track order (auth + ownership)
+POST   /api/v1/consumer/orders/{orderNumber}/cancel # Cancel order (auth + ownership)
 ```
 
 ### Kitchen API (Auth Required)
@@ -203,6 +205,7 @@ const placeOrder = async (orderData) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getConsumerToken()}`,
       },
       body: JSON.stringify(orderData)
     });
@@ -213,8 +216,8 @@ const placeOrder = async (orderData) => {
       // Save order number for tracking
       localStorage.setItem('currentOrder', result.data.orderNumber);
 
-      // Redirect to tracking page
-      window.location.href = `/track/${result.data.orderNumber}`;
+      // Redirect to tracking page (customer route is under basename /order; token is required)
+      window.location.href = `/order/track/${result.data.orderNumber}?token=${result.data.trackingToken}`;
     }
   } catch (error) {
     console.error('Order placement failed:', error);
@@ -225,14 +228,15 @@ const placeOrder = async (orderData) => {
 ### React Example - Track Order
 
 ```javascript
-const TrackOrder = ({ orderNumber }) => {
+const TrackOrder = ({ orderNumber, token }) => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchOrder = async () => {
+      // Public tracking is authorized by the per-order token, not the order number
       const response = await fetch(
-        `http://localhost:8080/api/v1/consumer/orders/${orderNumber}`
+        `http://localhost:8080/api/v1/public/orders/${orderNumber}/status?token=${token}`
       );
       const result = await response.json();
       setOrder(result.data);
@@ -244,7 +248,7 @@ const TrackOrder = ({ orderNumber }) => {
     // Poll for updates every 10 seconds
     const interval = setInterval(fetchOrder, 10000);
     return () => clearInterval(interval);
-  }, [orderNumber]);
+  }, [orderNumber, token]);
 
   if (loading) return <div>Loading...</div>;
 
@@ -330,7 +334,7 @@ const KitchenDashboard = () => {
 curl -X POST http://localhost:8080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "chef@elcafe.com",
+    "email": "chef@elcafe.com",
     "password": "password123"
   }'
 ```
