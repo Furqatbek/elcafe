@@ -238,7 +238,7 @@ $env:ADMIN_EMAIL="you@example.com"; $env:ADMIN_PASSWORD="ChangeMe123!"; ./run-lo
 ```json
 {
   "email": "you@example.com",
-  "password": "Admin123!"
+  "password": "ChangeMe123!"
 }
 ```
 
