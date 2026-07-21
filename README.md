@@ -591,16 +591,71 @@ Built with Spring Boot, PostgreSQL, Redis, and modern Java best practices.
 
 ---
 
-## 📖 Additional Documentation
+## 📖 Documentation index
 
-- **[Local Development](./docs/LOCAL_DEVELOPMENT.md)** - Run the full stack on your machine (one command)
-- **[Launch Guide (production)](./docs/LAUNCH.md)** - Shortest path to a production deployment
-- **[Production Readiness Audit](./docs/PRODUCTION_READINESS_AUDIT.md)** - Current hardening status
-- **[API Integration Guide](./README_API_INTEGRATION.md)** - Guide for integrating with the API
-- **[Food Ordering API](./docs/FOOD_ORDERING_API.md)** - Order API documentation
-- **[Waiter Module Guide](./docs/WAITER_MODULE.md)** - Waiter system documentation
-- **[Postman Collection](./postman/)** - API testing collection
-- **Live API reference**: Swagger UI at `/swagger-ui.html`, OpenAPI at `/api-docs`
+Quick orientation: **new dev** → this README → [Local Development](./docs/LOCAL_DEVELOPMENT.md) ·
+**deploying** → [Launch (production)](./docs/LAUNCH.md) · **integrating** →
+[API Reference](./docs/API_REFERENCE.md) or the live Swagger at `/swagger-ui.html`.
+
+### Getting started & deployment
+| Doc | Purpose |
+|---|---|
+| [docs/LOCAL_DEVELOPMENT.md](./docs/LOCAL_DEVELOPMENT.md) | Run the whole stack locally with one command (`run-local.sh`/`.ps1`) |
+| [docs/LAUNCH.md](./docs/LAUNCH.md) | Shortest production launch checklist (Docker + domain) |
+| [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) | Detailed Docker Compose deployment (env, HTTPS via nginx-proxy, backups) |
+| [PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md) | Full production reference (env table, monitoring, SSL, troubleshooting) |
+| [docs/DEPLOYMENT_TOPOLOGY.md](./docs/DEPLOYMENT_TOPOLOGY.md) | Single-node architecture, ShedLock/scheduling, scaling guidance |
+| [frontend/README.md](./frontend/README.md) | Frontend (React) dev setup, scripts, admin/customer apps |
+| [print-agent/README.md](./print-agent/README.md) | Thermal-print agent — install, config, `AGENT_TOKEN` auth |
+| [print-agent/QUICK-START.md](./print-agent/QUICK-START.md) | Print agent condensed setup + token minting |
+
+### API reference
+| Doc | Purpose |
+|---|---|
+| [docs/API_REFERENCE.md](./docs/API_REFERENCE.md) | Full REST endpoint catalog (paths, roles, error envelope) |
+| [docs/API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md) | Waiter/table API + response/error/rate-limit conventions |
+| [docs/FOOD_ORDERING_API.md](./docs/FOOD_ORDERING_API.md) | Ordering, kitchen, courier, token-gated public tracking |
+| [README_API_INTEGRATION.md](./README_API_INTEGRATION.md) | Integration guide with React/fetch examples |
+| [postman/README.md](./postman/README.md) | Postman collection walkthrough |
+| Live API | Swagger UI at `/swagger-ui.html`, OpenAPI at `/api-docs` |
+
+### Feature guides
+| Doc | Purpose |
+|---|---|
+| [docs/WAITER_MODULE.md](./docs/WAITER_MODULE.md) | Waiter system — PIN auth, orders, tables, WebSocket events |
+| [docs/WAITER_QUICKSTART.md](./docs/WAITER_QUICKSTART.md) | Waiter setup/API cheat-sheet |
+| [docs/INVENTORY_MANAGEMENT.md](./docs/INVENTORY_MANAGEMENT.md) | Inventory — ingredients, stock, transactions, valuation, batches |
+| [docs/LOYALTY_SYSTEM.md](./docs/LOYALTY_SYSTEM.md) | Loyalty tiers, bonuses, wallet, milestones, QR |
+| [frontend/src/pos/README.md](./frontend/src/pos/README.md) | POS frontend (SinglePagePOS, customer display) |
+| [BRANDING.md](./BRANDING.md) | White-label branding config (`BRAND_*` / `VITE_BRAND_*`) |
+
+### Subscription & billing
+| Doc | Purpose |
+|---|---|
+| [SUBSCRIPTION_IMPLEMENTATION_PLAN.md](./SUBSCRIPTION_IMPLEMENTATION_PLAN.md) | Billing/subscription design + landed-vs-deferred status |
+| [docs/subscription-tiers-plan.md](./docs/subscription-tiers-plan.md) | Plan tiers + feature-gating design |
+| [docs/SUBSCRIPTION_ENFORCE_FLIP_RUNBOOK.md](./docs/SUBSCRIPTION_ENFORCE_FLIP_RUNBOOK.md) | Runbook for the subscription enforcement gate |
+
+### Security, hardening & ops runbooks
+| Doc | Purpose |
+|---|---|
+| [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Current production-hardening status (live reference) |
+| [docs/RBAC_AUDIT.md](./docs/RBAC_AUDIT.md) | RBAC audit & the 24 remediated defects |
+| [docs/ERROR_HANDLING_PLAN.md](./docs/ERROR_HANDLING_PLAN.md) | Cross-stack error-handling plan + status |
+| [docs/TENANT_ENFORCE_FLIP_RUNBOOK.md](./docs/TENANT_ENFORCE_FLIP_RUNBOOK.md) | Tenant-isolation enforce runbook (enforce is default) |
+| [MEMORY_OPTIMIZATION_PLAN.md](./MEMORY_OPTIMIZATION_PLAN.md) | JVM/DB memory tuning analysis (historical; items shipped) |
+
+### Shipped feature plans (historical design records)
+[auto-add-packaging](./docs/auto-add-packaging-plan.md) ·
+[customer-facing-display](./docs/customer-facing-display-plan.md) ·
+[customer-reviews](./docs/customer-reviews-plan.md) ·
+[inventory-categories](./docs/inventory-categories-plan.md) ·
+[production-batch-system](./docs/production-batch-system-plan.md) ·
+[shift-based-operations](./docs/shift-based-operations-plan.md) ·
+[variant-batch-deduction](./docs/variant-batch-deduction-plan.md)
+
+### History
+- [CHANGELOG.md](./CHANGELOG.md) — append-only release/change history
 
 ---
 
