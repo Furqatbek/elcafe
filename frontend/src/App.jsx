@@ -100,6 +100,17 @@ function AdminRoute({ children }) {
   return children;
 }
 
+// Super-admin route guard - only ADMIN may manage system users / access.
+// (AdminRoute above only blocks OPERATOR; it is intentionally left as-is
+// because many operational pages rely on it for OWNER/MANAGER access.)
+function SuperAdminRoute({ children }) {
+  const user = useAuthStore((state) => state.user);
+  if (user?.role !== 'ADMIN') {
+    return <Navigate to="/orders" replace />;
+  }
+  return children;
+}
+
 function InventoryWrapper({ children }) {
   return <InventoryProvider>{children}</InventoryProvider>;
 }
@@ -179,7 +190,7 @@ function App() {
           <Route path="customer-segments" element={<CustomerSegments />} />
           <Route path="reviews" element={<Reviews />} />
           <Route path="operators" element={<Operators />} />
-          <Route path="system-users" element={<AdminRoute><SystemUsers /></AdminRoute>} />
+          <Route path="system-users" element={<SuperAdminRoute><SystemUsers /></SuperAdminRoute>} />
           <Route path="employees/waiters" element={<Waiters />} />
           <Route path="employees/waiter-performance" element={<AdminRoute><WaiterPerformance /></AdminRoute>} />
           <Route path="employees/shift-dashboard" element={<ShiftDashboard />} />

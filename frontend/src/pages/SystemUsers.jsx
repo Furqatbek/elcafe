@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { systemUserAPI } from '../services/api';
+import { systemUserAPI, restaurantAPI } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -23,13 +23,14 @@ const ROLES = ['ADMIN', 'OWNER', 'MANAGER', 'OPERATOR'];
 export default function SystemUsers() {
   const { t } = useTranslation();
   const [users, setUsers] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [form, setForm] = useState({
-    email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true,
+    email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true, restaurantId: null,
   });
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => { loadUsers(); loadRestaurants(); }, []);
 
   const loadUsers = async () => {
     try {
@@ -38,9 +39,18 @@ export default function SystemUsers() {
     } catch (e) { console.error(e); }
   };
 
+  const loadRestaurants = async () => {
+    try {
+      const res = await restaurantAPI.getAll({ page: 0, size: 100, sort: 'name,asc' });
+      setRestaurants(res.data.data?.content || res.data.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const restaurantName = (id) => restaurants.find(r => r.id === id)?.name || '—';
+
   const openCreate = () => {
     setEditingUser(null);
-    setForm({ email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true });
+    setForm({ email: '', password: '', firstName: '', lastName: '', phone: '', role: 'MANAGER', active: true, restaurantId: null });
     setDialogOpen(true);
   };
 
@@ -52,12 +62,13 @@ export default function SystemUsers() {
 
   const handleSave = async () => {
     try {
+      // ADMIN spans all restaurants, so never bind it to a single branch.
+      const payload = { ...form, restaurantId: form.role === 'ADMIN' ? null : form.restaurantId };
       if (editingUser) {
-        const data = { ...form };
-        if (!data.password) delete data.password;
-        await systemUserAPI.update(editingUser.id, data);
+        if (!payload.password) delete payload.password;
+        await systemUserAPI.update(editingUser.id, payload);
       } else {
-        await systemUserAPI.create(form);
+        await systemUserAPI.create(payload);
       }
       setDialogOpen(false);
       loadUsers();
@@ -111,13 +122,14 @@ export default function SystemUsers() {
                 <TableHead>{t('systemUsers.email', 'Email')}</TableHead>
                 <TableHead>{t('systemUsers.phone', 'Phone')}</TableHead>
                 <TableHead className="text-center">{t('systemUsers.role', 'Role')}</TableHead>
+                <TableHead>{t('systemUsers.restaurant', 'Restaurant')}</TableHead>
                 <TableHead className="text-center">{t('systemUsers.status', 'Status')}</TableHead>
                 <TableHead className="text-right">{t('systemUsers.actions', 'Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t('systemUsers.noUsers', 'No system users')}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t('systemUsers.noUsers', 'No system users')}</TableCell></TableRow>
               ) : (
                 users.map(u => (
                   <TableRow key={u.id}>
@@ -127,6 +139,7 @@ export default function SystemUsers() {
                     <TableCell className="text-center">
                       <Badge variant={roleColor(u.role)}>{u.role}</Badge>
                     </TableCell>
+                    <TableCell>{u.role === 'ADMIN' ? t('systemUsers.allRestaurants', 'All') : restaurantName(u.restaurantId)}</TableCell>
                     <TableCell className="text-center">
                       <Badge variant={u.active ? 'default' : 'secondary'}>
                         {u.active ? t('systemUsers.active', 'Active') : t('systemUsers.inactive', 'Inactive')}
@@ -193,6 +206,24 @@ export default function SystemUsers() {
                 </Select>
               </div>
             </div>
+            {form.role !== 'ADMIN' && (
+              <div className="space-y-2">
+                <Label>{t('systemUsers.restaurant', 'Restaurant')}</Label>
+                <Select
+                  value={form.restaurantId != null ? String(form.restaurantId) : 'none'}
+                  onValueChange={v => setForm({ ...form, restaurantId: v === 'none' ? null : Number(v) })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t('systemUsers.noRestaurant', 'Not assigned')}</SelectItem>
+                    {restaurants.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t('systemUsers.restaurantHint', 'Which branch this owner/manager belongs to.')}
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>

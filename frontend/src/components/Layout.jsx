@@ -255,9 +255,18 @@ export default function Layout() {
   // Filter menu items based on user role
   // OPERATOR role cannot access dashboard and finance
   const isOperator = user?.role === 'OPERATOR';
-  const filteredMenuItems = isOperator
+  const isAdmin = user?.role === 'ADMIN';
+  let filteredMenuItems = isOperator
     ? menuItems.filter((item) => !['dashboard', 'finance', 'marketing'].includes(item.id))
     : menuItems;
+  // System Users is a super-admin (ADMIN-only) area; hide it from everyone else.
+  if (!isAdmin) {
+    filteredMenuItems = filteredMenuItems.map((item) =>
+      item.subItems
+        ? { ...item, subItems: item.subItems.filter((s) => s.path !== '/system-users') }
+        : item
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50">

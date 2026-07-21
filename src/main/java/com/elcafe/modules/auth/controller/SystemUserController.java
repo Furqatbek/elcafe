@@ -19,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,19 +39,10 @@ public class SystemUserController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAll() {
-        List<User> users = userRepository.findAll().stream()
+        List<Map<String, Object>> result = userRepository.findAll().stream()
                 .filter(u -> SYSTEM_ROLES.contains(u.getRole()))
+                .map(this::toMap)
                 .toList();
-
-        List<Map<String, Object>> result = users.stream().map(u -> Map.<String, Object>of(
-                "id", u.getId(),
-                "email", u.getEmail() != null ? u.getEmail() : "",
-                "firstName", u.getFirstName() != null ? u.getFirstName() : "",
-                "lastName", u.getLastName() != null ? u.getLastName() : "",
-                "phone", u.getPhone() != null ? u.getPhone() : "",
-                "role", u.getRole().name(),
-                "active", u.getActive()
-        )).toList();
 
         return ResponseEntity.ok(ApiResponse.success("System users retrieved", result));
     }
@@ -71,6 +63,7 @@ public class SystemUserController {
                 .lastName(req.lastName)
                 .phone(req.phone)
                 .role(req.role)
+                .restaurantId(req.restaurantId)
                 .active(true)
                 .emailVerified(true)
                 .build();
@@ -99,6 +92,9 @@ public class SystemUserController {
         if (req.lastName != null) user.setLastName(req.lastName);
         if (req.phone != null) user.setPhone(req.phone);
         if (req.role != null && SYSTEM_ROLES.contains(req.role)) user.setRole(req.role);
+        // restaurantId is always applied (including null) so an owner/manager can be
+        // reassigned or unlinked from a branch. The admin panel always sends the field.
+        user.setRestaurantId(req.restaurantId);
         if (req.active != null) user.setActive(req.active);
         if (req.password != null && !req.password.isBlank()) {
             user.setPassword(passwordEncoder.encode(req.password));
@@ -134,15 +130,17 @@ public class SystemUserController {
     }
 
     private Map<String, Object> toMap(User u) {
-        return Map.of(
-                "id", u.getId(),
-                "email", u.getEmail(),
-                "firstName", u.getFirstName() != null ? u.getFirstName() : "",
-                "lastName", u.getLastName() != null ? u.getLastName() : "",
-                "phone", u.getPhone() != null ? u.getPhone() : "",
-                "role", u.getRole().name(),
-                "active", u.getActive()
-        );
+        // HashMap (not Map.of) because restaurantId is nullable and Map.of rejects nulls.
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", u.getId());
+        map.put("email", u.getEmail() != null ? u.getEmail() : "");
+        map.put("firstName", u.getFirstName() != null ? u.getFirstName() : "");
+        map.put("lastName", u.getLastName() != null ? u.getLastName() : "");
+        map.put("phone", u.getPhone() != null ? u.getPhone() : "");
+        map.put("role", u.getRole().name());
+        map.put("active", u.getActive());
+        map.put("restaurantId", u.getRestaurantId());
+        return map;
     }
 
     public record CreateRequest(
@@ -151,7 +149,8 @@ public class SystemUserController {
             @NotBlank String firstName,
             @NotBlank String lastName,
             String phone,
-            @NotNull UserRole role
+            @NotNull UserRole role,
+            Long restaurantId
     ) {}
 
     public record UpdateRequest(
@@ -160,6 +159,7 @@ public class SystemUserController {
             String phone,
             String password,
             UserRole role,
-            Boolean active
+            Boolean active,
+            Long restaurantId
     ) {}
 }
