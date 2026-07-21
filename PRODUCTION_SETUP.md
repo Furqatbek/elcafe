@@ -122,9 +122,8 @@ SENTRY_ENVIRONMENT=production
 ### 4. Install SSL Certificate
 
 > **The reverse proxy is built into the Compose stack.** TLS is terminated by the **`nginx-proxy`**
-> service, not a host NGINX — do **not** install `nginx-production.conf` on the host (it would
-> collide with `nginx-proxy` on ports 80/443). Select the HTTPS proxy config by setting `NGINX_CONF`
-> in `.env.docker`:
+> service, not a host NGINX — do **not** run a separate host NGINX on ports 80/443 (it would collide
+> with `nginx-proxy`). Select the HTTPS proxy config by setting `NGINX_CONF` in `.env.docker`:
 >
 > ```env
 > NGINX_CONF=./nginx-proxy/nginx.conf
