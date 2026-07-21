@@ -1,5 +1,7 @@
 # Inventory Categories & Search Filter — Implementation Plan
 
+> **STATUS: SHIPPED** — fully implemented (migration V117; `inventory/IngredientCategory` entity + `IngredientCategoryController` at `/api/v1/inventory/ingredient-categories`, wired into `InventoryIngredients.jsx`). Kept as a historical design record.
+
 ## Problem
 
 The packaging rule dropdown shows all 1000+ inventory items in a flat list. Finding "Plastic Bag" among meat, vegetables, spices, and chemicals is impossible. The inventory system has no grouping mechanism at all.

@@ -1,5 +1,7 @@
 # Shift-Based Operations — Implementation Plan
 
+> **STATUS: SHIPPED** — all 10 phases implemented (migrations V118–V122; `pos/shift/*` enforcement, scheduling, reports, handover, rules, swap, inventory snapshots; `ShiftDashboard.jsx`, `ShiftSchedule.jsx`, `MobileClockIn`). Kept as a historical design record.
+
 ## Current State
 
 The system already has:

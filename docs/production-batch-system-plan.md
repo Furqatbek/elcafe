@@ -1,5 +1,7 @@
 # Production Batch System — Implementation Plan
 
+> **STATUS: SHIPPED** — fully implemented (migrations V109–V111; `inventory/ProductionBatch*` entities + service + controller, `usesProductionBatch` on Product, `ProductionBatches.jsx` at `/kitchen/production`). Kept as a historical design record.
+
 ## Context
 
 The restaurant kitchen cooks in batches (e.g., 10L soup pot), not per-portion. The current system only supports per-portion recipes (`ProductIngredient`) that deduct raw ingredients directly when orders come in. This fails for:

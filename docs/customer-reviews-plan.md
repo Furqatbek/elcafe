@@ -1,5 +1,7 @@
 # Customer Reviews & Feedback — Implementation Plan
 
+> **STATUS: SHIPPED** — fully implemented (migration V113; `modules/review` + public/admin controllers, owner-notification on low ratings, admin `Reviews.jsx` + customer `ReviewPage.jsx`). Kept as a historical design record.
+
 ## Overview
 
 Customers can rate their order (1-5 stars) and leave optional comments after order completion. Reviews are linked to orders, customers, and restaurants. The system auto-prompts for reviews via the order status page and notification channels.

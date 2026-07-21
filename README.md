@@ -6,7 +6,7 @@ A complete production-ready backend system for restaurant management and deliver
 
 ✅ All features implemented and production-ready
 ✅ 250+ REST API endpoints
-✅ 32 modular controllers
+✅ ~116 modular controllers across ~30 feature modules
 ✅ Complete order lifecycle management
 ✅ Real-time WebSocket notifications
 ✅ SMS integration (Eskiz.uz)
@@ -18,7 +18,7 @@ A complete production-ready backend system for restaurant management and deliver
 
 - **Authentication & Authorization**
   - JWT-based security with role-based access control
-  - Roles: ADMIN, OPERATOR, WAITER, COURIER, KITCHEN_STAFF, SUPERVISOR
+  - Roles: SUPER_ADMIN (cross-tenant platform operator), ADMIN, OWNER, MANAGER, OPERATOR, WAITER, HEAD_WAITER, SUPERVISOR, KITCHEN_STAFF, CASHIER, COURIER, CUSTOMER
   - Consumer OTP authentication via SMS
   - Admin/Operator email-password authentication
 
@@ -36,11 +36,11 @@ A complete production-ready backend system for restaurant management and deliver
   - Redis caching for public menu (30-minute TTL)
 
 - **Order Management**
-  - Consumer order placement (public API)
-  - Full order lifecycle: PENDING → PLACED → ACCEPTED → PREPARING → READY → PICKED_UP → COMPLETED
-  - Admin order acceptance/rejection with automated refunds
+  - Consumer order placement (authenticated via consumer OTP/JWT)
+  - Full order lifecycle: NEW → ACCEPTED → PREPARING → READY → (COURIER_ASSIGNED → ON_DELIVERY → DELIVERED for delivery) → COMPLETED
+  - Admin order acceptance/rejection (no automated refund path — payments are handled out of band)
   - Consumer cancellation (5-minute window)
-  - Order validation (minimum $10, maximum $500)
+  - Order validation against a per-restaurant configurable minimum order amount (UZS)
   - WebSocket real-time order updates
   - SMS notifications at key milestones
 
@@ -101,7 +101,7 @@ A complete production-ready backend system for restaurant management and deliver
 ### Technical Features
 
 - **Architecture**: Multi-layer clean architecture with modular design
-- **Database**: PostgreSQL 16 with Flyway migrations (V1-V16)
+- **Database**: PostgreSQL 16 with Flyway migrations (V1–V161)
 - **Caching**: Redis 7 for menu data and session management
 - **Security**: JWT authentication with access and refresh tokens
 - **Real-time**: WebSocket (STOMP) for order and table updates
@@ -134,7 +134,6 @@ A complete production-ready backend system for restaurant management and deliver
 | Springdoc OpenAPI | 2.5.0 | API Documentation |
 | WebSocket (STOMP) | Latest | Real-time Communication |
 | Lombok | Latest | Code Generation |
-| MapStruct | Latest | Object Mapping |
 | Docker | Latest | Containerization |
 
 ## 🚀 Quick Start
@@ -299,23 +298,22 @@ src/main/resources/
 Orders follow this comprehensive status lifecycle:
 
 ```
-PENDING (Payment processing)
-    ↓
-PLACED (Waiting for restaurant acceptance)
+NEW (Awaiting restaurant acceptance)
     ↓
 ACCEPTED (Restaurant confirms order)
     ↓
 PREPARING (Kitchen is cooking)
     ↓
-READY (Food ready for pickup)
+READY (Food ready)
+    ↓  (delivery orders)
+COURIER_ASSIGNED → ON_DELIVERY → DELIVERED
     ↓
-PICKED_UP (Courier picked up order)
-    ↓
-COMPLETED (Delivered to customer)
+COMPLETED (Settled)
 
 Alternative flows:
-PENDING/PLACED/ACCEPTED → REJECTED (Restaurant rejects) → Auto-refund
-PENDING/PLACED/ACCEPTED → CANCELLED (Customer/Admin cancels) → Refund if paid
+NEW/ACCEPTED → REJECTED (Restaurant rejects)
+NEW/ACCEPTED → CANCELLED (Customer within 5 min, or Admin)
+(No automated refund path — payment settlement is handled out of band.)
 ```
 
 **State Machine Validation**: All status transitions are validated to prevent invalid state changes.
@@ -397,7 +395,7 @@ PENDING/PLACED/ACCEPTED → CANCELLED (Customer/Admin cancels) → Refund if pai
 
 ## 🗄️ Database Schema
 
-The application uses PostgreSQL with **16 Flyway migrations** (V1-V16) defining 40+ tables:
+The application uses PostgreSQL with **161 Flyway migrations** (V1–V161) defining the full schema (auth, restaurant, menu, order, kitchen, waiter, courier, customer, inventory, financial, loyalty, shifts, billing/subscription, marketing, and more):
 
 ### Core Tables
 - **users** - System users (Admin, Operator)
@@ -451,9 +449,8 @@ The application uses PostgreSQL with **16 Flyway migrations** (V1-V16) defining 
 - **courier_locations** - GPS tracking
 - **courier_tariffs** - Delivery pricing
 
-**Total Tables**: 40+
-**Database Migrations**: V1 through V16
-**Migration Management**: Flyway with checksum verification
+**Database Migrations**: V1 through V161
+**Migration Management**: Flyway (`validate-on-migrate: true`, `baseline-on-migrate: false`); deployments always start from a clean, empty database. The full V1→V161 chain is verified against real PostgreSQL in CI on every push.
 
 ## ⚙️ Configuration
 
@@ -483,8 +480,8 @@ app:
   security:
     jwt:
       secret: your-secret-key
-      access-token-expiration: 3600000  # 1 hour
-      refresh-token-expiration: 86400000  # 24 hours
+      access-token-expiration: 900000  # 15 minutes
+      refresh-token-expiration: 2592000000  # 30 days
 ```
 
 ### Cache TTL
@@ -548,7 +545,7 @@ docker run -p 8080:8080 \
 | DB_PASSWORD | Database password | postgres |
 | REDIS_HOST | Redis host | localhost |
 | REDIS_PORT | Redis port | 6379 |
-| JWT_SECRET | JWT signing secret | (see config) |
+| JWT_SECRET | JWT signing secret (≥32 bytes; app fails to start if unset or a known committed value) | (none — required) |
 | SERVER_PORT | Application port | 8080 |
 
 ## 🛡️ Security Best Practices
@@ -579,7 +576,7 @@ docker run -p 8080:8080 \
 
 ## 📝 License
 
-This project is licensed under the Apache License 2.0.
+This repository does not currently include a license file; all rights are reserved by the repository owner unless stated otherwise.
 
 ## 📧 Support
 
@@ -593,19 +590,19 @@ Built with Spring Boot, PostgreSQL, Redis, and modern Java best practices.
 
 ## 📖 Additional Documentation
 
-- **[API Integration Guide](./README_API_INTEGRATION.md)** - Complete guide for integrating with the API
-- **[Implementation Status](./docs/IMPLEMENTATION_STATUS.md)** - Detailed feature implementation tracking (100% complete)
-- **[Flyway Checksum Guide](./docs/FLYWAY_CHECKSUM_GUIDE.md)** - Database migration management
-- **[Food Ordering API](./docs/FOOD_ORDERING_API.md)** - Detailed order API documentation
+- **[Launch Guide](./docs/LAUNCH.md)** - Shortest path to a running deployment
+- **[Production Readiness Audit](./docs/PRODUCTION_READINESS_AUDIT.md)** - Current hardening status
+- **[API Integration Guide](./README_API_INTEGRATION.md)** - Guide for integrating with the API
+- **[Food Ordering API](./docs/FOOD_ORDERING_API.md)** - Order API documentation
 - **[Waiter Module Guide](./docs/WAITER_MODULE.md)** - Waiter system documentation
-- **[Postman Collection](./postman/)** - Complete API testing collection
+- **[Postman Collection](./postman/)** - API testing collection
+- **Live API reference**: Swagger UI at `/swagger-ui.html`, OpenAPI at `/api-docs`
 
 ---
 
 **Version**: 1.0.0
-**Implementation Status**: 100% Complete ✅
-**Last Updated**: 2025-12-05
+**Last Updated**: 2026-07-21
 **Built with**: ☕ Java 21 + 🍃 Spring Boot 3.3.0
 **API Endpoints**: 250+
-**Database Tables**: 40+
-**Modules**: 11 (Auth, Restaurant, Menu, Order, Kitchen, Waiter, Courier, Customer, Analytics, SMS, Files)
+**Migrations**: V1–V161
+**Modules**: ~30 (auth, restaurant, menu, order, kitchen, waiter, courier, customer, analytics, inventory, financial, loyalty, billing, pos, shift, reservation, review, promotion, referral, sms/telegram/instagram marketing, push, ownerbot, selfservice, files, …)

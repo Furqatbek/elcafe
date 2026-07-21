@@ -125,7 +125,7 @@ When rebranding, update the following:
    - `logo-light.svg` - Light version (for dark backgrounds)
    - `logo-dark.svg` - Dark version (for light backgrounds)
 3. **Favicon** - Update `frontend/public/favicon.ico`
-4. **Database Seed Data** - Update `src/main/resources/db/migration/V2__seed_data.sql` for default admin emails
+4. **First admin account** - There is no seeded admin (the old `V2__seed_data.sql` demo seed was removed). The first platform operator is created at boot from the `ADMIN_EMAIL` / `ADMIN_PASSWORD` env vars on an empty database — set those instead.
 5. **Documentation** - Update README.md and other docs if needed
 
 ## Docker Deployment

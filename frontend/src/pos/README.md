@@ -22,30 +22,51 @@ A modern, touch-optimized Point of Sale (POS) system built with React, designed 
 
 ## Architecture
 
+### Entry points & routing
+
+The POS has **two implementations**, both mounted from the admin app's router (`src/App.jsx`) and
+wrapped in `PrivateRoute` (login required):
+
+- **`single/SinglePagePOS.jsx`** — the current default, rendered at **`/pos`**. A single-page POS with
+  its own Zustand store (`single/store.js`, persisted to `localStorage`), theme (`single/theme.js`),
+  and component set under `single/components/`.
+- **`POSApp.jsx`** — the older multi-screen flow, now only at **`/pos/legacy`**.
+
+Two auxiliary full-screen views are routed directly from `screens/`:
+`CustomerDisplayScreen` (`/pos/customer-display`) and `OrderStatusBoardScreen` (`/pos/order-status`).
+
+> `KitchenTicketPage.jsx` exists in the source but is **not wired into the router** — there is no
+> route that renders it. Kitchen tickets are produced by the `KitchenTicket` component inside the
+> order flow.
+
 ### Directory Structure
 ```
 src/pos/
-├── POSApp.jsx                 # Main POS application with routing
-├── KitchenTicketPage.jsx      # Standalone kitchen ticket print page
+├── POSApp.jsx                 # Legacy multi-screen POS (mounted at /pos/legacy)
+├── KitchenTicketPage.jsx      # Kitchen ticket print page — present but NOT routed
 ├── config/
 │   └── designSystem.js        # Design tokens and theme configuration
 ├── store/
-│   └── posStore.js            # Zustand state management
-├── components/
-│   ├── TouchButton.jsx        # Touch-optimized button component
-│   ├── ProductCard.jsx        # Product display card
-│   ├── CartItem.jsx           # Cart item with quantity controls
-│   ├── NumericKeypad.jsx      # Touch-friendly numeric input
-│   ├── POSModal.jsx           # Full-screen modal dialog
-│   └── KitchenTicket.jsx      # Kitchen ticket print template
-└── screens/
-    ├── StartOrderScreen.jsx   # Order type selection
-    ├── MenuSelectionScreen.jsx# Browse menu & select products
-    ├── ProductModifiersScreen.jsx # Customize product
-    ├── CartScreen.jsx         # Review order & edit items
-    ├── OrderDetailsScreen.jsx # Customer info & delivery details
-    ├── PaymentScreen.jsx      # Payment processing
-    └── OrderConfirmationScreen.jsx # Success confirmation
+│   └── posStore.js            # Zustand store for the legacy POSApp
+├── components/                # Shared POS components (TouchButton, ProductCard, CartItem,
+│   │                          #   NumericKeypad, POSModal, KitchenTicket, payment dialogs,
+│   │                          #   table/floor-plan + split-bill/refund/tip widgets, …)
+│   └── …
+├── screens/                   # Legacy POSApp screens + the two routed full-screen views:
+│   │                          #   StartOrderScreen, MenuSelectionScreen, ProductModifiersScreen,
+│   │                          #   CartScreen, OrderDetailsScreen, PaymentScreen,
+│   │                          #   OrderConfirmationScreen, ActiveOrdersScreen, SplitBillScreen,
+│   │                          #   TableSelectionScreen, OrderModificationScreen,
+│   │                          #   CustomerDisplayScreen (/pos/customer-display),
+│   │                          #   OrderStatusBoardScreen (/pos/order-status)
+│   └── …
+└── single/                    # Default single-page POS (mounted at /pos)
+    ├── SinglePagePOS.jsx      # Single-page POS root
+    ├── store.js               # Zustand store (persisted to localStorage)
+    ├── theme.js               # Theme tokens for the single-page POS
+    └── components/            # Its own components (Header, CategoriesRail, ProductGrid,
+                               #   ProductTile, CartLine, TicketRail, PaymentBlock, ModifierEditor,
+                               #   TypeSegments, TypeFields, Button, Divider)
 ```
 
 ## User Flows
@@ -168,14 +189,14 @@ Touch-friendly numeric input for cash payments.
 // Fetch categories
 GET /api/v1/categories
 
-// Fetch products
-GET /api/v1/products
+// Fetch products (scoped to the current restaurant)
+GET /api/v1/products/restaurant/{restaurantId}
 ```
 
 ### Order Submission
 ```javascript
-// Create new order
-POST /api/v1/consumer/orders
+// Create new order (POS surface — NOT the customer self-service /consumer/orders endpoint)
+POST /api/v1/pos/orders
 {
   type: 'DELIVERY' | 'TAKEAWAY' | 'DINE_IN',
   customerId, customerName, customerPhone, customerEmail,
@@ -190,8 +211,17 @@ POST /api/v1/consumer/orders
 ## Access & Usage
 
 ### URL Access
-- **POS Interface**: `http://localhost:5173/pos`
-- **Kitchen Ticket Print**: `http://localhost:5173/pos/kitchen-ticket`
+
+The dev server runs on port **3000** and the app is served under the `/admin` base path
+(`vite base: '/admin/'` + `<BrowserRouter basename="/admin">`). All POS routes require a logged-in
+session (`PrivateRoute`):
+
+- **POS Interface (default single-page)**: `http://localhost:3000/admin/pos`
+- **POS Interface (legacy multi-screen)**: `http://localhost:3000/admin/pos/legacy`
+- **Customer Display**: `http://localhost:3000/admin/pos/customer-display`
+- **Order Status Board**: `http://localhost:3000/admin/pos/order-status`
+
+> There is no `/pos/kitchen-ticket` route — `KitchenTicketPage.jsx` is not wired into the router.
 
 ### Development
 ```bash
@@ -254,7 +284,8 @@ npm run build
 - **Mobile browsers**: Touch events fully supported
 
 ## Security Considerations
-- No authentication required (operator-facing only)
+- **Authentication required**: every `/pos` route is wrapped in `PrivateRoute`, so a valid login/JWT
+  session is needed to reach the POS (operator-facing, but not unauthenticated)
 - Should be deployed on internal network
 - Payment data not stored locally
 - Session data cleared after order completion

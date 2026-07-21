@@ -10,15 +10,15 @@ Flipping is an **ops action per environment** (set the env var + restart), not a
 runbook is the gate: what `enforce` protects, how to soak and flip safely, and what it deliberately
 does **not** cover.
 
-> **Order matters.** This gate is only meaningful once tenancy is hard-enforced. A suspended tenant
-> blocked here can still be reached cross-tenant by an unscoped caller if `TENANT_ENFORCEMENT_MODE`
-> is not yet `enforce`. Do the tenant flip first (`docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`), then this one.
+> **Order matters.** This gate is only meaningful once tenancy is hard-enforced. `TENANT_ENFORCEMENT_MODE`
+> already defaults to `enforce` (see `docs/TENANT_ENFORCE_FLIP_RUNBOOK.md`), so that prerequisite is met;
+> if you ever relax tenancy back to `shadow`, this subscription gate becomes bypassable cross-tenant.
 
 ## What `enforce` protects (verified by tests)
 
 | Access path | Behaviour under `enforce` | Proof |
 |---|---|---|
-| Staff (`UserPrincipal`, non-SUPER_ADMIN) of a suspended tenant | `402 SUBSCRIPTION_INACTIVE` (`{"error":"SUBSCRIPTION_INACTIVE","status":"SUSPENDED",…}`), chain short-circuited | `SubscriptionEnforcementFilterTest.enforce_suspended_blocks` |
+| Staff (`UserPrincipal`, non-SUPER_ADMIN) of a suspended tenant | `402 SUBSCRIPTION_INACTIVE` (standard envelope: `{"success":false,"error":"SUBSCRIPTION_INACTIVE","message":…,"requestId":…}` — no `status` field), chain short-circuited | `SubscriptionEnforcementFilterTest.enforce_suspended_blocks` |
 | Waiter (`ROLE_WAITER`, tenant in `TenantContext`) of a suspended tenant | `402` — the POS is cut off too | `SubscriptionEnforcementFilterTest.enforce_suspendedWaiter_blocks` |
 | Staff / waiter of an **active** tenant | passes | `enforce_active_passes`, `enforce_activeWaiter_passes` |
 | SUPER_ADMIN (platform operator) | always passes | `enforce_superAdmin_passes` |

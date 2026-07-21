@@ -34,7 +34,9 @@ npm install
 npm run dev
 ```
 
-The app will be available at http://localhost:3000
+The app is served under the `/admin/` base path (Vite `base: '/admin/'` together with
+`<BrowserRouter basename="/admin">`), so it will be available at **http://localhost:3000/admin/**.
+The root `/` is not the app — only `/admin/…` routes are handled.
 
 ### Production Build
 
@@ -85,39 +87,43 @@ restaurant is allowed, and core modules are never gated.
 
 ## 📁 Project Structure
 
+This is a **multi-app Vite project** with two HTML entry points, both configured in `vite.config.js`:
+
+- **`index.html` → `src/main.jsx` → `src/App.jsx`** — the admin control panel (served under `/admin/`).
+- **`order.html` → `src/main-customer.jsx` → `src/CustomerApp.jsx`** — the customer self-service
+  ordering app (a separate bundle/surface).
+
+A third surface, the touch-optimized POS, lives under `src/pos/` and is reachable via the admin app's
+`/pos` routes (see `src/pos/README.md`).
+
 ```
 frontend/
 ├── public/              # Static assets
+├── index.html           # Entry HTML for the admin app (main.jsx)
+├── order.html           # Entry HTML for the customer ordering app (main-customer.jsx)
 ├── src/
-│   ├── components/      # Reusable components
-│   │   ├── ui/         # Shadcn UI components
-│   │   ├── Layout.jsx  # Main layout wrapper
-│   │   └── LanguageSwitcher.jsx  # Language switcher
-│   ├── pages/          # Page components
-│   │   ├── Login.jsx
-│   │   ├── Dashboard.jsx
-│   │   ├── Orders.jsx
-│   │   ├── Restaurants.jsx
-│   │   └── Customers.jsx
-│   ├── services/       # API services
-│   │   └── api.js      # Axios configuration
-│   ├── store/          # State management
-│   │   └── authStore.js
-│   ├── i18n/           # Internationalization
-│   │   ├── config.js   # i18n configuration
-│   │   └── locales/    # Translation files
-│   │       ├── en.json # English
-│   │       ├── ru.json # Russian
-│   │       └── uz.json # Uzbek
-│   ├── lib/            # Utilities
-│   │   └── utils.js
-│   ├── App.jsx         # Main app component
-│   ├── main.jsx        # Entry point
-│   └── index.css       # Global styles
-├── Dockerfile          # Docker configuration
-├── nginx.conf          # Nginx configuration
-├── vite.config.js      # Vite configuration
-└── tailwind.config.js  # Tailwind configuration
+│   ├── App.jsx          # Admin app: routing + guards (basename "/admin")
+│   ├── main.jsx         # Admin app entry
+│   ├── CustomerApp.jsx  # Customer self-service ordering app
+│   ├── main-customer.jsx# Customer app entry (loaded by order.html)
+│   ├── components/       # Reusable components (incl. ui/ Shadcn, Layout, guards)
+│   ├── pages/            # ~60 lazy-loaded admin page components (React.lazy),
+│   │                     #   incl. pages/customer/ and pages/inventory/ subtrees
+│   ├── pos/              # Full touch POS app (single-page + legacy) — see pos/README.md
+│   ├── services/         # API client(s): api.js (Axios), websocket.js, …
+│   ├── store/            # Zustand state stores (authStore, …)
+│   ├── hooks/            # Custom React hooks (usePlan, …)
+│   ├── context/          # React context providers (InventoryContext, …)
+│   ├── config/           # App config: branding.js, planFeatures, …
+│   ├── utils/            # Shared helpers (restaurant resolution, …)
+│   ├── lib/              # Low-level utilities (utils.js, lazyWithRetry, …)
+│   ├── i18n/             # Internationalization (config + locales en/ru/uz)
+│   ├── test/             # Test setup / helpers
+│   └── index.css         # Global styles
+├── Dockerfile           # Docker configuration
+├── nginx.conf           # Nginx configuration
+├── vite.config.js       # Vite configuration (multi-entry, base "/admin/")
+└── tailwind.config.js   # Tailwind configuration
 ```
 
 ## 🎯 Features
@@ -377,10 +383,27 @@ Defined in `index.css`:
 
 ### Environment Variables
 
-Create `.env` file:
+All build-time config is passed through `VITE_*` variables (baked into the bundle at build time).
+Create a `.env` file:
 
 ```bash
+# API base (required)
 VITE_API_URL=http://localhost:8080/api/v1
+
+# Error monitoring (optional; empty DSN keeps Sentry dormant — the SDK is never loaded)
+VITE_SENTRY_DSN=
+VITE_SENTRY_ENVIRONMENT=production
+
+# Branding overrides (optional) — the VITE_BRAND_* family in src/config/branding.js.
+# Any value there can be overridden, e.g.:
+VITE_BRAND_NAME=Qahvoon
+VITE_BRAND_TAGLINE="Restaurant Delivery"
+VITE_BRAND_SUPPORT_EMAIL=support@qahvoon.uz
+VITE_BRAND_DOMAIN=qahvoon.uz
+VITE_BRAND_COLOR_PRIMARY=#2563eb
+VITE_BRAND_LOGO_MAIN=/logo.svg
+# …see src/config/branding.js for the full list (identity, contact, domain, colors,
+#   logos, social links, legal, optional demo credentials).
 ```
 
 For production:
@@ -388,6 +411,9 @@ For production:
 ```bash
 VITE_API_URL=https://api.yourdomain.com/api/v1
 ```
+
+> Note: `frontend/Dockerfile` accepts `VITE_API_URL`, `VITE_SENTRY_DSN`, and
+> `VITE_SENTRY_ENVIRONMENT` as build args; the `VITE_BRAND_*` values can be supplied the same way.
 
 ### Docker Deployment
 
@@ -399,7 +425,11 @@ The Dockerfile uses multi-stage build:
 ```dockerfile
 # Build
 FROM node:20-alpine AS build
-RUN npm ci && npm run build
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
 
 # Serve
 FROM nginx:alpine
@@ -419,12 +449,15 @@ COPY --from=build /app/dist /usr/share/nginx/html
 - Email & password inputs
 - Remember credentials
 - Demo credentials shown
-- Auto-redirect after login
+- Auto-redirect after login to **`/orders`** (the index route `/` redirects to `/orders`, which is
+  the primary landing surface — not the dashboard)
 
 ### Dashboard (`/dashboard`)
 - Stats cards (orders, restaurants, customers)
 - Recent activity feed
 - Quick action buttons
+- **Admin-gated**: wrapped in `AdminRoute`, so the `OPERATOR` role is bounced back to `/orders`;
+  it is not the default landing page
 
 ### Orders (`/orders`)
 - Order list with pagination
@@ -540,9 +573,6 @@ Override in `index.css`:
 ### Build Optimization
 
 ```bash
-# Analyze bundle
-npm run build -- --analyze
-
 # Production build
 npm run build
 ```

@@ -20,7 +20,7 @@ A lightweight print agent that runs on your local network and connects to the El
 
 ## Requirements
 
-- Node.js 16 or higher
+- Node.js 18 or higher (`npm run dev` uses `node --watch`, which requires Node ≥ 18.11)
 - Thermal printer with ESC/POS support (most receipt printers)
 - Network connection to both internet and local printer
 
@@ -63,11 +63,19 @@ A lightweight print agent that runs on your local network and connects to the El
 Edit the `.env` file:
 
 ```env
-# Your cloud server WebSocket URL
-SERVER_URL=wss://your-server.com/api/ws-print-agent
+# Your cloud server WebSocket URL (note: the endpoint path is /ws-print-agent, with no /api prefix)
+SERVER_URL=wss://your-server.com/ws-print-agent
 
 # Your restaurant ID (from admin panel)
 RESTAURANT_ID=1
+
+# Authentication token — REQUIRED once the server enforces WebSocket auth
+# (app.websocket.auth.mode=enforce). Mint it in the admin panel:
+#   POST /api/v1/settings/print-agent/token   (as an ADMIN/OWNER of this restaurant)
+# then paste the returned JWT here. It is scoped to this restaurant and valid ~1 year.
+# The agent sends it as `Authorization: Bearer <AGENT_TOKEN>` on the STOMP CONNECT frame;
+# a tokenless connection is rejected under enforce.
+AGENT_TOKEN=
 
 # Printer type: 'usb' or 'network'
 PRINTER_TYPE=network

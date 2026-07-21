@@ -1,5 +1,7 @@
 # Auto-Add Packaging Items — Implementation Plan
 
+> **STATUS: SHIPPED** — fully implemented (migrations V114–V116/V127; `menu/PackagingRule` + `PackagingService`, wired into POS & self-service ordering). Kept as a historical design record.
+
 ## Problem
 
 When a customer orders food for takeaway or delivery, the restaurant needs to add packaging items: bags, plastic bowls, spoons, napkins, etc. Currently, operators must remember to add these manually — items get forgotten, costs go untracked, and inventory doesn't deduct packaging materials.

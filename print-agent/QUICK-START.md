@@ -50,6 +50,11 @@ SERVER_URL=wss://www.qahvoon.uz/ws-print-agent
 # Your restaurant ID (from admin panel)
 RESTAURANT_ID=1
 
+# Authentication token — REQUIRED once the server enforces WebSocket auth.
+# Mint it in the admin panel (POST /api/v1/settings/print-agent/token, as an ADMIN/OWNER
+# of this restaurant) and paste the returned token here. See "Get your token" below.
+AGENT_TOKEN=
+
 # Printer settings
 PRINTER_TYPE=network
 PRINTER_IP=192.168.1.100
@@ -57,6 +62,8 @@ PRINTER_PORT=9100
 ```
 
 > **Note:** The server is at `https://www.qahvoon.uz`, API at `/api/v1`, WebSocket at `/ws-print-agent`.
+
+> **Get your token:** in the admin panel, open **Settings → Printer Settings** and generate a print-agent token (this calls `POST /api/v1/settings/print-agent/token`). Paste it into `AGENT_TOKEN`. The agent sends it as a Bearer token on connect; without it, the server rejects the connection once WebSocket auth is in `enforce` mode (default is `shadow`, which only logs).
 
 ---
 
@@ -72,9 +79,10 @@ npm start
 
 **You should see:**
 ```
-[Print Agent] Starting...
-[Print Agent] Connecting to server...
-[Print Agent] Connected! Waiting for print jobs...
+=== ElCafe Print Agent v1.0.0 ===
+[APP] Starting print agent...
+[WS] Connecting to server...
+[WS] Connected to server
 ```
 
 ---
@@ -92,7 +100,7 @@ npm start
 4. Enable **"Auto Print"** if you want orders to print automatically
 5. Click **Save**
 
-> **Note:** Print Agent is enabled by default on the server. No checkbox needed!
+> **Note:** The print-agent WebSocket endpoint is always available. Whether a token is required depends on the server's `app.websocket.auth.mode` (default `shadow` logs but allows; `enforce` requires a valid `AGENT_TOKEN`).
 
 ---
 
@@ -190,8 +198,9 @@ If you have multiple printers (e.g., one for drinks, one for food):
 
 | Setting | Example | Description |
 |---------|---------|-------------|
-| `SERVER_URL` | `wss://www.qahvoon.uz/ws-print-agent` | ElCafe WebSocket server |
+| `SERVER_URL` | `wss://www.qahvoon.uz/ws-print-agent` | ElCafe WebSocket server (path `/ws-print-agent`, no `/api`) |
 | `RESTAURANT_ID` | `1` | Your restaurant ID |
+| `AGENT_TOKEN` | `<minted token>` | Bearer token from Settings → Printer Settings; required under WebSocket-auth enforce |
 | `PRINTER_TYPE` | `network` | Use `network` or `usb` |
 | `PRINTER_IP` | `192.168.1.100` | Your printer's IP |
 | `PRINTER_PORT` | `9100` | Default thermal printer port |

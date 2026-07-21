@@ -1,5 +1,7 @@
 # Customer-Facing Display — Implementation Plan
 
+> **STATUS: SHIPPED** — fully implemented (`pos/screens/CustomerDisplayScreen.jsx` + panels, route `/pos/customer-display`, localStorage sync). Kept as a historical design record.
+
 ## Concept
 
 A second-screen display that faces the customer at the POS counter. While the cashier works on the main POS screen, the customer sees their order being built in real time on a separate monitor/tablet.

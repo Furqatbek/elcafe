@@ -7,8 +7,9 @@ public-tracking PII leaks, initially deferred as a product decision, were fixed 
 made (see the dedicated section below). This records what was fixed, how, and the rollout residuals.
 
 > **Load-bearing context:** `@PreAuthorize` is active (`@EnableMethodSecurity`), the role hierarchy is
-> only `SUPER_ADMIN > ADMIN`, and tenant/subscription enforcement ship in **shadow/off** (not yet
-> flipped). So a role hole cannot be closed by the enforce flip, and vice-versa.
+> only `SUPER_ADMIN > ADMIN`, and enforcement now defaults to **tenant = `enforce`, WebSocket auth =
+> `enforce`, subscription = `off`** (tenant + WS were flipped to enforce after their shadow soak; see the
+> "Enforcement flips" section below). So a role hole cannot be closed by the enforce flip, and vice-versa.
 
 ## Root causes (the useful mental model)
 
