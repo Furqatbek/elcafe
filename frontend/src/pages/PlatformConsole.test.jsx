@@ -26,6 +26,11 @@ vi.mock('../services/api', () => {
 
 vi.mock('../hooks/useToast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 
+// The onboarding wizard and per-tenant access panel are covered by their own tests; stub them here
+// so this file stays a focused unit test of PlatformConsole and doesn't pull in their dependencies.
+vi.mock('../components/platform/TenantOnboardingWizard', () => ({ default: () => null }));
+vi.mock('../components/platform/TenantAccessDialog', () => ({ default: () => null }));
+
 // English fallbacks with {{n}} interpolation, so assertions read against real wording.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

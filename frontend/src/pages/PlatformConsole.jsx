@@ -14,7 +14,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../components/ui/select';
-import { Server, Search, Ban, CheckCircle2, CalendarPlus, XCircle, Pencil } from 'lucide-react';
+import { Server, Search, Ban, CheckCircle2, CalendarPlus, XCircle, Pencil, Plus, Users } from 'lucide-react';
+import TenantOnboardingWizard from '../components/platform/TenantOnboardingWizard';
+import TenantAccessDialog from '../components/platform/TenantAccessDialog';
 
 const PAGE_SIZE = 20;
 
@@ -38,6 +40,9 @@ export default function PlatformConsole() {
   const [busyId, setBusyId] = useState(null);
   // The tenant being plan-edited (dialog open when non-null) + the dialog's form state.
   const [planEdit, setPlanEdit] = useState(null);
+  // Onboarding wizard (new tenant) and the tenant whose access panel is open.
+  const [onboardOpen, setOnboardOpen] = useState(false);
+  const [accessTenant, setAccessTenant] = useState(null);
 
   // Returns its promise so callers can await the refresh (see runAction).
   const load = useCallback(() => {
@@ -161,7 +166,12 @@ export default function PlatformConsole() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>{t('platform.tenants', 'Tenants')}</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle>{t('platform.tenants', 'Tenants')}</CardTitle>
+          <Button size="sm" onClick={() => setOnboardOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />{t('platform.onboard.newTenant', 'New tenant')}
+          </Button>
+        </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={applySearch} className="flex gap-2 max-w-md">
             <Input
@@ -206,6 +216,12 @@ export default function PlatformConsole() {
                     <td className="py-3 pr-4 whitespace-nowrap">{expiryText(tn)}</td>
                     <td className="py-3 pr-4">
                       <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm" variant="outline"
+                          onClick={() => setAccessTenant(tn)}
+                        >
+                          <Users className="h-4 w-4 mr-1" />{t('platform.manageAccess', 'Manage access')}
+                        </Button>
                         <Button
                           size="sm" variant="outline" disabled={busyId === tn.restaurantId}
                           onClick={() => runAction(tn.restaurantId, () => platformAPI.extend(tn.restaurantId, 30),
@@ -324,6 +340,9 @@ export default function PlatformConsole() {
           )}
         </DialogContent>
       </Dialog>
+
+      <TenantOnboardingWizard open={onboardOpen} onOpenChange={setOnboardOpen} onComplete={load} />
+      <TenantAccessDialog tenant={accessTenant} onOpenChange={(o) => !o && setAccessTenant(null)} />
     </div>
   );
 }
