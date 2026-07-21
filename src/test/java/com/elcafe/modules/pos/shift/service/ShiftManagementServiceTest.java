@@ -73,6 +73,7 @@ class ShiftManagementServiceTest {
         employee.setEmail("cashier@test.com");
         employee.setFirstName("Test");
         employee.setLastName("Cashier");
+        employee.setRestaurantId(1L); // staff of the restaurant used in clock-in tests
 
         manager = new User();
         manager.setId(2L);
@@ -119,6 +120,22 @@ class ShiftManagementServiceTest {
         assertThatThrownBy(() -> shiftManagementService.clockIn(1L, request))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("already has an active shift");
+    }
+
+    @Test @DisplayName("clockIn — platform account with no restaurant membership is rejected")
+    void clockIn_platformAccountNotStaff_throws() {
+        User platformOperator = new User();
+        platformOperator.setId(99L);
+        platformOperator.setRestaurantId(null); // SUPER_ADMIN platform account: staff of no restaurant
+        ClockInRequest request = new ClockInRequest();
+        request.setEmployeeId(99L);
+        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(restaurant));
+        when(userRepository.findById(99L)).thenReturn(Optional.of(platformOperator));
+
+        assertThatThrownBy(() -> shiftManagementService.clockIn(1L, request))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class)
+                .hasMessageContaining("not a staff member");
+        verify(shiftRepository, never()).save(any());
     }
 
     @Test @DisplayName("clockOut — sets end time")

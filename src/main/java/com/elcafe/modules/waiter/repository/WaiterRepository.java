@@ -31,6 +31,9 @@ public interface WaiterRepository extends JpaRepository<Waiter, Long> {
 
     boolean existsByRestaurantIdAndEmail(Long restaurantId, String email);
 
+    /** Tenant-scoped fetch: the waiter must belong to this restaurant (e.g. when opening a shift). */
+    Optional<Waiter> findByIdAndRestaurantId(Long id, Long restaurantId);
+
     /**
      * Find waiter by email and active status
      */

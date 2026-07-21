@@ -79,21 +79,28 @@ public class ShiftManagementService {
         if (request.getEmployeeId() != null) {
             employee = userRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+            // Tenant membership: the employee must be staff of THIS restaurant. Without this, a
+            // SUPER_ADMIN platform account (whose own restaurantId is null and who is auto-stamped as
+            // the employee above) — or an admin/owner passing another tenant's userId — could open a
+            // shift against a restaurant they have no relationship with.
+            if (!restaurantId.equals(employee.getRestaurantId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Employee is not a staff member of this restaurant");
+            }
             Optional<EmployeeShift> activeShift = shiftRepository.findActiveShiftByEmployee(request.getEmployeeId());
             if (activeShift.isPresent()) {
                 throw new ConflictException("Employee already has an active shift");
             }
         }
 
-        // Get waiter
+        // Get waiter — scoped to THIS restaurant so a shift can't be opened for another tenant's waiter.
         Waiter waiter = null;
         if (request.getWaiterId() != null) {
-            waiter = waiterRepository.findById(request.getWaiterId()).orElse(null);
-            if (waiter != null) {
-                Optional<EmployeeShift> activeWaiterShift = shiftRepository.findActiveShiftByWaiter(waiter.getId());
-                if (activeWaiterShift.isPresent()) {
-                    throw new ConflictException("Waiter already has an active shift");
-                }
+            waiter = waiterRepository.findByIdAndRestaurantId(request.getWaiterId(), restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Waiter not found in this restaurant"));
+            Optional<EmployeeShift> activeWaiterShift = shiftRepository.findActiveShiftByWaiter(waiter.getId());
+            if (activeWaiterShift.isPresent()) {
+                throw new ConflictException("Waiter already has an active shift");
             }
         }
 
