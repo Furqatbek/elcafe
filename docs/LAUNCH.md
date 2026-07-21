@@ -1,4 +1,7 @@
-# How to launch
+# How to launch (production)
+
+> Just want to run it on your machine? See [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md) — one
+> command, no config. This page is for a real production deployment.
 
 Prerequisites: a server with Docker, a domain pointing at it, and (for HTTPS) a Let's Encrypt
 certificate in `/etc/letsencrypt`.

@@ -140,6 +140,9 @@ A complete production-ready backend system for restaurant management and deliver
 
 ### Option 1: Local dev with Docker Compose (Recommended)
 
+> Full local guide: **[docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)**. For a real
+> production deployment, see **[docs/LAUNCH.md](docs/LAUNCH.md)** instead.
+
 1. Clone the repository:
 ```bash
 git clone <repository-url>
@@ -193,7 +196,7 @@ export SPRING_DATA_REDIS_PASSWORD=dev
 mvn spring-boot:run
 ```
 
-3. Run the frontend dev server (Vite, on http://localhost:5173):
+3. Run the frontend dev server (Vite, on http://localhost:3000/admin/ — the app is served under the `/admin` base):
 ```bash
 cd frontend && npm install && npm run dev
 ```
@@ -590,7 +593,8 @@ Built with Spring Boot, PostgreSQL, Redis, and modern Java best practices.
 
 ## 📖 Additional Documentation
 
-- **[Launch Guide](./docs/LAUNCH.md)** - Shortest path to a running deployment
+- **[Local Development](./docs/LOCAL_DEVELOPMENT.md)** - Run the full stack on your machine (one command)
+- **[Launch Guide (production)](./docs/LAUNCH.md)** - Shortest path to a production deployment
 - **[Production Readiness Audit](./docs/PRODUCTION_READINESS_AUDIT.md)** - Current hardening status
 - **[API Integration Guide](./README_API_INTEGRATION.md)** - Guide for integrating with the API
 - **[Food Ordering API](./docs/FOOD_ORDERING_API.md)** - Order API documentation
