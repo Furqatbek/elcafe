@@ -17,6 +17,10 @@ Fill in the six required values — `DB_PASSWORD`, `REDIS_PASSWORD`, `JWT_SECRET
 `ADMIN_EMAIL`, `ADMIN_PASSWORD` (generate commands are in the file). For HTTPS also uncomment
 `NGINX_CONF=./nginx-proxy/nginx.conf`.
 
+Optional but recommended: set `SENTRY_DSN` (plus `SENTRY_ENVIRONMENT=production`) for backend error
+tracking, and `VITE_SENTRY_DSN` for the frontend. Left unset, error tracking stays completely off —
+the app runs fine without it, you just fly blind on production errors.
+
 ## 2. Start
 
 ```bash
