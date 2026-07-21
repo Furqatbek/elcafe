@@ -9,6 +9,7 @@ import com.elcafe.modules.instagram.repository.InstagramSubscriberAddressReposit
 import com.elcafe.modules.instagram.repository.InstagramSubscriberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,9 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class InstagramBotService {
+
+    @Value("${branding.name:Qahvoon}")
+    private String brandName;
 
     private static final String STATE_AWAITING_NAME           = "AWAITING_NAME";
     private static final String STATE_AWAITING_PHONE          = "AWAITING_PHONE";
@@ -122,7 +126,7 @@ public class InstagramBotService {
 
         String welcome = (config.getWelcomeMessage() != null && !config.getWelcomeMessage().isBlank())
                 ? config.getWelcomeMessage() + "\n\n"
-                : "👋 Xush kelibsiz ElCafe'ga!\n\n";
+                : "👋 Xush kelibsiz " + brandName + "'ga!\n\n";
         apiClient.sendMessage(config, igsid, welcome + "Ismingizni kiriting (to'liq ism yoki laqab):");
     }
 

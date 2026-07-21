@@ -1,6 +1,6 @@
 # 🚀 Production Deployment with NGINX Reverse Proxy
 
-This guide explains how to deploy ElCafe with Docker Compose behind NGINX reverse proxy.
+This guide explains how to deploy Qahvoon with Docker Compose behind NGINX reverse proxy.
 
 > **Just launching?** The short checklist is [`docs/LAUNCH.md`](docs/LAUNCH.md) — this document is the
 > full reference behind it.

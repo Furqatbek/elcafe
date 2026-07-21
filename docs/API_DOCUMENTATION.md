@@ -1,4 +1,4 @@
-# ElCafe API Documentation
+# Qahvoon API Documentation
 
 ## Base URL
 ```

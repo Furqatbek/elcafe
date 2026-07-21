@@ -19,7 +19,7 @@ import java.util.List;
 public class RestaurantRequest {
 
     @NotBlank(message = "Restaurant name is required")
-    @Schema(description = "Restaurant name", example = "El Cafe")
+    @Schema(description = "Restaurant name", example = "Qahvoon")
     private String name;
 
     @Schema(description = "Restaurant description", example = "Best coffee in town")

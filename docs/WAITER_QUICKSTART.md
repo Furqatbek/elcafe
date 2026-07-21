@@ -4,7 +4,7 @@ Get started with the Waiter Module in 5 minutes!
 
 ## Prerequisites
 
-- ElCafe backend running on `http://localhost:8080`
+- Qahvoon backend running on `http://localhost:8080`
 - Database migrations completed (V15)
 - WebSocket dependency installed
 

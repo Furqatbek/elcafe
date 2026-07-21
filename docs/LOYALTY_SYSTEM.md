@@ -2,7 +2,7 @@
 
 **Version:** 1.2
 **Last Updated:** 2026-06-08
-**Author:** ElCafe Development Team
+**Author:** Qahvoon Development Team
 
 ## Table of Contents
 
@@ -28,7 +28,7 @@
 
 ## Overview
 
-The ElCafe Loyalty & Bonus Points System is a comprehensive customer retention solution that rewards customers with bonus points for purchases and provides tier-based benefits. The system is designed to:
+The Qahvoon Loyalty & Bonus Points System is a comprehensive customer retention solution that rewards customers with bonus points for purchases and provides tier-based benefits. The system is designed to:
 
 - **Increase Customer Retention**: Reward repeat customers with bonus points
 - **Drive Higher Spend**: Tier-based multipliers encourage customers to spend more
@@ -669,7 +669,7 @@ public void grantBirthdayBonus(Long customerId) {
         TransactionType.BIRTHDAY_BONUS,
         config.getBirthdayBonusAmount(),
         null,
-        "Happy Birthday! Bonus from ElCafe",
+        "Happy Birthday! Bonus from Qahvoon",
         "birthday-" + customerId + "-" + currentYear,
         Map.of("year", currentYear)
     );

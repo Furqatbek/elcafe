@@ -1,7 +1,7 @@
 {
   "name": "elcafe-print-agent",
   "version": "1.0.0",
-  "description": "Print agent for ElCafe - connects to cloud backend and prints to local thermal printers",
+  "description": "Print agent for Qahvoon - connects to cloud backend and prints to local thermal printers",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -22,6 +22,6 @@
     "restaurant",
     "print-agent"
   ],
-  "author": "ElCafe",
+  "author": "Qahvoon",
   "license": "MIT"
 }

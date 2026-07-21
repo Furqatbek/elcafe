@@ -1,5 +1,5 @@
 /**
- * ElCafe Print Agent
+ * Qahvoon Print Agent
  *
  * Connects to the cloud backend via WebSocket and prints
  * kitchen tickets to local thermal printers.
@@ -34,7 +34,7 @@ const config = {
 };
 
 console.log('===========================================');
-console.log('       ElCafe Print Agent v1.0.0');
+console.log('       Qahvoon Print Agent v1.0.0');
 console.log('===========================================');
 console.log(`Agent ID: ${config.agentId}`);
 console.log(`Restaurant ID: ${config.restaurantId}`);

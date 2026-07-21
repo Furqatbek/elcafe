@@ -269,7 +269,7 @@ const { t } = useTranslation();
 ```json
 {
   "app": {
-    "name": "El Cafe - Restaurant Delivery",
+    "name": "Qahvoon - Restaurant Delivery",
     "tagline": "Manage your restaurant delivery operations"
   },
   "auth": {

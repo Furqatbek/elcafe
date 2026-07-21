@@ -1,4 +1,4 @@
-# El Cafe API Reference
+# Qahvoon API Reference
 
 **Version**: 1.0.0
 **Base URL**: `http://localhost:8080/api/v1`
@@ -282,7 +282,7 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "name": "El Cafe Downtown",
+  "name": "Qahvoon Downtown",
   "description": "Best cafe in the city",
   "phone": "+998711234567",
   "email": "downtown@example.com",
@@ -306,7 +306,7 @@ Authorization: Bearer {token}
 Content-Type: application/json
 
 {
-  "name": "El Cafe Downtown - Updated",
+  "name": "Qahvoon Downtown - Updated",
   "acceptingOrders": true
 }
 ```
@@ -383,7 +383,7 @@ GET /api/v1/menu/public/{restaurantId}
   "data": {
     "restaurant": {
       "id": 1,
-      "name": "El Cafe Downtown"
+      "name": "Qahvoon Downtown"
     },
     "categories": [
       {
@@ -623,7 +623,7 @@ Content-Type: application/json
     "estimatedDeliveryTime": "2025-12-05T16:30:00Z",
     "restaurant": {
       "id": 1,
-      "name": "El Cafe Downtown",
+      "name": "Qahvoon Downtown",
       "phone": "+998711234567"
     },
     "items": [
@@ -657,7 +657,7 @@ GET /api/v1/consumer/orders/{orderNumber}
     "estimatedDeliveryTime": "2025-12-05T16:30:00Z",
     "total": 46300,
     "restaurant": {
-      "name": "El Cafe Downtown",
+      "name": "Qahvoon Downtown",
       "phone": "+998711234567"
     },
     "deliveryInfo": {
@@ -2722,7 +2722,7 @@ Authorization: Bearer {token}
     {
       "id": 1,
       "restaurantId": 1,
-      "restaurantName": "El Cafe Downtown",
+      "restaurantName": "Qahvoon Downtown",
       "categoryId": 2,
       "categoryName": "Vegetables",
       "name": "Tomatoes",
@@ -2908,7 +2908,7 @@ Authorization: Bearer {token}
     {
       "id": 1,
       "restaurantId": 1,
-      "restaurantName": "El Cafe Downtown",
+      "restaurantName": "Qahvoon Downtown",
       "tableNumber": "T-01",
       "tableName": "Window Table 1",
       "status": "AVAILABLE",
@@ -3057,7 +3057,7 @@ Authorization: Bearer {token}
     {
       "id": 1,
       "restaurantId": 1,
-      "restaurantName": "El Cafe Downtown",
+      "restaurantName": "Qahvoon Downtown",
       "dayOfWeek": "MONDAY",
       "openTime": "09:00:00",
       "closeTime": "22:00:00",

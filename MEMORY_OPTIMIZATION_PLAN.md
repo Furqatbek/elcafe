@@ -1,4 +1,4 @@
-# ElCafe Memory Optimization Plan
+# Qahvoon Memory Optimization Plan
 
 > **HISTORICAL (2026-07-11):** this plan's load-bearing items are now implemented — container-aware
 > JVM (`MaxRAMPercentage` + heap-dump-on-OOM), Hibernate batch fetching, `open-in-view` off,

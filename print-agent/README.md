@@ -1,6 +1,6 @@
-# ElCafe Print Agent
+# Qahvoon Print Agent
 
-A lightweight print agent that runs on your local network and connects to the ElCafe cloud backend via WebSocket. When new orders are placed, print jobs are automatically sent to this agent which prints to your local thermal printer.
+A lightweight print agent that runs on your local network and connects to the Qahvoon cloud backend via WebSocket. When new orders are placed, print jobs are automatically sent to this agent which prints to your local thermal printer.
 
 ## Architecture
 
@@ -93,7 +93,7 @@ Create `/etc/systemd/system/elcafe-print-agent.service`:
 
 ```ini
 [Unit]
-Description=ElCafe Print Agent
+Description=Qahvoon Print Agent
 After=network.target
 
 [Service]
@@ -119,8 +119,8 @@ sudo systemctl start elcafe-print-agent
 
 Use [NSSM](https://nssm.cc/) to create a Windows service:
 ```cmd
-nssm install ElCafePrintAgent "C:\Program Files\nodejs\node.exe" "C:\print-agent\index.js"
-nssm start ElCafePrintAgent
+nssm install QahvoonPrintAgent "C:\Program Files\nodejs\node.exe" "C:\print-agent\index.js"
+nssm start QahvoonPrintAgent
 ```
 
 ### Raspberry Pi

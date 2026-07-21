@@ -1,4 +1,4 @@
-# El Cafe - Restaurant Delivery Control Service
+# Qahvoon - Restaurant Delivery Control Service
 
 A complete production-ready backend system for restaurant management and delivery control built with Java 21 + Spring Boot 3.3.0.
 

@@ -7,6 +7,7 @@ import com.elcafe.modules.telegram.entity.*;
 import com.elcafe.modules.telegram.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,9 @@ public class TelegramCampaignExecutor {
     private final TelegramCampaignRecipientRepository recipientRepository;
     private final TelegramTemplateRepository templateRepository;
     private final TelegramCampaignPersistence persistence;
+
+    @Value("${branding.name:Qahvoon}")
+    private String brandName;
 
     // Telegram rate limit: 30 messages per second, we'll be conservative with 25
     private static final int MESSAGES_PER_SECOND = 25;
@@ -163,7 +167,7 @@ public class TelegramCampaignExecutor {
             return renderPlaceholders(campaign.getTemplate().getContent(), recipient);
         }
 
-        return "Message from ElCafe";
+        return "Message from " + brandName;
     }
 
     /**

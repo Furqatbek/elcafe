@@ -2,7 +2,7 @@
 
 **Version:** 1.0
 **Last Updated:** 2025-12-15
-**Author:** ElCafe Development Team
+**Author:** Qahvoon Development Team
 
 ## Table of Contents
 
@@ -23,7 +23,7 @@
 
 ## Overview
 
-The ElCafe Inventory Management System provides comprehensive tracking and management of restaurant ingredients and supplies. The system helps restaurants:
+The Qahvoon Inventory Management System provides comprehensive tracking and management of restaurant ingredients and supplies. The system helps restaurants:
 
 - **Track Stock Levels**: Real-time visibility into current inventory
 - **Prevent Stockouts**: Automatic low stock alerts and reorder suggestions

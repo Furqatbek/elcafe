@@ -20,7 +20,7 @@ public class RestaurantResponse {
     @Schema(description = "Restaurant ID", example = "1")
     private Long id;
 
-    @Schema(description = "Restaurant name", example = "El Cafe")
+    @Schema(description = "Restaurant name", example = "Qahvoon")
     private String name;
 
     @Schema(description = "Description")

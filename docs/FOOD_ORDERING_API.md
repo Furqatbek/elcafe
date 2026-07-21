@@ -1,4 +1,4 @@
-# 🍽️ El Cafe - Food Ordering System Documentation
+# 🍽️ Qahvoon - Food Ordering System Documentation
 
 Complete API documentation for the comprehensive food ordering system with full lifecycle management.
 
@@ -17,7 +17,7 @@ Complete API documentation for the comprehensive food ordering system with full 
 
 ## 🎯 System Overview
 
-The El Cafe Food Ordering System provides a complete end-to-end solution for food ordering, preparation, and delivery management.
+The Qahvoon Food Ordering System provides a complete end-to-end solution for food ordering, preparation, and delivery management.
 
 ### Key Features
 
@@ -157,7 +157,7 @@ Development: http://localhost:8080/api/v1
     "estimatedDeliveryTime": null,
     "restaurant": {
       "id": 1,
-      "name": "El Cafe Downtown",
+      "name": "Qahvoon Downtown",
       "phone": "+998712345678",
       "address": "456 Restaurant Ave"
     },
@@ -488,7 +488,7 @@ PATCH /kitchen/orders/101/priority?priority=URGENT
       "orderNumber": "ORD-A7B3C4D5",
       "status": "READY",
       "restaurant": {
-        "name": "El Cafe Downtown",
+        "name": "Qahvoon Downtown",
         "address": "456 Restaurant Ave"
       },
       "deliveryInfo": {
@@ -839,7 +839,7 @@ Track: qahvoon.uz/order/track/ORD-A7B3C4D5?token=<trackingToken>
 ```
 ✅ Your order has been delivered!
 Order: ORD-A7B3C4D5
-Thank you for choosing El Cafe!
+Thank you for choosing Qahvoon!
 Rate your experience: qahvoon.uz/rate/ORD-A7B3C4D5
 ```
 

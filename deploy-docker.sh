@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# ElCafe Docker Deployment Script
+# Qahvoon Docker Deployment Script
 # One-command deployment for production
 
 set -e
 
-echo "🚀 Deploying ElCafe with Docker Compose..."
+echo "🚀 Deploying Qahvoon with Docker Compose..."
 echo ""
 
 # Check if .env.docker exists

@@ -1,10 +1,10 @@
-# El Cafe - API Integration Guide
+# Qahvoon - API Integration Guide
 
 ## 🚀 Quick Start
 
 ### Complete Food Ordering System
 
-The El Cafe platform provides a comprehensive API for food ordering, kitchen management, and delivery tracking.
+The Qahvoon platform provides a comprehensive API for food ordering, kitchen management, and delivery tracking.
 
 ```
 ┌──────────────┐

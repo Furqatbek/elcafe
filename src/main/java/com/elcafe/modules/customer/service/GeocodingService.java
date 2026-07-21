@@ -23,7 +23,7 @@ import java.util.List;
 public class GeocodingService {
 
     private static final String NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
-    private static final String USER_AGENT = "ElCafe/1.0 (restaurant delivery service)";
+    private static final String USER_AGENT = "Qahvoon/1.0 (restaurant delivery service)";
 
     private final RestTemplate restTemplate;
 

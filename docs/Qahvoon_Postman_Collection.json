@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "ElCafe API Collection",
-    "description": "Complete API collection for ElCafe restaurant management system",
+    "name": "Qahvoon API Collection",
+    "description": "Complete API collection for Qahvoon restaurant management system",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "version": "2.0.0"
   },

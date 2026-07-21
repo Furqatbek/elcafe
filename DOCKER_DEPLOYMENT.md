@@ -1,6 +1,6 @@
 # 🐳 Docker Deployment Guide
 
-Deploy the entire ElCafe application stack with **one command** using Docker Compose.
+Deploy the entire Qahvoon application stack with **one command** using Docker Compose.
 
 ## Prerequisites
 
