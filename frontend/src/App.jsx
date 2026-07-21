@@ -105,7 +105,8 @@ function AdminRoute({ children }) {
 // because many operational pages rely on it for OWNER/MANAGER access.)
 function SuperAdminRoute({ children }) {
   const user = useAuthStore((state) => state.user);
-  if (user?.role !== 'ADMIN') {
+  // SUPER_ADMIN is a superset of ADMIN, so both may manage system users.
+  if (user?.role !== 'ADMIN' && user?.role !== 'SUPER_ADMIN') {
     return <Navigate to="/orders" replace />;
   }
   return children;

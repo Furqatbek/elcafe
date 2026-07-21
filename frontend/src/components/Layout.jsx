@@ -255,11 +255,12 @@ export default function Layout() {
   // Filter menu items based on user role
   // OPERATOR role cannot access dashboard and finance
   const isOperator = user?.role === 'OPERATOR';
-  const isAdmin = user?.role === 'ADMIN';
+  // SUPER_ADMIN is a superset of ADMIN, so both count as super-admin here.
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   let filteredMenuItems = isOperator
     ? menuItems.filter((item) => !['dashboard', 'finance', 'marketing'].includes(item.id))
     : menuItems;
-  // System Users is a super-admin (ADMIN-only) area; hide it from everyone else.
+  // System Users is a super-admin area; hide it from everyone else.
   if (!isAdmin) {
     filteredMenuItems = filteredMenuItems.map((item) =>
       item.subItems
