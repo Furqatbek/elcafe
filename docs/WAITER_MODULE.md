@@ -26,7 +26,7 @@ The Waiter Module is a comprehensive restaurant table management system that ena
 ├─────────────────────────────────────────────────────────────┤
 │  Controllers:                                                │
 │    ├─ WaiterController         (Waiter CRUD)                │
-│    ├─ WaiterTableController    (Table Management)           │
+│    ├─ TableController          (Tables: restaurant module)  │
 │    └─ WaiterOrderController    (Order Operations)           │
 ├─────────────────────────────────────────────────────────────┤
 │  Services:                                                   │
@@ -71,7 +71,7 @@ CREATE TABLE waiters (
     pin_code VARCHAR(10) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE,
     phone_number VARCHAR(20),
-    role VARCHAR(50) NOT NULL,              -- WAITER, HEAD_WAITER, SUPERVISOR
+    role VARCHAR(50) NOT NULL,              -- JUNIOR_WAITER, WAITER, SENIOR_WAITER, HEAD_WAITER, SUPERVISOR
     active BOOLEAN NOT NULL DEFAULT TRUE,
     permissions TEXT,                       -- JSON array of permissions
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -90,7 +90,7 @@ CREATE TABLE tables (
     capacity INTEGER NOT NULL,
     floor INTEGER,
     section VARCHAR(50),
-    status VARCHAR(50) NOT NULL,            -- FREE, ORDERING, WAITING, SERVED, etc.
+    status VARCHAR(50) NOT NULL,            -- AVAILABLE, OCCUPIED, RESERVED, CLEANING, OUT_OF_SERVICE
     current_waiter_id BIGINT REFERENCES waiters(id) ON DELETE SET NULL,
     merged_with_id BIGINT REFERENCES tables(id) ON DELETE SET NULL,
     opened_at TIMESTAMP,
@@ -148,21 +148,21 @@ ADD COLUMN waiter_id BIGINT REFERENCES waiters(id);
 #### TableStatus
 ```java
 public enum TableStatus {
-    FREE,           // Available for customers
-    ORDERING,       // Customers seated, taking order
-    WAITING,        // Order submitted, waiting for food
-    SERVED,         // Food delivered, customers eating
-    BILL_REQUESTED, // Customer requested bill
-    PAYING,         // Processing payment
-    CLEANING        // Being cleaned after customers leave
+    AVAILABLE,      // Available for customers
+    OCCUPIED,       // Customers seated / order in progress
+    RESERVED,       // Reserved for an upcoming booking
+    CLEANING,       // Being cleaned after customers leave
+    OUT_OF_SERVICE  // Not usable (maintenance, etc.)
 }
 ```
 
 #### WaiterRole
 ```java
 public enum WaiterRole {
-    WAITER,         // Standard waiter
-    HEAD_WAITER,    // Senior waiter with additional permissions
+    JUNIOR_WAITER,  // Basic service tasks
+    WAITER,         // Full service capabilities
+    SENIOR_WAITER,  // Can handle complex situations
+    HEAD_WAITER,    // Supervisory role, can override
     SUPERVISOR      // Full management access
 }
 ```
@@ -207,8 +207,12 @@ public enum OrderEventType {
 ### Waiter Management
 
 #### Create Waiter
+
+> Requires an `ADMIN` or `SUPERVISOR` token. The new waiter is created under the **caller's**
+> restaurant (derived from the token), so there is no restaurant id in the path.
+
 ```http
-POST /api/v1/restaurants/{restaurantId}/waiters
+POST /api/v1/waiters
 Content-Type: application/json
 
 {
@@ -217,7 +221,7 @@ Content-Type: application/json
   "email": "john@example.com",
   "phoneNumber": "+998901234567",
   "role": "WAITER",
-  "permissions": ["take_orders", "view_menu", "request_bill"]
+  "permissions": ["MANAGE_TABLES", "OVERRIDE_PRICES", "VOID_ITEMS", "MERGE_TABLES"]
 }
 ```
 
@@ -230,35 +234,59 @@ Content-Type: application/json
   "phoneNumber": "+998901234567",
   "role": "WAITER",
   "active": true,
-  "permissions": ["take_orders", "view_menu", "request_bill"],
+  "permissions": ["MANAGE_TABLES", "OVERRIDE_PRICES", "VOID_ITEMS", "MERGE_TABLES"],
   "createdAt": "2025-12-02T10:00:00"
 }
 ```
 
 #### Authenticate Waiter
+
+> Both `restaurantId` and `pinCode` (4–6 digits) are **required** — PIN codes are unique
+> *per restaurant*, so the login must name the restaurant being signed into.
+
 ```http
 POST /api/v1/waiters/auth
 Content-Type: application/json
 
 {
+  "restaurantId": 1,
   "pinCode": "1234"
 }
 ```
 
-**Response**: `200 OK`
+**Response**: `200 OK` — note there is no top-level `role`/`permissions`; the role lives on the
+nested `waiter` object.
 ```json
 {
   "waiterId": 1,
   "name": "John Doe",
-  "role": "WAITER",
-  "permissions": ["take_orders", "view_menu", "request_bill"],
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "waiter": {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phoneNumber": "+998901234567",
+    "role": "WAITER",
+    "active": true,
+    "permissions": ["MANAGE_TABLES", "OVERRIDE_PRICES", "VOID_ITEMS", "MERGE_TABLES"],
+    "activeTablesCount": 0,
+    "createdAt": "2025-12-02T10:00:00",
+    "updatedAt": "2025-12-02T10:00:00"
+  }
 }
 ```
 
 #### Get All Waiters
+
+> Requires `ADMIN`, `OPERATOR`, or `SUPERVISOR`. Paged; scoped to the caller's restaurant.
+
 ```http
-GET /api/v1/restaurants/{restaurantId}/waiters?active=true
+GET /api/v1/waiters?page=0&size=10&sortBy=name&sortDir=asc
+```
+
+Only active waiters:
+```http
+GET /api/v1/waiters/active
 ```
 
 #### Get Waiter by ID
@@ -289,10 +317,11 @@ DELETE /api/v1/waiters/{waiterId}
 
 #### Create Table
 ```http
-POST /api/v1/restaurants/{restaurantId}/tables
+POST /api/v1/tables
 Content-Type: application/json
 
 {
+  "restaurantId": 1,
   "number": "A1",
   "capacity": 4,
   "floor": 1,
@@ -309,7 +338,7 @@ Content-Type: application/json
   "capacity": 4,
   "floor": 1,
   "section": "Main Hall",
-  "status": "FREE",
+  "status": "AVAILABLE",
   "currentWaiterId": null,
   "mergedWithId": null,
   "createdAt": "2025-12-02T10:00:00"
@@ -318,7 +347,7 @@ Content-Type: application/json
 
 #### Get All Tables
 ```http
-GET /api/v1/restaurants/{restaurantId}/tables?status=FREE&floor=1
+GET /api/v1/restaurants/{restaurantId}/tables?status=AVAILABLE&floor=1
 ```
 
 #### Get Available Tables
@@ -326,13 +355,17 @@ GET /api/v1/restaurants/{restaurantId}/tables?status=FREE&floor=1
 GET /api/v1/restaurants/{restaurantId}/tables/available
 ```
 
-#### Open Table
+#### Change Table Status
+
+> There is no separate "open" or "close" endpoint — a table's lifecycle is driven entirely by
+> its status via `PATCH`. Use `OCCUPIED` when seating customers, `AVAILABLE` to free it, etc.
+
 ```http
-POST /api/v1/tables/{tableId}/open
+PATCH /api/v1/tables/{tableId}/status
 Content-Type: application/json
 
 {
-  "waiterId": 1
+  "status": "OCCUPIED"
 }
 ```
 
@@ -341,24 +374,30 @@ Content-Type: application/json
 {
   "id": 1,
   "number": "A1",
-  "status": "ORDERING",
+  "status": "OCCUPIED",
   "currentWaiterId": 1,
   "openedAt": "2025-12-02T10:00:00"
 }
 ```
 
-#### Close Table
+#### Free a Table
 ```http
-POST /api/v1/tables/{tableId}/close
+PATCH /api/v1/tables/{tableId}/status
+Content-Type: application/json
+
+{
+  "status": "AVAILABLE"
+}
 ```
 
 #### Merge Tables
 ```http
-POST /api/v1/tables/{tableId}/merge
+POST /api/v1/tables/merge
 Content-Type: application/json
 
 {
-  "mergeWithTableId": 2
+  "mainTableId": 1,
+  "tableIdsToMerge": [2]
 }
 ```
 
@@ -369,30 +408,30 @@ POST /api/v1/tables/{tableId}/unmerge
 
 #### Assign Waiter to Table
 ```http
-POST /api/v1/tables/{tableId}/assign-waiter
-Content-Type: application/json
-
-{
-  "waiterId": 2
-}
+POST /api/v1/waiters/{waiterId}/tables/{tableId}/assign
 ```
 
 #### Get Table Orders
 ```http
-GET /api/v1/tables/{tableId}/orders?status=ACTIVE
+GET /api/v1/waiter/orders/table/{tableId}
 ```
 
 ---
 
 ### Order Management
 
-#### Create Order for Table
+#### Create Order
+
+> The acting waiter is identified by the `X-Waiter-Id` header (not a body field), and the target
+> table is passed as `tableId` in the body.
+
 ```http
-POST /api/v1/tables/{tableId}/orders
+POST /api/v1/waiter/orders
 Content-Type: application/json
+X-Waiter-Id: 1
 
 {
-  "waiterId": 1,
+  "tableId": 1,
   "customerId": 5,
   "items": [
     {
@@ -424,22 +463,29 @@ Content-Type: application/json
 }
 ```
 
-#### Add Item to Order
-```http
-POST /api/v1/orders/{orderId}/items
-Content-Type: application/json
+#### Add Items to Order
 
-{
-  "productId": 12,
-  "quantity": 1,
-  "notes": "Extra spicy"
-}
+> The request body is a JSON **array** — one or more items can be added in a single call.
+
+```http
+POST /api/v1/waiter/orders/{orderId}/items
+Content-Type: application/json
+X-Waiter-Id: 1
+
+[
+  {
+    "productId": 12,
+    "quantity": 1,
+    "notes": "Extra spicy"
+  }
+]
 ```
 
 #### Update Order Item
 ```http
-PUT /api/v1/orders/{orderId}/items/{itemId}
+PUT /api/v1/waiter/orders/{orderId}/items/{itemId}
 Content-Type: application/json
+X-Waiter-Id: 1
 
 {
   "quantity": 3,
@@ -449,12 +495,14 @@ Content-Type: application/json
 
 #### Remove Order Item
 ```http
-DELETE /api/v1/orders/{orderId}/items/{itemId}?reason=Customer%20changed%20mind
+DELETE /api/v1/waiter/orders/{orderId}/items/{itemId}
+X-Waiter-Id: 1
 ```
 
 #### Submit Order to Kitchen
 ```http
-POST /api/v1/orders/{orderId}/submit
+POST /api/v1/waiter/orders/{orderId}/submit
+X-Waiter-Id: 1
 ```
 
 **Response**: `200 OK`
@@ -470,7 +518,8 @@ POST /api/v1/orders/{orderId}/submit
 
 #### Request Bill
 ```http
-POST /api/v1/orders/{orderId}/bill
+POST /api/v1/waiter/orders/{orderId}/bill
+X-Waiter-Id: 1
 ```
 
 **Response**: `200 OK`
@@ -485,26 +534,29 @@ POST /api/v1/orders/{orderId}/bill
 }
 ```
 
-#### Mark Order as Paid
-```http
-POST /api/v1/orders/{orderId}/paid
-Content-Type: application/json
+#### Close Order (after payment)
 
-{
-  "paymentMethod": "CARD",
-  "amount": 44.00,
-  "transactionId": "TXN-12345"
-}
+> There is **no** `/paid` endpoint. Once payment is settled, close the order with the endpoint
+> below (identified by the `X-Waiter-Id` header).
+
+```http
+POST /api/v1/waiter/orders/{orderId}/close
+X-Waiter-Id: 1
 ```
 
 #### Get Order Details
 ```http
-GET /api/v1/orders/{orderId}
+GET /api/v1/waiter/orders/{orderId}
 ```
 
-#### Get Waiter's Orders
+#### Get Waiter's Ongoing Orders
 ```http
-GET /api/v1/waiters/{waiterId}/orders?status=ACTIVE&date=2025-12-02
+GET /api/v1/waiter/orders/waiter/{waiterId}/ongoing
+```
+
+Full order history for a waiter:
+```http
+GET /api/v1/waiter/orders/waiter/{waiterId}/history
 ```
 
 ---
@@ -513,7 +565,7 @@ GET /api/v1/waiters/{waiterId}/orders?status=ACTIVE&date=2025-12-02
 
 #### Get Order Event History
 ```http
-GET /api/v1/orders/{orderId}/events
+GET /api/v1/waiter/orders/{orderId}/history
 ```
 
 **Response**: `200 OK`
@@ -571,7 +623,9 @@ http://localhost:8080/ws-waiter/sockjs
 const socket = new SockJS('http://localhost:8080/ws-waiter');
 const stompClient = Stomp.over(socket);
 
-// WebSocket auth is enforced: send the Bearer token on CONNECT (a waiter/staff JWT).
+// WebSocket auth defaults to 'shadow' mode (logs violations, does NOT block); it only blocks
+// when app.websocket.auth.mode=enforce. Send the Bearer token on CONNECT anyway (a waiter/staff
+// JWT) so the client keeps working once enforce is flipped on.
 // The order/kitchen/table topics are tenant-scoped — subscribe under your own restaurantId
 // (a waiter JWT carries a restaurantId claim; the login response returns it too).
 const token = '<access token>';
@@ -665,7 +719,7 @@ Table status changes for this restaurant.
 {
   "tableId": 1,
   "tableNumber": "A1",
-  "status": "ORDERING",
+  "status": "OCCUPIED",
   "waiterId": 1,
   "timestamp": "2025-12-02T10:00:00"
 }
@@ -806,24 +860,27 @@ spring:
 
 ### 3. Security Configuration
 
-Waiter endpoints require authentication. Configure in `SecurityConfig.java`:
+Only the waiter PIN auth and the WebSocket endpoint are public; every other request must be
+authenticated, and fine-grained authorization is enforced **per-method** with `@PreAuthorize`
+(`ADMIN` / `OPERATOR` / `SUPERVISOR` / `WAITER` / `HEAD_WAITER`) on the controllers. The real
+`SecurityConfig.java` uses the `SecurityFilterChain` bean style (not the deprecated
+`WebSecurityConfigurerAdapter`/`antMatchers`):
 
 ```java
-@Override
-protected void configure(HttpSecurity http) throws Exception {
+@Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
-        .authorizeRequests()
-            // Public waiter auth endpoint
-            .antMatchers("/api/v1/waiters/auth").permitAll()
-
-            // Waiter endpoints require WAITER role
-            .antMatchers("/api/v1/waiters/**").hasAnyRole("WAITER", "HEAD_WAITER", "SUPERVISOR")
-            .antMatchers("/api/v1/tables/**").hasAnyRole("WAITER", "HEAD_WAITER", "SUPERVISOR")
-
-            // WebSocket endpoint
-            .antMatchers("/ws-waiter/**").permitAll()
-        .and()
-        .csrf().disable();
+        .csrf(AbstractHttpConfigurer::disable)
+        .authorizeHttpRequests(auth -> auth
+            // Public: waiter PIN auth + the WebSocket endpoint
+            .requestMatchers(
+                "/api/v1/waiters/auth",
+                "/ws-waiter/**"
+            ).permitAll()
+            // Everything else must be authenticated; roles are checked per-method via @PreAuthorize
+            .anyRequest().authenticated()
+        );
+    return http.build();
 }
 ```
 
@@ -853,7 +910,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 ```bash
 curl -X POST http://localhost:8080/api/v1/waiters/auth \
   -H "Content-Type: application/json" \
-  -d '{"pinCode": "1234"}'
+  -d '{"restaurantId": 1, "pinCode": "1234"}'
 ```
 
 #### 2. Get Available Tables
@@ -862,21 +919,22 @@ curl -X GET "http://localhost:8080/api/v1/restaurants/1/tables/available" \
   -H "Authorization: Bearer {token}"
 ```
 
-#### 3. Open Table
+#### 3. Occupy the Table (status change)
 ```bash
-curl -X POST http://localhost:8080/api/v1/tables/1/open \
+curl -X PATCH http://localhost:8080/api/v1/tables/1/status \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {token}" \
-  -d '{"waiterId": 1}'
+  -d '{"status": "OCCUPIED"}'
 ```
 
 #### 4. Create Order
 ```bash
-curl -X POST http://localhost:8080/api/v1/tables/1/orders \
+curl -X POST http://localhost:8080/api/v1/waiter/orders \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {token}" \
+  -H "X-Waiter-Id: 1" \
   -d '{
-    "waiterId": 1,
+    "tableId": 1,
     "customerId": 5,
     "items": [
       {
@@ -894,92 +952,71 @@ curl -X POST http://localhost:8080/api/v1/tables/1/orders \
 
 #### 5. Add More Items
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders/100/items \
+curl -X POST http://localhost:8080/api/v1/waiter/orders/100/items \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {token}" \
-  -d '{
-    "productId": 20,
-    "quantity": 2,
-    "notes": "Extra cheese"
-  }'
+  -H "X-Waiter-Id: 1" \
+  -d '[
+    {
+      "productId": 20,
+      "quantity": 2,
+      "notes": "Extra cheese"
+    }
+  ]'
 ```
 
 #### 6. Submit to Kitchen
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders/100/submit \
-  -H "Authorization: Bearer {token}"
+curl -X POST http://localhost:8080/api/v1/waiter/orders/100/submit \
+  -H "Authorization: Bearer {token}" \
+  -H "X-Waiter-Id: 1"
 ```
 
 #### 7. Request Bill (when food delivered)
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders/100/bill \
-  -H "Authorization: Bearer {token}"
+curl -X POST http://localhost:8080/api/v1/waiter/orders/100/bill \
+  -H "Authorization: Bearer {token}" \
+  -H "X-Waiter-Id: 1"
 ```
 
-#### 8. Mark as Paid
+#### 8. Close the Order (after payment)
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders/100/paid \
+curl -X POST http://localhost:8080/api/v1/waiter/orders/100/close \
+  -H "Authorization: Bearer {token}" \
+  -H "X-Waiter-Id: 1"
+```
+
+#### 9. Free the Table (status change)
+```bash
+curl -X PATCH http://localhost:8080/api/v1/tables/1/status \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {token}" \
-  -d '{
-    "paymentMethod": "CARD",
-    "amount": 44.00,
-    "transactionId": "TXN-12345"
-  }'
-```
-
-#### 9. Close Table
-```bash
-curl -X POST http://localhost:8080/api/v1/tables/1/close \
-  -H "Authorization: Bearer {token}"
+  -d '{"status": "AVAILABLE"}'
 ```
 
 ---
 
 ## Permissions System
 
-### Available Permissions
+There is **no** `WaiterPermissions` class of constants and **no** fixed role→permission matrix.
+A waiter's `permissions` column is a free-form JSON **text** field, and `Waiter.hasPermission(String)`
+simply substring-matches the requested permission against that text (with two shortcuts: an inactive
+waiter has no permissions, and a `SUPERVISOR` implicitly has all of them):
 
 ```java
-public class WaiterPermissions {
-    // Order Management
-    public static final String CREATE_ORDER = "create_order";
-    public static final String MODIFY_ORDER = "modify_order";
-    public static final String CANCEL_ORDER = "cancel_order";
-    public static final String VIEW_ALL_ORDERS = "view_all_orders";
-
-    // Table Management
-    public static final String OPEN_TABLE = "open_table";
-    public static final String CLOSE_TABLE = "close_table";
-    public static final String MERGE_TABLES = "merge_tables";
-    public static final String REASSIGN_TABLE = "reassign_table";
-
-    // Payment
-    public static final String REQUEST_BILL = "request_bill";
-    public static final String PROCESS_PAYMENT = "process_payment";
-
-    // Management
-    public static final String VIEW_REPORTS = "view_reports";
-    public static final String MANAGE_WAITERS = "manage_waiters";
+public boolean hasPermission(String permission) {
+    if (!active) return false;
+    if (role == WaiterRole.SUPERVISOR) return true;      // supervisors: all permissions
+    if (permissions == null || permissions.isEmpty()) return false;
+    return permissions.contains(permission);             // substring match on the JSON text
 }
 ```
 
-### Role-Permission Matrix
+The permission strings are whatever you choose to store. The in-code example set is:
 
-| Permission | WAITER | HEAD_WAITER | SUPERVISOR |
-|-----------|--------|-------------|------------|
-| create_order | ✓ | ✓ | ✓ |
-| modify_order | ✓ | ✓ | ✓ |
-| cancel_order | ✗ | ✓ | ✓ |
-| view_all_orders | ✗ | ✓ | ✓ |
-| open_table | ✓ | ✓ | ✓ |
-| close_table | ✓ | ✓ | ✓ |
-| merge_tables | ✗ | ✓ | ✓ |
-| reassign_table | ✗ | ✓ | ✓ |
-| request_bill | ✓ | ✓ | ✓ |
-| process_payment | ✓ | ✓ | ✓ |
-| view_reports | ✗ | ✗ | ✓ |
-| manage_waiters | ✗ | ✗ | ✓ |
+```json
+["MANAGE_TABLES", "OVERRIDE_PRICES", "VOID_ITEMS", "MERGE_TABLES"]
+```
 
 ---
 
@@ -1003,8 +1040,8 @@ public class WaiterPermissions {
   "timestamp": "2025-12-02T10:00:00",
   "status": 409,
   "error": "Conflict",
-  "message": "Table is already open",
-  "path": "/api/v1/tables/1/open"
+  "message": "Table is already occupied",
+  "path": "/api/v1/tables/1/status"
 }
 ```
 
@@ -1072,7 +1109,7 @@ class WaiterServiceTest {
         request.setName("Test Waiter");
         request.setPinCode("9999");
 
-        WaiterResponse response = waiterService.createWaiter(1L, request);
+        WaiterResponse response = waiterService.createWaiter(request);
 
         assertNotNull(response.getId());
         assertEquals("Test Waiter", response.getName());
@@ -1091,8 +1128,8 @@ class WaiterControllerIntegrationTest {
 
     @Test
     void testCreateAndAuthenticateWaiter() throws Exception {
-        // Create waiter
-        mockMvc.perform(post("/api/v1/restaurants/1/waiters")
+        // Create waiter (restaurant derived from the caller's token)
+        mockMvc.perform(post("/api/v1/waiters")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Test\",\"pinCode\":\"1234\"}"))
                 .andExpect(status().isCreated());
@@ -1100,7 +1137,7 @@ class WaiterControllerIntegrationTest {
         // Authenticate
         mockMvc.perform(post("/api/v1/waiters/auth")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"pinCode\":\"1234\"}"))
+                .content("{\"restaurantId\":1,\"pinCode\":\"1234\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.waiterId").exists());
     }

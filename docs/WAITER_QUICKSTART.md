@@ -11,7 +11,7 @@ Get started with the Waiter Module in 5 minutes!
 ## Step 1: Create a Waiter
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/restaurants/1/waiters \
+curl -X POST http://localhost:8080/api/v1/waiters \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
   -d '{
@@ -36,10 +36,11 @@ curl -X POST http://localhost:8080/api/v1/restaurants/1/waiters \
 
 ```bash
 # Create Table A1
-curl -X POST http://localhost:8080/api/v1/restaurants/1/tables \
+curl -X POST http://localhost:8080/api/v1/tables \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
   -d '{
+    "restaurantId": 1,
     "number": "A1",
     "capacity": 4,
     "floor": 1,
@@ -47,10 +48,11 @@ curl -X POST http://localhost:8080/api/v1/restaurants/1/tables \
   }'
 
 # Create Table A2
-curl -X POST http://localhost:8080/api/v1/restaurants/1/tables \
+curl -X POST http://localhost:8080/api/v1/tables \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
   -d '{
+    "restaurantId": 1,
     "number": "A2",
     "capacity": 2,
     "floor": 1,
@@ -64,6 +66,7 @@ curl -X POST http://localhost:8080/api/v1/restaurants/1/tables \
 curl -X POST http://localhost:8080/api/v1/waiters/auth \
   -H "Content-Type: application/json" \
   -d '{
+    "restaurantId": 1,
     "pinCode": "1234"
   }'
 ```
@@ -73,21 +76,28 @@ curl -X POST http://localhost:8080/api/v1/waiters/auth \
 {
   "waiterId": 1,
   "name": "John Doe",
-  "role": "WAITER",
-  "token": "eyJhbGc..."
+  "token": "eyJhbGc...",
+  "waiter": {
+    "id": 1,
+    "name": "John Doe",
+    "role": "WAITER",
+    "active": true
+  }
 }
 ```
 
 Save the token for subsequent requests!
 
-## Step 4: Open a Table
+## Step 4: Occupy a Table (status change)
+
+There is no "open"/"close" endpoint — a table's lifecycle is driven by its status.
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/tables/1/open \
+curl -X PATCH http://localhost:8080/api/v1/tables/1/status \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer WAITER_TOKEN" \
   -d '{
-    "waiterId": 1
+    "status": "OCCUPIED"
   }'
 ```
 
@@ -96,7 +106,7 @@ curl -X POST http://localhost:8080/api/v1/tables/1/open \
 {
   "id": 1,
   "number": "A1",
-  "status": "ORDERING",
+  "status": "OCCUPIED",
   "currentWaiterId": 1,
   "openedAt": "2025-12-02T10:00:00"
 }
@@ -105,11 +115,12 @@ curl -X POST http://localhost:8080/api/v1/tables/1/open \
 ## Step 5: Create an Order
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/tables/1/orders \
+curl -X POST http://localhost:8080/api/v1/waiter/orders \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer WAITER_TOKEN" \
+  -H "X-Waiter-Id: 1" \
   -d '{
-    "waiterId": 1,
+    "tableId": 1,
     "customerId": 1,
     "items": [
       {
@@ -140,8 +151,9 @@ curl -X POST http://localhost:8080/api/v1/tables/1/orders \
 ## Step 6: Submit Order to Kitchen
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders/100/submit \
-  -H "Authorization: Bearer WAITER_TOKEN"
+curl -X POST http://localhost:8080/api/v1/waiter/orders/100/submit \
+  -H "Authorization: Bearer WAITER_TOKEN" \
+  -H "X-Waiter-Id: 1"
 ```
 
 **Response:**
@@ -160,7 +172,8 @@ curl -X POST http://localhost:8080/api/v1/orders/100/submit \
 const socket = new SockJS('http://localhost:8080/ws-waiter');
 const stompClient = Stomp.over(socket);
 
-// WebSocket auth is enforced — send the Bearer token on CONNECT.
+// WebSocket auth defaults to 'shadow' mode (logs violations, does NOT block); it only
+// blocks when app.websocket.auth.mode=enforce. Send the Bearer token on CONNECT anyway.
 // Topics are tenant-scoped: subscribe under your own restaurantId.
 const token = '<access token>';
 const restaurantId = 1;
@@ -186,25 +199,27 @@ stompClient.connect({ Authorization: 'Bearer ' + token }, (frame) => {
 
 ### Request Bill
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders/100/bill \
-  -H "Authorization: Bearer WAITER_TOKEN"
+curl -X POST http://localhost:8080/api/v1/waiter/orders/100/bill \
+  -H "Authorization: Bearer WAITER_TOKEN" \
+  -H "X-Waiter-Id: 1"
 ```
 
-### Mark as Paid
+### Close Order (after payment)
+
+There is no `/paid` endpoint — close the order once payment is settled.
+
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders/100/paid \
+curl -X POST http://localhost:8080/api/v1/waiter/orders/100/close \
+  -H "Authorization: Bearer WAITER_TOKEN" \
+  -H "X-Waiter-Id: 1"
+```
+
+### Free the Table (status change)
+```bash
+curl -X PATCH http://localhost:8080/api/v1/tables/1/status \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer WAITER_TOKEN" \
-  -d '{
-    "paymentMethod": "CARD",
-    "amount": 45.50
-  }'
-```
-
-### Close Table
-```bash
-curl -X POST http://localhost:8080/api/v1/tables/1/close \
-  -H "Authorization: Bearer WAITER_TOKEN"
+  -d '{"status": "AVAILABLE"}'
 ```
 
 ## Complete Workflow Summary
@@ -236,25 +251,28 @@ curl http://localhost:8080/api/v1/restaurants/1/tables/available \
 
 ### Get Waiter's Active Orders
 ```bash
-curl http://localhost:8080/api/v1/waiters/1/orders?status=ACTIVE \
+curl http://localhost:8080/api/v1/waiter/orders/waiter/1/ongoing \
   -H "Authorization: Bearer WAITER_TOKEN"
 ```
 
 ### Add Item to Existing Order
 ```bash
-curl -X POST http://localhost:8080/api/v1/orders/100/items \
+curl -X POST http://localhost:8080/api/v1/waiter/orders/100/items \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer WAITER_TOKEN" \
-  -d '{
-    "productId": 15,
-    "quantity": 1,
-    "notes": "Extra spicy"
-  }'
+  -H "X-Waiter-Id: 1" \
+  -d '[
+    {
+      "productId": 15,
+      "quantity": 1,
+      "notes": "Extra spicy"
+    }
+  ]'
 ```
 
 ### Get Order Event History
 ```bash
-curl http://localhost:8080/api/v1/orders/100/events \
+curl http://localhost:8080/api/v1/waiter/orders/100/history \
   -H "Authorization: Bearer WAITER_TOKEN"
 ```
 
@@ -267,16 +285,16 @@ curl http://localhost:8080/api/v1/orders/100/events \
 ### Can't open table
 - Table might already be open
 - Check table status: `GET /api/v1/tables/1`
-- Close table first if needed: `POST /api/v1/tables/1/close`
+- Free the table first if needed: `PATCH /api/v1/tables/1/status` with `{"status":"AVAILABLE"}`
 
 ### WebSocket not connecting
 - Verify endpoint URL: `http://localhost:8080/ws-waiter`
-- Ensure you send `Authorization: Bearer <token>` on CONNECT — WebSocket auth is enforced
+- Send `Authorization: Bearer <token>` on CONNECT — WS auth defaults to `shadow` (logs, does not block); it blocks only when `app.websocket.auth.mode=enforce`
 - Check CORS settings for your frontend origin
 - Try SockJS fallback if WebSocket fails
 
 ### Order not appearing in kitchen
-- Make sure to call `/orders/{id}/submit` after creating order
+- Make sure to call `/waiter/orders/{id}/submit` after creating order
 - Check WebSocket subscription to `/topic/restaurant/{restaurantId}/kitchen` (the bare `/topic/kitchen` is retired)
 - Verify order status is not CANCELLED
 

@@ -19,7 +19,7 @@ cd elcafe
 ### 2. Configure Environment
 ```bash
 # Copy environment template
-cp .env.docker .env.docker
+cp .env.docker.example .env.docker
 
 # Edit with your values
 nano .env.docker
@@ -27,8 +27,10 @@ nano .env.docker
 
 **Required changes:**
 - `DB_PASSWORD` - Set a strong database password
+- `REDIS_PASSWORD` - Set a strong Redis password (Compose refuses to start without it — `${REDIS_PASSWORD:?...}`)
 - `JWT_SECRET` - Generate with: `openssl rand -hex 32`
-- `CORS_ORIGINS` - Set your production domain(s)
+- `CORS_ORIGINS` - Set your production domain(s); a blank or `*` value is rejected at startup in the prod profile
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD` - First-boot SUPER_ADMIN account, created only while the users table is empty (remove `ADMIN_PASSWORD` after your first login)
 
 ### 3. Deploy Everything
 ```bash
@@ -42,53 +44,55 @@ That's it! 🎉
 
 The stack includes:
 
-- **PostgreSQL 15** - Database with persistent storage
-- **Redis 7** - Cache and session management
-- **Spring Boot Backend** - REST API on port 8080
-- **React Frontend** - SPA served by NGINX on port 80
-- **NGINX Reverse Proxy** - Routes /api to backend
+- **PostgreSQL 16** (`postgres:16-alpine`) - Database, stored in a host bind mount at `./data/postgres`
+- **Automatic DB Backups** (`db-backup` sidecar) - Daily `pg_dump` to `./backups`, rotated automatically (7 daily / 4 weekly / 6 monthly)
+- **Redis 7** - Cache and session store (password-protected)
+- **Spring Boot Backend** - REST API, published on loopback only (`127.0.0.1:8080`)
+- **React Frontend** - Admin dashboard + customer site served by NGINX on internal port 80 (no host port; reached only through the proxy)
+- **nginx-proxy** - Reverse proxy that publishes 80/443, terminates TLS, and routes `/api` → backend and `/`, `/admin/`, `/order` → frontend
 
 ## Access Your Application
 
-- **Frontend**: http://localhost or http://your-domain.com
-- **Backend API**: http://localhost:8080
-- **API via NGINX**: http://localhost/api
+- **Frontend / customer site**: http://localhost (or https://your-domain.com in production)
+- **Admin dashboard**: http://localhost/admin
+- **API via nginx-proxy**: http://localhost/api
+- **Backend (host-local debugging only)**: http://127.0.0.1:8080
 
 ## Common Commands
 
 ### Start Services
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Stop Services
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### View Logs
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Specific service
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f db
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f db
 ```
 
 ### Restart Services
 ```bash
 # All services
-docker-compose restart
+docker compose restart
 
 # Specific service
-docker-compose restart backend
+docker compose restart backend
 ```
 
 ### View Status
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 ### Update Application
@@ -99,146 +103,100 @@ git pull
 
 ### Rebuild Without Cache
 ```bash
-docker-compose build --no-cache
-docker-compose up -d
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ## Database Management
 
-### Backup Database
+A **`db-backup` sidecar runs automatic daily backups** — `pg_dump` output is written to `./backups` on the host and rotated automatically (7 daily, 4 weekly, 6 monthly). No host cron is required.
+
+### Restore From an Automatic Backup
 ```bash
-docker-compose exec db pg_dump -U elcafe elcafe > backup_$(date +%Y%m%d).sql
+gunzip -c ./backups/daily/<file>.sql.gz | docker exec -i elcafe-db psql -U elcafe -d elcafe
 ```
 
-### Restore Database
+### Manual Backup
 ```bash
-cat backup_20231220.sql | docker-compose exec -T db psql -U elcafe elcafe
+docker compose exec db pg_dump -U elcafe elcafe > backup_$(date +%Y%m%d).sql
+```
+
+### Restore a Manual Backup
+```bash
+cat backup_20231220.sql | docker compose exec -T db psql -U elcafe elcafe
 ```
 
 ### Access Database Shell
 ```bash
-docker-compose exec db psql -U elcafe elcafe
+docker compose exec db psql -U elcafe elcafe
 ```
 
 ## Production Deployment (with Domain)
 
-### 1. Update Environment
+In production, TLS is terminated by the dedicated **`nginx-proxy`** service (it publishes ports 80/443), **not** by the `frontend` container. You switch the proxy to its HTTPS config with the `NGINX_CONF` variable and mount the host's Let's Encrypt certificates. The `frontend` service publishes **no host ports** — it is reachable only through `nginx-proxy`.
+
+### 1. Point Your Domain
+Create DNS A records for `qahvoon.uz` and `www.qahvoon.uz` pointing at your server.
+
+### 2. Update Environment
 Edit `.env.docker`:
 ```env
-CORS_ORIGINS=https://lacasa.uz,https://www.lacasa.uz
-```
+CORS_ORIGINS=https://qahvoon.uz,https://www.qahvoon.uz
 
-### 2. Update NGINX for HTTPS
-
-Create `frontend/nginx-ssl.conf`:
-```nginx
-server {
-    listen 80;
-    server_name lacasa.uz www.lacasa.uz;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name lacasa.uz www.lacasa.uz;
-
-    ssl_certificate /etc/nginx/ssl/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/privkey.pem;
-
-    root /usr/share/nginx/html;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    location /api {
-        proxy_pass http://backend:8080;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location /uploads {
-        proxy_pass http://backend:8080/uploads;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
-}
+# Select the HTTPS proxy config (the default, nginx-local.conf, is HTTP-only)
+NGINX_CONF=./nginx-proxy/nginx.conf
 ```
 
 ### 3. Get SSL Certificates
+`nginx-proxy` mounts the host's `/etc/letsencrypt` read-only, and `nginx-proxy/nginx.conf` expects certificates at `/etc/letsencrypt/live/qahvoon.uz/`.
 
-Using Certbot:
 ```bash
 # Install certbot
 sudo apt install certbot
 
-# Get certificate
-sudo certbot certonly --standalone -d lacasa.uz -d www.lacasa.uz
-
-# Copy certificates
-sudo mkdir -p ./ssl
-sudo cp /etc/letsencrypt/live/lacasa.uz/fullchain.pem ./ssl/
-sudo cp /etc/letsencrypt/live/lacasa.uz/privkey.pem ./ssl/
-sudo chmod -R 755 ./ssl
+# Obtain the certificate (free up port 80 first, or use the webroot method)
+sudo certbot certonly --standalone -d qahvoon.uz -d www.qahvoon.uz
 ```
 
-### 4. Update docker-compose.yml
+Certificates are written to `/etc/letsencrypt/live/qahvoon.uz/{fullchain,privkey}.pem` and are read straight through the mount — nothing needs to be copied into the repo.
 
-Change frontend ports:
-```yaml
-frontend:
-  ports:
-    - "80:80"
-    - "443:443"
-  volumes:
-    - ./frontend/nginx-ssl.conf:/etc/nginx/conf.d/default.conf:ro
-    - ./ssl:/etc/nginx/ssl:ro
-```
-
-### 5. Deploy
+### 4. Deploy
 ```bash
 ./deploy-docker.sh
 ```
+
+`nginx-proxy` now serves HTTPS on 443 (redirecting 80 → 443), proxying `/api` to the backend and `/`, `/admin/` to the frontend.
 
 ## Troubleshooting
 
 ### Backend Won't Start
 ```bash
 # Check logs
-docker-compose logs backend
+docker compose logs backend
 
 # Check if database is ready
-docker-compose logs db
+docker compose logs db
 
 # Restart backend
-docker-compose restart backend
+docker compose restart backend
 ```
 
 ### Database Connection Issues
 ```bash
 # Verify database is running
-docker-compose ps db
+docker compose ps db
 
 # Check database logs
-docker-compose logs db
+docker compose logs db
 
 # Test connection
-docker-compose exec backend curl db:5432
+docker compose exec backend curl db:5432
 ```
 
 ### Frontend Can't Reach Backend
 ```bash
 # Verify backend is running
-docker-compose ps backend
+docker compose ps backend
 
 # Check backend health
 curl http://localhost:8080/actuator/health
@@ -277,25 +235,29 @@ docker system prune -a
 | `DB_NAME` | elcafe | PostgreSQL database name |
 | `DB_USER` | elcafe | PostgreSQL username |
 | `DB_PASSWORD` | - | PostgreSQL password (required) |
+| `REDIS_PASSWORD` | - | Redis password (required — Compose won't start without it) |
 | `JWT_SECRET` | - | JWT signing secret (required) |
 | `SPRING_PROFILES_ACTIVE` | prod | Spring profile |
-| `CORS_ORIGINS` | localhost | Allowed CORS origins |
-| `VITE_API_URL` | /api | Frontend API endpoint |
+| `CORS_ORIGINS` | - | Allowed CORS origins (required in prod; blank or `*` is rejected at startup) |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | - | First-boot SUPER_ADMIN bootstrap (only while the users table is empty) |
+| `TENANT_ENFORCEMENT_MODE` | enforce | Cross-tenant isolation: off / shadow / enforce |
+| `WEBSOCKET_AUTH_MODE` | enforce | STOMP WebSocket auth: off / shadow / enforce |
+| `SUBSCRIPTION_ENFORCEMENT_MODE` | off | Suspended-tenant access gate: off / shadow / enforce |
+| `VITE_API_URL` | /api/v1 | Frontend API endpoint |
 
 ## Data Persistence
 
-Data is persisted in Docker volumes:
-- `postgres_data` - Database files
-- `uploads` - File uploads
+- **PostgreSQL** data lives in a **host bind mount at `./data/postgres`** (not a named volume), so it survives `docker compose down -v`, `docker volume prune`, and project-name changes.
+- **Automatic backups** are written to `./backups` (host bind mount) by the `db-backup` sidecar.
+- **Named volumes**: `redis_data` (Redis), `uploads` (file uploads), `logs` (backend rolling logs).
 
-To backup volumes:
+To archive the Postgres data directory directly, copy the host path (stop the DB first for a consistent snapshot):
 ```bash
-# Create backup
-docker run --rm -v elcafe_postgres_data:/data -v $(pwd):/backup ubuntu tar czf /backup/postgres_backup.tar.gz /data
-
-# Restore backup
-docker run --rm -v elcafe_postgres_data:/data -v $(pwd):/backup ubuntu tar xzf /backup/postgres_backup.tar.gz -C /
+docker compose stop db
+tar czf postgres_backup_$(date +%Y%m%d).tar.gz ./data/postgres
+docker compose start db
 ```
+For logical dumps, prefer the automatic `db-backup` output in `./backups` (see Database Management above).
 
 ## Performance Tuning
 
@@ -315,11 +277,12 @@ db:
 ## Security Checklist
 
 - [ ] Changed default DB_PASSWORD
+- [ ] Set a strong REDIS_PASSWORD (required)
 - [ ] Generated secure JWT_SECRET (32+ chars)
-- [ ] Set CORS_ORIGINS to production domains only
+- [ ] Set CORS_ORIGINS to production domains only (never blank or `*`)
 - [ ] SSL certificates installed (for production)
 - [ ] Firewall configured (only 80, 443 open)
-- [ ] Regular backups scheduled
+- [ ] Backups verified (the `db-backup` sidecar runs daily)
 - [ ] Database password rotated regularly
 
 ## Monitoring
@@ -331,12 +294,12 @@ docker stats
 
 ### Check Container Health
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 ### Export Logs
 ```bash
-docker-compose logs > logs_$(date +%Y%m%d).txt
+docker compose logs > logs_$(date +%Y%m%d).txt
 ```
 
 ## Scaling (Future)
@@ -348,18 +311,18 @@ backend:
     replicas: 3
 ```
 
-Add load balancer in frontend nginx config.
+Add a load balancer in the nginx-proxy config.
 
 ---
 
 ## Support
 
 For issues:
-1. Check logs: `docker-compose logs -f`
-2. Verify all services running: `docker-compose ps`
+1. Check logs: `docker compose logs -f`
+2. Verify all services running: `docker compose ps`
 3. Check environment variables: `cat .env.docker`
 4. Review this guide
 
 ---
 
-**Last Updated:** 2025-12-20
+**Last Updated:** 2026-07-21

@@ -7,30 +7,36 @@ This guide explains how to deploy ElCafe with Docker Compose behind NGINX revers
 
 ## Architecture
 
+TLS is terminated by the **`nginx-proxy`** service that ships with the Docker Compose stack
+(select the HTTPS config with `NGINX_CONF=./nginx-proxy/nginx.conf`) — there is no separate
+host NGINX. `nginx-proxy` is the only service that publishes ports (80/443); the frontend and
+backend are reached only through it.
+
 ```
 Internet (HTTPS)
     ↓
-NGINX (Host Server) - Handles SSL, Port 80/443/3000
-    ├─→ https://lacasa.uz/          → Frontend (Docker: localhost:9090)
-    ├─→ https://lacasa.uz/api       → Backend (Docker: localhost:8080)
-    └─→ https://lacasa.uz:3000      → Admin Panel (Docker: localhost:3000)
+nginx-proxy service (Docker) - Handles SSL, publishes 80/443
+    ├─→ https://qahvoon.uz/          → Frontend (customer site)
+    ├─→ https://qahvoon.uz/admin/    → Admin dashboard (same frontend, served at /admin)
+    └─→ https://qahvoon.uz/api       → Backend (127.0.0.1:8080, loopback only)
 ```
 
 ### Services
 
 | Service | Docker Port | Host Port | URL |
 |---------|-------------|-----------|-----|
-| Frontend | 80 (internal) | 9090 | https://lacasa.uz |
-| Backend | 8080 (internal) | 8080 | https://lacasa.uz/api |
-| Admin Panel | 3000 (internal) | 3000 | https://lacasa.uz:3000 |
-| PostgreSQL | 5432 (internal) | 5432 | localhost only |
+| nginx-proxy | 80 / 443 | 80 / 443 | https://qahvoon.uz |
+| Frontend | 80 (internal) | none (via nginx-proxy) | https://qahvoon.uz and https://qahvoon.uz/admin/ |
+| Backend | 8080 (internal) | 127.0.0.1:8080 | https://qahvoon.uz/api |
+| PostgreSQL | 5432 (internal) | 127.0.0.1:5432 | localhost only |
+| Redis | 6379 (internal) | 127.0.0.1:6379 | localhost only |
 
 ## Prerequisites
 
 - Ubuntu Server 20.04+ or similar Linux
 - Docker & Docker Compose installed
-- Domain pointed to your server (lacasa.uz)
-- Ports 80, 443, 3000 open in firewall
+- Domain pointed to your server (qahvoon.uz)
+- Ports 80, 443 open in firewall
 
 ## Step-by-Step Setup
 
@@ -51,16 +57,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 docker-compose --version
 ```
 
-### 2. Install NGINX
-
-```bash
-sudo apt update
-sudo apt install nginx -y
-sudo systemctl start nginx
-sudo systemctl enable nginx
-```
-
-### 3. Clone Repository
+### 2. Clone Repository
 
 ```bash
 cd /opt
@@ -70,7 +67,7 @@ git clone https://github.com/Furqatbek/elcafe.git elcafe
 cd elcafe
 ```
 
-### 4. Configure Environment
+### 3. Configure Environment
 
 ```bash
 # Copy environment template
@@ -85,7 +82,7 @@ nano .env.docker
 DB_PASSWORD=your_secure_database_password    # Generate: openssl rand -base64 24
 REDIS_PASSWORD=your_secure_redis_password    # Generate: openssl rand -base64 24
 JWT_SECRET=your_super_secret_jwt_key_here    # Generate: openssl rand -hex 32
-CORS_ORIGINS=https://lacasa.uz,https://www.lacasa.uz
+CORS_ORIGINS=https://qahvoon.uz,https://www.qahvoon.uz
 # First boot only — creates the SUPER_ADMIN account while the users table is empty (migrations
 # seed no users). Change the password after first login, then remove ADMIN_PASSWORD.
 ADMIN_EMAIL=you@example.com
@@ -122,47 +119,33 @@ SENTRY_DSN=
 SENTRY_ENVIRONMENT=production
 ```
 
-### 5. Configure NGINX Reverse Proxy
+### 4. Install SSL Certificate
 
-```bash
-# Copy NGINX configuration
-sudo cp nginx-production.conf /etc/nginx/sites-available/lacasa.uz
-
-# Enable the site
-sudo ln -s /etc/nginx/sites-available/lacasa.uz /etc/nginx/sites-enabled/
-
-# Remove default site
-sudo rm /etc/nginx/sites-enabled/default
-
-# Test configuration
-sudo nginx -t
-```
-
-### 6. Install SSL Certificate
+> **The reverse proxy is built into the Compose stack.** TLS is terminated by the **`nginx-proxy`**
+> service, not a host NGINX — do **not** install `nginx-production.conf` on the host (it would
+> collide with `nginx-proxy` on ports 80/443). Select the HTTPS proxy config by setting `NGINX_CONF`
+> in `.env.docker`:
+>
+> ```env
+> NGINX_CONF=./nginx-proxy/nginx.conf
+> ```
+>
+> `nginx-proxy` mounts the host's `/etc/letsencrypt` read-only and expects certificates at
+> `/etc/letsencrypt/live/qahvoon.uz/`.
 
 ```bash
 # Install Certbot
-sudo apt install certbot python3-certbot-nginx -y
+sudo apt install certbot -y
 
-# Create certbot directory
-sudo mkdir -p /var/www/certbot
+# Get the certificate (free up port 80 first, or use the webroot method)
+sudo certbot certonly --standalone -d qahvoon.uz -d www.qahvoon.uz
 
-# Get certificate
-sudo certbot certonly --webroot -w /var/www/certbot -d lacasa.uz -d www.lacasa.uz
-
-# Certificate will be saved at:
-# /etc/letsencrypt/live/lacasa.uz/fullchain.pem
-# /etc/letsencrypt/live/lacasa.uz/privkey.pem
+# Certificates are saved at (read straight through the nginx-proxy mount — no copying needed):
+# /etc/letsencrypt/live/qahvoon.uz/fullchain.pem
+# /etc/letsencrypt/live/qahvoon.uz/privkey.pem
 ```
 
-### 7. Reload NGINX
-
-```bash
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-### 8. Deploy Docker Containers
+### 5. Deploy Docker Containers
 
 ```bash
 # Make deploy script executable
@@ -177,39 +160,35 @@ Or manually:
 docker-compose up -d --build
 ```
 
-### 9. Configure Firewall
+### 6. Configure Firewall
 
 ```bash
 # Install UFW
 sudo apt install ufw -y
 
-# Allow SSH, HTTP, HTTPS, Admin Panel
+# Allow SSH, HTTP, HTTPS
 sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 3000/tcp
 
 # Enable firewall
 sudo ufw enable
 sudo ufw status
 ```
 
-### 10. Verify Deployment
+### 7. Verify Deployment
 
 ```bash
-# Check Docker containers
+# Check Docker containers (includes nginx-proxy)
 docker-compose ps
 
-# Check NGINX
-sudo systemctl status nginx
+# Backend health — correct actuator path, via the loopback-published backend port
+# (actuator is NOT under /api/v1 and is not exposed through nginx-proxy)
+curl http://127.0.0.1:8080/actuator/health
 
-# Test URLs
-curl http://localhost:9090  # Frontend
-curl http://localhost:8080/actuator/health  # Backend
-
-# Test through NGINX
-curl https://lacasa.uz
-curl https://lacasa.uz/api/v1/actuator/health
+# Test the site + admin dashboard through nginx-proxy
+curl -I https://qahvoon.uz          # Frontend (customer site)
+curl -I https://qahvoon.uz/admin/   # Admin dashboard (same frontend)
 ```
 
 ## Post-Deployment
@@ -313,23 +292,17 @@ docker-compose up -d
 
 ### Check Service Status
 ```bash
-# Docker containers
+# Docker containers (includes nginx-proxy)
 docker-compose ps
-
-# NGINX
-sudo systemctl status nginx
 
 # Resource usage
 docker stats
 ```
 
-### View NGINX Logs
+### View nginx-proxy Logs
 ```bash
-# Access logs
-sudo tail -f /var/log/nginx/access.log
-
-# Error logs
-sudo tail -f /var/log/nginx/error.log
+# nginx-proxy runs as a Compose service — read its access/error logs via Docker
+docker-compose logs -f nginx-proxy
 ```
 
 ### Check SSL Certificate Expiry
@@ -344,11 +317,13 @@ sudo certbot certificates
 # Check frontend container
 docker-compose logs frontend
 
-# Check if port 9090 is accessible
-curl http://localhost:9090
+# The frontend has no host port — reach it through nginx-proxy
+curl -I http://localhost/          # customer site
+curl -I http://localhost/admin/    # admin dashboard
 
-# Check NGINX config
-sudo nginx -t
+# Check the nginx-proxy container and validate its config
+docker-compose logs nginx-proxy
+docker-compose exec nginx-proxy nginx -t
 ```
 
 ### API Requests Failing
@@ -356,11 +331,11 @@ sudo nginx -t
 # Check backend container
 docker-compose logs backend
 
-# Check backend health
+# Check backend health (correct actuator path; loopback-published port)
 curl http://localhost:8080/actuator/health
 
-# Check NGINX proxy
-curl https://lacasa.uz/api/v1/actuator/health
+# Check that nginx-proxy forwards /api to the backend (actuator is NOT under /api/v1)
+curl -I https://qahvoon.uz/api/v1/
 ```
 
 ### SSL Issues
@@ -371,8 +346,9 @@ sudo certbot certificates
 # Renew manually
 sudo certbot renew
 
-# Check NGINX SSL config
-sudo nginx -t
+# Validate and reload the nginx-proxy config after renewal
+docker-compose exec nginx-proxy nginx -t
+docker-compose restart nginx-proxy
 ```
 
 ### Database Connection Issues
@@ -390,14 +366,12 @@ docker-compose exec db psql -U elcafe elcafe
 sudo lsof -i :80
 sudo lsof -i :443
 sudo lsof -i :8080
-sudo lsof -i :9090
-sudo lsof -i :3000
 ```
 
 ## Security Checklist
 
 - [ ] SSL certificates installed and auto-renewing
-- [ ] Firewall configured (only 22, 80, 443, 3000 open)
+- [ ] Firewall configured (only 22, 80, 443 open)
 - [ ] Strong database password set in .env.docker
 - [ ] Secure JWT secret generated (32+ characters)
 - [ ] CORS origins restricted to production domains
@@ -428,7 +402,7 @@ db:
 ```
 
 ### NGINX Caching
-Add to `nginx-production.conf`:
+Add to `nginx-proxy/nginx.conf`:
 ```nginx
 proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_cache:10m max_size=1g;
 
@@ -489,28 +463,29 @@ cat /backups/elcafe/backup_YYYYMMDD_HHMMSS.sql | docker-compose exec -T db psql 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    Internet (HTTPS)                      │
-└────────────────────┬────────────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────────────┐
-│              Host NGINX (Port 80/443/3000)              │
-│  - SSL Termination                                      │
-│  - Reverse Proxy                                        │
-│  - Load Balancing                                       │
-└──────┬─────────────┬─────────────┬─────────────────────┘
-       │             │             │
-       │ :9090       │ :8080       │ :3000
-       │             │             │
-┌──────▼──────┐ ┌────▼──────┐ ┌────▼──────────┐
-│  Frontend   │ │  Backend  │ │  Admin Panel  │
-│  (Docker)   │ │  (Docker) │ │   (Docker)    │
-│  React+NGINX│ │  Spring   │ │               │
-└─────────────┘ └─────┬─────┘ └───────────────┘
-                      │
-                      │ :5432
-                ┌─────▼──────┐
-                │ PostgreSQL │
-                │  (Docker)  │
-                └────────────┘
+└────────────────────┬──────────────────────────────────┘
+                     │ 80 / 443 (published)
+┌────────────────────▼──────────────────────────────────┐
+│            nginx-proxy service (Docker)                 │
+│  - SSL termination (NGINX_CONF=./nginx-proxy/nginx.conf)│
+│  - Reverse proxy: / and /admin/ -> frontend             │
+│                   /api -> backend                       │
+└──────────────┬───────────────────────┬─────────────────┘
+               │ frontend:80            │ backend:8080
+               │ (no host port)         │ (also 127.0.0.1:8080)
+        ┌──────▼───────────┐     ┌──────▼──────┐
+        │ Frontend (Docker)│     │   Backend   │
+        │ React + NGINX    │     │  (Docker)   │
+        │ site + /admin    │     │   Spring    │
+        └──────────────────┘     └──────┬──────┘
+                                        │ db:5432 / redis:6379
+                          ┌─────────────┴─────────────┐
+                    ┌─────▼──────┐             ┌───────▼─────┐
+                    │ PostgreSQL │             │    Redis    │
+                    │  (Docker)  │             │  (Docker)   │
+                    │ ./data/    │             │ redis_data  │
+                    │  postgres  │             │             │
+                    └────────────┘             └─────────────┘
 ```
 
 ## Environment Variables Reference
@@ -524,7 +499,7 @@ cat /backups/elcafe/backup_YYYYMMDD_HHMMSS.sql | docker-compose exec -T db psql 
 | `REDIS_PASSWORD` | - | Redis password (required) |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | - | First-boot SUPER_ADMIN bootstrap (empty users table only) |
 | `SPRING_PROFILES_ACTIVE` | prod | Spring profile |
-| `CORS_ORIGINS` | localhost | Allowed origins (HTTP + WebSocket) |
+| `CORS_ORIGINS` | (required) | Exact allowed origins, comma-separated (e.g. `https://qahvoon.uz,https://www.qahvoon.uz`); blank or `*` is rejected at startup in prod |
 | `TENANT_ENFORCEMENT_MODE` | enforce | Tenant isolation: off/shadow/enforce |
 | `WEBSOCKET_AUTH_MODE` | enforce | STOMP auth: off/shadow/enforce |
 | `SUBSCRIPTION_ENFORCEMENT_MODE` | off | Suspended-tenant gate: off/shadow/enforce |
@@ -533,16 +508,16 @@ cat /backups/elcafe/backup_YYYYMMDD_HHMMSS.sql | docker-compose exec -T db psql 
 | `SENTRY_DSN` | - | Error tracking (dormant without) |
 | `SPRING_JPA_OPEN_IN_VIEW` | false | Emergency OSIV rollback switch |
 | `HIBERNATE_LAZY_LOAD_NO_TRANS` | false | Emergency lazy-load rollback switch |
-| `VITE_API_URL` | /api | Frontend API URL |
+| `VITE_API_URL` | /api/v1 | Frontend API base URL (build arg) |
 
 ## Support
 
 For issues:
 1. Check logs: `docker-compose logs -f`
-2. Check NGINX: `sudo tail -f /var/log/nginx/error.log`
+2. Check nginx-proxy: `docker-compose logs -f nginx-proxy`
 3. Verify services: `docker-compose ps`
-4. Test connectivity: `curl http://localhost:9090`
+4. Test connectivity: `curl -I http://localhost/`
 
 ---
 
-**Last Updated:** 2026-07-11
+**Last Updated:** 2026-07-21
