@@ -335,8 +335,10 @@ Content-Type: application/json
 DELETE /api/v1/inventory/ingredients/{id}
 ```
 
-**Soft Delete:**
-Instead of actual deletion, sets `active = false` to preserve historical data.
+**Hard Delete:**
+This endpoint performs an actual delete (`ingredientRepository.deleteById(id)`); there is no
+`@SQLDelete` on the ingredient entity. (Soft-delete via `active = false` applies to suppliers, not
+ingredients.) To retire an ingredient without deleting it, set `active = false` through an update.
 
 ### Listing Ingredients
 
