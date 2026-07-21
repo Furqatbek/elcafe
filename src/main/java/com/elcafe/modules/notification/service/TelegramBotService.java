@@ -1,6 +1,7 @@
 package com.elcafe.modules.notification.service;
 
 import com.elcafe.modules.customer.repository.CustomerRepository;
+import com.elcafe.utils.LogSanitizer;
 import com.elcafe.modules.notification.config.TelegramBotRegistry;
 import com.elcafe.modules.telegram.entity.TelegramBotConfig;
 import com.elcafe.modules.telegram.entity.TelegramSubscriber;
@@ -314,7 +315,7 @@ public class TelegramBotService {
         }
         subscriber.setConversationState(STATE_REGISTERED);
         subscriberRepository.save(subscriber);
-        log.info("Telegram subscriber registered: chatId={}, phone={}", chatId, subscriber.getPhone());
+        log.info("Telegram subscriber registered: chatId={}, phone={}", chatId, LogSanitizer.phone(subscriber.getPhone()));
         sendRegistrationSummary(subscriber, chatId);
     }
 

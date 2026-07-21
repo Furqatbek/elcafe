@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.service;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.utils.LogSanitizer;
 
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.modules.customer.entity.Customer;
@@ -327,7 +328,7 @@ public class POSOrderService {
 
         return customerRepository.findByPhoneAndRestaurantId(customerInfo.getPhone(), restaurantId)
                 .orElseGet(() -> {
-                    log.info("Creating new customer with phone: {} for restaurant: {}", customerInfo.getPhone(), restaurantId);
+                    log.info("Creating new customer with phone: {} for restaurant: {}", LogSanitizer.phone(customerInfo.getPhone()), restaurantId);
 
                     String name = customerInfo.getName() != null ? customerInfo.getName().trim() : "Customer";
                     String[] nameParts = name.split("\\s+", 2);

@@ -1,6 +1,7 @@
 package com.elcafe.modules.sms.service;
 
 import com.elcafe.modules.sms.config.SmsProperties;
+import com.elcafe.utils.LogSanitizer;
 import com.elcafe.modules.sms.dto.*;
 import lombok.extern.slf4j.Slf4j;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
@@ -191,7 +192,7 @@ public class SmsService {
                     SendSmsResponse.class
             );
 
-            log.info("SMS sent successfully to {}", request.getMobilePhone());
+            log.info("SMS sent successfully to {}", LogSanitizer.phone(request.getMobilePhone()));
             return response.getBody();
         } catch (RestClientException e) {
             log.error("Failed to send SMS: {}", e.getMessage());
@@ -240,7 +241,7 @@ public class SmsService {
     @CircuitBreaker(name = "sms", fallbackMethod = "globalSmsCircuitOpen")
     public SendSmsResponse sendGlobalSms(SendGlobalSmsRequest request) {
         if (!smsProperties.getEnabled()) {
-            log.info("SMS sending is disabled. Would send global SMS to: {}", request.getPhoneNumber());
+            log.info("SMS sending is disabled. Would send global SMS to: {}", LogSanitizer.phone(request.getPhoneNumber()));
             return createMockResponse();
         }
 

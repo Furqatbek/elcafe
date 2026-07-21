@@ -1,6 +1,7 @@
 package com.elcafe.modules.reservation.service;
 
 import com.elcafe.exception.BadRequestException;
+import com.elcafe.utils.LogSanitizer;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.billing.PlanFeatures;
 import com.elcafe.modules.billing.service.PlanGateService;
@@ -458,7 +459,7 @@ public class ReservationService {
             }
 
             // Create new customer
-            log.info("Creating new customer for phone: {}", normalizedPhone);
+            log.info("Creating new customer for phone: {}", LogSanitizer.phone(normalizedPhone));
             String[] names = (request.getCustomerName() != null && !request.getCustomerName().isBlank())
                     ? request.getCustomerName().trim().split("\\s+", 2)
                     : new String[]{"Guest", ""};

@@ -1,6 +1,7 @@
 package com.elcafe.modules.sms.service;
 
 import com.elcafe.exception.BadRequestException;
+import com.elcafe.utils.LogSanitizer;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.repository.CustomerRepository;
@@ -208,7 +209,7 @@ public class SmsCampaignService {
                 }
 
             } catch (Exception e) {
-                log.error("Failed to send SMS to {}: {}", recipient.getPhone(), e.getMessage());
+                log.error("Failed to send SMS to {}: {}", LogSanitizer.phone(recipient.getPhone()), e.getMessage());
                 recipient.markAsFailed(e.getMessage());
                 campaign.incrementFailedCount();
             }

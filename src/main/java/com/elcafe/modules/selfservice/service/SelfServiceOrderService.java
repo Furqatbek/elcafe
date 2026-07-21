@@ -1,6 +1,7 @@
 package com.elcafe.modules.selfservice.service;
 
 import com.elcafe.exception.BadRequestException;
+import com.elcafe.utils.LogSanitizer;
 import com.elcafe.exception.ResourceNotFoundException;
 import com.elcafe.modules.customer.entity.Customer;
 import com.elcafe.modules.customer.enums.RegistrationSource;
@@ -557,7 +558,7 @@ public class SelfServiceOrderService {
                             .registrationSource(RegistrationSource.QR_ORDER)
                             .active(true)
                             .build();
-                    log.info("Creating new customer from self-service order: phone={}, restaurant={}", phone, restaurantId);
+                    log.info("Creating new customer from self-service order: phone={}, restaurant={}", LogSanitizer.phone(phone), restaurantId);
                     return customerRepository.save(newCustomer);
                 });
     }

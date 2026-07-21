@@ -1,6 +1,7 @@
 package com.elcafe.modules.sms.controller;
 
 import com.elcafe.modules.sms.dto.*;
+import com.elcafe.utils.LogSanitizer;
 import com.elcafe.modules.sms.service.SmsService;
 import com.elcafe.utils.ApiResponse;
 import jakarta.validation.Valid;
@@ -99,7 +100,7 @@ public class SmsController {
     @PostMapping("/send")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<SendSmsResponse>> sendSms(@Valid @RequestBody SendSmsRequest request) {
-        log.info("Sending SMS to {}", request.getMobilePhone());
+        log.info("Sending SMS to {}", LogSanitizer.phone(request.getMobilePhone()));
         SendSmsResponse response = smsService.sendSms(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("SMS sent successfully", response));

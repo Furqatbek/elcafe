@@ -3,6 +3,7 @@ package com.elcafe.modules.auth.service;
 import com.elcafe.exception.BadRequestException;
 import com.elcafe.exception.RateLimitExceededException;
 import com.elcafe.exception.UnauthorizedException;
+import com.elcafe.utils.LogSanitizer;
 import com.elcafe.modules.auth.dto.*;
 import com.elcafe.modules.auth.entity.ConsumerSession;
 import com.elcafe.modules.auth.entity.OtpCode;
@@ -119,8 +120,8 @@ public class ConsumerAuthService {
                     .registrationSource(request.getRegistrationSource())
                     .build();
             customer = customerRepository.save(customer);
-            log.info("Created new customer - phone: {}, firstName: {}, lastName: {}, birthDate: {}, source: {}, language: {}",
-                    phoneNumber, firstName, lastName, request.getBirthDate(), request.getRegistrationSource(), request.getLanguage());
+            log.info("Created new customer - id: {}, phone: {}, source: {}, language: {}",
+                    customer.getId(), LogSanitizer.phone(phoneNumber), request.getRegistrationSource(), request.getLanguage());
         } else {
             // Update existing customer with new data if provided
             boolean updated = false;
@@ -148,7 +149,7 @@ public class ConsumerAuthService {
 
             if (updated) {
                 customer = customerRepository.save(customer);
-                log.info("Updated customer during login request: phone={}", phoneNumber);
+                log.info("Updated customer during login request: phone={}", LogSanitizer.phone(phoneNumber));
             }
         }
 
@@ -158,7 +159,7 @@ public class ConsumerAuthService {
         // Never log the OTP code or phone number in production — logs are shipped/retained and a live
         // OTP + phone is an account-takeover primitive. The actual code is printed only in dev mode.
         if (developmentMode) {
-            log.info("[dev] OTP for {}: {}", phoneNumber, otpCode);
+            log.info("[dev] OTP for {}: {}", LogSanitizer.phone(phoneNumber), otpCode);
         } else {
             log.debug("OTP generated and dispatched");
         }
@@ -193,13 +194,13 @@ public class ConsumerAuthService {
                         .build();
 
                 smsService.sendSms(smsRequest);
-                log.info("OTP sent successfully to {}", phoneNumber);
+                log.info("OTP sent successfully to {}", LogSanitizer.phone(phoneNumber));
             } catch (Exception e) {
-                log.error("Failed to send OTP SMS to {}: {}", phoneNumber, e.getMessage());
+                log.error("Failed to send OTP SMS to {}: {}", LogSanitizer.phone(phoneNumber), e.getMessage());
                 // Don't fail the request - OTP is still saved in DB
             }
         } else {
-            log.info("Development mode: SMS sending skipped for {}", phoneNumber);
+            log.info("Development mode: SMS sending skipped for {}", LogSanitizer.phone(phoneNumber));
         }
 
         long expiresInSeconds = ChronoUnit.SECONDS.between(LocalDateTime.now(), expiresAt);
@@ -233,12 +234,12 @@ public class ConsumerAuthService {
 
         // In development mode, accept any OTP code
         if (developmentMode) {
-            log.info("Development mode: Accepting any OTP code for {}", phoneNumber);
+            log.info("Development mode: Accepting any OTP code for {}", LogSanitizer.phone(phoneNumber));
             // Find any recent OTP for this phone number (to mark as verified)
             otp = otpCodeRepository.findByPhoneNumberAndOtpCodeAndIsVerifiedFalse(phoneNumber, otpCode)
                     .orElseGet(() -> {
                         // If no matching OTP found in dev mode, create a temporary one
-                        log.info("Development mode: Creating temporary OTP record for {}", phoneNumber);
+                        log.info("Development mode: Creating temporary OTP record for {}", LogSanitizer.phone(phoneNumber));
                         OtpCode tempOtp = OtpCode.builder()
                                 .phoneNumber(phoneNumber)
                                 .otpCode(otpCode)
@@ -314,7 +315,7 @@ public class ConsumerAuthService {
         long expiresInSeconds = accessTokenExpiration / 1000;
 
         log.info("Consumer authenticated successfully: phone={}, customerId={}",
-                phoneNumber, customer.getId());
+                LogSanitizer.phone(phoneNumber), customer.getId());
 
         return ConsumerAuthResponse.builder()
                 .accessToken(accessToken)
@@ -365,7 +366,7 @@ public class ConsumerAuthService {
 
         long expiresInSeconds = accessTokenExpiration / 1000;
 
-        log.info("Access token refreshed for phone: {}", session.getPhoneNumber());
+        log.info("Access token refreshed for phone: {}", LogSanitizer.phone(session.getPhoneNumber()));
 
         return ConsumerAuthResponse.builder()
                 .accessToken(newAccessToken)
@@ -387,7 +388,7 @@ public class ConsumerAuthService {
                 .ifPresent(session -> {
                     session.invalidate();
                     sessionRepository.save(session);
-                    log.info("Consumer logged out: phone={}", session.getPhoneNumber());
+                    log.info("Consumer logged out: phone={}", LogSanitizer.phone(session.getPhoneNumber()));
                 });
     }
 

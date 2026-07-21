@@ -1,6 +1,7 @@
 package com.elcafe.modules.order.controller;
 
 import com.elcafe.exception.ResourceNotFoundException;
+import com.elcafe.utils.LogSanitizer;
 
 import com.elcafe.common.audit.entity.AuditAction;
 import com.elcafe.common.audit.service.AuditService;
@@ -181,7 +182,7 @@ public class POSOrderController {
             @Valid @RequestBody AttachCustomerRequest request) {
 
         log.info("Attaching customer to order {} (customerId={}, qrCode={}, phone={})",
-                orderId, request.getCustomerId(), request.getQrCode(), request.getPhone());
+                orderId, request.getCustomerId(), request.getQrCode(), LogSanitizer.phone(request.getPhone()));
 
         POSOrderResponse response = posOrderService.attachCustomer(orderId, request);
         return ResponseEntity.ok(ApiResponse.success("Customer attached to order", response));
