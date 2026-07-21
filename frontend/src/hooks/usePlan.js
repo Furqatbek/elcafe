@@ -18,6 +18,11 @@ export function usePlan() {
     features,
     hasFeature: (code) => features.includes(code),
     daysUntilExpiry: plan?.daysUntilExpiry ?? null,
+    // A1: absolute expiry (ISO string|null) and the caller's own restaurant id, sourced straight
+    // from the billing status (GET /billing/me). restaurantId is the trusted value the self-serve
+    // plan switch must use — never a user-entered id.
+    planExpiresAt: plan?.planExpiresAt ?? null,
+    restaurantId: plan?.restaurantId ?? null,
     isTrial: !!plan?.isTrial,
     inGracePeriod: !!plan?.inGracePeriod,
     isReadOnly: !!plan?.readOnly,

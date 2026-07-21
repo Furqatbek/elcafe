@@ -72,3 +72,18 @@ const PATH_FEATURE = {
 export function featureForPath(path) {
   return PATH_FEATURE[path] || null;
 }
+
+/**
+ * Readable fallback for a dotted/underscored feature code when no localized label exists in
+ * `subscription.featureLabels` (i18n). Splits on '.'/'_' and title-cases each part, so an unmapped
+ * code like "kitchen.stock_counts" renders "Kitchen Stock Counts" instead of a raw code. Callers
+ * should prefer the i18n label and use this only as the last resort.
+ */
+export function humanizeFeatureCode(code) {
+  if (!code) return '';
+  return String(code)
+    .split(/[._]/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
