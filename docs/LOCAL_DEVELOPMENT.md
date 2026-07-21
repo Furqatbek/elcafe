@@ -33,6 +33,14 @@ secret, and an HTTP-only nginx. Extra arguments pass straight through:
 ./run-local.sh backend     # just the backend + its dependencies
 ```
 
+> **No `.env` file is involved.** The launchers set `DB_PASSWORD`/`REDIS_PASSWORD` inline and take
+> every other dev default (Spring profile, JWT secret, HTTP-only nginx) from
+> `docker-compose.local.yml`, so a local run needs no secrets file. One caveat: because the command
+> passes no `--env-file`, Docker Compose still auto-loads a `./.env` in the repo root **if one happens
+> to exist** — a stray file there can silently inject values into your local run. For a clean
+> zero-config start, don't keep a `.env` in the repo root. (Production's `.env.docker` is a different
+> filename loaded explicitly with `--env-file`, so it is never picked up here.)
+
 The database starts empty on a fresh named volume (`pgdata_local`); migrations build the schema —
 no demo data.
 
