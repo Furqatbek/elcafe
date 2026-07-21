@@ -45,13 +45,13 @@ public class SubscriptionController {
     }
 
     @PostMapping("/admin/set-plan")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Set a restaurant's plan", description = "Change the caller's own restaurant plan; audited")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    @Operation(summary = "Set a restaurant's plan", description = "Owner/admin self-serve: change the caller's own restaurant plan; audited")
     public ResponseEntity<ApiResponse<BillingStatusDto>> setPlan(
             @Valid @RequestBody SetPlanRequest request,
             @AuthenticationPrincipal UserPrincipal actor) {
-        // Ownership: a tenant ADMIN may only set its OWN restaurant's plan. The restaurantId travels in
-        // the body, so hasRole('ADMIN') alone would let tenant A rewrite tenant B's plan/expiry (a
+        // Ownership: a tenant ADMIN/OWNER may only set its OWN restaurant's plan. The restaurantId
+        // travels in the body, so the role check alone would let tenant A rewrite tenant B's plan/expiry (a
         // cross-tenant DoS). validateRestaurantAccess always-enforces (SUPER_ADMIN bypasses; the
         // cross-tenant platform path is the separate SUPER_ADMIN-gated PlatformAdminController).
         authorizationService.validateRestaurantAccess(request.getRestaurantId());
