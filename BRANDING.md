@@ -22,7 +22,6 @@ VITE_BRAND_NAME=Your Brand Name
 VITE_BRAND_SHORT_NAME=YourBrand
 VITE_BRAND_TAGLINE=Your Tagline
 VITE_BRAND_SUPPORT_EMAIL=support@yourdomain.com
-VITE_BRAND_DEMO_EMAIL=admin@yourdomain.com
 VITE_BRAND_COLOR_PRIMARY=#your-color
 VITE_BRAND_COMPANY_NAME=Your Company Inc.
 ```
@@ -41,19 +40,25 @@ The central branding configuration for the frontend. All values can be overridde
 | `VITE_BRAND_TAGLINE` | Short tagline | Restaurant Delivery |
 | `VITE_BRAND_DESCRIPTION` | Full description | Restaurant Delivery Control Service |
 | `VITE_BRAND_DOMAIN` | Main domain | qahvoon.uz |
-| `VITE_BRAND_API_URL` | Production API URL | https://api.qahvoon.uz |
-| `VITE_BRAND_WEBSITE_URL` | Main website URL | https://qahvoon.uz |
+| `VITE_BRAND_API_URL` | Production API URL | https://www.qahvoon.uz |
+| `VITE_BRAND_WEBSITE_URL` | Main website URL | https://www.qahvoon.uz |
 | `VITE_BRAND_SUPPORT_EMAIL` | Support email | support@qahvoon.uz |
 | `VITE_BRAND_ADMIN_EMAIL` | Admin email | admin@qahvoon.uz |
-| `VITE_BRAND_DEMO_EMAIL` | Demo login email | admin@qahvoon.uz |
-| `VITE_BRAND_DEMO_PASSWORD` | Demo login password | Admin123! |
+| `VITE_BRAND_DEMO_EMAIL` | Login-form autofill only (not an account) | _(empty)_ |
+| `VITE_BRAND_DEMO_PASSWORD` | Login-form autofill only (not an account) | _(empty)_ |
 | `VITE_BRAND_COLOR_PRIMARY` | Primary brand color | #2563eb |
 | `VITE_BRAND_COLOR_PRIMARY_DARK` | Dark variant | #1d4ed8 |
 | `VITE_BRAND_COLOR_PRIMARY_LIGHT` | Light variant | #3b82f6 |
 | `VITE_BRAND_COLOR_ACCENT` | Accent color | #f59e0b |
 | `VITE_BRAND_LOGO_MAIN` | Main logo path | /logo.svg |
 | `VITE_BRAND_LOGO_ICON` | Favicon path | /vite.svg |
-| `VITE_BRAND_COMPANY_NAME` | Legal company name | Qahvoon Inc. |
+| `VITE_BRAND_COMPANY_NAME` | Legal company name | Qahvoon |
+
+> **`VITE_BRAND_DEMO_*` is not a login.** These two only pre-fill the login form in a throwaway demo
+> build — they create no account and grant no access, and default to empty (no hint is shown). The
+> platform seeds **no** demo or admin account; the first operator is created from
+> `ADMIN_EMAIL` / `ADMIN_PASSWORD` on an empty database (see [docs/LAUNCH.md](docs/LAUNCH.md)). Never
+> put a real password here.
 
 ### Backend (`src/main/resources/application.yml`)
 
@@ -67,7 +72,7 @@ Backend branding configuration under the `branding:` section. All values can be 
 | `BRAND_TAGLINE` | Short tagline | Restaurant Delivery |
 | `BRAND_DESCRIPTION` | Full description | Restaurant Delivery Control Service |
 | `BRAND_DOMAIN` | Main domain | qahvoon.uz |
-| `BRAND_API_URL` | Production API URL | https://api.qahvoon.uz |
+| `BRAND_API_URL` | Production API URL | https://www.qahvoon.uz |
 | `BRAND_SUPPORT_EMAIL` | Support email | support@qahvoon.uz |
 | `BRAND_TEAM_NAME` | Team name for docs | Qahvoon Team |
 
