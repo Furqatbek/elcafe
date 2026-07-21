@@ -1593,7 +1593,12 @@ Migration **V146** adds the `wallet_top_ups` table:
 
 A `BonusTransaction.TransactionType.TOP_UP` value was added; it is intended to credit the wallet just like `EARNED` but with no `order_id` link and a `topup-{id}` idempotency key.
 
-> **Known limitation**: `TOP_UP` exists in the `BonusTransaction` enum, but the V27 `bonus_transactions.check_transaction_type` CHECK constraint was never amended to include it (the allowed set is still `EARNED, SPENT, REFUNDED, EXPIRED, ADJUSTMENT, BIRTHDAY_BONUS, FIRST_ORDER_BONUS, REACTIVATION_BONUS, PROMOTION_BONUS, ADMIN_ADJUSTMENT`). On PostgreSQL a real top-up therefore violates the CHECK constraint and the insert is rejected — the wallet credit path only works where the constraint is absent (e.g. some H2 test configurations). A follow-up migration must add `TOP_UP` (and `REFERRAL_BONUS`, likewise missing) to the constraint before top-ups can settle in production.
+> **Resolved (V162)**: `TOP_UP` and `REFERRAL_BONUS` exist in the `BonusTransaction` enum but were
+> omitted from the original V27 `bonus_transactions.check_transaction_type` CHECK constraint, so on
+> PostgreSQL a real top-up or referral credit would have violated the constraint and been rejected.
+> Migration `V162__allow_referral_and_topup_transaction_types.sql` recreates the constraint with the
+> full enum set, so those transaction types now persist. (H2 test configs never hit this because
+> Flyway is disabled there and the schema comes from `ddl-auto`.)
 
 ### Lifecycle
 
