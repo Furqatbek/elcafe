@@ -56,7 +56,7 @@ public class RestaurantRequest {
     @Schema(description = "Phone number", example = "+1234567890")
     private String phone;
 
-    @Schema(description = "Email", example = "info@elcafe.com")
+    @Schema(description = "Email", example = "info@example.com")
     private String email;
 
     @Schema(description = "Website", example = "https://elcafe.com")

@@ -50,7 +50,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"newuser@elcafe.com\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+1234567890\",\n  \"role\": \"OPERATOR\"\n}"
+							"raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+1234567890\",\n  \"role\": \"OPERATOR\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/register",
@@ -90,7 +90,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"cashier@elcafe.com\",\n  \"password\": \"Cashier123!\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phone\": \"+1234567891\",\n  \"role\": \"CASHIER\"\n}"
+							"raw": "{\n  \"email\": \"cashier@example.com\",\n  \"password\": \"Cashier123!\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phone\": \"+1234567891\",\n  \"role\": \"CASHIER\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/register",
@@ -131,7 +131,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin@elcafe.com\",\n  \"password\": \"Admin123!\"\n}"
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin123!\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/login",
@@ -198,7 +198,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin@elcafe.com\"\n}"
+							"raw": "{\n  \"email\": \"admin@example.com\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/v1/auth/forgot-password",
@@ -534,7 +534,7 @@
 						"method": "PATCH",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/v1/orders/{{order_id}}/status?status=ACCEPTED&notes=Order accepted&changedBy=operator@elcafe.com",
+							"raw": "{{base_url}}/api/v1/orders/{{order_id}}/status?status=ACCEPTED&notes=Order accepted&changedBy=operator@example.com",
 							"host": ["{{base_url}}"],
 							"path": ["api", "v1", "orders", "{{order_id}}", "status"],
 							"query": [
@@ -548,7 +548,7 @@
 								},
 								{
 									"key": "changedBy",
-									"value": "operator@elcafe.com"
+									"value": "operator@example.com"
 								}
 							]
 						},

@@ -85,7 +85,7 @@ Authorization: Bearer {super_admin_token}
 Content-Type: application/json
 
 {
-  "email": "operator@elcafe.com",
+  "email": "operator@example.com",
   "password": "SecurePass123!",
   "firstName": "John",
   "lastName": "Doe",
@@ -106,7 +106,7 @@ Content-Type: application/json
     "expiresIn": 3600,
     "user": {
       "id": 1,
-      "email": "operator@elcafe.com",
+      "email": "operator@example.com",
       "role": "OPERATOR"
     }
   }
@@ -119,7 +119,7 @@ POST /api/v1/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@elcafe.com",
+  "email": "admin@example.com",
   "password": "Admin123!"
 }
 ```
@@ -285,7 +285,7 @@ Content-Type: application/json
   "name": "El Cafe Downtown",
   "description": "Best cafe in the city",
   "phone": "+998711234567",
-  "email": "downtown@elcafe.com",
+  "email": "downtown@example.com",
   "address": "123 Main St",
   "city": "Tashkent",
   "zipCode": "100000",
@@ -685,7 +685,7 @@ GET /api/v1/consumer/orders/{orderNumber}
       {
         "status": "ACCEPTED",
         "changedAt": "2025-12-05T15:32:00Z",
-        "changedBy": "operator@elcafe.com",
+        "changedBy": "operator@example.com",
         "notes": "Order accepted by restaurant"
       },
       {
@@ -1026,7 +1026,7 @@ Content-Type: application/json
   "firstName": "Maria",
   "lastName": "Garcia",
   "phone": "+998901234567",
-  "email": "maria@elcafe.com",
+  "email": "maria@example.com",
   "employeeCode": "W001",
   "pinCode": "1234",
   "role": "WAITER",
@@ -1270,7 +1270,7 @@ Content-Type: application/json
   "firstName": "Ahmed",
   "lastName": "Khan",
   "phone": "+998901234567",
-  "email": "ahmed@elcafe.com",
+  "email": "ahmed@example.com",
   "vehicleType": "MOTORCYCLE",
   "vehicleNumber": "01A123BC",
   "active": true,

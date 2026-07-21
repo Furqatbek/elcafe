@@ -105,7 +105,7 @@ If needed, you can manually set the token:
 
 ## 🎯 Bootstrap Admin
 
-No users are seeded. On first boot **against an empty database**, if both `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables are set, the platform creates a **single `SUPER_ADMIN`** account from them. It is inert on every subsequent boot (remove `ADMIN_PASSWORD` from the environment once the account exists). There are **no** `admin@elcafe.com` / `operator@elcafe.com` accounts.
+No users are seeded. On first boot **against an empty database**, if both `ADMIN_EMAIL` and `ADMIN_PASSWORD` environment variables are set, the platform creates a **single `SUPER_ADMIN`** account from them. It is inert on every subsequent boot (remove `ADMIN_PASSWORD` from the environment once the account exists). There are **no** `admin@example.com` / `operator@example.com` accounts.
 
 | Role | Email | Password |
 |------|-------|----------|

@@ -653,7 +653,7 @@ public void sendLowStockAlerts() {
     if (!lowStock.isEmpty()) {
         String message = buildLowStockMessage(lowStock);
         notificationService.sendEmail(
-            "manager@elcafe.com",
+            "manager@example.com",
             "Low Stock Alert",
             message
         );
