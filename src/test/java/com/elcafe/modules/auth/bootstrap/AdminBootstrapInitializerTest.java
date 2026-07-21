@@ -73,4 +73,17 @@ class AdminBootstrapInitializerTest {
 
         verify(userRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("users exist + ADMIN_EMAIL set for a missing user → checks existence, creates nothing")
+    void warnsWhenAdminEmailSetButDatabaseNotEmpty() {
+        when(userRepository.count()).thenReturn(3L);
+        when(userRepository.existsByEmail("newadmin@example.com")).thenReturn(false);
+
+        initializer("NewAdmin@Example.com", "S3cure-Pass!").run(null);
+
+        // The diagnostic path normalises the email and consults the DB, then creates nothing.
+        verify(userRepository).existsByEmail("newadmin@example.com");
+        verify(userRepository, never()).save(any());
+    }
 }

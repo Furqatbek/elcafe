@@ -46,7 +46,7 @@ public class AdminBootstrapInitializer implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (userRepository.count() > 0) {
-            log.debug("Bootstrap admin skipped: users already exist");
+            warnIfAdminEmailSetButInert();
             return;
         }
         if (adminEmail == null || adminEmail.isBlank()
@@ -71,5 +71,25 @@ public class AdminBootstrapInitializer implements ApplicationRunner {
         log.info("Bootstrap: created SUPER_ADMIN '{}' on empty database. "
                 + "Log in and change the password, then remove ADMIN_PASSWORD from the environment.",
                 admin.getEmail());
+    }
+
+    /**
+     * The bootstrap only ever runs against an empty users table, so on every boot after the first the
+     * ADMIN_EMAIL / ADMIN_PASSWORD variables are ignored. If an operator sets ADMIN_EMAIL expecting a
+     * fresh account but the database already has users (typically a persistent volume left over from an
+     * earlier boot), the new credentials silently do nothing. Warn with the remedy instead of a DEBUG
+     * skip so the failure is diagnosable. See docs/LAUNCH.md.
+     */
+    private void warnIfAdminEmailSetButInert() {
+        if (adminEmail != null && !adminEmail.isBlank()
+                && !userRepository.existsByEmail(adminEmail.trim().toLowerCase())) {
+            log.warn("ADMIN_EMAIL='{}' is set, but the users table is not empty and no such user exists. "
+                    + "The first-boot admin bootstrap only runs on an EMPTY database, so this account was "
+                    + "NOT created and these credentials will not work. Log in with an existing account, or "
+                    + "reset the database (e.g. `docker compose ... down -v`) and boot again to create it. "
+                    + "See docs/LAUNCH.md.", adminEmail.trim());
+        } else {
+            log.debug("Bootstrap admin skipped: users already exist");
+        }
     }
 }

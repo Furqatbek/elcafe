@@ -83,9 +83,10 @@ DB_PASSWORD=your_secure_database_password    # Generate: openssl rand -base64 24
 REDIS_PASSWORD=your_secure_redis_password    # Generate: openssl rand -base64 24
 JWT_SECRET=your_super_secret_jwt_key_here    # Generate: openssl rand -hex 32
 CORS_ORIGINS=https://qahvoon.uz,https://www.qahvoon.uz
-# First boot only — creates the SUPER_ADMIN account while the users table is empty (migrations
-# seed no users). Change the password after first login, then remove ADMIN_PASSWORD.
-ADMIN_EMAIL=you@example.com
+# First boot ONLY — creates the SUPER_ADMIN while the users table is empty (migrations seed no
+# users). Ignored on every later boot: to change it, reset the DB (docker compose ... down -v) or
+# edit the account in-app. Change the password after first login, then remove ADMIN_PASSWORD.
+ADMIN_EMAIL=admin@your-domain.example
 ADMIN_PASSWORD=a_strong_one_time_password
 ```
 

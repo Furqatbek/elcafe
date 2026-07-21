@@ -225,19 +225,24 @@ remove `ADMIN_PASSWORD`. For local dev, set them in your shell before the launch
 
 ```bash
 # bash
-ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='ChangeMe123!' ./run-local.sh
+ADMIN_EMAIL=admin@your-domain.example ADMIN_PASSWORD='ChangeMe123!' ./run-local.sh
 ```
 ```powershell
 # PowerShell
-$env:ADMIN_EMAIL="you@example.com"; $env:ADMIN_PASSWORD="ChangeMe123!"; ./run-local.ps1
+$env:ADMIN_EMAIL="admin@your-domain.example"; $env:ADMIN_PASSWORD="ChangeMe123!"; ./run-local.ps1
 ```
+
+> **`ADMIN_EMAIL` / `ADMIN_PASSWORD` take effect only on the first boot against an empty database.**
+> On later boots they're ignored — so if you re-run with different values, or an earlier boot already
+> created an admin, the new credentials silently won't work. Reset the database first
+> (`docker compose … down -v`) or change the account from inside the app.
 
 ## 🔐 Authentication Flow
 
 1. **Login** - POST `/api/v1/auth/login`
 ```json
 {
-  "email": "you@example.com",
+  "email": "admin@your-domain.example",
   "password": "ChangeMe123!"
 }
 ```
@@ -252,7 +257,7 @@ $env:ADMIN_EMAIL="you@example.com"; $env:ADMIN_PASSWORD="ChangeMe123!"; ./run-lo
     "tokenType": "Bearer",
     "user": {
       "id": 1,
-      "email": "you@example.com",
+      "email": "admin@your-domain.example",
       "role": "ADMIN"
     }
   }
