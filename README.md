@@ -583,7 +583,7 @@ This repository does not currently include a license file; all rights are reserv
 
 ## 📧 Support
 
-For support, email support@elcafe.com or open an issue in the repository.
+For support, email support@qahvoon.uz or open an issue in the repository.
 
 ## 🎉 Acknowledgments
 

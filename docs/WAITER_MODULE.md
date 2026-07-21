@@ -1178,8 +1178,8 @@ class WaiterControllerIntegrationTest {
 
 For issues or questions:
 - **GitHub Issues**: [github.com/yourrepo/issues](https://github.com/yourrepo/issues)
-- **Email**: support@elcafe.com
-- **Documentation**: [docs.elcafe.com](https://docs.elcafe.com)
+- **Email**: support@qahvoon.uz
+- **Documentation**: [docs.qahvoon.uz](https://docs.qahvoon.uz)
 
 ---
 

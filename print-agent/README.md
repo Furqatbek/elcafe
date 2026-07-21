@@ -7,7 +7,7 @@ A lightweight print agent that runs on your local network and connects to the El
 ```
 ┌─────────────────┐         WebSocket          ┌─────────────────┐
 │  Cloud Backend  │ ◄─────────────────────────► │  Print Agent    │
-│  (elcafe.com)   │                             │  (your network) │
+│  (qahvoon.uz)   │                             │  (your network) │
 └─────────────────┘                             └────────┬────────┘
                                                          │
                                                          │ ESC/POS

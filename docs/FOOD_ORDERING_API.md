@@ -81,7 +81,7 @@ The El Cafe Food Ordering System provides a complete end-to-end solution for foo
 ### Base URL
 
 ```
-Production: https://api.elcafe.com/api/v1
+Production: https://www.qahvoon.uz/api/v1
 Development: http://localhost:8080/api/v1
 ```
 
@@ -832,7 +832,7 @@ Delivery: 123 Main Street, Tashkent
 Courier: Ali Karimov
 Phone: +998909876543
 Estimated delivery: 11:40 AM
-Track: elcafe.com/order/track/ORD-A7B3C4D5?token=<trackingToken>
+Track: qahvoon.uz/order/track/ORD-A7B3C4D5?token=<trackingToken>
 ```
 
 **Order Delivered (to Customer):**
@@ -840,7 +840,7 @@ Track: elcafe.com/order/track/ORD-A7B3C4D5?token=<trackingToken>
 ✅ Your order has been delivered!
 Order: ORD-A7B3C4D5
 Thank you for choosing El Cafe!
-Rate your experience: elcafe.com/rate/ORD-A7B3C4D5
+Rate your experience: qahvoon.uz/rate/ORD-A7B3C4D5
 ```
 
 ---

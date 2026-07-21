@@ -20,19 +20,19 @@ public class OpenApiConfig {
     @Value("${server.port:8080}")
     private String serverPort;
 
-    @Value("${branding.name:El Cafe}")
+    @Value("${branding.name:Qahvoon}")
     private String brandName;
 
     @Value("${branding.description:Restaurant Delivery Control Service}")
     private String brandDescription;
 
-    @Value("${branding.team-name:ElCafe Team}")
+    @Value("${branding.team-name:Qahvoon Team}")
     private String teamName;
 
-    @Value("${branding.support-email:support@elcafe.com}")
+    @Value("${branding.support-email:support@qahvoon.uz}")
     private String supportEmail;
 
-    @Value("${branding.api-url:https://api.elcafe.com}")
+    @Value("${branding.api-url:https://www.qahvoon.uz}")
     private String apiUrl;
 
     @Bean

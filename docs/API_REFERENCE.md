@@ -2916,7 +2916,7 @@ Authorization: Bearer {token}
       "section": "Main Hall",
       "active": true,
       "notes": "Near the window",
-      "qrCode": "https://elcafe.com/qr/table-1",
+      "qrCode": "https://qahvoon.uz/qr/table-1",
       "createdAt": "2025-12-01T10:00:00Z",
       "updatedAt": "2025-12-14T15:00:00Z"
     }
