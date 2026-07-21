@@ -54,25 +54,29 @@ The ElCafe Inventory Management System provides comprehensive tracking and manag
 ```
 ┌──────────────────────────────────────────────────────┐
 │              Frontend (React)                        │
-│  • Inventory.jsx - Main inventory page               │
-│  • Stock modals - Add/Adjust stock                   │
-│  • Transaction viewer                                │
+│  • pages/inventory/ - multi-page module              │
+│    (InventoryIngredients, InventoryWaste,            │
+│     InventoryValuation, ProductionBatches, ...)      │
+│  • pages/InventoryAnalytics.jsx                      │
 └──────────────┬───────────────────────────────────────┘
                │
                ▼ REST API
 ┌──────────────────────────────────────────────────────┐
-│         InventoryController                          │
-│  • GET /api/v1/inventory/ingredients                 │
+│   InventoryIngredientController (+ siblings)         │
+│  • GET  /api/v1/inventory/ingredients                │
 │  • POST /api/v1/inventory/ingredients                │
-│  • PUT /api/v1/inventory/ingredients/{id}            │
-│  • POST /api/v1/inventory/{id}/add-stock             │
-│  • POST /api/v1/inventory/{id}/adjust-stock          │
-│  • GET /api/v1/inventory/{id}/transactions           │
+│  • PUT  /api/v1/inventory/ingredients/{id}           │
+│  • POST .../ingredients/{id}/add-stock               │
+│  • POST .../ingredients/{id}/adjust-stock            │
+│  • GET  .../ingredients/{id}/transactions            │
+│  Siblings: Waste, Valuation, IngredientCategory,     │
+│  InventoryBatch, ProductionBatch, StockCount,        │
+│  Supplier, Recipe, POSuggestion controllers          │
 └──────────────┬───────────────────────────────────────┘
                │
                ▼
 ┌──────────────────────────────────────────────────────┐
-│           InventoryService                           │
+│      InventoryService (+ related services)           │
 │  • createIngredient()                                │
 │  • updateIngredient()                                │
 │  • addStock()                                        │
@@ -83,11 +87,10 @@ The ElCafe Inventory Management System provides comprehensive tracking and manag
                │
                ├────────────────┬─────────────────┐
                ▼                ▼                 ▼
-      ┌────────────┐   ┌────────────┐   ┌────────────┐
-      │ Ingredient │   │ Stock      │   │Restaurant  │
-      │ Repository │   │Transaction │   │Repository  │
-      │            │   │ Repository │   │            │
-      └────────────┘   └────────────┘   └────────────┘
+  ┌─────────────────────┐ ┌──────────────────────┐ ┌────────────┐
+  │ InventoryIngredient  │ │ InventoryTransaction  │ │ Restaurant │
+  │ Repository           │ │ Repository            │ │ Repository │
+  └─────────────────────┘ └──────────────────────┘ └────────────┘
 ```
 
 ### Technology Stack
@@ -112,70 +115,83 @@ The ElCafe Inventory Management System provides comprehensive tracking and manag
          │ 1
          │
          │ N
-┌────────▼──────────────┐
-│  Ingredient           │
-│                       │
-│ - name                │
-│ - category            │
-│ - unit                │
-│ - currentStock        │
-│ - minStockLevel       │
-│ - reorderPoint        │
-│ - reorderQuantity     │
-│ - costPerUnit         │
-│ - supplier            │
-│ - expirationDate      │
-└──────┬────────────────┘
+┌────────▼───────────────────────┐
+│  InventoryIngredient            │
+│  (table: inventory_ingredients) │
+│                                 │
+│ - name                          │
+│ - category (FK category_id →    │
+│    IngredientCategory)          │
+│ - unit                          │
+│ - currentStock                  │
+│ - minimumStock                  │
+│ - reorderLevel                  │
+│ - reorderQuantity               │
+│ - costPerUnit                   │
+│ - weightedAverageCost           │
+│ - supplier / supplierId (FK)    │
+│ - sku                           │
+│ - active                        │
+│ - trackExpiry / expiryAlertDays │
+└──────┬──────────────────────────┘
        │ 1
        │
        │ N
-┌──────▼────────────────┐
-│ StockTransaction      │
-│                       │
-│ - transactionType     │
-│ - quantity            │
-│ - stockBefore         │
-│ - stockAfter          │
-│ - notes               │
-│ - performedBy         │
-│ - transactionDate     │
-└───────────────────────┘
+┌──────▼──────────────────────────┐
+│ InventoryTransaction            │
+│  (table: inventory_transactions)│
+│                                 │
+│ - transactionType               │
+│ - quantity                      │
+│ - stockBefore                   │
+│ - stockAfter                    │
+│ - notes                         │
+│ - performedBy                   │
+│ - transactionDate               │
+└─────────────────────────────────┘
 ```
 
-### Table: `ingredients`
+### Table: `inventory_ingredients`
 
-Stores all ingredient and supply items for each restaurant.
+Stores all ingredient and supply items for each restaurant. (Entity class: `Ingredient`, mapped as JPA entity name `InventoryIngredient`.)
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | BIGSERIAL | Primary key |
 | restaurant_id | BIGINT | FK to restaurants |
-| name | VARCHAR(100) | Ingredient name |
-| category | VARCHAR(50) | MEAT, DAIRY, VEGETABLE, etc. |
-| unit | VARCHAR(20) | kg, L, pieces, boxes, etc. |
-| current_stock | DECIMAL(10,2) | Current quantity in stock |
-| min_stock_level | DECIMAL(10,2) | Minimum acceptable stock level |
-| reorder_point | DECIMAL(10,2) | Stock level to trigger reorder |
+| category_id | BIGINT | FK to `ingredient_categories` (nullable) |
+| name | VARCHAR(200) | Ingredient name |
+| description | TEXT | Description / notes |
+| unit | VARCHAR(50) | kg, g, L, ml, pieces, etc. |
+| current_stock | DECIMAL(10,3) | Current quantity in stock |
+| minimum_stock | DECIMAL(10,3) | Minimum acceptable stock level |
+| reorder_level | DECIMAL(10,3) | Stock level to trigger reorder |
 | reorder_quantity | DECIMAL(10,2) | Suggested reorder amount |
 | cost_per_unit | DECIMAL(10,2) | Cost per unit in local currency |
-| supplier | VARCHAR(100) | Preferred supplier name |
-| supplier_contact | VARCHAR(100) | Supplier phone/email |
-| expiration_date | DATE | Expiration date (if applicable) |
-| notes | TEXT | Additional notes |
-| is_active | BOOLEAN | Active status |
+| weighted_average_cost | DECIMAL(15,4) | Weighted-average cost (recalculated on each purchase) |
+| supplier | VARCHAR(100) | Supplier name (free text) |
+| supplier_id | BIGINT | FK to inventory `suppliers` (nullable) |
+| sku | VARCHAR(50) | Stock keeping unit |
+| active | BOOLEAN | Active status |
+| track_inventory | BOOLEAN | Whether stock is tracked |
+| track_expiry | BOOLEAN | Whether batch expiry is tracked |
+| default_shelf_life_days | INTEGER | Default shelf life for new batches |
+| expiry_alert_days | INTEGER | Days before expiry to trigger alert |
+| version | BIGINT | Optimistic-lock version |
 | created_at | TIMESTAMP | Creation timestamp |
 | updated_at | TIMESTAMP | Last update timestamp |
 
+> **Category:** `category` is a `@ManyToOne` to `IngredientCategory` (FK `category_id`), managed via the ingredient-categories API — not an inline `VARCHAR` enum.
+> **Expiry:** there is no `expiration_date` column on the ingredient. Expiry is controlled by `track_expiry` / `default_shelf_life_days` / `expiry_alert_days` and tracked per batch (see `inventory_batches`).
+
 **Categories:**
-- `MEAT` - Meats and poultry
-- `DAIRY` - Milk, cheese, butter, etc.
-- `VEGETABLE` - Fresh vegetables
-- `FRUIT` - Fresh fruits
-- `GRAIN` - Rice, pasta, flour, etc.
-- `SPICE` - Spices and seasonings
-- `BEVERAGE` - Drinks and liquids
-- `SAUCE` - Sauces and condiments
-- `OTHER` - Miscellaneous items
+
+Ingredient categories are **not** a hard-coded enum. They are stored in their own table (`ingredient_categories`, entity `IngredientCategory`) and referenced from an ingredient via `category_id` (`@ManyToOne`). Categories are created and managed dynamically through the ingredient-categories API:
+
+- `GET /api/v1/inventory/ingredient-categories` - list categories
+- `POST /api/v1/inventory/ingredient-categories` - create a category
+- `PUT /api/v1/inventory/ingredient-categories/{id}` - update a category
+- `DELETE /api/v1/inventory/ingredient-categories/{id}` - delete a category
 
 **Units:**
 - `kg` - Kilograms
@@ -188,15 +204,15 @@ Stores all ingredient and supply items for each restaurant.
 - `cans` - Cans
 - `bags` - Bags
 
-### Table: `stock_transactions`
+### Table: `inventory_transactions`
 
-Records all stock movements for audit trail and usage analysis.
+Records all stock movements for audit trail and usage analysis. (Entity: `InventoryTransaction`.)
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | BIGSERIAL | Primary key |
-| ingredient_id | BIGINT | FK to ingredients |
-| transaction_type | VARCHAR(30) | PURCHASE, USAGE, ADJUSTMENT, WASTE, etc. |
+| ingredient_id | BIGINT | FK to inventory_ingredients |
+| transaction_type | VARCHAR(50) | PURCHASE, ORDER_DEDUCTION, ADJUSTMENT, WASTE, etc. |
 | quantity | DECIMAL(10,2) | Quantity added/removed |
 | stock_before | DECIMAL(10,2) | Stock level before transaction |
 | stock_after | DECIMAL(10,2) | Stock level after transaction |
@@ -208,14 +224,17 @@ Records all stock movements for audit trail and usage analysis.
 | transaction_date | TIMESTAMP | When transaction occurred |
 | created_at | TIMESTAMP | Record creation timestamp |
 
-**Transaction Types:**
-- `PURCHASE` - Stock purchased from supplier
-- `USAGE` - Stock used in production
-- `ADJUSTMENT` - Manual stock correction
-- `WASTE` - Stock discarded (spoilage, damage)
-- `TRANSFER` - Transferred to another location
-- `RETURN` - Returned to supplier
-- `INITIAL` - Initial stock entry
+**Transaction Types** (enum `TransactionType`):
+- `PURCHASE` - Stock added from supplier
+- `ORDER_DEDUCTION` - Stock deducted for a customer order
+- `ADJUSTMENT` - Manual stock adjustment
+- `WASTE` - Stock wasted/spoiled
+- `RETURN` - Stock returned
+- `RESTOCK` - Stock replenished
+- `INITIAL_STOCK` - Initial stock entry
+- `TRANSFER` - Stock transferred between locations
+- `PRODUCTION_INPUT` - Raw ingredients consumed for a production batch
+- `PRODUCTION_OUTPUT` - Prepared item produced from a production batch
 
 ---
 
@@ -230,43 +249,68 @@ Content-Type: application/json
 
 {
   "restaurantId": 1,
+  "categoryId": 7,
   "name": "Chicken Breast",
-  "category": "MEAT",
+  "description": "Store in refrigerator at 4°C",
   "unit": "kg",
   "currentStock": 50.0,
-  "minStockLevel": 10.0,
-  "reorderPoint": 15.0,
+  "minimumStock": 10.0,
+  "reorderLevel": 15.0,
   "reorderQuantity": 30.0,
   "costPerUnit": 8.50,
   "supplier": "Fresh Poultry Co.",
-  "supplierContact": "+1-555-1234",
-  "expirationDate": "2025-12-25",
-  "notes": "Store in refrigerator at 4°C"
+  "supplierId": 3,
+  "sku": "CHK-BRST-01",
+  "active": true,
+  "trackInventory": true,
+  "trackExpiry": true,
+  "defaultShelfLifeDays": 5,
+  "expiryAlertDays": 2
 }
 ```
 
 **Response:**
+
+Returns `ApiResponse<IngredientResponse>`.
+
 ```json
 {
-  "id": 42,
-  "restaurantId": 1,
-  "name": "Chicken Breast",
-  "category": "MEAT",
-  "unit": "kg",
-  "currentStock": 50.0,
-  "minStockLevel": 10.0,
-  "reorderPoint": 15.0,
-  "reorderQuantity": 30.0,
-  "costPerUnit": 8.50,
-  "supplier": "Fresh Poultry Co.",
-  "supplierContact": "+1-555-1234",
-  "expirationDate": "2025-12-25",
-  "notes": "Store in refrigerator at 4°C",
-  "isActive": true,
-  "createdAt": "2025-12-15T10:30:00",
-  "updatedAt": "2025-12-15T10:30:00"
+  "success": true,
+  "message": "Ingredient created successfully",
+  "data": {
+    "id": 42,
+    "restaurantId": 1,
+    "restaurantName": "Downtown Branch",
+    "categoryId": 7,
+    "categoryName": "Meat",
+    "name": "Chicken Breast",
+    "description": "Store in refrigerator at 4°C",
+    "unit": "kg",
+    "currentStock": 50.0,
+    "minimumStock": 10.0,
+    "reorderLevel": 15.0,
+    "reorderQuantity": 30.0,
+    "costPerUnit": 8.50,
+    "supplier": "Fresh Poultry Co.",
+    "supplierId": 3,
+    "supplierName": "Fresh Poultry Co.",
+    "sku": "CHK-BRST-01",
+    "active": true,
+    "trackInventory": true,
+    "trackExpiry": true,
+    "defaultShelfLifeDays": 5,
+    "expiryAlertDays": 2,
+    "activeBatchCount": 1,
+    "expiringBatchCount": 0,
+    "expiredBatchCount": 0,
+    "createdAt": "2025-12-15T10:30:00",
+    "updatedAt": "2025-12-15T10:30:00"
+  },
+  "timestamp": "2025-12-15T10:30:00"
 }
 ```
+
+> **Note:** When both `currentStock` and `costPerUnit` are greater than zero, the create call also seeds the initial stock through the financial purchase-order pipeline (create → receive → pay), producing an inventory batch and cost history; the returned ingredient then reflects the received stock and weighted-average cost. (`weightedAverageCost` lives on the entity and the valuation views — it is **not** a field of `IngredientResponse`, so it does not appear in this JSON.)
 
 ### Updating an Ingredient
 
@@ -282,6 +326,8 @@ Content-Type: application/json
 }
 ```
 
+> `PUT` replaces the ingredient from a full `IngredientRequest`, so the required fields (`restaurantId`, `name`, `unit`, `currentStock`, `minimumStock`, `reorderLevel`) must be present, along with any optional fields (`categoryId`, `supplierId`, `sku`, `description`, `active`, `trackInventory`, `trackExpiry`, `defaultShelfLifeDays`, `expiryAlertDays`).
+
 ### Deleting an Ingredient
 
 **API Endpoint:**
@@ -290,40 +336,50 @@ DELETE /api/v1/inventory/ingredients/{id}
 ```
 
 **Soft Delete:**
-Instead of actual deletion, sets `is_active = false` to preserve historical data.
+Instead of actual deletion, sets `active = false` to preserve historical data.
 
 ### Listing Ingredients
 
 **API Endpoint:**
 ```http
-GET /api/v1/inventory/ingredients?restaurantId=1&page=0&size=20
+GET /api/v1/inventory/ingredients?restaurantId=1&categoryId=7
 ```
 
+- `restaurantId` (required)
+- `categoryId` (optional)
+
 **Response:**
+
+Returns `ApiResponse<List<IngredientResponse>>` — a plain list in `data`. This is **not** a Spring `Page` (there is no `content` / `totalElements` / `totalPages`), and list items have **no** `status` field.
+
 ```json
 {
-  "content": [
+  "success": true,
+  "message": "Ingredients retrieved successfully",
+  "data": [
     {
       "id": 42,
       "name": "Chicken Breast",
-      "category": "MEAT",
+      "categoryId": 7,
+      "categoryName": "Meat",
       "currentStock": 50.0,
       "unit": "kg",
-      "minStockLevel": 10.0,
-      "status": "ADEQUATE"
+      "minimumStock": 10.0,
+      "reorderLevel": 15.0,
+      "sku": "CHK-BRST-01",
+      "active": true
     }
   ],
-  "totalElements": 45,
-  "totalPages": 3,
-  "size": 20,
-  "number": 0
+  "timestamp": "2025-12-15T10:30:00"
 }
 ```
 
 **Stock Status:**
-- `CRITICAL` - Stock below minimum level
-- `LOW` - Stock at or below reorder point
-- `ADEQUATE` - Stock above reorder point
+
+`IngredientResponse` does not include a `status` field. Low-stock / reorder conditions are exposed through dedicated endpoints (`GET .../ingredients/low-stock`, `GET .../ingredients/reorder`) or computed on the client from `currentStock` vs `minimumStock` / `reorderLevel`:
+- Below `minimumStock` → critical
+- At or below `reorderLevel` → low / needs reorder
+- Otherwise → adequate
 
 ---
 
@@ -342,38 +398,37 @@ Content-Type: application/json
   "quantity": 25.0,
   "costPerUnit": 8.50,
   "supplier": "Fresh Poultry Co.",
-  "notes": "Weekly delivery - Invoice #12345",
-  "performedBy": "John Doe"
+  "notes": "Weekly delivery - Invoice #12345"
 }
 ```
+
+> `performedBy` is `@Deprecated` and **ignored** — the server records the authenticated user. Do not send it.
 
 **Process:**
 1. Validates quantity is positive
 2. Calculates new stock level: `currentStock + quantity`
 3. Creates `PURCHASE` transaction record
 4. Updates ingredient's `current_stock`
-5. Records stock before/after values
+5. Records balance before/after on the transaction
 
 **Response:**
+
+Returns `ApiResponse<IngredientResponse>` — the reloaded ingredient only. There is **no** `previousStock` and **no** nested `transaction` object (the `PURCHASE` transaction is still recorded internally and is visible via the transactions endpoint).
+
 ```json
 {
   "success": true,
   "message": "Stock added successfully",
-  "ingredient": {
+  "data": {
     "id": 42,
     "name": "Chicken Breast",
     "currentStock": 75.0,
-    "previousStock": 50.0
+    "minimumStock": 10.0,
+    "reorderLevel": 15.0,
+    "unit": "kg",
+    "active": true
   },
-  "transaction": {
-    "id": 156,
-    "transactionType": "PURCHASE",
-    "quantity": 25.0,
-    "stockBefore": 50.0,
-    "stockAfter": 75.0,
-    "totalCost": 212.50,
-    "transactionDate": "2025-12-15T14:30:00"
-  }
+  "timestamp": "2025-12-15T14:30:00"
 }
 ```
 
@@ -388,10 +443,11 @@ Content-Type: application/json
 
 {
   "newQuantity": 45.0,
-  "notes": "Inventory count adjustment - found 5kg spoiled",
-  "performedBy": "Jane Smith"
+  "notes": "Inventory count adjustment - found 5kg spoiled"
 }
 ```
+
+> This endpoint requires the `ADMIN`, `OWNER`, or `MANAGER` role. `performedBy` is `@Deprecated` and **ignored** — the server records the authenticated user. Do not send it.
 
 **Process:**
 1. Calculates difference: `newQuantity - currentStock`
@@ -400,67 +456,70 @@ Content-Type: application/json
 4. Records reason in notes
 
 **Response:**
+
+Returns `ApiResponse<IngredientResponse>` — the reloaded ingredient only. There is **no** `previousStock` and **no** nested `transaction` object.
+
 ```json
 {
   "success": true,
   "message": "Stock adjusted successfully",
-  "ingredient": {
+  "data": {
     "id": 42,
     "name": "Chicken Breast",
     "currentStock": 45.0,
-    "previousStock": 50.0
+    "minimumStock": 10.0,
+    "reorderLevel": 15.0,
+    "unit": "kg",
+    "active": true
   },
-  "transaction": {
-    "id": 157,
-    "transactionType": "ADJUSTMENT",
-    "quantity": -5.0,
-    "stockBefore": 50.0,
-    "stockAfter": 45.0,
-    "notes": "Inventory count adjustment - found 5kg spoiled"
-  }
+  "timestamp": "2025-12-15T16:00:00"
 }
 ```
 
-### Recording Usage
+### Stock Deduction (Orders & Production)
 
-Typically called automatically when orders are completed or recipes are prepared.
+There is **no** `use-stock` endpoint. Stock is deducted **internally** by the system:
 
-**API Endpoint:**
-```http
-POST /api/v1/inventory/ingredients/{id}/use-stock
-Content-Type: application/json
-
-{
-  "quantity": 2.5,
-  "notes": "Used in Order #3421 - Grilled Chicken",
-  "performedBy": "Kitchen Staff"
-}
-```
+- Completing/handling a customer order creates `ORDER_DEDUCTION` transactions for the recipe ingredients.
+- Running a production batch creates `PRODUCTION_INPUT` (raw ingredients consumed) and `PRODUCTION_OUTPUT` (item produced) transactions.
 
 **Process:**
-1. Validates sufficient stock available
-2. Deducts quantity from current stock
-3. Creates `USAGE` transaction
-4. Checks if stock falls below reorder point
+1. Validates sufficient stock is available (`Ingredient.deductStock` throws on shortfall)
+2. Deducts the quantity from `currentStock` (guarded by `@Version` optimistic locking)
+3. Records an `ORDER_DEDUCTION` / `PRODUCTION_INPUT` transaction
+4. Reorder/low-stock status is derived from the new `currentStock`
+
+Consumption can be reviewed via the valuation/consumption endpoints (see [API Reference](#api-reference)).
 
 ### Recording Waste
 
+Waste is recorded through the **Waste** controller (`WasteController`), not the ingredient controller. There is no `.../ingredients/{id}/record-waste` endpoint.
+
 **API Endpoint:**
 ```http
-POST /api/v1/inventory/ingredients/{id}/record-waste
+POST /api/v1/inventory/waste
 Content-Type: application/json
 
 {
+  "restaurantId": 1,
+  "ingredientId": 42,
+  "batchId": 15,
+  "wasteDate": "2025-12-14",
   "quantity": 3.0,
-  "reason": "Expired on 2025-12-14",
-  "performedBy": "Manager"
+  "unitCost": 8.50,
+  "wasteReason": "EXPIRED",
+  "notes": "Expired stock"
 }
 ```
 
+- `batchId` and `unitCost` are optional (`unitCost` defaults to the ingredient's cost).
+- `wasteReason` is a `WasteRecord.WasteReason` enum value; allowed values are available from `GET /api/v1/inventory/waste/reasons`.
+- Returns `ApiResponse<WasteRecordResponse>`.
+
 **Process:**
-1. Deducts quantity from stock
-2. Creates `WASTE` transaction
-3. Tracks waste patterns for analysis
+1. Deducts the quantity from stock and creates a `WASTE` transaction
+2. Records a `WasteRecord` for reporting
+3. Waste totals are available via `GET /api/v1/inventory/waste/report?restaurantId=&startDate=&endDate=`
 
 ---
 
@@ -515,9 +574,9 @@ SELECT
     DATE(transaction_date) AS usage_date,
     SUM(ABS(quantity)) AS total_used,
     COUNT(*) AS transaction_count
-FROM stock_transactions
+FROM inventory_transactions
 WHERE ingredient_id = 42
-  AND transaction_type = 'USAGE'
+  AND transaction_type = 'ORDER_DEDUCTION'
   AND transaction_date >= NOW() - INTERVAL '30 days'
 GROUP BY DATE(transaction_date)
 ORDER BY usage_date DESC;
@@ -529,13 +588,13 @@ Calculate total inventory value:
 
 ```sql
 SELECT
-    i.category,
+    i.category_id,
     SUM(i.current_stock * i.cost_per_unit) AS total_value,
     COUNT(*) AS item_count
-FROM ingredients i
+FROM inventory_ingredients i
 WHERE i.restaurant_id = 1
-  AND i.is_active = true
-GROUP BY i.category
+  AND i.active = true
+GROUP BY i.category_id
 ORDER BY total_value DESC;
 ```
 
@@ -558,8 +617,8 @@ GET /api/v1/inventory/ingredients/low-stock?restaurantId=1
       "id": 42,
       "name": "Chicken Breast",
       "currentStock": 8.0,
-      "minStockLevel": 10.0,
-      "reorderPoint": 15.0,
+      "minimumStock": 10.0,
+      "reorderLevel": 15.0,
       "unit": "kg",
       "status": "CRITICAL",
       "daysUntilStockout": 2
@@ -568,8 +627,8 @@ GET /api/v1/inventory/ingredients/low-stock?restaurantId=1
       "id": 43,
       "name": "Olive Oil",
       "currentStock": 12.0,
-      "minStockLevel": 5.0,
-      "reorderPoint": 10.0,
+      "minimumStock": 5.0,
+      "reorderLevel": 10.0,
       "unit": "L",
       "status": "LOW",
       "daysUntilStockout": 5
@@ -599,7 +658,7 @@ public void sendLowStockAlerts() {
 
         // Also send SMS for critical items
         List<Ingredient> critical = lowStock.stream()
-            .filter(i -> i.getCurrentStock().compareTo(i.getMinStockLevel()) < 0)
+            .filter(i -> i.getCurrentStock().compareTo(i.getMinimumStock()) < 0)
             .toList();
 
         if (!critical.isEmpty()) {
@@ -631,11 +690,11 @@ GET /api/v1/inventory/ingredients/reorder?restaurantId=1
       "id": 42,
       "name": "Chicken Breast",
       "currentStock": 8.0,
-      "reorderPoint": 15.0,
+      "reorderLevel": 15.0,
       "reorderQuantity": 30.0,
       "unit": "kg",
       "supplier": "Fresh Poultry Co.",
-      "supplierContact": "+1-555-1234",
+      "supplierId": 3,
       "costPerUnit": 8.50,
       "estimatedCost": 255.00,
       "priority": "HIGH"
@@ -646,28 +705,26 @@ GET /api/v1/inventory/ingredients/reorder?restaurantId=1
 }
 ```
 
-### Generating Purchase Orders
+### Purchase-Order Suggestions
+
+> **Important:** `PurchaseOrder` is **not** part of the inventory module. It lives in the **financial** module (`com.elcafe.modules.financial`, entity `PurchaseOrder`, table `financial_purchase_orders`) and is created by the financial `PurchaseOrderService`.
+
+The inventory module only exposes **PO suggestions** derived from reorder levels (`POSuggestionController`):
+
+```http
+GET  /api/v1/inventory/po-suggestions?restaurantId=1
+GET  /api/v1/inventory/po-suggestions/count?restaurantId=1
+POST /api/v1/inventory/po-suggestions/generate
+POST /api/v1/inventory/po-suggestions/generate-all
+```
+
+The following is **illustrative only** — the actual purchase order is built and persisted by the financial module, not the inventory module:
 
 ```java
-public PurchaseOrder generatePurchaseOrder(Long restaurantId) {
-    List<Ingredient> reorderList = inventoryService.getReorderList(restaurantId);
-
-    PurchaseOrder po = new PurchaseOrder();
-    po.setRestaurantId(restaurantId);
-    po.setOrderDate(LocalDateTime.now());
-
-    for (Ingredient ingredient : reorderList) {
-        PurchaseOrderItem item = new PurchaseOrderItem();
-        item.setIngredientId(ingredient.getId());
-        item.setQuantity(ingredient.getReorderQuantity());
-        item.setCostPerUnit(ingredient.getCostPerUnit());
-        item.setSupplier(ingredient.getSupplier());
-
-        po.addItem(item);
-    }
-
-    return purchaseOrderRepository.save(po);
-}
+// Illustrative: real PurchaseOrder creation lives in the financial module's
+// PurchaseOrderService (create -> receive -> pay), not in inventory.
+PurchaseOrder po = purchaseOrderService.createAndFinalize(
+        order, items, "CASH", LocalDate.now(), performedBy);
 ```
 
 ---
@@ -676,47 +733,70 @@ public PurchaseOrder generatePurchaseOrder(Long restaurantId) {
 
 ### Complete Endpoint List
 
+Ingredient endpoints (`InventoryIngredientController`):
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/inventory/ingredients` | List all ingredients |
+| GET | `/api/v1/inventory/ingredients` | List ingredients (`restaurantId` required, `categoryId` optional; plain list) |
 | GET | `/api/v1/inventory/ingredients/{id}` | Get ingredient details |
 | POST | `/api/v1/inventory/ingredients` | Create new ingredient |
 | PUT | `/api/v1/inventory/ingredients/{id}` | Update ingredient |
 | DELETE | `/api/v1/inventory/ingredients/{id}` | Delete ingredient |
-| POST | `/api/v1/inventory/ingredients/{id}/add-stock` | Add stock (purchase) |
-| POST | `/api/v1/inventory/ingredients/{id}/adjust-stock` | Adjust stock level |
-| POST | `/api/v1/inventory/ingredients/{id}/use-stock` | Record usage |
-| POST | `/api/v1/inventory/ingredients/{id}/record-waste` | Record waste |
+| POST | `/api/v1/inventory/ingredients/{id}/add-stock` | Add stock |
+| POST | `/api/v1/inventory/ingredients/{id}/adjust-stock` | Adjust stock level (ADMIN/OWNER/MANAGER) |
 | GET | `/api/v1/inventory/ingredients/{id}/transactions` | Get transaction history |
+| GET | `/api/v1/inventory/ingredients/{id}/reconcile` | Reconcile one ingredient's stock |
 | GET | `/api/v1/inventory/ingredients/low-stock` | Get low stock items |
 | GET | `/api/v1/inventory/ingredients/reorder` | Get reorder list |
-| GET | `/api/v1/inventory/ingredients/expiring` | Get expiring items |
-| GET | `/api/v1/inventory/categories` | List all categories |
-| GET | `/api/v1/inventory/reports/usage` | Usage report |
-| GET | `/api/v1/inventory/reports/waste` | Waste report |
+| GET | `/api/v1/inventory/ingredients/reconcile` | Reconcile all ingredients |
+
+Sibling controllers:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET/POST/PUT/DELETE | `/api/v1/inventory/ingredient-categories` | Manage ingredient categories |
+| POST | `/api/v1/inventory/waste` | Record waste |
+| GET | `/api/v1/inventory/waste/report` | Waste report |
+| GET | `/api/v1/inventory/waste/reasons` | Allowed waste reasons |
+| GET | `/api/v1/inventory/batches/expiring` | Expiring batches |
+| GET | `/api/v1/inventory/batches/expired` | Expired batches |
+| GET | `/api/v1/inventory/valuation/calculate` | Inventory valuation |
+| GET | `/api/v1/inventory/valuation/consumption/{ingredientId}` | Ingredient consumption |
+| GET | `/api/v1/inventory/valuation/consumption/summary` | Consumption summary |
+| GET | `/api/v1/inventory/po-suggestions` | Purchase-order suggestions |
+| GET/POST | `/api/v1/inventory/suppliers` | Manage suppliers |
+| GET/POST | `/api/v1/inventory/recipes` | Manage recipes |
+| GET/POST | `/api/v1/inventory/stock-counts` | Manage stock counts |
+| GET/POST | `/api/v1/inventory/production-batches` | Manage production batches |
+
+**Previously documented but do NOT exist (corrected):**
+- `POST .../ingredients/{id}/use-stock` — stock deducts internally via orders/production
+- `POST .../ingredients/{id}/record-waste` — use `POST /api/v1/inventory/waste`
+- `GET .../ingredients/expiring` — use `GET /api/v1/inventory/batches/expiring`
+- `GET /api/v1/inventory/categories` — use `GET /api/v1/inventory/ingredient-categories`
+- `GET /api/v1/inventory/reports/usage` — use `GET /api/v1/inventory/valuation/consumption/*`
+- `GET /api/v1/inventory/reports/waste` — use `GET /api/v1/inventory/waste/report`
 
 ### Query Parameters
 
-**Pagination:**
-- `page` - Page number (0-indexed)
-- `size` - Items per page (default: 20)
+The ingredient list and transaction endpoints return **plain lists** (no Spring pagination — no `page` / `size` / `sort`).
 
-**Filtering:**
-- `restaurantId` - Filter by restaurant
-- `category` - Filter by category
-- `isActive` - Filter active/inactive (default: true)
-- `search` - Search by name
+**Ingredient list** (`GET /api/v1/inventory/ingredients`):
+- `restaurantId` (required) - restaurant to list ingredients for
+- `categoryId` (optional) - filter by ingredient category
 
-**Sorting:**
-- `sort` - Sort field and direction (e.g., `name,asc` or `currentStock,desc`)
+Other inventory endpoints use their own parameters, e.g. the waste report (`GET /api/v1/inventory/waste/report`) takes `restaurantId`, `startDate`, and `endDate`.
 
 ---
 
 ## Frontend Integration
 
-### Inventory Page Component
+### Inventory Pages
 
-The main inventory management interface is in `/frontend/src/pages/Inventory.jsx`.
+There is no single `Inventory.jsx`. The inventory UI is a multi-page module under `frontend/src/pages/inventory/`:
+
+- `InventoryIngredients.jsx`, `InventoryRecipes.jsx`, `InventoryStockCounts.jsx`, `InventorySuppliers.jsx`, `InventoryValuation.jsx`, `InventoryWaste.jsx`, `ProductionBatches.jsx`, `InventoryAlerts.jsx`, `InventoryExpiry.jsx`, and `InventoryLayout.jsx` (shared layout; exported from `index.js`)
+- Plus `frontend/src/pages/InventoryAnalytics.jsx` at the pages root
 
 **Key Features:**
 1. Restaurant selector
@@ -736,7 +816,6 @@ const handleStockAction = (ingredient, action) => {
     quantity: '',
     newQuantity: action === 'adjust' ? ingredient.currentStock.toString() : '',
     notes: '',
-    performedBy: 'Admin',
   });
   setStockModalOpen(true);
 };
@@ -744,16 +823,15 @@ const handleStockAction = (ingredient, action) => {
 const handleStockSubmit = async () => {
   try {
     if (stockAction === 'add') {
+      // performedBy is set server-side from the authenticated user; do not send it
       await inventoryAPI.addStock(selectedIngredient.id, {
         quantity: parseFloat(stockFormData.quantity),
         notes: stockFormData.notes,
-        performedBy: stockFormData.performedBy,
       });
     } else {
       await inventoryAPI.adjustStock(selectedIngredient.id, {
         newQuantity: parseFloat(stockFormData.newQuantity),
         notes: stockFormData.notes,
-        performedBy: stockFormData.performedBy,
       });
     }
 
@@ -770,9 +848,9 @@ const handleStockSubmit = async () => {
 
 ```javascript
 const getStockStatus = (ingredient) => {
-  if (ingredient.currentStock < ingredient.minStockLevel) {
+  if (ingredient.currentStock < ingredient.minimumStock) {
     return { status: 'CRITICAL', color: 'red', icon: AlertTriangle };
-  } else if (ingredient.currentStock <= ingredient.reorderPoint) {
+  } else if (ingredient.currentStock <= ingredient.reorderLevel) {
     return { status: 'LOW', color: 'orange', icon: AlertCircle };
   } else {
     return { status: 'ADEQUATE', color: 'green', icon: CheckCircle };
@@ -906,15 +984,15 @@ public void performMonthlyAudit() {
 -- Identify high-waste ingredients
 SELECT
     i.name,
-    i.category,
+    i.category_id,
     SUM(ABS(st.quantity)) AS total_waste,
     COUNT(*) AS waste_events,
     SUM(ABS(st.quantity) * st.cost_per_unit) AS total_cost
-FROM stock_transactions st
-JOIN ingredients i ON st.ingredient_id = i.id
+FROM inventory_transactions st
+JOIN inventory_ingredients i ON st.ingredient_id = i.id
 WHERE st.transaction_type = 'WASTE'
   AND st.transaction_date >= NOW() - INTERVAL '90 days'
-GROUP BY i.id, i.name, i.category
+GROUP BY i.id, i.name, i.category_id
 ORDER BY total_cost DESC
 LIMIT 10;
 ```
@@ -1000,15 +1078,19 @@ ingredientRepository.save(ingredient); // No transaction created
 - Expired items not flagged
 - No notifications sent
 
+**Root Cause:**
+- Expiry is tracked per **batch**, not on the ingredient. There is no `expirationDate` field on `Ingredient`; instead the ingredient carries `trackExpiry` / `defaultShelfLifeDays` / `expiryAlertDays`, and each `InventoryBatch` holds its own expiry date.
+
 **Solution:**
+Query expiring/expired batches via the batch endpoints or repository (`GET /api/v1/inventory/batches/expiring`):
 ```java
 @Scheduled(cron = "0 0 9 * * *") // Daily at 9 AM
 public void checkExpiringItems() {
     LocalDate today = LocalDate.now();
     LocalDate weekFromNow = today.plusDays(7);
 
-    List<Ingredient> expiring = ingredientRepository
-        .findByExpirationDateBetween(today, weekFromNow);
+    List<InventoryBatch> expiring = inventoryBatchRepository
+        .findExpiringBatches(today, weekFromNow);
 
     if (!expiring.isEmpty()) {
         notificationService.sendExpirationAlert(expiring);
@@ -1025,7 +1107,7 @@ public void checkExpiringItems() {
 ```java
 public InventoryValueReport generateValueReport(Long restaurantId) {
     List<Ingredient> ingredients = ingredientRepository
-        .findByRestaurantIdAndIsActiveTrue(restaurantId);
+        .findByRestaurantIdAndActiveTrue(restaurantId);
 
     BigDecimal totalValue = ingredients.stream()
         .map(i -> i.getCurrentStock().multiply(i.getCostPerUnit()))
@@ -1033,7 +1115,7 @@ public InventoryValueReport generateValueReport(Long restaurantId) {
 
     Map<String, BigDecimal> byCategory = ingredients.stream()
         .collect(Collectors.groupingBy(
-            Ingredient::getCategory,
+            i -> i.getCategory() != null ? i.getCategory().getName() : "Uncategorized",
             Collectors.reducing(
                 BigDecimal.ZERO,
                 i -> i.getCurrentStock().multiply(i.getCostPerUnit()),
@@ -1051,10 +1133,10 @@ public InventoryValueReport generateValueReport(Long restaurantId) {
 public UsageTrendReport getUsageTrends(Long ingredientId, int days) {
     LocalDateTime startDate = LocalDateTime.now().minusDays(days);
 
-    List<StockTransaction> transactions = transactionRepository
+    List<InventoryTransaction> transactions = transactionRepository
         .findByIngredientIdAndTransactionTypeAndTransactionDateAfter(
             ingredientId,
-            TransactionType.USAGE,
+            TransactionType.ORDER_DEDUCTION,
             startDate
         );
 
@@ -1137,7 +1219,7 @@ For questions or issues:
 - **Documentation**: `/docs/API_REFERENCE.md`
 - **Database Schema**: `/src/main/resources/db/migration/V*__inventory*.sql`
 - **Source Code**: `/src/main/java/com/elcafe/modules/inventory/`
-- **Frontend**: `/frontend/src/pages/Inventory.jsx`
+- **Frontend**: `/frontend/src/pages/inventory/` (multi-page module) and `/frontend/src/pages/InventoryAnalytics.jsx`
 
 **Version:** 1.0
 **Last Updated:** 2025-12-15
