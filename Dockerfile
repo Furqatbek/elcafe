@@ -2,11 +2,20 @@ FROM maven:3.9.6-eclipse-temurin-21 AS build
 
 WORKDIR /app
 
+# Survive transient Maven Central hiccups ("Remote host terminated the handshake" / "SSL peer shut
+# down incorrectly") instead of failing the whole build on one dropped download. Wagon auto-retries
+# each failed transfer; applies to every mvn invocation in this stage.
+ENV MAVEN_OPTS="-Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=120"
+
 COPY pom.xml .
-RUN mvn dependency:resolve || mvn dependency:resolve || mvn dependency:resolve
+# Pre-download project deps AND build-plugin deps (e.g. the resources plugin's commons-io /
+# commons-lang3) into a cached layer so the package step needs no network. go-offline (not just
+# dependency:resolve) is what pulls the plugin deps; retried a few times in case Central drops a
+# connection mid-download.
+RUN mvn -B dependency:go-offline || mvn -B dependency:go-offline || mvn -B dependency:go-offline
 
 COPY src ./src
-RUN mvn clean package -DskipTests
+RUN mvn -B clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-jammy
 
