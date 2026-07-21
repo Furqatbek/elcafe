@@ -54,6 +54,7 @@ public class SmsAutomationService {
     @Transactional
     public SmsAutomationRuleResponse createRule(SmsAutomationRuleRequest request) {
         log.info("Creating SMS automation rule: {}", request.getName());
+        requireImmediateDelivery(request.getDelayMinutes());
 
         if (ruleRepository.existsByName(request.getName())) {
             throw new BadRequestException("Rule with name '" + request.getName() + "' already exists");
@@ -88,6 +89,7 @@ public class SmsAutomationService {
         if (!rule.getName().equals(request.getName()) && ruleRepository.existsByName(request.getName())) {
             throw new BadRequestException("Rule with name '" + request.getName() + "' already exists");
         }
+        requireImmediateDelivery(request.getDelayMinutes());
 
         SmsTemplate template = templateRepository.findById(request.getTemplateId())
                 .orElseThrow(() -> new ResourceNotFoundException("SmsTemplate", "id", request.getTemplateId()));
@@ -150,14 +152,9 @@ public class SmsAutomationService {
                     continue;
                 }
 
-                // Send immediately or schedule based on delay
-                if (rule.getDelayMinutes() == null || rule.getDelayMinutes() == 0) {
-                    sendAutomatedSms(rule, customer, message);
-                } else {
-                    // TODO: Implement delayed sending via scheduler
-                    log.info("Delayed sending not yet implemented, sending immediately");
-                    sendAutomatedSms(rule, customer, message);
-                }
+                // Delayed delivery is rejected at create/update time (requireImmediateDelivery),
+                // so every active rule sends immediately.
+                sendAutomatedSms(rule, customer, message);
 
                 rule.incrementSentCount();
                 ruleRepository.save(rule);
@@ -198,6 +195,19 @@ public class SmsAutomationService {
     }
 
     // ========== Helper Methods ==========
+
+    /**
+     * Delayed automation delivery is not implemented — {@link #triggerAutomation} sends immediately
+     * regardless of the configured delay. Reject a non-zero delay at create/update time (FUNC-8:
+     * fail honestly) instead of storing a value the engine silently ignores.
+     */
+    private void requireImmediateDelivery(Integer delayMinutes) {
+        if (delayMinutes != null && delayMinutes > 0) {
+            throw new BadRequestException(
+                    "Delayed sending is not supported yet — set delayMinutes to 0 (or leave it empty) "
+                            + "for immediate delivery.");
+        }
+    }
 
     private void sendAutomatedSms(SmsAutomationRule rule, Customer customer, String message) {
         try {

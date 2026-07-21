@@ -58,6 +58,7 @@ public class SmsCampaignService {
     @Transactional
     public SmsCampaignResponse createCampaign(SmsCampaignRequest request) {
         log.info("Creating SMS campaign: {}", request.getName());
+        requireSupportedAudience(request.getTargetAudience());
 
         SmsCampaign campaign = SmsCampaign.builder()
                 .name(request.getName())
@@ -103,6 +104,7 @@ public class SmsCampaignService {
         if (campaign.getStatus() != CampaignStatus.DRAFT) {
             throw new BadRequestException("Can only update campaigns in DRAFT status");
         }
+        requireSupportedAudience(request.getTargetAudience());
 
         campaign.setName(request.getName());
         campaign.setDescription(request.getDescription());
@@ -297,6 +299,29 @@ public class SmsCampaignService {
 
     // ========== Helper Methods ==========
 
+    /**
+     * Target audiences whose recipient query is actually implemented in {@link #buildRecipientList}.
+     * Everything else is rejected up-front by {@link #requireSupportedAudience}:
+     *   - SEGMENT / CUSTOM were never wired up (no segment engine, no custom phone-list input) and
+     *     returned an empty list, so the campaign reported success while sending to nobody.
+     *   - LOYAL_CUSTOMERS / HIGH_VALUE were never added to the switch, so they fell through to the
+     *     default branch and blasted every active customer.
+     * FUNC-8: fail honestly instead of faking delivery or spamming the whole customer base.
+     */
+    private static final Set<TargetAudience> SUPPORTED_AUDIENCES = EnumSet.of(
+            TargetAudience.ALL,
+            TargetAudience.BIRTHDAY_TODAY,
+            TargetAudience.INACTIVE,
+            TargetAudience.NEW_CUSTOMERS);
+
+    private void requireSupportedAudience(TargetAudience audience) {
+        if (audience == null || !SUPPORTED_AUDIENCES.contains(audience)) {
+            throw new BadRequestException(
+                    "Target audience '" + audience + "' is not supported yet. "
+                            + "Supported audiences: ALL, BIRTHDAY_TODAY, INACTIVE, NEW_CUSTOMERS.");
+        }
+    }
+
     private List<Customer> buildRecipientList(SmsCampaign campaign) {
         switch (campaign.getTargetAudience()) {
             case ALL:
@@ -320,14 +345,12 @@ public class SmsCampaignService {
                 }
                 OffsetDateTime since = OffsetDateTime.now(ZoneOffset.UTC).minusDays(days);
                 return customerRepository.findByCreatedAtAfter(since);
-            case SEGMENT:
-                // TODO: Implement segment-based targeting
-                return new ArrayList<>();
-            case CUSTOM:
-                // Custom phone list handled separately
-                return new ArrayList<>();
             default:
-                return customerRepository.findByActiveTrue();
+                // Unsupported audiences are rejected up-front by requireSupportedAudience(); reaching
+                // here means that guard was bypassed. Fail loudly instead of silently sending to nobody
+                // (SEGMENT/CUSTOM) or to every active customer (LOYAL_CUSTOMERS/HIGH_VALUE).
+                throw new IllegalStateException(
+                        "Unsupported target audience reached recipient build: " + campaign.getTargetAudience());
         }
     }
 
