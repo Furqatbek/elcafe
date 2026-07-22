@@ -43,7 +43,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-waiter")
                 .setAllowedOriginPatterns("*") // Configure based on your CORS policy
-                .withSockJS(); // Enable SockJS fallback options
+                .withSockJS()
+                .setHeartbeatTime(25000)
+                .setDisconnectDelay(5000)
+                .setSessionCookieNeeded(false);
 
         // Print agent endpoint - no SockJS needed as agent is a dedicated application
         registry.addEndpoint("/ws-print-agent")

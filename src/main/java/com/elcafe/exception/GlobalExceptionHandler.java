@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -212,6 +213,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(status)
                 .body(ApiResponse.error(ex.getMessage(), details));
+    }
+
+    @ExceptionHandler(HttpMessageNotWritableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotWritable(
+            HttpMessageNotWritableException ex,
+            WebRequest request
+    ) {
+        String msg = ex.getMessage();
+        // SockJS jsonp transport disconnect — response was already committed with
+        // application/javascript content type. Tomcat logs "Ignoring exception,
+        // response committed already" right after this, confirming no action is possible.
+        if (msg != null && msg.contains("application/javascript")) {
+            log.debug("SockJS jsonp transport disconnect (ignorable): {}", msg);
+            return null;
+        }
+        log.error("Message not writable: ", ex);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Response serialization failed"));
     }
 
     @ExceptionHandler(Exception.class)
